@@ -449,7 +449,7 @@
 <span class="kw">use</span> <span class="ident">ff::PrimeFieldBits</span>;
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Region</span>},
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
+    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
     <span class="ident">poly::Rotation</span>,
 };
 
@@ -516,7 +516,7 @@
             <span class="comment">// =&gt; k_i = z_i - 2^{K}⋅z_{i + 1}</span>
             <span class="kw">let</span> <span class="ident">word</span> <span class="op">=</span> <span class="ident">z_cur</span> <span class="op">-</span> <span class="ident">z_next</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">WINDOW_NUM_BITS</span>);
 
-            <span class="macro">vec!</span>[<span class="ident">q_range_check</span> <span class="op">*</span> <span class="ident">range_check</span>(<span class="ident">word</span>, <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">WINDOW_NUM_BITS</span>)]
+            <span class="ident">Constraints::with_selector</span>(<span class="ident">q_range_check</span>, <span class="prelude-val">Some</span>(<span class="ident">range_check</span>(<span class="ident">word</span>, <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">WINDOW_NUM_BITS</span>)))
         });
 
         <span class="ident">config</span>
@@ -827,5 +827,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (18f314e70 2022-04-24)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
 </body></html>

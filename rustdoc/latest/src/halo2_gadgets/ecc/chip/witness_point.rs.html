@@ -189,13 +189,25 @@
 <span id="169">169</span>
 <span id="170">170</span>
 <span id="171">171</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">EccPoint</span>, <span class="ident">NonIdentityEccPoint</span>};
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::array</span>;
+
+<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">EccPoint</span>, <span class="ident">NonIdentityEccPoint</span>};
 
 <span class="kw">use</span> <span class="ident">group::prime::PrimeCurveAffine</span>;
 
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Region</span>},
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>, <span class="ident">VirtualCells</span>},
+    <span class="ident">plonk</span>::{
+        <span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>, <span class="ident">VirtualCells</span>,
+    },
     <span class="ident">poly::Rotation</span>,
 };
 <span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::CurveAffine</span>, <span class="ident">pallas</span>};
@@ -251,10 +263,14 @@
             <span class="kw">let</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x</span>, <span class="ident">Rotation::cur</span>());
             <span class="kw">let</span> <span class="ident">y</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">y</span>, <span class="ident">Rotation::cur</span>());
 
-            <span class="macro">vec!</span>[
+            <span class="comment">// We can&#39;t use `Constraints::with_selector` because that creates constraints</span>
+            <span class="comment">// of the form `q_point * (x * curve_eqn)`, but this was implemented without</span>
+            <span class="comment">// parentheses, and thus evaluates as `(q_point * x) * curve_eqn`, which is</span>
+            <span class="comment">// structurally different in the pinned verifying key.</span>
+            <span class="ident">array::IntoIter::new</span>([
                 (<span class="string">&quot;x == 0 v on_curve&quot;</span>, <span class="ident">q_point</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x</span> <span class="op">*</span> <span class="ident">curve_eqn</span>(<span class="ident">meta</span>)),
                 (<span class="string">&quot;y == 0 v on_curve&quot;</span>, <span class="ident">q_point</span> <span class="op">*</span> <span class="ident">y</span> <span class="op">*</span> <span class="ident">curve_eqn</span>(<span class="ident">meta</span>)),
-            ]
+            ])
         });
 
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;witness non-identity point&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
@@ -263,7 +279,7 @@
 
             <span class="kw">let</span> <span class="ident">q_point_non_id</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_point_non_id</span>);
 
-            <span class="macro">vec!</span>[(<span class="string">&quot;on_curve&quot;</span>, <span class="ident">q_point_non_id</span> <span class="op">*</span> <span class="ident">curve_eqn</span>(<span class="ident">meta</span>))]
+            <span class="ident">Constraints::with_selector</span>(<span class="ident">q_point_non_id</span>, <span class="prelude-val">Some</span>((<span class="string">&quot;on_curve&quot;</span>, <span class="ident">curve_eqn</span>(<span class="ident">meta</span>))))
         });
     }
 
@@ -361,5 +377,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (18f314e70 2022-04-24)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
 </body></html>

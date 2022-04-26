@@ -516,11 +516,13 @@
 <span id="496">496</span>
 <span id="497">497</span>
 <span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Chip implementing a Merkle hash using Sinsemilla as the hash function.</span>
 
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Chip</span>, <span class="ident">Layouter</span>},
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
+    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
     <span class="ident">poly::Rotation</span>,
 };
 <span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">pallas</span>};
@@ -681,13 +683,15 @@
             <span class="comment">// &lt;https://zips.z.cash/protocol/protocol.pdf#merklepath&gt;</span>
             <span class="kw">let</span> <span class="ident">right_check</span> <span class="op">=</span> <span class="ident">b_2</span> <span class="op">+</span> <span class="ident">c_whole</span> <span class="op">*</span> <span class="ident">two_pow_5</span> <span class="op">-</span> <span class="ident">right_node</span>;
 
-            <span class="ident">array::IntoIter::new</span>([
-                (<span class="string">&quot;l_check&quot;</span>, <span class="ident">l_check</span>),
-                (<span class="string">&quot;left_check&quot;</span>, <span class="ident">left_check</span>),
-                (<span class="string">&quot;right_check&quot;</span>, <span class="ident">right_check</span>),
-                (<span class="string">&quot;b1_b2_check&quot;</span>, <span class="ident">b1_b2_check</span>),
-            ])
-            .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">name</span>, <span class="ident">poly</span>)<span class="op">|</span> (<span class="ident">name</span>, <span class="ident">q_decompose</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">poly</span>))
+            <span class="ident">Constraints::with_selector</span>(
+                <span class="ident">q_decompose</span>,
+                <span class="ident">array::IntoIter::new</span>([
+                    (<span class="string">&quot;l_check&quot;</span>, <span class="ident">l_check</span>),
+                    (<span class="string">&quot;left_check&quot;</span>, <span class="ident">left_check</span>),
+                    (<span class="string">&quot;right_check&quot;</span>, <span class="ident">right_check</span>),
+                    (<span class="string">&quot;b1_b2_check&quot;</span>, <span class="ident">b1_b2_check</span>),
+                ]),
+            )
         });
 
         <span class="ident">MerkleConfig</span> {
@@ -1015,5 +1019,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (18f314e70 2022-04-24)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
 </body></html>

@@ -588,6 +588,8 @@
 <span id="568">568</span>
 <span id="569">569</span>
 <span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">add</span>, <span class="ident">EccPoint</span>, <span class="ident">NonIdentityEccPoint</span>, <span class="ident">T_Q</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">primitives::sinsemilla</span>,
@@ -602,7 +604,7 @@
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">arithmetic::FieldExt</span>,
     <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Layouter</span>, <span class="ident">Region</span>},
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
+    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
     <span class="ident">poly::Rotation</span>,
 };
 <span class="kw">use</span> <span class="ident">uint::construct_uint</span>;
@@ -741,12 +743,14 @@
             <span class="kw">let</span> <span class="ident">lsb_x</span> <span class="op">=</span> <span class="ident">ternary</span>(<span class="ident">lsb</span>.<span class="ident">clone</span>(), <span class="ident">x_p</span>.<span class="ident">clone</span>(), <span class="ident">x_p</span> <span class="op">-</span> <span class="ident">base_x</span>);
             <span class="kw">let</span> <span class="ident">lsb_y</span> <span class="op">=</span> <span class="ident">ternary</span>(<span class="ident">lsb</span>, <span class="ident">y_p</span>.<span class="ident">clone</span>(), <span class="ident">y_p</span> <span class="op">+</span> <span class="ident">base_y</span>);
 
-            <span class="ident">std::array::IntoIter::new</span>([
-                (<span class="string">&quot;bool_check&quot;</span>, <span class="ident">bool_check</span>),
-                (<span class="string">&quot;lsb_x&quot;</span>, <span class="ident">lsb_x</span>),
-                (<span class="string">&quot;lsb_y&quot;</span>, <span class="ident">lsb_y</span>),
-            ])
-            .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">name</span>, <span class="ident">poly</span>)<span class="op">|</span> (<span class="ident">name</span>, <span class="ident">q_mul_lsb</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">poly</span>))
+            <span class="ident">Constraints::with_selector</span>(
+                <span class="ident">q_mul_lsb</span>,
+                <span class="ident">std::array::IntoIter::new</span>([
+                    (<span class="string">&quot;bool_check&quot;</span>, <span class="ident">bool_check</span>),
+                    (<span class="string">&quot;lsb_x&quot;</span>, <span class="ident">lsb_x</span>),
+                    (<span class="string">&quot;lsb_y&quot;</span>, <span class="ident">lsb_y</span>),
+                ]),
+            )
         });
     }
 
@@ -1159,5 +1163,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (18f314e70 2022-04-24)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
 </body></html>

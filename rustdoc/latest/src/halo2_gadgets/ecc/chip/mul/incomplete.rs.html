@@ -361,13 +361,19 @@
 <span id="341">341</span>
 <span id="342">342</span>
 <span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::NonIdentityEccPoint</span>;
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">X</span>, <span class="ident">Y</span>, <span class="ident">Z</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities::bool_check</span>;
 <span class="kw">use</span> <span class="ident">ff::Field</span>;
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit::Region</span>,
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>, <span class="ident">VirtualCells</span>},
+    <span class="ident">plonk</span>::{
+        <span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>, <span class="ident">VirtualCells</span>,
+    },
     <span class="ident">poly::Rotation</span>,
 };
 
@@ -440,7 +446,6 @@
 
         <span class="comment">// Constraints used for q_mul_{2, 3} == 1</span>
         <span class="kw">let</span> <span class="ident">for_loop</span> <span class="op">=</span> <span class="op">|</span><span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-                        <span class="ident">q_mul</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
                         <span class="ident">y_a_next</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">one</span> <span class="op">=</span> <span class="ident">Expression::Constant</span>(<span class="ident">pallas::Base::one</span>());
 
@@ -484,10 +489,10 @@
             <span class="kw">let</span> <span class="ident">gradient_2</span> <span class="op">=</span> <span class="ident">lambda2_cur</span> <span class="op">*</span> (<span class="ident">x_a_cur</span> <span class="op">-</span> <span class="ident">x_a_next</span>) <span class="op">-</span> <span class="ident">y_a_cur</span> <span class="op">-</span> <span class="ident">y_a_next</span>;
 
             <span class="ident">std::iter::empty</span>()
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;bool_check&quot;</span>, <span class="ident">q_mul</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">bool_check</span>)))
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;gradient_1&quot;</span>, <span class="ident">q_mul</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">gradient_1</span>)))
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;secant_line&quot;</span>, <span class="ident">q_mul</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">secant_line</span>)))
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;gradient_2&quot;</span>, <span class="ident">q_mul</span> <span class="op">*</span> <span class="ident">gradient_2</span>)))
+                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;bool_check&quot;</span>, <span class="ident">bool_check</span>)))
+                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;gradient_1&quot;</span>, <span class="ident">gradient_1</span>)))
+                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;secant_line&quot;</span>, <span class="ident">secant_line</span>)))
+                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;gradient_2&quot;</span>, <span class="ident">gradient_2</span>)))
         };
 
         <span class="comment">// q_mul_1 == 1 checks</span>
@@ -496,7 +501,7 @@
 
             <span class="kw">let</span> <span class="ident">y_a_next</span> <span class="op">=</span> <span class="ident">y_a</span>(<span class="ident">meta</span>, <span class="ident">Rotation::next</span>());
             <span class="kw">let</span> <span class="ident">y_a_witnessed</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">lambda1</span>, <span class="ident">Rotation::cur</span>());
-            <span class="macro">vec!</span>[(<span class="string">&quot;init y_a&quot;</span>, <span class="ident">q_mul_1</span> <span class="op">*</span> (<span class="ident">y_a_witnessed</span> <span class="op">-</span> <span class="ident">y_a_next</span>))]
+            <span class="ident">Constraints::with_selector</span>(<span class="ident">q_mul_1</span>, <span class="prelude-val">Some</span>((<span class="string">&quot;init y_a&quot;</span>, <span class="ident">y_a_witnessed</span> <span class="op">-</span> <span class="ident">y_a_next</span>)))
         });
 
         <span class="comment">// q_mul_2 == 1 checks</span>
@@ -519,17 +524,20 @@
             <span class="kw">let</span> <span class="ident">x_p_check</span> <span class="op">=</span> <span class="ident">x_p_cur</span> <span class="op">-</span> <span class="ident">x_p_next</span>;
             <span class="kw">let</span> <span class="ident">y_p_check</span> <span class="op">=</span> <span class="ident">y_p_cur</span> <span class="op">-</span> <span class="ident">y_p_next</span>;
 
-            <span class="ident">std::iter::empty</span>()
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;x_p_check&quot;</span>, <span class="ident">q_mul_2</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x_p_check</span>)))
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;y_p_check&quot;</span>, <span class="ident">q_mul_2</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">y_p_check</span>)))
-                .<span class="ident">chain</span>(<span class="ident">for_loop</span>(<span class="ident">meta</span>, <span class="ident">q_mul_2</span>, <span class="ident">y_a_next</span>))
+            <span class="ident">Constraints::with_selector</span>(
+                <span class="ident">q_mul_2</span>,
+                <span class="ident">std::iter::empty</span>()
+                    .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;x_p_check&quot;</span>, <span class="ident">x_p_check</span>)))
+                    .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;y_p_check&quot;</span>, <span class="ident">y_p_check</span>)))
+                    .<span class="ident">chain</span>(<span class="ident">for_loop</span>(<span class="ident">meta</span>, <span class="ident">y_a_next</span>)),
+            )
         });
 
         <span class="comment">// q_mul_3 == 1 checks</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;q_mul_3 == 1 checks&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">q_mul_3</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul</span>.<span class="number">2</span>);
             <span class="kw">let</span> <span class="ident">y_a_final</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">lambda1</span>, <span class="ident">Rotation::next</span>());
-            <span class="ident">for_loop</span>(<span class="ident">meta</span>, <span class="ident">q_mul_3</span>, <span class="ident">y_a_final</span>)
+            <span class="ident">Constraints::with_selector</span>(<span class="ident">q_mul_3</span>, <span class="ident">for_loop</span>(<span class="ident">meta</span>, <span class="ident">y_a_final</span>))
         });
     }
 
@@ -705,5 +713,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (18f314e70 2022-04-24)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
 </body></html>

@@ -228,12 +228,13 @@
 <span id="208">208</span>
 <span id="209">209</span>
 <span id="210">210</span>
+<span id="211">211</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">T_Q</span>, <span class="ident">Z</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">primitives::sinsemilla</span>, <span class="ident">utilities::lookup_range_check::LookupRangeCheckConfig</span>};
 <span class="kw">use</span> <span class="ident">halo2_proofs::circuit::AssignedCell</span>;
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit::Layouter</span>,
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>},
+    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>},
     <span class="ident">poly::Rotation</span>,
 };
 
@@ -312,14 +313,15 @@
             <span class="comment">// (1 - k_254) * (1 - z_130 * eta) * s_minus_lo_130 = 0</span>
             <span class="kw">let</span> <span class="ident">canonicity</span> <span class="op">=</span> (<span class="ident">one</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">k_254</span>) <span class="op">*</span> (<span class="ident">one</span> <span class="op">-</span> <span class="ident">z_130</span> <span class="op">*</span> <span class="ident">eta</span>) <span class="op">*</span> <span class="ident">s_minus_lo_130</span>;
 
-            <span class="ident">iter::empty</span>()
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;s_check&quot;</span>, <span class="ident">s_check</span>)))
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;recovery&quot;</span>, <span class="ident">recovery</span>)))
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;lo_zero&quot;</span>, <span class="ident">lo_zero</span>)))
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;s_minus_lo_130_check&quot;</span>, <span class="ident">s_minus_lo_130_check</span>)))
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;canonicity&quot;</span>, <span class="ident">canonicity</span>)))
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">name</span>, <span class="ident">poly</span>)<span class="op">|</span> (<span class="ident">name</span>, <span class="ident">q_mul_overflow</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">poly</span>))
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+            <span class="ident">Constraints::with_selector</span>(
+                <span class="ident">q_mul_overflow</span>,
+                <span class="ident">iter::empty</span>()
+                    .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;s_check&quot;</span>, <span class="ident">s_check</span>)))
+                    .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;recovery&quot;</span>, <span class="ident">recovery</span>)))
+                    .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;lo_zero&quot;</span>, <span class="ident">lo_zero</span>)))
+                    .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;s_minus_lo_130_check&quot;</span>, <span class="ident">s_minus_lo_130_check</span>)))
+                    .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;canonicity&quot;</span>, <span class="ident">canonicity</span>))),
+            )
         });
     }
 
@@ -439,5 +441,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (18f314e70 2022-04-24)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
 </body></html>

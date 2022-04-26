@@ -324,12 +324,18 @@
 <span id="304">304</span>
 <span id="305">305</span>
 <span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Gadget and chip for a conditional swap utility.</span>
 
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">bool_check</span>, <span class="ident">ternary</span>, <span class="ident">UtilitiesInstructions</span>};
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Chip</span>, <span class="ident">Layouter</span>},
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
+    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
     <span class="ident">poly::Rotation</span>,
 };
 <span class="kw">use</span> <span class="ident">pasta_curves::arithmetic::FieldExt</span>;
@@ -515,8 +521,14 @@
             <span class="comment">// Check `swap` is boolean.</span>
             <span class="kw">let</span> <span class="ident">bool_check</span> <span class="op">=</span> <span class="ident">bool_check</span>(<span class="ident">swap</span>);
 
-            <span class="ident">array::IntoIter::new</span>([<span class="ident">a_check</span>, <span class="ident">b_check</span>, <span class="ident">bool_check</span>])
-                .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">poly</span><span class="op">|</span> <span class="ident">q_swap</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">poly</span>)
+            <span class="ident">Constraints::with_selector</span>(
+                <span class="ident">q_swap</span>,
+                <span class="ident">array::IntoIter::new</span>([
+                    (<span class="string">&quot;a check&quot;</span>, <span class="ident">a_check</span>),
+                    (<span class="string">&quot;b check&quot;</span>, <span class="ident">b_check</span>),
+                    (<span class="string">&quot;swap is bool&quot;</span>, <span class="ident">bool_check</span>),
+                ]),
+            )
         });
 
         <span class="ident">config</span>
@@ -631,5 +643,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (18f314e70 2022-04-24)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
 </body></html>

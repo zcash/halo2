@@ -535,6 +535,8 @@
 <span id="515">515</span>
 <span id="516">516</span>
 <span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">EccBaseFieldElemFixed</span>, <span class="ident">EccPoint</span>, <span class="ident">FixedPoints</span>, <span class="ident">NUM_WINDOWS</span>, <span class="ident">T_P</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::H_BASE</span>;
 
@@ -546,7 +548,7 @@
 <span class="kw">use</span> <span class="ident">group::ff::PrimeField</span>;
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Layouter</span>},
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>},
+    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>},
     <span class="ident">poly::Rotation</span>,
 };
 <span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">pallas</span>};
@@ -685,10 +687,12 @@
                     )))
             };
 
-            <span class="ident">canon_checks</span>
-                .<span class="ident">chain</span>(<span class="ident">decomposition_checks</span>)
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;alpha_0_prime check&quot;</span>, <span class="ident">alpha_0_prime_check</span>)))
-                .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">name</span>, <span class="ident">poly</span>)<span class="op">|</span> (<span class="ident">name</span>, <span class="ident">q_mul_fixed_base_field</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">poly</span>))
+            <span class="ident">Constraints::with_selector</span>(
+                <span class="ident">q_mul_fixed_base_field</span>,
+                <span class="ident">canon_checks</span>
+                    .<span class="ident">chain</span>(<span class="ident">decomposition_checks</span>)
+                    .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;alpha_0_prime check&quot;</span>, <span class="ident">alpha_0_prime_check</span>))),
+            )
         });
     }
 
@@ -1053,5 +1057,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (18f314e70 2022-04-24)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
 </body></html>

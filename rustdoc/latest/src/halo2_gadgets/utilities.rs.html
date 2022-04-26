@@ -642,7 +642,7 @@
     <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
         <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">SimpleFloorPlanner</span>},
         <span class="ident">dev</span>::{<span class="ident">FailureLocation</span>, <span class="ident">MockProver</span>, <span class="ident">VerifyFailure</span>},
-        <span class="ident">plonk</span>::{<span class="ident">Any</span>, <span class="ident">Circuit</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
+        <span class="ident">plonk</span>::{<span class="ident">Any</span>, <span class="ident">Circuit</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
         <span class="ident">poly::Rotation</span>,
     };
     <span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">pallas</span>};
@@ -682,7 +682,7 @@
                     <span class="kw">let</span> <span class="ident">selector</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">selector</span>);
                     <span class="kw">let</span> <span class="ident">advice</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">advice</span>, <span class="ident">Rotation::cur</span>());
 
-                    <span class="macro">vec!</span>[<span class="ident">selector</span> <span class="op">*</span> <span class="ident">range_check</span>(<span class="ident">advice</span>, <span class="ident">RANGE</span>)]
+                    <span class="ident">Constraints::with_selector</span>(<span class="ident">selector</span>, <span class="prelude-val">Some</span>(<span class="ident">range_check</span>(<span class="ident">advice</span>, <span class="ident">RANGE</span>)))
                 });
 
                 <span class="ident">Config</span> { <span class="ident">selector</span>, <span class="ident">advice</span> }
@@ -891,5 +891,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (18f314e70 2022-04-24)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
 </body></html>

@@ -638,6 +638,8 @@
 <span id="618">618</span>
 <span id="619">619</span>
 <span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">array</span>, <span class="ident">convert::TryInto</span>};
 
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">EccPoint</span>, <span class="ident">EccScalarFixedShort</span>, <span class="ident">FixedPoints</span>, <span class="ident">L_SCALAR_SHORT</span>, <span class="ident">NUM_WINDOWS_SHORT</span>};
@@ -645,7 +647,7 @@
 
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">Region</span>},
-    <span class="ident">plonk</span>::{<span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>},
+    <span class="ident">plonk</span>::{<span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>},
     <span class="ident">poly::Rotation</span>,
 };
 <span class="kw">use</span> <span class="ident">pasta_curves::pallas</span>;
@@ -697,13 +699,15 @@
             <span class="comment">// Check that the correct sign is witnessed s.t. sign * y_p = y_a</span>
             <span class="kw">let</span> <span class="ident">negation_check</span> <span class="op">=</span> <span class="ident">sign</span> <span class="op">*</span> <span class="ident">y_p</span> <span class="op">-</span> <span class="ident">y_a</span>;
 
-            <span class="ident">array::IntoIter::new</span>([
-                (<span class="string">&quot;last_window_check&quot;</span>, <span class="ident">last_window_check</span>),
-                (<span class="string">&quot;sign_check&quot;</span>, <span class="ident">sign_check</span>),
-                (<span class="string">&quot;y_check&quot;</span>, <span class="ident">y_check</span>),
-                (<span class="string">&quot;negation_check&quot;</span>, <span class="ident">negation_check</span>),
-            ])
-            .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">name</span>, <span class="ident">poly</span>)<span class="op">|</span> (<span class="ident">name</span>, <span class="ident">q_mul_fixed_short</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">poly</span>))
+            <span class="ident">Constraints::with_selector</span>(
+                <span class="ident">q_mul_fixed_short</span>,
+                <span class="ident">array::IntoIter::new</span>([
+                    (<span class="string">&quot;last_window_check&quot;</span>, <span class="ident">last_window_check</span>),
+                    (<span class="string">&quot;sign_check&quot;</span>, <span class="ident">sign_check</span>),
+                    (<span class="string">&quot;y_check&quot;</span>, <span class="ident">y_check</span>),
+                    (<span class="string">&quot;negation_check&quot;</span>, <span class="ident">negation_check</span>),
+                ]),
+            )
         });
     }
 
@@ -1259,5 +1263,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (18f314e70 2022-04-24)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
 </body></html>

@@ -523,6 +523,8 @@
 <span id="503">503</span>
 <span id="504">504</span>
 <span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">super</span>::{
     <span class="ident">add</span>, <span class="ident">add_incomplete</span>, <span class="ident">EccBaseFieldElemFixed</span>, <span class="ident">EccScalarFixed</span>, <span class="ident">EccScalarFixedShort</span>, <span class="ident">FixedPoint</span>,
     <span class="ident">NonIdentityEccPoint</span>, <span class="ident">FIXED_BASE_WINDOW_SIZE</span>, <span class="ident">H</span>,
@@ -534,7 +536,10 @@
 <span class="kw">use</span> <span class="ident">group</span>::{<span class="ident">ff::PrimeField</span>, <span class="ident">Curve</span>};
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Region</span>},
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Fixed</span>, <span class="ident">Selector</span>, <span class="ident">VirtualCells</span>},
+    <span class="ident">plonk</span>::{
+        <span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Fixed</span>, <span class="ident">Selector</span>,
+        <span class="ident">VirtualCells</span>,
+    },
     <span class="ident">poly::Rotation</span>,
 };
 <span class="kw">use</span> <span class="ident">lazy_static::lazy_static</span>;
@@ -664,7 +669,7 @@
             <span class="comment">// =&gt; a_i = z_i - z_{i+1} * 2^3</span>
             <span class="kw">let</span> <span class="ident">word</span> <span class="op">=</span> <span class="ident">z_cur</span> <span class="op">-</span> <span class="ident">z_next</span> <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="ident">H</span> <span class="kw">as</span> <span class="ident">u64</span>);
 
-            <span class="self">self</span>.<span class="ident">coords_check</span>(<span class="ident">meta</span>, <span class="ident">q_mul_fixed_running_sum</span>, <span class="ident">word</span>)
+            <span class="ident">Constraints::with_selector</span>(<span class="ident">q_mul_fixed_running_sum</span>, <span class="self">self</span>.<span class="ident">coords_check</span>(<span class="ident">meta</span>, <span class="ident">word</span>))
         });
     }
 
@@ -672,7 +677,6 @@
     <span class="kw">fn</span> <span class="ident">coords_check</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">toggle</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
         <span class="ident">window</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
     ) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">y_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">y_p</span>, <span class="ident">Rotation::cur</span>());
@@ -704,9 +708,9 @@
             <span class="ident">y_p</span>.<span class="ident">square</span>() <span class="op">-</span> <span class="ident">x_p</span>.<span class="ident">clone</span>().<span class="ident">square</span>() <span class="op">*</span> <span class="ident">x_p</span> <span class="op">-</span> <span class="ident">Expression::Constant</span>(<span class="ident">pallas::Affine::b</span>());
 
         <span class="macro">vec!</span>[
-            (<span class="string">&quot;check x&quot;</span>, <span class="ident">toggle</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x_check</span>),
-            (<span class="string">&quot;check y&quot;</span>, <span class="ident">toggle</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">y_check</span>),
-            (<span class="string">&quot;on-curve&quot;</span>, <span class="ident">toggle</span> <span class="op">*</span> <span class="ident">on_curve</span>),
+            (<span class="string">&quot;check x&quot;</span>, <span class="ident">x_check</span>),
+            (<span class="string">&quot;check y&quot;</span>, <span class="ident">y_check</span>),
+            (<span class="string">&quot;on-curve&quot;</span>, <span class="ident">on_curve</span>),
         ]
     }
 
@@ -1029,5 +1033,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (18f314e70 2022-04-24)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
 </body></html>
