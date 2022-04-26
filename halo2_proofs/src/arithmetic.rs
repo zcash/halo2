@@ -409,6 +409,32 @@ use rand_core::OsRng;
 use crate::pasta::Fp;
 
 #[test]
+fn test_eval_polynomial() {
+    for k in 3..10 {
+        let mut eval = Fp::zero();
+        let mut exp = Fp::one();
+        let point = Fp::random(OsRng);
+        let poly = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
+        poly.iter().for_each(|a| {
+            eval += a * exp;
+            exp *= point;
+        });
+        assert_eq!(eval_polynomial(&poly, point), eval);
+    }
+}
+
+#[test]
+fn test_compute_inner_product() {
+    for k in 3..10 {
+        let mut product = Fp::zero();
+        let a = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
+        let b = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
+        a.iter().zip(b.iter()).for_each(|(a, b)| product += a * b);
+        assert_eq!(compute_inner_product(&a, &b), product);
+    }
+}
+
+#[test]
 fn test_lagrange_interpolate() {
     let rng = OsRng;
 

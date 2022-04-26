@@ -4,3 +4,13 @@ members = [
     "halo2_gadgets",
     "halo2_proofs",
 ]
+
+[profile.bench]
+opt-level = 3
+debug = false
+debug-assertions = false
+overflow-checks = false
+rpath = false
+lto = "thin"
+incremental = false
+codegen-units = 1
