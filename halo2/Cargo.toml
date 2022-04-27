@@ -4,7 +4,7 @@ version = "0.1.0-beta.2"
 authors = [
     "Jack Grigg <jack@electriccoin.co>",
 ]
-edition = "2018"
+edition = "2021"
 rust-version = "1.56.1"
 description = "[BETA] Fast zero-knowledge proof-carrying data implementation with no trusted setup"
 license-file = "../COPYING"
