@@ -167,10 +167,10 @@ pub fn i2lebsp<const NUM_BITS: usize>(int: u64) -> [bool; NUM_BITS] {
     /// Takes in an FnMut closure and returns a constant-length array with elements of
     /// type `Output`.
     fn gen_const_array<Output: Copy + Default, const LEN: usize>(
-        mut closure: impl FnMut(usize) -> Output,
+        closure: impl FnMut(usize) -> Output,
     ) -> [Output; LEN] {
         let mut ret: [Output; LEN] = [Default::default(); LEN];
-        for (bit, val) in ret.iter_mut().zip((0..LEN).map(|idx| closure(idx))) {
+        for (bit, val) in ret.iter_mut().zip((0..LEN).map(closure)) {
             *bit = val;
         }
         ret

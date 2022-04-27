@@ -17,10 +17,10 @@ pub fn i2lebsp<const NUM_BITS: usize>(int: u64) -> [bool; NUM_BITS] {
 
     fn gen_const_array_with_default<Output: Copy, const LEN: usize>(
         default_value: Output,
-        mut closure: impl FnMut(usize) -> Output,
+        closure: impl FnMut(usize) -> Output,
     ) -> [Output; LEN] {
         let mut ret: [Output; LEN] = [default_value; LEN];
-        for (bit, val) in ret.iter_mut().zip((0..LEN).map(|idx| closure(idx))) {
+        for (bit, val) in ret.iter_mut().zip((0..LEN).map(closure)) {
             *bit = val;
         }
         ret
