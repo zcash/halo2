@@ -1,9 +1,9 @@
 use super::super::{util::*, Gate};
 use halo2_proofs::{
     arithmetic::FieldExt,
-    plonk::{Constraints, Expression},
+    plonk::{Constraint, Constraints, Expression},
 };
-use std::{array, marker::PhantomData};
+use std::marker::PhantomData;
 
 pub struct CompressionGate<F: FieldExt>(PhantomData<F>);
 
@@ -426,23 +426,19 @@ impl<F: FieldExt> CompressionGate<F> {
         lo_3: Expression<F>,
         hi_3: Expression<F>,
         word_3: Expression<F>,
-    ) -> Constraints<
-        F,
-        (&'static str, Expression<F>),
-        impl Iterator<Item = (&'static str, Expression<F>)>,
-    > {
+    ) -> impl IntoIterator<Item = Constraint<F>> {
         let check_lo_hi = |lo: Expression<F>, hi: Expression<F>, word: Expression<F>| {
             lo + hi * F::from(1 << 16) - word
         };
 
         Constraints::with_selector(
             s_digest,
-            array::IntoIter::new([
+            [
                 ("check_lo_hi_0", check_lo_hi(lo_0, hi_0, word_0)),
                 ("check_lo_hi_1", check_lo_hi(lo_1, hi_1, word_1)),
                 ("check_lo_hi_2", check_lo_hi(lo_2, hi_2, word_2)),
                 ("check_lo_hi_3", check_lo_hi(lo_3, hi_3, word_3)),
-            ]),
+            ],
         )
     }
 }

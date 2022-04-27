@@ -1,5 +1,3 @@
-use std::array;
-
 use super::EccPoint;
 use ff::{BatchInvert, Field};
 use halo2_proofs::{
@@ -71,7 +69,7 @@ impl Config {
     }
 
     pub(crate) fn advice_columns(&self) -> HashSet<Column<Advice>> {
-        core::array::IntoIter::new([
+        [
             self.x_p,
             self.y_p,
             self.x_qr,
@@ -81,12 +79,13 @@ impl Config {
             self.beta,
             self.gamma,
             self.delta,
-        ])
+        ]
+        .into_iter()
         .collect()
     }
 
     pub(crate) fn output_columns(&self) -> HashSet<Column<Advice>> {
-        core::array::IntoIter::new([self.x_qr, self.y_qr]).collect()
+        [self.x_qr, self.y_qr].into_iter().collect()
     }
 
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
@@ -206,10 +205,10 @@ impl Config {
 
             Constraints::with_selector(
                 q_add,
-                array::IntoIter::new([
+                [
                     poly1, poly2, poly3, poly4, poly5, poly6, poly7, poly8, poly9, poly10, poly11,
                     poly12,
-                ]),
+                ],
             )
         });
     }

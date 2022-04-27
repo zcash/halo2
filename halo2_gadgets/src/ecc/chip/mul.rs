@@ -153,11 +153,11 @@ impl Config {
 
             Constraints::with_selector(
                 q_mul_lsb,
-                std::array::IntoIter::new([
+                [
                     ("bool_check", bool_check),
                     ("lsb_x", lsb_x),
                     ("lsb_y", lsb_y),
-                ]),
+                ],
             )
         });
     }

@@ -259,10 +259,7 @@ where
                 lhs - rhs
             };
 
-            Constraints::with_selector(
-                q_s1,
-                std::array::IntoIter::new([("Secant line", secant_line), ("y check", y_check)]),
-            )
+            Constraints::with_selector(q_s1, [("Secant line", secant_line), ("y check", y_check)])
         });
 
         config

@@ -1,5 +1,3 @@
-use std::array;
-
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use ff::Field;
 use halo2_gadgets::primitives::{
@@ -39,7 +37,7 @@ fn bench_primitives(c: &mut Criterion) {
         // - 510 bits for Commit^ivk
         // - 520 bits for MerkleCRH
         // - 1086 bits for NoteCommit
-        for size in array::IntoIter::new([510, 520, 1086]) {
+        for size in [510, 520, 1086] {
             group.bench_function(BenchmarkId::new("hash-to-point", size), |b| {
                 b.iter(|| hasher.hash_to_point(bits[..size].iter().cloned()))
             });

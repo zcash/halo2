@@ -1,6 +1,5 @@
 //! Gadget and chips for the Poseidon algebraic hash function.
 
-use std::array;
 use std::convert::TryInto;
 use std::fmt;
 use std::marker::PhantomData;
@@ -283,7 +282,8 @@ impl<
         mut layouter: impl Layouter<F>,
         message: [AssignedCell<F, F>; L],
     ) -> Result<AssignedCell<F, F>, Error> {
-        for (i, value) in array::IntoIter::new(message)
+        for (i, value) in message
+            .into_iter()
             .map(PaddedWord::Message)
             .chain(<ConstantLength<L> as Domain<F, RATE>>::padding(L).map(PaddedWord::Padding))
             .enumerate()

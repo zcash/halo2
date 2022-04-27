@@ -1,4 +1,4 @@
-use std::{array, convert::TryInto};
+use std::convert::TryInto;
 
 use super::super::{EccPoint, EccScalarFixedShort, FixedPoints, L_SCALAR_SHORT, NUM_WINDOWS_SHORT};
 use crate::{ecc::chip::MagnitudeSign, utilities::bool_check};
@@ -59,12 +59,12 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 
             Constraints::with_selector(
                 q_mul_fixed_short,
-                array::IntoIter::new([
+                [
                     ("last_window_check", last_window_check),
                     ("sign_check", sign_check),
                     ("y_check", y_check),
                     ("negation_check", negation_check),
-                ]),
+                ],
             )
         });
     }

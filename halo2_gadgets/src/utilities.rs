@@ -6,7 +6,7 @@ use halo2_proofs::{
     plonk::{Advice, Column, Error, Expression},
 };
 use pasta_curves::arithmetic::FieldExt;
-use std::{array, ops::Range};
+use std::ops::Range;
 
 pub mod cond_swap;
 pub mod decompose_running_sum;
@@ -64,7 +64,7 @@ pub(crate) fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize
 ) -> [Option<T>; LEN] {
     let mut ret = [None; LEN];
     if let Some(arr) = option_array {
-        for (entry, value) in ret.iter_mut().zip(array::IntoIter::new(arr)) {
+        for (entry, value) in ret.iter_mut().zip(arr) {
             *entry = Some(value);
         }
     }

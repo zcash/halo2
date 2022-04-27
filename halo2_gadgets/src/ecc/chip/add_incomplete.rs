@@ -1,4 +1,4 @@
-use std::{array, collections::HashSet};
+use std::collections::HashSet;
 
 use super::NonIdentityEccPoint;
 use ff::Field;
@@ -50,7 +50,9 @@ impl Config {
     }
 
     pub(crate) fn advice_columns(&self) -> HashSet<Column<Advice>> {
-        core::array::IntoIter::new([self.x_p, self.y_p, self.x_qr, self.y_qr]).collect()
+        [self.x_p, self.y_p, self.x_qr, self.y_qr]
+            .into_iter()
+            .collect()
     }
 
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
@@ -74,10 +76,7 @@ impl Config {
             // (y_r + y_q)(x_p − x_q) − (y_p − y_q)(x_q − x_r) = 0
             let poly2 = (y_r + y_q.clone()) * (x_p - x_q.clone()) - (y_p - y_q) * (x_q - x_r);
 
-            Constraints::with_selector(
-                q_add_incomplete,
-                array::IntoIter::new([("x_r", poly1), ("y_r", poly2)]),
-            )
+            Constraints::with_selector(q_add_incomplete, [("x_r", poly1), ("y_r", poly2)])
         });
     }
 
