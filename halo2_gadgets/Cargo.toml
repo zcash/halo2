@@ -9,6 +9,7 @@ authors = [
     "Kris Nuttycombe <kris@electriccoin.co>",
 ]
 edition = "2018"
+rust-version = "1.56.1"
 description = "[BETA] Reusable gadgets and chip implementations for Halo 2"
 license-file = "../COPYING"
 repository = "https://github.com/zcash/halo2"
