@@ -1,5 +1,3 @@
-use std::array;
-
 use super::{EccPoint, NonIdentityEccPoint};
 
 use group::prime::PrimeCurveAffine;
@@ -68,10 +66,10 @@ impl Config {
             // of the form `q_point * (x * curve_eqn)`, but this was implemented without
             // parentheses, and thus evaluates as `(q_point * x) * curve_eqn`, which is
             // structurally different in the pinned verifying key.
-            array::IntoIter::new([
+            [
                 ("x == 0 v on_curve", q_point.clone() * x * curve_eqn(meta)),
                 ("y == 0 v on_curve", q_point * y * curve_eqn(meta)),
-            ])
+            ]
         });
 
         meta.create_gate("witness non-identity point", |meta| {

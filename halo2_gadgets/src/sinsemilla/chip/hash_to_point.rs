@@ -132,16 +132,14 @@ where
                 // Get message as a bitstring.
                 let bitstring: Vec<bool> = message
                     .iter()
-                    .map(|piece: &MessagePiece<pallas::Base, K>| {
+                    .flat_map(|piece: &MessagePiece<pallas::Base, K>| {
                         piece
                             .field_elem()
                             .unwrap()
                             .to_le_bits()
                             .into_iter()
                             .take(K * piece.num_words())
-                            .collect::<Vec<_>>()
                     })
-                    .flatten()
                     .collect();
 
                 let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
@@ -251,7 +249,7 @@ where
         let words: Option<Vec<u32>> = bitstring.map(|bitstring| {
             bitstring
                 .chunks_exact(sinsemilla::K)
-                .map(|word| lebs2ip_k(word))
+                .map(lebs2ip_k)
                 .collect()
         });
 

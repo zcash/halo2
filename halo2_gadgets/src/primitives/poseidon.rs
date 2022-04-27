@@ -1,6 +1,5 @@
 //! The Poseidon algebraic hash function.
 
-use std::array;
 use std::convert::TryInto;
 use std::fmt;
 use std::iter;
@@ -363,8 +362,9 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, const 
 {
     /// Hashes the given input.
     pub fn hash(mut self, message: [F; L]) -> F {
-        for value in
-            array::IntoIter::new(message).chain(<ConstantLength<L> as Domain<F, RATE>>::padding(L))
+        for value in message
+            .into_iter()
+            .chain(<ConstantLength<L> as Domain<F, RATE>>::padding(L))
         {
             self.sponge.absorb(value);
         }

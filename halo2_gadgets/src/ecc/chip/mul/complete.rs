@@ -74,7 +74,7 @@ impl Config {
 
                 Constraints::with_selector(
                     q_mul_decompose_var,
-                    std::array::IntoIter::new([("bool_check", bool_check), ("y_switch", y_switch)]),
+                    [("bool_check", bool_check), ("y_switch", y_switch)],
                 )
             },
         );

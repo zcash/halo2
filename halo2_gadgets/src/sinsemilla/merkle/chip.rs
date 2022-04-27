@@ -25,7 +25,6 @@ use crate::{
     },
 };
 use group::ff::PrimeField;
-use std::array;
 
 /// Configuration for the `MerkleChip` implementation.
 #[derive(Clone, Debug)]
@@ -165,12 +164,12 @@ where
 
             Constraints::with_selector(
                 q_decompose,
-                array::IntoIter::new([
+                [
                     ("l_check", l_check),
                     ("left_check", left_check),
                     ("right_check", right_check),
                     ("b1_b2_check", b1_b2_check),
-                ]),
+                ],
             )
         });
 

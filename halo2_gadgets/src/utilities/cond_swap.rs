@@ -7,7 +7,7 @@ use halo2_proofs::{
     poly::Rotation,
 };
 use pasta_curves::arithmetic::FieldExt;
-use std::{array, marker::PhantomData};
+use std::marker::PhantomData;
 
 /// Instructions for a conditional swap gadget.
 pub trait CondSwapInstructions<F: FieldExt>: UtilitiesInstructions<F> {
@@ -191,11 +191,11 @@ impl<F: FieldExt> CondSwapChip<F> {
 
             Constraints::with_selector(
                 q_swap,
-                array::IntoIter::new([
+                [
                     ("a check", a_check),
                     ("b check", b_check),
                     ("swap is bool", bool_check),
-                ]),
+                ],
             )
         });
 

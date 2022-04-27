@@ -210,8 +210,8 @@ impl From<CostOptions> for Circuit {
             .chain(opts.instance.iter())
             .chain(opts.fixed.iter())
             .cloned()
-            .chain(opts.lookup.iter().map(|l| l.queries()).flatten())
-            .chain(opts.permutation.iter().map(|p| p.queries()).flatten())
+            .chain(opts.lookup.iter().flat_map(|l| l.queries()))
+            .chain(opts.permutation.iter().flat_map(|p| p.queries()))
             .chain(iter::repeat("0".parse().unwrap()).take(max_deg - 1))
             .collect();
 

@@ -6,7 +6,7 @@ use halo2_proofs::{
     plonk::{Advice, Column, Error, Expression},
 };
 use pasta_curves::arithmetic::FieldExt;
-use std::{array, ops::Range};
+use std::ops::Range;
 
 pub mod cond_swap;
 pub mod decompose_running_sum;
@@ -64,7 +64,7 @@ pub(crate) fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize
 ) -> [Option<T>; LEN] {
     let mut ret = [None; LEN];
     if let Some(arr) = option_array {
-        for (entry, value) in ret.iter_mut().zip(array::IntoIter::new(arr)) {
+        for (entry, value) in ret.iter_mut().zip(arr) {
             *entry = Some(value);
         }
     }
@@ -167,10 +167,10 @@ pub fn i2lebsp<const NUM_BITS: usize>(int: u64) -> [bool; NUM_BITS] {
     /// Takes in an FnMut closure and returns a constant-length array with elements of
     /// type `Output`.
     fn gen_const_array<Output: Copy + Default, const LEN: usize>(
-        mut closure: impl FnMut(usize) -> Output,
+        closure: impl FnMut(usize) -> Output,
     ) -> [Output; LEN] {
         let mut ret: [Output; LEN] = [Default::default(); LEN];
-        for (bit, val) in ret.iter_mut().zip((0..LEN).map(|idx| closure(idx))) {
+        for (bit, val) in ret.iter_mut().zip((0..LEN).map(closure)) {
             *bit = val;
         }
         ret

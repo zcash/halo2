@@ -435,7 +435,7 @@ mod tests {
                 // Run message_scheduler to get W_[0..64]
                 let (w, _) = config.message_schedule.process(&mut layouter, inputs)?;
                 for (word, test_word) in w.iter().zip(MSG_SCHEDULE_TEST_OUTPUT.iter()) {
-                    let word: u32 = lebs2ip(&word.value().unwrap()) as u32;
+                    let word: u32 = lebs2ip(word.value().unwrap()) as u32;
                     assert_eq!(word, *test_word);
                 }
                 Ok(())
