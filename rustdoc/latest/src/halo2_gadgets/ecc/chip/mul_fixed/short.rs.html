@@ -640,7 +640,7 @@
 <span id="620">620</span>
 <span id="621">621</span>
 <span id="622">622</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">array</span>, <span class="ident">convert::TryInto</span>};
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">EccPoint</span>, <span class="ident">EccScalarFixedShort</span>, <span class="ident">FixedPoints</span>, <span class="ident">L_SCALAR_SHORT</span>, <span class="ident">NUM_WINDOWS_SHORT</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">ecc::chip::MagnitudeSign</span>, <span class="ident">utilities::bool_check</span>};
@@ -701,12 +701,12 @@
 
             <span class="ident">Constraints::with_selector</span>(
                 <span class="ident">q_mul_fixed_short</span>,
-                <span class="ident">array::IntoIter::new</span>([
+                [
                     (<span class="string">&quot;last_window_check&quot;</span>, <span class="ident">last_window_check</span>),
                     (<span class="string">&quot;sign_check&quot;</span>, <span class="ident">sign_check</span>),
                     (<span class="string">&quot;y_check&quot;</span>, <span class="ident">y_check</span>),
                     (<span class="string">&quot;negation_check&quot;</span>, <span class="ident">negation_check</span>),
-                ]),
+                ],
             )
         });
     }
@@ -1263,5 +1263,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (082e4ca49 2022-04-26)" ></div>
 </body></html>

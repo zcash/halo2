@@ -517,7 +517,6 @@
 <span id="497">497</span>
 <span id="498">498</span>
 <span id="499">499</span>
-<span id="500">500</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Chip implementing a Merkle hash using Sinsemilla as the hash function.</span>
 
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
@@ -545,7 +544,6 @@
     },
 };
 <span class="kw">use</span> <span class="ident">group::ff::PrimeField</span>;
-<span class="kw">use</span> <span class="ident">std::array</span>;
 
 <span class="doccomment">/// Configuration for the `MerkleChip` implementation.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
@@ -685,12 +683,12 @@
 
             <span class="ident">Constraints::with_selector</span>(
                 <span class="ident">q_decompose</span>,
-                <span class="ident">array::IntoIter::new</span>([
+                [
                     (<span class="string">&quot;l_check&quot;</span>, <span class="ident">l_check</span>),
                     (<span class="string">&quot;left_check&quot;</span>, <span class="ident">left_check</span>),
                     (<span class="string">&quot;right_check&quot;</span>, <span class="ident">right_check</span>),
                     (<span class="string">&quot;b1_b2_check&quot;</span>, <span class="ident">b1_b2_check</span>),
-                ]),
+                ],
             )
         });
 
@@ -1019,5 +1017,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (082e4ca49 2022-04-26)" ></div>
 </body></html>

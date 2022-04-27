@@ -348,9 +348,6 @@
 <span id="328">328</span>
 <span id="329">329</span>
 <span id="330">330</span>
-<span id="331">331</span>
-<span id="332">332</span>
-<span id="333">333</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Chip implementations for the Sinsemilla gadgets.</span>
 
 <span class="kw">use</span> <span class="kw">super</span>::{
@@ -612,10 +609,7 @@
                 <span class="ident">lhs</span> <span class="op">-</span> <span class="ident">rhs</span>
             };
 
-            <span class="ident">Constraints::with_selector</span>(
-                <span class="ident">q_s1</span>,
-                <span class="ident">std::array::IntoIter::new</span>([(<span class="string">&quot;Secant line&quot;</span>, <span class="ident">secant_line</span>), (<span class="string">&quot;y check&quot;</span>, <span class="ident">y_check</span>)]),
-            )
+            <span class="ident">Constraints::with_selector</span>(<span class="ident">q_s1</span>, [(<span class="string">&quot;Secant line&quot;</span>, <span class="ident">secant_line</span>), (<span class="string">&quot;y check&quot;</span>, <span class="ident">y_check</span>)])
         });
 
         <span class="ident">config</span>
@@ -685,5 +679,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (082e4ca49 2022-04-26)" ></div>
 </body></html>

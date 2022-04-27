@@ -195,11 +195,7 @@
 <span id="175">175</span>
 <span id="176">176</span>
 <span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::array</span>;
-
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">EccPoint</span>, <span class="ident">NonIdentityEccPoint</span>};
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">EccPoint</span>, <span class="ident">NonIdentityEccPoint</span>};
 
 <span class="kw">use</span> <span class="ident">group::prime::PrimeCurveAffine</span>;
 
@@ -267,10 +263,10 @@
             <span class="comment">// of the form `q_point * (x * curve_eqn)`, but this was implemented without</span>
             <span class="comment">// parentheses, and thus evaluates as `(q_point * x) * curve_eqn`, which is</span>
             <span class="comment">// structurally different in the pinned verifying key.</span>
-            <span class="ident">array::IntoIter::new</span>([
+            [
                 (<span class="string">&quot;x == 0 v on_curve&quot;</span>, <span class="ident">q_point</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x</span> <span class="op">*</span> <span class="ident">curve_eqn</span>(<span class="ident">meta</span>)),
                 (<span class="string">&quot;y == 0 v on_curve&quot;</span>, <span class="ident">q_point</span> <span class="op">*</span> <span class="ident">y</span> <span class="op">*</span> <span class="ident">curve_eqn</span>(<span class="ident">meta</span>)),
-            ])
+            ]
         });
 
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;witness non-identity point&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
@@ -377,5 +373,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (082e4ca49 2022-04-26)" ></div>
 </body></html>

@@ -223,8 +223,7 @@
 <span id="203">203</span>
 <span id="204">204</span>
 <span id="205">205</span>
-<span id="206">206</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">array</span>, <span class="ident">collections::HashSet</span>};
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::collections::HashSet</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::NonIdentityEccPoint</span>;
 <span class="kw">use</span> <span class="ident">ff::Field</span>;
@@ -276,7 +275,9 @@
     }
 
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">advice_columns</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">core::array::IntoIter::new</span>([<span class="self">self</span>.<span class="ident">x_p</span>, <span class="self">self</span>.<span class="ident">y_p</span>, <span class="self">self</span>.<span class="ident">x_qr</span>, <span class="self">self</span>.<span class="ident">y_qr</span>]).<span class="ident">collect</span>()
+        [<span class="self">self</span>.<span class="ident">x_p</span>, <span class="self">self</span>.<span class="ident">y_p</span>, <span class="self">self</span>.<span class="ident">x_qr</span>, <span class="self">self</span>.<span class="ident">y_qr</span>]
+            .<span class="ident">into_iter</span>()
+            .<span class="ident">collect</span>()
     }
 
     <span class="kw">fn</span> <span class="ident">create_gate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) {
@@ -300,10 +301,7 @@
             <span class="comment">// (y_r + y_q)(x_p − x_q) − (y_p − y_q)(x_q − x_r) = 0</span>
             <span class="kw">let</span> <span class="ident">poly2</span> <span class="op">=</span> (<span class="ident">y_r</span> <span class="op">+</span> <span class="ident">y_q</span>.<span class="ident">clone</span>()) <span class="op">*</span> (<span class="ident">x_p</span> <span class="op">-</span> <span class="ident">x_q</span>.<span class="ident">clone</span>()) <span class="op">-</span> (<span class="ident">y_p</span> <span class="op">-</span> <span class="ident">y_q</span>) <span class="op">*</span> (<span class="ident">x_q</span> <span class="op">-</span> <span class="ident">x_r</span>);
 
-            <span class="ident">Constraints::with_selector</span>(
-                <span class="ident">q_add_incomplete</span>,
-                <span class="ident">array::IntoIter::new</span>([(<span class="string">&quot;x_r&quot;</span>, <span class="ident">poly1</span>), (<span class="string">&quot;y_r&quot;</span>, <span class="ident">poly2</span>)]),
-            )
+            <span class="ident">Constraints::with_selector</span>(<span class="ident">q_add_incomplete</span>, [(<span class="string">&quot;x_r&quot;</span>, <span class="ident">poly1</span>), (<span class="string">&quot;y_r&quot;</span>, <span class="ident">poly2</span>)])
         });
     }
 
@@ -431,5 +429,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (082e4ca49 2022-04-26)" ></div>
 </body></html>

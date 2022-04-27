@@ -466,8 +466,6 @@
 <span id="446">446</span>
 <span id="447">447</span>
 <span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">CommitDomains</span>, <span class="ident">HashDomains</span>, <span class="ident">SinsemillaInstructions</span>};
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">NonIdentityEccPoint</span>, <span class="ident">SinsemillaChip</span>};
 
@@ -602,16 +600,14 @@
                 <span class="comment">// Get message as a bitstring.</span>
                 <span class="kw">let</span> <span class="ident">bitstring</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">message</span>
                     .<span class="ident">iter</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">piece</span>: <span class="kw-2">&amp;</span><span class="ident">MessagePiece</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">K</span><span class="op">&gt;</span><span class="op">|</span> {
+                    .<span class="ident">flat_map</span>(<span class="op">|</span><span class="ident">piece</span>: <span class="kw-2">&amp;</span><span class="ident">MessagePiece</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">K</span><span class="op">&gt;</span><span class="op">|</span> {
                         <span class="ident">piece</span>
                             .<span class="ident">field_elem</span>()
                             .<span class="ident">unwrap</span>()
                             .<span class="ident">to_le_bits</span>()
                             .<span class="ident">into_iter</span>()
                             .<span class="ident">take</span>(<span class="ident">K</span> <span class="op">*</span> <span class="ident">piece</span>.<span class="ident">num_words</span>())
-                            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
                     })
-                    .<span class="ident">flatten</span>()
                     .<span class="ident">collect</span>();
 
                 <span class="kw">let</span> <span class="ident">hasher_S</span> <span class="op">=</span> <span class="ident">pallas::Point::hash_to_curve</span>(<span class="ident">S_PERSONALIZATION</span>);
@@ -721,7 +717,7 @@
         <span class="kw">let</span> <span class="ident">words</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">bitstring</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">bitstring</span><span class="op">|</span> {
             <span class="ident">bitstring</span>
                 .<span class="ident">chunks_exact</span>(<span class="ident">sinsemilla::K</span>)
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident">lebs2ip_k</span>(<span class="ident">word</span>))
+                .<span class="ident">map</span>(<span class="ident">lebs2ip_k</span>)
                 .<span class="ident">collect</span>()
         });
 
@@ -919,5 +915,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (082e4ca49 2022-04-26)" ></div>
 </body></html>

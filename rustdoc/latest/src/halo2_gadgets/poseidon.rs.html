@@ -318,7 +318,6 @@
 <span id="298">298</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Gadget and chips for the Poseidon algebraic hash function.</span>
 
-<span class="kw">use</span> <span class="ident">std::array</span>;
 <span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
 <span class="kw">use</span> <span class="ident">std::fmt</span>;
 <span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
@@ -601,7 +600,8 @@
         <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
         <span class="ident">message</span>: [<span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>; <span class="ident">L</span>],
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">value</span>) <span class="kw">in</span> <span class="ident">array::IntoIter::new</span>(<span class="ident">message</span>)
+        <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">value</span>) <span class="kw">in</span> <span class="ident">message</span>
+            .<span class="ident">into_iter</span>()
             .<span class="ident">map</span>(<span class="ident">PaddedWord::Message</span>)
             .<span class="ident">chain</span>(<span class="op">&lt;</span><span class="ident">ConstantLength</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">Domain</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::padding</span>(<span class="ident">L</span>).<span class="ident">map</span>(<span class="ident">PaddedWord::Padding</span>))
             .<span class="ident">enumerate</span>()
@@ -615,5 +615,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (082e4ca49 2022-04-26)" ></div>
 </body></html>

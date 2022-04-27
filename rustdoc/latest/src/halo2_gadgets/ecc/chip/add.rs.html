@@ -520,10 +520,7 @@
 <span id="500">500</span>
 <span id="501">501</span>
 <span id="502">502</span>
-<span id="503">503</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::array</span>;
-
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::EccPoint</span>;
+</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::EccPoint</span>;
 <span class="kw">use</span> <span class="ident">ff</span>::{<span class="ident">BatchInvert</span>, <span class="ident">Field</span>};
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit::Region</span>,
@@ -594,7 +591,7 @@
     }
 
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">advice_columns</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">core::array::IntoIter::new</span>([
+        [
             <span class="self">self</span>.<span class="ident">x_p</span>,
             <span class="self">self</span>.<span class="ident">y_p</span>,
             <span class="self">self</span>.<span class="ident">x_qr</span>,
@@ -604,12 +601,13 @@
             <span class="self">self</span>.<span class="ident">beta</span>,
             <span class="self">self</span>.<span class="ident">gamma</span>,
             <span class="self">self</span>.<span class="ident">delta</span>,
-        ])
+        ]
+        .<span class="ident">into_iter</span>()
         .<span class="ident">collect</span>()
     }
 
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">output_columns</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="ident">core::array::IntoIter::new</span>([<span class="self">self</span>.<span class="ident">x_qr</span>, <span class="self">self</span>.<span class="ident">y_qr</span>]).<span class="ident">collect</span>()
+        [<span class="self">self</span>.<span class="ident">x_qr</span>, <span class="self">self</span>.<span class="ident">y_qr</span>].<span class="ident">into_iter</span>().<span class="ident">collect</span>()
     }
 
     <span class="kw">fn</span> <span class="ident">create_gate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) {
@@ -729,10 +727,10 @@
 
             <span class="ident">Constraints::with_selector</span>(
                 <span class="ident">q_add</span>,
-                <span class="ident">array::IntoIter::new</span>([
+                [
                     <span class="ident">poly1</span>, <span class="ident">poly2</span>, <span class="ident">poly3</span>, <span class="ident">poly4</span>, <span class="ident">poly5</span>, <span class="ident">poly6</span>, <span class="ident">poly7</span>, <span class="ident">poly8</span>, <span class="ident">poly9</span>, <span class="ident">poly10</span>, <span class="ident">poly11</span>,
                     <span class="ident">poly12</span>,
-                ]),
+                ],
             )
         });
     }
@@ -1025,5 +1023,5 @@
     }
 }
 </code></pre></div>
-</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (055bf4ccd 2022-04-25)" ></div>
+</section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (082e4ca49 2022-04-26)" ></div>
 </body></html>
