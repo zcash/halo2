@@ -42,7 +42,7 @@ criterion = "0.3"
 proptest = "1.0.0"
 
 [target.'cfg(unix)'.dev-dependencies]
-pprof = { version = "0.6.2", features = ["criterion", "flamegraph"] } # MSRV 1.56
+pprof = { version = "0.8", features = ["criterion", "flamegraph"] } # MSRV 1.56
 
 [lib]
 bench = false
