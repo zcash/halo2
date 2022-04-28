@@ -191,12 +191,13 @@ pub fn best_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
     }
 
     // precompute twiddle factors
-    let mut w = G::Scalar::one();
-    let mut twiddles = vec![G::Scalar::one(); (n / 2) as usize];
-    for tw in twiddles.iter_mut() {
-        *tw = w;
-        w.group_scale(&omega);
-    }
+    let twiddles: Vec<_> = (0..(n / 2) as usize)
+        .scan(G::Scalar::one(), |w, _| {
+            let tw = *w;
+            w.group_scale(&omega);
+            Some(tw)
+        })
+        .collect();
 
     if log_n <= log_threads {
         let mut chunk = 2_usize;
