@@ -20,3 +20,6 @@ rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
 
 [dependencies]
 halo2_proofs = { version = "0.1.0-beta.2", path = "../halo2_proofs" }
+
+[lib]
+bench = false
