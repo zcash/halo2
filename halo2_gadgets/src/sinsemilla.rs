@@ -1,7 +1,7 @@
 //! Gadgets for the Sinsemilla hash function.
 use crate::{
     ecc::{self, EccInstructions, FixedPoints},
-    utilities::Var,
+    utilities::{FieldValue, RangeConstrained, Var},
 };
 use group::ff::{Field, PrimeField};
 use halo2_proofs::{circuit::Layouter, plonk::Error};
@@ -220,6 +220,40 @@ where
     ) -> Result<Self, Error> {
         let inner = chip.witness_message_piece(layouter, field_elem, num_words)?;
         Ok(Self { chip, inner })
+    }
+
+    /// Constructs a `MessagePiece` by concatenating a sequence of [`RangeConstrained`]
+    /// subpieces.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the total number of bits across the subpieces is not a multiple of the
+    /// word size, or if the required bitshift for any subpiece is greater than 63 bits.
+    pub fn from_subpieces(
+        chip: SinsemillaChip,
+        layouter: impl Layouter<C::Base>,
+        subpieces: impl IntoIterator<Item = RangeConstrained<C::Base, Option<C::Base>>>,
+    ) -> Result<Self, Error> {
+        let (field_elem, total_bits) =
+            subpieces
+                .into_iter()
+                .fold((Some(C::Base::zero()), 0), |(acc, bits), subpiece| {
+                    assert!(bits < 64);
+                    let subpiece_shifted = subpiece
+                        .inner()
+                        .value()
+                        .map(|v| C::Base::from(1 << bits) * v);
+                    (
+                        acc.zip(subpiece_shifted).map(|(a, b)| a + b),
+                        bits + subpiece.num_bits(),
+                    )
+                });
+
+        // Message must be composed of `K`-bit words.
+        assert_eq!(total_bits % K, 0);
+        let num_words = total_bits / K;
+
+        Self::from_field_elem(chip, layouter, field_elem, num_words)
     }
 }
 
