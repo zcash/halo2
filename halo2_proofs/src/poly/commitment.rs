@@ -5,7 +5,8 @@
 
 use super::{Coeff, LagrangeCoeff, Polynomial, MSM};
 use crate::arithmetic::{
-    best_fft, best_multiexp, parallelize, CurveAffine, CurveExt, Engine, FieldExt, Group,
+    best_fft, best_multiexp, parallelize, parallelize_is_ok, CurveAffine, CurveExt, Engine,
+    FieldExt, Group,
 };
 use crate::helpers::CurveRead;
 
@@ -177,12 +178,45 @@ impl<C: CurveAffine> Params<C> {
         let k = u32::from_le_bytes(k);
         let n = 1 << k;
 
-        let g: Vec<C> = (0..n)
-            .map(|_| C::read(&mut reader))
-            .collect::<Result<_, _>>()?;
-        let g_lagrange: Vec<C> = (0..n)
-            .map(|_| C::read(&mut reader))
-            .collect::<Result<_, _>>()?;
+        let mut g_compressed: Vec<C::Repr> = vec![C::Repr::default(); n];
+        for i in 0..n {
+            reader.read_exact(g_compressed[i].as_mut())?;
+        }
+
+        let mut g_lagrange_compressed: Vec<C::Repr> = vec![C::Repr::default(); n];
+        for i in 0..n {
+            reader.read_exact(g_lagrange_compressed[i].as_mut())?;
+        }
+
+        let g: Vec<C> = {
+            let mut g = vec![C::default(); n];
+            parallelize_is_ok(&mut g, |g, chunks| {
+                for (i, g) in g.iter_mut().enumerate() {
+                    let tmp = C::convert_from_bytes(g_compressed[chunks + i]);
+                    *g = match tmp {
+                        Ok(ele) => ele,
+                        Err(e) => return Err(e),
+                    }
+                }
+                Ok(())
+            })?;
+            g
+        };
+
+        let g_lagrange: Vec<C> = {
+            let mut g_lagrange = vec![C::default(); n];
+            parallelize_is_ok(&mut g_lagrange, |g_lagrange, chunks| {
+                for (i, g_lagrange) in g_lagrange.iter_mut().enumerate() {
+                    let tmp = C::convert_from_bytes(g_lagrange_compressed[chunks + i]);
+                    *g_lagrange = match tmp {
+                        Ok(ele) => ele,
+                        Err(e) => return Err(e),
+                    }
+                }
+                Ok(())
+            })?;
+            g_lagrange
+        };
 
         let mut additional_data_len = [0u8; 4];
         reader.read_exact(&mut additional_data_len[..])?;
@@ -193,7 +227,7 @@ impl<C: CurveAffine> Params<C> {
 
         Ok(Params {
             k,
-            n,
+            n: n as u64,
             g,
             g_lagrange,
             additional_data,
