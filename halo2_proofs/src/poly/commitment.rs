@@ -5,8 +5,7 @@
 
 use super::{Coeff, LagrangeCoeff, Polynomial, MSM};
 use crate::arithmetic::{
-    best_fft, best_multiexp, parallelize, parallelize_is_ok, CurveAffine, CurveExt, Engine,
-    FieldExt, Group,
+    best_fft, best_multiexp, parallelize, CurveAffine, CurveExt, Engine, FieldExt, Group,
 };
 use crate::helpers::CurveRead;
 
@@ -179,42 +178,32 @@ impl<C: CurveAffine> Params<C> {
         let n = 1 << k;
 
         let mut g_compressed: Vec<C::Repr> = vec![C::Repr::default(); n];
-        for i in 0..n {
-            reader.read_exact(g_compressed[i].as_mut())?;
+        for g_compressed in g_compressed.iter_mut() {
+            reader.read_exact((*g_compressed).as_mut())?;
         }
 
         let mut g_lagrange_compressed: Vec<C::Repr> = vec![C::Repr::default(); n];
-        for i in 0..n {
-            reader.read_exact(g_lagrange_compressed[i].as_mut())?;
+        for g_lagrange_compressed in g_lagrange_compressed.iter_mut() {
+            reader.read_exact((*g_lagrange_compressed).as_mut())?;
         }
 
         let g: Vec<C> = {
             let mut g = vec![C::default(); n];
-            parallelize_is_ok(&mut g, |g, chunks| {
+            parallelize(&mut g, |g, chunks| {
                 for (i, g) in g.iter_mut().enumerate() {
-                    let tmp = C::convert_from_bytes(g_compressed[chunks + i]);
-                    *g = match tmp {
-                        Ok(ele) => ele,
-                        Err(e) => return Err(e),
-                    }
+                    *g = C::convert_from_bytes(g_compressed[chunks + i]).unwrap();
                 }
-                Ok(())
-            })?;
+            });
             g
         };
 
         let g_lagrange: Vec<C> = {
             let mut g_lagrange = vec![C::default(); n];
-            parallelize_is_ok(&mut g_lagrange, |g_lagrange, chunks| {
+            parallelize(&mut g_lagrange, |g_lagrange, chunks| {
                 for (i, g_lagrange) in g_lagrange.iter_mut().enumerate() {
-                    let tmp = C::convert_from_bytes(g_lagrange_compressed[chunks + i]);
-                    *g_lagrange = match tmp {
-                        Ok(ele) => ele,
-                        Err(e) => return Err(e),
-                    }
+                    *g_lagrange = C::convert_from_bytes(g_lagrange_compressed[chunks + i]).unwrap();
                 }
-                Ok(())
-            })?;
+            });
             g_lagrange
         };
 
