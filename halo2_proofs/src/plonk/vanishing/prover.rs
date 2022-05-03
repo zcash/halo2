@@ -54,25 +54,13 @@ impl<C: CurveAffine> Argument<C> {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(in crate::plonk) fn construct<
-        E: EncodedChallenge<C>,
-        Ev: Copy + Send + Sync,
-        T: TranscriptWrite<C, E>,
-    >(
+    pub(in crate::plonk) fn construct<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
         self,
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
-        evaluator: poly::Evaluator<Ev, C::Scalar, ExtendedLagrangeCoeff>,
-        expressions: impl Iterator<Item = poly::Ast<Ev, C::Scalar, ExtendedLagrangeCoeff>>,
-        y: ChallengeY<C>,
+        h_poly: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
         transcript: &mut T,
     ) -> Result<Constructed<C>, Error> {
-        // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
-        let h_poly = expressions
-            .reduce(|h_poly, v| &(&h_poly * *y) + &v) // Fold the gates together with the y challenge
-            .unwrap_or_else(|| poly::Ast::ConstantTerm(C::Scalar::zero()));
-        let h_poly = evaluator.evaluate(&h_poly, domain); // Evaluate the h(X) polynomial
-
         // Divide by t(X) = X^{params.n} - 1.
         let h_poly = domain.divide_by_vanishing_poly(h_poly);
 

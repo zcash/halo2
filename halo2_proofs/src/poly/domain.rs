@@ -360,6 +360,16 @@ impl<G: Group> EvaluationDomain<G> {
         });
     }
 
+    /// Get the size of the domain
+    pub fn k(&self) -> u32 {
+        self.k
+    }
+
+    /// Get the size of the extended domain
+    pub fn extended_k(&self) -> u32 {
+        self.extended_k
+    }
+
     /// Get the size of the extended domain
     pub fn extended_len(&self) -> usize {
         1 << self.extended_k
