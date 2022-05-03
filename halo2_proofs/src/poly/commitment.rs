@@ -179,12 +179,23 @@ impl<C: CurveAffine> Params<C> {
         let k = u32::from_le_bytes(k);
         let n = 1 << k;
 
-        let g: Vec<C> = (0..n)
-            .map(|_| C::read(&mut reader))
-            .collect::<Result<_, _>>()?;
-        let g_lagrange: Vec<C> = (0..n)
-            .map(|_| C::read(&mut reader))
-            .collect::<Result<_, _>>()?;
+        let load_points_from_file_parallelly = |reader: &mut R| -> io::Result<Vec<C>> {
+            let mut points_compressed: Vec<C::Repr> = vec![C::Repr::default(); n];
+            for points_compressed in points_compressed.iter_mut() {
+                reader.read_exact((*points_compressed).as_mut())?;
+            }
+
+            let mut points = vec![C::default(); n];
+            parallelize(&mut points, |points, chunks| {
+                for (i, point) in points.iter_mut().enumerate() {
+                    *point = Option::from(C::from_bytes(&points_compressed[chunks + i])).unwrap();
+                }
+            });
+            Ok(points)
+        };
+
+        let g = load_points_from_file_parallelly(&mut reader)?;
+        let g_lagrange = load_points_from_file_parallelly(&mut reader)?;
 
         let mut additional_data_len = [0u8; 4];
         reader.read_exact(&mut additional_data_len[..])?;
@@ -195,7 +206,7 @@ impl<C: CurveAffine> Params<C> {
 
         Ok(Params {
             k,
-            n,
+            n: n as u64,
             g,
             g_lagrange,
             additional_data,
