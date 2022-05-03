@@ -1,8 +1,6 @@
 //! This module provides common utilities, traits and structures for group,
 //! field and polynomial arithmetic.
 
-use std::io;
-
 use super::multicore;
 pub use ff::Field;
 use group::{
