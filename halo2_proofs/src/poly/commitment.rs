@@ -177,35 +177,23 @@ impl<C: CurveAffine> Params<C> {
         let k = u32::from_le_bytes(k);
         let n = 1 << k;
 
-        let mut g_compressed: Vec<C::Repr> = vec![C::Repr::default(); n];
-        for g_compressed in g_compressed.iter_mut() {
-            reader.read_exact((*g_compressed).as_mut())?;
-        }
+        let load_points_from_file_parallelly = |reader: &mut R| -> io::Result<Vec<C>> {
+            let mut points_compressed: Vec<C::Repr> = vec![C::Repr::default(); n];
+            for points_compressed in points_compressed.iter_mut() {
+                reader.read_exact((*points_compressed).as_mut())?;
+            }
 
-        let mut g_lagrange_compressed: Vec<C::Repr> = vec![C::Repr::default(); n];
-        for g_lagrange_compressed in g_lagrange_compressed.iter_mut() {
-            reader.read_exact((*g_lagrange_compressed).as_mut())?;
-        }
-
-        let g: Vec<C> = {
-            let mut g = vec![C::default(); n];
-            parallelize(&mut g, |g, chunks| {
-                for (i, g) in g.iter_mut().enumerate() {
-                    *g = C::convert_from_bytes(g_compressed[chunks + i]).unwrap();
+            let mut points = vec![C::default(); n];
+            parallelize(&mut points, |points, chunks| {
+                for (i, point) in points.iter_mut().enumerate() {
+                    *point = Option::from(C::from_bytes(&points_compressed[chunks + i])).unwrap();
                 }
             });
-            g
+            Ok(points)
         };
 
-        let g_lagrange: Vec<C> = {
-            let mut g_lagrange = vec![C::default(); n];
-            parallelize(&mut g_lagrange, |g_lagrange, chunks| {
-                for (i, g_lagrange) in g_lagrange.iter_mut().enumerate() {
-                    *g_lagrange = C::convert_from_bytes(g_lagrange_compressed[chunks + i]).unwrap();
-                }
-            });
-            g_lagrange
-        };
+        let g = load_points_from_file_parallelly(&mut reader)?;
+        let g_lagrange = load_points_from_file_parallelly(&mut reader)?;
 
         let mut additional_data_len = [0u8; 4];
         reader.read_exact(&mut additional_data_len[..])?;

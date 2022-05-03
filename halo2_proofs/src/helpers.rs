@@ -11,11 +11,6 @@ pub(crate) trait CurveRead: CurveAffine {
         Option::from(Self::from_bytes(&compressed))
             .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "invalid point encoding in proof"))
     }
-
-    fn convert_from_bytes(compressed: Self::Repr) -> io::Result<Self> {
-        Option::from(Self::from_bytes(&compressed))
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "invalid point encoding in proof"))
-    }
 }
 
 impl<C: CurveAffine> CurveRead for C {}
