@@ -94,7 +94,7 @@ pub fn bitrange_subset<F: PrimeFieldBits>(field_elem: &F, bitrange: Range<usize>
     field_elem
         .to_le_bits()
         .iter()
-        .by_val()
+        .by_vals()
         .skip(bitrange.start)
         .take(bitrange.end - bitrange.start)
         .rev()

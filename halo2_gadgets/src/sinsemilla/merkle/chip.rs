@@ -360,13 +360,13 @@ where
                 let left: Vec<_> = left
                     .to_le_bits()
                     .iter()
-                    .by_val()
+                    .by_vals()
                     .take(pallas::Base::NUM_BITS as usize)
                     .collect();
                 let right: Vec<_> = right
                     .to_le_bits()
                     .iter()
-                    .by_val()
+                    .by_vals()
                     .take(pallas::Base::NUM_BITS as usize)
                     .collect();
                 let merkle_crh = HashDomain::from_Q(Q.into());

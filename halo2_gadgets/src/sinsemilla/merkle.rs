@@ -318,14 +318,14 @@ pub mod tests {
                                     .chain(
                                         left.to_le_bits()
                                             .iter()
-                                            .by_val()
+                                            .by_vals()
                                             .take(pallas::Base::NUM_BITS as usize),
                                     )
                                     .chain(
                                         right
                                             .to_le_bits()
                                             .iter()
-                                            .by_val()
+                                            .by_vals()
                                             .take(pallas::Base::NUM_BITS as usize),
                                     ),
                             )
