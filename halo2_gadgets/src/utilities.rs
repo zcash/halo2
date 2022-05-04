@@ -99,8 +99,8 @@ impl<F: Field, T: FieldValue<F>> RangeConstrained<F, T> {
 }
 
 impl<F: PrimeFieldBits> RangeConstrained<F, Option<F>> {
-    /// Constructs a `RangeConstrained<Option<F>>` as a subset of the given value.
-    pub fn subset_of(value: Option<&F>, bitrange: Range<usize>) -> Self {
+    /// Constructs a `RangeConstrained<Option<F>>` as a bitrange of the given value.
+    pub fn bitrange_of(value: Option<&F>, bitrange: Range<usize>) -> Self {
         let num_bits = bitrange.len();
         Self {
             inner: value.map(|value| bitrange_subset(value, bitrange)),
