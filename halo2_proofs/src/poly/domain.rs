@@ -15,7 +15,7 @@ use std::marker::PhantomData;
 /// This structure contains precomputed constants and other details needed for
 /// performing operations on an evaluation domain of size $2^k$ and an extended
 /// domain of size $2^{k} * j$ with $j \neq 0$.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct EvaluationDomain<G: Group> {
     n: u64,
     k: u32,
