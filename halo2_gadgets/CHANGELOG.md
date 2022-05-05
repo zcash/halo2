@@ -33,6 +33,10 @@ and this project adheres to Rust's notion of
 - `halo2_gadgets::ecc::chip`:
   - `ScalarKind` has been renamed to `FixedScalarKind`.
 
+### Changed
+- `halo2_gadgets::sinsemilla::merkle::MerklePath` can now be constructed with
+  more or fewer than two `MerkleChip`s.
+
 ## [0.1.0-beta.3] - 2022-04-06
 ### Changed
 - Migrated to `halo2_proofs 0.1.0-beta.4`.

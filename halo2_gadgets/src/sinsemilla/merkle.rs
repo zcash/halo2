@@ -11,7 +11,6 @@ use super::{HashDomains, SinsemillaInstructions};
 use crate::utilities::{
     cond_swap::CondSwapInstructions, i2lebsp, transpose_option_array, UtilitiesInstructions,
 };
-use std::iter;
 
 pub mod chip;
 
@@ -55,11 +54,11 @@ pub struct MerklePath<
     const PATH_LENGTH: usize,
     const K: usize,
     const MAX_WORDS: usize,
+    const PAR: usize,
 > where
     MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
 {
-    chip_1: MerkleChip,
-    chip_2: MerkleChip,
+    chips: [MerkleChip; PAR],
     domain: MerkleChip::HashDomains,
     leaf_pos: Option<u32>,
     // The Merkle path is ordered from leaves to root.
@@ -72,21 +71,27 @@ impl<
         const PATH_LENGTH: usize,
         const K: usize,
         const MAX_WORDS: usize,
-    > MerklePath<C, MerkleChip, PATH_LENGTH, K, MAX_WORDS>
+        const PAR: usize,
+    > MerklePath<C, MerkleChip, PATH_LENGTH, K, MAX_WORDS, PAR>
 where
     MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
 {
     /// Constructs a [`MerklePath`].
+    ///
+    /// A circuit may have many more columns available than are required by a single
+    /// `MerkleChip`. To make better use of the available circuit area, the `MerklePath`
+    /// gadget will distribute its path hashing across each `MerkleChip` in `chips`, such
+    /// that each chip processes `ceil(PATH_LENGTH / PAR)` layers (with the last chip
+    /// processing fewer layers if the division is inexact).
     pub fn construct(
-        chip_1: MerkleChip,
-        chip_2: MerkleChip,
+        chips: [MerkleChip; PAR],
         domain: MerkleChip::HashDomains,
         leaf_pos: Option<u32>,
         path: Option<[C::Base; PATH_LENGTH]>,
     ) -> Self {
+        assert_ne!(PAR, 0);
         Self {
-            chip_1,
-            chip_2,
+            chips,
             domain,
             leaf_pos,
             path,
@@ -101,7 +106,8 @@ impl<
         const PATH_LENGTH: usize,
         const K: usize,
         const MAX_WORDS: usize,
-    > MerklePath<C, MerkleChip, PATH_LENGTH, K, MAX_WORDS>
+        const PAR: usize,
+    > MerklePath<C, MerkleChip, PATH_LENGTH, K, MAX_WORDS, PAR>
 where
     MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
 {
@@ -111,12 +117,11 @@ where
         mut layouter: impl Layouter<C::Base>,
         leaf: MerkleChip::Var,
     ) -> Result<MerkleChip::Var, Error> {
-        // A Sinsemilla chip uses 5 advice columns, but the full Orchard action circuit
-        // uses 10 advice columns. We distribute the path hashing across two Sinsemilla
-        // chips to make better use of the available circuit area.
-        let chips = iter::empty()
-            .chain(iter::repeat(self.chip_1.clone()).take(PATH_LENGTH / 2))
-            .chain(iter::repeat(self.chip_2.clone()));
+        // Each chip processes `ceil(PATH_LENGTH / PAR)` layers.
+        let layers_per_chip = (PATH_LENGTH + PAR - 1) / PAR;
+
+        // Assign each layer to a chip.
+        let chips = (0..PATH_LENGTH).map(|i| self.chips[i / layers_per_chip].clone());
 
         // The Merkle path is ordered from leaves to root, which is consistent with the
         // little-endian representation of `pos` below.
@@ -286,8 +291,7 @@ pub mod tests {
             )?;
 
             let path = MerklePath {
-                chip_1,
-                chip_2,
+                chips: [chip_1, chip_2],
                 domain: TestHashDomain,
                 leaf_pos: self.leaf_pos,
                 path: self.merkle_path,
