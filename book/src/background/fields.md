@@ -11,7 +11,7 @@ numbers $\mathbb{R}$ are an example of a field with uncountably many elements.
 Halo makes use of _finite fields_ which have a finite number of elements. Finite fields
 are fully classified as follows:
 
-- if $\mathbb{F}$ is a finite field, it contains $|\mathbb{F}| = p^k$ elements  for some
+- if $\mathbb{F}$ is a finite field, it contains $|\mathbb{F}| = p^k$ elements for some
   integer $k \geq 1$ and some prime $p$;
 - any two finite fields with the same number of elements are isomorphic. In particular,
   all of the arithmetic in a prime field $\mathbb{F}_p$ is isomorphic to addition and
@@ -203,7 +203,7 @@ with $S = 32$ and $T$ odd (i.e. $p - 1$ has 32 lower zero-bits). This means they
 multiplicative subgroups of order $2^k$ for all $k \leq 32$. These 2-adic subgroups are
 nice for [efficient FFTs], as well as enabling a wide variety of circuit sizes.
 
-[PLONK-based]: upa.md
+[PLONK-based]: plonkish.md
 [efficient FFTs]: polynomials.md#fast-fourier-transform-fft
 
 ## Square roots

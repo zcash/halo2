@@ -7,9 +7,9 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
@@ -32,8 +32,10 @@ jobs:
       - name: Build latest rustdocs
         uses: actions-rs/cargo@v1
         with:
-          command: rustdoc
-          args: -- --cfg docsrs --html-in-header katex-header.html
+          command: doc
+          args: --no-deps --workspace --all-features
+        env:
+          RUSTDOCFLAGS: -Z unstable-options --enable-index-page --cfg docsrs --html-in-header ${{ github.workspace }}/halo2_proofs/katex-header.html
 
       - name: Move latest rustdocs into book
         run: |

@@ -1,3 +1,30 @@
+# Conventions
+
+\bconcat:{\mathop{\kern 0.1em||\kern 0.1em}}
+\Repr:{\star}
+
+# Conversions
+
+\ItoLEBSP:{\mathsf{I2LEBSP}_{#1}}
+
+# Fields and curves
+
+\BaseLength:{\ell^\mathsf{#1\vphantom{p}}_{\mathsf{base}}}
+
+# Commitments and hashes
+
+\SinsemillaHash:{\mathsf{SinsemillaHash}}
+\SinsemillaCommit:{\mathsf{SinsemillaCommit}}
+\SinsemillaShortCommit:{\mathsf{SinsemillaShortCommit}}
+
+# Circuit constraint helper methods
+
+\BoolCheck:{\texttt{bool\_check}({#1})}
+\RangeCheck:{\texttt{range\_check}({#1, #2})}
+\ShortLookupRangeCheck:{\texttt{short\_lookup\_range\_check}({#1})}
+
+# Halo 2 proof
+
 \field:{\mathbb{F}}
 \group:{\mathbb{G}}
 \setup:{\textnormal{Setup}}
@@ -24,7 +51,7 @@
 \bottom:{\perp}
 \alg:{#1_\textnormal{alg}}
 \zero:{\mathcal{O}}
-\dlrel:{\mathsf{dl-rel}}
+\dlrel:{\textsf{dl-rel}}
 \game:{\mathsf{G}}
 \innerprod:{\langle{#1},{#2}\rangle}
 \dlgame:{\mathsf{G}^\dlrel_{\group,n}}
@@ -35,3 +62,14 @@
 \lo:{\textnormal{lo}}
 \hi:{\textnormal{hi}}
 \protocol:{\halo}
+\extractwitness:{\textnormal{ExtractWitness}}
+\pfail:{p_\textnormal{fail}}
+\repr:\{\kern-0.1em {#1} \kern-0.1em\}^{#2}
+\rep:{\repr{#1}{}}
+\repv:{\repr{#1}{\mathbf{#2}}_{#3}}
+\dlreladv:{\mathcal{H}}
+\mr:{\mathcal{M}^{#1}_{#2}({#3})}
+\mv:{\mr{\mathbf{#1}}{#2}{#3}}
+\m:{\mr{#1}{}{#2}}
+\z:{\mathcal{Z}_{#1}({#2}, {#3})}
+\trprefix:{{#1}|_{#2}}

@@ -8,15 +8,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # We don't need to test across multiple platforms yet
-        # os: [ubuntu-latest, windows-latest, macOS-latest]
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.51.0
+          toolchain: 1.56.1
           override: true
       - name: Run tests
         uses: actions-rs/cargo@v1
@@ -34,10 +32,10 @@ jobs:
           - wasm32-wasi
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.51.0
+          toolchain: 1.56.1
           override: true
       - name: Add target
         run: rustup target add ${{ matrix.target }}
@@ -45,17 +43,17 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --all-features
+          args: --features dev-graph,gadget-traces,unstable --target ${{ matrix.target }}
 
   bitrot:
     name: Bitrot check
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.51.0
+          toolchain: 1.56.1
           override: true
       # Build benchmarks to prevent bitrot
       - name: Build benchmarks
@@ -68,10 +66,10 @@ jobs:
     name: Book tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.51.0
+          toolchain: 1.56.1
           override: true
       - name: cargo build
         uses: actions-rs/cargo@v1
@@ -89,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       # Use stable for this to ensure that cargo-tarpaulin can be built.
       - uses: actions-rs/toolchain@v1
         with:
@@ -106,19 +104,17 @@ jobs:
           command: tarpaulin
           args: --all-features --timeout 600 --out Xml
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{secrets.CODECOV_TOKEN}}
+        uses: codecov/codecov-action@v3.1.0
 
   doc-links:
     name: Intra-doc links
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.51.0
+          toolchain: 1.56.1
           override: true
       - name: cargo fetch
         uses: actions-rs/cargo@v1
@@ -138,10 +134,10 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.51.0
+          toolchain: 1.56.1
           override: true
       - run: rustup component add rustfmt
       - uses: actions-rs/cargo@v1

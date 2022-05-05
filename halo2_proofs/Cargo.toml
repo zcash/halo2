@@ -1,0 +1,79 @@
+[package]
+name = "halo2_proofs"
+version = "0.1.0-beta.4"
+authors = [
+    "Sean Bowe <sean@electriccoin.co>",
+    "Ying Tong Lai <yingtong@electriccoin.co>",
+    "Daira Hopwood <daira@electriccoin.co>",
+    "Jack Grigg <jack@electriccoin.co>",
+]
+edition = "2021"
+rust-version = "1.56.1"
+description = """
+[BETA] Fast PLONK-based zero-knowledge proving system with no trusted setup
+"""
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/zcash/halo2"
+documentation = "https://docs.rs/halo2_proofs"
+readme = "README.md"
+categories = ["cryptography"]
+keywords = ["halo", "proofs", "zkp", "zkSNARKs"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
+
+[[bench]]
+name = "arithmetic"
+harness = false
+
+[[bench]]
+name = "hashtocurve"
+harness = false
+
+[[bench]]
+name = "plonk"
+harness = false
+
+[[bench]]
+name = "dev_lookup"
+harness = false
+
+[[bench]]
+name = "fft"
+harness = false
+
+[dependencies]
+backtrace = { version = "0.3", optional = true }
+rayon = "1.5.1"
+ff = "0.12"
+group = "0.12"
+pasta_curves = "0.4"
+rand_core = { version = "0.6", default-features = false }
+blake2b_simd = "1"
+
+# Developer tooling dependencies
+plotters = { version = "0.3.0", optional = true }
+tabbycat = { version = "0.1", features = ["attributes"], optional = true }
+
+[dev-dependencies]
+assert_matches = "1.5"
+criterion = "0.3"
+gumdrop = "0.8"
+proptest = "1"
+rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
+
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+
+[features]
+dev-graph = ["plotters", "tabbycat"]
+gadget-traces = ["backtrace"]
+sanity-checks = []
+
+[lib]
+bench = false
+
+[[example]]
+name = "circuit-layout"
+required-features = ["dev-graph"]
