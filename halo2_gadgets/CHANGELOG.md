@@ -11,6 +11,23 @@ and this project adheres to Rust's notion of
 - `halo2_gadgets::utilities`:
   - `FieldValue` trait.
   - `RangeConstrained` newtype wrapper.
+- `halo2_gadgets::ecc`:
+  - `EccInstructions::witness_scalar_var` API to witness a full-width scalar
+    used in variable-base scalar multiplication.
+  - `BaseFitsInScalarInstructions` trait that can be implemented for a curve
+    whose base field fits into its scalar field. This provides a method
+    `scalar_var_from_base` that converts a base field element that exists as
+    a variable in the circuit, into a scalar to be used in variable-base
+    scalar multiplication.
+  - `ScalarVar::new` and `ScalarVar::from_base` gadget APIs.
+- `halo2_gadgets::ecc::chip`:
+  - `ScalarVar` enum with `BaseFieldElem` and `FullWidth` variants. `FullWidth`
+    is unimplemented for `halo2_gadgets v0.1.0`.
+
+### Changed
+- `halo2_gadgets::ecc`:
+  - `EccInstructions::mul` now takes a `Self::ScalarVar` as argument, instead
+    of assuming that the scalar fits in a base field element `Self::Var`.
 
 ## [0.1.0-beta.3] - 2022-04-06
 ### Changed
