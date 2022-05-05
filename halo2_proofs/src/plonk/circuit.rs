@@ -31,7 +31,8 @@ impl<C: ColumnType> Column<C> {
         Column { index, column_type }
     }
 
-    pub(crate) fn index(&self) -> usize {
+    /// Index of this column.
+    pub fn index(&self) -> usize {
         self.index
     }
 
@@ -599,6 +600,173 @@ impl<F: Field> Expression<F> {
         }
     }
 
+    /// Evaluate the polynomial lazily using the provided closures to perform the
+    /// operations.
+    pub fn evaluate_lazy<T: PartialEq>(
+        &self,
+        constant: &impl Fn(F) -> T,
+        selector_column: &impl Fn(Selector) -> T,
+        fixed_column: &impl Fn(usize, usize, Rotation) -> T,
+        advice_column: &impl Fn(usize, usize, Rotation) -> T,
+        instance_column: &impl Fn(usize, usize, Rotation) -> T,
+        negated: &impl Fn(T) -> T,
+        sum: &impl Fn(T, T) -> T,
+        product: &impl Fn(T, T) -> T,
+        scaled: &impl Fn(T, F) -> T,
+        zero: &T,
+    ) -> T {
+        match self {
+            Expression::Constant(scalar) => constant(*scalar),
+            Expression::Selector(selector) => selector_column(*selector),
+            Expression::Fixed {
+                query_index,
+                column_index,
+                rotation,
+            } => fixed_column(*query_index, *column_index, *rotation),
+            Expression::Advice {
+                query_index,
+                column_index,
+                rotation,
+            } => advice_column(*query_index, *column_index, *rotation),
+            Expression::Instance {
+                query_index,
+                column_index,
+                rotation,
+            } => instance_column(*query_index, *column_index, *rotation),
+            Expression::Negated(a) => {
+                let a = a.evaluate_lazy(
+                    constant,
+                    selector_column,
+                    fixed_column,
+                    advice_column,
+                    instance_column,
+                    negated,
+                    sum,
+                    product,
+                    scaled,
+                    zero,
+                );
+                negated(a)
+            }
+            Expression::Sum(a, b) => {
+                let a = a.evaluate_lazy(
+                    constant,
+                    selector_column,
+                    fixed_column,
+                    advice_column,
+                    instance_column,
+                    negated,
+                    sum,
+                    product,
+                    scaled,
+                    zero,
+                );
+                let b = b.evaluate_lazy(
+                    constant,
+                    selector_column,
+                    fixed_column,
+                    advice_column,
+                    instance_column,
+                    negated,
+                    sum,
+                    product,
+                    scaled,
+                    zero,
+                );
+                sum(a, b)
+            }
+            Expression::Product(a, b) => {
+                let (a, b) = if a.complexity() <= b.complexity() {
+                    (a, b)
+                } else {
+                    (b, a)
+                };
+                let a = a.evaluate_lazy(
+                    constant,
+                    selector_column,
+                    fixed_column,
+                    advice_column,
+                    instance_column,
+                    negated,
+                    sum,
+                    product,
+                    scaled,
+                    zero,
+                );
+
+                if a == *zero {
+                    a
+                } else {
+                    let b = b.evaluate_lazy(
+                        constant,
+                        selector_column,
+                        fixed_column,
+                        advice_column,
+                        instance_column,
+                        negated,
+                        sum,
+                        product,
+                        scaled,
+                        zero,
+                    );
+                    product(a, b)
+                }
+            }
+            Expression::Scaled(a, f) => {
+                let a = a.evaluate_lazy(
+                    constant,
+                    selector_column,
+                    fixed_column,
+                    advice_column,
+                    instance_column,
+                    negated,
+                    sum,
+                    product,
+                    scaled,
+                    zero,
+                );
+                scaled(a, *f)
+            }
+        }
+    }
+
+    /// Identifier for this expression. Expressions with identical identifiers
+    /// do the same calculation (but the expressions don't need to be exactly equal
+    /// in how they are composed e.g. `1 + 2` and `2 + 1` can have the same identifier).
+    pub fn identifier(&self) -> String {
+        match self {
+            Expression::Constant(scalar) => format!("{:?}", scalar),
+            Expression::Selector(selector) => format!("selector[{}]", selector.0),
+            Expression::Fixed {
+                query_index: _,
+                column_index,
+                rotation,
+            } => format!("fixed[{}][{}]", column_index, rotation.0),
+            Expression::Advice {
+                query_index: _,
+                column_index,
+                rotation,
+            } => format!("advice[{}][{}]", column_index, rotation.0),
+            Expression::Instance {
+                query_index: _,
+                column_index,
+                rotation,
+            } => format!("instance[{}][{}]", column_index, rotation.0),
+            Expression::Negated(a) => {
+                format!("(-{})", a.identifier())
+            }
+            Expression::Sum(a, b) => {
+                format!("({}+{})", a.identifier(), b.identifier())
+            }
+            Expression::Product(a, b) => {
+                format!("({}*{})", a.identifier(), b.identifier())
+            }
+            Expression::Scaled(a, f) => {
+                format!("{}*{:?}", a.identifier(), f)
+            }
+        }
+    }
+
     /// Compute the degree of this polynomial
     pub fn degree(&self) -> usize {
         match self {
@@ -611,6 +779,21 @@ impl<F: Field> Expression<F> {
             Expression::Sum(a, b) => max(a.degree(), b.degree()),
             Expression::Product(a, b) => a.degree() + b.degree(),
             Expression::Scaled(poly, _) => poly.degree(),
+        }
+    }
+
+    /// Approximate the computational complexity of this expression.
+    pub fn complexity(&self) -> usize {
+        match self {
+            Expression::Constant(_) => 0,
+            Expression::Selector(_) => 1,
+            Expression::Fixed { .. } => 1,
+            Expression::Advice { .. } => 1,
+            Expression::Instance { .. } => 1,
+            Expression::Negated(poly) => poly.complexity() + 5,
+            Expression::Sum(a, b) => a.complexity() + b.complexity() + 15,
+            Expression::Product(a, b) => a.complexity() + b.complexity() + 30,
+            Expression::Scaled(poly, _) => poly.complexity() + 30,
         }
     }
 

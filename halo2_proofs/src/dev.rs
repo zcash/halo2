@@ -858,7 +858,7 @@ impl<F: FieldExt> MockProver<F> {
                         }
                         let row = row as i32;
                         gate.polynomials().iter().enumerate().filter_map(
-                            move |(poly_index, poly)| match poly.evaluate(
+                            move |(poly_index, poly)| match poly.evaluate_lazy(
                                 &|scalar| Value::Real(scalar),
                                 &|_| panic!("virtual selectors are removed during optimization"),
                                 &load(n, row, &self.cs.fixed_queries, &self.fixed),
@@ -868,6 +868,7 @@ impl<F: FieldExt> MockProver<F> {
                                 &|a, b| a + b,
                                 &|a, b| a * b,
                                 &|a, scalar| a * scalar,
+                                &Value::Real(F::zero()),
                             ) {
                                 Value::Real(x) if x.is_zero_vartime() => None,
                                 Value::Real(_) => Some(VerifyFailure::ConstraintNotSatisfied {
@@ -917,7 +918,7 @@ impl<F: FieldExt> MockProver<F> {
                 .enumerate()
                 .flat_map(|(lookup_index, lookup)| {
                     let load = |expression: &Expression<F>, row| {
-                        expression.evaluate(
+                        expression.evaluate_lazy(
                             &|scalar| Value::Real(scalar),
                             &|_| panic!("virtual selectors are removed during optimization"),
                             &|index, _, _| {
@@ -949,6 +950,7 @@ impl<F: FieldExt> MockProver<F> {
                             &|a, b| a + b,
                             &|a, b| a * b,
                             &|a, scalar| a * scalar,
+                            &Value::Real(F::zero()),
                         )
                     };
 
