@@ -249,7 +249,10 @@ mod tests {
 
     #[test]
     fn pad() {
-        assert_eq!(Pad::new([].iter().cloned()).collect::<Vec<_>>(), vec![]);
+        assert_eq!(
+            Pad::new([].iter().cloned()).collect::<Vec<_>>(),
+            vec![false; 0]
+        );
         assert_eq!(
             Pad::new([true].iter().cloned()).collect::<Vec<_>>(),
             vec![true, false, false, false, false, false, false, false, false, false]

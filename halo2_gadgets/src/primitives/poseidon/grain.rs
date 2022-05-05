@@ -44,7 +44,7 @@ impl SboxType {
 }
 
 pub(super) struct Grain<F: FieldExt> {
-    state: BitArr!(for 80, in Msb0, u8),
+    state: BitArr!(for 80, in u8, Msb0),
     next_bit: usize,
     _field: PhantomData<F>,
 }
@@ -52,7 +52,7 @@ pub(super) struct Grain<F: FieldExt> {
 impl<F: FieldExt> Grain<F> {
     pub(super) fn new(sbox: SboxType, t: u16, r_f: u16, r_p: u16) -> Self {
         // Initialize the LFSR state.
-        let mut state = bitarr![Msb0, u8; 1; STATE];
+        let mut state = bitarr![u8, Msb0; 1; STATE];
         let mut set_bits = |offset: usize, len, value| {
             // Poseidon reference impl sets initial state bits in MSB order.
             for i in 0..len {

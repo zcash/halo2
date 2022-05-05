@@ -427,7 +427,7 @@ mod tests {
                         element
                             .to_le_bits()
                             .iter()
-                            .by_val()
+                            .by_vals()
                             .take(num_words * K)
                             .collect::<Vec<_>>()
                             .chunks_exact(K)
