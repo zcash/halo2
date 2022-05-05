@@ -11,6 +11,8 @@ use super::MerkleInstructions;
 
 use crate::{
     primitives::sinsemilla,
+    sinsemilla::MessagePiece,
+    utilities::RangeConstrained,
     {
         ecc::FixedPoints,
         sinsemilla::{
@@ -18,7 +20,6 @@ use crate::{
             CommitDomains, HashDomains, SinsemillaInstructions,
         },
         utilities::{
-            bitrange_subset,
             cond_swap::{CondSwapChip, CondSwapConfig, CondSwapInstructions},
             UtilitiesInstructions,
         },
@@ -27,7 +28,7 @@ use crate::{
 use group::ff::PrimeField;
 
 /// Configuration for the `MerkleChip` implementation.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MerkleConfig<Hash, Commit, Fixed>
 where
     Hash: HashDomains<pallas::Affine>,
@@ -41,7 +42,7 @@ where
 }
 
 /// Chip implementing `MerkleInstructions`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MerkleChip<Hash, Commit, Fixed>
 where
     Hash: HashDomains<pallas::Affine>,
@@ -191,9 +192,9 @@ impl<Hash, Commit, F, const MERKLE_DEPTH: usize>
     MerkleInstructions<pallas::Affine, MERKLE_DEPTH, { sinsemilla::K }, { sinsemilla::C }>
     for MerkleChip<Hash, Commit, F>
 where
-    Hash: HashDomains<pallas::Affine>,
+    Hash: HashDomains<pallas::Affine> + Eq,
     F: FixedPoints<pallas::Affine>,
-    Commit: CommitDomains<pallas::Affine, F, Hash>,
+    Commit: CommitDomains<pallas::Affine, F, Hash> + Eq,
 {
     #[allow(non_snake_case)]
     fn hash_layer(
@@ -217,79 +218,62 @@ where
         // c = bits 5..=254 of right
 
         // `a = a_0||a_1` = `l` || (bits 0..=239 of `left`)
-        let a = {
-            let a = {
-                // a_0 = l
-                let a_0 = bitrange_subset(&pallas::Base::from(l as u64), 0..10);
-
-                // a_1 = (bits 0..=239 of `left`)
-                let a_1 = left.value().map(|value| bitrange_subset(value, 0..240));
-
-                a_1.map(|a_1| a_0 + a_1 * pallas::Base::from(1 << 10))
-            };
-
-            self.witness_message_piece(layouter.namespace(|| "Witness a = a_0 || a_1"), a, 25)?
-        };
+        let a = MessagePiece::from_subpieces(
+            self.clone(),
+            layouter.namespace(|| "Witness a = a_0 || a_1"),
+            [
+                RangeConstrained::bitrange_of(Some(&pallas::Base::from(l as u64)), 0..10),
+                RangeConstrained::bitrange_of(left.value(), 0..240),
+            ],
+        )?;
 
         // b = b_0 || b_1 || b_2
         //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
         let (b_1, b_2, b) = {
             // b_0 = (bits 240..=249 of `left`)
-            let b_0 = left.value().map(|value| bitrange_subset(value, 240..250));
+            let b_0 = RangeConstrained::bitrange_of(left.value(), 240..250);
 
             // b_1 = (bits 250..=254 of `left`)
             // Constrain b_1 to 5 bits.
-            let b_1 = {
-                let b_1 = left
-                    .value()
-                    .map(|value| bitrange_subset(value, 250..(pallas::Base::NUM_BITS as usize)));
-
-                config
-                    .sinsemilla_config
-                    .lookup_config()
-                    .witness_short_check(layouter.namespace(|| "Constrain b_1 to 5 bits"), b_1, 5)?
-            };
+            let b_1 = RangeConstrained::witness_short(
+                &config.sinsemilla_config.lookup_config(),
+                layouter.namespace(|| "b_1"),
+                left.value(),
+                250..(pallas::Base::NUM_BITS as usize),
+            )?;
 
             // b_2 = (bits 0..=4 of `right`)
             // Constrain b_2 to 5 bits.
-            let b_2 = {
-                let b_2 = right.value().map(|value| bitrange_subset(value, 0..5));
+            let b_2 = RangeConstrained::witness_short(
+                &config.sinsemilla_config.lookup_config(),
+                layouter.namespace(|| "b_2"),
+                right.value(),
+                0..5,
+            )?;
 
-                config
-                    .sinsemilla_config
-                    .lookup_config()
-                    .witness_short_check(layouter.namespace(|| "Constrain b_2 to 5 bits"), b_2, 5)?
-            };
-
-            let b = {
-                let b = b_0
-                    .zip(b_1.value())
-                    .zip(b_2.value())
-                    .map(|((b_0, b_1), b_2)| {
-                        b_0 + b_1 * pallas::Base::from(1 << 10) + b_2 * pallas::Base::from(1 << 15)
-                    });
-                self.witness_message_piece(
-                    layouter.namespace(|| "Witness b = b_0 || b_1 || b_2"),
-                    b,
-                    2,
-                )?
-            };
+            let b = MessagePiece::from_subpieces(
+                self.clone(),
+                layouter.namespace(|| "Witness b = b_0 || b_1 || b_2"),
+                [b_0, b_1.value(), b_2.value()],
+            )?;
 
             (b_1, b_2, b)
         };
 
-        let c = {
-            // `c = bits 5..=254 of `right`
-            let c = right
-                .value()
-                .map(|value| bitrange_subset(value, 5..(pallas::Base::NUM_BITS as usize)));
-            self.witness_message_piece(layouter.namespace(|| "Witness c"), c, 25)?
-        };
+        // c = bits 5..=254 of `right`
+        let c = MessagePiece::from_subpieces(
+            self.clone(),
+            layouter.namespace(|| "Witness c"),
+            [RangeConstrained::bitrange_of(
+                right.value(),
+                5..(pallas::Base::NUM_BITS as usize),
+            )],
+        )?;
 
         let (point, zs) = self.hash_to_point(
             layouter.namespace(|| format!("hash at l = {}", l)),
             Q,
-            vec![a.clone(), b.clone(), c.clone()].into(),
+            vec![a.inner(), b.inner(), c.inner()].into(),
         )?;
         let z1_a = zs[0][1].clone();
         let z1_b = zs[1][1].clone();
@@ -319,14 +303,26 @@ where
 
                     // Offset 0
                     // Copy and assign `a` at the correct position.
-                    a.cell_value()
-                        .copy_advice(|| "copy a", &mut region, config.advices[0], 0)?;
+                    a.inner().cell_value().copy_advice(
+                        || "copy a",
+                        &mut region,
+                        config.advices[0],
+                        0,
+                    )?;
                     // Copy and assign `b` at the correct position.
-                    b.cell_value()
-                        .copy_advice(|| "copy b", &mut region, config.advices[1], 0)?;
+                    b.inner().cell_value().copy_advice(
+                        || "copy b",
+                        &mut region,
+                        config.advices[1],
+                        0,
+                    )?;
                     // Copy and assign `c` at the correct position.
-                    c.cell_value()
-                        .copy_advice(|| "copy c", &mut region, config.advices[2], 0)?;
+                    c.inner().cell_value().copy_advice(
+                        || "copy c",
+                        &mut region,
+                        config.advices[2],
+                        0,
+                    )?;
                     // Copy and assign the left node at the correct position.
                     left.copy_advice(|| "left", &mut region, config.advices[3], 0)?;
                     // Copy and assign the right node at the correct position.
@@ -338,9 +334,11 @@ where
                     // Copy and assign z_1 of SinsemillaHash(b) = b_1
                     z1_b.copy_advice(|| "z1_b", &mut region, config.advices[1], 1)?;
                     // Copy `b_1`, which has been constrained to be a 5-bit value
-                    b_1.copy_advice(|| "b_1", &mut region, config.advices[2], 1)?;
+                    b_1.inner()
+                        .copy_advice(|| "b_1", &mut region, config.advices[2], 1)?;
                     // Copy `b_2`, which has been constrained to be a 5-bit value
-                    b_2.copy_advice(|| "b_2", &mut region, config.advices[3], 1)?;
+                    b_2.inner()
+                        .copy_advice(|| "b_2", &mut region, config.advices[3], 1)?;
 
                     Ok(())
                 },
