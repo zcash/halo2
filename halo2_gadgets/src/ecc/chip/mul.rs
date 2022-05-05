@@ -483,7 +483,7 @@ pub mod tests {
         ecc::{
             chip::{EccChip, EccPoint},
             tests::TestFixedBases,
-            BaseFitsInScalarInstructions, EccInstructions, NonIdentityPoint, Point,
+            EccInstructions, NonIdentityPoint, Point, ScalarVar,
         },
         utilities::UtilitiesInstructions,
     };
@@ -525,8 +525,12 @@ pub mod tests {
                     column,
                     Some(scalar_val),
                 )?;
-                let scalar = chip.scalar_var_from_base(&mut layouter, &scalar)?;
-                p.mul(layouter.namespace(|| "random [a]B"), &scalar)?
+                let scalar = ScalarVar::from_base(
+                    chip.clone(),
+                    layouter.namespace(|| "ScalarVar from_base"),
+                    &scalar,
+                )?;
+                p.mul(layouter.namespace(|| "random [a]B"), scalar)?
             };
             constrain_equal_non_id(
                 chip.clone(),
@@ -544,8 +548,12 @@ pub mod tests {
             let (result, _) = {
                 let scalar =
                     chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_val))?;
-                let scalar = chip.scalar_var_from_base(&mut layouter, &scalar)?;
-                p.mul(layouter.namespace(|| "[0]B"), &scalar)?
+                let scalar = ScalarVar::from_base(
+                    chip.clone(),
+                    layouter.namespace(|| "ScalarVar from_base"),
+                    &scalar,
+                )?;
+                p.mul(layouter.namespace(|| "[0]B"), scalar)?
             };
             if let Some(is_identity) = result.inner().is_identity() {
                 assert!(is_identity);
@@ -558,8 +566,12 @@ pub mod tests {
             let (result, _) = {
                 let scalar =
                     chip.load_private(layouter.namespace(|| "-1"), column, Some(scalar_val))?;
-                let scalar = chip.scalar_var_from_base(&mut layouter, &scalar)?;
-                p.mul(layouter.namespace(|| "[-1]B"), &scalar)?
+                let scalar = ScalarVar::from_base(
+                    chip.clone(),
+                    layouter.namespace(|| "ScalarVar from_base"),
+                    &scalar,
+                )?;
+                p.mul(layouter.namespace(|| "[-1]B"), scalar)?
             };
             constrain_equal_non_id(
                 chip,

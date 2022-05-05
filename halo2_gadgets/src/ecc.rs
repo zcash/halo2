@@ -17,6 +17,10 @@ pub trait EccInstructions<C: CurveAffine>:
     Chip<C::Base> + UtilitiesInstructions<C::Base> + Clone + Debug + Eq
 {
     /// Variable representing a scalar used in variable-base scalar mul.
+    ///
+    /// This type is treated as a full-width scalar. However, if `Self` implements
+    /// [`BaseFitsInScalarInstructions`] then this may also be constructed from an element
+    /// of the base field.
     type ScalarVar: Clone + Debug;
     /// Variable representing a full-width element of the elliptic curve's
     /// scalar field, to be used for fixed-base scalar mul.
@@ -167,6 +171,35 @@ pub struct ScalarVar<C: CurveAffine, EccChip: EccInstructions<C>> {
     inner: EccChip::ScalarVar,
 }
 
+impl<C: CurveAffine, EccChip: EccInstructions<C>> ScalarVar<C, EccChip> {
+    /// Witnesses the given full-width scalar.
+    ///
+    /// Depending on the `EccChip` implementation, this may either witness the scalar
+    /// immediately, or delay witnessing until its first use in [`NonIdentityPoint::mul`].
+    pub fn new(
+        chip: EccChip,
+        mut layouter: impl Layouter<C::Base>,
+        value: Option<C::Scalar>,
+    ) -> Result<Self, Error> {
+        let scalar = chip.witness_scalar_var(&mut layouter, value);
+        scalar.map(|inner| ScalarVar { chip, inner })
+    }
+}
+
+impl<C: CurveAffine, EccChip: BaseFitsInScalarInstructions<C> + UtilitiesInstructions<C::Base>>
+    ScalarVar<C, EccChip>
+{
+    /// Constructs a scalar from an existing base-field element.
+    pub fn from_base(
+        chip: EccChip,
+        mut layouter: impl Layouter<C::Base>,
+        base: &EccChip::Var,
+    ) -> Result<Self, Error> {
+        let scalar = chip.scalar_var_from_base(&mut layouter, base);
+        scalar.map(|inner| ScalarVar { chip, inner })
+    }
+}
+
 /// A full-width element of the given elliptic curve's scalar field, to be used for fixed-base scalar mul.
 #[derive(Debug)]
 pub struct ScalarFixed<C: CurveAffine, EccChip: EccInstructions<C>> {
@@ -268,10 +301,10 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> NonIdentityPoint<C, EccChip> {
     pub fn mul(
         &self,
         mut layouter: impl Layouter<C::Base>,
-        by: &EccChip::ScalarVar,
+        by: ScalarVar<C, EccChip>,
     ) -> Result<(Point<C, EccChip>, ScalarVar<C, EccChip>), Error> {
         self.chip
-            .mul(&mut layouter, by, &self.inner.clone())
+            .mul(&mut layouter, &by.inner, &self.inner.clone())
             .map(|(point, scalar)| {
                 (
                     Point {
