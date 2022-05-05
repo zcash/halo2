@@ -1,16 +1,35 @@
 //! Utility gadgets.
 
-use ff::PrimeFieldBits;
+use ff::{Field, PrimeFieldBits};
 use halo2_proofs::{
     circuit::{AssignedCell, Cell, Layouter},
     plonk::{Advice, Column, Error, Expression},
 };
 use pasta_curves::arithmetic::FieldExt;
+use std::marker::PhantomData;
 use std::ops::Range;
 
 pub mod cond_swap;
 pub mod decompose_running_sum;
 pub mod lookup_range_check;
+
+/// A type that has a value at either keygen or proving time.
+pub trait FieldValue<F: Field> {
+    /// Returns the value of this type.
+    fn value(&self) -> Option<&F>;
+}
+
+impl<F: Field> FieldValue<F> for Option<F> {
+    fn value(&self) -> Option<&F> {
+        self.as_ref()
+    }
+}
+
+impl<F: Field> FieldValue<F> for AssignedCell<F, F> {
+    fn value(&self) -> Option<&F> {
+        self.value()
+    }
+}
 
 /// Trait for a variable in the circuit.
 pub trait Var<F: FieldExt>: Clone + std::fmt::Debug + From<AssignedCell<F, F>> {
@@ -56,6 +75,62 @@ pub trait UtilitiesInstructions<F: FieldExt> {
                     .map(Self::Var::from)
             },
         )
+    }
+}
+
+/// A type representing a range-constrained field element.
+#[derive(Clone, Copy, Debug)]
+pub struct RangeConstrained<F: Field, T: FieldValue<F>> {
+    inner: T,
+    num_bits: usize,
+    _phantom: PhantomData<F>,
+}
+
+impl<F: Field, T: FieldValue<F>> RangeConstrained<F, T> {
+    /// Returns the range-constrained inner type.
+    pub fn inner(&self) -> &T {
+        &self.inner
+    }
+
+    /// Returns the number of bits to which this cell is constrained.
+    pub fn num_bits(&self) -> usize {
+        self.num_bits
+    }
+}
+
+impl<F: PrimeFieldBits> RangeConstrained<F, Option<F>> {
+    /// Constructs a `RangeConstrained<Option<F>>` as a bitrange of the given value.
+    pub fn bitrange_of(value: Option<&F>, bitrange: Range<usize>) -> Self {
+        let num_bits = bitrange.len();
+        Self {
+            inner: value.map(|value| bitrange_subset(value, bitrange)),
+            num_bits,
+            _phantom: PhantomData::default(),
+        }
+    }
+}
+
+impl<F: Field> RangeConstrained<F, AssignedCell<F, F>> {
+    /// Constructs a `RangeConstrained<AssignedCell<F, F>>` without verifying that the
+    /// cell is correctly range constrained.
+    ///
+    /// This API only exists to ease with integrating this type into existing circuits,
+    /// and will likely be removed in future.
+    pub fn unsound_unchecked(cell: AssignedCell<F, F>, num_bits: usize) -> Self {
+        Self {
+            inner: cell,
+            num_bits,
+            _phantom: PhantomData::default(),
+        }
+    }
+
+    /// Extracts the range-constrained value from this range-constrained cell.
+    pub fn value(&self) -> RangeConstrained<F, Option<F>> {
+        RangeConstrained {
+            inner: self.inner.value().copied(),
+            num_bits: self.num_bits,
+            _phantom: PhantomData::default(),
+        }
     }
 }
 

@@ -23,6 +23,37 @@ impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
     }
 }
 
+impl<F: FieldExt + PrimeFieldBits> RangeConstrained<F, AssignedCell<F, F>> {
+    /// Witnesses a subset of the bits in `value` and constrains them to be the correct
+    /// number of bits.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `bitrange.len() >= K`.
+    pub fn witness_short<const K: usize>(
+        lookup_config: &LookupRangeCheckConfig<F, K>,
+        layouter: impl Layouter<F>,
+        value: Option<&F>,
+        bitrange: Range<usize>,
+    ) -> Result<Self, Error> {
+        let num_bits = bitrange.len();
+        assert!(num_bits < K);
+
+        // Witness the subset and constrain it to be the correct number of bits.
+        lookup_config
+            .witness_short_check(
+                layouter,
+                value.map(|value| bitrange_subset(value, bitrange)),
+                num_bits,
+            )
+            .map(|inner| Self {
+                inner,
+                num_bits,
+                _phantom: PhantomData::default(),
+            })
+    }
+}
+
 /// Configuration that provides methods for a lookup range check.
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub struct LookupRangeCheckConfig<F: FieldExt + PrimeFieldBits, const K: usize> {
