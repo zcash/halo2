@@ -154,7 +154,7 @@ $$
 &\underline{\bold{Oracle} \, \oracle_\srs(\tau = (a_1, c_1, ..., a_{i - 1}, c_{i - 1}), a_i):} \\
 & \textnormal{If} \, \tau \in \tr \, \textnormal{then} \\
 & \, \, \textnormal{If} \, i \leq r \, \textnormal{then} \\
-& \, \, \, \, c_i \gets \ch_i; \tr \gets \tr || (\tau, a_i, c_i); \textnormal{Return} \, c_i \\
+& \, \, \, \, c_i \gets \ch_i; \tr \gets \tr || (a_i, c_i); \textnormal{Return} \, c_i \\
 & \, \, \textnormal{Else if} \, i = r + 1 \, \textnormal{then} \\
 & \, \, \, \, d \gets \ip.\verifier (\pp, x, (\tau, a_i)); \tr \gets (\tau, a_i) \\
 & \, \, \, \, \textnormal{If} \, d = 1 \, \textnormal{then win} \gets \tt{true} \\
@@ -232,7 +232,7 @@ $$
 &\underline{\bold{Oracle} \, \oracle_\real(\tau = (a_1, c_1, ..., a_{i - 1}, c_{i - 1}), a_i):} \\
 & \textnormal{If} \, \tau \in \tr \, \textnormal{then} \\
 & \, \, \textnormal{If} \, i \leq r \, \textnormal{then} \\
-& \, \, \, \, c_i \gets \ch_i; \tr \gets \tr || (\tau, a_i, c_i); \textnormal{Return} \, c_i \\
+& \, \, \, \, c_i \gets \ch_i; \tr \gets \tr || (a_i, c_i); \textnormal{Return} \, c_i \\
 & \, \, \textnormal{Else if} \, i = r + 1 \, \textnormal{then} \\
 & \, \, \, \, d \gets \ip.\verifier (\pp, x, (\tau, a_i)); \tr \gets (\tau, a_i) \\
 & \, \, \, \, \textnormal{If} \, d = 1 \, \textnormal{then win} \gets \tt{true} \\
@@ -243,7 +243,7 @@ $$
 &\underline{\bold{Oracle} \, \oracle_\ideal(\tau, a):} \\
 & \textnormal{If} \, \tau \in \tr \, \textnormal{then} \\
 & \, \, (r, \state{\extractor}) \gets \extractor(\state{\extractor}, \left[(\tau, a)\right]) \\
-& \, \, \tr \gets \tr || (\tau, a, r) \\
+& \, \, \tr \gets \tr || (a, r) \\
 & \, \, \textnormal{Return} \, r \\
 &\textnormal{Return} \, \bottom
 \end{array}
