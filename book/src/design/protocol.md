@@ -83,7 +83,7 @@ notions.
   correct, does the prover actually possess ("know") a valid witness? We refer
   to the probability that a cheating prover falsely convinces the verifier of
   this knowledge as the _knowledge error_.
-* **Zero knowledge:** Does the prover learn anything besides that which can be
+* **Zero knowledge:** Does the verifier learn anything besides that which can be
   inferred from the correctness of the statement and the prover's knowledge of a
   valid witness?
 
@@ -123,7 +123,7 @@ easily "rewind" the verifier by forking the transcript and sending new messages
 to the verifier. Studying the concrete security of our construction _after_
 applying this transformation is important. Fortunately, we are able to follow a
 framework of analysis by Ghoshal and Tessaro
-([[GT20]]((https://eprint.iacr.org/2020/1351))) that has been applied to
+([[GT20](https://eprint.iacr.org/2020/1351)]) that has been applied to
 constructions similar to ours.
 
 We will study our protocol through the notion of _state-restoration soundness_.
@@ -164,7 +164,7 @@ $$
 \end{array}
 $$
 
-As shown in [[GT20]]((https://eprint.iacr.org/2020/1351)) (Theorem 1) state
+As shown in [[GT20](https://eprint.iacr.org/2020/1351)] (Theorem 1) state
 restoration soundness is tightly related to soundness after applying the
 Fiat-Shamir transformation.
 
