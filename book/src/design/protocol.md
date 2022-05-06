@@ -83,7 +83,7 @@ notions.
   correct, does the prover actually possess ("know") a valid witness? We refer
   to the probability that a cheating prover falsely convinces the verifier of
   this knowledge as the _knowledge error_.
-* **Zero knowledge:** Does the prover learn anything besides that which can be
+* **Zero knowledge:** Does the verifier learn anything besides that which can be
   inferred from the correctness of the statement and the prover's knowledge of a
   valid witness?
 
