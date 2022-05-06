@@ -136,10 +136,10 @@
                     <main>
                         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
 <h1 id="lookup-argument"><a class="header" href="#lookup-argument">Lookup argument</a></h1>
-<p>halo2 uses the following lookup technique, which allows for lookups in arbitrary sets, and
+<p>Halo 2 uses the following lookup technique, which allows for lookups in arbitrary sets, and
 is arguably simpler than Plookup.</p>
 <h2 id="note-on-language"><a class="header" href="#note-on-language">Note on Language</a></h2>
-<p>In addition to the <a href="../design.html#note-on-language">general notes on language</a>:</p>
+<p>In addition to the <a href="../../design.html#note-on-language">general notes on language</a>:</p>
 <ul>
 <li>We call the <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.07153em;">Z</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.07847em;">X</span><span class="mclose">)</span></span></span></span> polynomial (the grand product argument polynomial for the permutation
 argument) the &quot;permutation product&quot; column.</li>
@@ -235,7 +235,7 @@ soundness is not affected.</p>
 <li>The gates are all of low degree.</li>
 </ul>
 <h2 id="generalizations"><a class="header" href="#generalizations">Generalizations</a></h2>
-<p>halo2's lookup argument implementation generalizes the above technique in the following
+<p>Halo 2's lookup argument implementation generalizes the above technique in the following
 ways:</p>
 <ul>
 <li><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal">A</span></span></span></span> and <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.05764em;">S</span></span></span></span> can be extended to multiple columns, combined using a random challenge. <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.751892em;vertical-align:0em;"></span><span class="mord"><span class="mord mathnormal">A</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.751892em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">′</span></span></span></span></span></span></span></span></span></span></span></span>
