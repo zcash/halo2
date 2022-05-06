@@ -7,6 +7,8 @@ algorithms and adversaries are probabilistic (interactive) Turing machines that
 run in polynomial time in this security parameter. We use $\negl$ to denote a
 function that is negligible in $\sec$.
 
+When $a$ and $b$ are strings, $a \in b$ means $a$ is a prefix of $b$.
+
 ### Cryptographic Groups
 
 We let $\group$ denote a cyclic group of prime order $p$. The identity of a
