@@ -42,6 +42,15 @@ where
 }
 
 /// Chip implementing `MerkleInstructions`.
+///
+/// This chip specifically implements `MerkleInstructions::hash_layer` as the `MerkleCRH`
+/// function `hash = SinsemillaHash(Q, 𝑙⋆ || left⋆ || right⋆)`, where:
+/// - `𝑙⋆ = I2LEBSP_10(l)`
+/// - `left⋆ = I2LEBSP_255(left)`
+/// - `right⋆ = I2LEBSP_255(right)`
+///
+/// This chip does **NOT** constrain `left⋆` and `right⋆` to be canonical encodings of
+/// `left` and `right`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MerkleChip<Hash, Commit, Fixed>
 where
@@ -99,13 +108,11 @@ where
         // The message pieces `a`, `b`, `c` are constrained by Sinsemilla to be
         // 250 bits, 20 bits, and 250 bits respectively.
         //
-        /*
-            The pieces and subpieces are arranged in the following configuration:
-            |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |
-            -------------------------------------------------------
-            |   a   |   b   |   c   |  left | right |      1      |
-            |  z1_a |  z1_b |  b_1  |  b_2  |   l   |             |
-        */
+        // The pieces and subpieces are arranged in the following configuration:
+        // |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |
+        // -------------------------------------------------------
+        // |   a   |   b   |   c   |  left | right |      1      |
+        // |  z1_a |  z1_b |  b_1  |  b_2  |   l   |      0      |
         meta.create_gate("Decomposition check", |meta| {
             let q_decompose = meta.query_selector(q_decompose);
             let l_whole = meta.query_advice(advices[4], Rotation::next());
@@ -123,14 +130,13 @@ where
             let right_node = meta.query_advice(advices[4], Rotation::cur());
 
             // a = a_0||a_1 = l || (bits 0..=239 of left)
-            // Check that a_0 = l
             //
             // z_1 of SinsemillaHash(a) = a_1
+            // => a_0 = a - (a_1 * 2^10)
             let z1_a = meta.query_advice(advices[0], Rotation::next());
             let a_1 = z1_a;
-            // a_0 = a - (a_1 * 2^10)
-            let a_0 = a_whole - a_1.clone() * pallas::Base::from(1 << 10);
-            let l_check = a_0 - l_whole;
+            // Derive a_0 (constrained by SinsemillaHash to be 10 bits)
+            let a_0 = a_whole - a_1.clone() * two_pow_10;
 
             // b = b_0||b_1||b_2
             //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
@@ -166,7 +172,7 @@ where
             Constraints::with_selector(
                 q_decompose,
                 [
-                    ("l_check", l_check),
+                    ("l_check", a_0 - l_whole),
                     ("left_check", left_check),
                     ("right_check", right_check),
                     ("b1_b2_check", b1_b2_check),
@@ -216,6 +222,9 @@ where
         // b = b_0||b_1||b_2
         //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
         // c = bits 5..=254 of right
+        //
+        // We start by witnessing all of the individual pieces, and range-constraining the
+        // short pieces b_1 and b_2.
 
         // `a = a_0||a_1` = `l` || (bits 0..=239 of `left`)
         let a = MessagePiece::from_subpieces(
@@ -270,22 +279,38 @@ where
             )],
         )?;
 
+        // hash = SinsemillaHash(Q, 𝑙⋆ || left⋆ || right⋆)
+        //
+        // `hash = ⊥` is handled internally to `SinsemillaChip::hash_to_point`: incomplete
+        // addition constraints allows ⊥ to occur, and then during synthesis it detects
+        // these edge cases and raises an error (aborting proof creation).
+        //
+        // Note that MerkleCRH as-defined maps ⊥ to 0. This is for completeness outside
+        // the circuit (so that the ⊥ does not propagate into the type system). The chip
+        // explicitly doesn't map ⊥ to 0; in fact it cannot, as doing so would require
+        // constraints that amount to using complete addition. The rationale for excluding
+        // this map is the same as why Sinsemilla uses incomplete addition: this situation
+        // yields a nontrivial discrete log relation, and by assumption it is hard to find
+        // these.
         let (point, zs) = self.hash_to_point(
             layouter.namespace(|| format!("hash at l = {}", l)),
             Q,
             vec![a.inner(), b.inner(), c.inner()].into(),
         )?;
+        let hash = Self::extract(&point);
+
+        // `SinsemillaChip::hash_to_point` returns the running sum for each `MessagePiece`.
+        // Grab the outputs we need for the decomposition constraints.
         let z1_a = zs[0][1].clone();
         let z1_b = zs[1][1].clone();
 
         // Check that the pieces have been decomposed properly.
-        /*
-            The pieces and subpieces are arranged in the following configuration:
-            |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |
-            -------------------------------------------------------
-            |   a   |   b   |   c   |  left | right |      1      |
-            |  z1_a |  z1_b |  b_1  |  b_2  |   l   |             |
-        */
+        //
+        // The pieces and subpieces are arranged in the following configuration:
+        // |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |
+        // -------------------------------------------------------
+        // |   a   |   b   |   c   |  left | right |      1      |
+        // |  z1_a |  z1_b |  b_1  |  b_2  |   l   |             |
         {
             layouter.assign_region(
                 || "Check piece decomposition",
@@ -345,8 +370,6 @@ where
             )?;
         }
 
-        let result = Self::extract(&point);
-
         // Check layer hash output against Sinsemilla primitives hash
         #[cfg(test)]
         {
@@ -375,11 +398,11 @@ where
 
                 let expected = merkle_crh.hash(message.into_iter()).unwrap();
 
-                assert_eq!(expected.to_repr(), result.value().unwrap().to_repr());
+                assert_eq!(expected.to_repr(), hash.value().unwrap().to_repr());
             }
         }
 
-        Ok(result)
+        Ok(hash)
     }
 }
 

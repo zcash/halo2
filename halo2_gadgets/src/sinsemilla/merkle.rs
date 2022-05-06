@@ -112,6 +112,10 @@ where
     MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
 {
     /// Calculates the root of the tree containing the given leaf at this Merkle path.
+    ///
+    /// Implements [Zcash Protocol Specification Section 4.9: Merkle Path Validity][merklepath].
+    ///
+    /// [merklepath]: https://zips.z.cash/protocol/protocol.pdf#merklepath
     pub fn calculate_root(
         &self,
         mut layouter: impl Layouter<C::Base>,
@@ -143,6 +147,9 @@ where
             // we have `l` = 32 - 31 - 1 = 0.
             // On the other hand, when `layer = 0` (the final sibling on the Merkle path),
             // we have `l` = 32 - 0 - 1 = 31.
+
+            // Constrain which of (node, sibling) is (left, right) with a conditional swap
+            // tied to the current bit of the position.
             let pair = {
                 let pair = (node, *sibling);
 
@@ -150,11 +157,10 @@ where
                 chip.swap(layouter.namespace(|| "node position"), pair, *pos)?
             };
 
-            // Each `hash_layer` consists of 52 Sinsemilla words:
-            //  - l (10 bits) = 1 word
-            //  - left (255 bits) || right (255 bits) = 51 words (510 bits)
+            // Compute the node in layer l from its children:
+            //     M^l_i = MerkleCRH(l, M^{l+1}_{2i}, M^{l+1}_{2i+1})
             node = chip.hash_layer(
-                layouter.namespace(|| format!("hash l {}", l)),
+                layouter.namespace(|| format!("MerkleCRH({}, left, right)", l)),
                 Q,
                 l,
                 pair.0,
