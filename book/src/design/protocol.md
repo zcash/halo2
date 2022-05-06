@@ -153,7 +153,7 @@ $$
 &\textnormal{Return win}
 \end{array} &
 \begin{array}{ll}
-&\underline{\bold{Oracle} \, \oracle_\srs(\tau = (a_1, c_1, ..., a_{i - 1}, c_{i - 1}), a_i):} \\
+&\underline{\bold{Oracle} \, \oracle_\srs(\tau = ((a_1, c_1), ..., (a_{i - 1}, c_{i - 1})), a_i):} \\
 & \textnormal{If} \, \tau \in \tr \, \textnormal{then} \\
 & \, \, \textnormal{If} \, i \leq r \, \textnormal{then} \\
 & \, \, \, \, c_i \gets \ch_i; \tr \gets \tr || (a_i, c_i); \textnormal{Return} \, c_i \\
@@ -231,7 +231,7 @@ $$
 &\, \, \land (\textnormal{Acc}(\tr) \implies (x, w) \in \relation) \\
 \end{array} &
 \begin{array}{ll}
-&\underline{\bold{Oracle} \, \oracle_\real(\tau = (a_1, c_1, ..., a_{i - 1}, c_{i - 1}), a_i):} \\
+&\underline{\bold{Oracle} \, \oracle_\real(\tau = ((a_1, c_1), ..., (a_{i - 1}, c_{i - 1})), a_i):} \\
 & \textnormal{If} \, \tau \in \tr \, \textnormal{then} \\
 & \, \, \textnormal{If} \, i \leq r \, \textnormal{then} \\
 & \, \, \, \, c_i \gets \ch_i; \tr \gets \tr || (a_i, c_i); \textnormal{Return} \, c_i \\
