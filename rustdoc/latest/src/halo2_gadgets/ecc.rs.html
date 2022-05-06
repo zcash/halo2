@@ -849,6 +849,47 @@
 <span id="829">829</span>
 <span id="830">830</span>
 <span id="831">831</span>
+<span id="832">832</span>
+<span id="833">833</span>
+<span id="834">834</span>
+<span id="835">835</span>
+<span id="836">836</span>
+<span id="837">837</span>
+<span id="838">838</span>
+<span id="839">839</span>
+<span id="840">840</span>
+<span id="841">841</span>
+<span id="842">842</span>
+<span id="843">843</span>
+<span id="844">844</span>
+<span id="845">845</span>
+<span id="846">846</span>
+<span id="847">847</span>
+<span id="848">848</span>
+<span id="849">849</span>
+<span id="850">850</span>
+<span id="851">851</span>
+<span id="852">852</span>
+<span id="853">853</span>
+<span id="854">854</span>
+<span id="855">855</span>
+<span id="856">856</span>
+<span id="857">857</span>
+<span id="858">858</span>
+<span id="859">859</span>
+<span id="860">860</span>
+<span id="861">861</span>
+<span id="862">862</span>
+<span id="863">863</span>
+<span id="864">864</span>
+<span id="865">865</span>
+<span id="866">866</span>
+<span id="867">867</span>
+<span id="868">868</span>
+<span id="869">869</span>
+<span id="870">870</span>
+<span id="871">871</span>
+<span id="872">872</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Gadgets for elliptic curve operations.</span>
 
 <span class="kw">use</span> <span class="ident">std::fmt::Debug</span>;
@@ -867,17 +908,11 @@
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>:
     <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">UtilitiesInstructions</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span>
 {
-    <span class="doccomment">/// Variable representing an element of the elliptic curve&#39;s base field, that</span>
-    <span class="doccomment">/// is used as a scalar in variable-base scalar mul.</span>
+    <span class="doccomment">/// Variable representing a scalar used in variable-base scalar mul.</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// It is not true in general that a scalar field element fits in a curve&#39;s</span>
-    <span class="doccomment">/// base field, and in particular it is untrue for the Pallas curve, whose</span>
-    <span class="doccomment">/// scalar field `Fq` is larger than its base field `Fp`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// However, the only use of variable-base scalar mul in the Orchard protocol</span>
-    <span class="doccomment">/// is in deriving diversified addresses `[ivk] g_d`,  and `ivk` is guaranteed</span>
-    <span class="doccomment">/// to be in the base field of the curve. (See non-normative notes in</span>
-    <span class="doccomment">/// https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents.)</span>
+    <span class="doccomment">/// This type is treated as a full-width scalar. However, if `Self` implements</span>
+    <span class="doccomment">/// [`BaseFitsInScalarInstructions`] then this may also be constructed from an element</span>
+    <span class="doccomment">/// of the base field.</span>
     <span class="kw">type</span> <span class="ident">ScalarVar</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span>;
     <span class="doccomment">/// Variable representing a full-width element of the elliptic curve&#39;s</span>
     <span class="doccomment">/// scalar field, to be used for fixed-base scalar mul.</span>
@@ -925,6 +960,13 @@
         <span class="ident">value</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 
+    <span class="doccomment">/// Witnesses a full-width scalar to be used in variable-base multiplication.</span>
+    <span class="kw">fn</span> <span class="ident">witness_scalar_var</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
+        <span class="ident">value</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ScalarVar</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+
     <span class="doccomment">/// Extracts the x-coordinate of a point.</span>
     <span class="kw">fn</span> <span class="ident">extract_p</span><span class="op">&lt;</span><span class="ident">Point</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(<span class="ident">point</span>: <span class="kw-2">&amp;</span><span class="ident">Point</span>) -&gt; <span class="ident"><span class="self">Self</span>::X</span>;
 
@@ -950,7 +992,7 @@
     <span class="kw">fn</span> <span class="ident">mul</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">scalar</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Var</span>,
+        <span class="ident">scalar</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ScalarVar</span>,
         <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident"><span class="self">Self</span>::ScalarVar</span>), <span class="ident">Error</span><span class="op">&gt;</span>;
 
@@ -982,6 +1024,18 @@
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 }
 
+<span class="doccomment">/// Instructions that can be implemented for a curve whose base field fits into</span>
+<span class="doccomment">/// its scalar field.</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">BaseFitsInScalarInstructions</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Converts a base field element that exists as a variable in the circuit</span>
+    <span class="doccomment">/// into a scalar to be used in variable-base scalar multiplication.</span>
+    <span class="kw">fn</span> <span class="ident">scalar_var_from_base</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
+        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Var</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ScalarVar</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+}
+
 <span class="doccomment">/// Defines the fixed points for a given instantiation of the ECC chip.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>: <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Clone</span> {
     <span class="doccomment">/// Fixed points that can be used with full-width scalar multiplication.</span>
@@ -1007,6 +1061,33 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ScalarVar</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="ident">chip</span>: <span class="ident">EccChip</span>,
     <span class="ident">inner</span>: <span class="ident">EccChip::ScalarVar</span>,
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">ScalarVar</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Witnesses the given full-width scalar.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Depending on the `EccChip` implementation, this may either witness the scalar</span>
+    <span class="doccomment">/// immediately, or delay witnessing until its first use in [`NonIdentityPoint::mul`].</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">chip</span>: <span class="ident">EccChip</span>,
+        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
+        <span class="ident">value</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">witness_scalar_var</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">value</span>);
+        <span class="ident">scalar</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">ScalarVar</span> { <span class="ident">chip</span>, <span class="ident">inner</span> })
+    }
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">BaseFitsInScalarInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">ScalarVar</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Constructs a scalar from an existing base-field element.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_base</span>(
+        <span class="ident">chip</span>: <span class="ident">EccChip</span>,
+        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
+        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">EccChip::Var</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">scalar_var_from_base</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">base</span>);
+        <span class="ident">scalar</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">ScalarVar</span> { <span class="ident">chip</span>, <span class="ident">inner</span> })
+    }
 }
 
 <span class="doccomment">/// A full-width element of the given elliptic curve&#39;s scalar field, to be used for fixed-base scalar mul.</span>
@@ -1110,10 +1191,11 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mul</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">by</span>: <span class="kw-2">&amp;</span><span class="ident">EccChip::Var</span>,
+        <span class="ident">by</span>: <span class="ident">ScalarVar</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>, <span class="ident">ScalarVar</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">chip</span>, <span class="ident">by</span>.<span class="ident">chip</span>);
         <span class="self">self</span>.<span class="ident">chip</span>
-            .<span class="ident">mul</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">by</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">clone</span>())
+            .<span class="ident">mul</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="kw-2">&amp;</span><span class="ident">by</span>.<span class="ident">inner</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">clone</span>())
             .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)<span class="op">|</span> {
                 (
                     <span class="ident">Point</span> {
@@ -1392,7 +1474,7 @@
     }
 
     <span class="kw">impl</span> <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">FullWidth</span> {
-        <span class="kw">type</span> <span class="ident">ScalarKind</span> <span class="op">=</span> <span class="ident">FullScalar</span>;
+        <span class="kw">type</span> <span class="ident">FixedScalarKind</span> <span class="op">=</span> <span class="ident">FullScalar</span>;
 
         <span class="kw">fn</span> <span class="ident">generator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">pallas::Affine</span> {
             <span class="self">self</span>.<span class="number">0</span>
@@ -1422,7 +1504,7 @@
     }
 
     <span class="kw">impl</span> <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">BaseField</span> {
-        <span class="kw">type</span> <span class="ident">ScalarKind</span> <span class="op">=</span> <span class="ident">BaseFieldElem</span>;
+        <span class="kw">type</span> <span class="ident">FixedScalarKind</span> <span class="op">=</span> <span class="ident">BaseFieldElem</span>;
 
         <span class="kw">fn</span> <span class="ident">generator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">pallas::Affine</span> {
             <span class="kw-2">*</span><span class="ident">BASE</span>
@@ -1452,7 +1534,7 @@
     }
 
     <span class="kw">impl</span> <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Short</span> {
-        <span class="kw">type</span> <span class="ident">ScalarKind</span> <span class="op">=</span> <span class="ident">ShortScalar</span>;
+        <span class="kw">type</span> <span class="ident">FixedScalarKind</span> <span class="op">=</span> <span class="ident">ShortScalar</span>;
 
         <span class="kw">fn</span> <span class="ident">generator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">pallas::Affine</span> {
             <span class="kw-2">*</span><span class="ident">BASE</span>
