@@ -16,17 +16,11 @@ pub mod chip;
 pub trait EccInstructions<C: CurveAffine>:
     Chip<C::Base> + UtilitiesInstructions<C::Base> + Clone + Debug + Eq
 {
-    /// Variable representing an element of the elliptic curve's base field, that
-    /// is used as a scalar in variable-base scalar mul.
+    /// Variable representing a scalar used in variable-base scalar mul.
     ///
-    /// It is not true in general that a scalar field element fits in a curve's
-    /// base field, and in particular it is untrue for the Pallas curve, whose
-    /// scalar field `Fq` is larger than its base field `Fp`.
-    ///
-    /// However, the only use of variable-base scalar mul in the Orchard protocol
-    /// is in deriving diversified addresses `[ivk] g_d`,  and `ivk` is guaranteed
-    /// to be in the base field of the curve. (See non-normative notes in
-    /// https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents.)
+    /// This type is treated as a full-width scalar. However, if `Self` implements
+    /// [`BaseFitsInScalarInstructions`] then this may also be constructed from an element
+    /// of the base field.
     type ScalarVar: Clone + Debug;
     /// Variable representing a full-width element of the elliptic curve's
     /// scalar field, to be used for fixed-base scalar mul.
@@ -74,6 +68,13 @@ pub trait EccInstructions<C: CurveAffine>:
         value: Option<C>,
     ) -> Result<Self::NonIdentityPoint, Error>;
 
+    /// Witnesses a full-width scalar to be used in variable-base multiplication.
+    fn witness_scalar_var(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        value: Option<C::Scalar>,
+    ) -> Result<Self::ScalarVar, Error>;
+
     /// Extracts the x-coordinate of a point.
     fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X;
 
@@ -99,7 +100,7 @@ pub trait EccInstructions<C: CurveAffine>:
     fn mul(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        scalar: &Self::Var,
+        scalar: &Self::ScalarVar,
         base: &Self::NonIdentityPoint,
     ) -> Result<(Self::Point, Self::ScalarVar), Error>;
 
@@ -131,6 +132,18 @@ pub trait EccInstructions<C: CurveAffine>:
     ) -> Result<Self::Point, Error>;
 }
 
+/// Instructions that can be implemented for a curve whose base field fits into
+/// its scalar field.
+pub trait BaseFitsInScalarInstructions<C: CurveAffine>: EccInstructions<C> {
+    /// Converts a base field element that exists as a variable in the circuit
+    /// into a scalar to be used in variable-base scalar multiplication.
+    fn scalar_var_from_base(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        base: &Self::Var,
+    ) -> Result<Self::ScalarVar, Error>;
+}
+
 /// Defines the fixed points for a given instantiation of the ECC chip.
 pub trait FixedPoints<C: CurveAffine>: Debug + Eq + Clone {
     /// Fixed points that can be used with full-width scalar multiplication.
@@ -156,6 +169,33 @@ pub trait FixedPoints<C: CurveAffine>: Debug + Eq + Clone {
 pub struct ScalarVar<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
     inner: EccChip::ScalarVar,
+}
+
+impl<C: CurveAffine, EccChip: EccInstructions<C>> ScalarVar<C, EccChip> {
+    /// Witnesses the given full-width scalar.
+    ///
+    /// Depending on the `EccChip` implementation, this may either witness the scalar
+    /// immediately, or delay witnessing until its first use in [`NonIdentityPoint::mul`].
+    pub fn new(
+        chip: EccChip,
+        mut layouter: impl Layouter<C::Base>,
+        value: Option<C::Scalar>,
+    ) -> Result<Self, Error> {
+        let scalar = chip.witness_scalar_var(&mut layouter, value);
+        scalar.map(|inner| ScalarVar { chip, inner })
+    }
+}
+
+impl<C: CurveAffine, EccChip: BaseFitsInScalarInstructions<C>> ScalarVar<C, EccChip> {
+    /// Constructs a scalar from an existing base-field element.
+    pub fn from_base(
+        chip: EccChip,
+        mut layouter: impl Layouter<C::Base>,
+        base: &EccChip::Var,
+    ) -> Result<Self, Error> {
+        let scalar = chip.scalar_var_from_base(&mut layouter, base);
+        scalar.map(|inner| ScalarVar { chip, inner })
+    }
 }
 
 /// A full-width element of the given elliptic curve's scalar field, to be used for fixed-base scalar mul.
@@ -259,10 +299,11 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> NonIdentityPoint<C, EccChip> {
     pub fn mul(
         &self,
         mut layouter: impl Layouter<C::Base>,
-        by: &EccChip::Var,
+        by: ScalarVar<C, EccChip>,
     ) -> Result<(Point<C, EccChip>, ScalarVar<C, EccChip>), Error> {
+        assert_eq!(self.chip, by.chip);
         self.chip
-            .mul(&mut layouter, by, &self.inner.clone())
+            .mul(&mut layouter, &by.inner, &self.inner.clone())
             .map(|(point, scalar)| {
                 (
                     Point {
@@ -541,7 +582,7 @@ pub(crate) mod tests {
     }
 
     impl FixedPoint<pallas::Affine> for FullWidth {
-        type ScalarKind = FullScalar;
+        type FixedScalarKind = FullScalar;
 
         fn generator(&self) -> pallas::Affine {
             self.0
@@ -571,7 +612,7 @@ pub(crate) mod tests {
     }
 
     impl FixedPoint<pallas::Affine> for BaseField {
-        type ScalarKind = BaseFieldElem;
+        type FixedScalarKind = BaseFieldElem;
 
         fn generator(&self) -> pallas::Affine {
             *BASE
@@ -601,7 +642,7 @@ pub(crate) mod tests {
     }
 
     impl FixedPoint<pallas::Affine> for Short {
-        type ScalarKind = ShortScalar;
+        type FixedScalarKind = ShortScalar;
 
         fn generator(&self) -> pallas::Affine {
             *BASE

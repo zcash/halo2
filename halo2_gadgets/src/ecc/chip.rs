@@ -1,6 +1,6 @@
 //! Chip implementations for the ECC gadgets.
 
-use super::{EccInstructions, FixedPoints};
+use super::{BaseFitsInScalarInstructions, EccInstructions, FixedPoints};
 use crate::{
     primitives::sinsemilla,
     utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
@@ -163,7 +163,7 @@ pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>> {
 /// A trait representing the kind of scalar used with a particular `FixedPoint`.
 ///
 /// This trait exists because of limitations around const generics.
-pub trait ScalarKind {
+pub trait FixedScalarKind {
     /// The number of windows that this scalar kind requires.
     const NUM_WINDOWS: usize;
 }
@@ -172,7 +172,7 @@ pub trait ScalarKind {
 /// multiplication.
 #[derive(Debug)]
 pub enum FullScalar {}
-impl ScalarKind for FullScalar {
+impl FixedScalarKind for FullScalar {
     const NUM_WINDOWS: usize = NUM_WINDOWS;
 }
 
@@ -180,7 +180,7 @@ impl ScalarKind for FullScalar {
 /// multiplication.
 #[derive(Debug)]
 pub enum ShortScalar {}
-impl ScalarKind for ShortScalar {
+impl FixedScalarKind for ShortScalar {
     const NUM_WINDOWS: usize = NUM_WINDOWS_SHORT;
 }
 
@@ -188,13 +188,13 @@ impl ScalarKind for ShortScalar {
 /// scalar multiplication.
 #[derive(Debug)]
 pub enum BaseFieldElem {}
-impl ScalarKind for BaseFieldElem {
+impl FixedScalarKind for BaseFieldElem {
     const NUM_WINDOWS: usize = NUM_WINDOWS;
 }
 
 /// Returns information about a fixed point that is required by [`EccChip`].
 ///
-/// For each window required by `Self::ScalarKind`, $z$ is a field element such that for
+/// For each window required by `Self::FixedScalarKind`, $z$ is a field element such that for
 /// each point $(x, y)$ in the window:
 /// - $z + y = u^2$ (some square in the field); and
 /// - $z - y$ is not a square.
@@ -204,7 +204,7 @@ impl ScalarKind for BaseFieldElem {
 /// arrays instead of `Vec`s.
 pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
     /// The kind of scalar that this fixed point can be multiplied by.
-    type ScalarKind: ScalarKind;
+    type FixedScalarKind: FixedScalarKind;
 
     /// Returns the generator for this fixed point.
     fn generator(&self) -> C;
@@ -217,7 +217,7 @@ pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
 
     /// Returns the Lagrange coefficients for this fixed point.
     fn lagrange_coeffs(&self) -> Vec<[C::Base; H]> {
-        compute_lagrange_coeffs(self.generator(), Self::ScalarKind::NUM_WINDOWS)
+        compute_lagrange_coeffs(self.generator(), Self::FixedScalarKind::NUM_WINDOWS)
     }
 }
 
@@ -377,18 +377,38 @@ impl EccBaseFieldElemFixed {
     }
 }
 
+/// An enumeration of the possible types of scalars used in variable-base
+/// multiplication.
+#[derive(Clone, Debug)]
+pub enum ScalarVar {
+    /// An element of the elliptic curve's base field, that is used as a scalar
+    /// in variable-base scalar mul.
+    ///
+    /// It is not true in general that a scalar field element fits in a curve's
+    /// base field, and in particular it is untrue for the Pallas curve, whose
+    /// scalar field `Fq` is larger than its base field `Fp`.
+    ///
+    /// However, the only use of variable-base scalar mul in the Orchard protocol
+    /// is in deriving diversified addresses `[ivk] g_d`,  and `ivk` is guaranteed
+    /// to be in the base field of the curve. (See non-normative notes in
+    /// https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents.)
+    BaseFieldElem(AssignedCell<pallas::Base, pallas::Base>),
+    /// A full-width scalar. This is unimplemented for halo2_gadgets v0.1.0.
+    FullWidth,
+}
+
 impl<Fixed: FixedPoints<pallas::Affine>> EccInstructions<pallas::Affine> for EccChip<Fixed>
 where
     <Fixed as FixedPoints<pallas::Affine>>::Base:
-        FixedPoint<pallas::Affine, ScalarKind = BaseFieldElem>,
+        FixedPoint<pallas::Affine, FixedScalarKind = BaseFieldElem>,
     <Fixed as FixedPoints<pallas::Affine>>::FullScalar:
-        FixedPoint<pallas::Affine, ScalarKind = FullScalar>,
+        FixedPoint<pallas::Affine, FixedScalarKind = FullScalar>,
     <Fixed as FixedPoints<pallas::Affine>>::ShortScalar:
-        FixedPoint<pallas::Affine, ScalarKind = ShortScalar>,
+        FixedPoint<pallas::Affine, FixedScalarKind = ShortScalar>,
 {
     type ScalarFixed = EccScalarFixed;
     type ScalarFixedShort = EccScalarFixedShort;
-    type ScalarVar = AssignedCell<pallas::Base, pallas::Base>;
+    type ScalarVar = ScalarVar;
     type Point = EccPoint;
     type NonIdentityPoint = NonIdentityEccPoint;
     type X = AssignedCell<pallas::Base, pallas::Base>;
@@ -435,6 +455,15 @@ where
         )
     }
 
+    fn witness_scalar_var(
+        &self,
+        _layouter: &mut impl Layouter<pallas::Base>,
+        _value: Option<pallas::Scalar>,
+    ) -> Result<Self::ScalarVar, Error> {
+        // This is unimplemented for halo2_gadgets v0.1.0.
+        todo!()
+    }
+
     fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X {
         let point: EccPoint = (point.clone()).into();
         point.x()
@@ -471,15 +500,20 @@ where
     fn mul(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        scalar: &Self::Var,
+        scalar: &Self::ScalarVar,
         base: &Self::NonIdentityPoint,
     ) -> Result<(Self::Point, Self::ScalarVar), Error> {
         let config = self.config().mul;
-        config.assign(
-            layouter.namespace(|| "variable-base scalar mul"),
-            scalar.clone(),
-            base,
-        )
+        match scalar {
+            ScalarVar::BaseFieldElem(scalar) => config.assign(
+                layouter.namespace(|| "variable-base scalar mul"),
+                scalar.clone(),
+                base,
+            ),
+            ScalarVar::FullWidth => {
+                todo!()
+            }
+        }
     }
 
     fn mul_fixed(
@@ -522,5 +556,24 @@ where
             base_field_elem,
             base,
         )
+    }
+}
+
+impl<Fixed: FixedPoints<pallas::Affine>> BaseFitsInScalarInstructions<pallas::Affine>
+    for EccChip<Fixed>
+where
+    <Fixed as FixedPoints<pallas::Affine>>::Base:
+        FixedPoint<pallas::Affine, FixedScalarKind = BaseFieldElem>,
+    <Fixed as FixedPoints<pallas::Affine>>::FullScalar:
+        FixedPoint<pallas::Affine, FixedScalarKind = FullScalar>,
+    <Fixed as FixedPoints<pallas::Affine>>::ShortScalar:
+        FixedPoint<pallas::Affine, FixedScalarKind = ShortScalar>,
+{
+    fn scalar_var_from_base(
+        &self,
+        _layouter: &mut impl Layouter<pallas::Base>,
+        base: &Self::Var,
+    ) -> Result<Self::ScalarVar, Error> {
+        Ok(ScalarVar::BaseFieldElem(base.clone()))
     }
 }
