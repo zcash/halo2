@@ -186,9 +186,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> ScalarVar<C, EccChip> {
     }
 }
 
-impl<C: CurveAffine, EccChip: BaseFitsInScalarInstructions<C> + UtilitiesInstructions<C::Base>>
-    ScalarVar<C, EccChip>
-{
+impl<C: CurveAffine, EccChip: BaseFitsInScalarInstructions<C>> ScalarVar<C, EccChip> {
     /// Constructs a scalar from an existing base-field element.
     pub fn from_base(
         chip: EccChip,
@@ -303,6 +301,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> NonIdentityPoint<C, EccChip> {
         mut layouter: impl Layouter<C::Base>,
         by: ScalarVar<C, EccChip>,
     ) -> Result<(Point<C, EccChip>, ScalarVar<C, EccChip>), Error> {
+        assert_eq!(self.chip, by.chip);
         self.chip
             .mul(&mut layouter, &by.inner, &self.inner.clone())
             .map(|(point, scalar)| {
