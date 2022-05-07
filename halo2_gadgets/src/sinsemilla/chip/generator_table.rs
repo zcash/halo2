@@ -39,10 +39,7 @@ impl GeneratorTableConfig {
         meta.lookup(|meta| {
             let q_s1 = meta.query_selector(config.q_sinsemilla1);
             let q_s2 = meta.query_fixed(config.q_sinsemilla2, Rotation::cur());
-            let q_s3 = {
-                let one = Expression::Constant(pallas::Base::one());
-                q_s2.clone() * (q_s2.clone() - one)
-            };
+            let q_s3 = config.q_s3(meta);
 
             // m_{i+1} = z_{i} - 2^K * (q_s2 - q_s3) * z_{i + 1}
             // Note that the message words m_i's are 1-indexed while the
@@ -55,17 +52,11 @@ impl GeneratorTableConfig {
 
             let x_p = meta.query_advice(config.x_p, Rotation::cur());
 
-            // y_{p,i} = (Y_{A,i} / 2) - lambda1 * (x_{A,i} - x_{P,i}),
-            // where Y_{A,i} = (lambda1_i + lambda2_i) * (x_{A,i} - x_{R,i}),
-            //       x_{R,i} = lambda1^2 - x_{A,i} - x_{P,i}
-            //
+            // y_{p,i} = (Y_{A,i} / 2) - lambda1 * (x_{A,i} - x_{P,i})
             let y_p = {
                 let lambda1 = meta.query_advice(config.lambda_1, Rotation::cur());
-                let lambda2 = meta.query_advice(config.lambda_2, Rotation::cur());
                 let x_a = meta.query_advice(config.x_a, Rotation::cur());
-
-                let x_r = lambda1.clone().square() - x_a.clone() - x_p.clone();
-                let Y_A = (lambda1.clone() + lambda2) * (x_a.clone() - x_r);
+                let Y_A = config.Y_A(meta, Rotation::cur());
 
                 (Y_A * pallas::Base::TWO_INV) - (lambda1 * (x_a - x_p.clone()))
             };

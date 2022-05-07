@@ -88,6 +88,38 @@ where
     pub fn lookup_config(&self) -> LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }> {
         self.lookup_config
     }
+
+    /// Derives the expression `x_r = lambda_1^2 - x_a - x_p`.
+    fn x_r(
+        &self,
+        meta: &mut VirtualCells<pallas::Base>,
+        rotation: Rotation,
+    ) -> Expression<pallas::Base> {
+        let x_a = meta.query_advice(self.x_a, rotation);
+        let x_p = meta.query_advice(self.x_p, rotation);
+        let lambda_1 = meta.query_advice(self.lambda_1, rotation);
+        lambda_1.square() - x_a - x_p
+    }
+
+    /// Derives the expression `Y_A = (lambda_1 + lambda_2) * (x_a - x_r)`.
+    #[allow(non_snake_case)]
+    fn Y_A(
+        &self,
+        meta: &mut VirtualCells<pallas::Base>,
+        rotation: Rotation,
+    ) -> Expression<pallas::Base> {
+        let x_a = meta.query_advice(self.x_a, rotation);
+        let lambda_1 = meta.query_advice(self.lambda_1, rotation);
+        let lambda_2 = meta.query_advice(self.lambda_2, rotation);
+        (lambda_1 + lambda_2) * (x_a - self.x_r(meta, rotation))
+    }
+
+    /// Derives the expression `q_s3 = (q_s2) * (q_s2 - 1)`.
+    fn q_s3(&self, meta: &mut VirtualCells<pallas::Base>) -> Expression<pallas::Base> {
+        let one = Expression::Constant(pallas::Base::one());
+        let q_s2 = meta.query_fixed(self.q_sinsemilla2, Rotation::cur());
+        q_s2.clone() * (q_s2 - one)
+    }
 }
 
 /// A chip that implements 10-bit Sinsemilla using a lookup table and 5 advice columns.
@@ -184,20 +216,10 @@ where
 
         // Closures for expressions that are derived multiple times
         // x_r = lambda_1^2 - x_a - x_p
-        let x_r = |meta: &mut VirtualCells<pallas::Base>, rotation| {
-            let x_a = meta.query_advice(config.x_a, rotation);
-            let x_p = meta.query_advice(config.x_p, rotation);
-            let lambda_1 = meta.query_advice(config.lambda_1, rotation);
-            lambda_1.square() - x_a - x_p
-        };
+        let x_r = |meta: &mut VirtualCells<pallas::Base>, rotation| config.x_r(meta, rotation);
 
         // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
-        let Y_A = |meta: &mut VirtualCells<pallas::Base>, rotation| {
-            let x_a = meta.query_advice(config.x_a, rotation);
-            let lambda_1 = meta.query_advice(config.lambda_1, rotation);
-            let lambda_2 = meta.query_advice(config.lambda_2, rotation);
-            (lambda_1 + lambda_2) * (x_a - x_r(meta, rotation))
-        };
+        let Y_A = |meta: &mut VirtualCells<pallas::Base>, rotation| config.Y_A(meta, rotation);
 
         // Check that the initial x_A, x_P, lambda_1, lambda_2 are consistent with y_Q.
         meta.create_gate("Initial y_Q", |meta| {
@@ -215,12 +237,7 @@ where
 
         meta.create_gate("Sinsemilla gate", |meta| {
             let q_s1 = meta.query_selector(config.q_sinsemilla1);
-            // q_s3 = (q_s2) * (q_s2 - 1)
-            let q_s3 = {
-                let one = Expression::Constant(pallas::Base::one());
-                let q_s2 = meta.query_fixed(config.q_sinsemilla2, Rotation::cur());
-                q_s2.clone() * (q_s2 - one)
-            };
+            let q_s3 = config.q_s3(meta);
 
             let lambda_1_next = meta.query_advice(config.lambda_1, Rotation::next());
             let lambda_2_cur = meta.query_advice(config.lambda_2, Rotation::cur());
