@@ -54,6 +54,7 @@ blake2b_simd = "1"
 maybe-rayon = {version = "0.1.0", default-features = false}
 
 # Developer tooling dependencies
+criterion = { version = "0.3", optional = true }
 plotters = { version = "0.3.0", default-features = false, optional = true }
 tabbycat = { version = "0.1", features = ["attributes"], optional = true }
 
@@ -73,6 +74,7 @@ getrandom = { version = "0.2", features = ["js"] }
 [features]
 default = ["batch", "multicore"]
 multicore = ["maybe-rayon/threads"]
+dev-cost = ["criterion"]
 dev-graph = ["plotters", "tabbycat"]
 test-dev-graph = [
     "dev-graph",
