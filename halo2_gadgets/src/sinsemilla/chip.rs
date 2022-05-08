@@ -123,6 +123,8 @@ where
 }
 
 /// A chip that implements 10-bit Sinsemilla using a lookup table and 5 advice columns.
+///
+/// [Chip description](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html#plonk--halo-2-constraints).
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct SinsemillaChip<Hash, Commit, Fixed>
 where
