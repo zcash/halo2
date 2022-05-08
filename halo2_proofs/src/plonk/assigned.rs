@@ -121,10 +121,31 @@ impl<F: Field> Add<F> for Assigned<F> {
     }
 }
 
+impl<F: Field> Add<F> for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn add(self, rhs: F) -> Assigned<F> {
+        *self + rhs
+    }
+}
+
 impl<F: Field> Add<&Assigned<F>> for Assigned<F> {
     type Output = Assigned<F>;
     fn add(self, rhs: &Self) -> Assigned<F> {
         self + *rhs
+    }
+}
+
+impl<F: Field> Add<Assigned<F>> for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn add(self, rhs: Assigned<F>) -> Assigned<F> {
+        *self + rhs
+    }
+}
+
+impl<F: Field> Add<&Assigned<F>> for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn add(self, rhs: &Assigned<F>) -> Assigned<F> {
+        *self + *rhs
     }
 }
 
@@ -154,10 +175,31 @@ impl<F: Field> Sub<F> for Assigned<F> {
     }
 }
 
+impl<F: Field> Sub<F> for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn sub(self, rhs: F) -> Assigned<F> {
+        *self - rhs
+    }
+}
+
 impl<F: Field> Sub<&Assigned<F>> for Assigned<F> {
     type Output = Assigned<F>;
     fn sub(self, rhs: &Self) -> Assigned<F> {
         self - *rhs
+    }
+}
+
+impl<F: Field> Sub<Assigned<F>> for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn sub(self, rhs: Assigned<F>) -> Assigned<F> {
+        *self - rhs
+    }
+}
+
+impl<F: Field> Sub<&Assigned<F>> for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn sub(self, rhs: &Assigned<F>) -> Assigned<F> {
+        *self - *rhs
     }
 }
 
