@@ -41,6 +41,16 @@ So we get the constraints:
     and so cannot be used with arbitrary inputs.
 - $(y_r + y_q) \cdot (x_p - x_q) - (y_p - y_q) \cdot (x_q - x_r) = 0.$
 
+### Constraints
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+4 & q_\text{add-incomplete} \cdot \left( (x_r + x_q + x_p) \cdot (x_p - x_q)^2 - (y_p - y_q)^2 \right) = 0 \\\hline
+3 & q_\text{add-incomplete} \cdot \left( (y_r + y_q) \cdot (x_p - x_q) - (y_p - y_q) \cdot (x_q - x_r) \right) = 0 \\\hline
+\end{array}
+$$
 
 ## Complete addition
 
