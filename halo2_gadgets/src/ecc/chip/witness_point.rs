@@ -53,6 +53,7 @@ impl Config {
             y.square() - (x.clone().square() * x) - Expression::Constant(pallas::Affine::b())
         };
 
+        // https://p.z.cash/halo2-0.1:ecc-witness-point
         meta.create_gate("witness point", |meta| {
             // Check that the point being witnessed is either:
             // - the identity, which is mapped to (0, 0) in affine coordinates; or
@@ -72,6 +73,7 @@ impl Config {
             ]
         });
 
+        // https://p.z.cash/halo2-0.1:ecc-witness-non-identity-point
         meta.create_gate("witness non-identity point", |meta| {
             // Check that the point being witnessed is a valid curve point y^2 = x^3 + b,
             // where b = 5 in the Pallas equation

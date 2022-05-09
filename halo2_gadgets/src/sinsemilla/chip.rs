@@ -200,6 +200,7 @@ where
         };
 
         // Check that the initial x_A, x_P, lambda_1, lambda_2 are consistent with y_Q.
+        // https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial
         meta.create_gate("Initial y_Q", |meta| {
             let q_s4 = meta.query_selector(config.q_sinsemilla4);
             let y_q = meta.query_fixed(config.fixed_y_q, Rotation::cur());
@@ -213,6 +214,7 @@ where
             Constraints::with_selector(q_s4, Some(("init_y_q_check", init_y_q_check)))
         });
 
+        // https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial
         meta.create_gate("Sinsemilla gate", |meta| {
             let q_s1 = meta.query_selector(config.q_sinsemilla1);
             let q_s3 = config.q_s3(meta);

@@ -89,6 +89,7 @@ impl Config {
     }
 
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+        // https://p.z.cash/halo2-0.1:ecc-complete-addition
         meta.create_gate("complete addition", |meta| {
             let q_add = meta.query_selector(self.q_add);
             let x_p = meta.query_advice(self.x_p, Rotation::cur());

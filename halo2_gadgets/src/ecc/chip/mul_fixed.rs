@@ -131,6 +131,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         });
     }
 
+    /// [Specification](https://p.z.cash/halo2-0.1:ecc-fixed-mul-coordinates).
     #[allow(clippy::op_ref)]
     fn coords_check(
         &self,
@@ -196,6 +197,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         Ok((acc, mul_b))
     }
 
+    /// [Specification](https://p.z.cash/halo2-0.1:ecc-fixed-mul-load-base).
     fn assign_fixed_constants<F: FixedPoint<pallas::Affine>, const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, pallas::Base>,

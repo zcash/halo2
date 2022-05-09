@@ -36,6 +36,7 @@ impl GeneratorTableConfig {
             config.generator_table.table_y,
         );
 
+        // https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial
         meta.lookup(|meta| {
             let q_s1 = meta.query_selector(config.q_sinsemilla1);
             let q_s2 = meta.query_fixed(config.q_sinsemilla2, Rotation::cur());

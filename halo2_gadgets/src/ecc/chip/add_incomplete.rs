@@ -56,7 +56,8 @@ impl Config {
     }
 
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
-        meta.create_gate("incomplete addition gates", |meta| {
+        // https://p.z.cash/halo2-0.1:ecc-incomplete-addition
+        meta.create_gate("incomplete addition", |meta| {
             let q_add_incomplete = meta.query_selector(self.q_add_incomplete);
             let x_p = meta.query_advice(self.x_p, Rotation::cur());
             let y_p = meta.query_advice(self.y_p, Rotation::cur());

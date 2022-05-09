@@ -33,6 +33,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // Check that each window `k` is within 3 bits
+        // https://p.z.cash/halo2-0.1:ecc-fixed-mul-full-word
         meta.create_gate("Full-width fixed-base scalar mul", |meta| {
             let q_mul_fixed_full = meta.query_selector(self.q_mul_fixed_full);
             let window = meta.query_advice(self.super_config.window, Rotation::cur());

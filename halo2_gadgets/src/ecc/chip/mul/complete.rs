@@ -49,6 +49,7 @@ impl Config {
         // | y_p | z_{i + 1}  |
         // |     | base_y     |
         // |     | z_i        |
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-complete-gate
         meta.create_gate(
             "Decompose scalar for complete bits of variable-base mul",
             |meta| {

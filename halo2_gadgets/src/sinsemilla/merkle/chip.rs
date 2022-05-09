@@ -150,11 +150,13 @@ where
             // b_2 has been constrained to be 5 bits outside this gate.
             let b_2 = meta.query_advice(advices[3], Rotation::next());
             // Constrain b_1 + 2^5 b_2 = z1_b
+            // https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-bit-lengths?partial
             let b1_b2_check = z1_b.clone() - (b_1.clone() + b_2.clone() * two_pow_5);
             // Derive b_0 (constrained by SinsemillaHash to be 10 bits)
             let b_0 = b_whole - (z1_b * two_pow_10);
 
             // Check that left = a_1 (240 bits) || b_0 (10 bits) || b_1 (5 bits)
+            // https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-decomposition?partial
             let left_check = {
                 let reconstructed = {
                     let two_pow_240 = pallas::Base::from_u128(1 << 120).square();
@@ -166,6 +168,7 @@ where
             // Check that right = b_2 (5 bits) || c (250 bits)
             // The Orchard specification allows this representation to be non-canonical.
             // <https://zips.z.cash/protocol/protocol.pdf#merklepath>
+            // https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-decomposition?partial
             let right_check = b_2 + c_whole * two_pow_5 - right_node;
 
             Constraints::with_selector(
@@ -213,7 +216,6 @@ where
     ) -> Result<Self::Var, Error> {
         let config = self.config().clone();
 
-        // <https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh>
         // We need to hash `l || left || right`, where `l` is a 10-bit value.
         // We allow `left` and `right` to be non-canonical 255-bit encodings.
         //
@@ -224,6 +226,8 @@ where
         //
         // We start by witnessing all of the individual pieces, and range-constraining the
         // short pieces b_1 and b_2.
+        //
+        // https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-bit-lengths?partial
 
         // `a = a_0||a_1` = `l` || (bits 0..=239 of `left`)
         let a = MessagePiece::from_subpieces(
@@ -291,6 +295,8 @@ where
         // this map is the same as why Sinsemilla uses incomplete addition: this situation
         // yields a nontrivial discrete log relation, and by assumption it is hard to find
         // these.
+        //
+        // https://p.z.cash/proto:merkle-crh-orchard
         let (point, zs) = self.hash_to_point(
             layouter.namespace(|| format!("hash at l = {}", l)),
             Q,

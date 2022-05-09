@@ -91,7 +91,7 @@ $\mathsf{v^{old}}$ and $\mathsf{v^{new}}$ are each already constrained to $64$ b
 
 Decompose the magnitude $m$ into three-bit windows, and range-constrain each window, using the [short range decomposition](../decomposition.md#short-range-decomposition) gadget in strict mode, with $W = 22, K = 3.$
 
-We have two additional constraints:
+<a name="constrain-short-signed-msb"></a> We have two additional constraints:
 $$
 \begin{array}{|c|l|l|}
 \hline
@@ -147,7 +147,7 @@ Given a decomposed scalar $\alpha$ and a fixed base $B$, we compute $[\alpha]B$ 
 
 > Note: complete addition is required in the final step to correctly map $[0]B$ to a representation of the point at infinity, $(0,0)$; and also to handle a corner case for which the last step is a doubling.
 
-Constraints:
+<a name="constrain-coordinates"></a> Constraints:
 $$
 \begin{array}{|c|l|}
 \hline
@@ -163,7 +163,7 @@ where $b = 5$ (from the Pallas curve equation).
 ### Signed short exponent
 Recall that the signed short exponent is witnessed as a $64-$bit magnitude $m$, and a sign $s \in {1, -1}.$ Using the above algorithm, we compute $P = [m] \mathcal{B}$. Then, to get the final result $P',$ we conditionally negate $P$ using $(x, y) \mapsto (x, s \cdot y)$.
 
-Constraints:
+<a name="constrain-short-signed-conditional-neg"></a> Constraints:
 $$
 \begin{array}{|c|l|}
 \hline

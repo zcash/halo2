@@ -116,6 +116,8 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         };
 
         // Constraints used for q_mul_{2, 3} == 1
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-main-loop?partial
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-last-row?partial
         let for_loop = |meta: &mut VirtualCells<pallas::Base>,
                         y_a_next: Expression<pallas::Base>| {
             let one = Expression::Constant(pallas::Base::one());
@@ -167,6 +169,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         };
 
         // q_mul_1 == 1 checks
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-first-row
         meta.create_gate("q_mul_1 == 1 checks", |meta| {
             let q_mul_1 = meta.query_selector(self.q_mul_1);
 
@@ -176,6 +179,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         });
 
         // q_mul_2 == 1 checks
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-main-loop?partial
         meta.create_gate("q_mul_2 == 1 checks", |meta| {
             let q_mul_2 = meta.query_selector(self.q_mul_2);
 
@@ -205,6 +209,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         });
 
         // q_mul_3 == 1 checks
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-last-row?partial
         meta.create_gate("q_mul_3 == 1 checks", |meta| {
             let q_mul_3 = meta.query_selector(self.q_mul_3);
             let y_a_final = meta.query_advice(self.double_and_add.lambda_1, Rotation::next());
@@ -293,6 +298,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         // Incomplete addition
         for (row, k) in bits.iter().enumerate() {
             // z_{i} = 2 * z_{i+1} + k_i
+            // https://p.z.cash/halo2-0.1:ecc-var-mul-witness-scalar?partial
             let z_val = z
                 .value()
                 .zip(k.as_ref())
