@@ -75,6 +75,21 @@ pub trait EccInstructions<C: CurveAffine>:
         value: Option<C::Scalar>,
     ) -> Result<Self::ScalarVar, Error>;
 
+    /// Witnesses a full-width scalar to be used in fixed-base multiplication.
+    fn witness_scalar_fixed(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        value: Option<C::Scalar>,
+    ) -> Result<Self::ScalarFixed, Error>;
+
+    /// Converts a magnitude and sign that exists as variables in the circuit into a
+    /// signed short scalar to be used in fixed-base scalar multiplication.
+    fn scalar_fixed_from_signed_short(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        magnitude_sign: (Self::Var, Self::Var),
+    ) -> Result<Self::ScalarFixedShort, Error>;
+
     /// Extracts the x-coordinate of a point.
     fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X;
 
@@ -108,16 +123,16 @@ pub trait EccInstructions<C: CurveAffine>:
     fn mul_fixed(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        scalar: Option<C::Scalar>,
+        scalar: &Self::ScalarFixed,
         base: &<Self::FixedPoints as FixedPoints<C>>::FullScalar,
     ) -> Result<(Self::Point, Self::ScalarFixed), Error>;
 
     /// Performs fixed-base scalar multiplication using a short signed scalar, returning
-    /// `[magnitude * sign] base`.
+    /// `[scalar] base`.
     fn mul_fixed_short(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        magnitude_sign: (Self::Var, Self::Var),
+        scalar: &Self::ScalarFixedShort,
         base: &<Self::FixedPoints as FixedPoints<C>>::ShortScalar,
     ) -> Result<(Self::Point, Self::ScalarFixedShort), Error>;
 
@@ -198,18 +213,55 @@ impl<C: CurveAffine, EccChip: BaseFitsInScalarInstructions<C>> ScalarVar<C, EccC
     }
 }
 
-/// A full-width element of the given elliptic curve's scalar field, to be used for fixed-base scalar mul.
+/// An integer representing an element of the scalar field for a specific elliptic curve,
+/// for [`FixedPoint`] scalar multiplication.
 #[derive(Debug)]
 pub struct ScalarFixed<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
     inner: EccChip::ScalarFixed,
 }
 
-/// A signed short element of the given elliptic curve's scalar field, to be used for fixed-base scalar mul.
+impl<C: CurveAffine, EccChip: EccInstructions<C>> ScalarFixed<C, EccChip> {
+    /// Witnesses the given full-width scalar.
+    ///
+    /// Depending on the `EccChip` implementation, this may either witness the scalar
+    /// immediately, or delay witnessing until its first use in [`FixedPoint::mul`].
+    pub fn new(
+        chip: EccChip,
+        mut layouter: impl Layouter<C::Base>,
+        value: Option<C::Scalar>,
+    ) -> Result<Self, Error> {
+        let scalar = chip.witness_scalar_fixed(&mut layouter, value);
+        scalar.map(|inner| ScalarFixed { chip, inner })
+    }
+}
+
+/// A signed short (64-bit) integer represented as an element of the scalar field for a
+/// specific elliptic curve, to be used for [`FixedPointShort`] scalar multiplication.
 #[derive(Debug)]
 pub struct ScalarFixedShort<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
     inner: EccChip::ScalarFixedShort,
+}
+
+impl<C: CurveAffine, EccChip: EccInstructions<C>> ScalarFixedShort<C, EccChip> {
+    /// Converts the given signed short scalar.
+    ///
+    /// `magnitude_sign` must be a tuple of two circuit-assigned values:
+    /// - An unsigned integer of at most 64 bits.
+    /// - A sign value that is either 1 or -1.
+    ///
+    /// Depending on the `EccChip` implementation, the scalar may either be constrained
+    /// immediately by this constructor, or lazily constrained when it is first used in
+    /// [`FixedPointShort::mul`].
+    pub fn new(
+        chip: EccChip,
+        mut layouter: impl Layouter<C::Base>,
+        magnitude_sign: (EccChip::Var, EccChip::Var),
+    ) -> Result<Self, Error> {
+        let scalar = chip.scalar_fixed_from_signed_short(&mut layouter, magnitude_sign);
+        scalar.map(|inner| ScalarFixedShort { chip, inner })
+    }
 }
 
 /// A non-identity elliptic curve point over the given curve.
@@ -444,10 +496,11 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> FixedPoint<C, EccChip> {
     pub fn mul(
         &self,
         mut layouter: impl Layouter<C::Base>,
-        by: Option<C::Scalar>,
+        by: ScalarFixed<C, EccChip>,
     ) -> Result<(Point<C, EccChip>, ScalarFixed<C, EccChip>), Error> {
+        assert_eq!(self.chip, by.chip);
         self.chip
-            .mul_fixed(&mut layouter, by, &self.inner)
+            .mul_fixed(&mut layouter, &by.inner, &self.inner)
             .map(|(point, scalar)| {
                 (
                     Point {
@@ -502,10 +555,11 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> FixedPointShort<C, EccChip> {
     pub fn mul(
         &self,
         mut layouter: impl Layouter<C::Base>,
-        magnitude_sign: (EccChip::Var, EccChip::Var),
+        by: ScalarFixedShort<C, EccChip>,
     ) -> Result<(Point<C, EccChip>, ScalarFixedShort<C, EccChip>), Error> {
+        assert_eq!(self.chip, by.chip);
         self.chip
-            .mul_fixed_short(&mut layouter, magnitude_sign, &self.inner)
+            .mul_fixed_short(&mut layouter, &by.inner, &self.inner)
             .map(|(point, scalar)| {
                 (
                     Point {

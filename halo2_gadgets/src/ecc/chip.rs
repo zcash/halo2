@@ -328,7 +328,9 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
 #[derive(Clone, Debug)]
 pub struct EccScalarFixed {
     value: Option<pallas::Scalar>,
-    windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS }>,
+    /// The circuit-assigned windows representing this scalar, or `None` if the scalar has
+    /// not been used yet.
+    windows: Option<ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS }>>,
 }
 
 // TODO: Make V a `u64`
@@ -353,7 +355,10 @@ type MagnitudeSign = (MagnitudeCell, SignCell);
 pub struct EccScalarFixedShort {
     magnitude: MagnitudeCell,
     sign: SignCell,
-    running_sum: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS_SHORT + 1 }>,
+    /// The circuit-assigned running sum constraining this signed short scalar, or `None`
+    /// if the scalar has not been used yet.
+    running_sum:
+        Option<ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS_SHORT + 1 }>>,
 }
 
 /// A base field element used for fixed-base scalar multiplication.
@@ -464,6 +469,31 @@ where
         todo!()
     }
 
+    fn witness_scalar_fixed(
+        &self,
+        _layouter: &mut impl Layouter<pallas::Base>,
+        value: Option<pallas::Scalar>,
+    ) -> Result<Self::ScalarFixed, Error> {
+        Ok(EccScalarFixed {
+            value,
+            // This chip uses lazy witnessing.
+            windows: None,
+        })
+    }
+
+    fn scalar_fixed_from_signed_short(
+        &self,
+        _layouter: &mut impl Layouter<pallas::Base>,
+        (magnitude, sign): MagnitudeSign,
+    ) -> Result<Self::ScalarFixedShort, Error> {
+        Ok(EccScalarFixedShort {
+            magnitude,
+            sign,
+            // This chip uses lazy constraining.
+            running_sum: None,
+        })
+    }
+
     fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X {
         let point: EccPoint = (point.clone()).into();
         point.x()
@@ -519,7 +549,7 @@ where
     fn mul_fixed(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        scalar: Option<pallas::Scalar>,
+        scalar: &Self::ScalarFixed,
         base: &<Self::FixedPoints as FixedPoints<pallas::Affine>>::FullScalar,
     ) -> Result<(Self::Point, Self::ScalarFixed), Error> {
         let config = self.config().mul_fixed_full.clone();
@@ -533,13 +563,13 @@ where
     fn mul_fixed_short(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        magnitude_sign: MagnitudeSign,
+        scalar: &Self::ScalarFixedShort,
         base: &<Self::FixedPoints as FixedPoints<pallas::Affine>>::ShortScalar,
     ) -> Result<(Self::Point, Self::ScalarFixedShort), Error> {
         let config = self.config().mul_fixed_short.clone();
         config.assign(
             layouter.namespace(|| format!("short fixed-base mul of {:?}", base)),
-            magnitude_sign,
+            scalar,
             base,
         )
     }

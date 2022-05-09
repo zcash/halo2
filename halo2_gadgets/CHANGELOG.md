@@ -13,11 +13,18 @@ and this project adheres to Rust's notion of
 - `halo2_gadgets::ecc`:
   - `EccInstructions::witness_scalar_var` API to witness a full-width scalar
     used in variable-base scalar multiplication.
+  - `EccInstructions::witness_scalar_fixed`, to witness a full-width scalar
+    used in fixed-base scalar multiplication.
+  - `EccInstructions::scalar_fixed_from_signed_short`, to construct a signed
+    short scalar used in fixed-base scalar multiplication from its magnitude and
+    sign.
   - `BaseFitsInScalarInstructions` trait that can be implemented for a curve
     whose base field fits into its scalar field. This provides a method
     `scalar_var_from_base` that converts a base field element that exists as
     a variable in the circuit, into a scalar to be used in variable-base
     scalar multiplication.
+  - `ScalarFixed::new`
+  - `ScalarFixedShort::new`
   - `ScalarVar::new` and `ScalarVar::from_base` gadget APIs.
 - `halo2_gadgets::ecc::chip`:
   - `ScalarVar` enum with `BaseFieldElem` and `FullWidth` variants. `FullWidth`
@@ -34,10 +41,20 @@ and this project adheres to Rust's notion of
     of being restricted to a base field element.
   - `EccInstructions::mul` now takes a `Self::ScalarVar` as argument, instead
     of assuming that the scalar fits in a base field element `Self::Var`.
+  - `EccInstructions::mul_fixed` now takes a `Self::ScalarFixed` as argument,
+    instead of requiring that the chip always witness a new scalar.
+  - `EccInstructions::mul_fixed_short` now takes a `Self::ScalarFixedShort` as
+    argument, instead of the magnitude and sign directly.
+  - `FixedPoint::mul` now takes `ScalarFixed` instead of `Option<C::Scalar>`.
+  - `FixedPointShort::mul` now takes `ScalarFixedShort` instead of
+    `(EccChip::Var, EccChip::Var)`.
 - `halo2_gadgets::ecc::chip`:
   - `ScalarKind` has been renamed to `FixedScalarKind`.
-- `halo2_gadgets::sinsemilla::merkle::MerklePath` can now be constructed with
-  more or fewer than two `MerkleChip`s.
+- `halo2_gadgets::sinsemilla`:
+  - `CommitDomain::{commit, short_commit}` now take the trapdoor `r` as an
+    `ecc::ScalarFixed<C, EccChip>` instead of `Option<C::Scalar>`.
+  - `merkle::MerklePath` can now be constructed with more or fewer than two
+    `MerkleChip`s.
 
 ### Removed
 - `halo2_gadgets::primitives` (use `halo2_gadgets::poseidon::primitives` or

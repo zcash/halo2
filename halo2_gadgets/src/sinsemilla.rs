@@ -415,7 +415,7 @@ where
         &self,
         mut layouter: impl Layouter<C::Base>,
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
-        r: Option<C::Scalar>,
+        r: ecc::ScalarFixed<C, EccChip>,
     ) -> Result<
         (
             ecc::Point<C, EccChip>,
@@ -438,7 +438,7 @@ where
         &self,
         mut layouter: impl Layouter<C::Base>,
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
-        r: Option<C::Scalar>,
+        r: ecc::ScalarFixed<C, EccChip>,
     ) -> Result<(ecc::X<C, EccChip>, Vec<SinsemillaChip::RunningSum>), Error> {
         assert_eq!(self.M.sinsemilla_chip, message.chip);
         let (p, zs) = self.commit(layouter.namespace(|| "commit"), message, r)?;
@@ -461,6 +461,7 @@ pub(crate) mod tests {
     };
 
     use crate::{
+        ecc::ScalarFixed,
         sinsemilla::primitives::{self as sinsemilla, K},
         {
             ecc::{
@@ -686,12 +687,17 @@ pub(crate) mod tests {
                     (0..500).map(|_| Some(rand::random::<bool>())).collect();
 
                 let (result, _) = {
+                    let r = ScalarFixed::new(
+                        ecc_chip.clone(),
+                        layouter.namespace(|| "r"),
+                        Some(r_val),
+                    )?;
                     let message = Message::from_bitstring(
                         chip2,
                         layouter.namespace(|| "witness message"),
                         message.clone(),
                     )?;
-                    test_commit.commit(layouter.namespace(|| "commit"), message, Some(r_val))?
+                    test_commit.commit(layouter.namespace(|| "commit"), message, r)?
                 };
 
                 // Witness expected result.

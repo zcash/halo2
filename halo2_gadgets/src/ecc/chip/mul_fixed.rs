@@ -473,9 +473,17 @@ impl ScalarFixed {
         };
         match self {
             Self::BaseFieldElem(scalar) => running_sum_to_windows(scalar.running_sum.to_vec()),
-            Self::Short(scalar) => running_sum_to_windows(scalar.running_sum.to_vec()),
+            Self::Short(scalar) => running_sum_to_windows(
+                scalar
+                    .running_sum
+                    .as_ref()
+                    .expect("EccScalarFixedShort has been constrained")
+                    .to_vec(),
+            ),
             Self::FullWidth(scalar) => scalar
                 .windows
+                .as_ref()
+                .expect("EccScalarFixed has been witnessed")
                 .iter()
                 .map(|bits| {
                     bits.value()

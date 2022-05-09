@@ -90,14 +90,14 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         Ok(EccScalarFixedShort {
             magnitude,
             sign,
-            running_sum: (*running_sum).as_slice().try_into().unwrap(),
+            running_sum: Some((*running_sum).as_slice().try_into().unwrap()),
         })
     }
 
     pub fn assign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        magnitude_sign: MagnitudeSign,
+        scalar: &EccScalarFixedShort,
         base: &<Fixed as FixedPoints<pallas::Affine>>::ShortScalar,
     ) -> Result<(EccPoint, EccScalarFixedShort), Error>
     where
@@ -110,7 +110,14 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                 let offset = 0;
 
                 // Decompose the scalar
-                let scalar = self.decompose(&mut region, offset, magnitude_sign.clone())?;
+                let scalar = match scalar.running_sum {
+                    None => self.decompose(
+                        &mut region,
+                        offset,
+                        (scalar.magnitude.clone(), scalar.sign.clone()),
+                    ),
+                    Some(_) => todo!("unimplemented for halo2_gadgets v0.1.0"),
+                }?;
 
                 let (acc, mul_b) = self
                     .super_config
@@ -153,7 +160,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                 // Copy last window to `u` column.
                 // (Although the last window is not a `u` value; we are copying it into the `u`
                 // column because there is an available cell there.)
-                let z_21 = scalar.running_sum[21].clone();
+                let z_21 = scalar.running_sum.as_ref().unwrap()[21].clone();
                 z_21.copy_advice(|| "last_window", &mut region, self.super_config.u, offset)?;
 
                 // Conditionally negate `y`-coordinate
@@ -243,7 +250,7 @@ pub mod tests {
         ecc::{
             chip::{EccChip, FixedPoint, MagnitudeSign},
             tests::{Short, TestFixedBases},
-            FixedPointShort, NonIdentityPoint, Point,
+            FixedPointShort, NonIdentityPoint, Point, ScalarFixedShort,
         },
         utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
     };
@@ -327,7 +334,12 @@ pub mod tests {
                     *magnitude,
                     *sign,
                 )?;
-                test_short.mul(layouter.namespace(|| *name), magnitude_sign)?
+                let by = ScalarFixedShort::new(
+                    chip.clone(),
+                    layouter.namespace(|| "signed short scalar"),
+                    magnitude_sign,
+                )?;
+                test_short.mul(layouter.namespace(|| *name), by)?
             };
             // Move from base field into scalar field
             let scalar = {
@@ -361,7 +373,12 @@ pub mod tests {
                     *magnitude,
                     *sign,
                 )?;
-                test_short.mul(layouter.namespace(|| *name), magnitude_sign)?
+                let by = ScalarFixedShort::new(
+                    chip.clone(),
+                    layouter.namespace(|| "signed short scalar"),
+                    magnitude_sign,
+                )?;
+                test_short.mul(layouter.namespace(|| *name), by)?
             };
             if let Some(is_identity) = result.inner().is_identity() {
                 assert!(is_identity);
@@ -443,7 +460,7 @@ pub mod tests {
             ) -> Result<(), Error> {
                 let column = config.advices[0];
 
-                let short_config = config.mul_fixed_short;
+                let short_config = config.mul_fixed_short.clone();
                 let magnitude_sign = {
                     let magnitude = self.load_private(
                         layouter.namespace(|| "load magnitude"),
@@ -452,10 +469,14 @@ pub mod tests {
                     )?;
                     let sign =
                         self.load_private(layouter.namespace(|| "load sign"), column, self.sign)?;
-                    (magnitude, sign)
+                    ScalarFixedShort::new(
+                        EccChip::construct(config),
+                        layouter.namespace(|| "signed short scalar"),
+                        (magnitude, sign),
+                    )?
                 };
 
-                short_config.assign(layouter, magnitude_sign, &Short)?;
+                short_config.assign(layouter, &magnitude_sign.inner, &Short)?;
 
                 Ok(())
             }

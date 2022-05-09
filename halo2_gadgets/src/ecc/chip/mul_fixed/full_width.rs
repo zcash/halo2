@@ -64,7 +64,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 
         Ok(EccScalarFixed {
             value: scalar,
-            windows,
+            windows: Some(windows),
         })
     }
 
@@ -117,7 +117,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
     pub fn assign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        scalar: Option<pallas::Scalar>,
+        scalar: &EccScalarFixed,
         base: &<Fixed as FixedPoints<pallas::Affine>>::FullScalar,
     ) -> Result<(EccPoint, EccScalarFixed), Error>
     where
@@ -129,7 +129,11 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             |mut region| {
                 let offset = 0;
 
-                let scalar = self.witness(&mut region, offset, scalar)?;
+                // Lazily witness the scalar.
+                let scalar = match scalar.windows {
+                    None => self.witness(&mut region, offset, scalar.value),
+                    Some(_) => todo!("unimplemented for halo2_gadgets v0.1.0"),
+                }?;
 
                 let (acc, mul_b) = self.super_config.assign_region_inner::<_, NUM_WINDOWS>(
                     &mut region,
@@ -184,7 +188,7 @@ pub mod tests {
     use crate::ecc::{
         chip::{EccChip, FixedPoint as _, H},
         tests::{FullWidth, TestFixedBases},
-        FixedPoint, NonIdentityPoint, Point,
+        FixedPoint, NonIdentityPoint, Point, ScalarFixed,
     };
 
     pub(crate) fn test_mul_fixed(
@@ -227,8 +231,13 @@ pub mod tests {
         // [a]B
         {
             let scalar_fixed = pallas::Scalar::random(OsRng);
+            let by = ScalarFixed::new(
+                chip.clone(),
+                layouter.namespace(|| "random a"),
+                Some(scalar_fixed),
+            )?;
 
-            let (result, _) = base.mul(layouter.namespace(|| "random [a]B"), Some(scalar_fixed))?;
+            let (result, _) = base.mul(layouter.namespace(|| "random [a]B"), by)?;
             constrain_equal_non_id(
                 chip.clone(),
                 layouter.namespace(|| "random [a]B"),
@@ -249,8 +258,12 @@ pub mod tests {
                         .fold(pallas::Scalar::zero(), |acc, c| {
                             acc * &h + &pallas::Scalar::from(c.to_digit(8).unwrap() as u64)
                         });
-            let (result, _) =
-                base.mul(layouter.namespace(|| "mul with double"), Some(scalar_fixed))?;
+            let by = ScalarFixed::new(
+                chip.clone(),
+                layouter.namespace(|| "1333333333333333333333333333333333333333333333333333333333333333333333333333333333334"),
+                Some(scalar_fixed),
+            )?;
+            let (result, _) = base.mul(layouter.namespace(|| "mul with double"), by)?;
 
             constrain_equal_non_id(
                 chip.clone(),
@@ -265,7 +278,9 @@ pub mod tests {
         // on the last step.
         {
             let scalar_fixed = pallas::Scalar::zero();
-            let (result, _) = base.mul(layouter.namespace(|| "mul by zero"), Some(scalar_fixed))?;
+            let zero =
+                ScalarFixed::new(chip.clone(), layouter.namespace(|| "0"), Some(scalar_fixed))?;
+            let (result, _) = base.mul(layouter.namespace(|| "mul by zero"), zero)?;
             if let Some(is_identity) = result.inner().is_identity() {
                 assert!(is_identity);
             }
@@ -274,7 +289,12 @@ pub mod tests {
         // [-1]B is the largest scalar field element.
         {
             let scalar_fixed = -pallas::Scalar::one();
-            let (result, _) = base.mul(layouter.namespace(|| "mul by -1"), Some(scalar_fixed))?;
+            let neg_1 = ScalarFixed::new(
+                chip.clone(),
+                layouter.namespace(|| "-1"),
+                Some(scalar_fixed),
+            )?;
+            let (result, _) = base.mul(layouter.namespace(|| "mul by -1"), neg_1)?;
             constrain_equal_non_id(
                 chip,
                 layouter.namespace(|| "mul by -1"),
