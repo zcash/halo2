@@ -49,6 +49,8 @@ and this project adheres to Rust's notion of
   - `FixedPointShort::mul` now takes `ScalarFixedShort` instead of
     `(EccChip::Var, EccChip::Var)`.
 - `halo2_gadgets::ecc::chip`:
+  - `FixedPoint::u` now returns `Vec<[<C::Base as PrimeField>::Repr; H]>`
+    instead of `Vec<[[u8; 32]; H]>`.
   - `ScalarKind` has been renamed to `FixedScalarKind`.
 - `halo2_gadgets::sinsemilla`:
   - `CommitDomain::{commit, short_commit}` now take the trapdoor `r` as an

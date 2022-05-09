@@ -7,7 +7,7 @@ use crate::{
 };
 use arrayvec::ArrayVec;
 
-use ff::Field;
+use ff::{Field, PrimeField};
 use group::prime::PrimeCurveAffine;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter},
@@ -210,7 +210,7 @@ pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
     fn generator(&self) -> C;
 
     /// Returns the $u$ values for this fixed point.
-    fn u(&self) -> Vec<[[u8; 32]; H]>;
+    fn u(&self) -> Vec<[<C::Base as PrimeField>::Repr; H]>;
 
     /// Returns the $z$ value for this fixed point.
     fn z(&self) -> Vec<u64>;
