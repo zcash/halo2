@@ -1,7 +1,7 @@
 //! This module provides common utilities, traits and structures for group,
 //! field and polynomial arithmetic.
 
-use super::multicore::{self, log_threads};
+use super::multicore::{self, log_threads, prelude::*};
 pub use ff::Field;
 use group::{
     ff::{BatchInvert, PrimeField},
@@ -166,13 +166,11 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
 /// distinct powers of $\omega$. This transformation is invertible by providing
 /// $\omega^{-1}$ in place of $\omega$ and dividing each resulting field element
 /// by $n$.
-///
-/// This will use multithreading if beneficial.
 pub fn best_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
     let n = a.len() as usize;
     assert_eq!(n, 1 << log_n);
 
-    // swap bit reverse index
+    // bit reverse permutation
     swap_bit_reverse(a, n, log_n);
 
     // precompute twiddle factors
@@ -185,27 +183,49 @@ pub fn best_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
         .collect();
 
     if log_n <= log_threads() {
-        serial_butterfly_arithmetic(a, n, log_n, &twiddles)
+        serial_fft(a, n, log_n, &twiddles)
     } else {
         let (left, right) = a.split_at_mut(n / 2);
-        parallel_butterfly_arithmetic(left, right, n / 2, 2, &twiddles);
-        two_argument_butterfly_arithmetic(left, right, 1, &twiddles)
+        parallel_fft(left, right, n / 2, 2, &twiddles);
+        parallel_butterfly_arithmetic(left, right, 1, &twiddles)
+    }
+}
+
+/// Performs a radix-$2$ inverse Fast-Fourier Transformation (iFFT)
+pub fn best_ifft<G: Group>(a: &mut [G], omega_inv: G::Scalar, log_n: u32, divisor: G::Scalar) {
+    let n = a.len() as usize;
+    assert_eq!(n, 1 << log_n);
+
+    // bit reverse permutation
+    swap_bit_reverse(a, n, log_n);
+
+    // precompute twiddle factors
+    let twiddles: Vec<_> = (0..(n / 2) as usize)
+        .scan(G::Scalar::one(), |w, _| {
+            let tw = *w;
+            w.group_scale(&omega_inv);
+            Some(tw)
+        })
+        .collect();
+
+    if log_n <= log_threads() {
+        serial_fft(a, n, log_n, &twiddles);
+        a.iter_mut().for_each(|a| a.group_scale(&divisor))
+    } else {
+        let (left, right) = a.split_at_mut(n / 2);
+        parallel_fft(left, right, n / 2, 2, &twiddles);
+        parallel_butterfly_arithmetic_with_divisor(left, right, 1, &twiddles, divisor)
     }
 }
 
 /// This performs serial butterfly arithmetic
-fn serial_butterfly_arithmetic<G: Group>(
-    a: &mut [G],
-    n: usize,
-    log_n: u32,
-    twiddles: &[G::Scalar],
-) {
+fn serial_fft<G: Group>(a: &mut [G], n: usize, log_n: u32, twiddles: &[G::Scalar]) {
     let mut chunk = 2_usize;
     let mut twiddle_chunk = (n / 2) as usize;
     for _ in 0..log_n {
         a.chunks_mut(chunk).for_each(|coeffs| {
             let (left, right) = coeffs.split_at_mut(chunk / 2);
-            two_argument_butterfly_arithmetic(left, right, twiddle_chunk, twiddles)
+            serial_butterfly_arithmetic(left, right, twiddle_chunk, twiddles)
         });
         chunk *= 2;
         twiddle_chunk /= 2;
@@ -213,7 +233,7 @@ fn serial_butterfly_arithmetic<G: Group>(
 }
 
 /// This performs recursive butterfly arithmetic
-fn parallel_butterfly_arithmetic<G: Group>(
+fn parallel_fft<G: Group>(
     left: &mut [G],
     right: &mut [G],
     n: usize,
@@ -229,15 +249,15 @@ fn parallel_butterfly_arithmetic<G: Group>(
         let (a, b) = left.split_at_mut(n / 2);
         let (c, d) = right.split_at_mut(n / 2);
         rayon::join(
-            || parallel_butterfly_arithmetic(a, b, n / 2, twiddle_chunk * 2, twiddles),
-            || parallel_butterfly_arithmetic(c, d, n / 2, twiddle_chunk * 2, twiddles),
+            || parallel_fft(a, b, n / 2, twiddle_chunk * 2, twiddles),
+            || parallel_fft(c, d, n / 2, twiddle_chunk * 2, twiddles),
         );
-        four_argument_butterfly_arithmetic(a, b, c, d, twiddle_chunk, twiddles);
+        double_butterfly_arithmetic(a, b, c, d, twiddle_chunk, twiddles);
     }
 }
 
 /// This performs butterfly arithmetic with two `G` array
-fn two_argument_butterfly_arithmetic<G: Group>(
+fn serial_butterfly_arithmetic<G: Group>(
     left: &mut [G],
     right: &mut [G],
     twiddle_chunk: usize,
@@ -253,8 +273,49 @@ fn two_argument_butterfly_arithmetic<G: Group>(
         .for_each(|(i, (a, b))| swap_arithmetic_with_twiddle(a, b, &twiddles[i * twiddle_chunk]));
 }
 
+/// This performs butterfly arithmetic with two `G` array
+fn parallel_butterfly_arithmetic<G: Group>(
+    left: &mut [G],
+    right: &mut [G],
+    twiddle_chunk: usize,
+    twiddles: &[G::Scalar],
+) {
+    // case when twiddle factor is one
+    swap_arithmetic(&mut left[0], &mut right[0]);
+
+    left.par_iter_mut()
+        .zip(right.par_iter_mut())
+        .enumerate()
+        .skip(1)
+        .for_each(|(i, (a, b))| swap_arithmetic_with_twiddle(a, b, &twiddles[i * twiddle_chunk]));
+}
+
+/// This performs butterfly arithmetic with two `G` array
+fn parallel_butterfly_arithmetic_with_divisor<G: Group>(
+    left: &mut [G],
+    right: &mut [G],
+    twiddle_chunk: usize,
+    twiddles: &[G::Scalar],
+    divisor: G::Scalar,
+) {
+    // case when twiddle factor is one
+    swap_arithmetic(&mut left[0], &mut right[0]);
+    left[0].group_scale(&divisor);
+    right[0].group_scale(&divisor);
+
+    left.par_iter_mut()
+        .zip(right.par_iter_mut())
+        .enumerate()
+        .skip(1)
+        .for_each(|(i, (a, b))| {
+            swap_arithmetic_with_twiddle(a, b, &twiddles[i * twiddle_chunk]);
+            a.group_scale(&divisor);
+            b.group_scale(&divisor)
+        });
+}
+
 /// This performs butterfly arithmetic with four `G` array
-fn four_argument_butterfly_arithmetic<G: Group>(
+fn double_butterfly_arithmetic<G: Group>(
     a: &mut [G],
     b: &mut [G],
     c: &mut [G],
@@ -403,6 +464,7 @@ pub fn lagrange_interpolate<F: FieldExt>(points: &[F], evals: &[F]) -> Vec<F> {
     }
 }
 
+/// This performs bit reverse permutation over `[G]`
 fn swap_bit_reverse<G: Group>(a: &mut [G], n: usize, log_n: u32) {
     // sort by bit reverse
     let diff = 64 - log_n;
@@ -464,37 +526,15 @@ fn self_swap_arithmetic_with_twiddle<G: Group>(
 }
 
 #[cfg(test)]
-use rand_core::OsRng;
+pub(crate) mod tests {
+    use super::*;
+    use crate::pasta::Fp;
+    use crate::poly::EvaluationDomain;
+    use rand_core::OsRng;
 
-#[cfg(test)]
-use crate::pasta::Fp;
-
-#[test]
-fn test_bitreverse() {
-    fn bitreverse(mut n: usize, l: usize) -> usize {
-        let mut r = 0;
-        for _ in 0..l {
-            r = (r << 1) | (n & 1);
-            n >>= 1;
-        }
-        r
-    }
-
-    for k in 3..10 {
-        let n = 1 << k;
-        for i in 0..n as u64 {
-            assert_eq!(
-                bitreverse(i as usize, k),
-                (i.reverse_bits() >> (64 - k)) as usize
-            )
-        }
-    }
-}
-
-#[test]
-fn test_fft() {
-    fn fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
-        fn bitreverse(mut n: u32, l: u32) -> u32 {
+    #[test]
+    fn test_bitreverse() {
+        fn bitreverse(mut n: usize, l: usize) -> usize {
             let mut r = 0;
             for _ in 0..l {
                 r = (r << 1) | (n & 1);
@@ -503,65 +543,83 @@ fn test_fft() {
             r
         }
 
-        let n = a.len() as u32;
-        assert_eq!(n, 1 << log_n);
-
-        for k in 0..n {
-            let rk = bitreverse(k, log_n);
-            if k < rk {
-                a.swap(rk as usize, k as usize);
+        for k in 3..10 {
+            let n = 1 << k;
+            for i in 0..n as u64 {
+                assert_eq!(
+                    bitreverse(i as usize, k),
+                    (i.reverse_bits() >> (64 - k)) as usize
+                )
             }
         }
+    }
 
-        let mut m = 1;
-        for _ in 0..log_n {
-            let w_m = omega.pow_vartime(&[u64::from(n / (2 * m)), 0, 0, 0]);
+    #[test]
+    fn test_fft() {
+        fn prev_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
+            let n = a.len() as u32;
+            assert_eq!(n, 1 << log_n);
 
-            let mut k = 0;
-            while k < n {
-                let mut w = G::Scalar::one();
-                for j in 0..m {
-                    let mut t = a[(k + j + m) as usize];
-                    t.group_scale(&w);
-                    a[(k + j + m) as usize] = a[(k + j) as usize];
-                    a[(k + j + m) as usize].group_sub(&t);
-                    a[(k + j) as usize].group_add(&t);
-                    w *= &w_m;
+            swap_bit_reverse(a, n as usize, log_n);
+
+            let mut m = 1;
+            for _ in 0..log_n {
+                let w_m = omega.pow_vartime(&[u64::from(n / (2 * m)), 0, 0, 0]);
+                let mut k = 0;
+                while k < n {
+                    let mut w = G::Scalar::one();
+                    for j in 0..m {
+                        let mut t = a[(k + j + m) as usize];
+                        t.group_scale(&w);
+                        a[(k + j + m) as usize] = a[(k + j) as usize];
+                        a[(k + j + m) as usize].group_sub(&t);
+                        a[(k + j) as usize].group_add(&t);
+                        w *= &w_m;
+                    }
+                    k += 2 * m;
                 }
-
-                k += 2 * m;
+                m *= 2;
             }
+        }
 
-            m *= 2;
+        // This checks whether fft algorithm is correct by comparing with previous `serial_fft`
+        for k in 3..10 {
+            let mut a = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
+            let mut b = a.clone();
+            let omega = Fp::random(OsRng); // would be weird if this mattered
+            prev_fft(&mut a, omega, k);
+            best_fft(&mut b, omega, k);
+            assert_eq!(a, b);
+        }
+
+        // This checks whether `best_ifft` is inverse operation of `best_fft`
+        for k in 3..10 {
+            let domain = EvaluationDomain::<Fp>::new(1, k);
+            let mut a = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
+            let b = a.clone();
+            best_fft(&mut a, domain.get_omega(), k);
+            best_ifft(&mut a, domain.get_omega_inv(), k, domain.get_divisor());
+            assert_eq!(a, b);
         }
     }
 
-    for k in 3..10 {
-        let mut a = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
-        let mut b = a.clone();
-        let omega = Fp::random(OsRng); // would be weird if this mattered
-        fft(&mut a, omega, k);
-        best_fft(&mut b, omega, k);
-        assert_eq!(a, b);
-    }
-}
+    #[test]
+    fn test_lagrange_interpolate() {
+        let rng = OsRng;
 
-#[test]
-fn test_lagrange_interpolate() {
-    let rng = OsRng;
+        let points = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
+        let evals = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
 
-    let points = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
-    let evals = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
+        for coeffs in 0..5 {
+            let points = &points[0..coeffs];
+            let evals = &evals[0..coeffs];
 
-    for coeffs in 0..5 {
-        let points = &points[0..coeffs];
-        let evals = &evals[0..coeffs];
+            let poly = lagrange_interpolate(points, evals);
+            assert_eq!(poly.len(), points.len());
 
-        let poly = lagrange_interpolate(points, evals);
-        assert_eq!(poly.len(), points.len());
-
-        for (point, eval) in points.iter().zip(evals) {
-            assert_eq!(eval_polynomial(&poly, *point), *eval);
+            for (point, eval) in points.iter().zip(evals) {
+                assert_eq!(eval_polynomial(&poly, *point), *eval);
+            }
         }
     }
 }

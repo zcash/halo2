@@ -1,9 +1,9 @@
 name: Benchmarks
-on: [pull_request]
+on: [push, pull_request]
 
-# permissions:
-#   contents: write
-#   deployments: write
+permissions:
+  contents: write
+  deployments: write
 
 jobs:
   benchmark:

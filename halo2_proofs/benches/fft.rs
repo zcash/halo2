@@ -1,9 +1,8 @@
 #[macro_use]
 extern crate criterion;
 
-use crate::arithmetic::best_fft;
+use crate::arithmetic::{best_fft, best_ifft};
 use crate::pasta::Fp;
-use crate::poly::EvaluationDomain;
 use group::ff::Field;
 use halo2_proofs::*;
 
@@ -16,9 +15,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         fft_group.bench_function(BenchmarkId::new("k", k), |b| {
             let mut a = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
             let omega = Fp::random(OsRng); // would be weird if this mattered
-            b.iter(|| {
-                best_fft(&mut a, omega, k as u32);
-            });
+            b.iter(|| best_fft(&mut a, omega, k as u32));
         });
     }
     fft_group.finish();
@@ -29,7 +26,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             let mut a = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
             let omega_inv = Fp::random(OsRng); // would be weird if this mattered
             let divisor = Fp::random(OsRng); // would be weird if this mattered
-            b.iter(|| EvaluationDomain::ifft(&mut a, omega_inv, k, divisor));
+            b.iter(|| best_ifft(&mut a, omega_inv, k, divisor));
         });
     }
     ifft_group.finish();
