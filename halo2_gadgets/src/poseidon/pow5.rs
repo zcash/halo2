@@ -75,7 +75,7 @@ impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE
         // values), and used in a permutation from an arbitrary region. rc_a is used in
         // every permutation round, while rc_b is empty in the initial and final full
         // rounds, so we use rc_b as "scratch space" for fixed values (enabling potential
-        // layouter optimisations).
+        // layouter optimizations).
         for column in iter::empty()
             .chain(state.iter().cloned().map(Column::<Any>::from))
             .chain(rc_b.iter().cloned().map(Column::<Any>::from))

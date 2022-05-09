@@ -169,7 +169,7 @@ where
 /// Inside a region, the chip may freely use relative offsets; the [`Layouter`] will
 /// treat these assignments as a single "region" within the circuit.
 ///
-/// The [`Layouter`] is allowed to optimise between regions as it sees fit. Chips must use
+/// The [`Layouter`] is allowed to optimize between regions as it sees fit. Chips must use
 /// [`Region::constrain_equal`] to copy in variables assigned in other regions.
 ///
 /// TODO: It would be great if we could constrain the columns in these types to be
@@ -402,7 +402,7 @@ pub trait Layouter<F: Field> {
     ///
     /// Inside the closure, the chip may freely use relative offsets; the `Layouter` will
     /// treat these assignments as a single "region" within the circuit. Outside this
-    /// closure, the `Layouter` is allowed to optimise as it sees fit.
+    /// closure, the `Layouter` is allowed to optimize as it sees fit.
     ///
     /// ```ignore
     /// fn assign_region(&mut self, || "region name", |region| {

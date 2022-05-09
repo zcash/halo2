@@ -167,7 +167,7 @@ impl<F: FieldExt> CondSwapChip<F> {
             swap: advices[4],
         };
 
-        // TODO: optimise shape of gate for Merkle path validation
+        // TODO: optimize shape of gate for Merkle path validation
 
         meta.create_gate("a' = b ⋅ swap + a ⋅ (1-swap)", |meta| {
             let q_swap = meta.query_selector(q_swap);

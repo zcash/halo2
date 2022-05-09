@@ -1,4 +1,4 @@
-//! This module contains an optimisation of the polynomial commitment opening
+//! This module contains an optimization of the polynomial commitment opening
 //! scheme described in the [Halo][halo] paper.
 //!
 //! [halo]: https://eprint.iacr.org/2019/1021
