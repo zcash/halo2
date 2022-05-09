@@ -2,7 +2,7 @@ use super::super::{EccBaseFieldElemFixed, EccPoint, FixedPoints, NUM_WINDOWS, T_
 use super::H_BASE;
 
 use crate::{
-    primitives::sinsemilla,
+    sinsemilla::primitives as sinsemilla,
     utilities::{bitrange_subset, lookup_range_check::LookupRangeCheckConfig, range_check},
 };
 

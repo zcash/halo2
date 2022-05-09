@@ -2,14 +2,11 @@
 
 use super::{
     message::{Message, MessagePiece},
-    CommitDomains, HashDomains, SinsemillaInstructions,
+    primitives as sinsemilla, CommitDomains, HashDomains, SinsemillaInstructions,
 };
 use crate::{
-    primitives::sinsemilla,
-    {
-        ecc::{chip::NonIdentityEccPoint, FixedPoints},
-        utilities::lookup_range_check::LookupRangeCheckConfig,
-    },
+    ecc::{chip::NonIdentityEccPoint, FixedPoints},
+    utilities::lookup_range_check::LookupRangeCheckConfig,
 };
 use std::marker::PhantomData;
 

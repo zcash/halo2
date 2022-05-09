@@ -400,7 +400,8 @@ mod tests {
     use super::LookupRangeCheckConfig;
 
     use super::super::lebs2ip;
-    use crate::primitives::sinsemilla::K;
+    use crate::sinsemilla::primitives::K;
+
     use ff::{Field, PrimeFieldBits};
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},

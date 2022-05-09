@@ -14,9 +14,8 @@ use halo2_proofs::{
 mod pow5;
 pub use pow5::{Pow5Chip, Pow5Config, StateWord};
 
-use crate::primitives::poseidon::{
-    Absorbing, ConstantLength, Domain, Spec, SpongeMode, Squeezing, State,
-};
+pub mod primitives;
+use primitives::{Absorbing, ConstantLength, Domain, Spec, SpongeMode, Squeezing, State};
 
 /// A word from the padded input to a Poseidon sponge.
 #[derive(Clone, Debug)]

@@ -2,7 +2,7 @@
 
 use super::{BaseFitsInScalarInstructions, EccInstructions, FixedPoints};
 use crate::{
-    primitives::sinsemilla,
+    sinsemilla::primitives as sinsemilla,
     utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
 };
 use arrayvec::ArrayVec;

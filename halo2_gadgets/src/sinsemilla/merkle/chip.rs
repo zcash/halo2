@@ -10,8 +10,7 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 use super::MerkleInstructions;
 
 use crate::{
-    primitives::sinsemilla,
-    sinsemilla::MessagePiece,
+    sinsemilla::{primitives as sinsemilla, MessagePiece},
     utilities::RangeConstrained,
     {
         ecc::FixedPoints,
@@ -373,7 +372,8 @@ where
         // Check layer hash output against Sinsemilla primitives hash
         #[cfg(test)]
         {
-            use crate::{primitives::sinsemilla::HashDomain, utilities::i2lebsp};
+            use crate::{sinsemilla::primitives::HashDomain, utilities::i2lebsp};
+
             use group::ff::PrimeFieldBits;
 
             if let (Some(left), Some(right)) = (left.value(), right.value()) {

@@ -1,4 +1,4 @@
-//! The Sinsemilla hash function and commitment scheme.
+//! Implementation of Sinsemilla outside the circuit.
 
 use group::{Curve, Wnaf};
 use halo2_proofs::arithmetic::{CurveAffine, CurveExt};

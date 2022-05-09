@@ -11,9 +11,9 @@ use halo2_proofs::{
 };
 use pasta_curves::{pallas, vesta};
 
-use halo2_gadgets::{
-    poseidon::{Hash, Pow5Chip, Pow5Config},
-    primitives::poseidon::{self, ConstantLength, Spec},
+use halo2_gadgets::poseidon::{
+    primitives::{self as poseidon, ConstantLength, Spec},
+    Hash, Pow5Chip, Pow5Config,
 };
 use std::convert::TryInto;
 use std::marker::PhantomData;

@@ -1,8 +1,8 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use ff::Field;
-use halo2_gadgets::primitives::{
-    poseidon::{self, ConstantLength, P128Pow5T3},
-    sinsemilla,
+use halo2_gadgets::{
+    poseidon::primitives::{self as poseidon, ConstantLength, P128Pow5T3},
+    sinsemilla::primitives as sinsemilla,
 };
 
 use pasta_curves::pallas;

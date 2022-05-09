@@ -1,4 +1,3 @@
-use crate::primitives::sinsemilla::{self, SINSEMILLA_S};
 use halo2_proofs::{
     circuit::Layouter,
     plonk::{ConstraintSystem, Error, Expression, TableColumn},
@@ -6,6 +5,7 @@ use halo2_proofs::{
 };
 
 use super::{CommitDomains, FixedPoints, HashDomains};
+use crate::sinsemilla::primitives::{self as sinsemilla, SINSEMILLA_S};
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
 /// Table containing independent generators S[0..2^k]

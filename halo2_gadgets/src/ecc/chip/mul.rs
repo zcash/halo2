@@ -1,6 +1,6 @@
 use super::{add, EccPoint, NonIdentityEccPoint, ScalarVar, T_Q};
 use crate::{
-    primitives::sinsemilla,
+    sinsemilla::primitives as sinsemilla,
     utilities::{bool_check, lookup_range_check::LookupRangeCheckConfig, ternary},
 };
 use std::{

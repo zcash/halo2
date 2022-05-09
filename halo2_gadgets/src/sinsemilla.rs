@@ -11,6 +11,7 @@ use std::fmt::Debug;
 pub mod chip;
 pub mod merkle;
 mod message;
+pub mod primitives;
 
 /// The set of circuit instructions required to use the [`Sinsemilla`](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html) gadget.
 /// This trait is bounded on two constant parameters: `K`, the number of bits
@@ -460,7 +461,7 @@ pub(crate) mod tests {
     };
 
     use crate::{
-        primitives::sinsemilla::{self, K},
+        sinsemilla::primitives::{self as sinsemilla, K},
         {
             ecc::{
                 chip::{find_zs_and_us, EccChip, EccConfig, H, NUM_WINDOWS},

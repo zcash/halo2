@@ -7,7 +7,6 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 ### Added
-- `halo2_gadgets::sinsemilla::MessagePiece::from_subpieces`
 - `halo2_gadgets::utilities`:
   - `FieldValue` trait.
   - `RangeConstrained` newtype wrapper.
@@ -23,6 +22,11 @@ and this project adheres to Rust's notion of
 - `halo2_gadgets::ecc::chip`:
   - `ScalarVar` enum with `BaseFieldElem` and `FullWidth` variants. `FullWidth`
     is unimplemented for `halo2_gadgets v0.1.0`.
+- `halo2_gadgets::poseidon`:
+  - `primitives` (moved from `halo2_gadgets::primitives::poseidon`)
+- `halo2_gadgets::sinsemilla`:
+  - `primitives` (moved from `halo2_gadgets::primitives::sinsemilla`)
+  - `MessagePiece::from_subpieces`
 
 ### Changed
 - `halo2_gadgets::ecc`:
@@ -32,10 +36,12 @@ and this project adheres to Rust's notion of
     of assuming that the scalar fits in a base field element `Self::Var`.
 - `halo2_gadgets::ecc::chip`:
   - `ScalarKind` has been renamed to `FixedScalarKind`.
-
-### Changed
 - `halo2_gadgets::sinsemilla::merkle::MerklePath` can now be constructed with
   more or fewer than two `MerkleChip`s.
+
+### Removed
+- `halo2_gadgets::primitives` (use `halo2_gadgets::poseidon::primitives` or
+  `halo2_gadgets::sinsemilla::primitives` instead).
 
 ## [0.1.0-beta.3] - 2022-04-06
 ### Changed

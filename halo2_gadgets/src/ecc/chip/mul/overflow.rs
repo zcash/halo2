@@ -1,5 +1,8 @@
 use super::{T_Q, Z};
-use crate::{primitives::sinsemilla, utilities::lookup_range_check::LookupRangeCheckConfig};
+use crate::{
+    sinsemilla::primitives as sinsemilla, utilities::lookup_range_check::LookupRangeCheckConfig,
+};
+
 use halo2_proofs::circuit::AssignedCell;
 use halo2_proofs::{
     circuit::Layouter,
