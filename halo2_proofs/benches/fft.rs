@@ -3,6 +3,7 @@ extern crate criterion;
 
 use crate::arithmetic::best_fft;
 use crate::pasta::Fp;
+use crate::poly::EvaluationDomain;
 use group::ff::Field;
 use halo2_proofs::*;
 
@@ -10,9 +11,9 @@ use criterion::{BenchmarkId, Criterion};
 use rand_core::OsRng;
 
 fn criterion_benchmark(c: &mut Criterion) {
-    let mut group = c.benchmark_group("fft");
+    let mut fft_group = c.benchmark_group("fft");
     for k in 3..19 {
-        group.bench_function(BenchmarkId::new("k", k), |b| {
+        fft_group.bench_function(BenchmarkId::new("k", k), |b| {
             let mut a = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
             let omega = Fp::random(OsRng); // would be weird if this mattered
             b.iter(|| {
@@ -20,6 +21,18 @@ fn criterion_benchmark(c: &mut Criterion) {
             });
         });
     }
+    fft_group.finish();
+
+    let mut ifft_group = c.benchmark_group("ifft");
+    for k in 3..19 {
+        ifft_group.bench_function(BenchmarkId::new("k", k), |b| {
+            let mut a = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
+            let omega_inv = Fp::random(OsRng); // would be weird if this mattered
+            let divisor = Fp::random(OsRng); // would be weird if this mattered
+            b.iter(|| EvaluationDomain::ifft(&mut a, omega_inv, k, divisor));
+        });
+    }
+    ifft_group.finish();
 }
 
 criterion_group!(benches, criterion_benchmark);

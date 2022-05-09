@@ -350,7 +350,8 @@ impl<G: Group> EvaluationDomain<G> {
         });
     }
 
-    fn ifft(a: &mut [G], omega_inv: G::Scalar, log_n: u32, divisor: G::Scalar) {
+    /// bench
+    pub fn ifft(a: &mut [G], omega_inv: G::Scalar, log_n: u32, divisor: G::Scalar) {
         best_fft(a, omega_inv, log_n);
         parallelize(a, |a, _| {
             for a in a {
