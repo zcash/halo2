@@ -1,7 +1,7 @@
 //! This module provides common utilities, traits and structures for group,
 //! field and polynomial arithmetic.
 
-use super::multicore;
+use super::multicore::{self, log_threads};
 pub use ff::Field;
 use group::{
     ff::{BatchInvert, PrimeField},
@@ -166,27 +166,16 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
 /// distinct powers of $\omega$. This transformation is invertible by providing
 /// $\omega^{-1}$ in place of $\omega$ and dividing each resulting field element
 /// by $n$.
-///
-/// This will use multithreading if beneficial.
 pub fn best_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
-    fn bitreverse(mut n: usize, l: usize) -> usize {
-        let mut r = 0;
-        for _ in 0..l {
-            r = (r << 1) | (n & 1);
-            n >>= 1;
-        }
-        r
-    }
-
-    let threads = multicore::current_num_threads();
-    let log_threads = log2_floor(threads);
     let n = a.len() as usize;
     assert_eq!(n, 1 << log_n);
 
-    for k in 0..n {
-        let rk = bitreverse(k, log_n as usize);
-        if k < rk {
-            a.swap(rk, k);
+    // sort by bit reverse
+    let diff = 64 - log_n;
+    for i in 0..n as u64 {
+        let ri = i.reverse_bits() >> diff;
+        if i < ri {
+            a.swap(ri as usize, i as usize);
         }
     }
 
@@ -199,42 +188,34 @@ pub fn best_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
         })
         .collect();
 
-    if log_n <= log_threads {
-        let mut chunk = 2_usize;
-        let mut twiddle_chunk = (n / 2) as usize;
-        for _ in 0..log_n {
-            a.chunks_mut(chunk).for_each(|coeffs| {
-                let (left, right) = coeffs.split_at_mut(chunk / 2);
-
-                // case when twiddle factor is one
-                let (a, left) = left.split_at_mut(1);
-                let (b, right) = right.split_at_mut(1);
-                let t = b[0];
-                b[0] = a[0];
-                a[0].group_add(&t);
-                b[0].group_sub(&t);
-
-                left.iter_mut()
-                    .zip(right.iter_mut())
-                    .enumerate()
-                    .for_each(|(i, (a, b))| {
-                        let mut t = *b;
-                        t.group_scale(&twiddles[(i + 1) * twiddle_chunk]);
-                        *b = *a;
-                        a.group_add(&t);
-                        b.group_sub(&t);
-                    });
-            });
-            chunk *= 2;
-            twiddle_chunk /= 2;
-        }
+    if log_n <= log_threads() {
+        serial_butterfly_arithmetic(a, n, log_n, &twiddles)
     } else {
-        recursive_butterfly_arithmetic(a, n, 1, &twiddles)
+        parallel_butterfly_arithmetic(a, n, 1, &twiddles)
     }
 }
 
-/// This perform recursive butterfly arithmetic
-pub fn recursive_butterfly_arithmetic<G: Group>(
+/// This performs serial butterfly arithmetic
+fn serial_butterfly_arithmetic<G: Group>(
+    a: &mut [G],
+    n: usize,
+    log_n: u32,
+    twiddles: &[G::Scalar],
+) {
+    let mut chunk = 2_usize;
+    let mut twiddle_chunk = (n / 2) as usize;
+    for _ in 0..log_n {
+        a.chunks_mut(chunk).for_each(|coeffs| {
+            let (left, right) = coeffs.split_at_mut(chunk / 2);
+            butterfly_arithmetic(left, right, twiddle_chunk, twiddles)
+        });
+        chunk *= 2;
+        twiddle_chunk /= 2;
+    }
+}
+
+/// This performs parallel butterfly arithmetic
+pub fn parallel_butterfly_arithmetic<G: Group>(
     a: &mut [G],
     n: usize,
     twiddle_chunk: usize,
@@ -248,29 +229,38 @@ pub fn recursive_butterfly_arithmetic<G: Group>(
     } else {
         let (left, right) = a.split_at_mut(n / 2);
         rayon::join(
-            || recursive_butterfly_arithmetic(left, n / 2, twiddle_chunk * 2, twiddles),
-            || recursive_butterfly_arithmetic(right, n / 2, twiddle_chunk * 2, twiddles),
+            || parallel_butterfly_arithmetic(left, n / 2, twiddle_chunk * 2, twiddles),
+            || parallel_butterfly_arithmetic(right, n / 2, twiddle_chunk * 2, twiddles),
         );
 
-        // case when twiddle factor is one
-        let (a, left) = left.split_at_mut(1);
-        let (b, right) = right.split_at_mut(1);
-        let t = b[0];
-        b[0] = a[0];
-        a[0].group_add(&t);
-        b[0].group_sub(&t);
-
-        left.iter_mut()
-            .zip(right.iter_mut())
-            .enumerate()
-            .for_each(|(i, (a, b))| {
-                let mut t = *b;
-                t.group_scale(&twiddles[(i + 1) * twiddle_chunk]);
-                *b = *a;
-                a.group_add(&t);
-                b.group_sub(&t);
-            });
+        butterfly_arithmetic(left, right, twiddle_chunk, twiddles)
     }
+}
+
+/// This performs butterfly arithmetic
+fn butterfly_arithmetic<G: Group>(
+    left: &mut [G],
+    right: &mut [G],
+    twiddle_chunk: usize,
+    twiddles: &[G::Scalar],
+) {
+    // case when twiddle factor is one
+    let t = right[0];
+    right[0] = left[0];
+    left[0].group_add(&t);
+    right[0].group_sub(&t);
+
+    left.iter_mut()
+        .zip(right.iter_mut())
+        .enumerate()
+        .skip(1)
+        .for_each(|(i, (a, b))| {
+            let mut t = *b;
+            t.group_scale(&twiddles[i * twiddle_chunk]);
+            *b = *a;
+            a.group_add(&t);
+            b.group_sub(&t);
+        });
 }
 
 /// This evaluates a provided polynomial (in coefficient form) at `point`.
@@ -340,18 +330,6 @@ pub fn parallelize<T: Send, F: Fn(&mut [T], usize) + Send + Sync + Clone>(v: &mu
     });
 }
 
-fn log2_floor(num: usize) -> u32 {
-    assert!(num > 0);
-
-    let mut pow = 0;
-
-    while (1 << (pow + 1)) <= num {
-        pow += 1;
-    }
-
-    pow
-}
-
 /// Returns coefficients of an n - 1 degree polynomial given a set of n points
 /// and their evaluations. This function will panic if two values in `points`
 /// are the same.
@@ -410,11 +388,86 @@ pub fn lagrange_interpolate<F: FieldExt>(points: &[F], evals: &[F]) -> Vec<F> {
     }
 }
 
+use crate::pasta::Fp;
 #[cfg(test)]
 use rand_core::OsRng;
 
-#[cfg(test)]
-use crate::pasta::Fp;
+#[test]
+fn test_bitreverse() {
+    fn bitreverse(mut n: usize, l: usize) -> usize {
+        let mut r = 0;
+        for _ in 0..l {
+            r = (r << 1) | (n & 1);
+            n >>= 1;
+        }
+        r
+    }
+
+    for k in 3..10 {
+        let n = 1 << k;
+        for i in 0..n as u64 {
+            assert_eq!(
+                bitreverse(i as usize, k),
+                (i.reverse_bits() >> (64 - k)) as usize
+            )
+        }
+    }
+}
+
+#[test]
+fn test_fft() {
+    fn fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
+        fn bitreverse(mut n: u32, l: u32) -> u32 {
+            let mut r = 0;
+            for _ in 0..l {
+                r = (r << 1) | (n & 1);
+                n >>= 1;
+            }
+            r
+        }
+
+        let n = a.len() as u32;
+        assert_eq!(n, 1 << log_n);
+
+        for k in 0..n {
+            let rk = bitreverse(k, log_n);
+            if k < rk {
+                a.swap(rk as usize, k as usize);
+            }
+        }
+
+        let mut m = 1;
+        for _ in 0..log_n {
+            let w_m = omega.pow_vartime(&[u64::from(n / (2 * m)), 0, 0, 0]);
+
+            let mut k = 0;
+            while k < n {
+                let mut w = G::Scalar::one();
+                for j in 0..m {
+                    let mut t = a[(k + j + m) as usize];
+                    t.group_scale(&w);
+                    a[(k + j + m) as usize] = a[(k + j) as usize];
+                    a[(k + j + m) as usize].group_sub(&t);
+                    a[(k + j) as usize].group_add(&t);
+                    w *= &w_m;
+                }
+
+                k += 2 * m;
+            }
+
+            m *= 2;
+        }
+    }
+
+    for k in 3..10 {
+        let mut a = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
+        let mut b = a.clone();
+        let omega = Fp::random(OsRng); // would be weird if this mattered
+        fft(&mut a, omega, k);
+        best_fft(&mut b, omega, k);
+        assert_eq!(a, b);
+    }
+}
 
 #[test]
 fn test_lagrange_interpolate() {
