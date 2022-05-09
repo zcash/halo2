@@ -89,7 +89,7 @@ impl Config {
     }
 
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
-        meta.create_gate("complete addition gates", |meta| {
+        meta.create_gate("complete addition", |meta| {
             let q_add = meta.query_selector(self.q_add);
             let x_p = meta.query_advice(self.x_p, Rotation::cur());
             let y_p = meta.query_advice(self.y_p, Rotation::cur());
@@ -109,14 +109,20 @@ impl Config {
             let delta = meta.query_advice(self.delta, Rotation::cur());
 
             // Useful composite expressions
+            // (x_q − x_p)
+            let x_q_minus_x_p = x_q.clone() - x_p.clone();
+            // (x_p - x_r)
+            let x_p_minus_x_r = x_p.clone() - x_r.clone();
+            // (y_q + y_p)
+            let y_q_plus_y_p = y_q.clone() + y_p.clone();
             // α ⋅(x_q - x_p)
-            let if_alpha = (x_q.clone() - x_p.clone()) * alpha;
+            let if_alpha = x_q_minus_x_p.clone() * alpha;
             // β ⋅ x_p
             let if_beta = x_p.clone() * beta;
             // γ ⋅ x_q
             let if_gamma = x_q.clone() * gamma;
-            // δ ⋅(y_p + y_q)
-            let if_delta = (y_q.clone() + y_p.clone()) * delta;
+            // δ ⋅(y_q + y_p)
+            let if_delta = y_q_plus_y_p.clone() * delta;
 
             // Useful constants
             let one = Expression::Constant(pallas::Base::one());
@@ -125,13 +131,11 @@ impl Config {
 
             // (x_q − x_p)⋅((x_q − x_p)⋅λ − (y_q−y_p)) = 0
             let poly1 = {
-                let x_q_minus_x_p = x_q.clone() - x_p.clone(); // (x_q − x_p)
-
                 let y_q_minus_y_p = y_q.clone() - y_p.clone(); // (y_q − y_p)
                 let incomplete = x_q_minus_x_p.clone() * lambda.clone() - y_q_minus_y_p; // (x_q − x_p)⋅λ − (y_q−y_p)
 
                 // q_add ⋅(x_q − x_p)⋅((x_q − x_p)⋅λ − (y_q−y_p))
-                x_q_minus_x_p * incomplete
+                x_q_minus_x_p.clone() * incomplete
             };
 
             // (1 - (x_q - x_p)⋅α)⋅(2y_p ⋅λ - 3x_p^2) = 0
@@ -144,70 +148,56 @@ impl Config {
                 (one.clone() - if_alpha.clone()) * tangent_line
             };
 
-            // x_p⋅x_q⋅(x_q - x_p)⋅(λ^2 - x_p - x_q - x_r) = 0
-            let secant_line = lambda.clone().square() - x_p.clone() - x_q.clone() - x_r.clone(); // (λ^2 - x_p - x_q - x_r)
-            let poly3 = {
-                let x_q_minus_x_p = x_q.clone() - x_p.clone(); // (x_q - x_p)
+            // (λ^2 - x_p - x_q - x_r)
+            let secant_line = lambda.clone().square() - x_p.clone() - x_q.clone() - x_r.clone();
+            // (λ ⋅(x_p - x_r) - y_p - y_r)
+            let y_r_constraint = lambda * x_p_minus_x_r - y_p.clone() - y_r.clone();
 
-                // x_p⋅x_q⋅(x_q - x_p)⋅(λ^2 - x_p - x_q - x_r)
-                x_p.clone() * x_q.clone() * x_q_minus_x_p * secant_line.clone()
-            };
+            // x_p⋅x_q⋅(x_q - x_p)⋅(λ^2 - x_p - x_q - x_r) = 0
+            let poly3a = x_p.clone() * x_q.clone() * x_q_minus_x_p.clone() * secant_line.clone();
 
             // x_p⋅x_q⋅(x_q - x_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r) = 0
-            let poly4 = {
-                let x_q_minus_x_p = x_q.clone() - x_p.clone(); // (x_q - x_p)
-                let x_p_minus_x_r = x_p.clone() - x_r.clone(); // (x_p - x_r)
-
-                // x_p⋅x_q⋅(x_q - x_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r)
-                x_p.clone()
-                    * x_q.clone()
-                    * x_q_minus_x_p
-                    * (lambda.clone() * x_p_minus_x_r - y_p.clone() - y_r.clone())
-            };
+            let poly3b = x_p.clone() * x_q.clone() * x_q_minus_x_p * y_r_constraint.clone();
 
             // x_p⋅x_q⋅(y_q + y_p)⋅(λ^2 - x_p - x_q - x_r) = 0
-            let poly5 = {
-                let y_q_plus_y_p = y_q.clone() + y_p.clone(); // (y_q + y_p)
-
-                // x_p⋅x_q⋅(y_q + y_p)⋅(λ^2 - x_p - x_q - x_r)
-                x_p.clone() * x_q.clone() * y_q_plus_y_p * secant_line
-            };
+            let poly3c = x_p.clone() * x_q.clone() * y_q_plus_y_p.clone() * secant_line;
 
             // x_p⋅x_q⋅(y_q + y_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r) = 0
-            let poly6 = {
-                let y_q_plus_y_p = y_q.clone() + y_p.clone(); // (y_q + y_p)
-                let x_p_minus_x_r = x_p.clone() - x_r.clone(); // (x_p - x_r)
-
-                // x_p⋅x_q⋅(y_q + y_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r)
-                x_p.clone()
-                    * x_q.clone()
-                    * y_q_plus_y_p
-                    * (lambda * x_p_minus_x_r - y_p.clone() - y_r.clone())
-            };
+            let poly3d = x_p.clone() * x_q.clone() * y_q_plus_y_p * y_r_constraint;
 
             // (1 - x_p * β) * (x_r - x_q) = 0
-            let poly7 = (one.clone() - if_beta.clone()) * (x_r.clone() - x_q);
+            let poly4a = (one.clone() - if_beta.clone()) * (x_r.clone() - x_q);
 
             // (1 - x_p * β) * (y_r - y_q) = 0
-            let poly8 = (one.clone() - if_beta) * (y_r.clone() - y_q);
+            let poly4b = (one.clone() - if_beta) * (y_r.clone() - y_q);
 
             // (1 - x_q * γ) * (x_r - x_p) = 0
-            let poly9 = (one.clone() - if_gamma.clone()) * (x_r.clone() - x_p);
+            let poly5a = (one.clone() - if_gamma.clone()) * (x_r.clone() - x_p);
 
             // (1 - x_q * γ) * (y_r - y_p) = 0
-            let poly10 = (one.clone() - if_gamma) * (y_r.clone() - y_p);
+            let poly5b = (one.clone() - if_gamma) * (y_r.clone() - y_p);
 
             // ((1 - (x_q - x_p) * α - (y_q + y_p) * δ)) * x_r
-            let poly11 = (one.clone() - if_alpha.clone() - if_delta.clone()) * x_r;
+            let poly6a = (one.clone() - if_alpha.clone() - if_delta.clone()) * x_r;
 
             // ((1 - (x_q - x_p) * α - (y_q + y_p) * δ)) * y_r
-            let poly12 = (one - if_alpha - if_delta) * y_r;
+            let poly6b = (one - if_alpha - if_delta) * y_r;
 
             Constraints::with_selector(
                 q_add,
                 [
-                    poly1, poly2, poly3, poly4, poly5, poly6, poly7, poly8, poly9, poly10, poly11,
-                    poly12,
+                    ("1", poly1),
+                    ("2", poly2),
+                    ("3a", poly3a),
+                    ("3b", poly3b),
+                    ("3c", poly3c),
+                    ("3d", poly3d),
+                    ("4a", poly4a),
+                    ("4b", poly4b),
+                    ("5a", poly5a),
+                    ("5b", poly5b),
+                    ("6a", poly6a),
+                    ("6b", poly6b),
                 ],
             )
         });
