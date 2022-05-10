@@ -343,23 +343,18 @@
 <span id="323">323</span>
 <span id="324">324</span>
 <span id="325">325</span>
-<span id="326">326</span>
-<span id="327">327</span>
-<span id="328">328</span>
-<span id="329">329</span>
-<span id="330">330</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Chip implementations for the Sinsemilla gadgets.</span>
 
 <span class="kw">use</span> <span class="kw">super</span>::{
     <span class="ident">message</span>::{<span class="ident">Message</span>, <span class="ident">MessagePiece</span>},
-    <span class="ident">CommitDomains</span>, <span class="ident">HashDomains</span>, <span class="ident">SinsemillaInstructions</span>,
+    <span class="ident">primitives</span> <span class="kw">as</span> <span class="ident">sinsemilla</span>, <span class="ident">CommitDomains</span>, <span class="ident">HashDomains</span>, <span class="ident">SinsemillaInstructions</span>,
 };
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">primitives::sinsemilla</span>,
-    {
-        <span class="ident">ecc</span>::{<span class="ident">chip::NonIdentityEccPoint</span>, <span class="ident">FixedPoints</span>},
-        <span class="ident">utilities::lookup_range_check::LookupRangeCheckConfig</span>,
+    <span class="ident">ecc</span>::{
+        <span class="ident">chip</span>::{<span class="ident">DoubleAndAdd</span>, <span class="ident">NonIdentityEccPoint</span>},
+        <span class="ident">FixedPoints</span>,
     },
+    <span class="ident">utilities::lookup_range_check::LookupRangeCheckConfig</span>,
 };
 <span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
 
@@ -397,21 +392,10 @@
     <span class="ident">q_sinsemilla4</span>: <span class="ident">Selector</span>,
     <span class="doccomment">/// Fixed column used to load the y-coordinate of the domain $Q$.</span>
     <span class="ident">fixed_y_q</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Advice column used to store the x-coordinate of the accumulator at each</span>
-    <span class="doccomment">/// iteration of the hash.</span>
-    <span class="ident">x_a</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Advice column used to store the x-coordinate of the generator corresponding</span>
-    <span class="doccomment">/// to the message word at each iteration of the hash. This is looked up in the</span>
-    <span class="doccomment">/// generator table.</span>
-    <span class="ident">x_p</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Logic specific to merged double-and-add.</span>
+    <span class="ident">double_and_add</span>: <span class="ident">DoubleAndAdd</span>,
     <span class="doccomment">/// Advice column used to load the message.</span>
     <span class="ident">bits</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Advice column used to store the $\lambda_1$ intermediate value at each</span>
-    <span class="doccomment">/// iteration.</span>
-    <span class="ident">lambda_1</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Advice column used to store the $\lambda_2$ intermediate value at each</span>
-    <span class="doccomment">/// iteration.</span>
-    <span class="ident">lambda_2</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Advice column used to witness message pieces. This may or may not be the same</span>
     <span class="doccomment">/// column as `bits`.</span>
     <span class="ident">witness_pieces</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
@@ -431,16 +415,31 @@
 {
     <span class="doccomment">/// Returns an array of all advice columns in this config, in arbitrary order.</span>
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">advices</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>; <span class="number">5</span>] {
-        [<span class="self">self</span>.<span class="ident">x_a</span>, <span class="self">self</span>.<span class="ident">x_p</span>, <span class="self">self</span>.<span class="ident">bits</span>, <span class="self">self</span>.<span class="ident">lambda_1</span>, <span class="self">self</span>.<span class="ident">lambda_2</span>]
+        [
+            <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>,
+            <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>,
+            <span class="self">self</span>.<span class="ident">bits</span>,
+            <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>,
+            <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_2</span>,
+        ]
     }
 
     <span class="doccomment">/// Returns the lookup range check config used in this config.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lookup_config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">LookupRangeCheckConfig</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, { <span class="ident">sinsemilla::K</span> }<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">lookup_config</span>
     }
+
+    <span class="doccomment">/// Derives the expression `q_s3 = (q_s2) * (q_s2 - 1)`.</span>
+    <span class="kw">fn</span> <span class="ident">q_s3</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) -&gt; <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">one</span> <span class="op">=</span> <span class="ident">Expression::Constant</span>(<span class="ident">pallas::Base::one</span>());
+        <span class="kw">let</span> <span class="ident">q_s2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_fixed</span>(<span class="self">self</span>.<span class="ident">q_sinsemilla2</span>, <span class="ident">Rotation::cur</span>());
+        <span class="ident">q_s2</span>.<span class="ident">clone</span>() <span class="op">*</span> (<span class="ident">q_s2</span> <span class="op">-</span> <span class="ident">one</span>)
+    }
 }
 
 <span class="doccomment">/// A chip that implements 10-bit Sinsemilla using a lookup table and 5 advice columns.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// [Chip description](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html#plonk--halo-2-constraints).</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SinsemillaChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">Fixed</span><span class="op">&gt;</span>
 <span class="kw">where</span>
@@ -512,11 +511,13 @@
             <span class="ident">q_sinsemilla2</span>: <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
             <span class="ident">q_sinsemilla4</span>: <span class="ident">meta</span>.<span class="ident">selector</span>(),
             <span class="ident">fixed_y_q</span>,
-            <span class="ident">x_a</span>: <span class="ident">advices</span>[<span class="number">0</span>],
-            <span class="ident">x_p</span>: <span class="ident">advices</span>[<span class="number">1</span>],
+            <span class="ident">double_and_add</span>: <span class="ident">DoubleAndAdd</span> {
+                <span class="ident">x_a</span>: <span class="ident">advices</span>[<span class="number">0</span>],
+                <span class="ident">x_p</span>: <span class="ident">advices</span>[<span class="number">1</span>],
+                <span class="ident">lambda_1</span>: <span class="ident">advices</span>[<span class="number">3</span>],
+                <span class="ident">lambda_2</span>: <span class="ident">advices</span>[<span class="number">4</span>],
+            },
             <span class="ident">bits</span>: <span class="ident">advices</span>[<span class="number">2</span>],
-            <span class="ident">lambda_1</span>: <span class="ident">advices</span>[<span class="number">3</span>],
-            <span class="ident">lambda_2</span>: <span class="ident">advices</span>[<span class="number">4</span>],
             <span class="ident">witness_pieces</span>,
             <span class="ident">generator_table</span>: <span class="ident">GeneratorTableConfig</span> {
                 <span class="ident">table_idx</span>: <span class="ident">lookup</span>.<span class="number">0</span>,
@@ -535,18 +536,12 @@
         <span class="comment">// Closures for expressions that are derived multiple times</span>
         <span class="comment">// x_r = lambda_1^2 - x_a - x_p</span>
         <span class="kw">let</span> <span class="ident">x_r</span> <span class="op">=</span> <span class="op">|</span><span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">rotation</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">x_a</span>, <span class="ident">rotation</span>);
-            <span class="kw">let</span> <span class="ident">x_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">x_p</span>, <span class="ident">rotation</span>);
-            <span class="kw">let</span> <span class="ident">lambda_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">lambda_1</span>, <span class="ident">rotation</span>);
-            <span class="ident">lambda_1</span>.<span class="ident">square</span>() <span class="op">-</span> <span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_p</span>
+            <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_r</span>(<span class="ident">meta</span>, <span class="ident">rotation</span>)
         };
 
         <span class="comment">// Y_A = (lambda_1 + lambda_2) * (x_a - x_r)</span>
         <span class="kw">let</span> <span class="ident">Y_A</span> <span class="op">=</span> <span class="op">|</span><span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">rotation</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">x_a</span>, <span class="ident">rotation</span>);
-            <span class="kw">let</span> <span class="ident">lambda_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">lambda_1</span>, <span class="ident">rotation</span>);
-            <span class="kw">let</span> <span class="ident">lambda_2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">lambda_2</span>, <span class="ident">rotation</span>);
-            (<span class="ident">lambda_1</span> <span class="op">+</span> <span class="ident">lambda_2</span>) <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_r</span>(<span class="ident">meta</span>, <span class="ident">rotation</span>))
+            <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">Y_A</span>(<span class="ident">meta</span>, <span class="ident">rotation</span>)
         };
 
         <span class="comment">// Check that the initial x_A, x_P, lambda_1, lambda_2 are consistent with y_Q.</span>
@@ -565,17 +560,12 @@
 
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;Sinsemilla gate&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">q_s1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">config</span>.<span class="ident">q_sinsemilla1</span>);
-            <span class="comment">// q_s3 = (q_s2) * (q_s2 - 1)</span>
-            <span class="kw">let</span> <span class="ident">q_s3</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">one</span> <span class="op">=</span> <span class="ident">Expression::Constant</span>(<span class="ident">pallas::Base::one</span>());
-                <span class="kw">let</span> <span class="ident">q_s2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_fixed</span>(<span class="ident">config</span>.<span class="ident">q_sinsemilla2</span>, <span class="ident">Rotation::cur</span>());
-                <span class="ident">q_s2</span>.<span class="ident">clone</span>() <span class="op">*</span> (<span class="ident">q_s2</span> <span class="op">-</span> <span class="ident">one</span>)
-            };
+            <span class="kw">let</span> <span class="ident">q_s3</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">q_s3</span>(<span class="ident">meta</span>);
 
-            <span class="kw">let</span> <span class="ident">lambda_1_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">lambda_1</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">lambda_2_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">lambda_2</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">x_a_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">x_a</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">x_a_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">x_a</span>, <span class="ident">Rotation::next</span>());
+            <span class="kw">let</span> <span class="ident">lambda_1_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>, <span class="ident">Rotation::next</span>());
+            <span class="kw">let</span> <span class="ident">lambda_2_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_2</span>, <span class="ident">Rotation::cur</span>());
+            <span class="kw">let</span> <span class="ident">x_a_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>, <span class="ident">Rotation::cur</span>());
+            <span class="kw">let</span> <span class="ident">x_a_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>, <span class="ident">Rotation::next</span>());
 
             <span class="comment">// x_r = lambda_1^2 - x_a_cur - x_p</span>
             <span class="kw">let</span> <span class="ident">x_r</span> <span class="op">=</span> <span class="ident">x_r</span>(<span class="ident">meta</span>, <span class="ident">Rotation::cur</span>());

@@ -682,6 +682,7 @@
 <span id="662">662</span>
 <span id="663">663</span>
 <span id="664">664</span>
+<span id="665">665</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Make use of a K-bit lookup table to decompose a field element into K-bit</span>
 <span class="doccomment">//! words.</span>
 
@@ -1084,7 +1085,8 @@
     <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::LookupRangeCheckConfig</span>;
 
     <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::lebs2ip</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::primitives::sinsemilla::K</span>;
+    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::sinsemilla::primitives::K</span>;
+
     <span class="kw">use</span> <span class="ident">ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeFieldBits</span>};
     <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
         <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">SimpleFloorPlanner</span>},

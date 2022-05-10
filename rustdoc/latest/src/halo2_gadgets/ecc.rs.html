@@ -890,7 +890,53 @@
 <span id="870">870</span>
 <span id="871">871</span>
 <span id="872">872</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Gadgets for elliptic curve operations.</span>
+<span id="873">873</span>
+<span id="874">874</span>
+<span id="875">875</span>
+<span id="876">876</span>
+<span id="877">877</span>
+<span id="878">878</span>
+<span id="879">879</span>
+<span id="880">880</span>
+<span id="881">881</span>
+<span id="882">882</span>
+<span id="883">883</span>
+<span id="884">884</span>
+<span id="885">885</span>
+<span id="886">886</span>
+<span id="887">887</span>
+<span id="888">888</span>
+<span id="889">889</span>
+<span id="890">890</span>
+<span id="891">891</span>
+<span id="892">892</span>
+<span id="893">893</span>
+<span id="894">894</span>
+<span id="895">895</span>
+<span id="896">896</span>
+<span id="897">897</span>
+<span id="898">898</span>
+<span id="899">899</span>
+<span id="900">900</span>
+<span id="901">901</span>
+<span id="902">902</span>
+<span id="903">903</span>
+<span id="904">904</span>
+<span id="905">905</span>
+<span id="906">906</span>
+<span id="907">907</span>
+<span id="908">908</span>
+<span id="909">909</span>
+<span id="910">910</span>
+<span id="911">911</span>
+<span id="912">912</span>
+<span id="913">913</span>
+<span id="914">914</span>
+<span id="915">915</span>
+<span id="916">916</span>
+<span id="917">917</span>
+<span id="918">918</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Elliptic curve operations.</span>
 
 <span class="kw">use</span> <span class="ident">std::fmt::Debug</span>;
 
@@ -967,6 +1013,21 @@
         <span class="ident">value</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ScalarVar</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 
+    <span class="doccomment">/// Witnesses a full-width scalar to be used in fixed-base multiplication.</span>
+    <span class="kw">fn</span> <span class="ident">witness_scalar_fixed</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
+        <span class="ident">value</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ScalarFixed</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+
+    <span class="doccomment">/// Converts a magnitude and sign that exists as variables in the circuit into a</span>
+    <span class="doccomment">/// signed short scalar to be used in fixed-base scalar multiplication.</span>
+    <span class="kw">fn</span> <span class="ident">scalar_fixed_from_signed_short</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
+        <span class="ident">magnitude_sign</span>: (<span class="ident"><span class="self">Self</span>::Var</span>, <span class="ident"><span class="self">Self</span>::Var</span>),
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ScalarFixedShort</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+
     <span class="doccomment">/// Extracts the x-coordinate of a point.</span>
     <span class="kw">fn</span> <span class="ident">extract_p</span><span class="op">&lt;</span><span class="ident">Point</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(<span class="ident">point</span>: <span class="kw-2">&amp;</span><span class="ident">Point</span>) -&gt; <span class="ident"><span class="self">Self</span>::X</span>;
 
@@ -1000,16 +1061,16 @@
     <span class="kw">fn</span> <span class="ident">mul_fixed</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">scalar</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
+        <span class="ident">scalar</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ScalarFixed</span>,
         <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::FullScalar</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident"><span class="self">Self</span>::ScalarFixed</span>), <span class="ident">Error</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Performs fixed-base scalar multiplication using a short signed scalar, returning</span>
-    <span class="doccomment">/// `[magnitude * sign] base`.</span>
+    <span class="doccomment">/// `[scalar] base`.</span>
     <span class="kw">fn</span> <span class="ident">mul_fixed_short</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">magnitude_sign</span>: (<span class="ident"><span class="self">Self</span>::Var</span>, <span class="ident"><span class="self">Self</span>::Var</span>),
+        <span class="ident">scalar</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ScalarFixedShort</span>,
         <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::ShortScalar</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident"><span class="self">Self</span>::ScalarFixedShort</span>), <span class="ident">Error</span><span class="op">&gt;</span>;
 
@@ -1046,17 +1107,7 @@
     <span class="kw">type</span> <span class="ident">Base</span>: <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Clone</span>;
 }
 
-<span class="doccomment">/// An element of the given elliptic curve&#39;s base field, that is used as a scalar</span>
-<span class="doccomment">/// in variable-base scalar mul.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// It is not true in general that a scalar field element fits in a curve&#39;s</span>
-<span class="doccomment">/// base field, and in particular it is untrue for the Pallas curve, whose</span>
-<span class="doccomment">/// scalar field `Fq` is larger than its base field `Fp`.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// However, the only use of variable-base scalar mul in the Orchard protocol</span>
-<span class="doccomment">/// is in deriving diversified addresses `[ivk] g_d`,  and `ivk` is guaranteed</span>
-<span class="doccomment">/// to be in the base field of the curve. (See non-normative notes in</span>
-<span class="doccomment">/// https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents.)</span>
+<span class="doccomment">/// An integer representing an element of the scalar field for a specific elliptic curve.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ScalarVar</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="ident">chip</span>: <span class="ident">EccChip</span>,
@@ -1090,21 +1141,58 @@
     }
 }
 
-<span class="doccomment">/// A full-width element of the given elliptic curve&#39;s scalar field, to be used for fixed-base scalar mul.</span>
+<span class="doccomment">/// An integer representing an element of the scalar field for a specific elliptic curve,</span>
+<span class="doccomment">/// for [`FixedPoint`] scalar multiplication.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ScalarFixed</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="ident">chip</span>: <span class="ident">EccChip</span>,
     <span class="ident">inner</span>: <span class="ident">EccChip::ScalarFixed</span>,
 }
 
-<span class="doccomment">/// A signed short element of the given elliptic curve&#39;s scalar field, to be used for fixed-base scalar mul.</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">ScalarFixed</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Witnesses the given full-width scalar.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Depending on the `EccChip` implementation, this may either witness the scalar</span>
+    <span class="doccomment">/// immediately, or delay witnessing until its first use in [`FixedPoint::mul`].</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">chip</span>: <span class="ident">EccChip</span>,
+        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
+        <span class="ident">value</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">witness_scalar_fixed</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">value</span>);
+        <span class="ident">scalar</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">ScalarFixed</span> { <span class="ident">chip</span>, <span class="ident">inner</span> })
+    }
+}
+
+<span class="doccomment">/// A signed short (64-bit) integer represented as an element of the scalar field for a</span>
+<span class="doccomment">/// specific elliptic curve, to be used for [`FixedPointShort`] scalar multiplication.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ScalarFixedShort</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="ident">chip</span>: <span class="ident">EccChip</span>,
     <span class="ident">inner</span>: <span class="ident">EccChip::ScalarFixedShort</span>,
 }
 
-<span class="doccomment">/// A non-identity elliptic curve point over the given curve.</span>
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">ScalarFixedShort</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Converts the given signed short scalar.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// `magnitude_sign` must be a tuple of two circuit-assigned values:</span>
+    <span class="doccomment">/// - An unsigned integer of at most 64 bits.</span>
+    <span class="doccomment">/// - A sign value that is either 1 or -1.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Depending on the `EccChip` implementation, the scalar may either be constrained</span>
+    <span class="doccomment">/// immediately by this constructor, or lazily constrained when it is first used in</span>
+    <span class="doccomment">/// [`FixedPointShort::mul`].</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">chip</span>: <span class="ident">EccChip</span>,
+        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
+        <span class="ident">magnitude_sign</span>: (<span class="ident">EccChip::Var</span>, <span class="ident">EccChip::Var</span>),
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">scalar_fixed_from_signed_short</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">magnitude_sign</span>);
+        <span class="ident">scalar</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">ScalarFixedShort</span> { <span class="ident">chip</span>, <span class="ident">inner</span> })
+    }
+}
+
+<span class="doccomment">/// A point on a specific elliptic curve that is guaranteed to not be the identity.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NonIdentityPoint</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="ident">chip</span>: <span class="ident">EccChip</span>,
@@ -1222,7 +1310,7 @@
     }
 }
 
-<span class="doccomment">/// An elliptic curve point over the given curve.</span>
+<span class="doccomment">/// A point on a specific elliptic curve.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span><span class="op">&gt;</span> {
     <span class="ident">chip</span>: <span class="ident">EccChip</span>,
@@ -1284,8 +1372,7 @@
     }
 }
 
-<span class="doccomment">/// The affine short Weierstrass x-coordinate of an elliptic curve point over the</span>
-<span class="doccomment">/// given curve.</span>
+<span class="doccomment">/// The affine short Weierstrass x-coordinate of a point on a specific elliptic curve.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">X</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="ident">chip</span>: <span class="ident">EccChip</span>,
@@ -1304,26 +1391,29 @@
     }
 }
 
-<span class="doccomment">/// A constant elliptic curve point over the given curve, for which window tables have</span>
-<span class="doccomment">/// been provided to make scalar multiplication more efficient.</span>
+<span class="doccomment">/// Precomputed multiples of a fixed point, for full-width scalar multiplication.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// Used in scalar multiplication with full-width scalars.</span>
+<span class="doccomment">/// Fixing the curve point enables window tables to be baked into the circuit, making</span>
+<span class="doccomment">/// scalar multiplication more efficient. These window tables are tuned to full-width</span>
+<span class="doccomment">/// scalar multiplication.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="ident">chip</span>: <span class="ident">EccChip</span>,
     <span class="ident">inner</span>: <span class="op">&lt;</span><span class="ident">EccChip::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::FullScalar</span>,
 }
 
-<span class="doccomment">/// A constant elliptic curve point over the given curve, used in scalar multiplication</span>
-<span class="doccomment">/// with a base field element</span>
+<span class="doccomment">/// Precomputed multiples of a fixed point, that can be multiplied by base-field elements.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Fixing the curve point enables window tables to be baked into the circuit, making</span>
+<span class="doccomment">/// scalar multiplication more efficient. These window tables are tuned to scalar</span>
+<span class="doccomment">/// multiplication by base-field elements.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FixedPointBaseField</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="ident">chip</span>: <span class="ident">EccChip</span>,
     <span class="ident">inner</span>: <span class="op">&lt;</span><span class="ident">EccChip::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Base</span>,
 }
 
-<span class="doccomment">/// A constant elliptic curve point over the given curve, used in scalar multiplication</span>
-<span class="doccomment">/// with a short signed exponent</span>
+<span class="doccomment">/// Precomputed multiples of a fixed point, for short signed scalar multiplication.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FixedPointShort</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="ident">chip</span>: <span class="ident">EccChip</span>,
@@ -1336,10 +1426,11 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mul</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">by</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
+        <span class="ident">by</span>: <span class="ident">ScalarFixed</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>, <span class="ident">ScalarFixed</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">chip</span>, <span class="ident">by</span>.<span class="ident">chip</span>);
         <span class="self">self</span>.<span class="ident">chip</span>
-            .<span class="ident">mul_fixed</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">by</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>)
+            .<span class="ident">mul_fixed</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="kw-2">&amp;</span><span class="ident">by</span>.<span class="ident">inner</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>)
             .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)<span class="op">|</span> {
                 (
                     <span class="ident">Point</span> {
@@ -1394,10 +1485,11 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mul</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">magnitude_sign</span>: (<span class="ident">EccChip::Var</span>, <span class="ident">EccChip::Var</span>),
+        <span class="ident">by</span>: <span class="ident">ScalarFixedShort</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>, <span class="ident">ScalarFixedShort</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">chip</span>, <span class="ident">by</span>.<span class="ident">chip</span>);
         <span class="self">self</span>.<span class="ident">chip</span>
-            .<span class="ident">mul_fixed_short</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">magnitude_sign</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>)
+            .<span class="ident">mul_fixed_short</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="kw-2">&amp;</span><span class="ident">by</span>.<span class="ident">inner</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>)
             .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)<span class="op">|</span> {
                 (
                     <span class="ident">Point</span> {

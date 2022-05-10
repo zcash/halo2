@@ -37,7 +37,34 @@
 <span id="17">17</span>
 <span id="18">18</span>
 <span id="19">19</span>
-</pre><pre class="rust"><code><span class="doccomment">//! # halo2_gadgets</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+</pre><pre class="rust"><code><span class="doccomment">//! This crate provides various common gadgets and chips for use with `halo2_proofs`.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! # Gadgets</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! Gadgets are an abstraction for writing reusable and interoperable circuit logic. They</span>
+<span class="doccomment">//! do not create any circuit constraints or assignments themselves, instead interacting</span>
+<span class="doccomment">//! with the circuit through a defined &quot;instruction set&quot;. A circuit developer uses gadgets</span>
+<span class="doccomment">//! by instantiating them with a particular choice of chip.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! # Chips</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! Chips implement the low-level circuit constraints. The same instructions may be</span>
+<span class="doccomment">//! implemented by multiple chips, enabling different performance trade-offs to be made.</span>
+<span class="doccomment">//! Chips can be highly optimised by their developers, as long as they conform to the</span>
+<span class="doccomment">//! defined instructions.</span>
 
 <span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">feature</span>(<span class="ident">doc_cfg</span>))]</span>
 <span class="comment">// Temporary until we have more of the crate implemented.</span>
@@ -51,11 +78,10 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">ecc</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">poseidon</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;unstable&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;unstable&quot;</span>)))]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">sha256</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">sinsemilla</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">utilities</span>;
-
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">primitives</span>;
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.62.0-nightly (88860d547 2022-05-09)" ></div>
 </body></html>

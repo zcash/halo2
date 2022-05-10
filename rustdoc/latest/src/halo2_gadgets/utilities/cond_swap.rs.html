@@ -378,7 +378,7 @@
 }
 
 <span class="doccomment">/// Configuration for the [`CondSwapChip`].</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CondSwapConfig</span> {
     <span class="ident">q_swap</span>: <span class="ident">Selector</span>,
     <span class="ident">a</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,

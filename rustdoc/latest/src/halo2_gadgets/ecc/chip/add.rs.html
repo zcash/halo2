@@ -512,14 +512,6 @@
 <span id="492">492</span>
 <span id="493">493</span>
 <span id="494">494</span>
-<span id="495">495</span>
-<span id="496">496</span>
-<span id="497">497</span>
-<span id="498">498</span>
-<span id="499">499</span>
-<span id="500">500</span>
-<span id="501">501</span>
-<span id="502">502</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::EccPoint</span>;
 <span class="kw">use</span> <span class="ident">ff</span>::{<span class="ident">BatchInvert</span>, <span class="ident">Field</span>};
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
@@ -611,7 +603,7 @@
     }
 
     <span class="kw">fn</span> <span class="ident">create_gate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) {
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;complete addition gates&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
+        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;complete addition&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">q_add</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_add</span>);
             <span class="kw">let</span> <span class="ident">x_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_p</span>, <span class="ident">Rotation::cur</span>());
             <span class="kw">let</span> <span class="ident">y_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">y_p</span>, <span class="ident">Rotation::cur</span>());
@@ -631,14 +623,20 @@
             <span class="kw">let</span> <span class="ident">delta</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">delta</span>, <span class="ident">Rotation::cur</span>());
 
             <span class="comment">// Useful composite expressions</span>
+            <span class="comment">// (x_q − x_p)</span>
+            <span class="kw">let</span> <span class="ident">x_q_minus_x_p</span> <span class="op">=</span> <span class="ident">x_q</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_p</span>.<span class="ident">clone</span>();
+            <span class="comment">// (x_p - x_r)</span>
+            <span class="kw">let</span> <span class="ident">x_p_minus_x_r</span> <span class="op">=</span> <span class="ident">x_p</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_r</span>.<span class="ident">clone</span>();
+            <span class="comment">// (y_q + y_p)</span>
+            <span class="kw">let</span> <span class="ident">y_q_plus_y_p</span> <span class="op">=</span> <span class="ident">y_q</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="ident">y_p</span>.<span class="ident">clone</span>();
             <span class="comment">// α ⋅(x_q - x_p)</span>
-            <span class="kw">let</span> <span class="ident">if_alpha</span> <span class="op">=</span> (<span class="ident">x_q</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_p</span>.<span class="ident">clone</span>()) <span class="op">*</span> <span class="ident">alpha</span>;
+            <span class="kw">let</span> <span class="ident">if_alpha</span> <span class="op">=</span> <span class="ident">x_q_minus_x_p</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">alpha</span>;
             <span class="comment">// β ⋅ x_p</span>
             <span class="kw">let</span> <span class="ident">if_beta</span> <span class="op">=</span> <span class="ident">x_p</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">beta</span>;
             <span class="comment">// γ ⋅ x_q</span>
             <span class="kw">let</span> <span class="ident">if_gamma</span> <span class="op">=</span> <span class="ident">x_q</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">gamma</span>;
-            <span class="comment">// δ ⋅(y_p + y_q)</span>
-            <span class="kw">let</span> <span class="ident">if_delta</span> <span class="op">=</span> (<span class="ident">y_q</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="ident">y_p</span>.<span class="ident">clone</span>()) <span class="op">*</span> <span class="ident">delta</span>;
+            <span class="comment">// δ ⋅(y_q + y_p)</span>
+            <span class="kw">let</span> <span class="ident">if_delta</span> <span class="op">=</span> <span class="ident">y_q_plus_y_p</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">delta</span>;
 
             <span class="comment">// Useful constants</span>
             <span class="kw">let</span> <span class="ident">one</span> <span class="op">=</span> <span class="ident">Expression::Constant</span>(<span class="ident">pallas::Base::one</span>());
@@ -647,13 +645,11 @@
 
             <span class="comment">// (x_q − x_p)⋅((x_q − x_p)⋅λ − (y_q−y_p)) = 0</span>
             <span class="kw">let</span> <span class="ident">poly1</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">x_q_minus_x_p</span> <span class="op">=</span> <span class="ident">x_q</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_p</span>.<span class="ident">clone</span>(); <span class="comment">// (x_q − x_p)</span>
-
                 <span class="kw">let</span> <span class="ident">y_q_minus_y_p</span> <span class="op">=</span> <span class="ident">y_q</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">y_p</span>.<span class="ident">clone</span>(); <span class="comment">// (y_q − y_p)</span>
                 <span class="kw">let</span> <span class="ident">incomplete</span> <span class="op">=</span> <span class="ident">x_q_minus_x_p</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">lambda</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">y_q_minus_y_p</span>; <span class="comment">// (x_q − x_p)⋅λ − (y_q−y_p)</span>
 
                 <span class="comment">// q_add ⋅(x_q − x_p)⋅((x_q − x_p)⋅λ − (y_q−y_p))</span>
-                <span class="ident">x_q_minus_x_p</span> <span class="op">*</span> <span class="ident">incomplete</span>
+                <span class="ident">x_q_minus_x_p</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">incomplete</span>
             };
 
             <span class="comment">// (1 - (x_q - x_p)⋅α)⋅(2y_p ⋅λ - 3x_p^2) = 0</span>
@@ -666,70 +662,58 @@
                 (<span class="ident">one</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">if_alpha</span>.<span class="ident">clone</span>()) <span class="op">*</span> <span class="ident">tangent_line</span>
             };
 
-            <span class="comment">// x_p⋅x_q⋅(x_q - x_p)⋅(λ^2 - x_p - x_q - x_r) = 0</span>
-            <span class="kw">let</span> <span class="ident">secant_line</span> <span class="op">=</span> <span class="ident">lambda</span>.<span class="ident">clone</span>().<span class="ident">square</span>() <span class="op">-</span> <span class="ident">x_p</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_q</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_r</span>.<span class="ident">clone</span>(); <span class="comment">// (λ^2 - x_p - x_q - x_r)</span>
-            <span class="kw">let</span> <span class="ident">poly3</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">x_q_minus_x_p</span> <span class="op">=</span> <span class="ident">x_q</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_p</span>.<span class="ident">clone</span>(); <span class="comment">// (x_q - x_p)</span>
+            <span class="comment">// (λ^2 - x_p - x_q - x_r)</span>
+            <span class="kw">let</span> <span class="ident">nonexceptional_x_r</span> <span class="op">=</span>
+                <span class="ident">lambda</span>.<span class="ident">clone</span>().<span class="ident">square</span>() <span class="op">-</span> <span class="ident">x_p</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_q</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_r</span>.<span class="ident">clone</span>();
+            <span class="comment">// (λ ⋅(x_p - x_r) - y_p - y_r)</span>
+            <span class="kw">let</span> <span class="ident">nonexceptional_y_r</span> <span class="op">=</span> <span class="ident">lambda</span> <span class="op">*</span> <span class="ident">x_p_minus_x_r</span> <span class="op">-</span> <span class="ident">y_p</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">y_r</span>.<span class="ident">clone</span>();
 
-                <span class="comment">// x_p⋅x_q⋅(x_q - x_p)⋅(λ^2 - x_p - x_q - x_r)</span>
-                <span class="ident">x_p</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x_q</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x_q_minus_x_p</span> <span class="op">*</span> <span class="ident">secant_line</span>.<span class="ident">clone</span>()
-            };
+            <span class="comment">// x_p⋅x_q⋅(x_q - x_p)⋅(λ^2 - x_p - x_q - x_r) = 0</span>
+            <span class="kw">let</span> <span class="ident">poly3a</span> <span class="op">=</span>
+                <span class="ident">x_p</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x_q</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x_q_minus_x_p</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">nonexceptional_x_r</span>.<span class="ident">clone</span>();
 
             <span class="comment">// x_p⋅x_q⋅(x_q - x_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r) = 0</span>
-            <span class="kw">let</span> <span class="ident">poly4</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">x_q_minus_x_p</span> <span class="op">=</span> <span class="ident">x_q</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_p</span>.<span class="ident">clone</span>(); <span class="comment">// (x_q - x_p)</span>
-                <span class="kw">let</span> <span class="ident">x_p_minus_x_r</span> <span class="op">=</span> <span class="ident">x_p</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_r</span>.<span class="ident">clone</span>(); <span class="comment">// (x_p - x_r)</span>
-
-                <span class="comment">// x_p⋅x_q⋅(x_q - x_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r)</span>
-                <span class="ident">x_p</span>.<span class="ident">clone</span>()
-                    <span class="op">*</span> <span class="ident">x_q</span>.<span class="ident">clone</span>()
-                    <span class="op">*</span> <span class="ident">x_q_minus_x_p</span>
-                    <span class="op">*</span> (<span class="ident">lambda</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x_p_minus_x_r</span> <span class="op">-</span> <span class="ident">y_p</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">y_r</span>.<span class="ident">clone</span>())
-            };
+            <span class="kw">let</span> <span class="ident">poly3b</span> <span class="op">=</span> <span class="ident">x_p</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x_q</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x_q_minus_x_p</span> <span class="op">*</span> <span class="ident">nonexceptional_y_r</span>.<span class="ident">clone</span>();
 
             <span class="comment">// x_p⋅x_q⋅(y_q + y_p)⋅(λ^2 - x_p - x_q - x_r) = 0</span>
-            <span class="kw">let</span> <span class="ident">poly5</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">y_q_plus_y_p</span> <span class="op">=</span> <span class="ident">y_q</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="ident">y_p</span>.<span class="ident">clone</span>(); <span class="comment">// (y_q + y_p)</span>
-
-                <span class="comment">// x_p⋅x_q⋅(y_q + y_p)⋅(λ^2 - x_p - x_q - x_r)</span>
-                <span class="ident">x_p</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x_q</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">y_q_plus_y_p</span> <span class="op">*</span> <span class="ident">secant_line</span>
-            };
+            <span class="kw">let</span> <span class="ident">poly3c</span> <span class="op">=</span> <span class="ident">x_p</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x_q</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">y_q_plus_y_p</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">nonexceptional_x_r</span>;
 
             <span class="comment">// x_p⋅x_q⋅(y_q + y_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r) = 0</span>
-            <span class="kw">let</span> <span class="ident">poly6</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">y_q_plus_y_p</span> <span class="op">=</span> <span class="ident">y_q</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="ident">y_p</span>.<span class="ident">clone</span>(); <span class="comment">// (y_q + y_p)</span>
-                <span class="kw">let</span> <span class="ident">x_p_minus_x_r</span> <span class="op">=</span> <span class="ident">x_p</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_r</span>.<span class="ident">clone</span>(); <span class="comment">// (x_p - x_r)</span>
-
-                <span class="comment">// x_p⋅x_q⋅(y_q + y_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r)</span>
-                <span class="ident">x_p</span>.<span class="ident">clone</span>()
-                    <span class="op">*</span> <span class="ident">x_q</span>.<span class="ident">clone</span>()
-                    <span class="op">*</span> <span class="ident">y_q_plus_y_p</span>
-                    <span class="op">*</span> (<span class="ident">lambda</span> <span class="op">*</span> <span class="ident">x_p_minus_x_r</span> <span class="op">-</span> <span class="ident">y_p</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">y_r</span>.<span class="ident">clone</span>())
-            };
+            <span class="kw">let</span> <span class="ident">poly3d</span> <span class="op">=</span> <span class="ident">x_p</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x_q</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">y_q_plus_y_p</span> <span class="op">*</span> <span class="ident">nonexceptional_y_r</span>;
 
             <span class="comment">// (1 - x_p * β) * (x_r - x_q) = 0</span>
-            <span class="kw">let</span> <span class="ident">poly7</span> <span class="op">=</span> (<span class="ident">one</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">if_beta</span>.<span class="ident">clone</span>()) <span class="op">*</span> (<span class="ident">x_r</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_q</span>);
+            <span class="kw">let</span> <span class="ident">poly4a</span> <span class="op">=</span> (<span class="ident">one</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">if_beta</span>.<span class="ident">clone</span>()) <span class="op">*</span> (<span class="ident">x_r</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_q</span>);
 
             <span class="comment">// (1 - x_p * β) * (y_r - y_q) = 0</span>
-            <span class="kw">let</span> <span class="ident">poly8</span> <span class="op">=</span> (<span class="ident">one</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">if_beta</span>) <span class="op">*</span> (<span class="ident">y_r</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">y_q</span>);
+            <span class="kw">let</span> <span class="ident">poly4b</span> <span class="op">=</span> (<span class="ident">one</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">if_beta</span>) <span class="op">*</span> (<span class="ident">y_r</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">y_q</span>);
 
             <span class="comment">// (1 - x_q * γ) * (x_r - x_p) = 0</span>
-            <span class="kw">let</span> <span class="ident">poly9</span> <span class="op">=</span> (<span class="ident">one</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">if_gamma</span>.<span class="ident">clone</span>()) <span class="op">*</span> (<span class="ident">x_r</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_p</span>);
+            <span class="kw">let</span> <span class="ident">poly5a</span> <span class="op">=</span> (<span class="ident">one</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">if_gamma</span>.<span class="ident">clone</span>()) <span class="op">*</span> (<span class="ident">x_r</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_p</span>);
 
             <span class="comment">// (1 - x_q * γ) * (y_r - y_p) = 0</span>
-            <span class="kw">let</span> <span class="ident">poly10</span> <span class="op">=</span> (<span class="ident">one</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">if_gamma</span>) <span class="op">*</span> (<span class="ident">y_r</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">y_p</span>);
+            <span class="kw">let</span> <span class="ident">poly5b</span> <span class="op">=</span> (<span class="ident">one</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">if_gamma</span>) <span class="op">*</span> (<span class="ident">y_r</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">y_p</span>);
 
             <span class="comment">// ((1 - (x_q - x_p) * α - (y_q + y_p) * δ)) * x_r</span>
-            <span class="kw">let</span> <span class="ident">poly11</span> <span class="op">=</span> (<span class="ident">one</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">if_alpha</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">if_delta</span>.<span class="ident">clone</span>()) <span class="op">*</span> <span class="ident">x_r</span>;
+            <span class="kw">let</span> <span class="ident">poly6a</span> <span class="op">=</span> (<span class="ident">one</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">if_alpha</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">if_delta</span>.<span class="ident">clone</span>()) <span class="op">*</span> <span class="ident">x_r</span>;
 
             <span class="comment">// ((1 - (x_q - x_p) * α - (y_q + y_p) * δ)) * y_r</span>
-            <span class="kw">let</span> <span class="ident">poly12</span> <span class="op">=</span> (<span class="ident">one</span> <span class="op">-</span> <span class="ident">if_alpha</span> <span class="op">-</span> <span class="ident">if_delta</span>) <span class="op">*</span> <span class="ident">y_r</span>;
+            <span class="kw">let</span> <span class="ident">poly6b</span> <span class="op">=</span> (<span class="ident">one</span> <span class="op">-</span> <span class="ident">if_alpha</span> <span class="op">-</span> <span class="ident">if_delta</span>) <span class="op">*</span> <span class="ident">y_r</span>;
 
             <span class="ident">Constraints::with_selector</span>(
                 <span class="ident">q_add</span>,
                 [
-                    <span class="ident">poly1</span>, <span class="ident">poly2</span>, <span class="ident">poly3</span>, <span class="ident">poly4</span>, <span class="ident">poly5</span>, <span class="ident">poly6</span>, <span class="ident">poly7</span>, <span class="ident">poly8</span>, <span class="ident">poly9</span>, <span class="ident">poly10</span>, <span class="ident">poly11</span>,
-                    <span class="ident">poly12</span>,
+                    (<span class="string">&quot;1&quot;</span>, <span class="ident">poly1</span>),
+                    (<span class="string">&quot;2&quot;</span>, <span class="ident">poly2</span>),
+                    (<span class="string">&quot;3a&quot;</span>, <span class="ident">poly3a</span>),
+                    (<span class="string">&quot;3b&quot;</span>, <span class="ident">poly3b</span>),
+                    (<span class="string">&quot;3c&quot;</span>, <span class="ident">poly3c</span>),
+                    (<span class="string">&quot;3d&quot;</span>, <span class="ident">poly3d</span>),
+                    (<span class="string">&quot;4a&quot;</span>, <span class="ident">poly4a</span>),
+                    (<span class="string">&quot;4b&quot;</span>, <span class="ident">poly4b</span>),
+                    (<span class="string">&quot;5a&quot;</span>, <span class="ident">poly5a</span>),
+                    (<span class="string">&quot;5b&quot;</span>, <span class="ident">poly5b</span>),
+                    (<span class="string">&quot;6a&quot;</span>, <span class="ident">poly6a</span>),
+                    (<span class="string">&quot;6b&quot;</span>, <span class="ident">poly6b</span>),
                 ],
             )
         });

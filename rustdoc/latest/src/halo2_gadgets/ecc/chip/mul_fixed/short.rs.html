@@ -640,6 +640,35 @@
 <span id="620">620</span>
 <span id="621">621</span>
 <span id="622">622</span>
+<span id="623">623</span>
+<span id="624">624</span>
+<span id="625">625</span>
+<span id="626">626</span>
+<span id="627">627</span>
+<span id="628">628</span>
+<span id="629">629</span>
+<span id="630">630</span>
+<span id="631">631</span>
+<span id="632">632</span>
+<span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
+<span id="636">636</span>
+<span id="637">637</span>
+<span id="638">638</span>
+<span id="639">639</span>
+<span id="640">640</span>
+<span id="641">641</span>
+<span id="642">642</span>
+<span id="643">643</span>
+<span id="644">644</span>
+<span id="645">645</span>
+<span id="646">646</span>
+<span id="647">647</span>
+<span id="648">648</span>
+<span id="649">649</span>
+<span id="650">650</span>
+<span id="651">651</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">EccPoint</span>, <span class="ident">EccScalarFixedShort</span>, <span class="ident">FixedPoints</span>, <span class="ident">L_SCALAR_SHORT</span>, <span class="ident">NUM_WINDOWS_SHORT</span>};
@@ -677,9 +706,9 @@
     <span class="kw">fn</span> <span class="ident">create_gate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) {
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;Short fixed-base mul gate&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">q_mul_fixed_short</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul_fixed_short</span>);
-            <span class="kw">let</span> <span class="ident">y_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">super_config</span>.<span class="ident">y_p</span>, <span class="ident">Rotation::cur</span>());
+            <span class="kw">let</span> <span class="ident">y_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">super_config</span>.<span class="ident">add_config</span>.<span class="ident">y_p</span>, <span class="ident">Rotation::cur</span>());
             <span class="kw">let</span> <span class="ident">y_a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">super_config</span>.<span class="ident">add_config</span>.<span class="ident">y_qr</span>, <span class="ident">Rotation::cur</span>());
-            <span class="comment">// z_21</span>
+            <span class="comment">// z_21 = k_21</span>
             <span class="kw">let</span> <span class="ident">last_window</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">super_config</span>.<span class="ident">u</span>, <span class="ident">Rotation::cur</span>());
             <span class="kw">let</span> <span class="ident">sign</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">super_config</span>.<span class="ident">window</span>, <span class="ident">Rotation::cur</span>());
 
@@ -688,12 +717,16 @@
             <span class="comment">// Check that last window is either 0 or 1.</span>
             <span class="kw">let</span> <span class="ident">last_window_check</span> <span class="op">=</span> <span class="ident">bool_check</span>(<span class="ident">last_window</span>);
             <span class="comment">// Check that sign is either 1 or -1.</span>
-            <span class="kw">let</span> <span class="ident">sign_check</span> <span class="op">=</span> <span class="ident">sign</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">sign</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">one</span>;
+            <span class="kw">let</span> <span class="ident">sign_check</span> <span class="op">=</span> <span class="ident">sign</span>.<span class="ident">clone</span>().<span class="ident">square</span>() <span class="op">-</span> <span class="ident">one</span>;
 
             <span class="comment">// `(x_a, y_a)` is the result of `[m]B`, where `m` is the magnitude.</span>
             <span class="comment">// We conditionally negate this result using `y_p = y_a * s`, where `s` is the sign.</span>
 
             <span class="comment">// Check that the final `y_p = y_a` or `y_p = -y_a`</span>
+            <span class="comment">//</span>
+            <span class="comment">// This constraint is redundant / unnecessary, because `sign` is constrained</span>
+            <span class="comment">// to -1 or 1 by `sign_check`, and `negation_check` therefore permits a strict</span>
+            <span class="comment">// subset of the cases that this constraint permits.</span>
             <span class="kw">let</span> <span class="ident">y_check</span> <span class="op">=</span> (<span class="ident">y_p</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">y_a</span>.<span class="ident">clone</span>()) <span class="op">*</span> (<span class="ident">y_p</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="ident">y_a</span>.<span class="ident">clone</span>());
 
             <span class="comment">// Check that the correct sign is witnessed s.t. sign * y_p = y_a</span>
@@ -711,6 +744,10 @@
         });
     }
 
+    <span class="doccomment">/// Constraints `magnitude` to be at most 66 bits.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// The final window is separately constrained to be a single bit, which completes the</span>
+    <span class="doccomment">/// 64-bit range constraint.</span>
     <span class="kw">fn</span> <span class="ident">decompose</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
@@ -732,14 +769,14 @@
         <span class="prelude-val">Ok</span>(<span class="ident">EccScalarFixedShort</span> {
             <span class="ident">magnitude</span>,
             <span class="ident">sign</span>,
-            <span class="ident">running_sum</span>: (<span class="kw-2">*</span><span class="ident">running_sum</span>).<span class="ident">as_slice</span>().<span class="ident">try_into</span>().<span class="ident">unwrap</span>(),
+            <span class="ident">running_sum</span>: <span class="prelude-val">Some</span>((<span class="kw-2">*</span><span class="ident">running_sum</span>).<span class="ident">as_slice</span>().<span class="ident">try_into</span>().<span class="ident">unwrap</span>()),
         })
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assign</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">magnitude_sign</span>: <span class="ident">MagnitudeSign</span>,
+        <span class="ident">scalar</span>: <span class="kw-2">&amp;</span><span class="ident">EccScalarFixedShort</span>,
         <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="op">&lt;</span><span class="ident">Fixed</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::ShortScalar</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">EccPoint</span>, <span class="ident">EccScalarFixedShort</span>), <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
@@ -752,7 +789,14 @@
                 <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="number">0</span>;
 
                 <span class="comment">// Decompose the scalar</span>
-                <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">offset</span>, <span class="ident">magnitude_sign</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">scalar</span>.<span class="ident">running_sum</span> {
+                    <span class="prelude-val">None</span> =&gt; <span class="self">self</span>.<span class="ident">decompose</span>(
+                        <span class="kw-2">&amp;mut</span> <span class="ident">region</span>,
+                        <span class="ident">offset</span>,
+                        (<span class="ident">scalar</span>.<span class="ident">magnitude</span>.<span class="ident">clone</span>(), <span class="ident">scalar</span>.<span class="ident">sign</span>.<span class="ident">clone</span>()),
+                    ),
+                    <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="macro">todo!</span>(<span class="string">&quot;unimplemented for halo2_gadgets v0.1.0&quot;</span>),
+                }<span class="question-mark">?</span>;
 
                 <span class="kw">let</span> (<span class="ident">acc</span>, <span class="ident">mul_b</span>) <span class="op">=</span> <span class="self">self</span>
                     .<span class="ident">super_config</span>
@@ -795,7 +839,7 @@
                 <span class="comment">// Copy last window to `u` column.</span>
                 <span class="comment">// (Although the last window is not a `u` value; we are copying it into the `u`</span>
                 <span class="comment">// column because there is an available cell there.)</span>
-                <span class="kw">let</span> <span class="ident">z_21</span> <span class="op">=</span> <span class="ident">scalar</span>.<span class="ident">running_sum</span>[<span class="number">21</span>].<span class="ident">clone</span>();
+                <span class="kw">let</span> <span class="ident">z_21</span> <span class="op">=</span> <span class="ident">scalar</span>.<span class="ident">running_sum</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>()[<span class="number">21</span>].<span class="ident">clone</span>();
                 <span class="ident">z_21</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;last_window&quot;</span>, <span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">super_config</span>.<span class="ident">u</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
 
                 <span class="comment">// Conditionally negate `y`-coordinate</span>
@@ -815,7 +859,7 @@
                 <span class="comment">// Assign final `y` to `y_p` column and return final point</span>
                 <span class="kw">let</span> <span class="ident">y_var</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                     <span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_var&quot;</span>,
-                    <span class="self">self</span>.<span class="ident">super_config</span>.<span class="ident">y_p</span>,
+                    <span class="self">self</span>.<span class="ident">super_config</span>.<span class="ident">add_config</span>.<span class="ident">y_p</span>,
                     <span class="ident">offset</span>,
                     <span class="op">|</span><span class="op">|</span> <span class="ident">y_val</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
                 )<span class="question-mark">?</span>;
@@ -885,7 +929,7 @@
         <span class="ident">ecc</span>::{
             <span class="ident">chip</span>::{<span class="ident">EccChip</span>, <span class="ident">FixedPoint</span>, <span class="ident">MagnitudeSign</span>},
             <span class="ident">tests</span>::{<span class="ident">Short</span>, <span class="ident">TestFixedBases</span>},
-            <span class="ident">FixedPointShort</span>, <span class="ident">NonIdentityPoint</span>, <span class="ident">Point</span>,
+            <span class="ident">FixedPointShort</span>, <span class="ident">NonIdentityPoint</span>, <span class="ident">Point</span>, <span class="ident">ScalarFixedShort</span>,
         },
         <span class="ident">utilities</span>::{<span class="ident">lookup_range_check::LookupRangeCheckConfig</span>, <span class="ident">UtilitiesInstructions</span>},
     };
@@ -969,7 +1013,12 @@
                     <span class="kw-2">*</span><span class="ident">magnitude</span>,
                     <span class="kw-2">*</span><span class="ident">sign</span>,
                 )<span class="question-mark">?</span>;
-                <span class="ident">test_short</span>.<span class="ident">mul</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">name</span>), <span class="ident">magnitude_sign</span>)<span class="question-mark">?</span>
+                <span class="kw">let</span> <span class="ident">by</span> <span class="op">=</span> <span class="ident">ScalarFixedShort::new</span>(
+                    <span class="ident">chip</span>.<span class="ident">clone</span>(),
+                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;signed short scalar&quot;</span>),
+                    <span class="ident">magnitude_sign</span>,
+                )<span class="question-mark">?</span>;
+                <span class="ident">test_short</span>.<span class="ident">mul</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">name</span>), <span class="ident">by</span>)<span class="question-mark">?</span>
             };
             <span class="comment">// Move from base field into scalar field</span>
             <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> {
@@ -1003,7 +1052,12 @@
                     <span class="kw-2">*</span><span class="ident">magnitude</span>,
                     <span class="kw-2">*</span><span class="ident">sign</span>,
                 )<span class="question-mark">?</span>;
-                <span class="ident">test_short</span>.<span class="ident">mul</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">name</span>), <span class="ident">magnitude_sign</span>)<span class="question-mark">?</span>
+                <span class="kw">let</span> <span class="ident">by</span> <span class="op">=</span> <span class="ident">ScalarFixedShort::new</span>(
+                    <span class="ident">chip</span>.<span class="ident">clone</span>(),
+                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;signed short scalar&quot;</span>),
+                    <span class="ident">magnitude_sign</span>,
+                )<span class="question-mark">?</span>;
+                <span class="ident">test_short</span>.<span class="ident">mul</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">name</span>), <span class="ident">by</span>)<span class="question-mark">?</span>
             };
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">is_identity</span>) <span class="op">=</span> <span class="ident">result</span>.<span class="ident">inner</span>().<span class="ident">is_identity</span>() {
                 <span class="macro">assert!</span>(<span class="ident">is_identity</span>);
@@ -1085,7 +1139,7 @@
             ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">column</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">advices</span>[<span class="number">0</span>];
 
-                <span class="kw">let</span> <span class="ident">short_config</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">mul_fixed_short</span>;
+                <span class="kw">let</span> <span class="ident">short_config</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">mul_fixed_short</span>.<span class="ident">clone</span>();
                 <span class="kw">let</span> <span class="ident">magnitude_sign</span> <span class="op">=</span> {
                     <span class="kw">let</span> <span class="ident">magnitude</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">load_private</span>(
                         <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;load magnitude&quot;</span>),
@@ -1094,10 +1148,14 @@
                     )<span class="question-mark">?</span>;
                     <span class="kw">let</span> <span class="ident">sign</span> <span class="op">=</span>
                         <span class="self">self</span>.<span class="ident">load_private</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;load sign&quot;</span>), <span class="ident">column</span>, <span class="self">self</span>.<span class="ident">sign</span>)<span class="question-mark">?</span>;
-                    (<span class="ident">magnitude</span>, <span class="ident">sign</span>)
+                    <span class="ident">ScalarFixedShort::new</span>(
+                        <span class="ident">EccChip::construct</span>(<span class="ident">config</span>),
+                        <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;signed short scalar&quot;</span>),
+                        (<span class="ident">magnitude</span>, <span class="ident">sign</span>),
+                    )<span class="question-mark">?</span>
                 };
 
-                <span class="ident">short_config</span>.<span class="ident">assign</span>(<span class="ident">layouter</span>, <span class="ident">magnitude_sign</span>, <span class="kw-2">&amp;</span><span class="ident">Short</span>)<span class="question-mark">?</span>;
+                <span class="ident">short_config</span>.<span class="ident">assign</span>(<span class="ident">layouter</span>, <span class="kw-2">&amp;</span><span class="ident">magnitude_sign</span>.<span class="ident">inner</span>, <span class="kw-2">&amp;</span><span class="ident">Short</span>)<span class="question-mark">?</span>;
 
                 <span class="prelude-val">Ok</span>(())
             }

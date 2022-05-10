@@ -537,11 +537,13 @@
 <span id="517">517</span>
 <span id="518">518</span>
 <span id="519">519</span>
+<span id="520">520</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">EccBaseFieldElemFixed</span>, <span class="ident">EccPoint</span>, <span class="ident">FixedPoints</span>, <span class="ident">NUM_WINDOWS</span>, <span class="ident">T_P</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::H_BASE</span>;
 
+<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities::bool_check</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">primitives::sinsemilla</span>,
+    <span class="ident">sinsemilla::primitives</span> <span class="kw">as</span> <span class="ident">sinsemilla</span>,
     <span class="ident">utilities</span>::{<span class="ident">bitrange_subset</span>, <span class="ident">lookup_range_check::LookupRangeCheckConfig</span>, <span class="ident">range_check</span>},
 };
 
@@ -623,7 +625,7 @@
                 <span class="comment">// Range-constrain α_1 to be 2 bits</span>
                 <span class="kw">let</span> <span class="ident">alpha_1_range_check</span> <span class="op">=</span> <span class="ident">range_check</span>(<span class="ident">alpha_1</span>.<span class="ident">clone</span>(), <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">2</span>);
                 <span class="comment">// Boolean-constrain α_2</span>
-                <span class="kw">let</span> <span class="ident">alpha_2_range_check</span> <span class="op">=</span> <span class="ident">range_check</span>(<span class="ident">alpha_2</span>.<span class="ident">clone</span>(), <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>);
+                <span class="kw">let</span> <span class="ident">alpha_2_range_check</span> <span class="op">=</span> <span class="ident">bool_check</span>(<span class="ident">alpha_2</span>.<span class="ident">clone</span>());
                 <span class="comment">// Check that α_1 + 2^2 α_2 = z_84_alpha</span>
                 <span class="kw">let</span> <span class="ident">z_84_alpha_check</span> <span class="op">=</span> <span class="ident">z_84_alpha</span>.<span class="ident">clone</span>()
                     <span class="op">-</span> (<span class="ident">alpha_1</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="ident">alpha_2</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">2</span>));
@@ -679,7 +681,7 @@
                     )))
                     .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((
                         <span class="string">&quot;MSB = 1 =&gt; a_43 = 0 or 1&quot;</span>,
-                        <span class="ident">alpha_2</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">range_check</span>(<span class="ident">a_43</span>, <span class="number">2</span>),
+                        <span class="ident">alpha_2</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">bool_check</span>(<span class="ident">a_43</span>),
                     )))
                     .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((
                         <span class="string">&quot;MSB = 1 =&gt; z_13_alpha_0_prime = 0&quot;</span>,

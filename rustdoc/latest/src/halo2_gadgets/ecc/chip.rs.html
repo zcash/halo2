@@ -597,16 +597,49 @@
 <span id="577">577</span>
 <span id="578">578</span>
 <span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Chip implementations for the ECC gadgets.</span>
 
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">BaseFitsInScalarInstructions</span>, <span class="ident">EccInstructions</span>, <span class="ident">FixedPoints</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">primitives::sinsemilla</span>,
+    <span class="ident">sinsemilla::primitives</span> <span class="kw">as</span> <span class="ident">sinsemilla</span>,
     <span class="ident">utilities</span>::{<span class="ident">lookup_range_check::LookupRangeCheckConfig</span>, <span class="ident">UtilitiesInstructions</span>},
 };
 <span class="kw">use</span> <span class="ident">arrayvec::ArrayVec</span>;
 
-<span class="kw">use</span> <span class="ident">ff::Field</span>;
+<span class="kw">use</span> <span class="ident">ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeField</span>};
 <span class="kw">use</span> <span class="ident">group::prime::PrimeCurveAffine</span>;
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Chip</span>, <span class="ident">Layouter</span>},
@@ -624,6 +657,9 @@
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod</span> <span class="ident">witness_point</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">constants</span>::<span class="kw-2">*</span>;
+
+<span class="comment">// Exposed for Sinsemilla.</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use</span> <span class="ident">mul::incomplete::DoubleAndAdd</span>;
 
 <span class="doccomment">/// A curve point represented in affine (x, y) coordinates, or the</span>
 <span class="doccomment">/// identity represented as (0, 0).</span>
@@ -729,7 +765,7 @@
     }
 }
 
-<span class="doccomment">/// Configuration for the ECC chip</span>
+<span class="doccomment">/// Configuration for [`EccChip`].</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EccConfig</span><span class="op">&lt;</span><span class="ident">FixedPoints</span>: <span class="ident"><span class="kw">super</span>::FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span> {
@@ -809,7 +845,7 @@
     <span class="kw">fn</span> <span class="ident">generator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">C</span>;
 
     <span class="doccomment">/// Returns the $u$ values for this fixed point.</span>
-    <span class="kw">fn</span> <span class="ident">u</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span>[[<span class="ident">u8</span>; <span class="number">32</span>]; <span class="ident">H</span>]<span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">u</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span>[<span class="op">&lt;</span><span class="ident">C::Base</span> <span class="kw">as</span> <span class="ident">PrimeField</span><span class="op">&gt;</span><span class="ident">::Repr</span>; <span class="ident">H</span>]<span class="op">&gt;</span>;
 
     <span class="doccomment">/// Returns the $z$ value for this fixed point.</span>
     <span class="kw">fn</span> <span class="ident">z</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>;
@@ -820,7 +856,7 @@
     }
 }
 
-<span class="doccomment">/// A chip implementing EccInstructions</span>
+<span class="doccomment">/// An [`EccInstructions`] chip that uses 10 advice columns.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EccChip</span><span class="op">&lt;</span><span class="ident">FixedPoints</span>: <span class="ident"><span class="kw">super</span>::FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="ident">config</span>: <span class="ident">EccConfig</span><span class="op">&lt;</span><span class="ident">FixedPoints</span><span class="op">&gt;</span>,
@@ -882,8 +918,6 @@
             <span class="ident">meta</span>,
             <span class="ident">lagrange_coeffs</span>,
             <span class="ident">advices</span>[<span class="number">4</span>],
-            <span class="ident">advices</span>[<span class="number">0</span>],
-            <span class="ident">advices</span>[<span class="number">1</span>],
             <span class="ident">advices</span>[<span class="number">5</span>],
             <span class="ident">add</span>,
             <span class="ident">add_incomplete</span>,
@@ -927,7 +961,9 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EccScalarFixed</span> {
     <span class="ident">value</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">pallas::Scalar</span><span class="op">&gt;</span>,
-    <span class="ident">windows</span>: <span class="ident">ArrayVec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>, { <span class="ident">NUM_WINDOWS</span> }<span class="op">&gt;</span>,
+    <span class="doccomment">/// The circuit-assigned windows representing this scalar, or `None` if the scalar has</span>
+    <span class="doccomment">/// not been used yet.</span>
+    <span class="ident">windows</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ArrayVec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>, { <span class="ident">NUM_WINDOWS</span> }<span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="comment">// TODO: Make V a `u64`</span>
@@ -952,7 +988,10 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EccScalarFixedShort</span> {
     <span class="ident">magnitude</span>: <span class="ident">MagnitudeCell</span>,
     <span class="ident">sign</span>: <span class="ident">SignCell</span>,
-    <span class="ident">running_sum</span>: <span class="ident">ArrayVec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>, { <span class="ident">NUM_WINDOWS_SHORT</span> <span class="op">+</span> <span class="number">1</span> }<span class="op">&gt;</span>,
+    <span class="doccomment">/// The circuit-assigned running sum constraining this signed short scalar, or `None`</span>
+    <span class="doccomment">/// if the scalar has not been used yet.</span>
+    <span class="ident">running_sum</span>:
+        <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ArrayVec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>, { <span class="ident">NUM_WINDOWS_SHORT</span> <span class="op">+</span> <span class="number">1</span> }<span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
 <span class="doccomment">/// A base field element used for fixed-base scalar multiplication.</span>
@@ -990,7 +1029,9 @@
     <span class="doccomment">/// However, the only use of variable-base scalar mul in the Orchard protocol</span>
     <span class="doccomment">/// is in deriving diversified addresses `[ivk] g_d`,  and `ivk` is guaranteed</span>
     <span class="doccomment">/// to be in the base field of the curve. (See non-normative notes in</span>
-    <span class="doccomment">/// https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents.)</span>
+    <span class="doccomment">/// [4.2.3 Orchard Key Components][orchardkeycomponents].)</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [orchardkeycomponents]: https://zips.z.cash/protocol/protocol.pdf#orchardkeycomponents</span>
     <span class="ident">BaseFieldElem</span>(<span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>),
     <span class="doccomment">/// A full-width scalar. This is unimplemented for halo2_gadgets v0.1.0.</span>
     <span class="ident">FullWidth</span>,
@@ -1063,6 +1104,31 @@
         <span class="macro">todo!</span>()
     }
 
+    <span class="kw">fn</span> <span class="ident">witness_scalar_fixed</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">_layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
+        <span class="ident">value</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">pallas::Scalar</span><span class="op">&gt;</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ScalarFixed</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">EccScalarFixed</span> {
+            <span class="ident">value</span>,
+            <span class="comment">// This chip uses lazy witnessing.</span>
+            <span class="ident">windows</span>: <span class="prelude-val">None</span>,
+        })
+    }
+
+    <span class="kw">fn</span> <span class="ident">scalar_fixed_from_signed_short</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">_layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
+        (<span class="ident">magnitude</span>, <span class="ident">sign</span>): <span class="ident">MagnitudeSign</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ScalarFixedShort</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">EccScalarFixedShort</span> {
+            <span class="ident">magnitude</span>,
+            <span class="ident">sign</span>,
+            <span class="comment">// This chip uses lazy constraining.</span>
+            <span class="ident">running_sum</span>: <span class="prelude-val">None</span>,
+        })
+    }
+
     <span class="kw">fn</span> <span class="ident">extract_p</span><span class="op">&lt;</span><span class="ident">Point</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(<span class="ident">point</span>: <span class="kw-2">&amp;</span><span class="ident">Point</span>) -&gt; <span class="ident"><span class="self">Self</span>::X</span> {
         <span class="kw">let</span> <span class="ident">point</span>: <span class="ident">EccPoint</span> <span class="op">=</span> (<span class="ident">point</span>.<span class="ident">clone</span>()).<span class="ident">into</span>();
         <span class="ident">point</span>.<span class="ident">x</span>()
@@ -1118,7 +1184,7 @@
     <span class="kw">fn</span> <span class="ident">mul_fixed</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">scalar</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">pallas::Scalar</span><span class="op">&gt;</span>,
+        <span class="ident">scalar</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ScalarFixed</span>,
         <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::FullScalar</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident"><span class="self">Self</span>::ScalarFixed</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">mul_fixed_full</span>.<span class="ident">clone</span>();
@@ -1132,13 +1198,13 @@
     <span class="kw">fn</span> <span class="ident">mul_fixed_short</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">magnitude_sign</span>: <span class="ident">MagnitudeSign</span>,
+        <span class="ident">scalar</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ScalarFixedShort</span>,
         <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::ShortScalar</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident"><span class="self">Self</span>::ScalarFixedShort</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">mul_fixed_short</span>.<span class="ident">clone</span>();
         <span class="ident">config</span>.<span class="ident">assign</span>(
             <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;short fixed-base mul of {:?}&quot;</span>, <span class="ident">base</span>)),
-            <span class="ident">magnitude_sign</span>,
+            <span class="ident">scalar</span>,
             <span class="ident">base</span>,
         )
     }

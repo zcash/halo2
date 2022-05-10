@@ -466,18 +466,32 @@
 <span id="446">446</span>
 <span id="447">447</span>
 <span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">CommitDomains</span>, <span class="ident">HashDomains</span>, <span class="ident">SinsemillaInstructions</span>};
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">NonIdentityEccPoint</span>, <span class="ident">SinsemillaChip</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">ecc::FixedPoints</span>,
+    <span class="ident">sinsemilla::primitives</span>::{<span class="self">self</span> <span class="kw">as</span> <span class="ident">sinsemilla</span>, <span class="ident">lebs2ip_k</span>, <span class="ident">INV_TWO_POW_K</span>, <span class="ident">SINSEMILLA_S</span>},
+};
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::ecc::FixedPoints</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::primitives::sinsemilla</span>::{<span class="self">self</span>, <span class="ident">lebs2ip_k</span>, <span class="ident">INV_TWO_POW_K</span>, <span class="ident">SINSEMILLA_S</span>};
 <span class="kw">use</span> <span class="ident">halo2_proofs::circuit::AssignedCell</span>;
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit</span>::{<span class="ident">Chip</span>, <span class="ident">Region</span>},
-    <span class="ident">plonk::Error</span>,
+    <span class="ident">plonk</span>::{<span class="ident">Assigned</span>, <span class="ident">Error</span>},
 };
 
-<span class="kw">use</span> <span class="ident">group::ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeField</span>, <span class="ident">PrimeFieldBits</span>};
+<span class="kw">use</span> <span class="ident">group::ff</span>::{<span class="ident">PrimeField</span>, <span class="ident">PrimeFieldBits</span>};
 <span class="kw">use</span> <span class="ident">pasta_curves</span>::{
     <span class="ident">arithmetic</span>::{<span class="ident">CurveAffine</span>, <span class="ident">FieldExt</span>},
     <span class="ident">pallas</span>,
@@ -523,13 +537,17 @@
             <span class="ident">config</span>.<span class="ident">q_sinsemilla4</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
             <span class="ident">region</span>.<span class="ident">assign_fixed</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;fixed y_q&quot;</span>, <span class="ident">config</span>.<span class="ident">fixed_y_q</span>, <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">y_q</span>))<span class="question-mark">?</span>;
 
-            (<span class="prelude-val">Some</span>(<span class="ident">y_q</span>)).<span class="ident">into</span>()
+            (<span class="prelude-val">Some</span>(<span class="ident">y_q</span>.<span class="ident">into</span>())).<span class="ident">into</span>()
         };
 
         <span class="comment">// Constrain the initial x_q to equal the x-coordinate of the domain&#39;s `Q`.</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x_a</span>: <span class="ident">X</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">x_a</span> <span class="op">=</span>
-                <span class="ident">region</span>.<span class="ident">assign_advice_from_constant</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;fixed x_q&quot;</span>, <span class="ident">config</span>.<span class="ident">x_a</span>, <span class="ident">offset</span>, <span class="ident">x_q</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice_from_constant</span>(
+                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;fixed x_q&quot;</span>,
+                <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>,
+                <span class="ident">offset</span>,
+                <span class="ident">x_q</span>.<span class="ident">into</span>(),
+            )<span class="question-mark">?</span>;
 
             <span class="ident">x_a</span>.<span class="ident">into</span>()
         };
@@ -558,7 +576,7 @@
             <span class="comment">// Assign the final y_a.</span>
             <span class="kw">let</span> <span class="ident">y_a_cell</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                 <span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_a&quot;</span>,
-                <span class="ident">config</span>.<span class="ident">lambda_1</span>,
+                <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>,
                 <span class="ident">offset</span>,
                 <span class="op">|</span><span class="op">|</span> <span class="ident">y_a</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
             )<span class="question-mark">?</span>;
@@ -569,13 +587,13 @@
             {
                 <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                     <span class="op">|</span><span class="op">|</span> <span class="string">&quot;dummy lambda2&quot;</span>,
-                    <span class="ident">config</span>.<span class="ident">lambda_2</span>,
+                    <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_2</span>,
                     <span class="ident">offset</span>,
                     <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">pallas::Base::zero</span>()),
                 )<span class="question-mark">?</span>;
                 <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                     <span class="op">|</span><span class="op">|</span> <span class="string">&quot;dummy x_p&quot;</span>,
-                    <span class="ident">config</span>.<span class="ident">x_p</span>,
+                    <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>,
                     <span class="ident">offset</span>,
                     <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">pallas::Base::zero</span>()),
                 )<span class="question-mark">?</span>;
@@ -588,8 +606,11 @@
         <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
         <span class="comment">// Check equivalence to result from primitives::sinsemilla::hash_to_point</span>
         {
-            <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::primitives::sinsemilla</span>::{<span class="ident">K</span>, <span class="ident">S_PERSONALIZATION</span>};
-            <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::sinsemilla::message::MessagePiece</span>;
+            <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::sinsemilla</span>::{
+                <span class="ident">message::MessagePiece</span>,
+                <span class="ident">primitives</span>::{<span class="ident">K</span>, <span class="ident">S_PERSONALIZATION</span>},
+            };
+
             <span class="kw">use</span> <span class="ident">group</span>::{<span class="ident">prime::PrimeCurveAffine</span>, <span class="ident">Curve</span>};
             <span class="kw">use</span> <span class="ident">pasta_curves::arithmetic::CurveExt</span>;
 
@@ -618,8 +639,11 @@
                 <span class="kw">let</span> <span class="ident">expected_point</span> <span class="op">=</span> <span class="ident">bitstring</span>
                     .<span class="ident">chunks</span>(<span class="ident">K</span>)
                     .<span class="ident">fold</span>(<span class="ident">Q</span>.<span class="ident">to_curve</span>(), <span class="op">|</span><span class="ident">acc</span>, <span class="ident">chunk</span><span class="op">|</span> (<span class="ident">acc</span> <span class="op">+</span> <span class="ident">S</span>(<span class="ident">chunk</span>)) <span class="op">+</span> <span class="ident">acc</span>);
-                <span class="kw">let</span> <span class="ident">actual_point</span> <span class="op">=</span>
-                    <span class="ident">pallas::Affine::from_xy</span>(<span class="kw-2">*</span><span class="ident">x_a</span>.<span class="ident">value</span>().<span class="ident">unwrap</span>(), <span class="kw-2">*</span><span class="ident">y_a</span>.<span class="ident">value</span>().<span class="ident">unwrap</span>()).<span class="ident">unwrap</span>();
+                <span class="kw">let</span> <span class="ident">actual_point</span> <span class="op">=</span> <span class="ident">pallas::Affine::from_xy</span>(
+                    <span class="ident">x_a</span>.<span class="ident">value</span>().<span class="ident">unwrap</span>().<span class="ident">evaluate</span>(),
+                    <span class="ident">y_a</span>.<span class="ident">value</span>().<span class="ident">unwrap</span>().<span class="ident">evaluate</span>(),
+                )
+                .<span class="ident">unwrap</span>();
                 <span class="macro">assert_eq!</span>(<span class="ident">expected_point</span>.<span class="ident">to_affine</span>(), <span class="ident">actual_point</span>);
             }
         }
@@ -632,7 +656,7 @@
             }
         }
         <span class="prelude-val">Ok</span>((
-            <span class="ident">NonIdentityEccPoint::from_coordinates_unchecked</span>(<span class="ident">x_a</span>.<span class="number">0</span>, <span class="ident">y_a</span>),
+            <span class="ident">NonIdentityEccPoint::from_coordinates_unchecked</span>(<span class="ident">x_a</span>.<span class="number">0</span>.<span class="ident">evaluate</span>(), <span class="ident">y_a</span>.<span class="ident">evaluate</span>()),
             <span class="ident">zs_sum</span>,
         ))
     }
@@ -794,7 +818,7 @@
             <span class="comment">// Assign `x_p`</span>
             <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                 <span class="op">|</span><span class="op">|</span> <span class="string">&quot;x_p&quot;</span>,
-                <span class="ident">config</span>.<span class="ident">x_p</span>,
+                <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>,
                 <span class="ident">offset</span> <span class="op">+</span> <span class="ident">row</span>,
                 <span class="op">|</span><span class="op">|</span> <span class="ident">x_p</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
             )<span class="question-mark">?</span>;
@@ -806,12 +830,12 @@
                     .<span class="ident">zip</span>(<span class="ident">y_a</span>.<span class="number">0</span>)
                     .<span class="ident">zip</span>(<span class="ident">x_p</span>)
                     .<span class="ident">zip</span>(<span class="ident">y_p</span>)
-                    .<span class="ident">map</span>(<span class="op">|</span>(((<span class="ident">x_a</span>, <span class="ident">y_a</span>), <span class="ident">x_p</span>), <span class="ident">y_p</span>)<span class="op">|</span> (<span class="ident">y_a</span> <span class="op">-</span> <span class="ident">y_p</span>) <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_p</span>).<span class="ident">invert</span>().<span class="ident">unwrap</span>());
+                    .<span class="ident">map</span>(<span class="op">|</span>(((<span class="ident">x_a</span>, <span class="ident">y_a</span>), <span class="ident">x_p</span>), <span class="ident">y_p</span>)<span class="op">|</span> (<span class="ident">y_a</span> <span class="op">-</span> <span class="ident">y_p</span>) <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_p</span>).<span class="ident">invert</span>());
 
                 <span class="comment">// Assign lambda_1</span>
                 <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                     <span class="op">|</span><span class="op">|</span> <span class="string">&quot;lambda_1&quot;</span>,
-                    <span class="ident">config</span>.<span class="ident">lambda_1</span>,
+                    <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>,
                     <span class="ident">offset</span> <span class="op">+</span> <span class="ident">row</span>,
                     <span class="op">|</span><span class="op">|</span> <span class="ident">lambda_1</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
                 )<span class="question-mark">?</span>;
@@ -829,13 +853,13 @@
             <span class="kw">let</span> <span class="ident">lambda_2</span> <span class="op">=</span> {
                 <span class="kw">let</span> <span class="ident">lambda_2</span> <span class="op">=</span> <span class="ident">x_a</span>.<span class="ident">value</span>().<span class="ident">zip</span>(<span class="ident">y_a</span>.<span class="number">0</span>).<span class="ident">zip</span>(<span class="ident">x_r</span>).<span class="ident">zip</span>(<span class="ident">lambda_1</span>).<span class="ident">map</span>(
                     <span class="op">|</span>(((<span class="ident">x_a</span>, <span class="ident">y_a</span>), <span class="ident">x_r</span>), <span class="ident">lambda_1</span>)<span class="op">|</span> {
-                        <span class="ident">pallas::Base::from</span>(<span class="number">2</span>) <span class="op">*</span> <span class="ident">y_a</span> <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_r</span>).<span class="ident">invert</span>().<span class="ident">unwrap</span>() <span class="op">-</span> <span class="ident">lambda_1</span>
+                        <span class="ident">y_a</span> <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="number">2</span>) <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_r</span>).<span class="ident">invert</span>() <span class="op">-</span> <span class="ident">lambda_1</span>
                     },
                 );
 
                 <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                     <span class="op">|</span><span class="op">|</span> <span class="string">&quot;lambda_2&quot;</span>,
-                    <span class="ident">config</span>.<span class="ident">lambda_2</span>,
+                    <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_2</span>,
                     <span class="ident">offset</span> <span class="op">+</span> <span class="ident">row</span>,
                     <span class="op">|</span><span class="op">|</span> <span class="ident">lambda_2</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
                 )<span class="question-mark">?</span>;
@@ -852,7 +876,7 @@
 
                 <span class="kw">let</span> <span class="ident">x_a_cell</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                     <span class="op">|</span><span class="op">|</span> <span class="string">&quot;x_a&quot;</span>,
-                    <span class="ident">config</span>.<span class="ident">x_a</span>,
+                    <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>,
                     <span class="ident">offset</span> <span class="op">+</span> <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>,
                     <span class="op">|</span><span class="op">|</span> <span class="ident">x_a_new</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
                 )<span class="question-mark">?</span>;
@@ -878,18 +902,18 @@
 }
 
 <span class="doccomment">/// The x-coordinate of the accumulator in a Sinsemilla hash instance.</span>
-<span class="kw">struct</span> <span class="ident">X</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(<span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>);
+<span class="kw">struct</span> <span class="ident">X</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(<span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span><span class="op">&gt;</span>);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">X</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">cell_value</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">X</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">cell_value</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">X</span>(<span class="ident">cell_value</span>)
     }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">X</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span><span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span><span class="op">&gt;</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
     }
 }
@@ -899,18 +923,18 @@
 <span class="doccomment">/// This is never actually witnessed until the last round, since it</span>
 <span class="doccomment">/// can be derived from other variables. Thus it only exists as a field</span>
 <span class="doccomment">/// element, not a `CellValue`.</span>
-<span class="kw">struct</span> <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>);
+<span class="kw">struct</span> <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
         <span class="ident">Y</span>(<span class="ident">value</span>)
     }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
+    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
     }
 }

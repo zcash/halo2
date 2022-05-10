@@ -215,6 +215,14 @@
 <span id="195">195</span>
 <span id="196">196</span>
 <span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">add</span>, <span class="ident">EccPoint</span>};
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">COMPLETE_RANGE</span>, <span class="ident">X</span>, <span class="ident">Y</span>, <span class="ident">Z</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities</span>::{<span class="ident">bool_check</span>, <span class="ident">ternary</span>};
@@ -385,6 +393,14 @@
                         .<span class="ident">zip</span>(<span class="ident">k</span>.<span class="ident">as_ref</span>())
                         .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">base_y</span>, <span class="ident">k</span>)<span class="op">|</span> <span class="kw">if</span> <span class="op">!</span><span class="ident">k</span> { <span class="op">-</span><span class="ident">base_y</span> } <span class="kw">else</span> { <span class="ident">base_y</span> });
 
+                <span class="comment">// Assign the conditionally-negated y coordinate into the cell it will be</span>
+                <span class="comment">// used from by both the complete addition gate, and the decomposition and</span>
+                <span class="comment">// conditional negation gate.</span>
+                <span class="comment">//</span>
+                <span class="comment">// The complete addition gate will copy this cell onto itself. This is</span>
+                <span class="comment">// fine because we are just assigning the same value to the same cell</span>
+                <span class="comment">// twice, and then applying an equality constraint between the cell and</span>
+                <span class="comment">// itself (which the permutation argument treats as a no-op).</span>
                 <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                     <span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_p&quot;</span>,
                     <span class="self">self</span>.<span class="ident">add_config</span>.<span class="ident">y_p</span>,

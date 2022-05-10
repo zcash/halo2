@@ -763,7 +763,20 @@
 <span id="743">743</span>
 <span id="744">744</span>
 <span id="745">745</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Gadgets for the Sinsemilla hash function.</span>
+<span id="746">746</span>
+<span id="747">747</span>
+<span id="748">748</span>
+<span id="749">749</span>
+<span id="750">750</span>
+<span id="751">751</span>
+<span id="752">752</span>
+<span id="753">753</span>
+<span id="754">754</span>
+<span id="755">755</span>
+<span id="756">756</span>
+</pre><pre class="rust"><code><span class="doccomment">//! The [Sinsemilla] hash function.</span>
+<span class="doccomment">//!</span>
+<span class="doccomment">//! [Sinsemilla]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash</span>
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">ecc</span>::{<span class="self">self</span>, <span class="ident">EccInstructions</span>, <span class="ident">FixedPoints</span>},
     <span class="ident">utilities</span>::{<span class="ident">FieldValue</span>, <span class="ident">RangeConstrained</span>, <span class="ident">Var</span>},
@@ -776,6 +789,7 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">chip</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">merkle</span>;
 <span class="kw">mod</span> <span class="ident">message</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">primitives</span>;
 
 <span class="doccomment">/// The set of circuit instructions required to use the [`Sinsemilla`](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html) gadget.</span>
 <span class="doccomment">/// This trait is bounded on two constant parameters: `K`, the number of bits</span>
@@ -988,7 +1002,9 @@
     }
 
     <span class="doccomment">/// Constructs a `MessagePiece` by concatenating a sequence of [`RangeConstrained`]</span>
-    <span class="doccomment">/// subpieces.</span>
+    <span class="doccomment">/// subpiece values.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// The `MessagePiece` is assigned to the circuit, but not constrained in any way.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// # Panics</span>
     <span class="doccomment">///</span>
@@ -1179,7 +1195,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
         <span class="ident">message</span>: <span class="ident">Message</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>,
-        <span class="ident">r</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
+        <span class="ident">r</span>: <span class="ident">ecc::ScalarFixed</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>
         (
             <span class="ident">ecc::Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
@@ -1202,7 +1218,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
         <span class="ident">message</span>: <span class="ident">Message</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>,
-        <span class="ident">r</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
+        <span class="ident">r</span>: <span class="ident">ecc::ScalarFixed</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">ecc::X</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SinsemillaChip::RunningSum</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">M</span>.<span class="ident">sinsemilla_chip</span>, <span class="ident">message</span>.<span class="ident">chip</span>);
         <span class="kw">let</span> (<span class="ident">p</span>, <span class="ident">zs</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">commit</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;commit&quot;</span>), <span class="ident">message</span>, <span class="ident">r</span>)<span class="question-mark">?</span>;
@@ -1225,7 +1241,8 @@
     };
 
     <span class="kw">use</span> <span class="kw">crate</span>::{
-        <span class="ident">primitives::sinsemilla</span>::{<span class="self">self</span>, <span class="ident">K</span>},
+        <span class="ident">ecc::ScalarFixed</span>,
+        <span class="ident">sinsemilla::primitives</span>::{<span class="self">self</span> <span class="kw">as</span> <span class="ident">sinsemilla</span>, <span class="ident">K</span>},
         {
             <span class="ident">ecc</span>::{
                 <span class="ident">chip</span>::{<span class="ident">find_zs_and_us</span>, <span class="ident">EccChip</span>, <span class="ident">EccConfig</span>, <span class="ident">H</span>, <span class="ident">NUM_WINDOWS</span>},
@@ -1450,12 +1467,17 @@
                     (<span class="number">0</span>..<span class="number">500</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="prelude-val">Some</span>(<span class="ident">rand::random</span>::<span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>())).<span class="ident">collect</span>();
 
                 <span class="kw">let</span> (<span class="ident">result</span>, <span class="kw">_</span>) <span class="op">=</span> {
+                    <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">ScalarFixed::new</span>(
+                        <span class="ident">ecc_chip</span>.<span class="ident">clone</span>(),
+                        <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;r&quot;</span>),
+                        <span class="prelude-val">Some</span>(<span class="ident">r_val</span>),
+                    )<span class="question-mark">?</span>;
                     <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="ident">Message::from_bitstring</span>(
                         <span class="ident">chip2</span>,
                         <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;witness message&quot;</span>),
                         <span class="ident">message</span>.<span class="ident">clone</span>(),
                     )<span class="question-mark">?</span>;
-                    <span class="ident">test_commit</span>.<span class="ident">commit</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;commit&quot;</span>), <span class="ident">message</span>, <span class="prelude-val">Some</span>(<span class="ident">r_val</span>))<span class="question-mark">?</span>
+                    <span class="ident">test_commit</span>.<span class="ident">commit</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;commit&quot;</span>), <span class="ident">message</span>, <span class="ident">r</span>)<span class="question-mark">?</span>
                 };
 
                 <span class="comment">// Witness expected result.</span>

@@ -365,6 +365,50 @@
 <span id="345">345</span>
 <span id="346">346</span>
 <span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::NonIdentityEccPoint</span>;
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">X</span>, <span class="ident">Y</span>, <span class="ident">Z</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities::bool_check</span>;
@@ -379,22 +423,63 @@
 
 <span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">pallas</span>};
 
+<span class="doccomment">/// A helper struct for implementing single-row double-and-add using incomplete addition.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">DoubleAndAdd</span> {
+    <span class="comment">// x-coordinate of the accumulator in each double-and-add iteration.</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">x_a</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+    <span class="comment">// x-coordinate of the point being added in each double-and-add iteration.</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">x_p</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+    <span class="comment">// lambda1 in each double-and-add iteration.</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">lambda_1</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+    <span class="comment">// lambda2 in each double-and-add iteration.</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">lambda_2</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">DoubleAndAdd</span> {
+    <span class="doccomment">/// Derives the expression `x_r = lambda_1^2 - x_a - x_p`.</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">x_r</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
+        <span class="ident">rotation</span>: <span class="ident">Rotation</span>,
+    ) -&gt; <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_a</span>, <span class="ident">rotation</span>);
+        <span class="kw">let</span> <span class="ident">x_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_p</span>, <span class="ident">rotation</span>);
+        <span class="kw">let</span> <span class="ident">lambda_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">lambda_1</span>, <span class="ident">rotation</span>);
+        <span class="ident">lambda_1</span>.<span class="ident">square</span>() <span class="op">-</span> <span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_p</span>
+    }
+
+    <span class="doccomment">/// Derives the expression `Y_A = (lambda_1 + lambda_2) * (x_a - x_r)`.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Note that this is missing the factor of `1/2`; the Sinsemilla constraints factor</span>
+    <span class="doccomment">/// it out, so we leave it up to the caller to handle it.</span>
+    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">Y_A</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
+        <span class="ident">rotation</span>: <span class="ident">Rotation</span>,
+    ) -&gt; <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_a</span>, <span class="ident">rotation</span>);
+        <span class="kw">let</span> <span class="ident">lambda_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">lambda_1</span>, <span class="ident">rotation</span>);
+        <span class="kw">let</span> <span class="ident">lambda_2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">lambda_2</span>, <span class="ident">rotation</span>);
+        (<span class="ident">lambda_1</span> <span class="op">+</span> <span class="ident">lambda_2</span>) <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">x_r</span>(<span class="ident">meta</span>, <span class="ident">rotation</span>))
+    }
+}
+
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">Config</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">NUM_BITS</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="comment">// Selectors used to constrain the cells used in incomplete addition.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">q_mul</span>: (<span class="ident">Selector</span>, <span class="ident">Selector</span>, <span class="ident">Selector</span>),
+    <span class="comment">// Selector constraining the first row of incomplete addition.</span>
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">q_mul_1</span>: <span class="ident">Selector</span>,
+    <span class="comment">// Selector constraining the main loop of incomplete addition.</span>
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">q_mul_2</span>: <span class="ident">Selector</span>,
+    <span class="comment">// Selector constraining the last row of incomplete addition.</span>
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">q_mul_3</span>: <span class="ident">Selector</span>,
     <span class="comment">// Cumulative sum used to decompose the scalar.</span>
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">z</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="comment">// x-coordinate of the accumulator in each double-and-add iteration.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">x_a</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="comment">// x-coordinate of the point being added in each double-and-add iteration.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">x_p</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+    <span class="comment">// Logic specific to merged double-and-add.</span>
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">double_and_add</span>: <span class="ident">DoubleAndAdd</span>,
     <span class="comment">// y-coordinate of the point being added in each double-and-add iteration.</span>
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">y_p</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="comment">// lambda1 in each double-and-add iteration.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">lambda1</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="comment">// lambda2 in each double-and-add iteration.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">lambda2</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">NUM_BITS</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Config</span><span class="op">&lt;</span><span class="ident">NUM_BITS</span><span class="op">&gt;</span> {
@@ -404,20 +489,24 @@
         <span class="ident">x_a</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
         <span class="ident">x_p</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
         <span class="ident">y_p</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">lambda1</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">lambda2</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+        <span class="ident">lambda_1</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+        <span class="ident">lambda_2</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
     ) -&gt; <span class="self">Self</span> {
         <span class="ident">meta</span>.<span class="ident">enable_equality</span>(<span class="ident">z</span>);
-        <span class="ident">meta</span>.<span class="ident">enable_equality</span>(<span class="ident">lambda1</span>);
+        <span class="ident">meta</span>.<span class="ident">enable_equality</span>(<span class="ident">lambda_1</span>);
 
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">Self</span> {
-            <span class="ident">q_mul</span>: (<span class="ident">meta</span>.<span class="ident">selector</span>(), <span class="ident">meta</span>.<span class="ident">selector</span>(), <span class="ident">meta</span>.<span class="ident">selector</span>()),
+            <span class="ident">q_mul_1</span>: <span class="ident">meta</span>.<span class="ident">selector</span>(),
+            <span class="ident">q_mul_2</span>: <span class="ident">meta</span>.<span class="ident">selector</span>(),
+            <span class="ident">q_mul_3</span>: <span class="ident">meta</span>.<span class="ident">selector</span>(),
             <span class="ident">z</span>,
-            <span class="ident">x_a</span>,
-            <span class="ident">x_p</span>,
+            <span class="ident">double_and_add</span>: <span class="ident">DoubleAndAdd</span> {
+                <span class="ident">x_a</span>,
+                <span class="ident">x_p</span>,
+                <span class="ident">lambda_1</span>,
+                <span class="ident">lambda_2</span>,
+            },
             <span class="ident">y_p</span>,
-            <span class="ident">lambda1</span>,
-            <span class="ident">lambda2</span>,
         };
 
         <span class="ident">config</span>.<span class="ident">create_gate</span>(<span class="ident">meta</span>);
@@ -429,19 +518,12 @@
     <span class="kw">fn</span> <span class="ident">create_gate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) {
         <span class="comment">// Closure to compute x_{R,i} = λ_{1,i}^2 - x_{A,i} - x_{P,i}</span>
         <span class="kw">let</span> <span class="ident">x_r</span> <span class="op">=</span> <span class="op">|</span><span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">rotation</span>: <span class="ident">Rotation</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_a</span>, <span class="ident">rotation</span>);
-            <span class="kw">let</span> <span class="ident">x_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_p</span>, <span class="ident">rotation</span>);
-            <span class="kw">let</span> <span class="ident">lambda_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">lambda1</span>, <span class="ident">rotation</span>);
-            <span class="ident">lambda_1</span>.<span class="ident">square</span>() <span class="op">-</span> <span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_p</span>
+            <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_r</span>(<span class="ident">meta</span>, <span class="ident">rotation</span>)
         };
 
         <span class="comment">// Closure to compute y_{A,i} = (λ_{1,i} + λ_{2,i}) * (x_{A,i} - x_{R,i}) / 2</span>
         <span class="kw">let</span> <span class="ident">y_a</span> <span class="op">=</span> <span class="op">|</span><span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">rotation</span>: <span class="ident">Rotation</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_a</span>, <span class="ident">rotation</span>);
-            <span class="kw">let</span> <span class="ident">lambda_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">lambda1</span>, <span class="ident">rotation</span>);
-            <span class="kw">let</span> <span class="ident">lambda_2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">lambda2</span>, <span class="ident">rotation</span>);
-
-            (<span class="ident">lambda_1</span> <span class="op">+</span> <span class="ident">lambda_2</span>) <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_r</span>(<span class="ident">meta</span>, <span class="ident">rotation</span>)) <span class="op">*</span> <span class="ident">pallas::Base::TWO_INV</span>
+            <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">Y_A</span>(<span class="ident">meta</span>, <span class="ident">rotation</span>) <span class="op">*</span> <span class="ident">pallas::Base::TWO_INV</span>
         };
 
         <span class="comment">// Constraints used for q_mul_{2, 3} == 1</span>
@@ -454,17 +536,17 @@
             <span class="comment">// z_{i+1}</span>
             <span class="kw">let</span> <span class="ident">z_prev</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">z</span>, <span class="ident">Rotation::prev</span>());
             <span class="comment">// x_{A,i}</span>
-            <span class="kw">let</span> <span class="ident">x_a_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_a</span>, <span class="ident">Rotation::cur</span>());
+            <span class="kw">let</span> <span class="ident">x_a_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>, <span class="ident">Rotation::cur</span>());
             <span class="comment">// x_{A,i-1}</span>
-            <span class="kw">let</span> <span class="ident">x_a_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_a</span>, <span class="ident">Rotation::next</span>());
+            <span class="kw">let</span> <span class="ident">x_a_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>, <span class="ident">Rotation::next</span>());
             <span class="comment">// x_{P,i}</span>
-            <span class="kw">let</span> <span class="ident">x_p_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_p</span>, <span class="ident">Rotation::cur</span>());
+            <span class="kw">let</span> <span class="ident">x_p_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>, <span class="ident">Rotation::cur</span>());
             <span class="comment">// y_{P,i}</span>
             <span class="kw">let</span> <span class="ident">y_p_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">y_p</span>, <span class="ident">Rotation::cur</span>());
             <span class="comment">// λ_{1,i}</span>
-            <span class="kw">let</span> <span class="ident">lambda1_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">lambda1</span>, <span class="ident">Rotation::cur</span>());
+            <span class="kw">let</span> <span class="ident">lambda1_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>, <span class="ident">Rotation::cur</span>());
             <span class="comment">// λ_{2,i}</span>
-            <span class="kw">let</span> <span class="ident">lambda2_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">lambda2</span>, <span class="ident">Rotation::cur</span>());
+            <span class="kw">let</span> <span class="ident">lambda2_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_2</span>, <span class="ident">Rotation::cur</span>());
 
             <span class="kw">let</span> <span class="ident">y_a_cur</span> <span class="op">=</span> <span class="ident">y_a</span>(<span class="ident">meta</span>, <span class="ident">Rotation::cur</span>());
 
@@ -497,23 +579,23 @@
 
         <span class="comment">// q_mul_1 == 1 checks</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;q_mul_1 == 1 checks&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q_mul_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul</span>.<span class="number">0</span>);
+            <span class="kw">let</span> <span class="ident">q_mul_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul_1</span>);
 
             <span class="kw">let</span> <span class="ident">y_a_next</span> <span class="op">=</span> <span class="ident">y_a</span>(<span class="ident">meta</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">y_a_witnessed</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">lambda1</span>, <span class="ident">Rotation::cur</span>());
+            <span class="kw">let</span> <span class="ident">y_a_witnessed</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>, <span class="ident">Rotation::cur</span>());
             <span class="ident">Constraints::with_selector</span>(<span class="ident">q_mul_1</span>, <span class="prelude-val">Some</span>((<span class="string">&quot;init y_a&quot;</span>, <span class="ident">y_a_witnessed</span> <span class="op">-</span> <span class="ident">y_a_next</span>)))
         });
 
         <span class="comment">// q_mul_2 == 1 checks</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;q_mul_2 == 1 checks&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q_mul_2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul</span>.<span class="number">1</span>);
+            <span class="kw">let</span> <span class="ident">q_mul_2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul_2</span>);
 
             <span class="kw">let</span> <span class="ident">y_a_next</span> <span class="op">=</span> <span class="ident">y_a</span>(<span class="ident">meta</span>, <span class="ident">Rotation::next</span>());
 
             <span class="comment">// x_{P,i}</span>
-            <span class="kw">let</span> <span class="ident">x_p_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_p</span>, <span class="ident">Rotation::cur</span>());
+            <span class="kw">let</span> <span class="ident">x_p_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>, <span class="ident">Rotation::cur</span>());
             <span class="comment">// x_{P,i-1}</span>
-            <span class="kw">let</span> <span class="ident">x_p_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_p</span>, <span class="ident">Rotation::next</span>());
+            <span class="kw">let</span> <span class="ident">x_p_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>, <span class="ident">Rotation::next</span>());
             <span class="comment">// y_{P,i}</span>
             <span class="kw">let</span> <span class="ident">y_p_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">y_p</span>, <span class="ident">Rotation::cur</span>());
             <span class="comment">// y_{P,i-1}</span>
@@ -535,8 +617,8 @@
 
         <span class="comment">// q_mul_3 == 1 checks</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;q_mul_3 == 1 checks&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q_mul_3</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul</span>.<span class="number">2</span>);
-            <span class="kw">let</span> <span class="ident">y_a_final</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">lambda1</span>, <span class="ident">Rotation::next</span>());
+            <span class="kw">let</span> <span class="ident">q_mul_3</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul_3</span>);
+            <span class="kw">let</span> <span class="ident">y_a_final</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>, <span class="ident">Rotation::next</span>());
             <span class="ident">Constraints::with_selector</span>(<span class="ident">q_mul_3</span>, <span class="ident">for_loop</span>(<span class="ident">meta</span>, <span class="ident">y_a_final</span>))
         });
     }
@@ -579,16 +661,16 @@
         <span class="comment">// Set q_mul values</span>
         {
             <span class="comment">// q_mul_1 = 1 on offset 0</span>
-            <span class="self">self</span>.<span class="ident">q_mul</span>.<span class="number">0</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="ident">q_mul_1</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
 
             <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>;
             <span class="comment">// q_mul_2 = 1 on all rows after offset 0, excluding the last row.</span>
             <span class="kw">for</span> <span class="ident">idx</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="ident">NUM_BITS</span> <span class="op">-</span> <span class="number">1</span>) {
-                <span class="self">self</span>.<span class="ident">q_mul</span>.<span class="number">1</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="ident">idx</span>)<span class="question-mark">?</span>;
+                <span class="self">self</span>.<span class="ident">q_mul_2</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="ident">idx</span>)<span class="question-mark">?</span>;
             }
 
             <span class="comment">// q_mul_3 = 1 on the last row.</span>
-            <span class="self">self</span>.<span class="ident">q_mul</span>.<span class="number">2</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="ident">NUM_BITS</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="ident">q_mul_3</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="ident">NUM_BITS</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
         }
 
         <span class="comment">// Initialise double-and-add</span>
@@ -597,12 +679,18 @@
             <span class="kw">let</span> <span class="ident">z</span> <span class="op">=</span> <span class="ident">acc</span>.<span class="number">2</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;starting z&quot;</span>, <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">z</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
 
             <span class="comment">// Initialise acc</span>
-            <span class="kw">let</span> <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">acc</span>
-                .<span class="number">0</span>
-                .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;starting x_a&quot;</span>, <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">x_a</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">y_a</span> <span class="op">=</span> <span class="ident">acc</span>
-                .<span class="number">1</span>
-                .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;starting y_a&quot;</span>, <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">lambda1</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">acc</span>.<span class="number">0</span>.<span class="ident">copy_advice</span>(
+                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;starting x_a&quot;</span>,
+                <span class="ident">region</span>,
+                <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>,
+                <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>,
+            )<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">y_a</span> <span class="op">=</span> <span class="ident">acc</span>.<span class="number">1</span>.<span class="ident">copy_advice</span>(
+                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;starting y_a&quot;</span>,
+                <span class="ident">region</span>,
+                <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>,
+                <span class="ident">offset</span>,
+            )<span class="question-mark">?</span>;
 
             (<span class="ident">x_a</span>, <span class="ident">y_a</span>.<span class="ident">value</span>().<span class="ident">cloned</span>(), <span class="ident">z</span>)
         };
@@ -631,7 +719,7 @@
             <span class="comment">// Assign `x_p`, `y_p`</span>
             <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                 <span class="op">|</span><span class="op">|</span> <span class="string">&quot;x_p&quot;</span>,
-                <span class="self">self</span>.<span class="ident">x_p</span>,
+                <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>,
                 <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span>,
                 <span class="op">|</span><span class="op">|</span> <span class="ident">x_p</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
             )<span class="question-mark">?</span>;
@@ -655,7 +743,7 @@
                 .<span class="ident">map</span>(<span class="op">|</span>(((<span class="ident">y_a</span>, <span class="ident">y_p</span>), <span class="ident">x_a</span>), <span class="ident">x_p</span>)<span class="op">|</span> (<span class="ident">y_a</span> <span class="op">-</span> <span class="ident">y_p</span>) <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_p</span>).<span class="ident">invert</span>().<span class="ident">unwrap</span>());
             <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                 <span class="op">|</span><span class="op">|</span> <span class="string">&quot;lambda1&quot;</span>,
-                <span class="self">self</span>.<span class="ident">lambda1</span>,
+                <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>,
                 <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span>,
                 <span class="op">|</span><span class="op">|</span> <span class="ident">lambda1</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
             )<span class="question-mark">?</span>;
@@ -664,7 +752,7 @@
             <span class="kw">let</span> <span class="ident">x_r</span> <span class="op">=</span> <span class="ident">lambda1</span>
                 .<span class="ident">zip</span>(<span class="ident">x_a</span>.<span class="ident">value</span>())
                 .<span class="ident">zip</span>(<span class="ident">x_p</span>)
-                .<span class="ident">map</span>(<span class="op">|</span>((<span class="ident">lambda1</span>, <span class="ident">x_a</span>), <span class="ident">x_p</span>)<span class="op">|</span> <span class="ident">lambda1</span> <span class="op">*</span> <span class="ident">lambda1</span> <span class="op">-</span> <span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_p</span>);
+                .<span class="ident">map</span>(<span class="op">|</span>((<span class="ident">lambda1</span>, <span class="ident">x_a</span>), <span class="ident">x_p</span>)<span class="op">|</span> <span class="ident">lambda1</span>.<span class="ident">square</span>() <span class="op">-</span> <span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_p</span>);
 
             <span class="comment">// λ2 = (2(y_A) / (x_A - x_R)) - λ1</span>
             <span class="kw">let</span> <span class="ident">lambda2</span> <span class="op">=</span>
@@ -677,7 +765,7 @@
                     });
             <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                 <span class="op">|</span><span class="op">|</span> <span class="string">&quot;lambda2&quot;</span>,
-                <span class="self">self</span>.<span class="ident">lambda2</span>,
+                <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_2</span>,
                 <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span>,
                 <span class="op">|</span><span class="op">|</span> <span class="ident">lambda2</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
             )<span class="question-mark">?</span>;
@@ -695,7 +783,7 @@
             <span class="kw">let</span> <span class="ident">x_a_val</span> <span class="op">=</span> <span class="ident">x_a_new</span>;
             <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                 <span class="op">|</span><span class="op">|</span> <span class="string">&quot;x_a&quot;</span>,
-                <span class="self">self</span>.<span class="ident">x_a</span>,
+                <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>,
                 <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>,
                 <span class="op">|</span><span class="op">|</span> <span class="ident">x_a_val</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
             )<span class="question-mark">?</span>;
@@ -704,7 +792,7 @@
         <span class="comment">// Witness final y_a</span>
         <span class="kw">let</span> <span class="ident">y_a</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
             <span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_a&quot;</span>,
-            <span class="self">self</span>.<span class="ident">lambda1</span>,
+            <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>,
             <span class="ident">offset</span> <span class="op">+</span> <span class="ident">NUM_BITS</span>,
             <span class="op">|</span><span class="op">|</span> <span class="ident">y_a</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
         )<span class="question-mark">?</span>;

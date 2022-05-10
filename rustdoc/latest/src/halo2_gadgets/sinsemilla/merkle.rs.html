@@ -402,6 +402,16 @@
 <span id="382">382</span>
 <span id="383">383</span>
 <span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Gadgets for implementing a Merkle tree with Sinsemilla.</span>
 
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
@@ -415,7 +425,6 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities</span>::{
     <span class="ident">cond_swap::CondSwapInstructions</span>, <span class="ident">i2lebsp</span>, <span class="ident">transpose_option_array</span>, <span class="ident">UtilitiesInstructions</span>,
 };
-<span class="kw">use</span> <span class="ident">std::iter</span>;
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">chip</span>;
 
@@ -459,11 +468,11 @@
     <span class="kw">const</span> <span class="ident">PATH_LENGTH</span>: <span class="ident">usize</span>,
     <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>,
     <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span>,
+    <span class="kw">const</span> <span class="ident">PAR</span>: <span class="ident">usize</span>,
 <span class="op">&gt;</span> <span class="kw">where</span>
     <span class="ident">MerkleChip</span>: <span class="ident">MerkleInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">PATH_LENGTH</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>,
 {
-    <span class="ident">chip_1</span>: <span class="ident">MerkleChip</span>,
-    <span class="ident">chip_2</span>: <span class="ident">MerkleChip</span>,
+    <span class="ident">chips</span>: [<span class="ident">MerkleChip</span>; <span class="ident">PAR</span>],
     <span class="ident">domain</span>: <span class="ident">MerkleChip::HashDomains</span>,
     <span class="ident">leaf_pos</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
     <span class="comment">// The Merkle path is ordered from leaves to root.</span>
@@ -476,21 +485,27 @@
         <span class="kw">const</span> <span class="ident">PATH_LENGTH</span>: <span class="ident">usize</span>,
         <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>,
         <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span>,
-    <span class="op">&gt;</span> <span class="ident">MerklePath</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">MerkleChip</span>, <span class="ident">PATH_LENGTH</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>
+        <span class="kw">const</span> <span class="ident">PAR</span>: <span class="ident">usize</span>,
+    <span class="op">&gt;</span> <span class="ident">MerklePath</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">MerkleChip</span>, <span class="ident">PATH_LENGTH</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span>, <span class="ident">PAR</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">MerkleChip</span>: <span class="ident">MerkleInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">PATH_LENGTH</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>,
 {
     <span class="doccomment">/// Constructs a [`MerklePath`].</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// A circuit may have many more columns available than are required by a single</span>
+    <span class="doccomment">/// `MerkleChip`. To make better use of the available circuit area, the `MerklePath`</span>
+    <span class="doccomment">/// gadget will distribute its path hashing across each `MerkleChip` in `chips`, such</span>
+    <span class="doccomment">/// that each chip processes `ceil(PATH_LENGTH / PAR)` layers (with the last chip</span>
+    <span class="doccomment">/// processing fewer layers if the division is inexact).</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">construct</span>(
-        <span class="ident">chip_1</span>: <span class="ident">MerkleChip</span>,
-        <span class="ident">chip_2</span>: <span class="ident">MerkleChip</span>,
+        <span class="ident">chips</span>: [<span class="ident">MerkleChip</span>; <span class="ident">PAR</span>],
         <span class="ident">domain</span>: <span class="ident">MerkleChip::HashDomains</span>,
         <span class="ident">leaf_pos</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
         <span class="ident">path</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">C::Base</span>; <span class="ident">PATH_LENGTH</span>]<span class="op">&gt;</span>,
     ) -&gt; <span class="self">Self</span> {
+        <span class="macro">assert_ne!</span>(<span class="ident">PAR</span>, <span class="number">0</span>);
         <span class="self">Self</span> {
-            <span class="ident">chip_1</span>,
-            <span class="ident">chip_2</span>,
+            <span class="ident">chips</span>,
             <span class="ident">domain</span>,
             <span class="ident">leaf_pos</span>,
             <span class="ident">path</span>,
@@ -505,22 +520,26 @@
         <span class="kw">const</span> <span class="ident">PATH_LENGTH</span>: <span class="ident">usize</span>,
         <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>,
         <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span>,
-    <span class="op">&gt;</span> <span class="ident">MerklePath</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">MerkleChip</span>, <span class="ident">PATH_LENGTH</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>
+        <span class="kw">const</span> <span class="ident">PAR</span>: <span class="ident">usize</span>,
+    <span class="op">&gt;</span> <span class="ident">MerklePath</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">MerkleChip</span>, <span class="ident">PATH_LENGTH</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span>, <span class="ident">PAR</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">MerkleChip</span>: <span class="ident">MerkleInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">PATH_LENGTH</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>,
 {
     <span class="doccomment">/// Calculates the root of the tree containing the given leaf at this Merkle path.</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// Implements [Zcash Protocol Specification Section 4.9: Merkle Path Validity][merklepath].</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// [merklepath]: https://zips.z.cash/protocol/protocol.pdf#merklepath</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">calculate_root</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
         <span class="ident">leaf</span>: <span class="ident">MerkleChip::Var</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">MerkleChip::Var</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// A Sinsemilla chip uses 5 advice columns, but the full Orchard action circuit</span>
-        <span class="comment">// uses 10 advice columns. We distribute the path hashing across two Sinsemilla</span>
-        <span class="comment">// chips to make better use of the available circuit area.</span>
-        <span class="kw">let</span> <span class="ident">chips</span> <span class="op">=</span> <span class="ident">iter::empty</span>()
-            .<span class="ident">chain</span>(<span class="ident">iter::repeat</span>(<span class="self">self</span>.<span class="ident">chip_1</span>.<span class="ident">clone</span>()).<span class="ident">take</span>(<span class="ident">PATH_LENGTH</span> <span class="op">/</span> <span class="number">2</span>))
-            .<span class="ident">chain</span>(<span class="ident">iter::repeat</span>(<span class="self">self</span>.<span class="ident">chip_2</span>.<span class="ident">clone</span>()));
+        <span class="comment">// Each chip processes `ceil(PATH_LENGTH / PAR)` layers.</span>
+        <span class="kw">let</span> <span class="ident">layers_per_chip</span> <span class="op">=</span> (<span class="ident">PATH_LENGTH</span> <span class="op">+</span> <span class="ident">PAR</span> <span class="op">-</span> <span class="number">1</span>) <span class="op">/</span> <span class="ident">PAR</span>;
+
+        <span class="comment">// Assign each layer to a chip.</span>
+        <span class="kw">let</span> <span class="ident">chips</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">PATH_LENGTH</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">chips</span>[<span class="ident">i</span> <span class="op">/</span> <span class="ident">layers_per_chip</span>].<span class="ident">clone</span>());
 
         <span class="comment">// The Merkle path is ordered from leaves to root, which is consistent with the</span>
         <span class="comment">// little-endian representation of `pos` below.</span>
@@ -542,6 +561,9 @@
             <span class="comment">// we have `l` = 32 - 31 - 1 = 0.</span>
             <span class="comment">// On the other hand, when `layer = 0` (the final sibling on the Merkle path),</span>
             <span class="comment">// we have `l` = 32 - 0 - 1 = 31.</span>
+
+            <span class="comment">// Constrain which of (node, sibling) is (left, right) with a conditional swap</span>
+            <span class="comment">// tied to the current bit of the position.</span>
             <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> {
                 <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> (<span class="ident">node</span>, <span class="kw-2">*</span><span class="ident">sibling</span>);
 
@@ -549,11 +571,10 @@
                 <span class="ident">chip</span>.<span class="ident">swap</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;node position&quot;</span>), <span class="ident">pair</span>, <span class="kw-2">*</span><span class="ident">pos</span>)<span class="question-mark">?</span>
             };
 
-            <span class="comment">// Each `hash_layer` consists of 52 Sinsemilla words:</span>
-            <span class="comment">//  - l (10 bits) = 1 word</span>
-            <span class="comment">//  - left (255 bits) || right (255 bits) = 51 words (510 bits)</span>
+            <span class="comment">// Compute the node in layer l from its children:</span>
+            <span class="comment">//     M^l_i = MerkleCRH(l, M^{l+1}_{2i}, M^{l+1}_{2i+1})</span>
             <span class="ident">node</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">hash_layer</span>(
-                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;hash l {}&quot;</span>, <span class="ident">l</span>)),
+                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;MerkleCRH({}, left, right)&quot;</span>, <span class="ident">l</span>)),
                 <span class="ident">Q</span>,
                 <span class="ident">l</span>,
                 <span class="ident">pair</span>.<span class="number">0</span>,
@@ -690,8 +711,7 @@
             )<span class="question-mark">?</span>;
 
             <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">MerklePath</span> {
-                <span class="ident">chip_1</span>,
-                <span class="ident">chip_2</span>,
+                <span class="ident">chips</span>: [<span class="ident">chip_1</span>, <span class="ident">chip_2</span>],
                 <span class="ident">domain</span>: <span class="ident">TestHashDomain</span>,
                 <span class="ident">leaf_pos</span>: <span class="self">self</span>.<span class="ident">leaf_pos</span>,
                 <span class="ident">path</span>: <span class="self">self</span>.<span class="ident">merkle_path</span>,
@@ -712,7 +732,7 @@
                             (<span class="ident">sibling</span>, <span class="kw-2">&amp;</span><span class="ident">node</span>)
                         };
 
-                        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::primitives::sinsemilla</span>;
+                        <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::sinsemilla::primitives</span> <span class="kw">as</span> <span class="ident">sinsemilla</span>;
                         <span class="kw">let</span> <span class="ident">merkle_crh</span> <span class="op">=</span> <span class="ident">sinsemilla::HashDomain::from_Q</span>(<span class="ident">TestHashDomain</span>.<span class="ident">Q</span>().<span class="ident">into</span>());
 
                         <span class="ident">merkle_crh</span>
