@@ -57,8 +57,12 @@ impl DoubleAndAdd {
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Config<const NUM_BITS: usize> {
-    // Selectors used to constrain the cells used in incomplete addition.
-    pub(super) q_mul: (Selector, Selector, Selector),
+    // Selector constraining the first row of incomplete addition.
+    pub(super) q_mul_1: Selector,
+    // Selector constraining the main loop of incomplete addition.
+    pub(super) q_mul_2: Selector,
+    // Selector constraining the last row of incomplete addition.
+    pub(super) q_mul_3: Selector,
     // Cumulative sum used to decompose the scalar.
     pub(super) z: Column<Advice>,
     // Logic specific to merged double-and-add.
@@ -81,7 +85,9 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         meta.enable_equality(lambda_1);
 
         let config = Self {
-            q_mul: (meta.selector(), meta.selector(), meta.selector()),
+            q_mul_1: meta.selector(),
+            q_mul_2: meta.selector(),
+            q_mul_3: meta.selector(),
             z,
             double_and_add: DoubleAndAdd {
                 x_a,
@@ -162,7 +168,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
 
         // q_mul_1 == 1 checks
         meta.create_gate("q_mul_1 == 1 checks", |meta| {
-            let q_mul_1 = meta.query_selector(self.q_mul.0);
+            let q_mul_1 = meta.query_selector(self.q_mul_1);
 
             let y_a_next = y_a(meta, Rotation::next());
             let y_a_witnessed = meta.query_advice(self.double_and_add.lambda_1, Rotation::cur());
@@ -171,7 +177,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
 
         // q_mul_2 == 1 checks
         meta.create_gate("q_mul_2 == 1 checks", |meta| {
-            let q_mul_2 = meta.query_selector(self.q_mul.1);
+            let q_mul_2 = meta.query_selector(self.q_mul_2);
 
             let y_a_next = y_a(meta, Rotation::next());
 
@@ -200,7 +206,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
 
         // q_mul_3 == 1 checks
         meta.create_gate("q_mul_3 == 1 checks", |meta| {
-            let q_mul_3 = meta.query_selector(self.q_mul.2);
+            let q_mul_3 = meta.query_selector(self.q_mul_3);
             let y_a_final = meta.query_advice(self.double_and_add.lambda_1, Rotation::next());
             Constraints::with_selector(q_mul_3, for_loop(meta, y_a_final))
         });
@@ -244,16 +250,16 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         // Set q_mul values
         {
             // q_mul_1 = 1 on offset 0
-            self.q_mul.0.enable(region, offset)?;
+            self.q_mul_1.enable(region, offset)?;
 
             let offset = offset + 1;
             // q_mul_2 = 1 on all rows after offset 0, excluding the last row.
             for idx in 0..(NUM_BITS - 1) {
-                self.q_mul.1.enable(region, offset + idx)?;
+                self.q_mul_2.enable(region, offset + idx)?;
             }
 
             // q_mul_3 = 1 on the last row.
-            self.q_mul.2.enable(region, offset + NUM_BITS - 1)?;
+            self.q_mul_3.enable(region, offset + NUM_BITS - 1)?;
         }
 
         // Initialise double-and-add
