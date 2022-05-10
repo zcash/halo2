@@ -35,9 +35,9 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("Short fixed-base mul gate", |meta| {
             let q_mul_fixed_short = meta.query_selector(self.q_mul_fixed_short);
-            let y_p = meta.query_advice(self.super_config.y_p, Rotation::cur());
+            let y_p = meta.query_advice(self.super_config.add_config.y_p, Rotation::cur());
             let y_a = meta.query_advice(self.super_config.add_config.y_qr, Rotation::cur());
-            // z_21
+            // z_21 = k_21
             let last_window = meta.query_advice(self.super_config.u, Rotation::cur());
             let sign = meta.query_advice(self.super_config.window, Rotation::cur());
 
@@ -46,12 +46,16 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             // Check that last window is either 0 or 1.
             let last_window_check = bool_check(last_window);
             // Check that sign is either 1 or -1.
-            let sign_check = sign.clone() * sign.clone() - one;
+            let sign_check = sign.clone().square() - one;
 
             // `(x_a, y_a)` is the result of `[m]B`, where `m` is the magnitude.
             // We conditionally negate this result using `y_p = y_a * s`, where `s` is the sign.
 
             // Check that the final `y_p = y_a` or `y_p = -y_a`
+            //
+            // This constraint is redundant / unnecessary, because `sign` is constrained
+            // to -1 or 1 by `sign_check`, and `negation_check` therefore permits a strict
+            // subset of the cases that this constraint permits.
             let y_check = (y_p.clone() - y_a.clone()) * (y_p.clone() + y_a.clone());
 
             // Check that the correct sign is witnessed s.t. sign * y_p = y_a
@@ -69,6 +73,10 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         });
     }
 
+    /// Constraints `magnitude` to be at most 66 bits.
+    ///
+    /// The final window is separately constrained to be a single bit, which completes the
+    /// 64-bit range constraint.
     fn decompose(
         &self,
         region: &mut Region<'_, pallas::Base>,
@@ -90,14 +98,14 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         Ok(EccScalarFixedShort {
             magnitude,
             sign,
-            running_sum: (*running_sum).as_slice().try_into().unwrap(),
+            running_sum: Some((*running_sum).as_slice().try_into().unwrap()),
         })
     }
 
     pub fn assign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        magnitude_sign: MagnitudeSign,
+        scalar: &EccScalarFixedShort,
         base: &<Fixed as FixedPoints<pallas::Affine>>::ShortScalar,
     ) -> Result<(EccPoint, EccScalarFixedShort), Error>
     where
@@ -110,7 +118,14 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                 let offset = 0;
 
                 // Decompose the scalar
-                let scalar = self.decompose(&mut region, offset, magnitude_sign.clone())?;
+                let scalar = match scalar.running_sum {
+                    None => self.decompose(
+                        &mut region,
+                        offset,
+                        (scalar.magnitude.clone(), scalar.sign.clone()),
+                    ),
+                    Some(_) => todo!("unimplemented for halo2_gadgets v0.1.0"),
+                }?;
 
                 let (acc, mul_b) = self
                     .super_config
@@ -153,7 +168,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                 // Copy last window to `u` column.
                 // (Although the last window is not a `u` value; we are copying it into the `u`
                 // column because there is an available cell there.)
-                let z_21 = scalar.running_sum[21].clone();
+                let z_21 = scalar.running_sum.as_ref().unwrap()[21].clone();
                 z_21.copy_advice(|| "last_window", &mut region, self.super_config.u, offset)?;
 
                 // Conditionally negate `y`-coordinate
@@ -173,7 +188,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                 // Assign final `y` to `y_p` column and return final point
                 let y_var = region.assign_advice(
                     || "y_var",
-                    self.super_config.y_p,
+                    self.super_config.add_config.y_p,
                     offset,
                     || y_val.ok_or(Error::Synthesis),
                 )?;
@@ -243,7 +258,7 @@ pub mod tests {
         ecc::{
             chip::{EccChip, FixedPoint, MagnitudeSign},
             tests::{Short, TestFixedBases},
-            FixedPointShort, NonIdentityPoint, Point,
+            FixedPointShort, NonIdentityPoint, Point, ScalarFixedShort,
         },
         utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
     };
@@ -327,7 +342,12 @@ pub mod tests {
                     *magnitude,
                     *sign,
                 )?;
-                test_short.mul(layouter.namespace(|| *name), magnitude_sign)?
+                let by = ScalarFixedShort::new(
+                    chip.clone(),
+                    layouter.namespace(|| "signed short scalar"),
+                    magnitude_sign,
+                )?;
+                test_short.mul(layouter.namespace(|| *name), by)?
             };
             // Move from base field into scalar field
             let scalar = {
@@ -361,7 +381,12 @@ pub mod tests {
                     *magnitude,
                     *sign,
                 )?;
-                test_short.mul(layouter.namespace(|| *name), magnitude_sign)?
+                let by = ScalarFixedShort::new(
+                    chip.clone(),
+                    layouter.namespace(|| "signed short scalar"),
+                    magnitude_sign,
+                )?;
+                test_short.mul(layouter.namespace(|| *name), by)?
             };
             if let Some(is_identity) = result.inner().is_identity() {
                 assert!(is_identity);
@@ -443,7 +468,7 @@ pub mod tests {
             ) -> Result<(), Error> {
                 let column = config.advices[0];
 
-                let short_config = config.mul_fixed_short;
+                let short_config = config.mul_fixed_short.clone();
                 let magnitude_sign = {
                     let magnitude = self.load_private(
                         layouter.namespace(|| "load magnitude"),
@@ -452,10 +477,14 @@ pub mod tests {
                     )?;
                     let sign =
                         self.load_private(layouter.namespace(|| "load sign"), column, self.sign)?;
-                    (magnitude, sign)
+                    ScalarFixedShort::new(
+                        EccChip::construct(config),
+                        layouter.namespace(|| "signed short scalar"),
+                        (magnitude, sign),
+                    )?
                 };
 
-                short_config.assign(layouter, magnitude_sign, &Short)?;
+                short_config.assign(layouter, &magnitude_sign.inner, &Short)?;
 
                 Ok(())
             }

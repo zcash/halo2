@@ -1,15 +1,17 @@
 use super::super::{CommitDomains, HashDomains, SinsemillaInstructions};
 use super::{NonIdentityEccPoint, SinsemillaChip};
+use crate::{
+    ecc::FixedPoints,
+    sinsemilla::primitives::{self as sinsemilla, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S},
+};
 
-use crate::ecc::FixedPoints;
-use crate::primitives::sinsemilla::{self, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S};
 use halo2_proofs::circuit::AssignedCell;
 use halo2_proofs::{
     circuit::{Chip, Region},
-    plonk::Error,
+    plonk::{Assigned, Error},
 };
 
-use group::ff::{Field, PrimeField, PrimeFieldBits};
+use group::ff::{PrimeField, PrimeFieldBits};
 use pasta_curves::{
     arithmetic::{CurveAffine, FieldExt},
     pallas,
@@ -55,13 +57,17 @@ where
             config.q_sinsemilla4.enable(region, offset)?;
             region.assign_fixed(|| "fixed y_q", config.fixed_y_q, offset, || Ok(y_q))?;
 
-            (Some(y_q)).into()
+            (Some(y_q.into())).into()
         };
 
         // Constrain the initial x_q to equal the x-coordinate of the domain's `Q`.
         let mut x_a: X<pallas::Base> = {
-            let x_a =
-                region.assign_advice_from_constant(|| "fixed x_q", config.x_a, offset, x_q)?;
+            let x_a = region.assign_advice_from_constant(
+                || "fixed x_q",
+                config.double_and_add.x_a,
+                offset,
+                x_q.into(),
+            )?;
 
             x_a.into()
         };
@@ -90,7 +96,7 @@ where
             // Assign the final y_a.
             let y_a_cell = region.assign_advice(
                 || "y_a",
-                config.lambda_1,
+                config.double_and_add.lambda_1,
                 offset,
                 || y_a.ok_or(Error::Synthesis),
             )?;
@@ -101,13 +107,13 @@ where
             {
                 region.assign_advice(
                     || "dummy lambda2",
-                    config.lambda_2,
+                    config.double_and_add.lambda_2,
                     offset,
                     || Ok(pallas::Base::zero()),
                 )?;
                 region.assign_advice(
                     || "dummy x_p",
-                    config.x_p,
+                    config.double_and_add.x_p,
                     offset,
                     || Ok(pallas::Base::zero()),
                 )?;
@@ -120,8 +126,11 @@ where
         #[allow(non_snake_case)]
         // Check equivalence to result from primitives::sinsemilla::hash_to_point
         {
-            use crate::primitives::sinsemilla::{K, S_PERSONALIZATION};
-            use crate::sinsemilla::message::MessagePiece;
+            use crate::sinsemilla::{
+                message::MessagePiece,
+                primitives::{K, S_PERSONALIZATION},
+            };
+
             use group::{prime::PrimeCurveAffine, Curve};
             use pasta_curves::arithmetic::CurveExt;
 
@@ -150,8 +159,11 @@ where
                 let expected_point = bitstring
                     .chunks(K)
                     .fold(Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
-                let actual_point =
-                    pallas::Affine::from_xy(*x_a.value().unwrap(), *y_a.value().unwrap()).unwrap();
+                let actual_point = pallas::Affine::from_xy(
+                    x_a.value().unwrap().evaluate(),
+                    y_a.value().unwrap().evaluate(),
+                )
+                .unwrap();
                 assert_eq!(expected_point.to_affine(), actual_point);
             }
         }
@@ -164,7 +176,7 @@ where
             }
         }
         Ok((
-            NonIdentityEccPoint::from_coordinates_unchecked(x_a.0, y_a),
+            NonIdentityEccPoint::from_coordinates_unchecked(x_a.0.evaluate(), y_a.evaluate()),
             zs_sum,
         ))
     }
@@ -326,7 +338,7 @@ where
             // Assign `x_p`
             region.assign_advice(
                 || "x_p",
-                config.x_p,
+                config.double_and_add.x_p,
                 offset + row,
                 || x_p.ok_or(Error::Synthesis),
             )?;
@@ -338,12 +350,12 @@ where
                     .zip(y_a.0)
                     .zip(x_p)
                     .zip(y_p)
-                    .map(|(((x_a, y_a), x_p), y_p)| (y_a - y_p) * (x_a - x_p).invert().unwrap());
+                    .map(|(((x_a, y_a), x_p), y_p)| (y_a - y_p) * (x_a - x_p).invert());
 
                 // Assign lambda_1
                 region.assign_advice(
                     || "lambda_1",
-                    config.lambda_1,
+                    config.double_and_add.lambda_1,
                     offset + row,
                     || lambda_1.ok_or(Error::Synthesis),
                 )?;
@@ -361,13 +373,13 @@ where
             let lambda_2 = {
                 let lambda_2 = x_a.value().zip(y_a.0).zip(x_r).zip(lambda_1).map(
                     |(((x_a, y_a), x_r), lambda_1)| {
-                        pallas::Base::from(2) * y_a * (x_a - x_r).invert().unwrap() - lambda_1
+                        y_a * pallas::Base::from(2) * (x_a - x_r).invert() - lambda_1
                     },
                 );
 
                 region.assign_advice(
                     || "lambda_2",
-                    config.lambda_2,
+                    config.double_and_add.lambda_2,
                     offset + row,
                     || lambda_2.ok_or(Error::Synthesis),
                 )?;
@@ -384,7 +396,7 @@ where
 
                 let x_a_cell = region.assign_advice(
                     || "x_a",
-                    config.x_a,
+                    config.double_and_add.x_a,
                     offset + row + 1,
                     || x_a_new.ok_or(Error::Synthesis),
                 )?;
@@ -410,18 +422,18 @@ where
 }
 
 /// The x-coordinate of the accumulator in a Sinsemilla hash instance.
-struct X<F: FieldExt>(AssignedCell<F, F>);
+struct X<F: FieldExt>(AssignedCell<Assigned<F>, F>);
 
-impl<F: FieldExt> From<AssignedCell<F, F>> for X<F> {
-    fn from(cell_value: AssignedCell<F, F>) -> Self {
+impl<F: FieldExt> From<AssignedCell<Assigned<F>, F>> for X<F> {
+    fn from(cell_value: AssignedCell<Assigned<F>, F>) -> Self {
         X(cell_value)
     }
 }
 
 impl<F: FieldExt> Deref for X<F> {
-    type Target = AssignedCell<F, F>;
+    type Target = AssignedCell<Assigned<F>, F>;
 
-    fn deref(&self) -> &AssignedCell<F, F> {
+    fn deref(&self) -> &AssignedCell<Assigned<F>, F> {
         &self.0
     }
 }
@@ -431,18 +443,18 @@ impl<F: FieldExt> Deref for X<F> {
 /// This is never actually witnessed until the last round, since it
 /// can be derived from other variables. Thus it only exists as a field
 /// element, not a `CellValue`.
-struct Y<F: FieldExt>(Option<F>);
+struct Y<F: FieldExt>(Option<Assigned<F>>);
 
-impl<F: FieldExt> From<Option<F>> for Y<F> {
-    fn from(value: Option<F>) -> Self {
+impl<F: FieldExt> From<Option<Assigned<F>>> for Y<F> {
+    fn from(value: Option<Assigned<F>>) -> Self {
         Y(value)
     }
 }
 
 impl<F: FieldExt> Deref for Y<F> {
-    type Target = Option<F>;
+    type Target = Option<Assigned<F>>;
 
-    fn deref(&self) -> &Option<F> {
+    fn deref(&self) -> &Option<Assigned<F>> {
         &self.0
     }
 }

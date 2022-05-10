@@ -2,12 +2,12 @@
 
 use super::{BaseFitsInScalarInstructions, EccInstructions, FixedPoints};
 use crate::{
-    primitives::sinsemilla,
+    sinsemilla::primitives as sinsemilla,
     utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
 };
 use arrayvec::ArrayVec;
 
-use ff::Field;
+use ff::{Field, PrimeField};
 use group::prime::PrimeCurveAffine;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter},
@@ -25,6 +25,9 @@ pub(super) mod mul_fixed;
 pub(super) mod witness_point;
 
 pub use constants::*;
+
+// Exposed for Sinsemilla.
+pub(crate) use mul::incomplete::DoubleAndAdd;
 
 /// A curve point represented in affine (x, y) coordinates, or the
 /// identity represented as (0, 0).
@@ -130,7 +133,7 @@ impl From<NonIdentityEccPoint> for EccPoint {
     }
 }
 
-/// Configuration for the ECC chip
+/// Configuration for [`EccChip`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[allow(non_snake_case)]
 pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>> {
@@ -210,7 +213,7 @@ pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
     fn generator(&self) -> C;
 
     /// Returns the $u$ values for this fixed point.
-    fn u(&self) -> Vec<[[u8; 32]; H]>;
+    fn u(&self) -> Vec<[<C::Base as PrimeField>::Repr; H]>;
 
     /// Returns the $z$ value for this fixed point.
     fn z(&self) -> Vec<u64>;
@@ -221,7 +224,7 @@ pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
     }
 }
 
-/// A chip implementing EccInstructions
+/// An [`EccInstructions`] chip that uses 10 advice columns.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EccChip<FixedPoints: super::FixedPoints<pallas::Affine>> {
     config: EccConfig<FixedPoints>,
@@ -283,8 +286,6 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
             meta,
             lagrange_coeffs,
             advices[4],
-            advices[0],
-            advices[1],
             advices[5],
             add,
             add_incomplete,
@@ -328,7 +329,9 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
 #[derive(Clone, Debug)]
 pub struct EccScalarFixed {
     value: Option<pallas::Scalar>,
-    windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS }>,
+    /// The circuit-assigned windows representing this scalar, or `None` if the scalar has
+    /// not been used yet.
+    windows: Option<ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS }>>,
 }
 
 // TODO: Make V a `u64`
@@ -353,7 +356,10 @@ type MagnitudeSign = (MagnitudeCell, SignCell);
 pub struct EccScalarFixedShort {
     magnitude: MagnitudeCell,
     sign: SignCell,
-    running_sum: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS_SHORT + 1 }>,
+    /// The circuit-assigned running sum constraining this signed short scalar, or `None`
+    /// if the scalar has not been used yet.
+    running_sum:
+        Option<ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS_SHORT + 1 }>>,
 }
 
 /// A base field element used for fixed-base scalar multiplication.
@@ -391,7 +397,9 @@ pub enum ScalarVar {
     /// However, the only use of variable-base scalar mul in the Orchard protocol
     /// is in deriving diversified addresses `[ivk] g_d`,  and `ivk` is guaranteed
     /// to be in the base field of the curve. (See non-normative notes in
-    /// https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents.)
+    /// [4.2.3 Orchard Key Components][orchardkeycomponents].)
+    ///
+    /// [orchardkeycomponents]: https://zips.z.cash/protocol/protocol.pdf#orchardkeycomponents
     BaseFieldElem(AssignedCell<pallas::Base, pallas::Base>),
     /// A full-width scalar. This is unimplemented for halo2_gadgets v0.1.0.
     FullWidth,
@@ -464,6 +472,31 @@ where
         todo!()
     }
 
+    fn witness_scalar_fixed(
+        &self,
+        _layouter: &mut impl Layouter<pallas::Base>,
+        value: Option<pallas::Scalar>,
+    ) -> Result<Self::ScalarFixed, Error> {
+        Ok(EccScalarFixed {
+            value,
+            // This chip uses lazy witnessing.
+            windows: None,
+        })
+    }
+
+    fn scalar_fixed_from_signed_short(
+        &self,
+        _layouter: &mut impl Layouter<pallas::Base>,
+        (magnitude, sign): MagnitudeSign,
+    ) -> Result<Self::ScalarFixedShort, Error> {
+        Ok(EccScalarFixedShort {
+            magnitude,
+            sign,
+            // This chip uses lazy constraining.
+            running_sum: None,
+        })
+    }
+
     fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X {
         let point: EccPoint = (point.clone()).into();
         point.x()
@@ -519,7 +552,7 @@ where
     fn mul_fixed(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        scalar: Option<pallas::Scalar>,
+        scalar: &Self::ScalarFixed,
         base: &<Self::FixedPoints as FixedPoints<pallas::Affine>>::FullScalar,
     ) -> Result<(Self::Point, Self::ScalarFixed), Error> {
         let config = self.config().mul_fixed_full.clone();
@@ -533,13 +566,13 @@ where
     fn mul_fixed_short(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        magnitude_sign: MagnitudeSign,
+        scalar: &Self::ScalarFixedShort,
         base: &<Self::FixedPoints as FixedPoints<pallas::Affine>>::ShortScalar,
     ) -> Result<(Self::Point, Self::ScalarFixedShort), Error> {
         let config = self.config().mul_fixed_short.clone();
         config.assign(
             layouter.namespace(|| format!("short fixed-base mul of {:?}", base)),
-            magnitude_sign,
+            scalar,
             base,
         )
     }

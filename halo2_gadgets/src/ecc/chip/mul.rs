@@ -1,6 +1,6 @@
 use super::{add, EccPoint, NonIdentityEccPoint, ScalarVar, T_Q};
 use crate::{
-    primitives::sinsemilla,
+    sinsemilla::primitives as sinsemilla,
     utilities::{bool_check, lookup_range_check::LookupRangeCheckConfig, ternary},
 };
 use std::{
@@ -20,7 +20,7 @@ use uint::construct_uint;
 use pasta_curves::pallas;
 
 mod complete;
-mod incomplete;
+pub(super) mod incomplete;
 mod overflow;
 
 /// Number of bits for which complete addition needs to be used in variable-base
@@ -35,7 +35,7 @@ const INCOMPLETE_RANGE: Range<usize> = 0..INCOMPLETE_LEN;
 // The `hi` half is k_{254} to k_{130} inclusive (length 125 bits).
 // (It is a coincidence that k_{130} matches the boundary of the
 // overflow check described in [the book](https://zcash.github.io/halo2/design/gadgets/ecc/var-base-scalar-mul.html#overflow-check).)
-const INCOMPLETE_HI_RANGE: Range<usize> = 0..(INCOMPLETE_LEN / 2);
+const INCOMPLETE_HI_RANGE: Range<usize> = 0..INCOMPLETE_HI_LEN;
 const INCOMPLETE_HI_LEN: usize = INCOMPLETE_LEN / 2;
 
 // Bits k_{254} to k_{4} inclusive are used in incomplete addition.
@@ -92,7 +92,7 @@ impl Config {
         config.create_gate(meta);
 
         assert_eq!(
-            config.hi_config.x_p, config.lo_config.x_p,
+            config.hi_config.double_and_add.x_p, config.lo_config.double_and_add.x_p,
             "x_p is shared across hi and lo halves."
         );
         assert_eq!(
@@ -110,7 +110,7 @@ impl Config {
                 "incomplete config z cannot overlap with complete addition columns."
             );
             assert!(
-                !add_config_outputs.contains(&config.hi_config.lambda1),
+                !add_config_outputs.contains(&config.hi_config.double_and_add.lambda_1),
                 "incomplete config lambda1 cannot overlap with complete addition columns."
             );
         }
@@ -120,7 +120,7 @@ impl Config {
                 "incomplete config z cannot overlap with complete addition columns."
             );
             assert!(
-                !add_config_outputs.contains(&config.lo_config.lambda1),
+                !add_config_outputs.contains(&config.lo_config.double_and_add.lambda_1),
                 "incomplete config lambda1 cannot overlap with complete addition columns."
             );
         }
@@ -184,7 +184,7 @@ impl Config {
                 let bits_incomplete_lo = &bits[INCOMPLETE_LO_RANGE];
                 let lsb = bits[pallas::Scalar::NUM_BITS as usize - 1];
 
-                // Initialize the accumulator `acc = [2]base`
+                // Initialize the accumulator `acc = [2]base` using complete addition.
                 let acc =
                     self.add_config
                         .assign_region(&base_point, &base_point, offset, &mut region)?;
@@ -192,7 +192,12 @@ impl Config {
                 // Increase the offset by 1 after complete addition.
                 let offset = offset + 1;
 
-                // Initialize the running sum for scalar decomposition to zero
+                // Initialize the running sum for scalar decomposition to zero.
+                //
+                // `incomplete::Config::double_and_add` will copy this cell directly into
+                // itself. This is fine because we are just assigning the same value to
+                // the same cell twice, and then applying an equality constraint between
+                // the cell and itself (which the permutation argument treats as a no-op).
                 let z_init = Z(region.assign_advice_from_constant(
                     || "z_init = 0",
                     self.hi_config.z,
@@ -225,6 +230,7 @@ impl Config {
                 // Then, the final assignment of double-and-add was made on row + offset + 1.
                 // Outside of incomplete addition, we must account for these offset increases by adding
                 // 2 to the incomplete addition length.
+                assert!(INCOMPLETE_LO_RANGE.len() >= INCOMPLETE_HI_RANGE.len());
                 let offset = offset + INCOMPLETE_LO_RANGE.len() + 2;
 
                 // Complete addition
@@ -440,7 +446,7 @@ fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> 
         let t_q = U256::from_little_endian(&T_Q.to_le_bytes());
         let k = scalar + t_q;
 
-        // Big-endian bit representation of `k`.
+        // Little-endian bit representation of `k`.
         let bitstring: Vec<bool> = {
             let mut le_bytes = [0u8; 32];
             k.to_little_endian(&mut le_bytes);
@@ -453,7 +459,7 @@ fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> 
             })
         };
 
-        // Take the first 255 bits.
+        // Take the first 255 bits, and reverse to get the big-endian bit representation.
         let mut bitstring = bitstring[0..pallas::Scalar::NUM_BITS as usize].to_vec();
         bitstring.reverse();
         bitstring

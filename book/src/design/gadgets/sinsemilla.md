@@ -46,7 +46,44 @@ Note that unlike a simple Pedersen commitment, this commitment scheme ($\textsf{
 ## Efficient implementation
 The aim of the design is to optimize the number of bits that can be processed for each step of the algorithm (which requires a doubling and addition in $\mathbb{G}$) for a given table size. Using a single table of size $2^k$ group elements, we can process $k$ bits at a time.
 
-## Constraint program
+### Incomplete addition
+
+In each step of Sinsemilla we want to compute $A_{i+1} := (A_i \;⸭\; P_i) \;⸭\; A_i$. Let
+$R_i := A_i \;⸭\; P_i$ be the intermediate result such that $A_{i+1} := A_i \;⸭\; R_i$.
+Recalling the [incomplete addition formulae](ecc/addition.md#incomplete-addition):
+
+$$
+\begin{aligned}
+x_3 &= \left(\frac{y_1 - y_2}{x_1 - x_2}\right)^2 - x_1 - x_2 \\
+y_3 &= \frac{y_1 - y_2}{x_1 - x_2} \cdot (x_1 - x_3) - y_1 \\
+\end{aligned}
+$$
+
+Let $\lambda = \frac{y_1 - y_2}{x_1 - x_2}$. Substituting the coordinates for each of the
+incomplete additions in turn, and rearranging, we get
+
+$$
+\begin{aligned}
+\lambda_{1,i} &= \frac{y_{A,i} - y_{P,i}}{x_{A,i} - x_{P,i}} \\
+&\implies y_{A,i} - y_{P,i} = \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) \\
+&\implies y_{P,i} = y_{A,i} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) \\
+x_{R,i} &= \lambda_{1,i}^2 - x_{A,i} - x_{P,i} \\
+y_{R,i} &= \lambda_{1,i} \cdot (x_{A,i} - x_{R,i}) - y_{A,i} \\
+\end{aligned}
+$$
+and
+$$
+\begin{aligned}
+\lambda_{2,i} &= \frac{y_{A,i} - y_{R,i}}{x_{A,i} - x_{R,i}} \\
+&\implies y_{A,i} - y_{R,i} = \lambda_{2,i} \cdot (x_{A,i} - x_{R,i}) \\
+&\implies y_{A,i} - \left( \lambda_{1,i} \cdot (x_{A,i} - x_{R,i}) - y_{A,i} \right) = \lambda_{2,i} \cdot (x_{A,i} - x_{R,i}) \\
+&\implies 2 \cdot y_{A,i} = (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i}) \\
+x_{A,i+1} &= \lambda_{2,i}^2 - x_{A,i} - x_{R,i} \\
+y_{A,i+1} &= \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - y_{A,i}. \\
+\end{aligned}
+$$
+
+### Constraint program
 Let $\mathcal{P} = \left\{(j,\, x_{P[j]},\, y_{P[j]}) \text{ for } j \in \{0..2^k - 1\}\right\}$.
 
 Input: $m_{1..=n}$. (The message words are 1-indexed here, as in the [protocol spec](https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash), but we start the loop from $i = 0$ so that $(x_{A,i}, y_{A,i})$ corresponds to $\mathsf{Acc}_i$ in the protocol spec.)
@@ -70,15 +107,77 @@ We have an $n$-bit message $m = m_1 + 2^k m_2 + ... + 2^{k\cdot (n-1)} m_n$. (No
 
 Initialise the running sum $z_0 = \alpha$ and define $z_{i + 1} := \frac{z_{i} - m_{i+1}}{2^K}$. We will end up with $z_n = 0.$
 
-Rearranging gives us an expression for each word of the original message $m_{i+1} = z_{i} - 2^k \cdot z_{i + 1}$, which we can look up in the table.
+Rearranging gives us an expression for each word of the original message
+$m_{i+1} = z_{i} - 2^k \cdot z_{i + 1}$, which we can look up in the table. We position
+$z_{i}$ and $z_{i + 1}$ in adjacent rows of the same column, so we can sequentially apply
+the constraint across the entire message.
 
 In other words, $z_{n-i} = \sum\limits_{h=0}^{i-1} 2^{kh} \cdot m_{h+1}$.
 
 > For a little-endian decomposition as used here, the running sum is initialized to the scalar and ends at 0. For a big-endian decomposition as used in [variable-base scalar multiplication](https://hackmd.io/o9EzZBwxSWSi08kQ_fMIOw), the running sum would start at 0 and end with recovering the original scalar.
->
-> The running sum only applies to message words within a single field element, i.e. if $n \geq \mathtt{PrimeField::NUM\_BITS}$ then we will have several disjoint running sums. A longer message can be constructed by splitting the message words across several field elements, and then running several instances of the constraints below. An additional $q_{S2}$ selector is set to $0$ for the last step of each element, except for the last element where it is set to $2$.
->
-> In order to support chaining multiple field elements without a gap, we will use a slightly more complicated expression for $m_{i+1}$ that effectively forces $\mathbf{z}_n$ to zero for the last step of each element, as indicated by $q_{S2}$. This allows the cell that would have been $\mathbf{z}_n$ to be used to reinitialize the running sum for the next element.
+
+### Efficient packing
+
+The running sum only applies to message words within a single field element. That means if
+$n \geq \mathtt{PrimeField::NUM\_BITS}$ then we will need several disjoint running sums. A
+longer message can be constructed by splitting the message words across several field
+elements, and then running several instances of the constraints below.
+
+The expression for $m_{i+1}$ above requires $n + 1$ rows in the $z_{i}$ column, leaving a
+one-row gap in adjacent columns and making $\mathsf{Acc}_i$ tricker to accumulate. In
+order to support chaining multiple field elements without a gap, we use a slightly more
+complicated expression for $m_{i+1}$ that includes a selector:
+
+$$m_{i+1} = z_{i} - 2^k \cdot q_{run,i} \cdot z_{i+1}$$
+
+This effectively forces $\mathbf{z}_n$ to zero for the last step of each element, which
+allows the cell that would have been $\mathbf{z}_n$ to be used to reinitialize the running
+sum for the next element.
+
+With this sorted out, the incomplete addition accumulator can eliminate $y_{A,i}$ almost
+entirely, by substituting for $x$ and $\lambda$ values in the current and next rows. The
+two exceptions are at the start of Sinsemilla (where we need to constrain the accumulator
+to have initial value $Q$), and the end (where we need to witness $y_{A,n}$ for use
+outside of Sinsemilla).
+
+### Selectors
+
+We need a total of four logical selectors to:
+
+- Control the Sinsemilla gate and lookup.
+- Distinguish between the last message word in a running sum and its earlier words.
+- Mark the start of Sinsemilla.
+- Mark the end of Sinsemilla.
+
+We use regular selector columns for the Sinsemilla gate selector $q_{S1}$ and Sinsemilla
+start selector $q_{S4}.$ The other two selectors are synthesized from a single fixed
+column $q_{S2}$ as follows:
+
+$$
+\begin{aligned}
+q_{S3}  &= q_{S2} \cdot (q_{S2} - 1) \\
+q_{run} &= q_{S2} - q_{S3} \\
+\end{aligned}
+$$
+
+$$
+\begin{array}{|c|c|c|}
+\hline
+q_{S2} & q_{S3} & q_{run} \\\hline
+   0   &   0    &    0    \\\hline
+   1   &   0    &    1    \\\hline
+   2   &   2    &    0    \\\hline
+\end{array}
+$$
+
+We set $q_{S2}$ to $1$ on most Sinsemilla rows, and $0$ for the last step of each element,
+except for the last element where it is set to $2$. We can then use $q_{S3}$ to toggle
+between constraining the substituted $y_{A,i+1}$ on adjacent rows, and the witnessed
+$y_{A,n}$ at the end of Sinsemilla:
+
+$$
+\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) = y_{A,i} + \frac{2 - q_{S3}}{2} \cdot y_{A,i+1} + \frac{q_{S3}}{2} \cdot y_{A,n}
+$$
 
 ### Generator lookup table
 The Sinsemilla circuit makes use of $2^{10}$ pre-computed random generators. These are loaded into a lookup table:
@@ -95,26 +194,25 @@ $$
 $$
 
 ### Layout
-Note: $q_{S3}$ is synthesized from $q_{S1}$ and $q_{S2}$; it is shown here only for clarity.
 $$
-\begin{array}{|c|c|c|c|c|c|c|c|c|c|c|}
+\begin{array}{|c|c|c|c|c|c|c|c|c|c|}
 \hline
-\text{Step} &    x_A     &    x_P      &   bits   &    \lambda_1     &   \lambda_2      & q_{S1} & q_{S2} & q_{S3} &    q_{S4}  & \textsf{fixed\_y\_Q}\\\hline
-    0       & x_Q        & x_{P[m_1]}  & z_0      & \lambda_{1,0}    & \lambda_{2,0}    & 1      & 1      & 0      &     1      &    y_Q              \\\hline
-    1       & x_{A,1}    & x_{P[m_2]}  & z_1      & \lambda_{1,1}    & \lambda_{2,1}    & 1      & 1      & 0      &     0      &     0               \\\hline
-    2       & x_{A,2}    & x_{P[m_3]}  & z_2      & \lambda_{1,2}    & \lambda_{2,2}    & 1      & 1      & 0      &     0      &     0               \\\hline
-  \vdots    & \vdots     & \vdots      & \vdots   & \vdots           & \vdots           & 1      & 1      & 0      &     0      &     0               \\\hline
-   n-1      & x_{A,n-1}  & x_{P[m_n]}  & z_{n-1}  & \lambda_{1,n-1}  & \lambda_{2,n-1}  & 1      & 0      & 0      &     0      &     0               \\\hline
-    0'      & x'_{A,0}   & x_{P[m'_1]} & z'_0     & \lambda'_{1,0}   & \lambda'_{2,0}   & 1      & 1      & 0      &     0      &     0               \\\hline
-    1'      & x'_{A,1}   & x_{P[m'_2]} & z'_1     & \lambda'_{1,1}   & \lambda'_{2,1}   & 1      & 1      & 0      &     0      &     0               \\\hline
-    2'      & x'_{A,2}   & x_{P[m'_3]} & z'_2     & \lambda'_{1,2}   & \lambda'_{2,2}   & 1      & 1      & 0      &     0      &     0               \\\hline
-  \vdots    & \vdots     & \vdots      & \vdots   & \vdots           & \vdots           & 1      & 1      & 0      &     0      &     0               \\\hline
-   n-1'     & x'_{A,n-1} & x_{P[m'_n]} & z'_{n-1} & \lambda'_{1,n-1} & \lambda'_{2,n-1} & 1      & 2      & 2      &     0      &     0               \\\hline
-    n'      &  x'_{A,n}  &             &          &       y_{A,n}    &                  & 0      & 0      & 0      &     0      &     0               \\\hline
+\text{Step} &    x_A     &    x_P      &   bits   &    \lambda_1     &   \lambda_2      & q_{S1} & q_{S2} &    q_{S4}  & \textsf{fixed\_y\_Q}\\\hline
+    0       & x_Q        & x_{P[m_1]}  & z_0      & \lambda_{1,0}    & \lambda_{2,0}    & 1      & 1      &     1      &    y_Q              \\\hline
+    1       & x_{A,1}    & x_{P[m_2]}  & z_1      & \lambda_{1,1}    & \lambda_{2,1}    & 1      & 1      &     0      &     0               \\\hline
+    2       & x_{A,2}    & x_{P[m_3]}  & z_2      & \lambda_{1,2}    & \lambda_{2,2}    & 1      & 1      &     0      &     0               \\\hline
+  \vdots    & \vdots     & \vdots      & \vdots   & \vdots           & \vdots           & 1      & 1      &     0      &     0               \\\hline
+   n-1      & x_{A,n-1}  & x_{P[m_n]}  & z_{n-1}  & \lambda_{1,n-1}  & \lambda_{2,n-1}  & 1      & 0      &     0      &     0               \\\hline
+    0'      & x'_{A,0}   & x_{P[m'_1]} & z'_0     & \lambda'_{1,0}   & \lambda'_{2,0}   & 1      & 1      &     0      &     0               \\\hline
+    1'      & x'_{A,1}   & x_{P[m'_2]} & z'_1     & \lambda'_{1,1}   & \lambda'_{2,1}   & 1      & 1      &     0      &     0               \\\hline
+    2'      & x'_{A,2}   & x_{P[m'_3]} & z'_2     & \lambda'_{1,2}   & \lambda'_{2,2}   & 1      & 1      &     0      &     0               \\\hline
+  \vdots    & \vdots     & \vdots      & \vdots   & \vdots           & \vdots           & 1      & 1      &     0      &     0               \\\hline
+   n-1'     & x'_{A,n-1} & x_{P[m'_n]} & z'_{n-1} & \lambda'_{1,n-1} & \lambda'_{2,n-1} & 1      & 2      &     0      &     0               \\\hline
+    n'      &  x'_{A,n}  &             &          &       y_{A,n}    &                  & 0      & 0      &     0      &     0               \\\hline
 \end{array}
 $$
 
-$x_Q$, $z_0$, $z'_0$, etc. would be copied in using equality constraints.
+$x_Q$, $z_0$, $z'_0$, etc. are copied in using equality constraints.
 
 ### Optimized Sinsemilla gate
 $$
@@ -122,12 +220,14 @@ $$
 \text{For } i \in [0, n), \text{ let} &x_{R,i} &=& \lambda_{1,i}^2 - x_{A,i} - x_{P,i} \\
                                       &Y_{A,i} &=& (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i}) \\
                                       &y_{P,i} &=& Y_{A,i}/2 - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) \\
-                                      &m_{i+1} &=& z_{i} - 2^k \cdot (q_{S2,i} - q_{S3,i}) \cdot z_{i+1} \\
+                                      &m_{i+1} &=& z_{i} - q_{run,i} \cdot z_{i+1} \cdot 2^k \\
+                                      &q_{run} &=& q_{S2} - q_{S3} \\
                                       &q_{S3}  &=& q_{S2} \cdot (q_{S2} - 1)
 \end{array}
 $$
 
-The Halo 2 circuit API can automatically substitute $y_{P,i}$, $x_{R,i}$, $y_{A,i}$, and $y_{A,i+1}$, so we don't need to do that manually.
+The Halo 2 circuit API can automatically substitute $y_{P,i}$, $x_{R,i}$, $Y_{A,i}$, and
+$Y_{A,i+1}$, so we don't need to do that manually.
 
 - $x_{A,0} = x_Q$
 - $2 \cdot y_Q = Y_{A,0}$

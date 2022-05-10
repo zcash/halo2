@@ -2,14 +2,14 @@
 
 use super::{
     message::{Message, MessagePiece},
-    CommitDomains, HashDomains, SinsemillaInstructions,
+    primitives as sinsemilla, CommitDomains, HashDomains, SinsemillaInstructions,
 };
 use crate::{
-    primitives::sinsemilla,
-    {
-        ecc::{chip::NonIdentityEccPoint, FixedPoints},
-        utilities::lookup_range_check::LookupRangeCheckConfig,
+    ecc::{
+        chip::{DoubleAndAdd, NonIdentityEccPoint},
+        FixedPoints,
     },
+    utilities::lookup_range_check::LookupRangeCheckConfig,
 };
 use std::marker::PhantomData;
 
@@ -47,21 +47,10 @@ where
     q_sinsemilla4: Selector,
     /// Fixed column used to load the y-coordinate of the domain $Q$.
     fixed_y_q: Column<Fixed>,
-    /// Advice column used to store the x-coordinate of the accumulator at each
-    /// iteration of the hash.
-    x_a: Column<Advice>,
-    /// Advice column used to store the x-coordinate of the generator corresponding
-    /// to the message word at each iteration of the hash. This is looked up in the
-    /// generator table.
-    x_p: Column<Advice>,
+    /// Logic specific to merged double-and-add.
+    double_and_add: DoubleAndAdd,
     /// Advice column used to load the message.
     bits: Column<Advice>,
-    /// Advice column used to store the $\lambda_1$ intermediate value at each
-    /// iteration.
-    lambda_1: Column<Advice>,
-    /// Advice column used to store the $\lambda_2$ intermediate value at each
-    /// iteration.
-    lambda_2: Column<Advice>,
     /// Advice column used to witness message pieces. This may or may not be the same
     /// column as `bits`.
     witness_pieces: Column<Advice>,
@@ -81,16 +70,31 @@ where
 {
     /// Returns an array of all advice columns in this config, in arbitrary order.
     pub(super) fn advices(&self) -> [Column<Advice>; 5] {
-        [self.x_a, self.x_p, self.bits, self.lambda_1, self.lambda_2]
+        [
+            self.double_and_add.x_a,
+            self.double_and_add.x_p,
+            self.bits,
+            self.double_and_add.lambda_1,
+            self.double_and_add.lambda_2,
+        ]
     }
 
     /// Returns the lookup range check config used in this config.
     pub fn lookup_config(&self) -> LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }> {
         self.lookup_config
     }
+
+    /// Derives the expression `q_s3 = (q_s2) * (q_s2 - 1)`.
+    fn q_s3(&self, meta: &mut VirtualCells<pallas::Base>) -> Expression<pallas::Base> {
+        let one = Expression::Constant(pallas::Base::one());
+        let q_s2 = meta.query_fixed(self.q_sinsemilla2, Rotation::cur());
+        q_s2.clone() * (q_s2 - one)
+    }
 }
 
 /// A chip that implements 10-bit Sinsemilla using a lookup table and 5 advice columns.
+///
+/// [Chip description](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html#plonk--halo-2-constraints).
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct SinsemillaChip<Hash, Commit, Fixed>
 where
@@ -162,11 +166,13 @@ where
             q_sinsemilla2: meta.fixed_column(),
             q_sinsemilla4: meta.selector(),
             fixed_y_q,
-            x_a: advices[0],
-            x_p: advices[1],
+            double_and_add: DoubleAndAdd {
+                x_a: advices[0],
+                x_p: advices[1],
+                lambda_1: advices[3],
+                lambda_2: advices[4],
+            },
             bits: advices[2],
-            lambda_1: advices[3],
-            lambda_2: advices[4],
             witness_pieces,
             generator_table: GeneratorTableConfig {
                 table_idx: lookup.0,
@@ -185,18 +191,12 @@ where
         // Closures for expressions that are derived multiple times
         // x_r = lambda_1^2 - x_a - x_p
         let x_r = |meta: &mut VirtualCells<pallas::Base>, rotation| {
-            let x_a = meta.query_advice(config.x_a, rotation);
-            let x_p = meta.query_advice(config.x_p, rotation);
-            let lambda_1 = meta.query_advice(config.lambda_1, rotation);
-            lambda_1.square() - x_a - x_p
+            config.double_and_add.x_r(meta, rotation)
         };
 
         // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
         let Y_A = |meta: &mut VirtualCells<pallas::Base>, rotation| {
-            let x_a = meta.query_advice(config.x_a, rotation);
-            let lambda_1 = meta.query_advice(config.lambda_1, rotation);
-            let lambda_2 = meta.query_advice(config.lambda_2, rotation);
-            (lambda_1 + lambda_2) * (x_a - x_r(meta, rotation))
+            config.double_and_add.Y_A(meta, rotation)
         };
 
         // Check that the initial x_A, x_P, lambda_1, lambda_2 are consistent with y_Q.
@@ -215,17 +215,12 @@ where
 
         meta.create_gate("Sinsemilla gate", |meta| {
             let q_s1 = meta.query_selector(config.q_sinsemilla1);
-            // q_s3 = (q_s2) * (q_s2 - 1)
-            let q_s3 = {
-                let one = Expression::Constant(pallas::Base::one());
-                let q_s2 = meta.query_fixed(config.q_sinsemilla2, Rotation::cur());
-                q_s2.clone() * (q_s2 - one)
-            };
+            let q_s3 = config.q_s3(meta);
 
-            let lambda_1_next = meta.query_advice(config.lambda_1, Rotation::next());
-            let lambda_2_cur = meta.query_advice(config.lambda_2, Rotation::cur());
-            let x_a_cur = meta.query_advice(config.x_a, Rotation::cur());
-            let x_a_next = meta.query_advice(config.x_a, Rotation::next());
+            let lambda_1_next = meta.query_advice(config.double_and_add.lambda_1, Rotation::next());
+            let lambda_2_cur = meta.query_advice(config.double_and_add.lambda_2, Rotation::cur());
+            let x_a_cur = meta.query_advice(config.double_and_add.x_a, Rotation::cur());
+            let x_a_next = meta.query_advice(config.double_and_add.x_a, Rotation::next());
 
             // x_r = lambda_1^2 - x_a_cur - x_p
             let x_r = x_r(meta, Rotation::cur());

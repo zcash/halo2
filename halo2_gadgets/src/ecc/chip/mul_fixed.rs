@@ -6,7 +6,10 @@ use crate::utilities::decompose_running_sum::RunningSumConfig;
 
 use std::marker::PhantomData;
 
-use group::{ff::PrimeField, Curve};
+use group::{
+    ff::{PrimeField, PrimeFieldBits},
+    Curve,
+};
 use halo2_proofs::{
     circuit::{AssignedCell, Region},
     plonk::{
@@ -42,10 +45,6 @@ pub struct Config<FixedPoints: super::FixedPoints<pallas::Affine>> {
     // Decomposition of an `n-1`-bit scalar into `k`-bit windows:
     // a = a_0 + 2^k(a_1) + 2^{2k}(a_2) + ... + 2^{(n-1)k}(a_{n-1})
     window: Column<Advice>,
-    // x-coordinate of the multiple of the fixed base at the current window.
-    x_p: Column<Advice>,
-    // y-coordinate of the multiple of the fixed base at the current window.
-    y_p: Column<Advice>,
     // y-coordinate of accumulator (only used in the final row).
     u: Column<Advice>,
     // Configuration for `add`
@@ -61,8 +60,6 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         meta: &mut ConstraintSystem<pallas::Base>,
         lagrange_coeffs: [Column<Fixed>; H],
         window: Column<Advice>,
-        x_p: Column<Advice>,
-        y_p: Column<Advice>,
         u: Column<Advice>,
         add_config: add::Config,
         add_incomplete_config: add_incomplete::Config,
@@ -78,34 +75,22 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
             lagrange_coeffs,
             fixed_z: meta.fixed_column(),
             window,
-            x_p,
-            y_p,
             u,
             add_config,
             add_incomplete_config,
             _marker: PhantomData,
         };
 
-        // Check relationships between this config and `add_config`.
+        // Check relationships between `add_config` and `add_incomplete_config`.
         assert_eq!(
-            config.x_p, config.add_config.x_p,
-            "add is used internally in mul_fixed."
+            config.add_config.x_p, config.add_incomplete_config.x_p,
+            "add and add_incomplete are used internally in mul_fixed."
         );
         assert_eq!(
-            config.y_p, config.add_config.y_p,
-            "add is used internally in mul_fixed."
+            config.add_config.y_p, config.add_incomplete_config.y_p,
+            "add and add_incomplete are used internally in mul_fixed."
         );
-
-        // Check relationships between this config and `add_incomplete_config`.
-        assert_eq!(
-            config.x_p, config.add_incomplete_config.x_p,
-            "add_incomplete is used internally in mul_fixed."
-        );
-        assert_eq!(
-            config.y_p, config.add_incomplete_config.y_p,
-            "add_incomplete is used internally in mul_fixed."
-        );
-        for advice in [config.x_p, config.y_p, config.window, config.u].iter() {
+        for advice in [config.window, config.u].iter() {
             assert_ne!(
                 *advice, config.add_config.x_qr,
                 "Do not overlap with output columns of add."
@@ -152,8 +137,8 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         meta: &mut VirtualCells<'_, pallas::Base>,
         window: Expression<pallas::Base>,
     ) -> Vec<(&'static str, Expression<pallas::Base>)> {
-        let y_p = meta.query_advice(self.y_p, Rotation::cur());
-        let x_p = meta.query_advice(self.x_p, Rotation::cur());
+        let y_p = meta.query_advice(self.add_config.y_p, Rotation::cur());
+        let x_p = meta.query_advice(self.add_config.x_p, Rotation::cur());
         let z = meta.query_fixed(self.fixed_z, Rotation::cur());
         let u = meta.query_advice(self.u, Rotation::cur());
 
@@ -205,7 +190,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         // Process all windows excluding least and most significant windows
         let acc = self.add_incomplete::<F, NUM_WINDOWS>(region, offset, acc, base, scalar)?;
 
-        // Process most significant window using complete addition
+        // Process most significant window
         let mul_b = self.process_msb::<F, NUM_WINDOWS>(region, offset, base, scalar)?;
 
         Ok((acc, mul_b))
@@ -269,23 +254,23 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         Ok(())
     }
 
+    /// Assigns the values used to process a window.
     fn process_window<F: FixedPoint<pallas::Affine>, const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
         w: usize,
-        k: Option<pallas::Scalar>,
         k_usize: Option<usize>,
+        window_scalar: Option<pallas::Scalar>,
         base: &F,
     ) -> Result<NonIdentityEccPoint, Error> {
         let base_value = base.generator();
         let base_u = base.u();
         assert_eq!(base_u.len(), NUM_WINDOWS);
 
-        // Compute [(k_w + 2) ⋅ 8^w]B
+        // Compute [window_scalar]B
         let mul_b = {
-            let mul_b =
-                k.map(|k| base_value * (k + *TWO_SCALAR) * H_SCALAR.pow(&[w as u64, 0, 0, 0]));
+            let mul_b = window_scalar.map(|scalar| base_value * scalar);
             let mul_b = mul_b.map(|mul_b| mul_b.to_affine().coordinates().unwrap());
 
             let x = mul_b.map(|mul_b| {
@@ -295,7 +280,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
             });
             let x = region.assign_advice(
                 || format!("mul_b_x, window {}", w),
-                self.x_p,
+                self.add_config.x_p,
                 offset + w,
                 || x.ok_or(Error::Synthesis),
             )?;
@@ -307,7 +292,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
             });
             let y = region.assign_advice(
                 || format!("mul_b_y, window {}", w),
-                self.y_p,
+                self.add_config.y_p,
                 offset + w,
                 || y.ok_or(Error::Synthesis),
             )?;
@@ -335,7 +320,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         let w = 0;
         let k0 = scalar.windows_field()[0];
         let k0_usize = scalar.windows_usize()[0];
-        self.process_window::<_, NUM_WINDOWS>(region, offset, w, k0, k0_usize, base)
+        self.process_lower_bits::<_, NUM_WINDOWS>(region, offset, w, k0, k0_usize, base)
     }
 
     fn add_incomplete<F: FixedPoint<pallas::Affine>, const NUM_WINDOWS: usize>(
@@ -348,19 +333,28 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
     ) -> Result<NonIdentityEccPoint, Error> {
         let scalar_windows_field = scalar.windows_field();
         let scalar_windows_usize = scalar.windows_usize();
+        assert_eq!(scalar_windows_field.len(), NUM_WINDOWS);
 
-        for (w, (k, k_usize)) in scalar_windows_field[..(scalar_windows_field.len() - 1)]
-            .iter()
-            .zip(scalar_windows_usize[..(scalar_windows_field.len() - 1)].iter())
+        for (w, (k, k_usize)) in scalar_windows_field
+            .into_iter()
+            .zip(scalar_windows_usize)
             .enumerate()
+            // The MSB is processed separately.
+            .take(NUM_WINDOWS - 1)
             // Skip k_0 (already processed).
             .skip(1)
         {
             // Compute [(k_w + 2) ⋅ 8^w]B
+            //
+            // This assigns the coordinates of the returned point into the input cells for
+            // the incomplete addition gate, which will then copy them into themselves.
             let mul_b =
-                self.process_window::<_, NUM_WINDOWS>(region, offset, w, *k, *k_usize, base)?;
+                self.process_lower_bits::<_, NUM_WINDOWS>(region, offset, w, k, k_usize, base)?;
 
-            // Add to the accumulator
+            // Add to the accumulator.
+            //
+            // After the first loop, the accumulator will already be in the input cells
+            // for the incomplete addition gate, and will be copied into themselves.
             acc = self
                 .add_incomplete_config
                 .assign_region(&mul_b, &acc, offset + w, region)?;
@@ -368,6 +362,23 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         Ok(acc)
     }
 
+    /// Assigns the values used to process a window that does not contain the MSB.
+    fn process_lower_bits<F: FixedPoint<pallas::Affine>, const NUM_WINDOWS: usize>(
+        &self,
+        region: &mut Region<'_, pallas::Base>,
+        offset: usize,
+        w: usize,
+        k: Option<pallas::Scalar>,
+        k_usize: Option<usize>,
+        base: &F,
+    ) -> Result<NonIdentityEccPoint, Error> {
+        // `scalar = [(k_w + 2) ⋅ 8^w]
+        let scalar = k.map(|k| (k + *TWO_SCALAR) * (*H_SCALAR).pow(&[w as u64, 0, 0, 0]));
+
+        self.process_window::<_, NUM_WINDOWS>(region, offset, w, k_usize, scalar, base)
+    }
+
+    /// Assigns the values used to process the window containing the MSB.
     fn process_msb<F: FixedPoint<pallas::Affine>, const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, pallas::Base>,
@@ -375,59 +386,25 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         base: &F,
         scalar: &ScalarFixed,
     ) -> Result<NonIdentityEccPoint, Error> {
-        // Assign u = (y_p + z_w).sqrt() for the most significant window
-        {
-            let u_val = scalar.windows_usize()[NUM_WINDOWS - 1]
-                .map(|k| pallas::Base::from_repr(base.u()[NUM_WINDOWS - 1][k]).unwrap());
-            region.assign_advice(
-                || "u",
-                self.u,
-                offset + NUM_WINDOWS - 1,
-                || u_val.ok_or(Error::Synthesis),
-            )?;
-        }
+        let k_usize = scalar.windows_usize()[NUM_WINDOWS - 1];
 
         // offset_acc = \sum_{j = 0}^{NUM_WINDOWS - 2} 2^{FIXED_BASE_WINDOW_SIZE*j + 1}
         let offset_acc = (0..(NUM_WINDOWS - 1)).fold(pallas::Scalar::zero(), |acc, w| {
             acc + (*TWO_SCALAR).pow(&[FIXED_BASE_WINDOW_SIZE as u64 * w as u64 + 1, 0, 0, 0])
         });
 
-        // `scalar = [k * 8^84 - offset_acc]`, where `offset_acc = \sum_{j = 0}^{83} 2^{FIXED_BASE_WINDOW_SIZE*j + 1}`.
+        // `scalar = [k * 8^(NUM_WINDOWS - 1) - offset_acc]`.
         let scalar = scalar.windows_field()[scalar.windows_field().len() - 1]
             .map(|k| k * (*H_SCALAR).pow(&[(NUM_WINDOWS - 1) as u64, 0, 0, 0]) - offset_acc);
 
-        let mul_b = {
-            let mul_b = scalar.map(|scalar| base.generator() * scalar);
-            let mul_b = mul_b.map(|mul_b| mul_b.to_affine().coordinates().unwrap());
-
-            let x = mul_b.map(|mul_b| {
-                let x = *mul_b.x();
-                assert!(x != pallas::Base::zero());
-                x
-            });
-            let x = region.assign_advice(
-                || format!("mul_b_x, window {}", NUM_WINDOWS - 1),
-                self.x_p,
-                offset + NUM_WINDOWS - 1,
-                || x.ok_or(Error::Synthesis),
-            )?;
-
-            let y = mul_b.map(|mul_b| {
-                let y = *mul_b.y();
-                assert!(y != pallas::Base::zero());
-                y
-            });
-            let y = region.assign_advice(
-                || format!("mul_b_y, window {}", NUM_WINDOWS - 1),
-                self.y_p,
-                offset + NUM_WINDOWS - 1,
-                || y.ok_or(Error::Synthesis),
-            )?;
-
-            NonIdentityEccPoint { x, y }
-        };
-
-        Ok(mul_b)
+        self.process_window::<_, NUM_WINDOWS>(
+            region,
+            offset,
+            NUM_WINDOWS - 1,
+            k_usize,
+            scalar,
+            base,
+        )
     }
 }
 
@@ -456,8 +433,11 @@ impl From<&EccBaseFieldElemFixed> for ScalarFixed {
 }
 
 impl ScalarFixed {
-    // The scalar decomposition was done in the base field. For computation
-    // outside the circuit, we now convert them back into the scalar field.
+    /// The scalar decomposition was done in the base field. For computation
+    /// outside the circuit, we now convert them back into the scalar field.
+    ///
+    /// This function does not require that the base field fits inside the scalar field,
+    /// because the window size fits into either field.
     fn windows_field(&self) -> Vec<Option<pallas::Scalar>> {
         let running_sum_to_windows = |zs: Vec<AssignedCell<pallas::Base, pallas::Base>>| {
             (0..(zs.len() - 1))
@@ -467,17 +447,31 @@ impl ScalarFixed {
                     let word = z_cur
                         .zip(z_next)
                         .map(|(z_cur, z_next)| z_cur - z_next * *H_BASE);
+                    // This assumes that the endianness of the encodings of pallas::Base
+                    // and pallas::Scalar are the same. They happen to be, but we need to
+                    // be careful if this is generalised.
                     word.map(|word| pallas::Scalar::from_repr(word.to_repr()).unwrap())
                 })
                 .collect::<Vec<_>>()
         };
         match self {
             Self::BaseFieldElem(scalar) => running_sum_to_windows(scalar.running_sum.to_vec()),
-            Self::Short(scalar) => running_sum_to_windows(scalar.running_sum.to_vec()),
+            Self::Short(scalar) => running_sum_to_windows(
+                scalar
+                    .running_sum
+                    .as_ref()
+                    .expect("EccScalarFixedShort has been constrained")
+                    .to_vec(),
+            ),
             Self::FullWidth(scalar) => scalar
                 .windows
+                .as_ref()
+                .expect("EccScalarFixed has been witnessed")
                 .iter()
                 .map(|bits| {
+                    // This assumes that the endianness of the encodings of pallas::Base
+                    // and pallas::Scalar are the same. They happen to be, but we need to
+                    // be careful if this is generalised.
                     bits.value()
                         .map(|value| pallas::Scalar::from_repr(value.to_repr()).unwrap())
                 })
@@ -485,22 +479,22 @@ impl ScalarFixed {
         }
     }
 
-    // The scalar decomposition is guaranteed to be in three-bit windows,
-    // so we also cast the least significant 4 bytes in their serialisation
-    // into usize for convenient indexing into `u`-values
+    /// The scalar decomposition is guaranteed to be in three-bit windows, so we construct
+    /// `usize` indices from the lowest three bits of each window field element for
+    /// convenient indexing into `u`-values.
     fn windows_usize(&self) -> Vec<Option<usize>> {
         self.windows_field()
             .iter()
             .map(|window| {
-                if let Some(window) = window {
-                    // TODO: Remove this trait dependency
-                    use pasta_curves::arithmetic::SqrtRatio;
-                    let window = window.get_lower_32() as usize;
-                    assert!(window < H);
-                    Some(window)
-                } else {
-                    None
-                }
+                window.map(|window| {
+                    window
+                        .to_le_bits()
+                        .iter()
+                        .by_vals()
+                        .take(FIXED_BASE_WINDOW_SIZE)
+                        .rev()
+                        .fold(0, |acc, b| 2 * acc + if b { 1 } else { 0 })
+                })
             })
             .collect::<Vec<_>>()
     }

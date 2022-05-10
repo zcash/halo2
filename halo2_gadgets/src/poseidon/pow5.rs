@@ -10,12 +10,11 @@ use halo2_proofs::{
     poly::Rotation,
 };
 
-use super::{PaddedWord, PoseidonInstructions, PoseidonSpongeInstructions};
-use crate::primitives::poseidon::{Domain, Mds, Spec, State};
-use crate::{
-    primitives::poseidon::{Absorbing, Squeezing},
-    utilities::Var,
+use super::{
+    primitives::{Absorbing, Domain, Mds, Spec, Squeezing, State},
+    PaddedWord, PoseidonInstructions, PoseidonSpongeInstructions,
 };
+use crate::utilities::Var;
 
 /// Configuration for a [`Pow5Chip`].
 #[derive(Clone, Debug)]
@@ -608,9 +607,9 @@ mod tests {
     use rand::rngs::OsRng;
 
     use super::{PoseidonInstructions, Pow5Chip, Pow5Config, StateWord};
-    use crate::{
-        poseidon::Hash,
-        primitives::poseidon::{self, ConstantLength, P128Pow5T3 as OrchardNullifier, Spec},
+    use crate::poseidon::{
+        primitives::{self as poseidon, ConstantLength, P128Pow5T3 as OrchardNullifier, Spec},
+        Hash,
     };
     use std::convert::TryInto;
     use std::marker::PhantomData;
@@ -850,7 +849,7 @@ mod tests {
 
     #[test]
     fn hash_test_vectors() {
-        for tv in crate::primitives::poseidon::test_vectors::fp::hash() {
+        for tv in crate::poseidon::primitives::test_vectors::fp::hash() {
             let message = [
                 pallas::Base::from_repr(tv.input[0]).unwrap(),
                 pallas::Base::from_repr(tv.input[1]).unwrap(),

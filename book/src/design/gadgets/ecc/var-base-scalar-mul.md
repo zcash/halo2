@@ -88,7 +88,7 @@ for i from 2 down to 0 {
 return (k_0 = 0) ? (Acc + (-T)) : Acc  // complete addition
 ```
 
-## Constraint program for optimized double-and-add (incomplete addition)
+## Constraint program for optimized double-and-add
 Define a running sum $\mathbf{z_j} = \sum_{i=j}^{n} (\mathbf{k}_{i} \cdot 2^{i-j})$, where $n = 254$ and:
 
 $$
@@ -108,13 +108,13 @@ $\begin{array}{l}
 \hspace{1.5em} x_{P,i} = x_T \\
 \hspace{1.5em} y_{P,i} = (2 \mathbf{k}_i - 1) \cdot y_T  \hspace{2em}\text{(conditionally negate)} \\
 \hspace{1.5em} \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) = y_{A,i} - y_{P,i} \\
-\hspace{1.5em} \lambda_{1,i}^2 = x_{R,i} + x_{A,i} + x_{P,i} \\
+\hspace{1.5em} x_{R,i} = \lambda_{1,i}^2 - x_{A,i} - x_{P,i} \\
 \hspace{1.5em} (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i}) = 2 y_{\mathsf{A},i} \\
 \hspace{1.5em} \lambda_{2,i}^2 = x_{A,i-1} + x_{R,i} + x_{A,i} \\
-\hspace{1.5em} \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) = y_{A,i} + y_{A,i-1}, \\
+\hspace{1.5em} \lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) = y_{A,i} + y_{A,i-1}. \\
 \end{array}$
 
-where $x_{R,i} = (\lambda_{1,i}^2 - x_{A,i} - x_T).$ The helper $\BoolCheck{x} = x \cdot (1 - x)$.
+The helper $\BoolCheck{x} = x \cdot (1 - x)$.
 After substitution of $x_{P,i}, y_{P,i}, x_{R,i}, y_{A,i}$, and $y_{A,i-1}$, this becomes:
 
 $\begin{array}{l}
@@ -154,8 +154,8 @@ Output $(x_{A,0}, y_{A,0}) + B$.
 
 (Note that $(0, 0)$ represents $\mathcal{O}$.)
 
+## Incomplete addition
 
-### Circuit design
 We need six advice columns to witness $(x_T, y_T, \lambda_1, \lambda_2, x_{A,i}, \mathbf{z}_i)$. However, since $(x_T, y_T)$ are the same, we can perform two incomplete additions in a single row, reusing the same $(x_T, y_T)$. We split the scalar bits used in incomplete addition into $hi$ and $lo$ halves and process them in parallel. This means that we effectively have two for loops:
 - the first, covering the $hi$ half for $i$ from $254$ down to $130$, with a special case at $i = 130$; and
 - the second, covering the $lo$ half for the remaining $i$ from $129$ down to $4$, with a special case at $i = 4$.
@@ -169,7 +169,7 @@ $$
     x_T     &    y_T      &    \mathbf{z}_{253}       &     x_{A,253}      & \lambda_{1,253}  & \lambda_{2,253}  &     0      &     1       &     0      &   \mathbf{z}_{128}    & x_{A,128}   & \lambda_{1,128}     & \lambda_{2,128}   &     0      &     1       &     0      \\\hline
    \vdots   &   \vdots    &         \vdots            &      \vdots        &      \vdots      &      \vdots      &   \vdots   &   \vdots    &   \vdots   &        \vdots         &  \vdots     &      \vdots         &      \vdots       &   \vdots   &   \vdots    &   \vdots   \\\hline
     x_T     &    y_T      &    \mathbf{z}_{130}       &     x_{A,130}      & \lambda_{1,130}  & \lambda_{2,130}  &     0      &     0       &     1      &   \mathbf{z}_5        & x_{A,5}     & \lambda_{1,5}       & \lambda_{2,5}     &     0      &     1       &     0      \\\hline
-            &             &                           &     x_{A,129}      &    y_{A,129}     &                  &            &             &            &   \mathbf{z}_4        & x_{A,4}     & \lambda_{1,4}       & \lambda_{2,4}     &     0      &     0       &     1      \\\hline
+    x_T     &    y_T      &                           &     x_{A,129}      &    y_{A,129}     &                  &            &             &            &   \mathbf{z}_4        & x_{A,4}     & \lambda_{1,4}       & \lambda_{2,4}     &     0      &     0       &     1      \\\hline
             &             &                           &                    &                  &                  &            &             &            &                       & x_{A,3}     &     y_{A,3}         &                   &            &             &            \\\hline
 
 \end{array}
@@ -183,7 +183,7 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-3 & q_1 \cdot \left(y_{A,n}^\text{witnessed} - y_{A,n}\right) = 0 \\\hline
+4 & q_1 \cdot \left(y_{A,n}^\text{witnessed} - y_{A,n}\right) = 0 \\\hline
 \end{array}
 $$
 where
@@ -205,13 +205,14 @@ $$
 2 & q_2 \cdot \left(y_{T,cur} - y_{T,next}\right) = 0 \\\hline
 3 & q_2 \cdot \BoolCheck{\mathbf{k}_i} = 0, \text{ where } \mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\\hline
 4 & q_2 \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{T,i}) - y_{A,i} + (2\mathbf{k}_i - 1) \cdot y_{T,i}\right) = 0 \\\hline
-3 & q_2 \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - \lambda_{1,i}^2 + x_{T,i}\right) = 0 \\\hline
+3 & q_2 \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - x_{R,i} - x_{A,i}\right) = 0 \\\hline
 3 & q_2 \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}\right) = 0 \\\hline
 \end{array}
 $$
 where
 $$
 \begin{aligned}
+x_{R,i} &= \lambda_{1,i}^2 - x_{A,i} - x_T, \\
 y_{A,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2}, \\
 y_{A,i-1} &= \frac{(\lambda_{1,i-1} + \lambda_{2,i-1}) \cdot (x_{A,i-1} - (\lambda_{1,i-1}^2 - x_{A,i-1} - x_T))}{2}, \\
 \end{aligned}
@@ -225,17 +226,79 @@ $$
 \text{Degree} & \text{Constraint} \\\hline
 3 & q_3 \cdot \BoolCheck{\mathbf{k}_i} = 0, \text{ where } \mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\\hline
 4 & q_3 \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{T,i}) - y_{A,i} + (2\mathbf{k}_i - 1) \cdot y_{T,i}\right) = 0 \\\hline
-3 & q_3 \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - \lambda_{1,i}^2 + x_{T,i}\right) = 0 \\\hline
+3 & q_3 \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - x_{R,i} - x_{A,i}\right) = 0 \\\hline
 3 & q_3 \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}^\text{witnessed}\right) = 0 \\\hline
 \end{array}
 $$
 where
 $$
 \begin{aligned}
+x_{R,i} &= \lambda_{1,i}^2 - x_{A,i} - x_T, \\
 y_{A,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2},\\
 y_{A,i-1}^\text{witnessed} &\text{ is witnessed.}
 \end{aligned}
 $$
+
+## Complete addition
+
+We reuse the [complete addition](addition.md#complete-addition) constraints to implement
+the final $c$ rounds of double-and-add. This requires two rows per round because we need
+9 advice columns for each complete addition. In the 10th advice column we stash the other
+cells that we need to correctly implement the double-and-add:
+
+- The base $y$ coordinate, so we can conditionally negate it as input to one of the
+  complete additions.
+- The running sum, which we constrain over two rows instead of sequentially.
+
+### Layout
+
+$$
+\begin{array}{|c|c|c|c|c|c|c|c|c|c|c|}
+a_0 & a_1 & a_2 & a_3 &    a_4    &   a_5    &   a_6   &   a_7    &   a_8    & a_9     & q_\texttt{mul\_decompose\_var} \\\hline
+x_T & y_p & x_A & y_A & \lambda_1 & \alpha_1 & \beta_1 & \gamma_1 & \delta_1 & z_{i+1} & 0 \\\hline
+x_A & y_A & x_q & y_q & \lambda_2 & \alpha_2 & \beta_2 & \gamma_2 & \delta_2 & y_T     & 1 \\\hline
+    &     & x_r & y_r &           &          &         &          &          & z_i     & 0 \\\hline
+\end{array}
+$$
+
+### Constraints <a name="complete-gate">
+
+In addition to the complete addition constraints, we define the following gate:
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+  & q_\texttt{mul\_decompose\_var} \cdot \BoolCheck{\mathbf{k}_i} = 0 \\\hline
+  & q_\texttt{mul\_decompose\_var} \cdot \Ternary{\mathbf{k}_i}{y_T - y_p}{y_T + y_p} = 0 \\\hline
+\end{array}
+$$
+where $\mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1}$.
+
+## LSB
+
+### Layout
+
+$$
+\begin{array}{|c|c|c|c|c|c|c|c|c|c|c|}
+a_0 & a_1 & a_2 & a_3 &   a_4   &  a_5   &  a_6  &  a_7   &  a_8   & a_9 & q_\texttt{mul\_lsb} \\\hline
+x_p & y_p & x_A & y_A & \lambda & \alpha & \beta & \gamma & \delta & z_1 & 1 \\\hline
+x_T & y_T & x_r & y_r &         &        &       &        &        & z_0 & 0 \\\hline
+\end{array}
+$$
+
+### Constraints <a name="lsb-gate">
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+  & q_\texttt{mul\_lsb} \cdot \BoolCheck{\mathbf{k}_0} = 0 \\\hline
+  & q_\texttt{mul\_lsb} \cdot \Ternary{\mathbf{k}_0}{x_p}{x_p - x_T} = 0 \\\hline
+  & q_\texttt{mul\_lsb} \cdot \Ternary{\mathbf{k}_0}{y_p}{y_p + y_T} = 0 \\\hline
+\end{array}
+$$
+where $\mathbf{k}_0 = \mathbf{z}_0 - 2\mathbf{z}_1$.
 
 ## Overflow check
 
@@ -318,11 +381,11 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-2 & \text{q\_mul}^\text{overflow} \cdot \left(s - (\alpha + \mathbf{k}_{254} \cdot 2^{130})\right) = 0 \\\hline
-2 & \text{q\_mul}^\text{overflow} \cdot \left(\mathbf{z}_0 - \alpha - t_q\right) = 0 \\\hline
-3 & \text{q\_mul}^\text{overflow} \cdot \left(\mathbf{k}_{254} \cdot (\mathbf{z}_{130} - 2^{124})\right) = 0 \\\hline
-3 & \text{q\_mul}^\text{overflow} \cdot \left(\mathbf{k}_{254} \cdot (s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}\right) = 0 \\\hline
-5 & \text{q\_mul}^\text{overflow} \cdot \left((1 - \mathbf{k}_{254}) \cdot (1 - \mathbf{z}_{130} \cdot \eta) \cdot (s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}\right) = 0 \\\hline
+2 & q_\texttt{mul\_overflow} \cdot \left(s - (\alpha + \mathbf{k}_{254} \cdot 2^{130})\right) = 0 \\\hline
+2 & q_\texttt{mul\_overflow} \cdot \left(\mathbf{z}_0 - \alpha - t_q\right) = 0 \\\hline
+3 & q_\texttt{mul\_overflow} \cdot \left(\mathbf{k}_{254} \cdot (\mathbf{z}_{130} - 2^{124})\right) = 0 \\\hline
+3 & q_\texttt{mul\_overflow} \cdot \left(\mathbf{k}_{254} \cdot (s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}\right) = 0 \\\hline
+5 & q_\texttt{mul\_overflow} \cdot \left((1 - \mathbf{k}_{254}) \cdot (1 - \mathbf{z}_{130} \cdot \eta) \cdot (s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}\right) = 0 \\\hline
 \end{array}
 $$
 where $(s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}$ can be computed by another running sum. Note that the factor of $1/2^{130}$ has no effect on the constraint, since the RHS is zero.

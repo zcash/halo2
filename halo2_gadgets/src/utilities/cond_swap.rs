@@ -46,7 +46,7 @@ impl<F: FieldExt> Chip<F> for CondSwapChip<F> {
 }
 
 /// Configuration for the [`CondSwapChip`].
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CondSwapConfig {
     q_swap: Selector,
     a: Column<Advice>,

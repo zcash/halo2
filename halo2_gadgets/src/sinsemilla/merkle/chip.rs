@@ -10,7 +10,8 @@ use pasta_curves::{arithmetic::FieldExt, pallas};
 use super::MerkleInstructions;
 
 use crate::{
-    primitives::sinsemilla,
+    sinsemilla::{primitives as sinsemilla, MessagePiece},
+    utilities::RangeConstrained,
     {
         ecc::FixedPoints,
         sinsemilla::{
@@ -18,7 +19,6 @@ use crate::{
             CommitDomains, HashDomains, SinsemillaInstructions,
         },
         utilities::{
-            bitrange_subset,
             cond_swap::{CondSwapChip, CondSwapConfig, CondSwapInstructions},
             UtilitiesInstructions,
         },
@@ -27,7 +27,7 @@ use crate::{
 use group::ff::PrimeField;
 
 /// Configuration for the `MerkleChip` implementation.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MerkleConfig<Hash, Commit, Fixed>
 where
     Hash: HashDomains<pallas::Affine>,
@@ -41,7 +41,16 @@ where
 }
 
 /// Chip implementing `MerkleInstructions`.
-#[derive(Clone, Debug)]
+///
+/// This chip specifically implements `MerkleInstructions::hash_layer` as the `MerkleCRH`
+/// function `hash = SinsemillaHash(Q, 𝑙⋆ || left⋆ || right⋆)`, where:
+/// - `𝑙⋆ = I2LEBSP_10(l)`
+/// - `left⋆ = I2LEBSP_255(left)`
+/// - `right⋆ = I2LEBSP_255(right)`
+///
+/// This chip does **NOT** constrain `left⋆` and `right⋆` to be canonical encodings of
+/// `left` and `right`.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MerkleChip<Hash, Commit, Fixed>
 where
     Hash: HashDomains<pallas::Affine>,
@@ -98,13 +107,11 @@ where
         // The message pieces `a`, `b`, `c` are constrained by Sinsemilla to be
         // 250 bits, 20 bits, and 250 bits respectively.
         //
-        /*
-            The pieces and subpieces are arranged in the following configuration:
-            |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |
-            -------------------------------------------------------
-            |   a   |   b   |   c   |  left | right |      1      |
-            |  z1_a |  z1_b |  b_1  |  b_2  |   l   |             |
-        */
+        // The pieces and subpieces are arranged in the following configuration:
+        // |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |
+        // -------------------------------------------------------
+        // |   a   |   b   |   c   |  left | right |      1      |
+        // |  z1_a |  z1_b |  b_1  |  b_2  |   l   |      0      |
         meta.create_gate("Decomposition check", |meta| {
             let q_decompose = meta.query_selector(q_decompose);
             let l_whole = meta.query_advice(advices[4], Rotation::next());
@@ -122,14 +129,13 @@ where
             let right_node = meta.query_advice(advices[4], Rotation::cur());
 
             // a = a_0||a_1 = l || (bits 0..=239 of left)
-            // Check that a_0 = l
             //
             // z_1 of SinsemillaHash(a) = a_1
+            // => a_0 = a - (a_1 * 2^10)
             let z1_a = meta.query_advice(advices[0], Rotation::next());
             let a_1 = z1_a;
-            // a_0 = a - (a_1 * 2^10)
-            let a_0 = a_whole - a_1.clone() * pallas::Base::from(1 << 10);
-            let l_check = a_0 - l_whole;
+            // Derive a_0 (constrained by SinsemillaHash to be 10 bits)
+            let a_0 = a_whole - a_1.clone() * two_pow_10;
 
             // b = b_0||b_1||b_2
             //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
@@ -165,7 +171,7 @@ where
             Constraints::with_selector(
                 q_decompose,
                 [
-                    ("l_check", l_check),
+                    ("l_check", a_0 - l_whole),
                     ("left_check", left_check),
                     ("right_check", right_check),
                     ("b1_b2_check", b1_b2_check),
@@ -191,9 +197,9 @@ impl<Hash, Commit, F, const MERKLE_DEPTH: usize>
     MerkleInstructions<pallas::Affine, MERKLE_DEPTH, { sinsemilla::K }, { sinsemilla::C }>
     for MerkleChip<Hash, Commit, F>
 where
-    Hash: HashDomains<pallas::Affine>,
+    Hash: HashDomains<pallas::Affine> + Eq,
     F: FixedPoints<pallas::Affine>,
-    Commit: CommitDomains<pallas::Affine, F, Hash>,
+    Commit: CommitDomains<pallas::Affine, F, Hash> + Eq,
 {
     #[allow(non_snake_case)]
     fn hash_layer(
@@ -215,93 +221,95 @@ where
         // b = b_0||b_1||b_2
         //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
         // c = bits 5..=254 of right
+        //
+        // We start by witnessing all of the individual pieces, and range-constraining the
+        // short pieces b_1 and b_2.
 
         // `a = a_0||a_1` = `l` || (bits 0..=239 of `left`)
-        let a = {
-            let a = {
-                // a_0 = l
-                let a_0 = bitrange_subset(&pallas::Base::from(l as u64), 0..10);
-
-                // a_1 = (bits 0..=239 of `left`)
-                let a_1 = left.value().map(|value| bitrange_subset(value, 0..240));
-
-                a_1.map(|a_1| a_0 + a_1 * pallas::Base::from(1 << 10))
-            };
-
-            self.witness_message_piece(layouter.namespace(|| "Witness a = a_0 || a_1"), a, 25)?
-        };
+        let a = MessagePiece::from_subpieces(
+            self.clone(),
+            layouter.namespace(|| "Witness a = a_0 || a_1"),
+            [
+                RangeConstrained::bitrange_of(Some(&pallas::Base::from(l as u64)), 0..10),
+                RangeConstrained::bitrange_of(left.value(), 0..240),
+            ],
+        )?;
 
         // b = b_0 || b_1 || b_2
         //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
         let (b_1, b_2, b) = {
             // b_0 = (bits 240..=249 of `left`)
-            let b_0 = left.value().map(|value| bitrange_subset(value, 240..250));
+            let b_0 = RangeConstrained::bitrange_of(left.value(), 240..250);
 
             // b_1 = (bits 250..=254 of `left`)
             // Constrain b_1 to 5 bits.
-            let b_1 = {
-                let b_1 = left
-                    .value()
-                    .map(|value| bitrange_subset(value, 250..(pallas::Base::NUM_BITS as usize)));
-
-                config
-                    .sinsemilla_config
-                    .lookup_config()
-                    .witness_short_check(layouter.namespace(|| "Constrain b_1 to 5 bits"), b_1, 5)?
-            };
+            let b_1 = RangeConstrained::witness_short(
+                &config.sinsemilla_config.lookup_config(),
+                layouter.namespace(|| "b_1"),
+                left.value(),
+                250..(pallas::Base::NUM_BITS as usize),
+            )?;
 
             // b_2 = (bits 0..=4 of `right`)
             // Constrain b_2 to 5 bits.
-            let b_2 = {
-                let b_2 = right.value().map(|value| bitrange_subset(value, 0..5));
+            let b_2 = RangeConstrained::witness_short(
+                &config.sinsemilla_config.lookup_config(),
+                layouter.namespace(|| "b_2"),
+                right.value(),
+                0..5,
+            )?;
 
-                config
-                    .sinsemilla_config
-                    .lookup_config()
-                    .witness_short_check(layouter.namespace(|| "Constrain b_2 to 5 bits"), b_2, 5)?
-            };
-
-            let b = {
-                let b = b_0
-                    .zip(b_1.value())
-                    .zip(b_2.value())
-                    .map(|((b_0, b_1), b_2)| {
-                        b_0 + b_1 * pallas::Base::from(1 << 10) + b_2 * pallas::Base::from(1 << 15)
-                    });
-                self.witness_message_piece(
-                    layouter.namespace(|| "Witness b = b_0 || b_1 || b_2"),
-                    b,
-                    2,
-                )?
-            };
+            let b = MessagePiece::from_subpieces(
+                self.clone(),
+                layouter.namespace(|| "Witness b = b_0 || b_1 || b_2"),
+                [b_0, b_1.value(), b_2.value()],
+            )?;
 
             (b_1, b_2, b)
         };
 
-        let c = {
-            // `c = bits 5..=254 of `right`
-            let c = right
-                .value()
-                .map(|value| bitrange_subset(value, 5..(pallas::Base::NUM_BITS as usize)));
-            self.witness_message_piece(layouter.namespace(|| "Witness c"), c, 25)?
-        };
+        // c = bits 5..=254 of `right`
+        let c = MessagePiece::from_subpieces(
+            self.clone(),
+            layouter.namespace(|| "Witness c"),
+            [RangeConstrained::bitrange_of(
+                right.value(),
+                5..(pallas::Base::NUM_BITS as usize),
+            )],
+        )?;
 
+        // hash = SinsemillaHash(Q, 𝑙⋆ || left⋆ || right⋆)
+        //
+        // `hash = ⊥` is handled internally to `SinsemillaChip::hash_to_point`: incomplete
+        // addition constraints allows ⊥ to occur, and then during synthesis it detects
+        // these edge cases and raises an error (aborting proof creation).
+        //
+        // Note that MerkleCRH as-defined maps ⊥ to 0. This is for completeness outside
+        // the circuit (so that the ⊥ does not propagate into the type system). The chip
+        // explicitly doesn't map ⊥ to 0; in fact it cannot, as doing so would require
+        // constraints that amount to using complete addition. The rationale for excluding
+        // this map is the same as why Sinsemilla uses incomplete addition: this situation
+        // yields a nontrivial discrete log relation, and by assumption it is hard to find
+        // these.
         let (point, zs) = self.hash_to_point(
             layouter.namespace(|| format!("hash at l = {}", l)),
             Q,
-            vec![a.clone(), b.clone(), c.clone()].into(),
+            vec![a.inner(), b.inner(), c.inner()].into(),
         )?;
+        let hash = Self::extract(&point);
+
+        // `SinsemillaChip::hash_to_point` returns the running sum for each `MessagePiece`.
+        // Grab the outputs we need for the decomposition constraints.
         let z1_a = zs[0][1].clone();
         let z1_b = zs[1][1].clone();
 
         // Check that the pieces have been decomposed properly.
-        /*
-            The pieces and subpieces are arranged in the following configuration:
-            |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |
-            -------------------------------------------------------
-            |   a   |   b   |   c   |  left | right |      1      |
-            |  z1_a |  z1_b |  b_1  |  b_2  |   l   |             |
-        */
+        //
+        // The pieces and subpieces are arranged in the following configuration:
+        // |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |
+        // -------------------------------------------------------
+        // |   a   |   b   |   c   |  left | right |      1      |
+        // |  z1_a |  z1_b |  b_1  |  b_2  |   l   |      0      |
         {
             layouter.assign_region(
                 || "Check piece decomposition",
@@ -319,14 +327,26 @@ where
 
                     // Offset 0
                     // Copy and assign `a` at the correct position.
-                    a.cell_value()
-                        .copy_advice(|| "copy a", &mut region, config.advices[0], 0)?;
+                    a.inner().cell_value().copy_advice(
+                        || "copy a",
+                        &mut region,
+                        config.advices[0],
+                        0,
+                    )?;
                     // Copy and assign `b` at the correct position.
-                    b.cell_value()
-                        .copy_advice(|| "copy b", &mut region, config.advices[1], 0)?;
+                    b.inner().cell_value().copy_advice(
+                        || "copy b",
+                        &mut region,
+                        config.advices[1],
+                        0,
+                    )?;
                     // Copy and assign `c` at the correct position.
-                    c.cell_value()
-                        .copy_advice(|| "copy c", &mut region, config.advices[2], 0)?;
+                    c.inner().cell_value().copy_advice(
+                        || "copy c",
+                        &mut region,
+                        config.advices[2],
+                        0,
+                    )?;
                     // Copy and assign the left node at the correct position.
                     left.copy_advice(|| "left", &mut region, config.advices[3], 0)?;
                     // Copy and assign the right node at the correct position.
@@ -338,21 +358,22 @@ where
                     // Copy and assign z_1 of SinsemillaHash(b) = b_1
                     z1_b.copy_advice(|| "z1_b", &mut region, config.advices[1], 1)?;
                     // Copy `b_1`, which has been constrained to be a 5-bit value
-                    b_1.copy_advice(|| "b_1", &mut region, config.advices[2], 1)?;
+                    b_1.inner()
+                        .copy_advice(|| "b_1", &mut region, config.advices[2], 1)?;
                     // Copy `b_2`, which has been constrained to be a 5-bit value
-                    b_2.copy_advice(|| "b_2", &mut region, config.advices[3], 1)?;
+                    b_2.inner()
+                        .copy_advice(|| "b_2", &mut region, config.advices[3], 1)?;
 
                     Ok(())
                 },
             )?;
         }
 
-        let result = Self::extract(&point);
-
         // Check layer hash output against Sinsemilla primitives hash
         #[cfg(test)]
         {
-            use crate::{primitives::sinsemilla::HashDomain, utilities::i2lebsp};
+            use crate::{sinsemilla::primitives::HashDomain, utilities::i2lebsp};
+
             use group::ff::PrimeFieldBits;
 
             if let (Some(left), Some(right)) = (left.value(), right.value()) {
@@ -377,11 +398,11 @@ where
 
                 let expected = merkle_crh.hash(message.into_iter()).unwrap();
 
-                assert_eq!(expected.to_repr(), result.value().unwrap().to_repr());
+                assert_eq!(expected.to_repr(), hash.value().unwrap().to_repr());
             }
         }
 
-        Ok(result)
+        Ok(hash)
     }
 }
 

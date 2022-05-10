@@ -1,4 +1,6 @@
-//! Gadgets for the Sinsemilla hash function.
+//! The [Sinsemilla] hash function.
+//!
+//! [Sinsemilla]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
 use crate::{
     ecc::{self, EccInstructions, FixedPoints},
     utilities::{FieldValue, RangeConstrained, Var},
@@ -11,6 +13,7 @@ use std::fmt::Debug;
 pub mod chip;
 pub mod merkle;
 mod message;
+pub mod primitives;
 
 /// The set of circuit instructions required to use the [`Sinsemilla`](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html) gadget.
 /// This trait is bounded on two constant parameters: `K`, the number of bits
@@ -223,7 +226,9 @@ where
     }
 
     /// Constructs a `MessagePiece` by concatenating a sequence of [`RangeConstrained`]
-    /// subpieces.
+    /// subpiece values.
+    ///
+    /// The `MessagePiece` is assigned to the circuit, but not constrained in any way.
     ///
     /// # Panics
     ///
@@ -414,7 +419,7 @@ where
         &self,
         mut layouter: impl Layouter<C::Base>,
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
-        r: Option<C::Scalar>,
+        r: ecc::ScalarFixed<C, EccChip>,
     ) -> Result<
         (
             ecc::Point<C, EccChip>,
@@ -437,7 +442,7 @@ where
         &self,
         mut layouter: impl Layouter<C::Base>,
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
-        r: Option<C::Scalar>,
+        r: ecc::ScalarFixed<C, EccChip>,
     ) -> Result<(ecc::X<C, EccChip>, Vec<SinsemillaChip::RunningSum>), Error> {
         assert_eq!(self.M.sinsemilla_chip, message.chip);
         let (p, zs) = self.commit(layouter.namespace(|| "commit"), message, r)?;
@@ -460,7 +465,8 @@ pub(crate) mod tests {
     };
 
     use crate::{
-        primitives::sinsemilla::{self, K},
+        ecc::ScalarFixed,
+        sinsemilla::primitives::{self as sinsemilla, K},
         {
             ecc::{
                 chip::{find_zs_and_us, EccChip, EccConfig, H, NUM_WINDOWS},
@@ -685,12 +691,17 @@ pub(crate) mod tests {
                     (0..500).map(|_| Some(rand::random::<bool>())).collect();
 
                 let (result, _) = {
+                    let r = ScalarFixed::new(
+                        ecc_chip.clone(),
+                        layouter.namespace(|| "r"),
+                        Some(r_val),
+                    )?;
                     let message = Message::from_bitstring(
                         chip2,
                         layouter.namespace(|| "witness message"),
                         message.clone(),
                     )?;
-                    test_commit.commit(layouter.namespace(|| "commit"), message, Some(r_val))?
+                    test_commit.commit(layouter.namespace(|| "commit"), message, r)?
                 };
 
                 // Witness expected result.
