@@ -87,10 +87,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             decompose_word::<pallas::Scalar>(&scalar, SCALAR_NUM_BITS, FIXED_BASE_WINDOW_SIZE)
         });
 
-        // Store the scalar decomposition
-        let mut windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, NUM_WINDOWS> =
-            ArrayVec::new();
-
+        // Transpose `Option<Vec<u8>>` into `Vec<Option<pallas::Base>>`.
         let scalar_windows: Vec<Option<pallas::Base>> = if let Some(windows) = scalar_windows {
             assert_eq!(windows.len(), NUM_WINDOWS);
             windows
@@ -101,6 +98,9 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             vec![None; NUM_WINDOWS]
         };
 
+        // Store the scalar decomposition
+        let mut windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, NUM_WINDOWS> =
+            ArrayVec::new();
         for (idx, window) in scalar_windows.into_iter().enumerate() {
             let window_cell = region.assign_advice(
                 || format!("k[{:?}]", offset + idx),

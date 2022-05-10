@@ -46,12 +46,16 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             // Check that last window is either 0 or 1.
             let last_window_check = bool_check(last_window);
             // Check that sign is either 1 or -1.
-            let sign_check = sign.clone() * sign.clone() - one;
+            let sign_check = sign.clone().square() - one;
 
             // `(x_a, y_a)` is the result of `[m]B`, where `m` is the magnitude.
             // We conditionally negate this result using `y_p = y_a * s`, where `s` is the sign.
 
             // Check that the final `y_p = y_a` or `y_p = -y_a`
+            //
+            // This constraint is redundant / unnecessary, because `sign` is constrained
+            // to -1 or 1 by `sign_check`, and `negation_check` therefore permits a strict
+            // subset of the cases that this constraint permits.
             let y_check = (y_p.clone() - y_a.clone()) * (y_p.clone() + y_a.clone());
 
             // Check that the correct sign is witnessed s.t. sign * y_p = y_a

@@ -341,7 +341,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
             let x_r = lambda1
                 .zip(x_a.value())
                 .zip(x_p)
-                .map(|((lambda1, x_a), x_p)| lambda1 * lambda1 - x_a - x_p);
+                .map(|((lambda1, x_a), x_p)| lambda1.square() - x_a - x_p);
 
             // λ2 = (2(y_A) / (x_A - x_R)) - λ1
             let lambda2 =

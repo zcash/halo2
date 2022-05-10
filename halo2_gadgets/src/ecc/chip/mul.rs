@@ -35,7 +35,7 @@ const INCOMPLETE_RANGE: Range<usize> = 0..INCOMPLETE_LEN;
 // The `hi` half is k_{254} to k_{130} inclusive (length 125 bits).
 // (It is a coincidence that k_{130} matches the boundary of the
 // overflow check described in [the book](https://zcash.github.io/halo2/design/gadgets/ecc/var-base-scalar-mul.html#overflow-check).)
-const INCOMPLETE_HI_RANGE: Range<usize> = 0..(INCOMPLETE_LEN / 2);
+const INCOMPLETE_HI_RANGE: Range<usize> = 0..INCOMPLETE_HI_LEN;
 const INCOMPLETE_HI_LEN: usize = INCOMPLETE_LEN / 2;
 
 // Bits k_{254} to k_{4} inclusive are used in incomplete addition.
@@ -225,6 +225,7 @@ impl Config {
                 // Then, the final assignment of double-and-add was made on row + offset + 1.
                 // Outside of incomplete addition, we must account for these offset increases by adding
                 // 2 to the incomplete addition length.
+                assert!(INCOMPLETE_LO_RANGE.len() >= INCOMPLETE_HI_RANGE.len());
                 let offset = offset + INCOMPLETE_LO_RANGE.len() + 2;
 
                 // Complete addition
