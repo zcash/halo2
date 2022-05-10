@@ -12,22 +12,59 @@ use halo2_proofs::{
 
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
+/// A helper struct for implementing single-row double-and-add using incomplete addition.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) struct DoubleAndAdd {
+    // x-coordinate of the accumulator in each double-and-add iteration.
+    pub(crate) x_a: Column<Advice>,
+    // x-coordinate of the point being added in each double-and-add iteration.
+    pub(crate) x_p: Column<Advice>,
+    // lambda1 in each double-and-add iteration.
+    pub(crate) lambda_1: Column<Advice>,
+    // lambda2 in each double-and-add iteration.
+    pub(crate) lambda_2: Column<Advice>,
+}
+
+impl DoubleAndAdd {
+    /// Derives the expression `x_r = lambda_1^2 - x_a - x_p`.
+    pub(crate) fn x_r(
+        &self,
+        meta: &mut VirtualCells<pallas::Base>,
+        rotation: Rotation,
+    ) -> Expression<pallas::Base> {
+        let x_a = meta.query_advice(self.x_a, rotation);
+        let x_p = meta.query_advice(self.x_p, rotation);
+        let lambda_1 = meta.query_advice(self.lambda_1, rotation);
+        lambda_1.square() - x_a - x_p
+    }
+
+    /// Derives the expression `Y_A = (lambda_1 + lambda_2) * (x_a - x_r)`.
+    ///
+    /// Note that this is missing the factor of `1/2`; the Sinsemilla constraints factor
+    /// it out, so we leave it up to the caller to handle it.
+    #[allow(non_snake_case)]
+    pub(crate) fn Y_A(
+        &self,
+        meta: &mut VirtualCells<pallas::Base>,
+        rotation: Rotation,
+    ) -> Expression<pallas::Base> {
+        let x_a = meta.query_advice(self.x_a, rotation);
+        let lambda_1 = meta.query_advice(self.lambda_1, rotation);
+        let lambda_2 = meta.query_advice(self.lambda_2, rotation);
+        (lambda_1 + lambda_2) * (x_a - self.x_r(meta, rotation))
+    }
+}
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Config<const NUM_BITS: usize> {
     // Selectors used to constrain the cells used in incomplete addition.
     pub(super) q_mul: (Selector, Selector, Selector),
     // Cumulative sum used to decompose the scalar.
     pub(super) z: Column<Advice>,
-    // x-coordinate of the accumulator in each double-and-add iteration.
-    pub(super) x_a: Column<Advice>,
-    // x-coordinate of the point being added in each double-and-add iteration.
-    pub(super) x_p: Column<Advice>,
+    // Logic specific to merged double-and-add.
+    pub(super) double_and_add: DoubleAndAdd,
     // y-coordinate of the point being added in each double-and-add iteration.
     pub(super) y_p: Column<Advice>,
-    // lambda1 in each double-and-add iteration.
-    pub(super) lambda1: Column<Advice>,
-    // lambda2 in each double-and-add iteration.
-    pub(super) lambda2: Column<Advice>,
 }
 
 impl<const NUM_BITS: usize> Config<NUM_BITS> {
@@ -37,20 +74,22 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         x_a: Column<Advice>,
         x_p: Column<Advice>,
         y_p: Column<Advice>,
-        lambda1: Column<Advice>,
-        lambda2: Column<Advice>,
+        lambda_1: Column<Advice>,
+        lambda_2: Column<Advice>,
     ) -> Self {
         meta.enable_equality(z);
-        meta.enable_equality(lambda1);
+        meta.enable_equality(lambda_1);
 
         let config = Self {
             q_mul: (meta.selector(), meta.selector(), meta.selector()),
             z,
-            x_a,
-            x_p,
+            double_and_add: DoubleAndAdd {
+                x_a,
+                x_p,
+                lambda_1,
+                lambda_2,
+            },
             y_p,
-            lambda1,
-            lambda2,
         };
 
         config.create_gate(meta);
@@ -62,19 +101,12 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // Closure to compute x_{R,i} = λ_{1,i}^2 - x_{A,i} - x_{P,i}
         let x_r = |meta: &mut VirtualCells<pallas::Base>, rotation: Rotation| {
-            let x_a = meta.query_advice(self.x_a, rotation);
-            let x_p = meta.query_advice(self.x_p, rotation);
-            let lambda_1 = meta.query_advice(self.lambda1, rotation);
-            lambda_1.square() - x_a - x_p
+            self.double_and_add.x_r(meta, rotation)
         };
 
         // Closure to compute y_{A,i} = (λ_{1,i} + λ_{2,i}) * (x_{A,i} - x_{R,i}) / 2
         let y_a = |meta: &mut VirtualCells<pallas::Base>, rotation: Rotation| {
-            let x_a = meta.query_advice(self.x_a, rotation);
-            let lambda_1 = meta.query_advice(self.lambda1, rotation);
-            let lambda_2 = meta.query_advice(self.lambda2, rotation);
-
-            (lambda_1 + lambda_2) * (x_a - x_r(meta, rotation)) * pallas::Base::TWO_INV
+            self.double_and_add.Y_A(meta, rotation) * pallas::Base::TWO_INV
         };
 
         // Constraints used for q_mul_{2, 3} == 1
@@ -87,17 +119,17 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
             // z_{i+1}
             let z_prev = meta.query_advice(self.z, Rotation::prev());
             // x_{A,i}
-            let x_a_cur = meta.query_advice(self.x_a, Rotation::cur());
+            let x_a_cur = meta.query_advice(self.double_and_add.x_a, Rotation::cur());
             // x_{A,i-1}
-            let x_a_next = meta.query_advice(self.x_a, Rotation::next());
+            let x_a_next = meta.query_advice(self.double_and_add.x_a, Rotation::next());
             // x_{P,i}
-            let x_p_cur = meta.query_advice(self.x_p, Rotation::cur());
+            let x_p_cur = meta.query_advice(self.double_and_add.x_p, Rotation::cur());
             // y_{P,i}
             let y_p_cur = meta.query_advice(self.y_p, Rotation::cur());
             // λ_{1,i}
-            let lambda1_cur = meta.query_advice(self.lambda1, Rotation::cur());
+            let lambda1_cur = meta.query_advice(self.double_and_add.lambda_1, Rotation::cur());
             // λ_{2,i}
-            let lambda2_cur = meta.query_advice(self.lambda2, Rotation::cur());
+            let lambda2_cur = meta.query_advice(self.double_and_add.lambda_2, Rotation::cur());
 
             let y_a_cur = y_a(meta, Rotation::cur());
 
@@ -133,7 +165,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
             let q_mul_1 = meta.query_selector(self.q_mul.0);
 
             let y_a_next = y_a(meta, Rotation::next());
-            let y_a_witnessed = meta.query_advice(self.lambda1, Rotation::cur());
+            let y_a_witnessed = meta.query_advice(self.double_and_add.lambda_1, Rotation::cur());
             Constraints::with_selector(q_mul_1, Some(("init y_a", y_a_witnessed - y_a_next)))
         });
 
@@ -144,9 +176,9 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
             let y_a_next = y_a(meta, Rotation::next());
 
             // x_{P,i}
-            let x_p_cur = meta.query_advice(self.x_p, Rotation::cur());
+            let x_p_cur = meta.query_advice(self.double_and_add.x_p, Rotation::cur());
             // x_{P,i-1}
-            let x_p_next = meta.query_advice(self.x_p, Rotation::next());
+            let x_p_next = meta.query_advice(self.double_and_add.x_p, Rotation::next());
             // y_{P,i}
             let y_p_cur = meta.query_advice(self.y_p, Rotation::cur());
             // y_{P,i-1}
@@ -169,7 +201,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         // q_mul_3 == 1 checks
         meta.create_gate("q_mul_3 == 1 checks", |meta| {
             let q_mul_3 = meta.query_selector(self.q_mul.2);
-            let y_a_final = meta.query_advice(self.lambda1, Rotation::next());
+            let y_a_final = meta.query_advice(self.double_and_add.lambda_1, Rotation::next());
             Constraints::with_selector(q_mul_3, for_loop(meta, y_a_final))
         });
     }
@@ -230,12 +262,18 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
             let z = acc.2.copy_advice(|| "starting z", region, self.z, offset)?;
 
             // Initialise acc
-            let x_a = acc
-                .0
-                .copy_advice(|| "starting x_a", region, self.x_a, offset + 1)?;
-            let y_a = acc
-                .1
-                .copy_advice(|| "starting y_a", region, self.lambda1, offset)?;
+            let x_a = acc.0.copy_advice(
+                || "starting x_a",
+                region,
+                self.double_and_add.x_a,
+                offset + 1,
+            )?;
+            let y_a = acc.1.copy_advice(
+                || "starting y_a",
+                region,
+                self.double_and_add.lambda_1,
+                offset,
+            )?;
 
             (x_a, y_a.value().cloned(), z)
         };
@@ -264,7 +302,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
             // Assign `x_p`, `y_p`
             region.assign_advice(
                 || "x_p",
-                self.x_p,
+                self.double_and_add.x_p,
                 row + offset,
                 || x_p.ok_or(Error::Synthesis),
             )?;
@@ -288,7 +326,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
                 .map(|(((y_a, y_p), x_a), x_p)| (y_a - y_p) * (x_a - x_p).invert().unwrap());
             region.assign_advice(
                 || "lambda1",
-                self.lambda1,
+                self.double_and_add.lambda_1,
                 row + offset,
                 || lambda1.ok_or(Error::Synthesis),
             )?;
@@ -310,7 +348,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
                     });
             region.assign_advice(
                 || "lambda2",
-                self.lambda2,
+                self.double_and_add.lambda_2,
                 row + offset,
                 || lambda2.ok_or(Error::Synthesis),
             )?;
@@ -328,7 +366,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
             let x_a_val = x_a_new;
             x_a = region.assign_advice(
                 || "x_a",
-                self.x_a,
+                self.double_and_add.x_a,
                 row + offset + 1,
                 || x_a_val.ok_or(Error::Synthesis),
             )?;
@@ -337,7 +375,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         // Witness final y_a
         let y_a = region.assign_advice(
             || "y_a",
-            self.lambda1,
+            self.double_and_add.lambda_1,
             offset + NUM_BITS,
             || y_a.ok_or(Error::Synthesis),
         )?;

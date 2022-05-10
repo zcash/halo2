@@ -26,6 +26,9 @@ pub(super) mod witness_point;
 
 pub use constants::*;
 
+// Exposed for Sinsemilla.
+pub(crate) use mul::incomplete::DoubleAndAdd;
+
 /// A curve point represented in affine (x, y) coordinates, or the
 /// identity represented as (0, 0).
 /// Each coordinate is assigned to a cell.

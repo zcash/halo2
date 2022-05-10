@@ -20,7 +20,7 @@ use uint::construct_uint;
 use pasta_curves::pallas;
 
 mod complete;
-mod incomplete;
+pub(super) mod incomplete;
 mod overflow;
 
 /// Number of bits for which complete addition needs to be used in variable-base
@@ -92,7 +92,7 @@ impl Config {
         config.create_gate(meta);
 
         assert_eq!(
-            config.hi_config.x_p, config.lo_config.x_p,
+            config.hi_config.double_and_add.x_p, config.lo_config.double_and_add.x_p,
             "x_p is shared across hi and lo halves."
         );
         assert_eq!(
@@ -110,7 +110,7 @@ impl Config {
                 "incomplete config z cannot overlap with complete addition columns."
             );
             assert!(
-                !add_config_outputs.contains(&config.hi_config.lambda1),
+                !add_config_outputs.contains(&config.hi_config.double_and_add.lambda_1),
                 "incomplete config lambda1 cannot overlap with complete addition columns."
             );
         }
@@ -120,7 +120,7 @@ impl Config {
                 "incomplete config z cannot overlap with complete addition columns."
             );
             assert!(
-                !add_config_outputs.contains(&config.lo_config.lambda1),
+                !add_config_outputs.contains(&config.lo_config.double_and_add.lambda_1),
                 "incomplete config lambda1 cannot overlap with complete addition columns."
             );
         }

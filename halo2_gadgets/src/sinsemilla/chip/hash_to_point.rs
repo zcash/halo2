@@ -64,7 +64,7 @@ where
         let mut x_a: X<pallas::Base> = {
             let x_a = region.assign_advice_from_constant(
                 || "fixed x_q",
-                config.x_a,
+                config.double_and_add.x_a,
                 offset,
                 x_q.into(),
             )?;
@@ -96,7 +96,7 @@ where
             // Assign the final y_a.
             let y_a_cell = region.assign_advice(
                 || "y_a",
-                config.lambda_1,
+                config.double_and_add.lambda_1,
                 offset,
                 || y_a.ok_or(Error::Synthesis),
             )?;
@@ -107,13 +107,13 @@ where
             {
                 region.assign_advice(
                     || "dummy lambda2",
-                    config.lambda_2,
+                    config.double_and_add.lambda_2,
                     offset,
                     || Ok(pallas::Base::zero()),
                 )?;
                 region.assign_advice(
                     || "dummy x_p",
-                    config.x_p,
+                    config.double_and_add.x_p,
                     offset,
                     || Ok(pallas::Base::zero()),
                 )?;
@@ -338,7 +338,7 @@ where
             // Assign `x_p`
             region.assign_advice(
                 || "x_p",
-                config.x_p,
+                config.double_and_add.x_p,
                 offset + row,
                 || x_p.ok_or(Error::Synthesis),
             )?;
@@ -355,7 +355,7 @@ where
                 // Assign lambda_1
                 region.assign_advice(
                     || "lambda_1",
-                    config.lambda_1,
+                    config.double_and_add.lambda_1,
                     offset + row,
                     || lambda_1.ok_or(Error::Synthesis),
                 )?;
@@ -379,7 +379,7 @@ where
 
                 region.assign_advice(
                     || "lambda_2",
-                    config.lambda_2,
+                    config.double_and_add.lambda_2,
                     offset + row,
                     || lambda_2.ok_or(Error::Synthesis),
                 )?;
@@ -396,7 +396,7 @@ where
 
                 let x_a_cell = region.assign_advice(
                     || "x_a",
-                    config.x_a,
+                    config.double_and_add.x_a,
                     offset + row + 1,
                     || x_a_new.ok_or(Error::Synthesis),
                 )?;

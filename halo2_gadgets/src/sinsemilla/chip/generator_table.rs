@@ -51,13 +51,13 @@ impl GeneratorTableConfig {
                 z_cur - (q_run * z_next * pallas::Base::from(1 << sinsemilla::K))
             };
 
-            let x_p = meta.query_advice(config.x_p, Rotation::cur());
+            let x_p = meta.query_advice(config.double_and_add.x_p, Rotation::cur());
 
             // y_{p,i} = (Y_{A,i} / 2) - lambda1 * (x_{A,i} - x_{P,i})
             let y_p = {
-                let lambda1 = meta.query_advice(config.lambda_1, Rotation::cur());
-                let x_a = meta.query_advice(config.x_a, Rotation::cur());
-                let Y_A = config.Y_A(meta, Rotation::cur());
+                let lambda1 = meta.query_advice(config.double_and_add.lambda_1, Rotation::cur());
+                let x_a = meta.query_advice(config.double_and_add.x_a, Rotation::cur());
+                let Y_A = config.double_and_add.Y_A(meta, Rotation::cur());
 
                 (Y_A * pallas::Base::TWO_INV) - (lambda1 * (x_a - x_p.clone()))
             };
