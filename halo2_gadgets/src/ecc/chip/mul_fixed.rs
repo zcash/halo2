@@ -6,7 +6,10 @@ use crate::utilities::decompose_running_sum::RunningSumConfig;
 
 use std::marker::PhantomData;
 
-use group::{ff::PrimeField, Curve};
+use group::{
+    ff::{PrimeField, PrimeFieldBits},
+    Curve,
+};
 use halo2_proofs::{
     circuit::{AssignedCell, Region},
     plonk::{
@@ -467,22 +470,22 @@ impl ScalarFixed {
         }
     }
 
-    // The scalar decomposition is guaranteed to be in three-bit windows,
-    // so we also cast the least significant 4 bytes in their serialisation
-    // into usize for convenient indexing into `u`-values
+    /// The scalar decomposition is guaranteed to be in three-bit windows, so we construct
+    /// `usize` indices from the lowest three bits of each window field element for
+    /// convenient indexing into `u`-values.
     fn windows_usize(&self) -> Vec<Option<usize>> {
         self.windows_field()
             .iter()
             .map(|window| {
-                if let Some(window) = window {
-                    // TODO: Remove this trait dependency
-                    use pasta_curves::arithmetic::SqrtRatio;
-                    let window = window.get_lower_32() as usize;
-                    assert!(window < H);
-                    Some(window)
-                } else {
-                    None
-                }
+                window.map(|window| {
+                    window
+                        .to_le_bits()
+                        .iter()
+                        .by_vals()
+                        .take(FIXED_BASE_WINDOW_SIZE)
+                        .rev()
+                        .fold(0, |acc, b| 2 * acc + if b { 1 } else { 0 })
+                })
             })
             .collect::<Vec<_>>()
     }
