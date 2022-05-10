@@ -286,8 +286,6 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
             meta,
             lagrange_coeffs,
             advices[4],
-            advices[0],
-            advices[1],
             advices[5],
             add,
             add_incomplete,

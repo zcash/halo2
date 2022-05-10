@@ -42,10 +42,6 @@ pub struct Config<FixedPoints: super::FixedPoints<pallas::Affine>> {
     // Decomposition of an `n-1`-bit scalar into `k`-bit windows:
     // a = a_0 + 2^k(a_1) + 2^{2k}(a_2) + ... + 2^{(n-1)k}(a_{n-1})
     window: Column<Advice>,
-    // x-coordinate of the multiple of the fixed base at the current window.
-    x_p: Column<Advice>,
-    // y-coordinate of the multiple of the fixed base at the current window.
-    y_p: Column<Advice>,
     // y-coordinate of accumulator (only used in the final row).
     u: Column<Advice>,
     // Configuration for `add`
@@ -61,8 +57,6 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         meta: &mut ConstraintSystem<pallas::Base>,
         lagrange_coeffs: [Column<Fixed>; H],
         window: Column<Advice>,
-        x_p: Column<Advice>,
-        y_p: Column<Advice>,
         u: Column<Advice>,
         add_config: add::Config,
         add_incomplete_config: add_incomplete::Config,
@@ -78,34 +72,22 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
             lagrange_coeffs,
             fixed_z: meta.fixed_column(),
             window,
-            x_p,
-            y_p,
             u,
             add_config,
             add_incomplete_config,
             _marker: PhantomData,
         };
 
-        // Check relationships between this config and `add_config`.
+        // Check relationships between `add_config` and `add_incomplete_config`.
         assert_eq!(
-            config.x_p, config.add_config.x_p,
-            "add is used internally in mul_fixed."
+            config.add_config.x_p, config.add_incomplete_config.x_p,
+            "add and add_incomplete are used internally in mul_fixed."
         );
         assert_eq!(
-            config.y_p, config.add_config.y_p,
-            "add is used internally in mul_fixed."
+            config.add_config.y_p, config.add_incomplete_config.y_p,
+            "add and add_incomplete are used internally in mul_fixed."
         );
-
-        // Check relationships between this config and `add_incomplete_config`.
-        assert_eq!(
-            config.x_p, config.add_incomplete_config.x_p,
-            "add_incomplete is used internally in mul_fixed."
-        );
-        assert_eq!(
-            config.y_p, config.add_incomplete_config.y_p,
-            "add_incomplete is used internally in mul_fixed."
-        );
-        for advice in [config.x_p, config.y_p, config.window, config.u].iter() {
+        for advice in [config.window, config.u].iter() {
             assert_ne!(
                 *advice, config.add_config.x_qr,
                 "Do not overlap with output columns of add."
@@ -152,8 +134,8 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         meta: &mut VirtualCells<'_, pallas::Base>,
         window: Expression<pallas::Base>,
     ) -> Vec<(&'static str, Expression<pallas::Base>)> {
-        let y_p = meta.query_advice(self.y_p, Rotation::cur());
-        let x_p = meta.query_advice(self.x_p, Rotation::cur());
+        let y_p = meta.query_advice(self.add_config.y_p, Rotation::cur());
+        let x_p = meta.query_advice(self.add_config.x_p, Rotation::cur());
         let z = meta.query_fixed(self.fixed_z, Rotation::cur());
         let u = meta.query_advice(self.u, Rotation::cur());
 
@@ -295,7 +277,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
             });
             let x = region.assign_advice(
                 || format!("mul_b_x, window {}", w),
-                self.x_p,
+                self.add_config.x_p,
                 offset + w,
                 || x.ok_or(Error::Synthesis),
             )?;
@@ -307,7 +289,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
             });
             let y = region.assign_advice(
                 || format!("mul_b_y, window {}", w),
-                self.y_p,
+                self.add_config.y_p,
                 offset + w,
                 || y.ok_or(Error::Synthesis),
             )?;
@@ -348,19 +330,28 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
     ) -> Result<NonIdentityEccPoint, Error> {
         let scalar_windows_field = scalar.windows_field();
         let scalar_windows_usize = scalar.windows_usize();
+        assert_eq!(scalar_windows_field.len(), NUM_WINDOWS);
 
-        for (w, (k, k_usize)) in scalar_windows_field[..(scalar_windows_field.len() - 1)]
-            .iter()
-            .zip(scalar_windows_usize[..(scalar_windows_field.len() - 1)].iter())
+        for (w, (k, k_usize)) in scalar_windows_field
+            .into_iter()
+            .zip(scalar_windows_usize)
             .enumerate()
+            // The MSB is processed separately.
+            .take(NUM_WINDOWS - 1)
             // Skip k_0 (already processed).
             .skip(1)
         {
             // Compute [(k_w + 2) ⋅ 8^w]B
+            //
+            // This assigns the coordinates of the returned point into the input cells for
+            // the incomplete addition gate, which will then copy them into themselves.
             let mul_b =
-                self.process_lower_bits::<_, NUM_WINDOWS>(region, offset, w, *k, *k_usize, base)?;
+                self.process_lower_bits::<_, NUM_WINDOWS>(region, offset, w, k, k_usize, base)?;
 
-            // Add to the accumulator
+            // Add to the accumulator.
+            //
+            // After the first loop, the accumulator will already be in the input cells
+            // for the incomplete addition gate, and will be copied into themselves.
             acc = self
                 .add_incomplete_config
                 .assign_region(&mul_b, &acc, offset + w, region)?;

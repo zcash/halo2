@@ -35,7 +35,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         meta.create_gate("Short fixed-base mul gate", |meta| {
             let q_mul_fixed_short = meta.query_selector(self.q_mul_fixed_short);
-            let y_p = meta.query_advice(self.super_config.y_p, Rotation::cur());
+            let y_p = meta.query_advice(self.super_config.add_config.y_p, Rotation::cur());
             let y_a = meta.query_advice(self.super_config.add_config.y_qr, Rotation::cur());
             // z_21
             let last_window = meta.query_advice(self.super_config.u, Rotation::cur());
@@ -180,7 +180,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                 // Assign final `y` to `y_p` column and return final point
                 let y_var = region.assign_advice(
                     || "y_var",
-                    self.super_config.y_p,
+                    self.super_config.add_config.y_p,
                     offset,
                     || y_val.ok_or(Error::Synthesis),
                 )?;
