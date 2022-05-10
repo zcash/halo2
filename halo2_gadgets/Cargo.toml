@@ -1,6 +1,6 @@
 [package]
 name = "halo2_gadgets"
-version = "0.1.0-beta.3"
+version = "0.1.0"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
     "Jack Grigg <jack@electriccoin.co>",
@@ -10,7 +10,7 @@ authors = [
 ]
 edition = "2021"
 rust-version = "1.56.1"
-description = "[BETA] Reusable gadgets and chip implementations for Halo 2"
+description = "Reusable gadgets and chip implementations for Halo 2"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/zcash/halo2"
 readme = "README.md"
