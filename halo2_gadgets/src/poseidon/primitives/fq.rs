@@ -1,6 +1,11 @@
-//! https://github.com/daira/pasta-hadeshash
+//! Constants for using Poseidon with the Vesta field.
 //!
+//! The constants can be reproduced by running the following Sage script from
+//! [this repository](https://github.com/daira/pasta-hadeshash):
+//!
+//! ```text
 //! sage generate_parameters_grain.sage 1 0 255 3 8 56 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001
+//! ```
 use pasta_curves::vesta;
 
 // Number of round constants: 192

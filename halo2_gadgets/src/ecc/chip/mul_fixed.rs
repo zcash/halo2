@@ -190,7 +190,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         // Process all windows excluding least and most significant windows
         let acc = self.add_incomplete::<F, NUM_WINDOWS>(region, offset, acc, base, scalar)?;
 
-        // Process most significant window using complete addition
+        // Process most significant window
         let mul_b = self.process_msb::<F, NUM_WINDOWS>(region, offset, base, scalar)?;
 
         Ok((acc, mul_b))
@@ -433,8 +433,11 @@ impl From<&EccBaseFieldElemFixed> for ScalarFixed {
 }
 
 impl ScalarFixed {
-    // The scalar decomposition was done in the base field. For computation
-    // outside the circuit, we now convert them back into the scalar field.
+    /// The scalar decomposition was done in the base field. For computation
+    /// outside the circuit, we now convert them back into the scalar field.
+    ///
+    /// This function does not require that the base field fits inside the scalar field,
+    /// because the window size fits into either field.
     fn windows_field(&self) -> Vec<Option<pallas::Scalar>> {
         let running_sum_to_windows = |zs: Vec<AssignedCell<pallas::Base, pallas::Base>>| {
             (0..(zs.len() - 1))
@@ -444,6 +447,9 @@ impl ScalarFixed {
                     let word = z_cur
                         .zip(z_next)
                         .map(|(z_cur, z_next)| z_cur - z_next * *H_BASE);
+                    // This assumes that the endianness of the encodings of pallas::Base
+                    // and pallas::Scalar are the same. They happen to be, but we need to
+                    // be careful if this is generalised.
                     word.map(|word| pallas::Scalar::from_repr(word.to_repr()).unwrap())
                 })
                 .collect::<Vec<_>>()
@@ -463,6 +469,9 @@ impl ScalarFixed {
                 .expect("EccScalarFixed has been witnessed")
                 .iter()
                 .map(|bits| {
+                    // This assumes that the endianness of the encodings of pallas::Base
+                    // and pallas::Scalar are the same. They happen to be, but we need to
+                    // be careful if this is generalised.
                     bits.value()
                         .map(|value| pallas::Scalar::from_repr(value.to_repr()).unwrap())
                 })

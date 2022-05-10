@@ -184,7 +184,7 @@ impl Config {
                 let bits_incomplete_lo = &bits[INCOMPLETE_LO_RANGE];
                 let lsb = bits[pallas::Scalar::NUM_BITS as usize - 1];
 
-                // Initialize the accumulator `acc = [2]base`
+                // Initialize the accumulator `acc = [2]base` using complete addition.
                 let acc =
                     self.add_config
                         .assign_region(&base_point, &base_point, offset, &mut region)?;
@@ -192,7 +192,12 @@ impl Config {
                 // Increase the offset by 1 after complete addition.
                 let offset = offset + 1;
 
-                // Initialize the running sum for scalar decomposition to zero
+                // Initialize the running sum for scalar decomposition to zero.
+                //
+                // `incomplete::Config::double_and_add` will copy this cell directly into
+                // itself. This is fine because we are just assigning the same value to
+                // the same cell twice, and then applying an equality constraint between
+                // the cell and itself (which the permutation argument treats as a no-op).
                 let z_init = Z(region.assign_advice_from_constant(
                     || "z_init = 0",
                     self.hi_config.z,
@@ -441,7 +446,7 @@ fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> 
         let t_q = U256::from_little_endian(&T_Q.to_le_bytes());
         let k = scalar + t_q;
 
-        // Big-endian bit representation of `k`.
+        // Little-endian bit representation of `k`.
         let bitstring: Vec<bool> = {
             let mut le_bytes = [0u8; 32];
             k.to_little_endian(&mut le_bytes);
@@ -454,7 +459,7 @@ fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> 
             })
         };
 
-        // Take the first 255 bits.
+        // Take the first 255 bits, and reverse to get the big-endian bit representation.
         let mut bitstring = bitstring[0..pallas::Scalar::NUM_BITS as usize].to_vec();
         bitstring.reverse();
         bitstring

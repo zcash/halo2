@@ -1,4 +1,6 @@
-//! Gadgets for the Sinsemilla hash function.
+//! The [Sinsemilla] hash function.
+//!
+//! [Sinsemilla]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
 use crate::{
     ecc::{self, EccInstructions, FixedPoints},
     utilities::{FieldValue, RangeConstrained, Var},
@@ -224,7 +226,9 @@ where
     }
 
     /// Constructs a `MessagePiece` by concatenating a sequence of [`RangeConstrained`]
-    /// subpieces.
+    /// subpiece values.
+    ///
+    /// The `MessagePiece` is assigned to the circuit, but not constrained in any way.
     ///
     /// # Panics
     ///

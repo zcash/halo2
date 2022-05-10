@@ -43,7 +43,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                     .coords_check(meta, window.clone())
                     .into_iter()
                     // Constrain each window to a 3-bit value:
-                    // 1 * (window - 0) * (window - 1) * ... * (window - 7)
+                    // window * (1 - window) * ... * (7 - window)
                     .chain(Some(("window range check", range_check(window, H)))),
             )
         });

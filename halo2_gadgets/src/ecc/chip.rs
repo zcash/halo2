@@ -133,7 +133,7 @@ impl From<NonIdentityEccPoint> for EccPoint {
     }
 }
 
-/// Configuration for the ECC chip
+/// Configuration for [`EccChip`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[allow(non_snake_case)]
 pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>> {
@@ -224,7 +224,7 @@ pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
     }
 }
 
-/// A chip implementing EccInstructions
+/// An [`EccInstructions`] chip that uses 10 advice columns.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EccChip<FixedPoints: super::FixedPoints<pallas::Affine>> {
     config: EccConfig<FixedPoints>,
@@ -397,7 +397,9 @@ pub enum ScalarVar {
     /// However, the only use of variable-base scalar mul in the Orchard protocol
     /// is in deriving diversified addresses `[ivk] g_d`,  and `ivk` is guaranteed
     /// to be in the base field of the curve. (See non-normative notes in
-    /// https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents.)
+    /// [4.2.3 Orchard Key Components][orchardkeycomponents].)
+    ///
+    /// [orchardkeycomponents]: https://zips.z.cash/protocol/protocol.pdf#orchardkeycomponents
     BaseFieldElem(AssignedCell<pallas::Base, pallas::Base>),
     /// A full-width scalar. This is unimplemented for halo2_gadgets v0.1.0.
     FullWidth,

@@ -1,4 +1,4 @@
-//! Gadgets for elliptic curve operations.
+//! Elliptic curve operations.
 
 use std::fmt::Debug;
 
@@ -169,17 +169,7 @@ pub trait FixedPoints<C: CurveAffine>: Debug + Eq + Clone {
     type Base: Debug + Eq + Clone;
 }
 
-/// An element of the given elliptic curve's base field, that is used as a scalar
-/// in variable-base scalar mul.
-///
-/// It is not true in general that a scalar field element fits in a curve's
-/// base field, and in particular it is untrue for the Pallas curve, whose
-/// scalar field `Fq` is larger than its base field `Fp`.
-///
-/// However, the only use of variable-base scalar mul in the Orchard protocol
-/// is in deriving diversified addresses `[ivk] g_d`,  and `ivk` is guaranteed
-/// to be in the base field of the curve. (See non-normative notes in
-/// https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents.)
+/// An integer representing an element of the scalar field for a specific elliptic curve.
 #[derive(Debug)]
 pub struct ScalarVar<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
@@ -264,7 +254,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> ScalarFixedShort<C, EccChip> {
     }
 }
 
-/// A non-identity elliptic curve point over the given curve.
+/// A point on a specific elliptic curve that is guaranteed to not be the identity.
 #[derive(Copy, Clone, Debug)]
 pub struct NonIdentityPoint<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
@@ -382,7 +372,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq>
     }
 }
 
-/// An elliptic curve point over the given curve.
+/// A point on a specific elliptic curve.
 #[derive(Copy, Clone, Debug)]
 pub struct Point<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
     chip: EccChip,
@@ -444,8 +434,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
     }
 }
 
-/// The affine short Weierstrass x-coordinate of an elliptic curve point over the
-/// given curve.
+/// The affine short Weierstrass x-coordinate of a point on a specific elliptic curve.
 #[derive(Debug)]
 pub struct X<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
@@ -464,26 +453,29 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> X<C, EccChip> {
     }
 }
 
-/// A constant elliptic curve point over the given curve, for which window tables have
-/// been provided to make scalar multiplication more efficient.
+/// Precomputed multiples of a fixed point, for full-width scalar multiplication.
 ///
-/// Used in scalar multiplication with full-width scalars.
+/// Fixing the curve point enables window tables to be baked into the circuit, making
+/// scalar multiplication more efficient. These window tables are tuned to full-width
+/// scalar multiplication.
 #[derive(Clone, Debug)]
 pub struct FixedPoint<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
     inner: <EccChip::FixedPoints as FixedPoints<C>>::FullScalar,
 }
 
-/// A constant elliptic curve point over the given curve, used in scalar multiplication
-/// with a base field element
+/// Precomputed multiples of a fixed point, that can be multiplied by base-field elements.
+///
+/// Fixing the curve point enables window tables to be baked into the circuit, making
+/// scalar multiplication more efficient. These window tables are tuned to scalar
+/// multiplication by base-field elements.
 #[derive(Clone, Debug)]
 pub struct FixedPointBaseField<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
     inner: <EccChip::FixedPoints as FixedPoints<C>>::Base,
 }
 
-/// A constant elliptic curve point over the given curve, used in scalar multiplication
-/// with a short signed exponent
+/// Precomputed multiples of a fixed point, for short signed scalar multiplication.
 #[derive(Clone, Debug)]
 pub struct FixedPointShort<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,

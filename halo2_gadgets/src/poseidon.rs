@@ -1,4 +1,4 @@
-//! Gadget and chips for the Poseidon algebraic hash function.
+//! The Poseidon algebraic hash function.
 
 use std::convert::TryInto;
 use std::fmt;

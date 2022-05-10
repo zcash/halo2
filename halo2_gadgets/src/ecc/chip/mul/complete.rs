@@ -168,6 +168,14 @@ impl Config {
                         .zip(k.as_ref())
                         .map(|(base_y, k)| if !k { -base_y } else { base_y });
 
+                // Assign the conditionally-negated y coordinate into the cell it will be
+                // used from by both the complete addition gate, and the decomposition and
+                // conditional negation gate.
+                //
+                // The complete addition gate will copy this cell onto itself. This is
+                // fine because we are just assigning the same value to the same cell
+                // twice, and then applying an equality constraint between the cell and
+                // itself (which the permutation argument treats as a no-op).
                 region.assign_advice(
                     || "y_p",
                     self.add_config.y_p,

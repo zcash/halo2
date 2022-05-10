@@ -37,7 +37,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             let q_mul_fixed_short = meta.query_selector(self.q_mul_fixed_short);
             let y_p = meta.query_advice(self.super_config.add_config.y_p, Rotation::cur());
             let y_a = meta.query_advice(self.super_config.add_config.y_qr, Rotation::cur());
-            // z_21
+            // z_21 = k_21
             let last_window = meta.query_advice(self.super_config.u, Rotation::cur());
             let sign = meta.query_advice(self.super_config.window, Rotation::cur());
 
@@ -73,6 +73,10 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         });
     }
 
+    /// Constraints `magnitude` to be at most 66 bits.
+    ///
+    /// The final window is separately constrained to be a single bit, which completes the
+    /// 64-bit range constraint.
     fn decompose(
         &self,
         region: &mut Region<'_, pallas::Base>,
