@@ -269,23 +269,23 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         Ok(())
     }
 
+    /// Assigns the values used to process a window.
     fn process_window<F: FixedPoint<pallas::Affine>, const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
         w: usize,
-        k: Option<pallas::Scalar>,
         k_usize: Option<usize>,
+        window_scalar: Option<pallas::Scalar>,
         base: &F,
     ) -> Result<NonIdentityEccPoint, Error> {
         let base_value = base.generator();
         let base_u = base.u();
         assert_eq!(base_u.len(), NUM_WINDOWS);
 
-        // Compute [(k_w + 2) ⋅ 8^w]B
+        // Compute [window_scalar]B
         let mul_b = {
-            let mul_b =
-                k.map(|k| base_value * (k + *TWO_SCALAR) * H_SCALAR.pow(&[w as u64, 0, 0, 0]));
+            let mul_b = window_scalar.map(|scalar| base_value * scalar);
             let mul_b = mul_b.map(|mul_b| mul_b.to_affine().coordinates().unwrap());
 
             let x = mul_b.map(|mul_b| {
@@ -335,7 +335,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         let w = 0;
         let k0 = scalar.windows_field()[0];
         let k0_usize = scalar.windows_usize()[0];
-        self.process_window::<_, NUM_WINDOWS>(region, offset, w, k0, k0_usize, base)
+        self.process_lower_bits::<_, NUM_WINDOWS>(region, offset, w, k0, k0_usize, base)
     }
 
     fn add_incomplete<F: FixedPoint<pallas::Affine>, const NUM_WINDOWS: usize>(
@@ -358,7 +358,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         {
             // Compute [(k_w + 2) ⋅ 8^w]B
             let mul_b =
-                self.process_window::<_, NUM_WINDOWS>(region, offset, w, *k, *k_usize, base)?;
+                self.process_lower_bits::<_, NUM_WINDOWS>(region, offset, w, *k, *k_usize, base)?;
 
             // Add to the accumulator
             acc = self
@@ -368,6 +368,23 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         Ok(acc)
     }
 
+    /// Assigns the values used to process a window that does not contain the MSB.
+    fn process_lower_bits<F: FixedPoint<pallas::Affine>, const NUM_WINDOWS: usize>(
+        &self,
+        region: &mut Region<'_, pallas::Base>,
+        offset: usize,
+        w: usize,
+        k: Option<pallas::Scalar>,
+        k_usize: Option<usize>,
+        base: &F,
+    ) -> Result<NonIdentityEccPoint, Error> {
+        // `scalar = [(k_w + 2) ⋅ 8^w]
+        let scalar = k.map(|k| (k + *TWO_SCALAR) * (*H_SCALAR).pow(&[w as u64, 0, 0, 0]));
+
+        self.process_window::<_, NUM_WINDOWS>(region, offset, w, k_usize, scalar, base)
+    }
+
+    /// Assigns the values used to process the window containing the MSB.
     fn process_msb<F: FixedPoint<pallas::Affine>, const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, pallas::Base>,
@@ -375,59 +392,25 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         base: &F,
         scalar: &ScalarFixed,
     ) -> Result<NonIdentityEccPoint, Error> {
-        // Assign u = (y_p + z_w).sqrt() for the most significant window
-        {
-            let u_val = scalar.windows_usize()[NUM_WINDOWS - 1]
-                .map(|k| pallas::Base::from_repr(base.u()[NUM_WINDOWS - 1][k]).unwrap());
-            region.assign_advice(
-                || "u",
-                self.u,
-                offset + NUM_WINDOWS - 1,
-                || u_val.ok_or(Error::Synthesis),
-            )?;
-        }
+        let k_usize = scalar.windows_usize()[NUM_WINDOWS - 1];
 
         // offset_acc = \sum_{j = 0}^{NUM_WINDOWS - 2} 2^{FIXED_BASE_WINDOW_SIZE*j + 1}
         let offset_acc = (0..(NUM_WINDOWS - 1)).fold(pallas::Scalar::zero(), |acc, w| {
             acc + (*TWO_SCALAR).pow(&[FIXED_BASE_WINDOW_SIZE as u64 * w as u64 + 1, 0, 0, 0])
         });
 
-        // `scalar = [k * 8^84 - offset_acc]`, where `offset_acc = \sum_{j = 0}^{83} 2^{FIXED_BASE_WINDOW_SIZE*j + 1}`.
+        // `scalar = [k * 8^(NUM_WINDOWS - 1) - offset_acc]`.
         let scalar = scalar.windows_field()[scalar.windows_field().len() - 1]
             .map(|k| k * (*H_SCALAR).pow(&[(NUM_WINDOWS - 1) as u64, 0, 0, 0]) - offset_acc);
 
-        let mul_b = {
-            let mul_b = scalar.map(|scalar| base.generator() * scalar);
-            let mul_b = mul_b.map(|mul_b| mul_b.to_affine().coordinates().unwrap());
-
-            let x = mul_b.map(|mul_b| {
-                let x = *mul_b.x();
-                assert!(x != pallas::Base::zero());
-                x
-            });
-            let x = region.assign_advice(
-                || format!("mul_b_x, window {}", NUM_WINDOWS - 1),
-                self.x_p,
-                offset + NUM_WINDOWS - 1,
-                || x.ok_or(Error::Synthesis),
-            )?;
-
-            let y = mul_b.map(|mul_b| {
-                let y = *mul_b.y();
-                assert!(y != pallas::Base::zero());
-                y
-            });
-            let y = region.assign_advice(
-                || format!("mul_b_y, window {}", NUM_WINDOWS - 1),
-                self.y_p,
-                offset + NUM_WINDOWS - 1,
-                || y.ok_or(Error::Synthesis),
-            )?;
-
-            NonIdentityEccPoint { x, y }
-        };
-
-        Ok(mul_b)
+        self.process_window::<_, NUM_WINDOWS>(
+            region,
+            offset,
+            NUM_WINDOWS - 1,
+            k_usize,
+            scalar,
+            base,
+        )
     }
 }
 
