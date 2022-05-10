@@ -6,6 +6,8 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.1.0] - 2022-05-10
 ### Added
 - `halo2_proofs::dev`:
   - `MockProver::assert_satisfied`, for requiring that a circuit is satisfied.
