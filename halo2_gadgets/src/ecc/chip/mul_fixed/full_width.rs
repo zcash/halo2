@@ -252,15 +252,16 @@ pub mod tests {
         // (There is another *non-canonical* sequence
         // 5333333333333333333333333333333333333333332711161673731021062440252244051273333333333 in octal.)
         {
+            const LAST_DOUBLING: &str = "1333333333333333333333333333333333333333333333333333333333333333333333333333333333334";
             let h = pallas::Scalar::from(H as u64);
-            let scalar_fixed = "1333333333333333333333333333333333333333333333333333333333333333333333333333333333334"
-                        .chars()
-                        .fold(pallas::Scalar::zero(), |acc, c| {
-                            acc * &h + &pallas::Scalar::from(c.to_digit(8).unwrap() as u64)
-                        });
+            let scalar_fixed = LAST_DOUBLING
+                .chars()
+                .fold(pallas::Scalar::zero(), |acc, c| {
+                    acc * &h + &pallas::Scalar::from(c.to_digit(8).unwrap() as u64)
+                });
             let by = ScalarFixed::new(
                 chip.clone(),
-                layouter.namespace(|| "1333333333333333333333333333333333333333333333333333333333333333333333333333333333334"),
+                layouter.namespace(|| LAST_DOUBLING),
                 Some(scalar_fixed),
             )?;
             let (result, _) = base.mul(layouter.namespace(|| "mul with double"), by)?;

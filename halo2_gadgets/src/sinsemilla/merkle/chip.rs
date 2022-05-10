@@ -309,7 +309,7 @@ where
         // |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |
         // -------------------------------------------------------
         // |   a   |   b   |   c   |  left | right |      1      |
-        // |  z1_a |  z1_b |  b_1  |  b_2  |   l   |             |
+        // |  z1_a |  z1_b |  b_1  |  b_2  |   l   |      0      |
         {
             layouter.assign_region(
                 || "Check piece decomposition",

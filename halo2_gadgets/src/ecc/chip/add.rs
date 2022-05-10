@@ -149,21 +149,23 @@ impl Config {
             };
 
             // (λ^2 - x_p - x_q - x_r)
-            let secant_line = lambda.clone().square() - x_p.clone() - x_q.clone() - x_r.clone();
+            let nonexceptional_x_r =
+                lambda.clone().square() - x_p.clone() - x_q.clone() - x_r.clone();
             // (λ ⋅(x_p - x_r) - y_p - y_r)
-            let y_r_constraint = lambda * x_p_minus_x_r - y_p.clone() - y_r.clone();
+            let nonexceptional_y_r = lambda * x_p_minus_x_r - y_p.clone() - y_r.clone();
 
             // x_p⋅x_q⋅(x_q - x_p)⋅(λ^2 - x_p - x_q - x_r) = 0
-            let poly3a = x_p.clone() * x_q.clone() * x_q_minus_x_p.clone() * secant_line.clone();
+            let poly3a =
+                x_p.clone() * x_q.clone() * x_q_minus_x_p.clone() * nonexceptional_x_r.clone();
 
             // x_p⋅x_q⋅(x_q - x_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r) = 0
-            let poly3b = x_p.clone() * x_q.clone() * x_q_minus_x_p * y_r_constraint.clone();
+            let poly3b = x_p.clone() * x_q.clone() * x_q_minus_x_p * nonexceptional_y_r.clone();
 
             // x_p⋅x_q⋅(y_q + y_p)⋅(λ^2 - x_p - x_q - x_r) = 0
-            let poly3c = x_p.clone() * x_q.clone() * y_q_plus_y_p.clone() * secant_line;
+            let poly3c = x_p.clone() * x_q.clone() * y_q_plus_y_p.clone() * nonexceptional_x_r;
 
             // x_p⋅x_q⋅(y_q + y_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r) = 0
-            let poly3d = x_p.clone() * x_q.clone() * y_q_plus_y_p * y_r_constraint;
+            let poly3d = x_p.clone() * x_q.clone() * y_q_plus_y_p * nonexceptional_y_r;
 
             // (1 - x_p * β) * (x_r - x_q) = 0
             let poly4a = (one.clone() - if_beta.clone()) * (x_r.clone() - x_q);
