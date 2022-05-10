@@ -239,6 +239,67 @@ y_{A,i-1}^\text{witnessed} &\text{ is witnessed.}
 \end{aligned}
 $$
 
+## Complete addition
+
+We reuse the [complete addition](addition.md#complete-addition) constraints to implement
+the final $c$ rounds of double-and-add. This requires two rows per round because we need
+9 advice columns for each complete addition. In the 10th advice column we stash the other
+cells that we need to correctly implement the double-and-add:
+
+- The base $y$ coordinate, so we can conditionally negate it as input to one of the
+  complete additions.
+- The running sum, which we constrain over two rows instead of sequentially.
+
+### Layout
+
+$$
+\begin{array}{|c|c|c|c|c|c|c|c|c|c|c|}
+a_0 & a_1 & a_2 & a_3 &    a_4    &   a_5    &   a_6   &   a_7    &   a_8    & a_9     & q_\texttt{mul\_decompose\_var} \\\hline
+x_T & y_p & x_A & y_A & \lambda_1 & \alpha_1 & \beta_1 & \gamma_1 & \delta_1 & z_{i+1} & 0 \\\hline
+x_A & y_A & x_q & y_q & \lambda_2 & \alpha_2 & \beta_2 & \gamma_2 & \delta_2 & y_T     & 1 \\\hline
+    &     & x_r & y_r &           &          &         &          &          & z_i     & 0 \\\hline
+\end{array}
+$$
+
+### Constraints <a name="complete-gate">
+
+In addition to the complete addition constraints, we define the following gate:
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+  & q_\texttt{mul\_decompose\_var} \cdot \BoolCheck{\mathbf{k}_i} = 0 \\\hline
+  & q_\texttt{mul\_decompose\_var} \cdot \Ternary{\mathbf{k}_i}{y_T - y_p}{y_T + y_p} = 0 \\\hline
+\end{array}
+$$
+where $\mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1}$.
+
+## LSB
+
+### Layout
+
+$$
+\begin{array}{|c|c|c|c|c|c|c|c|c|c|c|}
+a_0 & a_1 & a_2 & a_3 &   a_4   &  a_5   &  a_6  &  a_7   &  a_8   & a_9 & q_\texttt{mul\_lsb} \\\hline
+x_p & y_p & x_A & y_A & \lambda & \alpha & \beta & \gamma & \delta & z_1 & 1 \\\hline
+x_T & y_T & x_r & y_r &         &        &       &        &        & z_0 & 0 \\\hline
+\end{array}
+$$
+
+### Constraints <a name="lsb-gate">
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+  & q_\texttt{mul\_lsb} \cdot \BoolCheck{\mathbf{k}_0} = 0 \\\hline
+  & q_\texttt{mul\_lsb} \cdot \Ternary{\mathbf{k}_0}{x_p}{x_p - x_T} = 0 \\\hline
+  & q_\texttt{mul\_lsb} \cdot \Ternary{\mathbf{k}_0}{y_p}{y_p + y_T} = 0 \\\hline
+\end{array}
+$$
+where $\mathbf{k}_0 = \mathbf{z}_0 - 2\mathbf{z}_1$.
+
 ## Overflow check
 
 $\mathbf{z}_i$ cannot overflow for any $i \geq 1$, because it is a weighted sum of bits only up to $2^{n-1} = 2^{253}$, which is smaller than $p$ (and also $q$).
