@@ -63,8 +63,8 @@ impl Config {
             let k_254 = meta.query_advice(self.advices[1], Rotation::prev());
             let alpha = meta.query_advice(self.advices[1], Rotation::cur());
 
-            // s_minus_lo_130 = s - sum_{i = 0}^{129} 2^i ⋅ s_i
-            let s_minus_lo_130 = meta.query_advice(self.advices[1], Rotation::next());
+            // s_hi = s - sum_{i = 0}^{129} 2^i ⋅ s_i
+            let s_hi = meta.query_advice(self.advices[1], Rotation::next());
 
             let s = meta.query_advice(self.advices[2], Rotation::cur());
             let s_check = s - (alpha.clone() + k_254.clone() * two_pow_130);
@@ -79,11 +79,11 @@ impl Config {
             // k_254 * (z_130 - 2^124) = 0
             let lo_zero = k_254.clone() * (z_130.clone() - two_pow_124);
 
-            // k_254 * s_minus_lo_130 = 0
-            let s_minus_lo_130_check = k_254.clone() * s_minus_lo_130.clone();
+            // k_254 * s_hi = 0
+            let s_hi_check = k_254.clone() * s_hi.clone();
 
-            // (1 - k_254) * (1 - z_130 * eta) * s_minus_lo_130 = 0
-            let canonicity = (one.clone() - k_254) * (one - z_130 * eta) * s_minus_lo_130;
+            // (1 - k_254) * (1 - z_130 * eta) * s_hi = 0
+            let canonicity = (one.clone() - k_254) * (one - z_130 * eta) * s_hi;
 
             Constraints::with_selector(
                 q_mul_overflow,
@@ -91,7 +91,7 @@ impl Config {
                     .chain(Some(("s_check", s_check)))
                     .chain(Some(("recovery", recovery)))
                     .chain(Some(("lo_zero", lo_zero)))
-                    .chain(Some(("s_minus_lo_130_check", s_minus_lo_130_check)))
+                    .chain(Some(("s_hi_check", s_hi_check)))
                     .chain(Some(("canonicity", canonicity))),
             )
         });
@@ -129,8 +129,7 @@ impl Config {
 
         // Subtract the first 130 low bits of s = alpha + k_254 ⋅ 2^130
         // using thirteen 10-bit lookups, s_{0..=129}
-        let s_minus_lo_130 =
-            self.s_minus_lo_130(layouter.namespace(|| "decompose s_{0..=129}"), s.clone())?;
+        let s_hi = self.s_hi(layouter.namespace(|| "decompose s_{0..=129}"), s.clone())?;
 
         layouter.assign_region(
             || "overflow check",
@@ -175,12 +174,7 @@ impl Config {
                 )?;
 
                 // Copy weighted sum of the decomposition of s = alpha + k_254 ⋅ 2^130.
-                s_minus_lo_130.copy_advice(
-                    || "copy s_minus_lo_130",
-                    &mut region,
-                    self.advices[1],
-                    offset + 2,
-                )?;
+                s_hi.copy_advice(|| "copy s_hi", &mut region, self.advices[1], offset + 2)?;
 
                 // Copy witnessed s to check that it was properly derived from alpha and k_254.
                 s.copy_advice(|| "copy s", &mut region, self.advices[2], offset + 1)?;
@@ -192,7 +186,7 @@ impl Config {
         Ok(())
     }
 
-    fn s_minus_lo_130(
+    fn s_hi(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         s: AssignedCell<pallas::Base, pallas::Base>,
