@@ -6,11 +6,10 @@ use crate::{
 use halo2_proofs::circuit::AssignedCell;
 use halo2_proofs::{
     circuit::Layouter,
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
+    plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
 
-use ff::Field;
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
 use std::iter;
@@ -149,13 +148,7 @@ impl Config {
 
                 // Witness η = inv0(z_130), where inv0(x) = 0 if x = 0, 1/x otherwise
                 {
-                    let eta = zs[130].value().map(|z_130| {
-                        if z_130.is_zero_vartime() {
-                            pallas::Base::zero()
-                        } else {
-                            z_130.invert().unwrap()
-                        }
-                    });
+                    let eta = zs[130].value().map(|z_130| Assigned::from(z_130).invert());
                     region.assign_advice(
                         || "η = inv0(z_130)",
                         self.advices[0],

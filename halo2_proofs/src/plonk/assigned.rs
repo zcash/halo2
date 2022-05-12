@@ -82,6 +82,13 @@ impl<F: Field> Neg for Assigned<F> {
     }
 }
 
+impl<F: Field> Neg for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn neg(self) -> Self::Output {
+        -*self
+    }
+}
+
 impl<F: Field> Add for Assigned<F> {
     type Output = Assigned<F>;
     fn add(self, rhs: Assigned<F>) -> Assigned<F> {

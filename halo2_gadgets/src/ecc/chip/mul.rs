@@ -12,7 +12,7 @@ use ff::PrimeField;
 use halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{AssignedCell, Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
+    plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
 use uint::construct_uint;
@@ -360,7 +360,7 @@ impl Config {
             if !lsb {
                 base.x.value().cloned()
             } else {
-                Some(pallas::Base::zero())
+                Some(Assigned::Zero)
             }
         } else {
             None
@@ -370,7 +370,7 @@ impl Config {
             if !lsb {
                 base.y.value().map(|y_p| -y_p)
             } else {
-                Some(pallas::Base::zero())
+                Some(Assigned::Zero)
             }
         } else {
             None
@@ -404,9 +404,9 @@ impl Config {
 
 #[derive(Clone, Debug)]
 // `x`-coordinate of the accumulator.
-struct X<F: FieldExt>(AssignedCell<F, F>);
+struct X<F: FieldExt>(AssignedCell<Assigned<F>, F>);
 impl<F: FieldExt> Deref for X<F> {
-    type Target = AssignedCell<F, F>;
+    type Target = AssignedCell<Assigned<F>, F>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -415,9 +415,9 @@ impl<F: FieldExt> Deref for X<F> {
 
 #[derive(Clone, Debug)]
 // `y`-coordinate of the accumulator.
-struct Y<F: FieldExt>(AssignedCell<F, F>);
+struct Y<F: FieldExt>(AssignedCell<Assigned<F>, F>);
 impl<F: FieldExt> Deref for Y<F> {
-    type Target = AssignedCell<F, F>;
+    type Target = AssignedCell<Assigned<F>, F>;
 
     fn deref(&self) -> &Self::Target {
         &self.0

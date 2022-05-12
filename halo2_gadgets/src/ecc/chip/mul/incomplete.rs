@@ -1,7 +1,6 @@
 use super::super::NonIdentityEccPoint;
 use super::{X, Y, Z};
 use crate::utilities::bool_check;
-use ff::Field;
 use halo2_proofs::{
     circuit::Region,
     plonk::{
@@ -335,7 +334,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
                 .zip(y_p)
                 .zip(x_a.value())
                 .zip(x_p)
-                .map(|(((y_a, y_p), x_a), x_p)| (y_a - y_p) * (x_a - x_p).invert().unwrap());
+                .map(|(((y_a, y_p), x_a), x_p)| (y_a - y_p) * (x_a - x_p).invert());
             region.assign_advice(
                 || "lambda1",
                 self.double_and_add.lambda_1,
@@ -356,7 +355,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
                     .zip(x_a.value())
                     .zip(x_r)
                     .map(|(((lambda1, y_a), x_a), x_r)| {
-                        pallas::Base::from(2) * y_a * (x_a - x_r).invert().unwrap() - lambda1
+                        y_a * pallas::Base::from(2) * (x_a - x_r).invert() - lambda1
                     });
             region.assign_advice(
                 || "lambda2",

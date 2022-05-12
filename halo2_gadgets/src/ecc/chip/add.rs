@@ -1,8 +1,7 @@
 use super::EccPoint;
-use ff::{BatchInvert, Field};
 use halo2_proofs::{
     circuit::Region,
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
+    plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -227,58 +226,31 @@ impl Config {
         let (x_p, y_p) = (p.x.value(), p.y.value());
         let (x_q, y_q) = (q.x.value(), q.y.value());
 
-        //   [alpha, beta, gamma, delta]
-        // = [inv0(x_q - x_p), inv0(x_p), inv0(x_q), inv0(y_q + y_p)]
-        // where inv0(x) = 0 if x = 0, 1/x otherwise.
-        //
-        let (alpha, beta, gamma, delta) = {
-            let inverses = x_p
-                .zip(x_q)
-                .zip(y_p)
-                .zip(y_q)
-                .map(|(((x_p, x_q), y_p), y_q)| {
-                    let alpha = x_q - x_p;
-                    let beta = x_p;
-                    let gamma = x_q;
-                    let delta = y_q + y_p;
-
-                    let mut inverses = [alpha, *beta, *gamma, delta];
-                    inverses.batch_invert();
-                    inverses
-                });
-
-            if let Some([alpha, beta, gamma, delta]) = inverses {
-                (Some(alpha), Some(beta), Some(gamma), Some(delta))
-            } else {
-                (None, None, None, None)
-            }
-        };
-
         // Assign α = inv0(x_q - x_p)
+        let alpha = x_p.zip(x_q).map(|(x_p, x_q)| (x_q - x_p).invert());
         region.assign_advice(|| "α", self.alpha, offset, || alpha.ok_or(Error::Synthesis))?;
 
         // Assign β = inv0(x_p)
+        let beta = x_p.map(|x_p| x_p.invert());
         region.assign_advice(|| "β", self.beta, offset, || beta.ok_or(Error::Synthesis))?;
 
         // Assign γ = inv0(x_q)
+        let gamma = x_q.map(|x_q| x_q.invert());
         region.assign_advice(|| "γ", self.gamma, offset, || gamma.ok_or(Error::Synthesis))?;
 
         // Assign δ = inv0(y_q + y_p) if x_q = x_p, 0 otherwise
-        region.assign_advice(
-            || "δ",
-            self.delta,
-            offset,
-            || {
-                let x_p = x_p.ok_or(Error::Synthesis)?;
-                let x_q = x_q.ok_or(Error::Synthesis)?;
-
+        let delta = x_p
+            .zip(x_q)
+            .zip(y_p)
+            .zip(y_q)
+            .map(|(((x_p, x_q), y_p), y_q)| {
                 if x_q == x_p {
-                    delta.ok_or(Error::Synthesis)
+                    (y_q + y_p).invert()
                 } else {
-                    Ok(pallas::Base::zero())
+                    Assigned::Zero
                 }
-            },
-        )?;
+            });
+        region.assign_advice(|| "δ", self.delta, offset, || delta.ok_or(Error::Synthesis))?;
 
         #[allow(clippy::collapsible_else_if)]
         // Assign lambda
@@ -296,13 +268,13 @@ impl Config {
                     } else {
                         if !y_p.is_zero_vartime() {
                             // 3(x_p)^2
-                            let three_x_p_sq = pallas::Base::from(3) * x_p.square();
+                            let three_x_p_sq = x_p.square() * pallas::Base::from(3);
                             // 1 / 2(y_p)
-                            let inv_two_y_p = y_p.invert().unwrap() * pallas::Base::TWO_INV;
+                            let inv_two_y_p = y_p.invert() * pallas::Base::TWO_INV;
                             // λ = 3(x_p)^2 / 2(y_p)
                             three_x_p_sq * inv_two_y_p
                         } else {
-                            pallas::Base::zero()
+                            Assigned::Zero
                         }
                     }
                 });
@@ -329,7 +301,7 @@ impl Config {
                             (*x_p, *y_p)
                         } else if (x_q == x_p) && (*y_q == -y_p) {
                             // P + (-P) maps to (0,0)
-                            (pallas::Base::zero(), pallas::Base::zero())
+                            (Assigned::Zero, Assigned::Zero)
                         } else {
                             // x_r = λ^2 - x_p - x_q
                             let x_r = lambda.square() - x_p - x_q;

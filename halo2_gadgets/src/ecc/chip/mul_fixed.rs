@@ -278,7 +278,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
             let x = mul_b.map(|mul_b| {
                 let x = *mul_b.x();
                 assert!(x != pallas::Base::zero());
-                x
+                x.into()
             });
             let x = region.assign_advice(
                 || format!("mul_b_x, window {}", w),
@@ -290,7 +290,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
             let y = mul_b.map(|mul_b| {
                 let y = *mul_b.y();
                 assert!(y != pallas::Base::zero());
-                y
+                y.into()
             });
             let y = region.assign_advice(
                 || format!("mul_b_y, window {}", w),
