@@ -198,7 +198,7 @@ pub fn range_check<F: FieldExt>(word: Expression<F>, range: usize) -> Expression
 ///
 /// We are returning a `Vec<u8>` which means the window size is limited to
 /// <= 8 bits.
-pub fn decompose_word<F: PrimeFieldBits>(
+pub fn decompose_word_le<F: PrimeFieldBits>(
     word: &F,
     word_num_bits: usize,
     window_num_bits: usize,
@@ -441,12 +441,12 @@ mod tests {
 
     proptest! {
         #[test]
-        fn test_decompose_word(
+        fn test_decompose_word_le(
             scalar in arb_scalar(),
             window_num_bits in 1u8..9
         ) {
             // Get decomposition into `window_num_bits` bits
-            let decomposed = decompose_word(&scalar, pallas::Scalar::NUM_BITS as usize, window_num_bits as usize);
+            let decomposed = decompose_word_le(&scalar, pallas::Scalar::NUM_BITS as usize, window_num_bits as usize);
 
             // Flatten bits
             let bits = decomposed

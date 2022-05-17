@@ -1,6 +1,6 @@
 use super::super::{EccPoint, EccScalarFixed, FixedPoints, FIXED_BASE_WINDOW_SIZE, H, NUM_WINDOWS};
 
-use crate::utilities::{decompose_word, range_check};
+use crate::utilities::{decompose_word_le, range_check};
 use arrayvec::ArrayVec;
 use ff::PrimeField;
 use halo2_proofs::{
@@ -84,7 +84,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 
         // Decompose scalar into `k-bit` windows
         let scalar_windows: Option<Vec<u8>> = scalar.map(|scalar| {
-            decompose_word::<pallas::Scalar>(&scalar, SCALAR_NUM_BITS, FIXED_BASE_WINDOW_SIZE)
+            decompose_word_le::<pallas::Scalar>(&scalar, SCALAR_NUM_BITS, FIXED_BASE_WINDOW_SIZE)
         });
 
         // Transpose `Option<Vec<u8>>` into `Vec<Option<pallas::Base>>`.
