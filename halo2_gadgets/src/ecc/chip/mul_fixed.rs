@@ -2,7 +2,7 @@ use super::{
     add, add_incomplete, EccBaseFieldElemFixed, EccScalarFixed, EccScalarFixedShort, FixedPoint,
     NonIdentityEccPoint, FIXED_BASE_WINDOW_SIZE, H,
 };
-use crate::utilities::decompose_running_sum::RunningSumConfig;
+use crate::utilities::decompose_running_sum::le::RunningSumConfig;
 
 use std::marker::PhantomData;
 

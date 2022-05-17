@@ -10,6 +10,7 @@ use std::marker::PhantomData;
 use std::ops::Range;
 
 pub mod cond_swap;
+/// Helpers for decomposing a field element using a running sum.
 pub mod decompose_running_sum;
 pub mod lookup_range_check;
 
