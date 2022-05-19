@@ -2,8 +2,7 @@
 
 use super::{BaseFitsInScalarInstructions, EccInstructions, FixedPoints};
 use crate::{
-    sinsemilla::primitives as sinsemilla,
-    utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
+    sinsemilla::primitives as sinsemilla, utilities::lookup_range_check::LookupRangeCheckConfig,
 };
 use arrayvec::ArrayVec;
 
@@ -242,12 +241,6 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Chip<pallas::Base> for Ecc
     fn loaded(&self) -> &Self::Loaded {
         &()
     }
-}
-
-impl<Fixed: super::FixedPoints<pallas::Affine>> UtilitiesInstructions<pallas::Base>
-    for EccChip<Fixed>
-{
-    type Var = AssignedCell<pallas::Base, pallas::Base>;
 }
 
 impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
@@ -607,7 +600,7 @@ where
     fn scalar_var_from_base(
         &self,
         _layouter: &mut impl Layouter<pallas::Base>,
-        base: &Self::Var,
+        base: &AssignedCell<pallas::Base, pallas::Base>,
     ) -> Result<Self::ScalarVar, Error> {
         Ok(ScalarVar::BaseFieldElem(base.clone()))
     }

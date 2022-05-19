@@ -3,7 +3,7 @@
 //! [Sinsemilla]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
 use crate::{
     ecc::{self, EccInstructions, FixedPoints},
-    utilities::{FieldValue, RangeConstrained, Var},
+    utilities::{FieldValue, RangeConstrained},
 };
 use group::ff::{Field, PrimeField};
 use halo2_proofs::{
@@ -23,9 +23,6 @@ pub mod primitives;
 /// in each word accepted by the Sinsemilla hash, and `MAX_WORDS`, the maximum
 /// number of words that a single hash instance can process.
 pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS: usize> {
-    /// A variable in the circuit.
-    type CellValue: Var<C::Base>;
-
     /// A message composed of [`Self::MessagePiece`]s.
     type Message: From<Vec<Self::MessagePiece>>;
 

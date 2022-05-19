@@ -18,10 +18,7 @@ use crate::{
             chip::{SinsemillaChip, SinsemillaConfig},
             CommitDomains, HashDomains, SinsemillaInstructions,
         },
-        utilities::{
-            cond_swap::{CondSwapChip, CondSwapConfig, CondSwapInstructions},
-            UtilitiesInstructions,
-        },
+        utilities::cond_swap::{CondSwapChip, CondSwapConfig, CondSwapInstructions},
     },
 };
 use group::ff::PrimeField;
@@ -211,9 +208,9 @@ where
         Q: pallas::Affine,
         // l = MERKLE_DEPTH - layer - 1
         l: usize,
-        left: Self::Var,
-        right: Self::Var,
-    ) -> Result<Self::Var, Error> {
+        left: AssignedCell<pallas::Base, pallas::Base>,
+        right: AssignedCell<pallas::Base, pallas::Base>,
+    ) -> Result<AssignedCell<pallas::Base, pallas::Base>, Error> {
         let config = self.config().clone();
 
         // We need to hash `l || left || right`, where `l` is a 10-bit value.
@@ -415,15 +412,6 @@ where
     }
 }
 
-impl<Hash, Commit, F> UtilitiesInstructions<pallas::Base> for MerkleChip<Hash, Commit, F>
-where
-    Hash: HashDomains<pallas::Affine>,
-    F: FixedPoints<pallas::Affine>,
-    Commit: CommitDomains<pallas::Affine, F, Hash>,
-{
-    type Var = AssignedCell<pallas::Base, pallas::Base>;
-}
-
 impl<Hash, Commit, F> CondSwapInstructions<pallas::Base> for MerkleChip<Hash, Commit, F>
 where
     Hash: HashDomains<pallas::Affine>,
@@ -434,9 +422,18 @@ where
     fn swap(
         &self,
         layouter: impl Layouter<pallas::Base>,
-        pair: (Self::Var, Value<pallas::Base>),
+        pair: (
+            AssignedCell<pallas::Base, pallas::Base>,
+            Value<pallas::Base>,
+        ),
         swap: Value<bool>,
-    ) -> Result<(Self::Var, Self::Var), Error> {
+    ) -> Result<
+        (
+            AssignedCell<pallas::Base, pallas::Base>,
+            AssignedCell<pallas::Base, pallas::Base>,
+        ),
+        Error,
+    > {
         let config = self.config().cond_swap_config.clone();
         let chip = CondSwapChip::<pallas::Base>::construct(config);
         chip.swap(layouter, pair, swap)
@@ -450,12 +447,6 @@ where
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
 {
-    type CellValue = <SinsemillaChip<Hash, Commit, F> as SinsemillaInstructions<
-        pallas::Affine,
-        { sinsemilla::K },
-        { sinsemilla::C },
-    >>::CellValue;
-
     type Message = <SinsemillaChip<Hash, Commit, F> as SinsemillaInstructions<
         pallas::Affine,
         { sinsemilla::K },
@@ -517,7 +508,13 @@ where
         layouter: impl Layouter<pallas::Base>,
         Q: pallas::Affine,
         message: Self::Message,
-    ) -> Result<(Self::NonIdentityPoint, Vec<Vec<Self::CellValue>>), Error> {
+    ) -> Result<
+        (
+            Self::NonIdentityPoint,
+            Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
+        ),
+        Error,
+    > {
         let config = self.config().sinsemilla_config.clone();
         let chip = SinsemillaChip::<Hash, Commit, F>::construct(config);
         chip.hash_to_point(layouter, Q, message)
