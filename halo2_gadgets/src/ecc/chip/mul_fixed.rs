@@ -455,14 +455,20 @@ impl ScalarFixed {
                 .collect::<Vec<_>>()
         };
         match self {
-            Self::BaseFieldElem(scalar) => running_sum_to_windows(scalar.running_sum.to_vec()),
-            Self::Short(scalar) => running_sum_to_windows(
-                scalar
+            Self::BaseFieldElem(scalar) => running_sum_to_windows({
+                let mut vec = vec![scalar.running_sum.value().clone()];
+                vec.extend_from_slice(scalar.running_sum.running_sum());
+                vec
+            }),
+            Self::Short(scalar) => running_sum_to_windows({
+                let running_sum = scalar
                     .running_sum
                     .as_ref()
-                    .expect("EccScalarFixedShort has been constrained")
-                    .to_vec(),
-            ),
+                    .expect("EccScalarFixedShort has been constrained");
+                let mut vec = vec![running_sum.value().clone()];
+                vec.extend_from_slice(running_sum.running_sum());
+                vec
+            }),
             Self::FullWidth(scalar) => scalar
                 .windows
                 .as_ref()

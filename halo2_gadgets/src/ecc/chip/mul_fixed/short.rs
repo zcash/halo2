@@ -1,5 +1,3 @@
-use std::convert::TryInto;
-
 use super::super::{EccPoint, EccScalarFixedShort, FixedPoints, L_SCALAR_SHORT, NUM_WINDOWS_SHORT};
 use crate::{ecc::chip::MagnitudeSign, utilities::bool_check};
 
@@ -86,19 +84,21 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         let (magnitude, sign) = magnitude_sign;
 
         // Decompose magnitude
-        let running_sum = self.super_config.running_sum_config.copy_decompose(
-            region,
-            offset,
-            magnitude.clone(),
-            true,
-            L_SCALAR_SHORT,
-            NUM_WINDOWS_SHORT,
-        )?;
+        let running_sum = self
+            .super_config
+            .running_sum_config
+            .copy_decompose::<NUM_WINDOWS_SHORT>(
+                region,
+                offset,
+                magnitude.clone(),
+                true,
+                L_SCALAR_SHORT,
+            )?;
 
         Ok(EccScalarFixedShort {
             magnitude,
             sign,
-            running_sum: Some((*running_sum).as_slice().try_into().unwrap()),
+            running_sum: Some(running_sum),
         })
     }
 
@@ -168,7 +168,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                 // Copy last window to `u` column.
                 // (Although the last window is not a `u` value; we are copying it into the `u`
                 // column because there is an available cell there.)
-                let z_21 = scalar.running_sum.as_ref().unwrap()[21].clone();
+                let z_21 = scalar.running_sum.as_ref().unwrap().z(21).clone();
                 z_21.copy_advice(|| "last_window", &mut region, self.super_config.u, offset)?;
 
                 // Conditionally negate `y`-coordinate

@@ -3,7 +3,10 @@
 use super::{BaseFitsInScalarInstructions, EccInstructions, FixedPoints};
 use crate::{
     sinsemilla::primitives as sinsemilla,
-    utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
+    utilities::{
+        decompose_running_sum::le::RunningSum, lookup_range_check::LookupRangeCheckConfig,
+        UtilitiesInstructions,
+    },
 };
 use arrayvec::ArrayVec;
 
@@ -358,8 +361,7 @@ pub struct EccScalarFixedShort {
     sign: SignCell,
     /// The circuit-assigned running sum constraining this signed short scalar, or `None`
     /// if the scalar has not been used yet.
-    running_sum:
-        Option<ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS_SHORT + 1 }>>,
+    running_sum: Option<RunningSum<pallas::Base, FIXED_BASE_WINDOW_SIZE, NUM_WINDOWS_SHORT>>,
 }
 
 /// A base field element used for fixed-base scalar multiplication.
@@ -374,7 +376,7 @@ pub struct EccScalarFixedShort {
 #[derive(Clone, Debug)]
 struct EccBaseFieldElemFixed {
     base_field_elem: AssignedCell<pallas::Base, pallas::Base>,
-    running_sum: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS + 1 }>,
+    running_sum: RunningSum<pallas::Base, FIXED_BASE_WINDOW_SIZE, NUM_WINDOWS>,
 }
 
 impl EccBaseFieldElemFixed {

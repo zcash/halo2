@@ -36,13 +36,64 @@ use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
 /// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
-#[derive(Debug)]
-pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<AssignedCell<F, F>>);
-impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
-    type Target = Vec<AssignedCell<F, F>>;
+#[derive(Debug, Clone)]
+pub struct RunningSum<F, const WINDOW_NUM_BITS: usize, const NUM_WINDOWS: usize>
+where
+    F: FieldExt + PrimeFieldBits,
+{
+    /// $z_0$, the original value decomposed by this helper.
+    value: AssignedCell<F, F>,
+    /// The running sum [z_1, ..., z_W]. If created in strict mode, $z_W = 0$.
+    running_sum: [AssignedCell<F, F>; NUM_WINDOWS],
+}
 
-    fn deref(&self) -> &Vec<AssignedCell<F, F>> {
-        &self.0
+impl<F, const WINDOW_NUM_BITS: usize, const NUM_WINDOWS: usize>
+    RunningSum<F, WINDOW_NUM_BITS, NUM_WINDOWS>
+where
+    F: FieldExt + PrimeFieldBits,
+{
+    /// The original value decomposed by this running sum.
+    pub fn value(&self) -> &AssignedCell<F, F> {
+        &self.value
+    }
+
+    /// The windows of this running sum.
+    pub fn running_sum(&self) -> &[AssignedCell<F, F>; NUM_WINDOWS] {
+        &self.running_sum
+    }
+
+    /// z[i], where i ranges from 0..=W.
+    pub fn z(&self, i: usize) -> &AssignedCell<F, F> {
+        if i == 0 {
+            &self.value
+        } else {
+            &self.running_sum[i - 1]
+        }
+    }
+
+    /// Returns [z_0, ..., z_W].
+    /// TODO: Use fixed array when const evaluatable is stable.
+    pub fn zs(&self) -> impl Iterator<Item = &AssignedCell<F, F>> {
+        (0..=NUM_WINDOWS).map(move |i| (self).z(i))
+    }
+
+    /// The window k_i, where i ranges from 0..={W-1}.
+    pub fn window(&self, i: usize) -> Option<F> {
+        //    z_i = 2^{K}⋅z_{i + 1} + k_i
+        // => k_i = z_i - 2^{K}⋅z_{i + 1}
+        self.z(i)
+            .value()
+            .zip(self.z(i + 1).value())
+            .map(|(&z_i, &z_iplus1)| z_i - F::from(1 << WINDOW_NUM_BITS) * z_iplus1)
+    }
+
+    /// Returns [k_0, ..., k_{W-1}].
+    pub fn windows(&self) -> [Option<F>; NUM_WINDOWS] {
+        (0..NUM_WINDOWS)
+            .map(move |i| (self).window(i))
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap()
     }
 }
 
@@ -54,8 +105,9 @@ pub struct RunningSumConfig<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS:
     _marker: PhantomData<F>,
 }
 
-impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
-    RunningSumConfig<F, WINDOW_NUM_BITS>
+impl<F, const WINDOW_NUM_BITS: usize> RunningSumConfig<F, WINDOW_NUM_BITS>
+where
+    F: FieldExt + PrimeFieldBits,
 {
     /// Returns the q_range_check selector of this [`RunningSumConfig`].
     pub(crate) fn q_range_check(&self) -> Selector {
@@ -104,39 +156,37 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
     ///
     /// `strict` = true constrains the final running sum to be zero, i.e.
     /// constrains alpha to be within WINDOW_NUM_BITS * num_windows bits.
-    pub fn witness_decompose(
+    pub fn witness_decompose<const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
         alpha: Option<F>,
         strict: bool,
         word_num_bits: usize,
-        num_windows: usize,
-    ) -> Result<RunningSum<F>, Error> {
+    ) -> Result<RunningSum<F, WINDOW_NUM_BITS, NUM_WINDOWS>, Error> {
         let z_0 = region.assign_advice(
             || "z_0 = alpha",
             self.z,
             offset,
             || alpha.ok_or(Error::Synthesis),
         )?;
-        self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
+        self.decompose(region, offset, z_0, strict, word_num_bits)
     }
 
     /// Decompose an existing variable alpha that is copied into this helper.
     ///
     /// `strict` = true constrains the final running sum to be zero, i.e.
     /// constrains alpha to be within WINDOW_NUM_BITS * num_windows bits.
-    pub fn copy_decompose(
+    pub fn copy_decompose<const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
         alpha: AssignedCell<F, F>,
         strict: bool,
         word_num_bits: usize,
-        num_windows: usize,
-    ) -> Result<RunningSum<F>, Error> {
+    ) -> Result<RunningSum<F, WINDOW_NUM_BITS, NUM_WINDOWS>, Error> {
         let z_0 = alpha.copy_advice(|| "copy z_0 = alpha", region, self.z, offset)?;
-        self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
+        self.decompose(region, offset, z_0, strict, word_num_bits)
     }
 
     /// `z_0` must be the cell at `(self.z, offset)` in `region`.
@@ -144,15 +194,14 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
     /// # Panics
     ///
     /// Panics if there are too many windows for the given word size.
-    fn decompose(
+    fn decompose<const NUM_WINDOWS: usize>(
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
         z_0: AssignedCell<F, F>,
         strict: bool,
         word_num_bits: usize,
-        num_windows: usize,
-    ) -> Result<RunningSum<F>, Error> {
+    ) -> Result<RunningSum<F, WINDOW_NUM_BITS, NUM_WINDOWS>, Error> {
         // Make sure that we do not have more windows than required for the number
         // of bits in the word. In other words, every window must contain at least
         // one bit of the word (no empty windows).
@@ -163,10 +212,10 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         // In this case, the maximum allowed num_windows is 22:
         //                    3 * 22 < 64 + 3
         //
-        assert!(WINDOW_NUM_BITS * num_windows < word_num_bits + WINDOW_NUM_BITS);
+        assert!(WINDOW_NUM_BITS * NUM_WINDOWS < word_num_bits + WINDOW_NUM_BITS);
 
         // Enable selectors
-        for idx in 0..num_windows {
+        for idx in 0..NUM_WINDOWS {
             self.q_range_check.enable(region, offset + idx)?;
         }
 
@@ -179,7 +228,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
             if let Some(words) = words {
                 words.into_iter().map(Some).collect()
             } else {
-                vec![None; num_windows]
+                vec![None; NUM_WINDOWS]
             }
         };
 
@@ -211,14 +260,17 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
             z = z_next;
             zs.push(z.clone());
         }
-        assert_eq!(zs.len(), num_windows + 1);
+        assert_eq!(zs.len(), NUM_WINDOWS + 1);
 
         if strict {
             // Constrain the final running sum output to be zero.
             region.constrain_constant(zs.last().unwrap().cell(), F::zero())?;
         }
 
-        Ok(RunningSum(zs))
+        Ok(RunningSum {
+            value: zs[0].clone(),
+            running_sum: zs[1..].to_vec().try_into().unwrap(),
+        })
     }
 }
 
@@ -287,25 +339,23 @@ mod tests {
                     || "decompose",
                     |mut region| {
                         let offset = 0;
-                        let zs = config.witness_decompose(
+                        let running_sum = config.witness_decompose::<NUM_WINDOWS>(
                             &mut region,
                             offset,
                             self.alpha,
                             self.strict,
                             WORD_NUM_BITS,
-                            NUM_WINDOWS,
                         )?;
-                        let alpha = zs[0].clone();
+                        let alpha = running_sum.value().clone();
 
                         let offset = offset + NUM_WINDOWS + 1;
 
-                        config.copy_decompose(
+                        config.copy_decompose::<NUM_WINDOWS>(
                             &mut region,
                             offset,
                             alpha,
                             self.strict,
                             WORD_NUM_BITS,
-                            NUM_WINDOWS,
                         )?;
 
                         Ok(())
