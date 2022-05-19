@@ -20,6 +20,13 @@ rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
 
 [dependencies]
 halo2_proofs = { version = "0.1", path = "../halo2_proofs" }
+pasta_curves = "0.4"
+ff = "0.12"
+group = "0.12"
+rand_core = { version = "0.6", default-features = false }
+
+[dev-dependencies]
+rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
 
 [lib]
 bench = false
