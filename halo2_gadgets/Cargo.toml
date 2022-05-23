@@ -22,7 +22,6 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
 
 [dependencies]
-arrayvec = "0.7.0"
 bitvec = "1"
 ff = "0.12"
 group = "0.12"

@@ -1,7 +1,6 @@
 use super::super::{EccPoint, EccScalarFixed, FixedPoints, FIXED_BASE_WINDOW_SIZE, H, NUM_WINDOWS};
 
 use crate::utilities::{decompose_word_le, range_check};
-use arrayvec::ArrayVec;
 use ff::PrimeField;
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter, Region},
@@ -76,7 +75,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         scalar: Option<pallas::Scalar>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
-    ) -> Result<ArrayVec<AssignedCell<pallas::Base, pallas::Base>, NUM_WINDOWS>, Error> {
+    ) -> Result<[AssignedCell<pallas::Base, pallas::Base>; NUM_WINDOWS], Error> {
         // Enable `q_mul_fixed_full` selector
         for idx in 0..NUM_WINDOWS {
             self.q_mul_fixed_full.enable(region, offset + idx)?;
@@ -99,8 +98,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         };
 
         // Store the scalar decomposition
-        let mut windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, NUM_WINDOWS> =
-            ArrayVec::new();
+        let mut windows: Vec<AssignedCell<pallas::Base, pallas::Base>> = Vec::new();
         for (idx, window) in scalar_windows.into_iter().enumerate() {
             let window_cell = region.assign_advice(
                 || format!("k[{:?}]", offset + idx),
@@ -111,7 +109,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             windows.push(window_cell);
         }
 
-        Ok(windows)
+        Ok(windows.try_into().unwrap())
     }
 
     pub fn assign(

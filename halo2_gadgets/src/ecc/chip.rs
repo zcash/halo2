@@ -8,7 +8,6 @@ use crate::{
         UtilitiesInstructions,
     },
 };
-use arrayvec::ArrayVec;
 
 use ff::{Field, PrimeField};
 use group::prime::PrimeCurveAffine;
@@ -334,7 +333,7 @@ pub struct EccScalarFixed {
     value: Option<pallas::Scalar>,
     /// The circuit-assigned windows representing this scalar, or `None` if the scalar has
     /// not been used yet.
-    windows: Option<ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS }>>,
+    windows: Option<[AssignedCell<pallas::Base, pallas::Base>; NUM_WINDOWS]>,
 }
 
 // TODO: Make V a `u64`
