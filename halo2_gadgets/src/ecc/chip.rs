@@ -143,6 +143,8 @@ pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>> {
 
     /// Incomplete addition
     add_incomplete: add_incomplete::Config,
+    /// Double-and-add using incomplete addition
+    double_and_add: double_and_add::Config,
 
     /// Complete addition
     add: add::Config,
@@ -271,6 +273,10 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
         // Create incomplete point addition gate
         let add_incomplete =
             add_incomplete::Config::configure(meta, advices[0], advices[1], advices[2], advices[3]);
+        // Create double-and-add gate
+        let double_and_add = double_and_add::Config::configure(
+            meta, advices[0], advices[1], advices[4], advices[2], advices[3],
+        );
 
         // Create complete point addition gate
         let add = add::Config::configure(
@@ -311,6 +317,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
         EccConfig {
             advices,
             add_incomplete,
+            double_and_add,
             add,
             mul,
             mul_fixed_full,
@@ -512,6 +519,19 @@ where
         let config = self.config().add_incomplete;
         layouter.assign_region(
             || "incomplete point addition",
+            |mut region| config.assign_region(a, b, 0, &mut region),
+        )
+    }
+
+    fn double_and_add(
+        &self,
+        layouter: &mut impl Layouter<pallas::Base>,
+        a: &Self::NonIdentityPoint,
+        b: &Self::NonIdentityPoint,
+    ) -> Result<Self::NonIdentityPoint, Error> {
+        let config = self.config().double_and_add;
+        layouter.assign_region(
+            || "double-and-add",
             |mut region| config.assign_region(a, b, 0, &mut region),
         )
     }

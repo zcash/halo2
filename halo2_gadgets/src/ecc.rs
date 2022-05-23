@@ -103,6 +103,17 @@ pub trait EccInstructions<C: CurveAffine>:
         b: &Self::NonIdentityPoint,
     ) -> Result<Self::NonIdentityPoint, Error>;
 
+    /// Performs a double-and-add operation using incomplete addition, returning
+    /// `2a + b`.
+    ///
+    /// This returns an error in exceptional cases.
+    fn double_and_add(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        a: &Self::NonIdentityPoint,
+        b: &Self::NonIdentityPoint,
+    ) -> Result<Self::NonIdentityPoint, Error>;
+
     /// Performs complete point addition, returning `a + b`.
     fn add<A: Into<Self::Point> + Clone, B: Into<Self::Point> + Clone>(
         &self,
@@ -330,6 +341,24 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> NonIdentityPoint<C, EccChip> {
         assert_eq!(self.chip, other.chip);
         self.chip
             .add_incomplete(&mut layouter, &self.inner, &other.inner)
+            .map(|inner| NonIdentityPoint {
+                chip: self.chip.clone(),
+                inner,
+            })
+    }
+
+    /// Returns `[2]self + other using incomplete addition.
+    /// The arguments are type-constrained not to be the identity point,
+    /// and since exceptional cases return an Error, the result also cannot
+    /// be the identity point.
+    pub fn double_and_add(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        other: &Self,
+    ) -> Result<Self, Error> {
+        assert_eq!(self.chip, other.chip);
+        self.chip
+            .double_and_add(&mut layouter, &self.inner, &other.inner)
             .map(|inner| NonIdentityPoint {
                 chip: self.chip.clone(),
                 inner,
