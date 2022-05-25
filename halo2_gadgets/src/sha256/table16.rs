@@ -456,9 +456,61 @@ mod tests {
     use super::{message_schedule::msg_schedule_test_input, Table16Chip, Table16Config};
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
+        dev::MockProver,
         pasta::pallas,
         plonk::{Circuit, ConstraintSystem, Error},
     };
+
+    #[test]
+    fn table16_digest() {
+        struct MyCircuit {}
+
+        impl Circuit<pallas::Base> for MyCircuit {
+            type Config = Table16Config;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                MyCircuit {}
+            }
+
+            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+                Table16Chip::configure(meta)
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<pallas::Base>,
+            ) -> Result<(), Error> {
+                let table16_chip = Table16Chip::construct(config.clone());
+                Table16Chip::load(config, &mut layouter)?;
+
+                // Test vector: "abc"
+                let test_input = msg_schedule_test_input();
+
+                // // Create a message of length 31 blocks
+                // let mut input = Vec::with_capacity(31 * BLOCK_SIZE);
+                // for _ in 0..31 {
+                //     input.extend_from_slice(&test_input);
+                // }
+
+                let digest =
+                    Sha256::digest(table16_chip, layouter.namespace(|| "'abc'"), &test_input)?;
+                println!("table16 digest");
+                dbg!(digest);
+
+                Ok(())
+            }
+        }
+
+        let circuit: MyCircuit = MyCircuit {};
+
+        let prover = match MockProver::<pallas::Base>::run(17, &circuit, vec![]) {
+            Ok(prover) => prover,
+            Err(e) => panic!("{:?}", e),
+        };
+        assert_eq!(prover.verify(), Ok(()));
+    }
 
     #[test]
     fn print_sha256_circuit() {

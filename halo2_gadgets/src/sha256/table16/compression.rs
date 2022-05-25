@@ -983,6 +983,9 @@ mod tests {
                     .compress(&mut layouter, initial_state, w_halves)?;
 
                 let digest = config.compression.digest(&mut layouter, state)?;
+                println!("compression digest");
+                dbg!(digest);
+
                 for (idx, digest_word) in digest.iter().enumerate() {
                     assert_eq!(
                         (digest_word.0.unwrap() as u64 + IV[idx] as u64) as u32,
