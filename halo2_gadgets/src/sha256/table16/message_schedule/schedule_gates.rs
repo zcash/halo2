@@ -40,9 +40,9 @@ impl<F: FieldExt> ScheduleGate<F> {
         lo: Expression<F>,
         hi: Expression<F>,
         word: Expression<F>,
-    ) -> impl Iterator<Item = (&'static str, Expression<F>)> {
+    ) -> Option<(&'static str, Expression<F>)> {
         let check = lo + hi * F::from(1 << 16) - word;
-        std::iter::empty().chain(Some(("s_decompose_0", s_decompose_0 * check)))
+        Some(("s_decompose_0", s_decompose_0 * check))
     }
 
     /// s_decompose_1 for W_1 to W_13
