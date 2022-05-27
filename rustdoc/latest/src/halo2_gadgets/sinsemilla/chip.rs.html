@@ -345,6 +345,8 @@
 <span id="323">323</span>
 <span id="324">324</span>
 <span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Chip implementations for the Sinsemilla gadgets.</span>
 
 <span class="kw">use</span> <span class="kw">super</span>::{
@@ -547,6 +549,7 @@
         };
 
         <span class="comment">// Check that the initial x_A, x_P, lambda_1, lambda_2 are consistent with y_Q.</span>
+        <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;Initial y_Q&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">q_s4</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">config</span>.<span class="ident">q_sinsemilla4</span>);
             <span class="kw">let</span> <span class="ident">y_q</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_fixed</span>(<span class="ident">config</span>.<span class="ident">fixed_y_q</span>, <span class="ident">Rotation::cur</span>());
@@ -560,6 +563,7 @@
             <span class="ident">Constraints::with_selector</span>(<span class="ident">q_s4</span>, <span class="prelude-val">Some</span>((<span class="string">&quot;init_y_q_check&quot;</span>, <span class="ident">init_y_q_check</span>)))
         });
 
+        <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;Sinsemilla gate&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">q_s1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">config</span>.<span class="ident">q_sinsemilla1</span>);
             <span class="kw">let</span> <span class="ident">q_s3</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">q_s3</span>(<span class="ident">meta</span>);
@@ -671,5 +675,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (76761db59 2022-05-24)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
 </body></html>

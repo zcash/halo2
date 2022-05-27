@@ -116,6 +116,7 @@
 <span id="94">94</span>
 <span id="95">95</span>
 <span id="96">96</span>
+<span id="97">97</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit::Layouter</span>,
     <span class="ident">plonk</span>::{<span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">TableColumn</span>},
@@ -154,6 +155,7 @@
             <span class="ident">config</span>.<span class="ident">generator_table</span>.<span class="ident">table_y</span>,
         );
 
+        <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial</span>
         <span class="ident">meta</span>.<span class="ident">lookup</span>(<span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">q_s1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">config</span>.<span class="ident">q_sinsemilla1</span>);
             <span class="kw">let</span> <span class="ident">q_s2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_fixed</span>(<span class="ident">config</span>.<span class="ident">q_sinsemilla2</span>, <span class="ident">Rotation::cur</span>());
@@ -213,5 +215,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (76761db59 2022-05-24)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
 </body></html>

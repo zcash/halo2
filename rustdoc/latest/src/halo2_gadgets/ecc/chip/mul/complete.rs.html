@@ -225,6 +225,7 @@
 <span id="203">203</span>
 <span id="204">204</span>
 <span id="205">205</span>
+<span id="206">206</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">add</span>, <span class="ident">EccPoint</span>};
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">COMPLETE_RANGE</span>, <span class="ident">X</span>, <span class="ident">Y</span>, <span class="ident">Z</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities</span>::{<span class="ident">bool_check</span>, <span class="ident">ternary</span>};
@@ -276,6 +277,7 @@
         <span class="comment">// | y_p | z_{i + 1}  |</span>
         <span class="comment">// |     | base_y     |</span>
         <span class="comment">// |     | z_i        |</span>
+        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-complete-gate</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(
             <span class="string">&quot;Decompose scalar for complete bits of variable-base mul&quot;</span>,
             <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
@@ -431,5 +433,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (76761db59 2022-05-24)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
 </body></html>

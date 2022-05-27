@@ -480,6 +480,7 @@
 <span id="458">458</span>
 <span id="459">459</span>
 <span id="460">460</span>
+<span id="461">461</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">CommitDomains</span>, <span class="ident">HashDomains</span>, <span class="ident">SinsemillaInstructions</span>};
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">NonIdentityEccPoint</span>, <span class="ident">SinsemillaChip</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{
@@ -507,6 +508,7 @@
     <span class="ident">Fixed</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
     <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">Fixed</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
 {
+    <span class="doccomment">/// [Specification](https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial).</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
     <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">hash_message</span>(
@@ -941,5 +943,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (76761db59 2022-05-24)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
 </body></html>

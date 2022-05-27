@@ -197,6 +197,8 @@
 <span id="175">175</span>
 <span id="176">176</span>
 <span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">EccPoint</span>, <span class="ident">NonIdentityEccPoint</span>};
 
 <span class="kw">use</span> <span class="ident">group::prime::PrimeCurveAffine</span>;
@@ -252,6 +254,7 @@
             <span class="ident">y</span>.<span class="ident">square</span>() <span class="op">-</span> (<span class="ident">x</span>.<span class="ident">clone</span>().<span class="ident">square</span>() <span class="op">*</span> <span class="ident">x</span>) <span class="op">-</span> <span class="ident">Expression::Constant</span>(<span class="ident">pallas::Affine::b</span>())
         };
 
+        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-witness-point</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;witness point&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="comment">// Check that the point being witnessed is either:</span>
             <span class="comment">// - the identity, which is mapped to (0, 0) in affine coordinates; or</span>
@@ -271,6 +274,7 @@
             ]
         });
 
+        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-witness-non-identity-point</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;witness non-identity point&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="comment">// Check that the point being witnessed is a valid curve point y^2 = x^3 + b,</span>
             <span class="comment">// where b = 5 in the Pallas equation</span>
@@ -375,5 +379,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (76761db59 2022-05-24)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
 </body></html>

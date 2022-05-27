@@ -424,6 +424,7 @@
 <span id="402">402</span>
 <span id="403">403</span>
 <span id="404">404</span>
+<span id="405">405</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Decomposes an $n$-bit field element $\alpha$ into $W$ windows, each window</span>
 <span class="doccomment">//! being a $K$-bit word, using a running sum $z$.</span>
 <span class="doccomment">//! We constrain $K \leq 3$ for this helper.</span>
@@ -510,6 +511,7 @@
             <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
         };
 
+        <span class="comment">// https://p.z.cash/halo2-0.1:decompose-short-range</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;range check&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">q_range_check</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">config</span>.<span class="ident">q_range_check</span>);
             <span class="kw">let</span> <span class="ident">z_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">z</span>, <span class="ident">Rotation::cur</span>());
@@ -829,5 +831,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (76761db59 2022-05-24)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
 </body></html>

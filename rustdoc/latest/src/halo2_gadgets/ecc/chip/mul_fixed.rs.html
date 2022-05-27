@@ -521,6 +521,8 @@
 <span id="499">499</span>
 <span id="500">500</span>
 <span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">super</span>::{
     <span class="ident">add</span>, <span class="ident">add_incomplete</span>, <span class="ident">EccBaseFieldElemFixed</span>, <span class="ident">EccScalarFixed</span>, <span class="ident">EccScalarFixedShort</span>, <span class="ident">FixedPoint</span>,
     <span class="ident">NonIdentityEccPoint</span>, <span class="ident">FIXED_BASE_WINDOW_SIZE</span>, <span class="ident">H</span>,
@@ -654,6 +656,7 @@
         });
     }
 
+    <span class="doccomment">/// [Specification](https://p.z.cash/halo2-0.1:ecc-fixed-mul-coordinates).</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::op_ref</span>)]</span>
     <span class="kw">fn</span> <span class="ident">coords_check</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -719,6 +722,7 @@
         <span class="prelude-val">Ok</span>((<span class="ident">acc</span>, <span class="ident">mul_b</span>))
     }
 
+    <span class="doccomment">/// [Specification](https://p.z.cash/halo2-0.1:ecc-fixed-mul-load-base).</span>
     <span class="kw">fn</span> <span class="ident">assign_fixed_constants</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">NUM_WINDOWS</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
@@ -1023,5 +1027,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (76761db59 2022-05-24)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
 </body></html>

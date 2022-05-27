@@ -330,6 +330,7 @@
 <span id="308">308</span>
 <span id="309">309</span>
 <span id="310">310</span>
+<span id="311">311</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">EccPoint</span>, <span class="ident">EccScalarFixed</span>, <span class="ident">FixedPoints</span>, <span class="ident">FIXED_BASE_WINDOW_SIZE</span>, <span class="ident">H</span>, <span class="ident">NUM_WINDOWS</span>};
 
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities</span>::{<span class="ident">decompose_word</span>, <span class="ident">range_check</span>};
@@ -365,6 +366,7 @@
 
     <span class="kw">fn</span> <span class="ident">create_gate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) {
         <span class="comment">// Check that each window `k` is within 3 bits</span>
+        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-fixed-mul-full-word</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;Full-width fixed-base scalar mul&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">q_mul_fixed_full</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul_fixed_full</span>);
             <span class="kw">let</span> <span class="ident">window</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">super_config</span>.<span class="ident">window</span>, <span class="ident">Rotation::cur</span>());
@@ -641,5 +643,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (76761db59 2022-05-24)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
 </body></html>

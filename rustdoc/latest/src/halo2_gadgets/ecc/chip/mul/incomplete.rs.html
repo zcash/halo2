@@ -411,6 +411,12 @@
 <span id="389">389</span>
 <span id="390">390</span>
 <span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::NonIdentityEccPoint</span>;
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">X</span>, <span class="ident">Y</span>, <span class="ident">Z</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities::bool_check</span>;
@@ -529,6 +535,8 @@
         };
 
         <span class="comment">// Constraints used for q_mul_{2, 3} == 1</span>
+        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-main-loop?partial</span>
+        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-last-row?partial</span>
         <span class="kw">let</span> <span class="ident">for_loop</span> <span class="op">=</span> <span class="op">|</span><span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
                         <span class="ident">y_a_next</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">one</span> <span class="op">=</span> <span class="ident">Expression::Constant</span>(<span class="ident">pallas::Base::one</span>());
@@ -580,6 +588,7 @@
         };
 
         <span class="comment">// q_mul_1 == 1 checks</span>
+        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-first-row</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;q_mul_1 == 1 checks&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">q_mul_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul_1</span>);
 
@@ -589,6 +598,7 @@
         });
 
         <span class="comment">// q_mul_2 == 1 checks</span>
+        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-main-loop?partial</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;q_mul_2 == 1 checks&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">q_mul_2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul_2</span>);
 
@@ -618,6 +628,7 @@
         });
 
         <span class="comment">// q_mul_3 == 1 checks</span>
+        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-last-row?partial</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;q_mul_3 == 1 checks&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">q_mul_3</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul_3</span>);
             <span class="kw">let</span> <span class="ident">y_a_final</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>, <span class="ident">Rotation::next</span>());
@@ -706,6 +717,7 @@
         <span class="comment">// Incomplete addition</span>
         <span class="kw">for</span> (<span class="ident">row</span>, <span class="ident">k</span>) <span class="kw">in</span> <span class="ident">bits</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
             <span class="comment">// z_{i} = 2 * z_{i+1} + k_i</span>
+            <span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-witness-scalar?partial</span>
             <span class="kw">let</span> <span class="ident">z_val</span> <span class="op">=</span> <span class="ident">z</span>
                 .<span class="ident">value</span>()
                 .<span class="ident">zip</span>(<span class="ident">k</span>.<span class="ident">as_ref</span>())
@@ -803,5 +815,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (76761db59 2022-05-24)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
 </body></html>

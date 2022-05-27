@@ -685,6 +685,8 @@
 <span id="663">663</span>
 <span id="664">664</span>
 <span id="665">665</span>
+<span id="666">666</span>
+<span id="667">667</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Make use of a K-bit lookup table to decompose a field element into K-bit</span>
 <span class="doccomment">//! words.</span>
 
@@ -783,6 +785,7 @@
             <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
         };
 
+        <span class="comment">// https://p.z.cash/halo2-0.1:decompose-combined-lookup</span>
         <span class="ident">meta</span>.<span class="ident">lookup</span>(<span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">q_lookup</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">config</span>.<span class="ident">q_lookup</span>);
             <span class="kw">let</span> <span class="ident">q_running</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">config</span>.<span class="ident">q_running</span>);
@@ -817,6 +820,7 @@
         });
 
         <span class="comment">// For short lookups, check that the word has been shifted by the correct number of bits.</span>
+        <span class="comment">// https://p.z.cash/halo2-0.1:decompose-short-lookup</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;Short lookup bitshift&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">q_bitshift</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">config</span>.<span class="ident">q_bitshift</span>);
             <span class="kw">let</span> <span class="ident">word</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">running_sum</span>, <span class="ident">Rotation::prev</span>());
@@ -1351,5 +1355,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (76761db59 2022-05-24)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
 </body></html>

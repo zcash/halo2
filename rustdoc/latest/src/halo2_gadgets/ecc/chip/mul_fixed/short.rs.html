@@ -671,6 +671,9 @@
 <span id="649">649</span>
 <span id="650">650</span>
 <span id="651">651</span>
+<span id="652">652</span>
+<span id="653">653</span>
+<span id="654">654</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">EccPoint</span>, <span class="ident">EccScalarFixedShort</span>, <span class="ident">FixedPoints</span>, <span class="ident">L_SCALAR_SHORT</span>, <span class="ident">NUM_WINDOWS_SHORT</span>};
@@ -706,6 +709,9 @@
     }
 
     <span class="kw">fn</span> <span class="ident">create_gate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) {
+        <span class="comment">// Gate contains the following constraints:</span>
+        <span class="comment">// - https://p.z.cash/halo2-0.1:ecc-fixed-mul-short-msb</span>
+        <span class="comment">// - https://p.z.cash/halo2-0.1:ecc-fixed-mul-short-conditional-neg</span>
         <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;Short fixed-base mul gate&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">q_mul_fixed_short</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul_fixed_short</span>);
             <span class="kw">let</span> <span class="ident">y_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">super_config</span>.<span class="ident">add_config</span>.<span class="ident">y_p</span>, <span class="ident">Rotation::cur</span>());
@@ -1323,5 +1329,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (76761db59 2022-05-24)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
 </body></html>

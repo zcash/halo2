@@ -540,6 +540,12 @@
 <span id="518">518</span>
 <span id="519">519</span>
 <span id="520">520</span>
+<span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Chip implementing a Merkle hash using Sinsemilla as the hash function.</span>
 
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
@@ -692,11 +698,13 @@
             <span class="comment">// b_2 has been constrained to be 5 bits outside this gate.</span>
             <span class="kw">let</span> <span class="ident">b_2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">advices</span>[<span class="number">3</span>], <span class="ident">Rotation::next</span>());
             <span class="comment">// Constrain b_1 + 2^5 b_2 = z1_b</span>
+            <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-bit-lengths?partial</span>
             <span class="kw">let</span> <span class="ident">b1_b2_check</span> <span class="op">=</span> <span class="ident">z1_b</span>.<span class="ident">clone</span>() <span class="op">-</span> (<span class="ident">b_1</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="ident">b_2</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">two_pow_5</span>);
             <span class="comment">// Derive b_0 (constrained by SinsemillaHash to be 10 bits)</span>
             <span class="kw">let</span> <span class="ident">b_0</span> <span class="op">=</span> <span class="ident">b_whole</span> <span class="op">-</span> (<span class="ident">z1_b</span> <span class="op">*</span> <span class="ident">two_pow_10</span>);
 
             <span class="comment">// Check that left = a_1 (240 bits) || b_0 (10 bits) || b_1 (5 bits)</span>
+            <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-decomposition?partial</span>
             <span class="kw">let</span> <span class="ident">left_check</span> <span class="op">=</span> {
                 <span class="kw">let</span> <span class="ident">reconstructed</span> <span class="op">=</span> {
                     <span class="kw">let</span> <span class="ident">two_pow_240</span> <span class="op">=</span> <span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">120</span>).<span class="ident">square</span>();
@@ -708,6 +716,7 @@
             <span class="comment">// Check that right = b_2 (5 bits) || c (250 bits)</span>
             <span class="comment">// The Orchard specification allows this representation to be non-canonical.</span>
             <span class="comment">// &lt;https://zips.z.cash/protocol/protocol.pdf#merklepath&gt;</span>
+            <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-decomposition?partial</span>
             <span class="kw">let</span> <span class="ident">right_check</span> <span class="op">=</span> <span class="ident">b_2</span> <span class="op">+</span> <span class="ident">c_whole</span> <span class="op">*</span> <span class="ident">two_pow_5</span> <span class="op">-</span> <span class="ident">right_node</span>;
 
             <span class="ident">Constraints::with_selector</span>(
@@ -755,7 +764,6 @@
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Var</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">clone</span>();
 
-        <span class="comment">// &lt;https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh&gt;</span>
         <span class="comment">// We need to hash `l || left || right`, where `l` is a 10-bit value.</span>
         <span class="comment">// We allow `left` and `right` to be non-canonical 255-bit encodings.</span>
         <span class="comment">//</span>
@@ -766,6 +774,8 @@
         <span class="comment">//</span>
         <span class="comment">// We start by witnessing all of the individual pieces, and range-constraining the</span>
         <span class="comment">// short pieces b_1 and b_2.</span>
+        <span class="comment">//</span>
+        <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-bit-lengths?partial</span>
 
         <span class="comment">// `a = a_0||a_1` = `l` || (bits 0..=239 of `left`)</span>
         <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">MessagePiece::from_subpieces</span>(
@@ -833,6 +843,8 @@
         <span class="comment">// this map is the same as why Sinsemilla uses incomplete addition: this situation</span>
         <span class="comment">// yields a nontrivial discrete log relation, and by assumption it is hard to find</span>
         <span class="comment">// these.</span>
+        <span class="comment">//</span>
+        <span class="comment">// https://p.z.cash/proto:merkle-crh-orchard</span>
         <span class="kw">let</span> (<span class="ident">point</span>, <span class="ident">zs</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">hash_to_point</span>(
             <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;hash at l = {}&quot;</span>, <span class="ident">l</span>)),
             <span class="ident">Q</span>,
@@ -1061,5 +1073,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (76761db59 2022-05-24)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
 </body></html>
