@@ -84,6 +84,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
             _marker: PhantomData,
         };
 
+        // https://p.z.cash/halo2-0.1:decompose-short-range
         meta.create_gate("range check", |meta| {
             let q_range_check = meta.query_selector(config.q_range_check);
             let z_cur = meta.query_advice(config.z, Rotation::cur());

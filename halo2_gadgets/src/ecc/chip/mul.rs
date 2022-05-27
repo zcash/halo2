@@ -130,6 +130,7 @@ impl Config {
 
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // If `lsb` is 0, (x, y) = (x_p, -y_p). If `lsb` is 1, (x, y) = (0,0).
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-lsb-gate?partial
         meta.create_gate("LSB check", |meta| {
             let q_mul_lsb = meta.query_selector(self.q_mul_lsb);
 
@@ -317,6 +318,8 @@ impl Config {
     /// | x_p  | y_p  | acc_x | acc_y | complete addition  | z_1 | q_mul_lsb = 1
     /// |base_x|base_y| res_x | res_y |   |   |    |   |   | z_0 |
     /// ```
+    ///
+    /// [Specification](https://p.z.cash/halo2-0.1:ecc-var-mul-lsb-gate?partial).
     fn process_lsb(
         &self,
         region: &mut Region<'_, pallas::Base>,
@@ -432,6 +435,7 @@ impl<F: FieldExt> Deref for Z<F> {
     }
 }
 
+// https://p.z.cash/halo2-0.1:ecc-var-mul-witness-scalar?partial
 fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> {
     construct_uint! {
         struct U256(4);

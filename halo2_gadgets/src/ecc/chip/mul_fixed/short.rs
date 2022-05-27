@@ -33,6 +33,9 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
     }
 
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+        // Gate contains the following constraints:
+        // - https://p.z.cash/halo2-0.1:ecc-fixed-mul-short-msb
+        // - https://p.z.cash/halo2-0.1:ecc-fixed-mul-short-conditional-neg
         meta.create_gate("Short fixed-base mul gate", |meta| {
             let q_mul_fixed_short = meta.query_selector(self.q_mul_fixed_short);
             let y_p = meta.query_advice(self.super_config.add_config.y_p, Rotation::cur());

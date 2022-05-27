@@ -47,6 +47,7 @@ impl Config {
     }
 
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-overflow
         meta.create_gate("overflow checks", |meta| {
             let q_mul_overflow = meta.query_selector(self.q_mul_overflow);
 

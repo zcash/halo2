@@ -41,7 +41,7 @@ So we get the constraints:
     and so cannot be used with arbitrary inputs.
 - $(y_r + y_q) \cdot (x_p - x_q) - (y_p - y_q) \cdot (x_q - x_r) = 0.$
 
-### Constraints
+### Constraints <a name="incomplete-addition-constraints">
 
 $$
 \begin{array}{|c|l|}
@@ -99,7 +99,7 @@ $\hspace{1em}
 \end{array}
 $
 
-### Constraints
+### Constraints <a name="complete-addition-constraints">
 
 $$
 \begin{array}{|c|lcl|l|}

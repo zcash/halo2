@@ -96,6 +96,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
             _marker: PhantomData,
         };
 
+        // https://p.z.cash/halo2-0.1:decompose-combined-lookup
         meta.lookup(|meta| {
             let q_lookup = meta.query_selector(config.q_lookup);
             let q_running = meta.query_selector(config.q_running);
@@ -130,6 +131,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> 
         });
 
         // For short lookups, check that the word has been shifted by the correct number of bits.
+        // https://p.z.cash/halo2-0.1:decompose-short-lookup
         meta.create_gate("Short lookup bitshift", |meta| {
             let q_bitshift = meta.query_selector(config.q_bitshift);
             let word = meta.query_advice(config.running_sum, Rotation::prev());

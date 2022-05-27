@@ -58,6 +58,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // Check that the base field element is canonical.
+        // https://p.z.cash/halo2-0.1:ecc-fixed-mul-base-canonicity
         meta.create_gate("Canonicity checks", |meta| {
             let q_mul_fixed_base_field = meta.query_selector(self.q_mul_fixed_base_field);
 
