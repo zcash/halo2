@@ -394,28 +394,98 @@ pub fn lagrange_interpolate<F: FieldExt>(points: &[F], evals: &[F]) -> Vec<F> {
     }
 }
 
-#[cfg(test)]
-use rand_core::OsRng;
+pub(crate) mod tests {
+    use super::*;
+    use crate::pasta::Fp;
+    use crate::poly::EvaluationDomain;
+    use rand_core::OsRng;
+    #[test]
+    fn test_bitreverse() {
+        fn bitreverse(mut n: usize, l: usize) -> usize {
+            let mut r = 0;
+            for _ in 0..l {
+                r = (r << 1) | (n & 1);
+                n >>= 1;
+            }
+            r
+        }
+        for k in 3..10 {
+            let n = 1 << k;
+            for i in 0..n as u64 {
+                assert_eq!(
+                    bitreverse(i as usize, k),
+                    (i.reverse_bits() >> (64 - k)) as usize
+                )
+            }
+        }
+    }
 
-#[cfg(test)]
-use crate::pasta::Fp;
+    #[test]
+    fn test_fft() {
+        fn prev_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
+            let n = a.len() as u32;
+            assert_eq!(n, 1 << log_n);
 
-#[test]
-fn test_lagrange_interpolate() {
-    let rng = OsRng;
+            swap_bit_reverse(a, n as usize, log_n);
 
-    let points = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
-    let evals = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
+            let mut m = 1;
+            for _ in 0..log_n {
+                let w_m = omega.pow_vartime(&[u64::from(n / (2 * m)), 0, 0, 0]);
+                let mut k = 0;
+                while k < n {
+                    let mut w = G::Scalar::one();
+                    for j in 0..m {
+                        let mut t = a[(k + j + m) as usize];
+                        t.group_scale(&w);
+                        a[(k + j + m) as usize] = a[(k + j) as usize];
+                        a[(k + j + m) as usize].group_sub(&t);
+                        a[(k + j) as usize].group_add(&t);
+                        w *= &w_m;
+                    }
+                    k += 2 * m;
+                }
+                m *= 2;
+            }
+        }
 
-    for coeffs in 0..5 {
-        let points = &points[0..coeffs];
-        let evals = &evals[0..coeffs];
+        // This checks whether fft algorithm is correct by comparing with previous `serial_fft`
+        for k in 3..10 {
+            let mut a = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
+            let mut b = a.clone();
+            let omega = Fp::random(OsRng); // would be weird if this mattered
+            prev_fft(&mut a, omega, k);
+            best_fft(&mut b, omega, k);
+            assert_eq!(a, b);
+        }
 
-        let poly = lagrange_interpolate(points, evals);
-        assert_eq!(poly.len(), points.len());
+        // This checks whether `best_ifft` is inverse operation of `best_fft`
+        for k in 3..10 {
+            let domain = EvaluationDomain::<Fp>::new(1, k);
+            let mut a = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
+            let b = a.clone();
+            best_fft(&mut a, domain.get_omega(), k);
+            best_ifft(&mut a, domain.get_omega_inv(), k, domain.get_divisor());
+            assert_eq!(a, b);
+        }
+    }
 
-        for (point, eval) in points.iter().zip(evals) {
-            assert_eq!(eval_polynomial(&poly, *point), *eval);
+    #[test]
+    fn test_lagrange_interpolate() {
+        let rng = OsRng;
+
+        let points = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
+        let evals = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
+
+        for coeffs in 0..5 {
+            let points = &points[0..coeffs];
+            let evals = &evals[0..coeffs];
+
+            let poly = lagrange_interpolate(points, evals);
+            assert_eq!(poly.len(), points.len());
+
+            for (point, eval) in points.iter().zip(evals) {
+                assert_eq!(eval_polynomial(&poly, *point), *eval);
+            }
         }
     }
 }

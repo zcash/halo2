@@ -371,6 +371,11 @@ impl<G: Group> EvaluationDomain<G> {
         self.extended_omega
     }
 
+    /// Get the divisor used for inverse fft.
+    pub fn get_divisor(&self) -> G::Scalar {
+        self.ifft_divisor
+    }
+
     /// Multiplies a value by some power of $\omega$, essentially rotating over
     /// the domain.
     pub fn rotate_omega(&self, value: G::Scalar, rotation: Rotation) -> G::Scalar {
