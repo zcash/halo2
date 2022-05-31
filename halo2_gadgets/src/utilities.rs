@@ -244,7 +244,7 @@ mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::{FailureLocation, MockProver, VerifyFailure},
-        plonk::{Any, Circuit, ConstraintSystem, Constraints, Error, Selector},
+        plonk::{Any, Circuit, ConstraintSystem, Constraints, Error, Phase::First, Selector},
         poly::Rotation,
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -329,7 +329,10 @@ mod tests {
                         region: (0, "range constrain").into(),
                         offset: 0,
                     },
-                    cell_values: vec![(((Any::Advice, 0).into(), 0).into(), "0x8".to_string())],
+                    cell_values: vec![(
+                        ((Any::Advice { phase: First }, 0).into(), 0).into(),
+                        "0x8".to_string()
+                    )],
                 }])
             );
         }
