@@ -403,53 +403,70 @@ pub fn lagrange_interpolate<F: FieldExt>(points: &[F], evals: &[F]) -> Vec<F> {
 }
 
 #[cfg(test)]
-use rand_core::OsRng;
+mod tests {
+    use super::{compute_inner_product, eval_polynomial, lagrange_interpolate, Field};
+    use crate::pasta::{arithmetic::FieldExt, Fp};
+    use proptest::{collection::vec, prelude::*};
+    use rand_core::OsRng;
+    use std::{convert::TryFrom, env::consts::OS};
 
-#[cfg(test)]
-use crate::pasta::Fp;
-
-#[test]
-fn test_eval_polynomial() {
-    for k in 3..10 {
-        let mut eval = Fp::zero();
-        let mut exp = Fp::one();
-        let point = Fp::random(OsRng);
-        let poly = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
-        poly.iter().for_each(|a| {
-            eval += a * exp;
-            exp *= point;
-        });
-        assert_eq!(eval_polynomial(&poly, point), eval);
+    prop_compose! {
+        fn arb_point()(
+            bytes in vec(any::<u8>(), 64)
+        ) -> Fp {
+            Fp::from_bytes_wide(&<[u8; 64]>::try_from(bytes).unwrap())
+        }
     }
-}
 
-#[test]
-fn test_compute_inner_product() {
-    for k in 3..10 {
-        let mut product = Fp::zero();
-        let a = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
-        let b = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
-        a.iter().zip(b.iter()).for_each(|(a, b)| product += a * b);
-        assert_eq!(compute_inner_product(&a, &b), product);
+    fn arb_poly(k: usize, rng: OsRng) -> Vec<Fp> {
+        (0..(1 << k)).map(|_| Fp::random(rng)).collect::<Vec<_>>()
     }
-}
 
-#[test]
-fn test_lagrange_interpolate() {
-    let rng = OsRng;
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(100))]
+        #[test]
+        fn test_eval_polynomial(point in arb_point(), k in 3_usize..10) {
+            let mut eval = Fp::zero();
+            let mut exp = Fp::one();
+            let poly = arb_poly(k, OsRng);
+            poly.iter().for_each(|a| {
+                eval += a * exp;
+                exp *= point;
+            });
+            assert_eq!(eval_polynomial(&poly, point), eval);
+        }
+    }
 
-    let points = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
-    let evals = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(100))]
+        #[test]
+        fn test_compute_inner_product(k in 3_usize..10) {
+            let mut product = Fp::zero();
+            let a = arb_poly(k, OsRng);
+            let b = arb_poly(k, OsRng);
+            a.iter().zip(b.iter()).for_each(|(a, b)| product += a * b);
+            assert_eq!(compute_inner_product(&a, &b), product);
+        }
+    }
 
-    for coeffs in 0..5 {
-        let points = &points[0..coeffs];
-        let evals = &evals[0..coeffs];
+    #[test]
+    fn test_lagrange_interpolate() {
+        let k = 5;
+        let rng = OsRng;
 
-        let poly = lagrange_interpolate(points, evals);
-        assert_eq!(poly.len(), points.len());
+        let points = arb_poly(k, rng);
+        let evals = arb_poly(k, rng);
 
-        for (point, eval) in points.iter().zip(evals) {
-            assert_eq!(eval_polynomial(&poly, *point), *eval);
+        for coeffs in 0..k {
+            let points = &points[0..coeffs];
+            let evals = &evals[0..coeffs];
+
+            let poly = lagrange_interpolate(points, evals);
+            assert_eq!(poly.len(), points.len());
+
+            for (point, eval) in points.iter().zip(evals) {
+                assert_eq!(eval_polynomial(&poly, *point), *eval);
+            }
         }
     }
 }
