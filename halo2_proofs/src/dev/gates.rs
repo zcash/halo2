@@ -7,7 +7,7 @@ use ff::PrimeField;
 
 use crate::{
     dev::util,
-    plonk::{Circuit, ConstraintSystem},
+    plonk::{Circuit, ConstraintSystem, Phase},
 };
 
 #[derive(Debug)]
@@ -120,7 +120,13 @@ impl CircuitGates {
                             &util::format_value,
                             &|selector| format!("S{}", selector.0),
                             &|_, column, rotation| format!("F{}@{}", column, rotation.0),
-                            &|_, column, rotation| format!("A{}@{}", column, rotation.0),
+                            &|_, column, rotation, phase| {
+                                if matches!(phase, Phase::First) {
+                                    format!("A{}@{}", column, rotation.0)
+                                } else {
+                                    format!("A{}({:?})@{}", column, phase, rotation.0)
+                                }
+                            },
                             &|_, column, rotation| format!("I{}@{}", column, rotation.0),
                             &|a| {
                                 if a.contains(' ') {
@@ -158,10 +164,13 @@ impl CircuitGates {
                                     .into_iter()
                                     .collect()
                             },
-                            &|_, column, rotation| {
-                                vec![format!("A{}@{}", column, rotation.0)]
-                                    .into_iter()
-                                    .collect()
+                            &|_, column, rotation, phase| {
+                                let query = if matches!(phase, Phase::First) {
+                                    format!("A{}@{}", column, rotation.0)
+                                } else {
+                                    format!("A{}({:?})@{}", column, phase, rotation.0)
+                                };
+                                vec![query].into_iter().collect()
                             },
                             &|_, column, rotation| {
                                 vec![format!("I{}@{}", column, rotation.0)]
@@ -193,7 +202,7 @@ impl CircuitGates {
                         &|_| (0, 0, 0),
                         &|_| (0, 0, 0),
                         &|_, _, _| (0, 0, 0),
-                        &|_, _, _| (0, 0, 0),
+                        &|_, _, _, _| (0, 0, 0),
                         &|_, _, _| (0, 0, 0),
                         &|(a_n, a_a, a_m)| (a_n + 1, a_a, a_m),
                         &|(a_n, a_a, a_m), (b_n, b_a, b_m)| (a_n + b_n, a_a + b_a + 1, a_m + b_m),

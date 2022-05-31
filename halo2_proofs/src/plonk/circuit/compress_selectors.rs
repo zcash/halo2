@@ -326,7 +326,7 @@ mod tests {
                             assert_eq!(selector.combination_index, query_index);
                             assignment
                         },
-                        &|_, _, _| panic!("should not occur in returned expressions"),
+                        &|_, _, _, _| panic!("should not occur in returned expressions"),
                         &|_, _, _| panic!("should not occur in returned expressions"),
                         &|a| -a,
                         &|a, b| a + b,

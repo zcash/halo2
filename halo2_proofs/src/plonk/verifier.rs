@@ -233,7 +233,7 @@ pub fn verify_proof<
                                 &|scalar| scalar,
                                 &|_| panic!("virtual selectors are removed during optimization"),
                                 &|index, _, _| fixed_evals[index],
-                                &|index, _, _| advice_evals[index],
+                                &|index, _, _, _| advice_evals[index],
                                 &|index, _, _| instance_evals[index],
                                 &|a| -a,
                                 &|a, b| a + &b,

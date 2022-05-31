@@ -120,7 +120,7 @@ impl CircuitLayout {
             column.index()
                 + match column.column_type() {
                     Any::Instance => 0,
-                    Any::Advice => cs.num_instance_columns,
+                    Any::Advice { .. } => cs.num_instance_columns,
                     Any::Fixed => cs.num_instance_columns + cs.num_advice_columns,
                 }
         };

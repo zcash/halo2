@@ -112,7 +112,7 @@ impl<F: FieldExt> Argument<F> {
                         &|_, column_index, rotation| {
                             fixed_values[column_index].with_rotation(rotation).into()
                         },
-                        &|_, column_index, rotation| {
+                        &|_, column_index, rotation, _| {
                             advice_values[column_index].with_rotation(rotation).into()
                         },
                         &|_, column_index, rotation| {
@@ -135,7 +135,7 @@ impl<F: FieldExt> Argument<F> {
                         &|_, column_index, rotation| {
                             fixed_cosets[column_index].with_rotation(rotation).into()
                         },
-                        &|_, column_index, rotation| {
+                        &|_, column_index, rotation, _| {
                             advice_cosets[column_index].with_rotation(rotation).into()
                         },
                         &|_, column_index, rotation| {

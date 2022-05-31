@@ -99,7 +99,7 @@ impl Argument {
             // Iterate over each column of the permutation
             for (&column, permuted_column_values) in columns.iter().zip(permutations.iter()) {
                 let values = match column.column_type() {
-                    Any::Advice => advice,
+                    Any::Advice { .. } => advice,
                     Any::Fixed => fixed,
                     Any::Instance => instance,
                 };
@@ -122,7 +122,7 @@ impl Argument {
             for &column in columns.iter() {
                 let omega = domain.get_omega();
                 let values = match column.column_type() {
-                    Any::Advice => advice,
+                    Any::Advice { .. } => advice,
                     Any::Fixed => fixed,
                     Any::Instance => instance,
                 };
@@ -277,7 +277,7 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Committed<C, Ev> {
                         for (values, permutation) in columns
                             .iter()
                             .map(|&column| match column.column_type() {
-                                Any::Advice => &advice_cosets[column.index()],
+                                Any::Advice { .. } => &advice_cosets[column.index()],
                                 Any::Fixed => &fixed_cosets[column.index()],
                                 Any::Instance => &instance_cosets[column.index()],
                             })
@@ -292,7 +292,7 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Committed<C, Ev> {
                         let mut current_delta = *beta
                             * &(C::Scalar::DELTA.pow_vartime(&[(chunk_index * chunk_len) as u64]));
                         for values in columns.iter().map(|&column| match column.column_type() {
-                            Any::Advice => &advice_cosets[column.index()],
+                            Any::Advice { .. } => &advice_cosets[column.index()],
                             Any::Fixed => &fixed_cosets[column.index()],
                             Any::Instance => &instance_cosets[column.index()],
                         }) {

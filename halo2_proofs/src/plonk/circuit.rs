@@ -61,9 +61,62 @@ impl<C: ColumnType> PartialOrd for Column<C> {
     }
 }
 
-/// An advice column
+/// Phase of advice column
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct Advice;
+pub enum Phase {
+    /// First phase
+    First,
+    /// Second phase
+    Second,
+    /// Third phase
+    Third,
+}
+
+impl Ord for Phase {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (Phase::First, Phase::First)
+            | (Phase::Second, Phase::Second)
+            | (Phase::Third, Phase::Third) => std::cmp::Ordering::Equal,
+            // Across phases, sort First < Second < Third.
+            (Phase::First, Phase::Second)
+            | (Phase::Second, Phase::Third)
+            | (Phase::First, Phase::Third) => std::cmp::Ordering::Less,
+            (Phase::Third, Phase::First)
+            | (Phase::Third, Phase::Second)
+            | (Phase::Second, Phase::First) => std::cmp::Ordering::Greater,
+        }
+    }
+}
+
+impl PartialOrd for Phase {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// An advice column
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+pub struct Advice {
+    phase: Phase,
+}
+
+impl Advice {
+    pub(crate) fn phase(&self) -> Phase {
+        self.phase
+    }
+}
+
+impl std::fmt::Debug for Advice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut debug_struct = f.debug_struct("Advice");
+        // Only show advice's phase if it's not in first phase.
+        if self.phase != Phase::First {
+            debug_struct.field("phase", &self.phase);
+        }
+        debug_struct.finish()
+    }
+}
 
 /// A fixed column
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -74,14 +127,34 @@ pub struct Fixed;
 pub struct Instance;
 
 /// An enum over the Advice, Fixed, Instance structs
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Any {
     /// An Advice variant
-    Advice,
+    Advice {
+        /// Phase of advice column
+        phase: Phase,
+    },
     /// A Fixed variant
     Fixed,
     /// An Instance variant
     Instance,
+}
+
+impl std::fmt::Debug for Any {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Any::Advice { phase } => {
+                let mut debug_struct = f.debug_struct("Advice");
+                // Only show advice's phase if it's not in first phase.
+                if *phase != Phase::First {
+                    debug_struct.field("phase", phase);
+                }
+                debug_struct.finish()
+            }
+            Any::Fixed => f.debug_struct("Fixed").finish(),
+            Any::Instance => f.debug_struct("Instance").finish(),
+        }
+    }
 }
 
 impl Ord for Any {
@@ -89,16 +162,15 @@ impl Ord for Any {
         // This ordering is consensus-critical! The layouters rely on deterministic column
         // orderings.
         match (self, other) {
-            (Any::Instance, Any::Instance)
-            | (Any::Advice, Any::Advice)
-            | (Any::Fixed, Any::Fixed) => std::cmp::Ordering::Equal,
+            (Any::Instance, Any::Instance) | (Any::Fixed, Any::Fixed) => std::cmp::Ordering::Equal,
+            (Any::Advice { phase: lhs }, Any::Advice { phase: rhs }) => lhs.cmp(rhs),
             // Across column types, sort Instance < Advice < Fixed.
-            (Any::Instance, Any::Advice)
-            | (Any::Advice, Any::Fixed)
+            (Any::Instance, Any::Advice { .. })
+            | (Any::Advice { .. }, Any::Fixed)
             | (Any::Instance, Any::Fixed) => std::cmp::Ordering::Less,
             (Any::Fixed, Any::Instance)
-            | (Any::Fixed, Any::Advice)
-            | (Any::Advice, Any::Instance) => std::cmp::Ordering::Greater,
+            | (Any::Fixed, Any::Advice { .. })
+            | (Any::Advice { .. }, Any::Instance) => std::cmp::Ordering::Greater,
         }
     }
 }
@@ -115,8 +187,8 @@ impl ColumnType for Instance {}
 impl ColumnType for Any {}
 
 impl From<Advice> for Any {
-    fn from(_: Advice) -> Any {
-        Any::Advice
+    fn from(Advice { phase }: Advice) -> Any {
+        Any::Advice { phase }
     }
 }
 
@@ -136,7 +208,9 @@ impl From<Column<Advice>> for Column<Any> {
     fn from(advice: Column<Advice>) -> Column<Any> {
         Column {
             index: advice.index(),
-            column_type: Any::Advice,
+            column_type: Any::Advice {
+                phase: advice.column_type().phase(),
+            },
         }
     }
 }
@@ -164,9 +238,9 @@ impl TryFrom<Column<Any>> for Column<Advice> {
 
     fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
         match any.column_type() {
-            Any::Advice => Ok(Column {
+            Any::Advice { phase } => Ok(Column {
                 index: any.index(),
-                column_type: Advice,
+                column_type: Advice { phase: *phase },
             }),
             _ => Err("Cannot convert into Column<Advice>"),
         }
@@ -448,7 +522,7 @@ pub trait Circuit<F: Field> {
 }
 
 /// Low-degree expression representing an identity that must hold over the committed columns.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum Expression<F> {
     /// This is a constant polynomial
     Constant(F),
@@ -471,6 +545,8 @@ pub enum Expression<F> {
         column_index: usize,
         /// Rotation of this query
         rotation: Rotation,
+        /// Phase of this advice column
+        phase: Phase,
     },
     /// This is an instance (external) column queried at a certain relative location
     Instance {
@@ -499,7 +575,7 @@ impl<F: Field> Expression<F> {
         constant: &impl Fn(F) -> T,
         selector_column: &impl Fn(Selector) -> T,
         fixed_column: &impl Fn(usize, usize, Rotation) -> T,
-        advice_column: &impl Fn(usize, usize, Rotation) -> T,
+        advice_column: &impl Fn(usize, usize, Rotation, Phase) -> T,
         instance_column: &impl Fn(usize, usize, Rotation) -> T,
         negated: &impl Fn(T) -> T,
         sum: &impl Fn(T, T) -> T,
@@ -518,7 +594,8 @@ impl<F: Field> Expression<F> {
                 query_index,
                 column_index,
                 rotation,
-            } => advice_column(*query_index, *column_index, *rotation),
+                phase,
+            } => advice_column(*query_index, *column_index, *rotation, *phase),
             Expression::Instance {
                 query_index,
                 column_index,
@@ -631,7 +708,7 @@ impl<F: Field> Expression<F> {
             &|_| false,
             &|selector| selector.is_simple(),
             &|_, _, _| false,
-            &|_, _, _| false,
+            &|_, _, _, _| false,
             &|_, _, _| false,
             &|a| a,
             &|a, b| a || b,
@@ -658,13 +735,64 @@ impl<F: Field> Expression<F> {
                 }
             },
             &|_, _, _| None,
-            &|_, _, _| None,
+            &|_, _, _, _| None,
             &|_, _, _| None,
             &|a| a,
             &op,
             &op,
             &|a, _| a,
         )
+    }
+}
+
+impl<F: std::fmt::Debug> std::fmt::Debug for Expression<F> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Expression::Constant(scalar) => f.debug_tuple("Constant").field(scalar).finish(),
+            Expression::Selector(selector) => f.debug_tuple("Selector").field(selector).finish(),
+            Expression::Fixed {
+                query_index,
+                column_index,
+                rotation,
+            } => f
+                .debug_struct("Fixed")
+                .field("query_index", query_index)
+                .field("column_index", column_index)
+                .field("rotation", rotation)
+                .finish(),
+            Expression::Advice {
+                query_index,
+                column_index,
+                rotation,
+                phase,
+            } => {
+                let mut debug_struct = f.debug_struct("Advice");
+                debug_struct
+                    .field("query_index", query_index)
+                    .field("column_index", column_index);
+                // Only show advice's phase if it's not in first phase.
+                if *phase != Phase::First {
+                    debug_struct.field("phase", phase);
+                }
+                debug_struct.field("rotation", rotation).finish()
+            }
+            Expression::Instance {
+                query_index,
+                column_index,
+                rotation,
+            } => f
+                .debug_struct("Instance")
+                .field("query_index", query_index)
+                .field("column_index", column_index)
+                .field("rotation", rotation)
+                .finish(),
+            Expression::Negated(poly) => f.debug_tuple("Negated").field(poly).finish(),
+            Expression::Sum(a, b) => f.debug_tuple("Sum").field(a).field(b).finish(),
+            Expression::Product(a, b) => f.debug_tuple("Product").field(a).field(b).finish(),
+            Expression::Scaled(poly, scalar) => {
+                f.debug_tuple("Scaled").field(poly).field(scalar).finish()
+            }
+        }
     }
 }
 
@@ -1079,7 +1207,9 @@ impl<F: Field> ConstraintSystem<F> {
 
     fn query_any_index(&mut self, column: Column<Any>, at: Rotation) -> usize {
         match column.column_type() {
-            Any::Advice => self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
+            Any::Advice { .. } => {
+                self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at)
+            }
             Any::Fixed => self.query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
             Any::Instance => {
                 self.query_instance_index(Column::<Instance>::try_from(column).unwrap(), at)
@@ -1119,7 +1249,7 @@ impl<F: Field> ConstraintSystem<F> {
 
     pub(crate) fn get_any_query_index(&self, column: Column<Any>, at: Rotation) -> usize {
         match column.column_type() {
-            Any::Advice => {
+            Any::Advice { .. } => {
                 self.get_advice_query_index(Column::<Advice>::try_from(column).unwrap(), at)
             }
             Any::Fixed => {
@@ -1265,10 +1395,11 @@ impl<F: Field> ConstraintSystem<F> {
                     column_index,
                     rotation,
                 },
-                &|query_index, column_index, rotation| Expression::Advice {
+                &|query_index, column_index, rotation, phase| Expression::Advice {
                     query_index,
                     column_index,
                     rotation,
+                    phase,
                 },
                 &|query_index, column_index, rotation| Expression::Instance {
                     query_index,
@@ -1340,7 +1471,9 @@ impl<F: Field> ConstraintSystem<F> {
     pub fn advice_column(&mut self) -> Column<Advice> {
         let tmp = Column {
             index: self.num_advice_columns,
-            column_type: Advice,
+            column_type: Advice {
+                phase: Phase::First,
+            },
         };
         self.num_advice_columns += 1;
         self.num_advice_queries.push(0);
@@ -1472,6 +1605,7 @@ impl<'a, F: Field> VirtualCells<'a, F> {
             query_index: self.meta.query_advice_index(column, at),
             column_index: column.index,
             rotation: at,
+            phase: column.column_type().phase(),
         }
     }
 
@@ -1489,7 +1623,9 @@ impl<'a, F: Field> VirtualCells<'a, F> {
     pub fn query_any<C: Into<Column<Any>>>(&mut self, column: C, at: Rotation) -> Expression<F> {
         let column = column.into();
         match column.column_type() {
-            Any::Advice => self.query_advice(Column::<Advice>::try_from(column).unwrap(), at),
+            Any::Advice { .. } => {
+                self.query_advice(Column::<Advice>::try_from(column).unwrap(), at)
+            }
             Any::Fixed => self.query_fixed(Column::<Fixed>::try_from(column).unwrap(), at),
             Any::Instance => self.query_instance(Column::<Instance>::try_from(column).unwrap(), at),
         }

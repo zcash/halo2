@@ -56,7 +56,7 @@ impl FailureLocation {
                     &|_| vec![],
                     &|_| panic!("virtual selectors are removed during optimization"),
                     &|index, _, _| vec![cs.fixed_queries[index].0.into()],
-                    &|index, _, _| vec![cs.advice_queries[index].0.into()],
+                    &|index, _, _, _| vec![cs.advice_queries[index].0.into()],
                     &|index, _, _| vec![cs.instance_queries[index].0.into()],
                     &|a| a,
                     &|mut a, mut b| {
@@ -388,7 +388,7 @@ fn render_lookup<F: FieldExt>(
             &|_| panic!("no constants in table expressions"),
             &|_| panic!("no selectors in table expressions"),
             &|_, column, _| format!("F{}", column),
-            &|_, _, _| panic!("no advice columns in table expressions"),
+            &|_, _, _, _| panic!("no advice columns in table expressions"),
             &|_, _, _| panic!("no instance columns in table expressions"),
             &|_| panic!("no negations in table expressions"),
             &|_, _| panic!("no sums in table expressions"),
@@ -436,10 +436,12 @@ fn render_lookup<F: FieldExt>(
                 Any::Fixed,
                 &util::load(n, row, &cs.fixed_queries, &prover.fixed),
             ),
-            &cell_value(
-                Any::Advice,
-                &util::load(n, row, &cs.advice_queries, &prover.advice),
-            ),
+            &|index, column, rotation, phase| {
+                cell_value(
+                    Any::Advice { phase },
+                    &util::load(n, row, &cs.advice_queries, &prover.advice),
+                )(index, column, rotation)
+            },
             &cell_value(
                 Any::Instance,
                 &util::load_instance(n, row, &cs.instance_queries, &prover.instance),

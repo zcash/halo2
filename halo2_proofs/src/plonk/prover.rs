@@ -555,7 +555,7 @@ pub fn create_proof<
                                 &|_, column_index, rotation| {
                                     fixed_cosets[column_index].with_rotation(rotation).into()
                                 },
-                                &|_, column_index, rotation| {
+                                &|_, column_index, rotation, _| {
                                     advice_cosets[column_index].with_rotation(rotation).into()
                                 },
                                 &|_, column_index, rotation| {
