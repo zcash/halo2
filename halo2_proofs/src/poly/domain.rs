@@ -372,7 +372,8 @@ impl<G: Group> EvaluationDomain<G> {
     }
 
     /// Get the divisor used for inverse fft.
-    pub fn get_divisor(&self) -> G::Scalar {
+    #[cfg(test)]
+    pub(crate) fn get_divisor(&self) -> G::Scalar {
         self.ifft_divisor
     }
 
@@ -472,8 +473,8 @@ pub struct PinnedEvaluationDomain<'a, G: Group> {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use super::*;
-    use crate::arithmetic::*;
+    use super::{EvaluationDomain, Field, FieldExt, Rotation};
+    use crate::arithmetic::{eval_polynomial, lagrange_interpolate};
     use crate::pasta::pallas::Scalar;
     use rand_core::OsRng;
 

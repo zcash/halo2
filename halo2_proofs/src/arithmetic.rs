@@ -166,6 +166,8 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
 /// distinct powers of $\omega$. This transformation is invertible by providing
 /// $\omega^{-1}$ in place of $\omega$ and dividing each resulting field element
 /// by $n$.
+///
+/// This will use multithreading if beneficial.
 pub fn best_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
     let n = a.len() as usize;
     assert_eq!(n, 1 << log_n);
@@ -192,9 +194,9 @@ pub fn best_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
 pub fn best_ifft<G: Group>(a: &mut [G], omega_inv: G::Scalar, log_n: u32, divisor: G::Scalar) {
     best_fft(a, omega_inv, log_n);
     parallelize(a, |a, _| {
-        for a in a {
+        for coeff in a {
             // Finish iFFT
-            a.group_scale(&divisor);
+            coeff.group_scale(&divisor);
         }
     });
 }
@@ -300,7 +302,7 @@ pub fn parallelize<T: Send, F: Fn(&mut [T], usize) + Send + Sync + Clone>(v: &mu
 
 /// This performs bit reverse permutation over `[G]`
 fn swap_bit_reverse<G: Group>(a: &mut [G], n: usize, log_n: u32) {
-    // sort by bit reverse
+    assert!(log_n <= 64);
     let diff = 64 - log_n;
     for i in 0..n as u64 {
         let ri = i.reverse_bits() >> diff;
@@ -394,11 +396,16 @@ pub fn lagrange_interpolate<F: FieldExt>(points: &[F], evals: &[F]) -> Vec<F> {
     }
 }
 
-pub(crate) mod tests {
-    use super::*;
-    use crate::pasta::Fp;
+#[cfg(test)]
+mod tests {
+    use super::{
+        best_fft, best_ifft, eval_polynomial, lagrange_interpolate, swap_bit_reverse, Field, Group,
+    };
+    use crate::pasta::{arithmetic::FieldExt, Fp};
     use crate::poly::EvaluationDomain;
+    use proptest::{collection::vec, prelude::*};
     use rand_core::OsRng;
+
     #[test]
     fn test_bitreverse() {
         fn bitreverse(mut n: usize, l: usize) -> usize {
@@ -420,63 +427,81 @@ pub(crate) mod tests {
         }
     }
 
-    #[test]
-    fn test_fft() {
-        fn prev_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
-            let n = a.len() as u32;
-            assert_eq!(n, 1 << log_n);
+    fn prev_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
+        let n = a.len() as u32;
+        assert_eq!(n, 1 << log_n);
 
-            swap_bit_reverse(a, n as usize, log_n);
+        swap_bit_reverse(a, n as usize, log_n);
 
-            let mut m = 1;
-            for _ in 0..log_n {
-                let w_m = omega.pow_vartime(&[u64::from(n / (2 * m)), 0, 0, 0]);
-                let mut k = 0;
-                while k < n {
-                    let mut w = G::Scalar::one();
-                    for j in 0..m {
-                        let mut t = a[(k + j + m) as usize];
-                        t.group_scale(&w);
-                        a[(k + j + m) as usize] = a[(k + j) as usize];
-                        a[(k + j + m) as usize].group_sub(&t);
-                        a[(k + j) as usize].group_add(&t);
-                        w *= &w_m;
-                    }
-                    k += 2 * m;
+        let mut m = 1;
+        for _ in 0..log_n {
+            let w_m = omega.pow_vartime(&[u64::from(n / (2 * m)), 0, 0, 0]);
+            let mut k = 0;
+            while k < n {
+                let mut w = G::Scalar::one();
+                for j in 0..m {
+                    let mut t = a[(k + j + m) as usize];
+                    t.group_scale(&w);
+                    a[(k + j + m) as usize] = a[(k + j) as usize];
+                    a[(k + j + m) as usize].group_sub(&t);
+                    a[(k + j) as usize].group_add(&t);
+                    w *= &w_m;
                 }
-                m *= 2;
+                k += 2 * m;
             }
+            m *= 2;
         }
+    }
 
-        // This checks whether fft algorithm is correct by comparing with previous `serial_fft`
-        for k in 3..10 {
-            let mut a = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
-            let mut b = a.clone();
-            let omega = Fp::random(OsRng); // would be weird if this mattered
-            prev_fft(&mut a, omega, k);
-            best_fft(&mut b, omega, k);
-            assert_eq!(a, b);
+    prop_compose! {
+        fn arb_fp()(
+            bytes in vec(any::<u8>(), 64)
+        ) -> Fp {
+            Fp::from_bytes_wide(&<[u8; 64]>::try_from(bytes).unwrap())
         }
+    }
 
-        // This checks whether `best_ifft` is inverse operation of `best_fft`
-        for k in 3..10 {
-            let domain = EvaluationDomain::<Fp>::new(1, k);
-            let mut a = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
-            let b = a.clone();
-            best_fft(&mut a, domain.get_omega(), k);
-            best_ifft(&mut a, domain.get_omega_inv(), k, domain.get_divisor());
-            assert_eq!(a, b);
+    fn arb_poly(k: usize, rng: OsRng) -> Vec<Fp> {
+        (0..(1 << k)).map(|_| Fp::random(rng)).collect::<Vec<_>>()
+    }
+
+    fn fft(k: u32, omega: Fp, rng: OsRng) {
+        let mut a = arb_poly(k as usize, rng);
+        let mut b = a.clone();
+        prev_fft(&mut a, omega, k);
+        best_fft(&mut b, omega, k);
+        assert_eq!(a, b);
+    }
+
+    fn ifft(k: u32, rng: OsRng) {
+        let domain = EvaluationDomain::<Fp>::new(1, k);
+        let mut a = arb_poly(k as usize, rng);
+        let b = a.clone();
+        best_fft(&mut a, domain.get_omega(), k);
+        best_ifft(&mut a, domain.get_omega_inv(), k, domain.get_divisor());
+        assert_eq!(a, b);
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(100))]
+        #[test]
+        fn test_fft(omega in arb_fp(), k in 3u32..10) {
+            // This checks whether fft algorithm is correct by comparing with previous `serial_fft`
+            fft(k, omega, OsRng);
+            // This checks whether `best_ifft` is inverse operation of `best_fft`
+            ifft(k, OsRng);
         }
     }
 
     #[test]
     fn test_lagrange_interpolate() {
+        let k = 5;
         let rng = OsRng;
 
-        let points = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
-        let evals = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
+        let points = arb_poly(k, rng);
+        let evals = arb_poly(k, rng);
 
-        for coeffs in 0..5 {
+        for coeffs in 0..k {
             let points = &points[0..coeffs];
             let evals = &evals[0..coeffs];
 
