@@ -37,8 +37,12 @@ use std::marker::PhantomData;
 
 /// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
 #[derive(Debug)]
-pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<AssignedCell<F, F>>);
-impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
+pub struct RunningSum<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>(
+    Vec<AssignedCell<F, F>>,
+);
+impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> std::ops::Deref
+    for RunningSum<F, WINDOW_NUM_BITS>
+{
     type Target = Vec<AssignedCell<F, F>>;
 
     fn deref(&self) -> &Vec<AssignedCell<F, F>> {
@@ -118,7 +122,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         strict: bool,
         word_num_bits: usize,
         num_windows: usize,
-    ) -> Result<RunningSum<F>, Error> {
+    ) -> Result<RunningSum<F, WINDOW_NUM_BITS>, Error> {
         let z_0 = region.assign_advice(|| "z_0 = alpha", self.z, offset, || alpha)?;
         self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
     }
@@ -135,7 +139,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         strict: bool,
         word_num_bits: usize,
         num_windows: usize,
-    ) -> Result<RunningSum<F>, Error> {
+    ) -> Result<RunningSum<F, WINDOW_NUM_BITS>, Error> {
         let z_0 = alpha.copy_advice(|| "copy z_0 = alpha", region, self.z, offset)?;
         self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
     }
@@ -153,7 +157,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         strict: bool,
         word_num_bits: usize,
         num_windows: usize,
-    ) -> Result<RunningSum<F>, Error> {
+    ) -> Result<RunningSum<F, WINDOW_NUM_BITS>, Error> {
         // Make sure that we do not have more windows than required for the number
         // of bits in the word. In other words, every window must contain at least
         // one bit of the word (no empty windows).
