@@ -133,6 +133,7 @@ pub(super) fn expression_to_string<F: Field>(
                 .unwrap()
                 .clone()
         },
+        &|challenge| format!("C{}", challenge.index()),
         &|a| {
             if a.contains(' ') {
                 format!("-({})", a)

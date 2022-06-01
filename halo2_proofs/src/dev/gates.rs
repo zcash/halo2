@@ -128,6 +128,7 @@ impl CircuitGates {
                                 }
                             },
                             &|_, column, rotation| format!("I{}@{}", column, rotation.0),
+                            &|challenge| format!("C{}", challenge.index()),
                             &|a| {
                                 if a.contains(' ') {
                                     format!("-({})", a)
@@ -177,6 +178,11 @@ impl CircuitGates {
                                     .into_iter()
                                     .collect()
                             },
+                            &|challenge| {
+                                vec![format!("C{}", challenge.index())]
+                                    .into_iter()
+                                    .collect()
+                            },
                             &|a| a,
                             &|mut a, mut b| {
                                 a.append(&mut b);
@@ -204,6 +210,7 @@ impl CircuitGates {
                         &|_, _, _| (0, 0, 0),
                         &|_, _, _, _| (0, 0, 0),
                         &|_, _, _| (0, 0, 0),
+                        &|_| (0, 0, 0),
                         &|(a_n, a_a, a_m)| (a_n + 1, a_a, a_m),
                         &|(a_n, a_a, a_m), (b_n, b_a, b_m)| (a_n + b_n, a_a + b_a + 1, a_m + b_m),
                         &|(a_n, a_a, a_m), (b_n, b_a, b_m)| (a_n + b_n, a_a + b_a, a_m + b_m + 1),

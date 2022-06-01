@@ -97,6 +97,7 @@ pub(super) fn cell_values<'a, F: FieldExt>(
             cell_value(virtual_cells, Any::Advice { phase }, load_advice)(index, column, rotation)
         },
         &cell_value(virtual_cells, Any::Instance, load_instance),
+        &|_| BTreeMap::default(),
         &|a| a,
         &|mut a, mut b| {
             a.append(&mut b);

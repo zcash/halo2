@@ -58,6 +58,7 @@ impl FailureLocation {
                     &|index, _, _| vec![cs.fixed_queries[index].0.into()],
                     &|index, _, _, _| vec![cs.advice_queries[index].0.into()],
                     &|index, _, _| vec![cs.instance_queries[index].0.into()],
+                    &|_| vec![],
                     &|a| a,
                     &|mut a, mut b| {
                         a.append(&mut b);
@@ -390,6 +391,7 @@ fn render_lookup<F: FieldExt>(
             &|_, column, _| format!("F{}", column),
             &|_, _, _, _| panic!("no advice columns in table expressions"),
             &|_, _, _| panic!("no instance columns in table expressions"),
+            &|_| panic!("no challenges in table expressions"),
             &|_| panic!("no negations in table expressions"),
             &|_, _| panic!("no sums in table expressions"),
             &|_, _| panic!("no products in table expressions"),
@@ -446,6 +448,7 @@ fn render_lookup<F: FieldExt>(
                 Any::Instance,
                 &util::load_instance(n, row, &cs.instance_queries, &prover.instance),
             ),
+            &|_| BTreeMap::default(),
             &|a| a,
             &|mut a, mut b| {
                 a.append(&mut b);

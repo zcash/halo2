@@ -11,8 +11,8 @@ use crate::{
         Cell, Layouter, Region, RegionIndex, RegionStart, Table, Value,
     },
     plonk::{
-        Advice, Any, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Instance,
-        Selector, TableColumn,
+        Advice, Any, Assigned, Assignment, Challenge, Circuit, Column, Error, Fixed, FloorPlanner,
+        Instance, Selector, TableColumn,
     },
 };
 
@@ -212,6 +212,10 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
             instance.into(),
             row,
         )
+    }
+
+    fn get_challenge(&self, challenge: Challenge) -> Value<F> {
+        self.cs.get_challenge(challenge)
     }
 
     fn get_root(&mut self) -> &mut Self::Root {

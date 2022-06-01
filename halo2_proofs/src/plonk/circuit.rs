@@ -72,6 +72,16 @@ pub enum Phase {
     Third,
 }
 
+impl Phase {
+    fn prev(&self) -> Option<Self> {
+        match self {
+            Phase::First => None,
+            Phase::Second => Some(Phase::First),
+            Phase::Third => Some(Phase::Second),
+        }
+    }
+}
+
 impl Ord for Phase {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match (self, other) {
@@ -371,6 +381,20 @@ impl TableColumn {
     }
 }
 
+/// A challenge squeezed from transcript after advice columns at the phase have been committed.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub struct Challenge {
+    index: usize,
+    phase: Phase,
+}
+
+impl Challenge {
+    /// The index of this challenge.
+    pub(crate) fn index(&self) -> usize {
+        self.index
+    }
+}
+
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
 pub trait Assignment<F: Field> {
@@ -455,6 +479,11 @@ pub trait Assignment<F: Field> {
         row: usize,
         to: Value<Assigned<F>>,
     ) -> Result<(), Error>;
+
+    /// Queries the value of the given challenge.
+    ///
+    /// Returns `Value::unknown()` if the current synthesis phase is before the challenge can be queried.
+    fn get_challenge(&self, challenge: Challenge) -> Value<F>;
 
     /// Creates a new (sub)namespace and enters into it.
     ///
@@ -557,6 +586,8 @@ pub enum Expression<F> {
         /// Rotation of this query
         rotation: Rotation,
     },
+    /// This is a challenge
+    Challenge(Challenge),
     /// This is a negated polynomial
     Negated(Box<Expression<F>>),
     /// This is the sum of two polynomials
@@ -577,6 +608,7 @@ impl<F: Field> Expression<F> {
         fixed_column: &impl Fn(usize, usize, Rotation) -> T,
         advice_column: &impl Fn(usize, usize, Rotation, Phase) -> T,
         instance_column: &impl Fn(usize, usize, Rotation) -> T,
+        challenge: &impl Fn(Challenge) -> T,
         negated: &impl Fn(T) -> T,
         sum: &impl Fn(T, T) -> T,
         product: &impl Fn(T, T) -> T,
@@ -601,6 +633,7 @@ impl<F: Field> Expression<F> {
                 column_index,
                 rotation,
             } => instance_column(*query_index, *column_index, *rotation),
+            Expression::Challenge(value) => challenge(*value),
             Expression::Negated(a) => {
                 let a = a.evaluate(
                     constant,
@@ -608,6 +641,7 @@ impl<F: Field> Expression<F> {
                     fixed_column,
                     advice_column,
                     instance_column,
+                    challenge,
                     negated,
                     sum,
                     product,
@@ -622,6 +656,7 @@ impl<F: Field> Expression<F> {
                     fixed_column,
                     advice_column,
                     instance_column,
+                    challenge,
                     negated,
                     sum,
                     product,
@@ -633,6 +668,7 @@ impl<F: Field> Expression<F> {
                     fixed_column,
                     advice_column,
                     instance_column,
+                    challenge,
                     negated,
                     sum,
                     product,
@@ -647,6 +683,7 @@ impl<F: Field> Expression<F> {
                     fixed_column,
                     advice_column,
                     instance_column,
+                    challenge,
                     negated,
                     sum,
                     product,
@@ -658,6 +695,7 @@ impl<F: Field> Expression<F> {
                     fixed_column,
                     advice_column,
                     instance_column,
+                    challenge,
                     negated,
                     sum,
                     product,
@@ -672,6 +710,7 @@ impl<F: Field> Expression<F> {
                     fixed_column,
                     advice_column,
                     instance_column,
+                    challenge,
                     negated,
                     sum,
                     product,
@@ -690,6 +729,7 @@ impl<F: Field> Expression<F> {
             Expression::Fixed { .. } => 1,
             Expression::Advice { .. } => 1,
             Expression::Instance { .. } => 1,
+            Expression::Challenge(_) => 0,
             Expression::Negated(poly) => poly.degree(),
             Expression::Sum(a, b) => max(a.degree(), b.degree()),
             Expression::Product(a, b) => a.degree() + b.degree(),
@@ -710,6 +750,7 @@ impl<F: Field> Expression<F> {
             &|_, _, _| false,
             &|_, _, _, _| false,
             &|_, _, _| false,
+            &|_| false,
             &|a| a,
             &|a, b| a || b,
             &|a, b| a || b,
@@ -737,6 +778,7 @@ impl<F: Field> Expression<F> {
             &|_, _, _| None,
             &|_, _, _, _| None,
             &|_, _, _| None,
+            &|_| None,
             &|a| a,
             &op,
             &op,
@@ -786,6 +828,9 @@ impl<F: std::fmt::Debug> std::fmt::Debug for Expression<F> {
                 .field("column_index", column_index)
                 .field("rotation", rotation)
                 .finish(),
+            Expression::Challenge(challenge) => {
+                f.debug_tuple("Challenge").field(challenge).finish()
+            }
             Expression::Negated(poly) => f.debug_tuple("Negated").field(poly).finish(),
             Expression::Sum(a, b) => f.debug_tuple("Sum").field(a).field(b).finish(),
             Expression::Product(a, b) => f.debug_tuple("Product").field(a).field(b).finish(),
@@ -1012,6 +1057,12 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) num_advice_columns: usize,
     pub(crate) num_instance_columns: usize,
     pub(crate) num_selectors: usize,
+    pub(crate) num_challenges: usize,
+
+    /// Contains the phase for each advice column. Should have same length as num_advice_columns.
+    pub(crate) advice_column_phase: Vec<Phase>,
+    /// Contains the phase for each challenge. Should have same length as num_challenges.
+    pub(crate) challenge_phase: Vec<Phase>,
 
     /// This is a cached vector that maps virtual selectors to the concrete
     /// fixed column that they were compressed into. This is just used by dev
@@ -1043,12 +1094,14 @@ pub struct ConstraintSystem<F: Field> {
 
 /// Represents the minimal parameters that determine a `ConstraintSystem`.
 #[allow(dead_code)]
-#[derive(Debug)]
 pub struct PinnedConstraintSystem<'a, F: Field> {
     num_fixed_columns: &'a usize,
     num_advice_columns: &'a usize,
     num_instance_columns: &'a usize,
     num_selectors: &'a usize,
+    num_challenges: &'a usize,
+    advice_column_phase: &'a Vec<Phase>,
+    challenge_phase: &'a Vec<Phase>,
     gates: PinnedGates<'a, F>,
     advice_queries: &'a Vec<(Column<Advice>, Rotation)>,
     instance_queries: &'a Vec<(Column<Instance>, Rotation)>,
@@ -1057,6 +1110,34 @@ pub struct PinnedConstraintSystem<'a, F: Field> {
     lookups: &'a Vec<lookup::Argument<F>>,
     constants: &'a Vec<Column<Fixed>>,
     minimum_degree: &'a Option<usize>,
+}
+
+impl<'a, F: Field> std::fmt::Debug for PinnedConstraintSystem<'a, F> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut debug_struct = f.debug_struct("PinnedConstraintSystem");
+        debug_struct
+            .field("num_fixed_columns", self.num_fixed_columns)
+            .field("num_advice_columns", self.num_advice_columns)
+            .field("num_instance_columns", self.num_instance_columns)
+            .field("num_selectors", self.num_selectors);
+        // Only show multi-phase related fields if it's used.
+        if *self.num_challenges > 0 {
+            debug_struct
+                .field("num_challenges", self.num_challenges)
+                .field("advice_column_phase", self.advice_column_phase)
+                .field("challenge_phase", self.challenge_phase);
+        }
+        debug_struct
+            .field("gates", &self.gates)
+            .field("advice_queries", self.advice_queries)
+            .field("instance_queries", self.instance_queries)
+            .field("fixed_queries", self.fixed_queries)
+            .field("permutation", self.permutation)
+            .field("lookups", self.lookups)
+            .field("constants", self.constants)
+            .field("minimum_degree", self.minimum_degree);
+        debug_struct.finish()
+    }
 }
 
 struct PinnedGates<'a, F: Field>(&'a Vec<Gate<F>>);
@@ -1076,6 +1157,9 @@ impl<F: Field> Default for ConstraintSystem<F> {
             num_advice_columns: 0,
             num_instance_columns: 0,
             num_selectors: 0,
+            num_challenges: 0,
+            advice_column_phase: Vec::new(),
+            challenge_phase: Vec::new(),
             selector_map: vec![],
             gates: vec![],
             fixed_queries: Vec::new(),
@@ -1100,6 +1184,9 @@ impl<F: Field> ConstraintSystem<F> {
             num_advice_columns: &self.num_advice_columns,
             num_instance_columns: &self.num_instance_columns,
             num_selectors: &self.num_selectors,
+            num_challenges: &self.num_challenges,
+            advice_column_phase: &self.advice_column_phase,
+            challenge_phase: &self.challenge_phase,
             gates: PinnedGates(&self.gates),
             fixed_queries: &self.fixed_queries,
             advice_queries: &self.advice_queries,
@@ -1406,6 +1493,7 @@ impl<F: Field> ConstraintSystem<F> {
                     column_index,
                     rotation,
                 },
+                &|challenge| Expression::Challenge(challenge),
                 &|a| -a,
                 &|a, b| a + b,
                 &|a, b| a * b,
@@ -1467,16 +1555,27 @@ impl<F: Field> ConstraintSystem<F> {
         tmp
     }
 
-    /// Allocate a new advice column
+    /// Allocate a new advice column at `First` phase
     pub fn advice_column(&mut self) -> Column<Advice> {
+        self.advice_column_in(Phase::First)
+    }
+
+    /// Allocate a new advice column in given phase
+    pub fn advice_column_in(&mut self, phase: Phase) -> Column<Advice> {
+        if let Some(previous_phase) = phase.prev() {
+            self.assert_phase_exists(
+                previous_phase,
+                format!("Column<Advice> in later phase {:?}", phase).as_str(),
+            );
+        }
+
         let tmp = Column {
             index: self.num_advice_columns,
-            column_type: Advice {
-                phase: Phase::First,
-            },
+            column_type: Advice { phase },
         };
         self.num_advice_columns += 1;
         self.num_advice_queries.push(0);
+        self.advice_column_phase.push(phase);
         tmp
     }
 
@@ -1488,6 +1587,37 @@ impl<F: Field> ConstraintSystem<F> {
         };
         self.num_instance_columns += 1;
         tmp
+    }
+
+    /// Requests a challenge that is usable after the given phase.
+    pub fn challenge_usable_after(&mut self, phase: Phase) -> Challenge {
+        self.assert_phase_exists(
+            phase,
+            format!("Challenge usable after phase {:?}", phase).as_str(),
+        );
+
+        let tmp = Challenge {
+            index: self.num_challenges,
+            phase,
+        };
+        self.num_challenges += 1;
+        self.challenge_phase.push(phase);
+        tmp
+    }
+
+    /// Helper funciotn to assert phase exists, to make sure phase-aware resources
+    /// are allocated in order, and to avoid any phase to be skipped accidentally
+    /// to cause unexpected issue in the future.
+    fn assert_phase_exists(&self, phase: Phase, resource: &str) {
+        self.advice_column_phase
+            .iter()
+            .find(|advice_column_phase| **advice_column_phase == phase)
+            .unwrap_or_else(|| {
+                panic!(
+                    "No Column<Advice> is used in phase {:?} while allocating a new {:?}",
+                    phase, resource
+                )
+            });
     }
 
     /// Compute the degree of the constraint system (the maximum degree of all
@@ -1629,5 +1759,10 @@ impl<'a, F: Field> VirtualCells<'a, F> {
             Any::Fixed => self.query_fixed(Column::<Fixed>::try_from(column).unwrap(), at),
             Any::Instance => self.query_instance(Column::<Instance>::try_from(column).unwrap(), at),
         }
+    }
+
+    /// Query a challenge
+    pub fn query_challenge(&mut self, challenge: Challenge) -> Expression<F> {
+        Expression::Challenge(challenge)
     }
 }

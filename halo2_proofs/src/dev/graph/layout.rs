@@ -10,8 +10,8 @@ use std::ops::Range;
 use crate::{
     circuit::{layouter::RegionColumn, Value},
     plonk::{
-        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
-        FloorPlanner, Instance, Selector,
+        Advice, Any, Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error,
+        Fixed, FloorPlanner, Instance, Selector,
     },
 };
 
@@ -488,6 +488,10 @@ impl<F: Field> Assignment<F> for Layout {
         _: Value<Assigned<F>>,
     ) -> Result<(), Error> {
         Ok(())
+    }
+
+    fn get_challenge(&self, _: Challenge) -> Value<F> {
+        Value::unknown()
     }
 
     fn push_namespace<NR, N>(&mut self, _: N)

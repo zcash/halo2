@@ -6,15 +6,16 @@ use std::fmt;
 use std::iter;
 use std::ops::{Add, Mul, Neg, Range};
 
+use blake2b_simd::blake2b;
 use ff::Field;
 
-use crate::plonk::Assigned;
 use crate::{
     arithmetic::{FieldExt, Group},
     circuit,
     plonk::{
-        permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
-        Expression, Fixed, FloorPlanner, Instance, Selector, VirtualCell,
+        permutation, Advice, Any, Assigned, Assignment, Challenge, Circuit, Column, ColumnType,
+        ConstraintSystem, Error, Expression, Fixed, FloorPlanner, Instance, Phase, Selector,
+        VirtualCell,
     },
     poly::Rotation,
 };
@@ -289,6 +290,8 @@ pub struct MockProver<F: Group + Field> {
 
     selectors: Vec<Vec<bool>>,
 
+    challenges: Vec<F>,
+
     permutation: permutation::keygen::Assembly,
 
     // A range of available rows for assignment and copies.
@@ -451,6 +454,10 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         Ok(())
     }
 
+    fn get_challenge(&self, challenge: Challenge) -> circuit::Value<F> {
+        circuit::Value::known(self.challenges[challenge.index()])
+    }
+
     fn push_namespace<NR, N>(&mut self, _: N)
     where
         NR: Into<String>,
@@ -518,6 +525,17 @@ impl<F: FieldExt> MockProver<F> {
         let permutation = permutation::keygen::Assembly::new(n, &cs.permutation);
         let constants = cs.constants.clone();
 
+        // Use hash chain to derive deterministic challenges for testing
+        let challenges = {
+            let mut hash: [u8; 64] = blake2b(b"Halo2-MockProver").as_bytes().try_into().unwrap();
+            iter::repeat_with(|| {
+                hash = blake2b(&hash).as_bytes().try_into().unwrap();
+                F::from_bytes_wide(&hash)
+            })
+            .take(cs.num_challenges)
+            .collect()
+        };
+
         let mut prover = MockProver {
             k,
             n: n as u32,
@@ -528,6 +546,7 @@ impl<F: FieldExt> MockProver<F> {
             advice,
             instance,
             selectors,
+            challenges,
             permutation,
             usable_rows: 0..usable_rows,
         };
@@ -621,6 +640,7 @@ impl<F: FieldExt> MockProver<F> {
                                     &self.cs.instance_queries,
                                     &self.instance,
                                 ),
+                                &|challenge| Value::Real(self.challenges[challenge.index()]),
                                 &|a| -a,
                                 &|a, b| a + b,
                                 &|a, b| a * b,
@@ -702,6 +722,7 @@ impl<F: FieldExt> MockProver<F> {
                                         [(row as i32 + n + rotation) as usize % n as usize],
                                 )
                             },
+                            &|challenge| Value::Real(self.challenges[challenge.index()]),
                             &|a| -a,
                             &|a, b| a + b,
                             &|a, b| a * b,
