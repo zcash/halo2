@@ -50,6 +50,23 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> std::ops::Deref
     }
 }
 
+impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> RunningSum<F, WINDOW_NUM_BITS> {
+    /// Returns windows derived from the intermediate values of the running sum.
+    pub(crate) fn windows(&self) -> Vec<Option<F>> {
+        let mut windows = Vec::new();
+        // k_i = z_i - (2^K * z_{i+1})
+        for i in 0..(self.0.len() - 1) {
+            let z_cur = self.0[i].value();
+            let z_next = self.0[i + 1].value();
+            let window = z_cur
+                .zip(z_next)
+                .map(|(z_cur, z_next)| *z_cur - *z_next * F::from(1 << WINDOW_NUM_BITS));
+            windows.push(window);
+        }
+        windows
+    }
+}
+
 /// Configuration that provides methods for running sum decomposition.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct RunningSumConfig<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> {
