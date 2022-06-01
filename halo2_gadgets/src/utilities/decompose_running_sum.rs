@@ -25,7 +25,9 @@
 use ff::PrimeFieldBits;
 use halo2_proofs::{
     circuit::{AssignedCell, Region, Value},
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
+    plonk::{
+        Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector, VirtualCells,
+    },
     poly::Rotation,
 };
 
@@ -87,16 +89,21 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         // https://p.z.cash/halo2-0.1:decompose-short-range
         meta.create_gate("range check", |meta| {
             let q_range_check = meta.query_selector(config.q_range_check);
-            let z_cur = meta.query_advice(config.z, Rotation::cur());
-            let z_next = meta.query_advice(config.z, Rotation::next());
-            //    z_i = 2^{K}⋅z_{i + 1} + k_i
-            // => k_i = z_i - 2^{K}⋅z_{i + 1}
-            let word = z_cur - z_next * F::from(1 << WINDOW_NUM_BITS);
+            let word = config.window_expr(meta);
 
             Constraints::with_selector(q_range_check, Some(range_check(word, 1 << WINDOW_NUM_BITS)))
         });
 
         config
+    }
+
+    /// Expression for a window
+    ///    z_i = 2^{K}⋅z_{i + 1} + k_i
+    /// => k_i = z_i - 2^{K}⋅z_{i + 1}
+    pub(crate) fn window_expr(&self, meta: &mut VirtualCells<'_, F>) -> Expression<F> {
+        let z_cur = meta.query_advice(self.z, Rotation::cur());
+        let z_next = meta.query_advice(self.z, Rotation::next());
+        z_cur - z_next * F::from(1 << WINDOW_NUM_BITS)
     }
 
     /// Decompose a field element alpha that is witnessed in this helper.
