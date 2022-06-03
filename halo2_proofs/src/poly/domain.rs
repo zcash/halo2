@@ -1,8 +1,9 @@
 //! Contains utilities for performing polynomial arithmetic over an evaluation
 //! domain that is of a suitable size for the application.
 
+use crate::multicore::parallelize;
 use crate::{
-    arithmetic::{best_fft, best_ifft, parallelize, FieldExt, Group},
+    arithmetic::{best_fft, best_ifft, FieldExt, Group},
     plonk::Assigned,
 };
 

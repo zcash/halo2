@@ -14,7 +14,7 @@ use pasta_curves::arithmetic::FieldExt;
 use super::{
     Basis, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
 };
-use crate::{arithmetic::parallelize, multicore};
+use crate::multicore::{self, parallelize};
 
 /// Returns `(chunk_size, num_chunks)` suitable for processing the given polynomial length
 /// in the current parallelization environment.
