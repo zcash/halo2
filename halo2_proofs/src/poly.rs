@@ -195,7 +195,7 @@ impl<'a, F: Field, B: Basis> Add<&'a Polynomial<F, B>> for Polynomial<F, B> {
     }
 }
 
-impl<'a, F: Field> Polynomial<F, LagrangeCoeff> {
+impl<F: Field> Polynomial<F, LagrangeCoeff> {
     /// Rotates the values in a Lagrange basis polynomial by `Rotation`
     pub fn rotate(&self, rotation: Rotation) -> Polynomial<F, LagrangeCoeff> {
         let mut values = self.values.clone();
@@ -211,7 +211,7 @@ impl<'a, F: Field> Polynomial<F, LagrangeCoeff> {
     }
 }
 
-impl<'a, F: Field, B: Basis> Mul<F> for Polynomial<F, B> {
+impl<F: Field, B: Basis> Mul<F> for Polynomial<F, B> {
     type Output = Polynomial<F, B>;
 
     fn mul(mut self, rhs: F) -> Polynomial<F, B> {

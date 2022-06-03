@@ -194,27 +194,6 @@ mod tests {
     use proptest::{collection::vec, prelude::*};
     use rand_core::OsRng;
 
-    #[test]
-    fn test_bitreverse() {
-        fn bitreverse(mut n: usize, l: usize) -> usize {
-            let mut r = 0;
-            for _ in 0..l {
-                r = (r << 1) | (n & 1);
-                n >>= 1;
-            }
-            r
-        }
-        for k in 3..10 {
-            let n = 1 << k;
-            for i in 0..n as u64 {
-                assert_eq!(
-                    bitreverse(i as usize, k),
-                    (i.reverse_bits() >> (64 - k)) as usize
-                )
-            }
-        }
-    }
-
     fn prev_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
         let n = a.len() as u32;
         assert_eq!(n, 1 << log_n);

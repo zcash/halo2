@@ -121,13 +121,19 @@ mod test {
     use crate::pasta::Fp;
     use crate::poly::commitment::Params;
     use ff::Field;
+    use proptest::{collection::vec, prelude::*};
     use rand_core::OsRng;
 
-    #[test]
-    fn test_multiexp() {
-        for k in 3..10 {
-            let coeffs = (0..(1 << k)).map(|_| Fp::random(OsRng)).collect::<Vec<_>>();
-            let params: Params<EqAffine> = Params::new(k);
+    fn arb_poly(k: usize, rng: OsRng) -> Vec<Fp> {
+        (0..(1 << k)).map(|_| Fp::random(rng)).collect::<Vec<_>>()
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10))]
+        #[test]
+        fn test_multiexp(k in 3usize..10) {
+            let coeffs = arb_poly(k, OsRng);
+            let params: Params<EqAffine> = Params::new(k as u32);
             let g_a = &mut params.get_g();
             let g_b = &mut params.get_g();
 
