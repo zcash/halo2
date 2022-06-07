@@ -11,6 +11,7 @@ use ff::{Field, PrimeField};
 use group::prime::PrimeGroup;
 
 use crate::{
+    circuit::Value,
     plonk::{
         Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
         FloorPlanner, Instance, Selector,
@@ -68,8 +69,8 @@ impl<F: Field> Assignment<F> for Assembly {
         Ok(())
     }
 
-    fn query_instance(&self, _: Column<Instance>, _: usize) -> Result<Option<F>, Error> {
-        Ok(None)
+    fn query_instance(&self, _: Column<Instance>, _: usize) -> Result<Value<F>, Error> {
+        Ok(Value::unknown())
     }
 
     fn assign_advice<V, VR, A, AR>(
@@ -80,7 +81,7 @@ impl<F: Field> Assignment<F> for Assembly {
         _: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
@@ -96,7 +97,7 @@ impl<F: Field> Assignment<F> for Assembly {
         _: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
@@ -112,7 +113,7 @@ impl<F: Field> Assignment<F> for Assembly {
         &mut self,
         _: Column<Fixed>,
         _: usize,
-        _: Option<Assigned<F>>,
+        _: Value<Assigned<F>>,
     ) -> Result<(), Error> {
         Ok(())
     }

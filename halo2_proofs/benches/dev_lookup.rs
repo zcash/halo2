@@ -2,7 +2,7 @@
 extern crate criterion;
 
 use halo2_proofs::arithmetic::FieldExt;
-use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner};
+use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::Rotation;
@@ -63,7 +63,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                             || format!("row {}", row),
                             config.table,
                             row as usize,
-                            || Ok(F::from(row + 1)),
+                            || Value::known(F::from(row + 1)),
                         )?;
                     }
 
@@ -80,7 +80,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                             || format!("offset {}", offset),
                             config.advice,
                             offset as usize,
-                            || Ok(F::from((offset % 256) + 1)),
+                            || Value::known(F::from((offset % 256) + 1)),
                         )?;
                     }
 

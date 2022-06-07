@@ -1,9 +1,12 @@
 use ff::Field;
 use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 
-use crate::plonk::{
-    Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
-    FloorPlanner, Instance, Selector,
+use crate::{
+    circuit::Value,
+    plonk::{
+        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
+        FloorPlanner, Instance, Selector,
+    },
 };
 
 pub mod layout;
@@ -96,8 +99,8 @@ impl<F: Field> Assignment<F> for Graph {
         Ok(())
     }
 
-    fn query_instance(&self, _: Column<Instance>, _: usize) -> Result<Option<F>, Error> {
-        Ok(None)
+    fn query_instance(&self, _: Column<Instance>, _: usize) -> Result<Value<F>, Error> {
+        Ok(Value::unknown())
     }
 
     fn assign_advice<V, VR, A, AR>(
@@ -108,7 +111,7 @@ impl<F: Field> Assignment<F> for Graph {
         _: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
@@ -125,7 +128,7 @@ impl<F: Field> Assignment<F> for Graph {
         _: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
@@ -149,7 +152,7 @@ impl<F: Field> Assignment<F> for Graph {
         &mut self,
         _: Column<Fixed>,
         _: usize,
-        _: Option<Assigned<F>>,
+        _: Value<Assigned<F>>,
     ) -> Result<(), Error> {
         Ok(())
     }

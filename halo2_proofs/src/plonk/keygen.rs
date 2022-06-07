@@ -12,11 +12,15 @@ use super::{
     },
     permutation, Assigned, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
 };
-use crate::poly::{
-    commitment::{Blind, Params},
-    EvaluationDomain,
+use crate::{
+    arithmetic::CurveAffine,
+    circuit::Value,
+    poly::{
+        batch_invert_assigned,
+        commitment::{Blind, Params},
+        EvaluationDomain,
+    },
 };
-use crate::{arithmetic::CurveAffine, poly::batch_invert_assigned};
 
 pub(crate) fn create_domain<C, ConcreteCircuit>(
     params: &Params<C>,
@@ -78,13 +82,13 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         Ok(())
     }
 
-    fn query_instance(&self, _: Column<Instance>, row: usize) -> Result<Option<F>, Error> {
+    fn query_instance(&self, _: Column<Instance>, row: usize) -> Result<Value<F>, Error> {
         if !self.usable_rows.contains(&row) {
             return Err(Error::not_enough_rows_available(self.k));
         }
 
         // There is no instance in this context.
-        Ok(None)
+        Ok(Value::unknown())
     }
 
     fn assign_advice<V, VR, A, AR>(
@@ -95,7 +99,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         _: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
@@ -112,7 +116,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
@@ -125,7 +129,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
             .fixed
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? = to()?.into();
+            .ok_or(Error::BoundsFailure)? = to().into_field().assign()?;
 
         Ok(())
     }
@@ -149,7 +153,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         &mut self,
         column: Column<Fixed>,
         from_row: usize,
-        to: Option<Assigned<F>>,
+        to: Value<Assigned<F>>,
     ) -> Result<(), Error> {
         if !self.usable_rows.contains(&from_row) {
             return Err(Error::not_enough_rows_available(self.k));
@@ -160,8 +164,9 @@ impl<F: Field> Assignment<F> for Assembly<F> {
             .get_mut(column.index())
             .ok_or(Error::BoundsFailure)?;
 
+        let filler = to.assign()?;
         for row in self.usable_rows.clone().skip(from_row) {
-            col[row] = to.ok_or(Error::Synthesis)?;
+            col[row] = filler;
         }
 
         Ok(())

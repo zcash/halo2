@@ -11,6 +11,7 @@ use ff::Field;
 use crate::plonk::Assigned;
 use crate::{
     arithmetic::{FieldExt, Group},
+    circuit,
     plonk::{
         permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
         Expression, Fixed, FloorPlanner, Instance, Selector, VirtualCell,
@@ -167,7 +168,7 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 /// ```
 /// use halo2_proofs::{
 ///     arithmetic::FieldExt,
-///     circuit::{Layouter, SimpleFloorPlanner},
+///     circuit::{Layouter, SimpleFloorPlanner, Value},
 ///     dev::{FailureLocation, MockProver, VerifyFailure},
 ///     pasta::Fp,
 ///     plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Selector},
@@ -185,8 +186,8 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 ///
 /// #[derive(Clone, Default)]
 /// struct MyCircuit {
-///     a: Option<u64>,
-///     b: Option<u64>,
+///     a: Value<u64>,
+///     b: Value<u64>,
 /// }
 ///
 /// impl<F: FieldExt> Circuit<F> for MyCircuit {
@@ -220,15 +221,13 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 ///         layouter.assign_region(|| "Example region", |mut region| {
 ///             config.s.enable(&mut region, 0)?;
 ///             region.assign_advice(|| "a", config.a, 0, || {
-///                 self.a.map(|v| F::from(v)).ok_or(Error::Synthesis)
+///                 self.a.map(F::from)
 ///             })?;
 ///             region.assign_advice(|| "b", config.b, 0, || {
-///                 self.b.map(|v| F::from(v)).ok_or(Error::Synthesis)
+///                 self.b.map(F::from)
 ///             })?;
 ///             region.assign_advice(|| "c", config.c, 0, || {
-///                 self.a
-///                     .and_then(|a| self.b.map(|b| F::from(a * b)))
-///                     .ok_or(Error::Synthesis)
+///                 (self.a * self.b).map(F::from)
 ///             })?;
 ///             Ok(())
 ///         })
@@ -237,8 +236,8 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 ///
 /// // Assemble the private inputs to the circuit.
 /// let circuit = MyCircuit {
-///     a: Some(2),
-///     b: Some(4),
+///     a: Value::known(2),
+///     b: Value::known(4),
 /// };
 ///
 /// // This circuit has no public inputs.
@@ -340,7 +339,11 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         Ok(())
     }
 
-    fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Option<F>, Error> {
+    fn query_instance(
+        &self,
+        column: Column<Instance>,
+        row: usize,
+    ) -> Result<circuit::Value<F>, Error> {
         if !self.usable_rows.contains(&row) {
             return Err(Error::not_enough_rows_available(self.k));
         }
@@ -348,7 +351,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         self.instance
             .get(column.index())
             .and_then(|column| column.get(row))
-            .map(|v| Some(*v))
+            .map(|v| circuit::Value::known(*v))
             .ok_or(Error::BoundsFailure)
     }
 
@@ -360,7 +363,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> circuit::Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
@@ -378,7 +381,8 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             .advice
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? = CellValue::Assigned(to()?.into().evaluate());
+            .ok_or(Error::BoundsFailure)? =
+            CellValue::Assigned(to().into_field().evaluate().assign()?);
 
         Ok(())
     }
@@ -391,7 +395,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> circuit::Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
@@ -409,7 +413,8 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             .fixed
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? = CellValue::Assigned(to()?.into().evaluate());
+            .ok_or(Error::BoundsFailure)? =
+            CellValue::Assigned(to().into_field().evaluate().assign()?);
 
         Ok(())
     }
@@ -433,14 +438,14 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         &mut self,
         col: Column<Fixed>,
         from_row: usize,
-        to: Option<Assigned<F>>,
+        to: circuit::Value<Assigned<F>>,
     ) -> Result<(), Error> {
         if !self.usable_rows.contains(&from_row) {
             return Err(Error::not_enough_rows_available(self.k));
         }
 
         for row in self.usable_rows.clone().skip(from_row) {
-            self.assign_fixed(|| "", col, row, || to.ok_or(Error::Synthesis))?;
+            self.assign_fixed(|| "", col, row, || to)?;
         }
 
         Ok(())
@@ -876,7 +881,7 @@ mod tests {
 
     use super::{FailureLocation, MockProver, VerifyFailure};
     use crate::{
-        circuit::{Layouter, SimpleFloorPlanner},
+        circuit::{Layouter, SimpleFloorPlanner, Value},
         plonk::{
             Advice, Any, Circuit, Column, ConstraintSystem, Error, Expression, Selector,
             TableColumn,
@@ -933,7 +938,7 @@ mod tests {
                         config.q.enable(&mut region, 1)?;
 
                         // Assign a = 0.
-                        region.assign_advice(|| "a", config.a, 0, || Ok(Fp::zero()))?;
+                        region.assign_advice(|| "a", config.a, 0, || Value::known(Fp::zero()))?;
 
                         // BUG: Forget to assign b = 0! This could go unnoticed during
                         // development, because cell values default to zero, which in this
@@ -1011,7 +1016,7 @@ mod tests {
                                     || format!("table[{}] = {}", i, 2 * i),
                                     config.table,
                                     i - 1,
-                                    || Ok(Fp::from(2 * i as u64)),
+                                    || Value::known(Fp::from(2 * i as u64)),
                                 )
                             })
                             .fold(Ok(()), |acc, res| acc.and(res))
@@ -1026,8 +1031,18 @@ mod tests {
                         config.q.enable(&mut region, 1)?;
 
                         // Assign a = 2 and a = 6.
-                        region.assign_advice(|| "a = 2", config.a, 0, || Ok(Fp::from(2)))?;
-                        region.assign_advice(|| "a = 6", config.a, 1, || Ok(Fp::from(6)))?;
+                        region.assign_advice(
+                            || "a = 2",
+                            config.a,
+                            0,
+                            || Value::known(Fp::from(2)),
+                        )?;
+                        region.assign_advice(
+                            || "a = 6",
+                            config.a,
+                            1,
+                            || Value::known(Fp::from(6)),
+                        )?;
 
                         Ok(())
                     },
@@ -1041,10 +1056,20 @@ mod tests {
                         config.q.enable(&mut region, 1)?;
 
                         // Assign a = 4.
-                        region.assign_advice(|| "a = 4", config.a, 0, || Ok(Fp::from(4)))?;
+                        region.assign_advice(
+                            || "a = 4",
+                            config.a,
+                            0,
+                            || Value::known(Fp::from(4)),
+                        )?;
 
                         // BUG: Assign a = 5, which doesn't exist in the table!
-                        region.assign_advice(|| "a = 5", config.a, 1, || Ok(Fp::from(5)))?;
+                        region.assign_advice(
+                            || "a = 5",
+                            config.a,
+                            1,
+                            || Value::known(Fp::from(5)),
+                        )?;
 
                         Ok(())
                     },

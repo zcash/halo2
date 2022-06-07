@@ -1,9 +1,9 @@
 use ff::Field;
 use halo2_proofs::{
     arithmetic::FieldExt,
-    circuit::{Cell, Layouter, Region, SimpleFloorPlanner},
+    circuit::{Cell, Layouter, Region, SimpleFloorPlanner, Value},
     pasta::Fp,
-    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed, TableColumn},
+    plonk::{Advice, Assigned, Circuit, Column, ConstraintSystem, Error, Fixed, TableColumn},
     poly::Rotation,
 };
 use rand_core::OsRng;
@@ -31,16 +31,16 @@ struct PlonkConfig {
 trait StandardCs<FF: FieldExt> {
     fn raw_multiply<F>(&self, region: &mut Region<FF>, f: F) -> Result<(Cell, Cell, Cell), Error>
     where
-        F: FnMut() -> Result<(FF, FF, FF), Error>;
+        F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>;
     fn raw_add<F>(&self, region: &mut Region<FF>, f: F) -> Result<(Cell, Cell, Cell), Error>
     where
-        F: FnMut() -> Result<(FF, FF, FF), Error>;
+        F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>;
     fn copy(&self, region: &mut Region<FF>, a: Cell, b: Cell) -> Result<(), Error>;
     fn lookup_table(&self, layouter: &mut impl Layouter<FF>, values: &[FF]) -> Result<(), Error>;
 }
 
 struct MyCircuit<F: FieldExt> {
-    a: Option<F>,
+    a: Value<F>,
     lookup_table: Vec<F>,
 }
 
@@ -65,7 +65,7 @@ impl<FF: FieldExt> StandardCs<FF> for StandardPlonk<FF> {
         mut f: F,
     ) -> Result<(Cell, Cell, Cell), Error>
     where
-        F: FnMut() -> Result<(FF, FF, FF), Error>,
+        F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>,
     {
         let mut value = None;
         let lhs = region.assign_advice(
@@ -73,44 +73,36 @@ impl<FF: FieldExt> StandardCs<FF> for StandardPlonk<FF> {
             self.config.a,
             0,
             || {
-                value = Some(f()?);
-                Ok(value.ok_or(Error::Synthesis)?.0)
+                value = Some(f());
+                value.unwrap().map(|v| v.0)
             },
         )?;
         region.assign_advice(
             || "lhs^4",
             self.config.d,
             0,
-            || Ok(value.ok_or(Error::Synthesis)?.0.square().square()),
+            || value.unwrap().map(|v| v.0).square().square(),
         )?;
-        let rhs = region.assign_advice(
-            || "rhs",
-            self.config.b,
-            0,
-            || Ok(value.ok_or(Error::Synthesis)?.1),
-        )?;
+        let rhs =
+            region.assign_advice(|| "rhs", self.config.b, 0, || value.unwrap().map(|v| v.1))?;
         region.assign_advice(
             || "rhs^4",
             self.config.e,
             0,
-            || Ok(value.ok_or(Error::Synthesis)?.1.square().square()),
+            || value.unwrap().map(|v| v.1).square().square(),
         )?;
-        let out = region.assign_advice(
-            || "out",
-            self.config.c,
-            0,
-            || Ok(value.ok_or(Error::Synthesis)?.2),
-        )?;
+        let out =
+            region.assign_advice(|| "out", self.config.c, 0, || value.unwrap().map(|v| v.2))?;
 
-        region.assign_fixed(|| "a", self.config.sa, 0, || Ok(FF::zero()))?;
-        region.assign_fixed(|| "b", self.config.sb, 0, || Ok(FF::zero()))?;
-        region.assign_fixed(|| "c", self.config.sc, 0, || Ok(FF::one()))?;
-        region.assign_fixed(|| "a * b", self.config.sm, 0, || Ok(FF::one()))?;
+        region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::zero()))?;
+        region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::zero()))?;
+        region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
+        region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::one()))?;
         Ok((lhs.cell(), rhs.cell(), out.cell()))
     }
     fn raw_add<F>(&self, region: &mut Region<FF>, mut f: F) -> Result<(Cell, Cell, Cell), Error>
     where
-        F: FnMut() -> Result<(FF, FF, FF), Error>,
+        F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>,
     {
         let mut value = None;
         let lhs = region.assign_advice(
@@ -118,39 +110,31 @@ impl<FF: FieldExt> StandardCs<FF> for StandardPlonk<FF> {
             self.config.a,
             0,
             || {
-                value = Some(f()?);
-                Ok(value.ok_or(Error::Synthesis)?.0)
+                value = Some(f());
+                value.unwrap().map(|v| v.0)
             },
         )?;
         region.assign_advice(
             || "lhs^4",
             self.config.d,
             0,
-            || Ok(value.ok_or(Error::Synthesis)?.0.square().square()),
+            || value.unwrap().map(|v| v.0.square().square()),
         )?;
-        let rhs = region.assign_advice(
-            || "rhs",
-            self.config.b,
-            0,
-            || Ok(value.ok_or(Error::Synthesis)?.1),
-        )?;
+        let rhs =
+            region.assign_advice(|| "rhs", self.config.b, 0, || value.unwrap().map(|v| v.1))?;
         region.assign_advice(
             || "rhs^4",
             self.config.e,
             0,
-            || Ok(value.ok_or(Error::Synthesis)?.1.square().square()),
+            || value.unwrap().map(|v| v.1.square().square()),
         )?;
-        let out = region.assign_advice(
-            || "out",
-            self.config.c,
-            0,
-            || Ok(value.ok_or(Error::Synthesis)?.2),
-        )?;
+        let out =
+            region.assign_advice(|| "out", self.config.c, 0, || value.unwrap().map(|v| v.2))?;
 
-        region.assign_fixed(|| "a", self.config.sa, 0, || Ok(FF::one()))?;
-        region.assign_fixed(|| "b", self.config.sb, 0, || Ok(FF::one()))?;
-        region.assign_fixed(|| "c", self.config.sc, 0, || Ok(FF::one()))?;
-        region.assign_fixed(|| "a * b", self.config.sm, 0, || Ok(FF::zero()))?;
+        region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::one()))?;
+        region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::one()))?;
+        region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
+        region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::zero()))?;
         Ok((lhs.cell(), rhs.cell(), out.cell()))
     }
     fn copy(&self, region: &mut Region<FF>, left: Cell, right: Cell) -> Result<(), Error> {
@@ -161,7 +145,12 @@ impl<FF: FieldExt> StandardCs<FF> for StandardPlonk<FF> {
             || "",
             |mut table| {
                 for (index, &value) in values.iter().enumerate() {
-                    table.assign_cell(|| "table col", self.config.sl, index, || Ok(value))?;
+                    table.assign_cell(
+                        || "table col",
+                        self.config.sl,
+                        index,
+                        || Value::known(value),
+                    )?;
                 }
                 Ok(())
             },
@@ -176,7 +165,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
 
     fn without_witnesses(&self) -> Self {
         Self {
-            a: None,
+            a: Value::unknown(),
             lookup_table: self.lookup_table.clone(),
         }
     }
@@ -257,22 +246,17 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
             layouter.assign_region(
                 || format!("region_{}", i),
                 |mut region| {
-                    let mut a_squared = None;
+                    let a: Value<Assigned<_>> = self.a.into();
+                    let mut a_squared = Value::unknown();
                     let (a0, _, c0) = cs.raw_multiply(&mut region, || {
-                        a_squared = self.a.map(|a| a.square());
-                        Ok((
-                            self.a.ok_or(Error::Synthesis)?,
-                            self.a.ok_or(Error::Synthesis)?,
-                            a_squared.ok_or(Error::Synthesis)?,
-                        ))
+                        a_squared = a.square();
+                        a.zip(a_squared).map(|(a, a_squared)| (a, a, a_squared))
                     })?;
                     let (a1, b1, _) = cs.raw_add(&mut region, || {
-                        let fin = a_squared.and_then(|a2| self.a.map(|a| a + a2));
-                        Ok((
-                            self.a.ok_or(Error::Synthesis)?,
-                            a_squared.ok_or(Error::Synthesis)?,
-                            fin.ok_or(Error::Synthesis)?,
-                        ))
+                        let fin = a_squared + a;
+                        a.zip(a_squared)
+                            .zip(fin)
+                            .map(|((a, a_squared), fin)| (a, a_squared, fin))
                     })?;
                     cs.copy(&mut region, a0, a1)?;
                     cs.copy(&mut region, b1, c0)
@@ -294,7 +278,7 @@ fn main() {
     let instance = Fp::one() + Fp::one();
     let lookup_table = vec![instance, a, a, Fp::zero()];
     let circuit: MyCircuit<Fp> = MyCircuit {
-        a: None,
+        a: Value::unknown(),
         lookup_table,
     };
 

@@ -7,8 +7,10 @@ use std::{
 };
 
 use super::{lookup, permutation, Assigned, Error};
-use crate::circuit::Layouter;
-use crate::{circuit::Region, poly::Rotation};
+use crate::{
+    circuit::{Layouter, Region, Value},
+    poly::Rotation,
+};
 
 mod compress_selectors;
 
@@ -226,7 +228,11 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// Selectors are disabled on all rows by default, and must be explicitly enabled on each
 /// row when required:
 /// ```
-/// use halo2_proofs::{arithmetic::FieldExt, circuit::{Chip, Layouter}, plonk::{Advice, Column, Error, Selector}};
+/// use halo2_proofs::{
+///     arithmetic::FieldExt,
+///     circuit::{Chip, Layouter, Value},
+///     plonk::{Advice, Column, Error, Selector},
+/// };
 /// # use ff::Field;
 /// # use halo2_proofs::plonk::Fixed;
 ///
@@ -240,8 +246,8 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 ///     let config = chip.config();
 ///     # let config: Config = todo!();
 ///     layouter.assign_region(|| "bar", |mut region| {
-///         region.assign_advice(|| "a", config.a, 0, || Ok(F::one()))?;
-///         region.assign_advice(|| "a", config.b, 1, || Ok(F::one()))?;
+///         region.assign_advice(|| "a", config.a, 0, || Value::known(F::one()))?;
+///         region.assign_advice(|| "a", config.b, 1, || Value::known(F::one()))?;
 ///         config.s.enable(&mut region, 1)
 ///     })?;
 ///     Ok(())
@@ -329,7 +335,7 @@ pub trait Assignment<F: Field> {
     /// Queries the cell of an instance column at a particular absolute row.
     ///
     /// Returns the cell's value, if known.
-    fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Option<F>, Error>;
+    fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Value<F>, Error>;
 
     /// Assign an advice column value (witness)
     fn assign_advice<V, VR, A, AR>(
@@ -340,7 +346,7 @@ pub trait Assignment<F: Field> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>;
@@ -354,7 +360,7 @@ pub trait Assignment<F: Field> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>;
@@ -373,7 +379,7 @@ pub trait Assignment<F: Field> {
         &mut self,
         column: Column<Fixed>,
         row: usize,
-        to: Option<Assigned<F>>,
+        to: Value<Assigned<F>>,
     ) -> Result<(), Error>;
 
     /// Creates a new (sub)namespace and enters into it.
