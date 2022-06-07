@@ -93,6 +93,13 @@ pub trait EccInstructions<C: CurveAffine>:
     /// Extracts the x-coordinate of a point.
     fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X;
 
+    /// Performs incomplete point doubling, returning `[2]a`.
+    fn double(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        a: &Self::NonIdentityPoint,
+    ) -> Result<Self::NonIdentityPoint, Error>;
+
     /// Performs incomplete point addition, returning `a + b`.
     ///
     /// This returns an error in exceptional cases.
@@ -299,6 +306,16 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> NonIdentityPoint<C, EccChip> {
     /// Wraps the given point (obtained directly from an instruction) in a gadget.
     pub fn from_inner(chip: EccChip, inner: EccChip::NonIdentityPoint) -> Self {
         NonIdentityPoint { chip, inner }
+    }
+
+    /// Returns [2]self using incomplete doubling.
+    pub fn double(&self, mut layouter: impl Layouter<C::Base>) -> Result<Self, Error> {
+        self.chip
+            .double(&mut layouter, &self.inner)
+            .map(|inner| NonIdentityPoint {
+                chip: self.chip.clone(),
+                inner,
+            })
     }
 
     /// Returns `self + other` using complete addition.
@@ -826,6 +843,16 @@ pub(crate) mod tests {
                     chip.clone(),
                     layouter.namespace(|| "witness non-identity point"),
                 )
+            }
+
+            // Test incomplete doubling
+            {
+                super::chip::double::tests::test_double(
+                    chip.clone(),
+                    layouter.namespace(|| "incomplete doubling"),
+                    p_val,
+                    &p,
+                )?;
             }
 
             // Test complete addition

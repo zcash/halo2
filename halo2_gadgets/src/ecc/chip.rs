@@ -19,6 +19,7 @@ use std::convert::TryInto;
 pub(super) mod add;
 pub(super) mod add_incomplete;
 pub mod constants;
+pub(super) mod double;
 pub(super) mod mul;
 pub(super) mod mul_fixed;
 pub(super) mod witness_point;
@@ -139,6 +140,9 @@ impl<C: CurveAffine> From<NonIdentityEccPoint<C>> for EccPoint<C> {
 pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>> {
     /// Advice columns needed by instructions in the ECC chip.
     pub advices: [Column<Advice>; 10],
+
+    /// Incomplete doubling
+    double: double::Config<pallas::Affine>,
 
     /// Incomplete addition
     add_incomplete: add_incomplete::Config<pallas::Affine>,
@@ -267,6 +271,11 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
     ) -> <Self as Chip<pallas::Base>>::Config {
         // Create witness point gate
         let witness_point = witness_point::Config::configure(meta, advices[0], advices[1]);
+
+        // Create incomplete point doubling gate
+        let double =
+            double::Config::configure(meta, advices[0], advices[1], advices[2], advices[3]);
+
         // Create incomplete point addition gate
         let add_incomplete =
             add_incomplete::Config::configure(meta, advices[0], advices[1], advices[2], advices[3]);
@@ -309,6 +318,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
 
         EccConfig {
             advices,
+            double,
             add_incomplete,
             add,
             mul,
@@ -501,6 +511,18 @@ where
     fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X {
         let point: EccPoint<pallas::Affine> = (point.clone()).into();
         point.x()
+    }
+
+    fn double(
+        &self,
+        layouter: &mut impl Layouter<pallas::Base>,
+        a: &Self::NonIdentityPoint,
+    ) -> Result<Self::NonIdentityPoint, Error> {
+        let config = self.config().double;
+        layouter.assign_region(
+            || "incomplete point doubling",
+            |mut region| config.assign_region(a, 0, &mut region),
+        )
     }
 
     fn add_incomplete(
