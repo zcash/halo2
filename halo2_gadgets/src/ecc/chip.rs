@@ -8,7 +8,6 @@ use crate::{
 use arrayvec::ArrayVec;
 
 use ff::PrimeField;
-use group::prime::PrimeCurveAffine;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter, Value},
     plonk::{Advice, Assigned, Column, ConstraintSystem, Error, Fixed},
@@ -33,46 +32,46 @@ pub(crate) use mul::incomplete::DoubleAndAdd;
 /// identity represented as (0, 0).
 /// Each coordinate is assigned to a cell.
 #[derive(Clone, Debug)]
-pub struct EccPoint {
+pub struct EccPoint<C: CurveAffine> {
     /// x-coordinate
     ///
     /// Stored as an `Assigned<F>` to enable batching inversions.
-    x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+    x: AssignedCell<Assigned<C::Base>, C::Base>,
     /// y-coordinate
     ///
     /// Stored as an `Assigned<F>` to enable batching inversions.
-    y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+    y: AssignedCell<Assigned<C::Base>, C::Base>,
 }
 
-impl EccPoint {
+impl<C: CurveAffine> EccPoint<C> {
     /// Constructs a point from its coordinates, without checking they are on the curve.
     ///
     /// This is an internal API that we only use where we know we have a valid curve point.
     pub(crate) fn from_coordinates_unchecked(
-        x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
-        y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+        x: AssignedCell<Assigned<C::Base>, C::Base>,
+        y: AssignedCell<Assigned<C::Base>, C::Base>,
     ) -> Self {
         EccPoint { x, y }
     }
 
     /// Returns the value of this curve point, if known.
-    pub fn point(&self) -> Value<pallas::Affine> {
+    pub fn point(&self) -> Value<C> {
         self.x.value().zip(self.y.value()).map(|(x, y)| {
             if x.is_zero_vartime() && y.is_zero_vartime() {
-                pallas::Affine::identity()
+                C::identity()
             } else {
-                pallas::Affine::from_xy(x.evaluate(), y.evaluate()).unwrap()
+                C::from_xy(x.evaluate(), y.evaluate()).unwrap()
             }
         })
     }
     /// The cell containing the affine short-Weierstrass x-coordinate,
     /// or 0 for the zero point.
-    pub fn x(&self) -> AssignedCell<pallas::Base, pallas::Base> {
+    pub fn x(&self) -> AssignedCell<C::Base, C::Base> {
         self.x.clone().evaluate()
     }
     /// The cell containing the affine short-Weierstrass y-coordinate,
     /// or 0 for the zero point.
-    pub fn y(&self) -> AssignedCell<pallas::Base, pallas::Base> {
+    pub fn y(&self) -> AssignedCell<C::Base, C::Base> {
         self.y.clone().evaluate()
     }
 
@@ -85,48 +84,48 @@ impl EccPoint {
 /// A non-identity point represented in affine (x, y) coordinates.
 /// Each coordinate is assigned to a cell.
 #[derive(Clone, Debug)]
-pub struct NonIdentityEccPoint {
+pub struct NonIdentityEccPoint<C: CurveAffine> {
     /// x-coordinate
     ///
     /// Stored as an `Assigned<F>` to enable batching inversions.
-    x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+    x: AssignedCell<Assigned<C::Base>, C::Base>,
     /// y-coordinate
     ///
     /// Stored as an `Assigned<F>` to enable batching inversions.
-    y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+    y: AssignedCell<Assigned<C::Base>, C::Base>,
 }
 
-impl NonIdentityEccPoint {
+impl<C: CurveAffine> NonIdentityEccPoint<C> {
     /// Constructs a point from its coordinates, without checking they are on the curve.
     ///
     /// This is an internal API that we only use where we know we have a valid non-identity
     /// curve point.
     pub(crate) fn from_coordinates_unchecked(
-        x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
-        y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+        x: AssignedCell<Assigned<C::Base>, C::Base>,
+        y: AssignedCell<Assigned<C::Base>, C::Base>,
     ) -> Self {
         NonIdentityEccPoint { x, y }
     }
 
     /// Returns the value of this curve point, if known.
-    pub fn point(&self) -> Value<pallas::Affine> {
+    pub fn point(&self) -> Value<C> {
         self.x.value().zip(self.y.value()).map(|(x, y)| {
             assert!(!x.is_zero_vartime() && !y.is_zero_vartime());
-            pallas::Affine::from_xy(x.evaluate(), y.evaluate()).unwrap()
+            C::from_xy(x.evaluate(), y.evaluate()).unwrap()
         })
     }
     /// The cell containing the affine short-Weierstrass x-coordinate.
-    pub fn x(&self) -> AssignedCell<pallas::Base, pallas::Base> {
+    pub fn x(&self) -> AssignedCell<C::Base, C::Base> {
         self.x.clone().evaluate()
     }
     /// The cell containing the affine short-Weierstrass y-coordinate.
-    pub fn y(&self) -> AssignedCell<pallas::Base, pallas::Base> {
+    pub fn y(&self) -> AssignedCell<C::Base, C::Base> {
         self.y.clone().evaluate()
     }
 }
 
-impl From<NonIdentityEccPoint> for EccPoint {
-    fn from(non_id_point: NonIdentityEccPoint) -> Self {
+impl<C: CurveAffine> From<NonIdentityEccPoint<C>> for EccPoint<C> {
+    fn from(non_id_point: NonIdentityEccPoint<C>) -> Self {
         Self {
             x: non_id_point.x,
             y: non_id_point.y,
@@ -419,8 +418,8 @@ where
     type ScalarFixed = EccScalarFixed;
     type ScalarFixedShort = EccScalarFixedShort;
     type ScalarVar = ScalarVar;
-    type Point = EccPoint;
-    type NonIdentityPoint = NonIdentityEccPoint;
+    type Point = EccPoint<pallas::Affine>;
+    type NonIdentityPoint = NonIdentityEccPoint<pallas::Affine>;
     type X = AssignedCell<pallas::Base, pallas::Base>;
     type FixedPoints = Fixed;
 
@@ -500,7 +499,7 @@ where
     }
 
     fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X {
-        let point: EccPoint = (point.clone()).into();
+        let point: EccPoint<pallas::Affine> = (point.clone()).into();
         point.x()
     }
 

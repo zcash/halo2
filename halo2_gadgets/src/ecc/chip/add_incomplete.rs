@@ -81,11 +81,11 @@ impl Config {
 
     pub(super) fn assign_region(
         &self,
-        p: &NonIdentityEccPoint,
-        q: &NonIdentityEccPoint,
+        p: &NonIdentityEccPoint<pallas::Affine>,
+        q: &NonIdentityEccPoint<pallas::Affine>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
-    ) -> Result<NonIdentityEccPoint, Error> {
+    ) -> Result<NonIdentityEccPoint<pallas::Affine>, Error> {
         // Enable `q_add_incomplete` selector
         self.q_add_incomplete.enable(region, offset)?;
 

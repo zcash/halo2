@@ -228,7 +228,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        base: &NonIdentityEccPoint,
+        base: &NonIdentityEccPoint<pallas::Affine>,
         bits: &[Value<bool>],
         acc: (X<pallas::Base>, Y<pallas::Base>, Z<pallas::Base>),
     ) -> Result<(X<pallas::Base>, Y<pallas::Base>, Vec<Z<pallas::Base>>), Error> {
