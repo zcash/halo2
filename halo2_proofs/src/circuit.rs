@@ -9,6 +9,9 @@ use crate::{
     plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector, TableColumn},
 };
 
+mod value;
+pub use value::Value;
+
 pub mod floor_planner;
 pub use floor_planner::single_pass::SimpleFloorPlanner;
 
