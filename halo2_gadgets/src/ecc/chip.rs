@@ -141,7 +141,7 @@ pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>> {
     pub advices: [Column<Advice>; 10],
 
     /// Incomplete addition
-    add_incomplete: add_incomplete::Config,
+    add_incomplete: add_incomplete::Config<pallas::Affine>,
 
     /// Complete addition
     add: add::Config,
