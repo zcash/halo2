@@ -108,7 +108,7 @@ impl Config {
         value: Value<pallas::Affine>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
-    ) -> Result<EccPoint, Error> {
+    ) -> Result<EccPoint<pallas::Affine>, Error> {
         // Enable `q_point` selector
         self.q_point.enable(region, offset)?;
 
@@ -132,7 +132,7 @@ impl Config {
         value: Value<pallas::Affine>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
-    ) -> Result<NonIdentityEccPoint, Error> {
+    ) -> Result<NonIdentityEccPoint<pallas::Affine>, Error> {
         // Enable `q_point_non_id` selector
         self.q_point_non_id.enable(region, offset)?;
 
