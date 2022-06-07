@@ -50,7 +50,7 @@ pub struct Config<FixedPoints: super::FixedPoints<pallas::Affine>> {
     // Configuration for `add`
     add_config: add::Config,
     // Configuration for `add_incomplete`
-    add_incomplete_config: add_incomplete::Config,
+    add_incomplete_config: add_incomplete::Config<pallas::Affine>,
     _marker: PhantomData<FixedPoints>,
 }
 
@@ -62,7 +62,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         window: Column<Advice>,
         u: Column<Advice>,
         add_config: add::Config,
-        add_incomplete_config: add_incomplete::Config,
+        add_incomplete_config: add_incomplete::Config<pallas::Affine>,
     ) -> Self {
         meta.enable_equality(window);
         meta.enable_equality(u);
