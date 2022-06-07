@@ -1,11 +1,10 @@
 use std::marker::PhantomData;
 
 use super::NonIdentityEccPoint;
-use ff::Field;
 use group::{Curve, Group};
 use halo2_proofs::{
     circuit::Region,
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
+    plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
 use pasta_curves::arithmetic::CurveAffine;
@@ -87,14 +86,7 @@ impl<C: CurveAffine> Config<C> {
 
         // Handle exceptional cases
         p.y.value()
-            .map(|y_p| {
-                if y_p.is_zero_vartime() {
-                    Err(Error::Synthesis)
-                } else {
-                    Ok(())
-                }
-            })
-            .transpose()?;
+            .error_if_known_and(|y_p| y_p.is_zero_vartime())?;
 
         // Copy point `p` into `x_p`, `y_p` columns
         p.x.copy_advice(|| "x_p", region, self.x_p, offset)?;
@@ -105,20 +97,18 @@ impl<C: CurveAffine> Config<C> {
             let r = p
                 .point()
                 .map(|p| p.to_curve().double().to_affine().coordinates().unwrap());
-            let r_x = r.map(|r| *r.x());
-            let r_y = r.map(|r| *r.y());
+            let r_x = r.map(|r| Assigned::<C::Base>::from(*r.x()));
+            let r_y = r.map(|r| Assigned::<C::Base>::from(*r.y()));
 
             (r_x, r_y)
         };
 
         // Assign `r` to `x_r`, `y_r` columns
         let x_r = r.0;
-        let x_r =
-            region.assign_advice(|| "x_r", self.x_r, offset, || x_r.ok_or(Error::Synthesis))?;
+        let x_r = region.assign_advice(|| "x_r", self.x_r, offset, || x_r)?;
 
         let y_r = r.1;
-        let y_r =
-            region.assign_advice(|| "y_r", self.y_r, offset, || y_r.ok_or(Error::Synthesis))?;
+        let y_r = region.assign_advice(|| "y_r", self.y_r, offset, || y_r)?;
 
         let result = NonIdentityEccPoint { x: x_r, y: y_r };
 
@@ -129,7 +119,10 @@ impl<C: CurveAffine> Config<C> {
 #[cfg(test)]
 pub mod tests {
     use group::{prime::PrimeCurveAffine, Curve, Group};
-    use halo2_proofs::{circuit::Layouter, plonk::Error};
+    use halo2_proofs::{
+        circuit::{Layouter, Value},
+        plonk::Error,
+    };
     use pasta_curves::pallas;
 
     use crate::ecc::{EccInstructions, NonIdentityPoint};
@@ -147,7 +140,7 @@ pub mod tests {
             let witnessed_result = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "witnessed [2]P"),
-                Some((p_val.to_curve().double()).to_affine()),
+                Value::known((p_val.to_curve().double()).to_affine()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain [2]P"), &witnessed_result)?;
         }
