@@ -238,6 +238,33 @@ pub fn i2lebsp<const NUM_BITS: usize>(int: u64) -> [bool; NUM_BITS] {
     gen_const_array(|mask: usize| (int & (1 << mask)) != 0)
 }
 
+/// The field element represented by an L-bit little-endian bitstring.
+///
+/// # Panics
+///
+/// Panics if the bitstring is longer than `F::NUM_BITS`.
+pub fn le_bits_to_field_elem<F: FieldExt>(bits: &[bool]) -> F {
+    assert!(bits.len() as u32 <= F::NUM_BITS);
+    let bits: Vec<_> = bits
+        .iter()
+        .chain(std::iter::repeat(&false).take(bits.len() % 8))
+        .collect();
+
+    let bytes = bits.chunks(8).map(|bits| {
+        bits.iter()
+            .enumerate()
+            .fold(0u8, |acc, (i, b)| acc + if **b { 1 << i } else { 0 })
+    });
+    let pad_len = bytes.len();
+    let bytes: [u8; 64] = bytes
+        .chain(std::iter::repeat(0u8).take(64 - pad_len))
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap();
+
+    F::from_bytes_wide(&bytes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

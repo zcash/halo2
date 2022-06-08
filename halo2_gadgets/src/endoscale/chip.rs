@@ -18,7 +18,7 @@ use alg_2::Alg2Config;
 #[derive(Clone, Debug)]
 #[allow(clippy::type_complexity)]
 pub enum Bitstring<F: FieldExt + PrimeFieldBits, const K: usize> {
-    Pair(alg_1::Bitstring<F, 2>),
+    Pair(alg_1::Bitstring<F>),
     KBit(alg_2::Bitstring<F, K>),
 }
 
@@ -90,11 +90,25 @@ where
 
     fn witness_bitstring(
         &self,
-        _layouter: &mut impl Layouter<C::Base>,
-        _bits: &[Value<bool>],
-        _for_base: bool,
+        layouter: &mut impl Layouter<C::Base>,
+        bits: &[Value<bool>],
+        for_base: bool,
     ) -> Result<Vec<Self::Bitstring>, Error> {
-        todo!()
+        assert_eq!(bits.len() % 2, 0);
+
+        bits.chunks(Self::MAX_BITSTRING_LENGTH)
+            .map(|bits| {
+                if for_base {
+                    self.alg_1
+                        .witness_bitstring(layouter.namespace(|| "alg 1"), bits)
+                        .map(Bitstring::Pair)
+                } else {
+                    self.alg_2
+                        .witness_bitstring(layouter.namespace(|| "alg 2"), bits)
+                        .map(Bitstring::KBit)
+                }
+            })
+            .collect()
     }
 
     #[allow(clippy::type_complexity)]
