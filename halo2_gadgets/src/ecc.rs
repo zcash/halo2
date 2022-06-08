@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 use halo2_proofs::{
     arithmetic::CurveAffine,
-    circuit::{Chip, Layouter},
+    circuit::{Chip, Layouter, Value},
     plonk::Error,
 };
 
@@ -57,7 +57,7 @@ pub trait EccInstructions<C: CurveAffine>:
     fn witness_point(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        value: Option<C>,
+        value: Value<C>,
     ) -> Result<Self::Point, Error>;
 
     /// Witnesses the given point as a private input to the circuit.
@@ -65,21 +65,21 @@ pub trait EccInstructions<C: CurveAffine>:
     fn witness_point_non_id(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        value: Option<C>,
+        value: Value<C>,
     ) -> Result<Self::NonIdentityPoint, Error>;
 
     /// Witnesses a full-width scalar to be used in variable-base multiplication.
     fn witness_scalar_var(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        value: Option<C::Scalar>,
+        value: Value<C::Scalar>,
     ) -> Result<Self::ScalarVar, Error>;
 
     /// Witnesses a full-width scalar to be used in fixed-base multiplication.
     fn witness_scalar_fixed(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        value: Option<C::Scalar>,
+        value: Value<C::Scalar>,
     ) -> Result<Self::ScalarFixed, Error>;
 
     /// Converts a magnitude and sign that exists as variables in the circuit into a
@@ -184,7 +184,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> ScalarVar<C, EccChip> {
     pub fn new(
         chip: EccChip,
         mut layouter: impl Layouter<C::Base>,
-        value: Option<C::Scalar>,
+        value: Value<C::Scalar>,
     ) -> Result<Self, Error> {
         let scalar = chip.witness_scalar_var(&mut layouter, value);
         scalar.map(|inner| ScalarVar { chip, inner })
@@ -219,7 +219,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> ScalarFixed<C, EccChip> {
     pub fn new(
         chip: EccChip,
         mut layouter: impl Layouter<C::Base>,
-        value: Option<C::Scalar>,
+        value: Value<C::Scalar>,
     ) -> Result<Self, Error> {
         let scalar = chip.witness_scalar_fixed(&mut layouter, value);
         scalar.map(|inner| ScalarFixed { chip, inner })
@@ -266,7 +266,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> NonIdentityPoint<C, EccChip> {
     pub fn new(
         chip: EccChip,
         mut layouter: impl Layouter<C::Base>,
-        value: Option<C>,
+        value: Value<C>,
     ) -> Result<Self, Error> {
         let point = chip.witness_point_non_id(&mut layouter, value);
         point.map(|inner| NonIdentityPoint { chip, inner })
@@ -384,7 +384,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
     pub fn new(
         chip: EccChip,
         mut layouter: impl Layouter<C::Base>,
-        value: Option<C>,
+        value: Value<C>,
     ) -> Result<Self, Error> {
         let point = chip.witness_point(&mut layouter, value);
         point.map(|inner| Point { chip, inner })
@@ -581,7 +581,7 @@ pub(crate) mod tests {
     use group::{prime::PrimeCurveAffine, Curve, Group};
 
     use halo2_proofs::{
-        circuit::{Layouter, SimpleFloorPlanner},
+        circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
@@ -784,13 +784,13 @@ pub(crate) mod tests {
             let p = super::NonIdentityPoint::new(
                 chip.clone(),
                 layouter.namespace(|| "P"),
-                Some(p_val),
+                Value::known(p_val),
             )?;
             let p_neg = -p_val;
             let p_neg = super::NonIdentityPoint::new(
                 chip.clone(),
                 layouter.namespace(|| "-P"),
-                Some(p_neg),
+                Value::known(p_neg),
             )?;
 
             // Generate a random non-identity point Q
@@ -798,7 +798,7 @@ pub(crate) mod tests {
             let q = super::NonIdentityPoint::new(
                 chip.clone(),
                 layouter.namespace(|| "Q"),
-                Some(q_val),
+                Value::known(q_val),
             )?;
 
             // Make sure P and Q are not the same point.
@@ -809,13 +809,13 @@ pub(crate) mod tests {
                 let _ = super::Point::new(
                     chip.clone(),
                     layouter.namespace(|| "identity"),
-                    Some(pallas::Affine::identity()),
+                    Value::known(pallas::Affine::identity()),
                 )?;
 
                 super::NonIdentityPoint::new(
                     chip.clone(),
                     layouter.namespace(|| "identity"),
-                    Some(pallas::Affine::identity()),
+                    Value::known(pallas::Affine::identity()),
                 )
                 .expect_err("Trying to witness the identity should return an error");
             }

@@ -227,9 +227,9 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             let real_mul = scalar.map(|scalar| base.generator() * scalar);
             let result = result.point();
 
-            if let (Some(real_mul), Some(result)) = (real_mul, result) {
-                assert_eq!(real_mul.to_affine(), result);
-            }
+            real_mul
+                .zip(result)
+                .assert_if_known(|(real_mul, result)| &real_mul.to_affine() == result);
         }
 
         // We want to enforce canonicity of a 255-bit base field element, α.
@@ -326,7 +326,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                         || "α_1 = α[252..=253]",
                         self.canon_advices[1],
                         offset,
-                        || alpha_1.ok_or(Error::Synthesis),
+                        || alpha_1,
                     )?;
 
                     // Witness the MSB α_2 = α[254]
@@ -335,7 +335,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                         || "α_2 = α[254]",
                         self.canon_advices[2],
                         offset,
-                        || alpha_2.ok_or(Error::Synthesis),
+                        || alpha_2,
                     )?;
                 }
 
@@ -382,7 +382,7 @@ pub mod tests {
         Curve,
     };
     use halo2_proofs::{
-        circuit::{Chip, Layouter},
+        circuit::{Chip, Layouter, Value},
         plonk::Error,
     };
     use pasta_curves::pallas;
@@ -432,7 +432,7 @@ pub mod tests {
             let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),
-                Some((base_val * scalar).to_affine()),
+                Value::known((base_val * scalar).to_affine()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain result"), &expected)
         }
@@ -444,7 +444,7 @@ pub mod tests {
                 let scalar_fixed = chip.load_private(
                     layouter.namespace(|| "random base field element"),
                     column,
-                    Some(scalar_fixed),
+                    Value::known(scalar_fixed),
                 )?;
                 base.mul(layouter.namespace(|| "random [a]B"), scalar_fixed)?
             };
@@ -472,7 +472,7 @@ pub mod tests {
                 let scalar_fixed = chip.load_private(
                     layouter.namespace(|| "mul with double"),
                     column,
-                    Some(scalar_fixed),
+                    Value::known(scalar_fixed),
                 )?;
                 base.mul(layouter.namespace(|| "mul with double"), scalar_fixed)?
             };
@@ -490,21 +490,28 @@ pub mod tests {
         {
             let scalar_fixed = pallas::Base::zero();
             let result = {
-                let scalar_fixed =
-                    chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_fixed))?;
+                let scalar_fixed = chip.load_private(
+                    layouter.namespace(|| "zero"),
+                    column,
+                    Value::known(scalar_fixed),
+                )?;
                 base.mul(layouter.namespace(|| "mul by zero"), scalar_fixed)?
             };
-            if let Some(is_identity) = result.inner().is_identity() {
-                assert!(is_identity);
-            }
+            result
+                .inner()
+                .is_identity()
+                .assert_if_known(|is_identity| *is_identity);
         }
 
         // [-1]B is the largest base field element
         {
             let scalar_fixed = -pallas::Base::one();
             let result = {
-                let scalar_fixed =
-                    chip.load_private(layouter.namespace(|| "-1"), column, Some(scalar_fixed))?;
+                let scalar_fixed = chip.load_private(
+                    layouter.namespace(|| "-1"),
+                    column,
+                    Value::known(scalar_fixed),
+                )?;
                 base.mul(layouter.namespace(|| "mul by -1"), scalar_fixed)?
             };
             constrain_equal_non_id(

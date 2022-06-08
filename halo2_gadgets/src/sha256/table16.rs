@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 
 use super::Sha256Instructions;
 use halo2_proofs::{
-    circuit::{AssignedCell, Chip, Layouter, Region},
+    circuit::{AssignedCell, Chip, Layouter, Region, Value},
     pasta::pallas,
     plonk::{Advice, Any, Assigned, Column, ConstraintSystem, Error},
 };
@@ -49,7 +49,7 @@ const IV: [u32; STATE] = [
 #[derive(Clone, Copy, Debug, Default)]
 /// A word in a `Table16` message block.
 // TODO: Make the internals of this struct private.
-pub struct BlockWord(pub Option<u32>);
+pub struct BlockWord(pub Value<u32>);
 
 #[derive(Clone, Debug)]
 /// Little-endian bits (up to 64 bits)
@@ -129,26 +129,26 @@ impl<const LEN: usize> AssignedBits<LEN> {
         annotation: A,
         column: impl Into<Column<Any>>,
         offset: usize,
-        value: Option<T>,
+        value: Value<T>,
     ) -> Result<Self, Error>
     where
         A: Fn() -> AR,
         AR: Into<String>,
         <T as TryInto<[bool; LEN]>>::Error: std::fmt::Debug,
     {
-        let value: Option<[bool; LEN]> = value.map(|v| v.try_into().unwrap());
-        let value: Option<Bits<LEN>> = value.map(|v| v.into());
+        let value: Value<[bool; LEN]> = value.map(|v| v.try_into().unwrap());
+        let value: Value<Bits<LEN>> = value.map(|v| v.into());
 
         let column: Column<Any> = column.into();
         match column.column_type() {
             Any::Advice => {
                 region.assign_advice(annotation, column.try_into().unwrap(), offset, || {
-                    value.clone().ok_or(Error::Synthesis)
+                    value.clone()
                 })
             }
             Any::Fixed => {
                 region.assign_fixed(annotation, column.try_into().unwrap(), offset, || {
-                    value.clone().ok_or(Error::Synthesis)
+                    value.clone()
                 })
             }
             _ => panic!("Cannot assign to instance column"),
@@ -158,7 +158,7 @@ impl<const LEN: usize> AssignedBits<LEN> {
 }
 
 impl AssignedBits<16> {
-    fn value_u16(&self) -> Option<u16> {
+    fn value_u16(&self) -> Value<u16> {
         self.value().map(|v| v.into())
     }
 
@@ -167,23 +167,23 @@ impl AssignedBits<16> {
         annotation: A,
         column: impl Into<Column<Any>>,
         offset: usize,
-        value: Option<u16>,
+        value: Value<u16>,
     ) -> Result<Self, Error>
     where
         A: Fn() -> AR,
         AR: Into<String>,
     {
         let column: Column<Any> = column.into();
-        let value: Option<Bits<16>> = value.map(|v| v.into());
+        let value: Value<Bits<16>> = value.map(|v| v.into());
         match column.column_type() {
             Any::Advice => {
                 region.assign_advice(annotation, column.try_into().unwrap(), offset, || {
-                    value.clone().ok_or(Error::Synthesis)
+                    value.clone()
                 })
             }
             Any::Fixed => {
                 region.assign_fixed(annotation, column.try_into().unwrap(), offset, || {
-                    value.clone().ok_or(Error::Synthesis)
+                    value.clone()
                 })
             }
             _ => panic!("Cannot assign to instance column"),
@@ -193,7 +193,7 @@ impl AssignedBits<16> {
 }
 
 impl AssignedBits<32> {
-    fn value_u32(&self) -> Option<u32> {
+    fn value_u32(&self) -> Value<u32> {
         self.value().map(|v| v.into())
     }
 
@@ -202,23 +202,23 @@ impl AssignedBits<32> {
         annotation: A,
         column: impl Into<Column<Any>>,
         offset: usize,
-        value: Option<u32>,
+        value: Value<u32>,
     ) -> Result<Self, Error>
     where
         A: Fn() -> AR,
         AR: Into<String>,
     {
         let column: Column<Any> = column.into();
-        let value: Option<Bits<32>> = value.map(|v| v.into());
+        let value: Value<Bits<32>> = value.map(|v| v.into());
         match column.column_type() {
             Any::Advice => {
                 region.assign_advice(annotation, column.try_into().unwrap(), offset, || {
-                    value.clone().ok_or(Error::Synthesis)
+                    value.clone()
                 })
             }
             Any::Fixed => {
                 region.assign_fixed(annotation, column.try_into().unwrap(), offset, || {
-                    value.clone().ok_or(Error::Synthesis)
+                    value.clone()
                 })
             }
             _ => panic!("Cannot assign to instance column"),
@@ -384,10 +384,10 @@ trait Table16Assignment {
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
         row: usize,
-        r_0_even: Option<[bool; 16]>,
-        r_0_odd: Option<[bool; 16]>,
-        r_1_even: Option<[bool; 16]>,
-        r_1_odd: Option<[bool; 16]>,
+        r_0_even: Value<[bool; 16]>,
+        r_0_odd: Value<[bool; 16]>,
+        r_1_even: Value<[bool; 16]>,
+        r_1_odd: Value<[bool; 16]>,
     ) -> Result<
         (
             (AssignedBits<16>, AssignedBits<16>),
@@ -436,10 +436,10 @@ trait Table16Assignment {
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
         row: usize,
-        r_0_even: Option<[bool; 16]>,
-        r_0_odd: Option<[bool; 16]>,
-        r_1_even: Option<[bool; 16]>,
-        r_1_odd: Option<[bool; 16]>,
+        r_0_even: Value<[bool; 16]>,
+        r_0_odd: Value<[bool; 16]>,
+        r_1_even: Value<[bool; 16]>,
+        r_1_odd: Value<[bool; 16]>,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
         let (even, _odd) = self.assign_spread_outputs(
             region, lookup, a_3, row, r_0_even, r_0_odd, r_1_even, r_1_odd,

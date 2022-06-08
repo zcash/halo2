@@ -1,5 +1,5 @@
 use halo2_proofs::{
-    circuit::Layouter,
+    circuit::{Layouter, Value},
     plonk::{ConstraintSystem, Error, Expression, TableColumn},
     poly::Rotation,
 };
@@ -85,10 +85,10 @@ impl GeneratorTableConfig {
                         || "table_idx",
                         self.table_idx,
                         index,
-                        || Ok(pallas::Base::from(index as u64)),
+                        || Value::known(pallas::Base::from(index as u64)),
                     )?;
-                    table.assign_cell(|| "table_x", self.table_x, index, || Ok(*x))?;
-                    table.assign_cell(|| "table_y", self.table_y, index, || Ok(*y))?;
+                    table.assign_cell(|| "table_x", self.table_x, index, || Value::known(*x))?;
+                    table.assign_cell(|| "table_y", self.table_y, index, || Value::known(*y))?;
                 }
                 Ok(())
             },

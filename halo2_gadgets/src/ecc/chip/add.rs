@@ -227,16 +227,16 @@ impl Config {
         let (x_q, y_q) = (q.x.value(), q.y.value());
 
         // Assign α = inv0(x_q - x_p)
-        let alpha = x_p.zip(x_q).map(|(x_p, x_q)| (x_q - x_p).invert());
-        region.assign_advice(|| "α", self.alpha, offset, || alpha.ok_or(Error::Synthesis))?;
+        let alpha = (x_q - x_p).invert();
+        region.assign_advice(|| "α", self.alpha, offset, || alpha)?;
 
         // Assign β = inv0(x_p)
-        let beta = x_p.map(|x_p| x_p.invert());
-        region.assign_advice(|| "β", self.beta, offset, || beta.ok_or(Error::Synthesis))?;
+        let beta = x_p.invert();
+        region.assign_advice(|| "β", self.beta, offset, || beta)?;
 
         // Assign γ = inv0(x_q)
-        let gamma = x_q.map(|x_q| x_q.invert());
-        region.assign_advice(|| "γ", self.gamma, offset, || gamma.ok_or(Error::Synthesis))?;
+        let gamma = x_q.invert();
+        region.assign_advice(|| "γ", self.gamma, offset, || gamma)?;
 
         // Assign δ = inv0(y_q + y_p) if x_q = x_p, 0 otherwise
         let delta = x_p
@@ -250,7 +250,7 @@ impl Config {
                     Assigned::Zero
                 }
             });
-        region.assign_advice(|| "δ", self.delta, offset, || delta.ok_or(Error::Synthesis))?;
+        region.assign_advice(|| "δ", self.delta, offset, || delta)?;
 
         #[allow(clippy::collapsible_else_if)]
         // Assign lambda
@@ -278,12 +278,7 @@ impl Config {
                         }
                     }
                 });
-        region.assign_advice(
-            || "λ",
-            self.lambda,
-            offset,
-            || lambda.ok_or(Error::Synthesis),
-        )?;
+        region.assign_advice(|| "λ", self.lambda, offset, || lambda)?;
 
         // Calculate (x_r, y_r)
         let r =
@@ -314,21 +309,11 @@ impl Config {
 
         // Assign x_r
         let x_r = r.map(|r| r.0);
-        let x_r_cell = region.assign_advice(
-            || "x_r",
-            self.x_qr,
-            offset + 1,
-            || x_r.ok_or(Error::Synthesis),
-        )?;
+        let x_r_cell = region.assign_advice(|| "x_r", self.x_qr, offset + 1, || x_r)?;
 
         // Assign y_r
         let y_r = r.map(|r| r.1);
-        let y_r_cell = region.assign_advice(
-            || "y_r",
-            self.y_qr,
-            offset + 1,
-            || y_r.ok_or(Error::Synthesis),
-        )?;
+        let y_r_cell = region.assign_advice(|| "y_r", self.y_qr, offset + 1, || y_r)?;
 
         let result = EccPoint {
             x: x_r_cell,
@@ -345,9 +330,9 @@ impl Config {
             let real_sum = p.zip(q).map(|(p, q)| p + q);
             let result = result.point();
 
-            if let (Some(real_sum), Some(result)) = (real_sum, result) {
-                assert_eq!(real_sum.to_affine(), result);
-            }
+            real_sum
+                .zip(result)
+                .assert_if_known(|(real_sum, result)| &real_sum.to_affine() == result);
         }
 
         Ok(result)
@@ -357,7 +342,10 @@ impl Config {
 #[cfg(test)]
 pub mod tests {
     use group::{prime::PrimeCurveAffine, Curve};
-    use halo2_proofs::{circuit::Layouter, plonk::Error};
+    use halo2_proofs::{
+        circuit::{Layouter, Value},
+        plonk::Error,
+    };
     use pasta_curves::{arithmetic::CurveExt, pallas};
 
     use crate::ecc::{chip::EccPoint, EccInstructions, NonIdentityPoint};
@@ -380,9 +368,10 @@ pub mod tests {
         // Check complete addition P + (-P)
         let zero = {
             let result = p.add(layouter.namespace(|| "P + (-P)"), p_neg)?;
-            if let Some(is_identity) = result.inner().is_identity() {
-                assert!(is_identity);
-            }
+            result
+                .inner()
+                .is_identity()
+                .assert_if_known(|is_identity| *is_identity);
             result
         };
 
@@ -398,7 +387,7 @@ pub mod tests {
             let witnessed_result = NonIdentityPoint::new(
                 chip.clone(),
                 layouter.namespace(|| "witnessed P + Q"),
-                Some((p_val + q_val).to_affine()),
+                Value::known((p_val + q_val).to_affine()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain P + Q"), &witnessed_result)?;
         }
@@ -409,7 +398,7 @@ pub mod tests {
             let witnessed_result = NonIdentityPoint::new(
                 chip.clone(),
                 layouter.namespace(|| "witnessed P + P"),
-                Some((p_val + p_val).to_affine()),
+                Value::known((p_val + p_val).to_affine()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain P + P"), &witnessed_result)?;
         }
@@ -431,7 +420,7 @@ pub mod tests {
         let endo_p = NonIdentityPoint::new(
             chip.clone(),
             layouter.namespace(|| "endo(P)"),
-            Some(endo_p.to_affine()),
+            Value::known(endo_p.to_affine()),
         )?;
         p.add(layouter.namespace(|| "P + endo(P)"), &endo_p)?;
 
@@ -440,7 +429,7 @@ pub mod tests {
         let endo_p_neg = NonIdentityPoint::new(
             chip.clone(),
             layouter.namespace(|| "endo(-P)"),
-            Some(endo_p_neg.to_affine()),
+            Value::known(endo_p_neg.to_affine()),
         )?;
         p.add(layouter.namespace(|| "P + endo(-P)"), &endo_p_neg)?;
 
@@ -449,7 +438,7 @@ pub mod tests {
         let endo_2_p = NonIdentityPoint::new(
             chip.clone(),
             layouter.namespace(|| "endo^2(P)"),
-            Some(endo_2_p.to_affine()),
+            Value::known(endo_2_p.to_affine()),
         )?;
         p.add(layouter.namespace(|| "P + endo^2(P)"), &endo_2_p)?;
 
@@ -458,7 +447,7 @@ pub mod tests {
         let endo_2_p_neg = NonIdentityPoint::new(
             chip,
             layouter.namespace(|| "endo^2(-P)"),
-            Some(endo_2_p_neg.to_affine()),
+            Value::known(endo_2_p_neg.to_affine()),
         )?;
         p.add(layouter.namespace(|| "P + endo^2(-P)"), &endo_2_p_neg)?;
 

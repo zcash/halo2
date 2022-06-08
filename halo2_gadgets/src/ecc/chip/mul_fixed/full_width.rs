@@ -4,7 +4,7 @@ use crate::utilities::{decompose_word, range_check};
 use arrayvec::ArrayVec;
 use ff::PrimeField;
 use halo2_proofs::{
-    circuit::{AssignedCell, Layouter, Region},
+    circuit::{AssignedCell, Layouter, Region, Value},
     plonk::{ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
@@ -57,7 +57,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        scalar: Option<pallas::Scalar>,
+        scalar: Value<pallas::Scalar>,
     ) -> Result<EccScalarFixed, Error> {
         let windows = self.decompose_scalar_fixed::<{ pallas::Scalar::NUM_BITS as usize }>(
             scalar, offset, region,
@@ -74,7 +74,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
     /// The scalar is allowed to be non-canonical.
     fn decompose_scalar_fixed<const SCALAR_NUM_BITS: usize>(
         &self,
-        scalar: Option<pallas::Scalar>,
+        scalar: Value<pallas::Scalar>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
     ) -> Result<ArrayVec<AssignedCell<pallas::Base, pallas::Base>, NUM_WINDOWS>, Error> {
@@ -84,20 +84,18 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         }
 
         // Decompose scalar into `k-bit` windows
-        let scalar_windows: Option<Vec<u8>> = scalar.map(|scalar| {
+        let scalar_windows: Value<Vec<u8>> = scalar.map(|scalar| {
             decompose_word::<pallas::Scalar>(&scalar, SCALAR_NUM_BITS, FIXED_BASE_WINDOW_SIZE)
         });
 
-        // Transpose `Option<Vec<u8>>` into `Vec<Option<pallas::Base>>`.
-        let scalar_windows: Vec<Option<pallas::Base>> = if let Some(windows) = scalar_windows {
-            assert_eq!(windows.len(), NUM_WINDOWS);
-            windows
-                .into_iter()
-                .map(|window| Some(pallas::Base::from(window as u64)))
-                .collect()
-        } else {
-            vec![None; NUM_WINDOWS]
-        };
+        // Transpose `Value<Vec<u8>>` into `Vec<Value<pallas::Base>>`.
+        let scalar_windows = scalar_windows
+            .map(|windows| {
+                windows
+                    .into_iter()
+                    .map(|window| pallas::Base::from(window as u64))
+            })
+            .transpose_vec(NUM_WINDOWS);
 
         // Store the scalar decomposition
         let mut windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, NUM_WINDOWS> =
@@ -107,7 +105,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                 || format!("k[{:?}]", offset + idx),
                 self.super_config.window,
                 offset + idx,
-                || window.ok_or(Error::Synthesis),
+                || window,
             )?;
             windows.push(window_cell);
         }
@@ -170,9 +168,9 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             let real_mul = scalar.value.map(|scalar| base.generator() * scalar);
             let result = result.point();
 
-            if let (Some(real_mul), Some(result)) = (real_mul, result) {
-                assert_eq!(real_mul.to_affine(), result);
-            }
+            real_mul
+                .zip(result)
+                .assert_if_known(|(real_mul, result)| &real_mul.to_affine() == result);
         }
 
         Ok((result, scalar))
@@ -182,7 +180,10 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 #[cfg(test)]
 pub mod tests {
     use group::{ff::Field, Curve};
-    use halo2_proofs::{circuit::Layouter, plonk::Error};
+    use halo2_proofs::{
+        circuit::{Layouter, Value},
+        plonk::Error,
+    };
     use pasta_curves::pallas;
     use rand::rngs::OsRng;
 
@@ -224,7 +225,7 @@ pub mod tests {
             let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),
-                Some((base_val * scalar_val).to_affine()),
+                Value::known((base_val * scalar_val).to_affine()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain result"), &expected)
         }
@@ -235,7 +236,7 @@ pub mod tests {
             let by = ScalarFixed::new(
                 chip.clone(),
                 layouter.namespace(|| "random a"),
-                Some(scalar_fixed),
+                Value::known(scalar_fixed),
             )?;
 
             let (result, _) = base.mul(layouter.namespace(|| "random [a]B"), by)?;
@@ -263,7 +264,7 @@ pub mod tests {
             let by = ScalarFixed::new(
                 chip.clone(),
                 layouter.namespace(|| LAST_DOUBLING),
-                Some(scalar_fixed),
+                Value::known(scalar_fixed),
             )?;
             let (result, _) = base.mul(layouter.namespace(|| "mul with double"), by)?;
 
@@ -280,12 +281,16 @@ pub mod tests {
         // on the last step.
         {
             let scalar_fixed = pallas::Scalar::zero();
-            let zero =
-                ScalarFixed::new(chip.clone(), layouter.namespace(|| "0"), Some(scalar_fixed))?;
+            let zero = ScalarFixed::new(
+                chip.clone(),
+                layouter.namespace(|| "0"),
+                Value::known(scalar_fixed),
+            )?;
             let (result, _) = base.mul(layouter.namespace(|| "mul by zero"), zero)?;
-            if let Some(is_identity) = result.inner().is_identity() {
-                assert!(is_identity);
-            }
+            result
+                .inner()
+                .is_identity()
+                .assert_if_known(|is_identity| *is_identity);
         }
 
         // [-1]B is the largest scalar field element.
@@ -294,7 +299,7 @@ pub mod tests {
             let neg_1 = ScalarFixed::new(
                 chip.clone(),
                 layouter.namespace(|| "-1"),
-                Some(scalar_fixed),
+                Value::known(scalar_fixed),
             )?;
             let (result, _) = base.mul(layouter.namespace(|| "mul by -1"), neg_1)?;
             constrain_equal_non_id(

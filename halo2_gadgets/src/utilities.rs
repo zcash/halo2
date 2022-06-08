@@ -2,7 +2,7 @@
 
 use ff::{Field, PrimeFieldBits};
 use halo2_proofs::{
-    circuit::{AssignedCell, Cell, Layouter},
+    circuit::{AssignedCell, Cell, Layouter, Value},
     plonk::{Advice, Column, Error, Expression},
 };
 use pasta_curves::arithmetic::FieldExt;
@@ -16,17 +16,17 @@ pub mod lookup_range_check;
 /// A type that has a value at either keygen or proving time.
 pub trait FieldValue<F: Field> {
     /// Returns the value of this type.
-    fn value(&self) -> Option<&F>;
+    fn value(&self) -> Value<&F>;
 }
 
-impl<F: Field> FieldValue<F> for Option<F> {
-    fn value(&self) -> Option<&F> {
+impl<F: Field> FieldValue<F> for Value<F> {
+    fn value(&self) -> Value<&F> {
         self.as_ref()
     }
 }
 
 impl<F: Field> FieldValue<F> for AssignedCell<F, F> {
-    fn value(&self) -> Option<&F> {
+    fn value(&self) -> Value<&F> {
         self.value()
     }
 }
@@ -37,7 +37,7 @@ pub trait Var<F: FieldExt>: Clone + std::fmt::Debug + From<AssignedCell<F, F>> {
     fn cell(&self) -> Cell;
 
     /// The value allocated to this variable.
-    fn value(&self) -> Option<F>;
+    fn value(&self) -> Value<F>;
 }
 
 impl<F: FieldExt> Var<F> for AssignedCell<F, F> {
@@ -45,7 +45,7 @@ impl<F: FieldExt> Var<F> for AssignedCell<F, F> {
         self.cell()
     }
 
-    fn value(&self) -> Option<F> {
+    fn value(&self) -> Value<F> {
         self.value().cloned()
     }
 }
@@ -60,18 +60,13 @@ pub trait UtilitiesInstructions<F: FieldExt> {
         &self,
         mut layouter: impl Layouter<F>,
         column: Column<Advice>,
-        value: Option<F>,
+        value: Value<F>,
     ) -> Result<Self::Var, Error> {
         layouter.assign_region(
             || "load private",
             |mut region| {
                 region
-                    .assign_advice(
-                        || "load private",
-                        column,
-                        0,
-                        || value.ok_or(Error::Synthesis),
-                    )
+                    .assign_advice(|| "load private", column, 0, || value)
                     .map(Self::Var::from)
             },
         )
@@ -98,9 +93,9 @@ impl<F: Field, T: FieldValue<F>> RangeConstrained<F, T> {
     }
 }
 
-impl<F: PrimeFieldBits> RangeConstrained<F, Option<F>> {
-    /// Constructs a `RangeConstrained<Option<F>>` as a bitrange of the given value.
-    pub fn bitrange_of(value: Option<&F>, bitrange: Range<usize>) -> Self {
+impl<F: PrimeFieldBits> RangeConstrained<F, Value<F>> {
+    /// Constructs a `RangeConstrained<Value<F>>` as a bitrange of the given value.
+    pub fn bitrange_of(value: Value<&F>, bitrange: Range<usize>) -> Self {
         let num_bits = bitrange.len();
         Self {
             inner: value.map(|value| bitrange_subset(value, bitrange)),
@@ -125,25 +120,13 @@ impl<F: Field> RangeConstrained<F, AssignedCell<F, F>> {
     }
 
     /// Extracts the range-constrained value from this range-constrained cell.
-    pub fn value(&self) -> RangeConstrained<F, Option<F>> {
+    pub fn value(&self) -> RangeConstrained<F, Value<F>> {
         RangeConstrained {
             inner: self.inner.value().copied(),
             num_bits: self.num_bits,
             _phantom: PhantomData::default(),
         }
     }
-}
-
-pub(crate) fn transpose_option_array<T: Copy + std::fmt::Debug, const LEN: usize>(
-    option_array: Option<[T; LEN]>,
-) -> [Option<T>; LEN] {
-    let mut ret = [None; LEN];
-    if let Some(arr) = option_array {
-        for (entry, value) in ret.iter_mut().zip(arr) {
-            *entry = Some(value);
-        }
-    }
-    ret
 }
 
 /// Checks that an expression is either 1 or 0.
@@ -320,7 +303,7 @@ mod tests {
                             || format!("witness {}", self.0),
                             config.advice,
                             0,
-                            || Ok(pallas::Base::from(self.0 as u64)),
+                            || Value::known(pallas::Base::from(self.0 as u64)),
                         )?;
 
                         Ok(())
