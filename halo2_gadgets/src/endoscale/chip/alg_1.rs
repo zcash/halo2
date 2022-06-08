@@ -1,7 +1,7 @@
 use ff::PrimeFieldBits;
 use halo2_proofs::{
     arithmetic::CurveAffine,
-    circuit::Layouter,
+    circuit::{Layouter, Value},
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
 };
 
@@ -10,10 +10,11 @@ use crate::{
     utilities::{
         decompose_running_sum::{RunningSum, RunningSumConfig},
         double_and_add::DoubleAndAdd,
+        le_bits_to_field_elem,
     },
 };
 
-pub(super) type Bitstring<F, const K: usize> = RunningSum<F, K>;
+pub(super) type Bitstring<F> = RunningSum<F, 2>;
 
 /// Config used in Algorithm 1 (endoscaling with a base).
 #[derive(Clone, Debug)]
@@ -40,7 +41,7 @@ where
     // Bits used in endoscaling. These are in (b_0, b_1) pairs.
     pair: (Column<Advice>, Column<Advice>),
     // Configuration for running sum decomposition into pairs of bits.
-    running_sum_pairs: RunningSumConfig<C::Base, 2>,
+    pub(super) running_sum_pairs: RunningSumConfig<C::Base, 2>,
 }
 
 impl<C: CurveAffine> Alg1Config<C>
@@ -120,6 +121,35 @@ where
             pair,
             running_sum_pairs,
         }
+    }
+
+    pub(super) fn witness_bitstring(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        bits: &[Value<bool>],
+    ) -> Result<Bitstring<C::Base>, Error> {
+        let alpha = {
+            let bits = Value::<Vec<_>>::from_iter(bits.to_vec());
+            bits.map(|b| le_bits_to_field_elem(&b))
+        };
+        let word_num_bits = bits.len();
+        let num_windows = word_num_bits / 2;
+
+        layouter.assign_region(
+            || "witness bitstring",
+            |mut region| {
+                let offset = 0;
+
+                self.running_sum_pairs.witness_decompose(
+                    &mut region,
+                    offset,
+                    alpha,
+                    true,
+                    word_num_bits,
+                    num_windows,
+                )
+            },
+        )
     }
 
     pub(super) fn endoscale_fixed_base(

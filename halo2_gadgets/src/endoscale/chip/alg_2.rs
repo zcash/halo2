@@ -9,7 +9,7 @@ use crate::{
     endoscale::util::compute_endoscalar_with_acc,
     utilities::{
         decompose_running_sum::{RunningSum, RunningSumConfig},
-        i2lebsp,
+        i2lebsp, le_bits_to_field_elem,
     },
 };
 use std::marker::PhantomData;
@@ -87,7 +87,7 @@ where
     // Advice column where accumulator is witnessed.
     acc: Column<Advice>,
     // Configuration for running sum decomposition into K-bit chunks.
-    running_sum_chunks: RunningSumConfig<C::Base, K>,
+    pub(super) running_sum_chunks: RunningSumConfig<C::Base, K>,
     // Table mapping words to their corresponding endoscalars.
     table: TableConfig<C::Base, K>,
 }
@@ -119,6 +119,48 @@ where
             running_sum_chunks,
             table,
         }
+    }
+
+    pub(super) fn witness_bitstring(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        bits: &[Value<bool>],
+    ) -> Result<Bitstring<C::Base, K>, Error> {
+        let word_num_bits = bits.len();
+        let pad_len = (K - (word_num_bits % K)) % K;
+
+        // Right-pad bitstring to a multiple of K if needed
+        let mut bits: Value<Vec<bool>> = bits.iter().copied().collect();
+        if pad_len > 0 {
+            bits = bits.map(|bits| {
+                let padding = std::iter::repeat(false).take(pad_len);
+                bits.iter().copied().chain(padding).collect()
+            });
+        }
+
+        let alpha = bits.map(|b| le_bits_to_field_elem(&b));
+
+        let running_sum = layouter.assign_region(
+            || "witness bitstring",
+            |mut region| {
+                let offset = 0;
+
+                let num_windows = (word_num_bits + pad_len) / K;
+                self.running_sum_chunks.witness_decompose(
+                    &mut region,
+                    offset,
+                    alpha,
+                    true,
+                    word_num_bits + pad_len,
+                    num_windows,
+                )
+            },
+        )?;
+
+        Ok(Bitstring {
+            running_sum,
+            pad_len,
+        })
     }
 
     pub(super) fn compute_endoscalar(
