@@ -416,11 +416,9 @@
 <span id="394">394</span>
 <span id="395">395</span>
 <span id="396">396</span>
-<span id="397">397</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::NonIdentityEccPoint</span>;
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">X</span>, <span class="ident">Y</span>, <span class="ident">Z</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities::bool_check</span>;
-<span class="kw">use</span> <span class="ident">ff::Field</span>;
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit::Region</span>,
     <span class="ident">plonk</span>::{
@@ -754,7 +752,7 @@
                 .<span class="ident">zip</span>(<span class="ident">y_p</span>)
                 .<span class="ident">zip</span>(<span class="ident">x_a</span>.<span class="ident">value</span>())
                 .<span class="ident">zip</span>(<span class="ident">x_p</span>)
-                .<span class="ident">map</span>(<span class="op">|</span>(((<span class="ident">y_a</span>, <span class="ident">y_p</span>), <span class="ident">x_a</span>), <span class="ident">x_p</span>)<span class="op">|</span> (<span class="ident">y_a</span> <span class="op">-</span> <span class="ident">y_p</span>) <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_p</span>).<span class="ident">invert</span>().<span class="ident">unwrap</span>());
+                .<span class="ident">map</span>(<span class="op">|</span>(((<span class="ident">y_a</span>, <span class="ident">y_p</span>), <span class="ident">x_a</span>), <span class="ident">x_p</span>)<span class="op">|</span> (<span class="ident">y_a</span> <span class="op">-</span> <span class="ident">y_p</span>) <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_p</span>).<span class="ident">invert</span>());
             <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                 <span class="op">|</span><span class="op">|</span> <span class="string">&quot;lambda1&quot;</span>,
                 <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>,
@@ -775,7 +773,7 @@
                     .<span class="ident">zip</span>(<span class="ident">x_a</span>.<span class="ident">value</span>())
                     .<span class="ident">zip</span>(<span class="ident">x_r</span>)
                     .<span class="ident">map</span>(<span class="op">|</span>(((<span class="ident">lambda1</span>, <span class="ident">y_a</span>), <span class="ident">x_a</span>), <span class="ident">x_r</span>)<span class="op">|</span> {
-                        <span class="ident">pallas::Base::from</span>(<span class="number">2</span>) <span class="op">*</span> <span class="ident">y_a</span> <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_r</span>).<span class="ident">invert</span>().<span class="ident">unwrap</span>() <span class="op">-</span> <span class="ident">lambda1</span>
+                        <span class="ident">y_a</span> <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="number">2</span>) <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_r</span>).<span class="ident">invert</span>() <span class="op">-</span> <span class="ident">lambda1</span>
                     });
             <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                 <span class="op">|</span><span class="op">|</span> <span class="string">&quot;lambda2&quot;</span>,
@@ -815,5 +813,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
 </body></html>

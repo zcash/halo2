@@ -853,7 +853,7 @@
                 <span class="comment">// Conditionally negate `y`-coordinate</span>
                 <span class="kw">let</span> <span class="ident">y_val</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">sign</span>) <span class="op">=</span> <span class="ident">sign</span>.<span class="ident">value</span>() {
                     <span class="kw">if</span> <span class="ident">sign</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="op">-</span><span class="ident">pallas::Base::one</span>() {
-                        <span class="ident">magnitude_mul</span>.<span class="ident">y</span>.<span class="ident">value</span>().<span class="ident">cloned</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">y</span>: <span class="ident">pallas::Base</span><span class="op">|</span> <span class="op">-</span><span class="ident">y</span>)
+                        <span class="ident">magnitude_mul</span>.<span class="ident">y</span>.<span class="ident">value</span>().<span class="ident">cloned</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">y</span><span class="op">|</span> <span class="op">-</span><span class="ident">y</span>)
                     } <span class="kw">else</span> {
                         <span class="ident">magnitude_mul</span>.<span class="ident">y</span>.<span class="ident">value</span>().<span class="ident">cloned</span>()
                     }
@@ -1329,5 +1329,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
 </body></html>

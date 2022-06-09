@@ -803,7 +803,7 @@
             <span class="kw">let</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">mul_b</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">mul_b</span><span class="op">|</span> {
                 <span class="kw">let</span> <span class="ident">x</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">mul_b</span>.<span class="ident">x</span>();
                 <span class="macro">assert!</span>(<span class="ident">x</span> <span class="op">!</span><span class="op">=</span> <span class="ident">pallas::Base::zero</span>());
-                <span class="ident">x</span>
+                <span class="ident">x</span>.<span class="ident">into</span>()
             });
             <span class="kw">let</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                 <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;mul_b_x, window {}&quot;</span>, <span class="ident">w</span>),
@@ -815,7 +815,7 @@
             <span class="kw">let</span> <span class="ident">y</span> <span class="op">=</span> <span class="ident">mul_b</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">mul_b</span><span class="op">|</span> {
                 <span class="kw">let</span> <span class="ident">y</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">mul_b</span>.<span class="ident">y</span>();
                 <span class="macro">assert!</span>(<span class="ident">y</span> <span class="op">!</span><span class="op">=</span> <span class="ident">pallas::Base::zero</span>());
-                <span class="ident">y</span>
+                <span class="ident">y</span>.<span class="ident">into</span>()
             });
             <span class="kw">let</span> <span class="ident">y</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                 <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;mul_b_y, window {}&quot;</span>, <span class="ident">w</span>),
@@ -1027,5 +1027,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
 </body></html>

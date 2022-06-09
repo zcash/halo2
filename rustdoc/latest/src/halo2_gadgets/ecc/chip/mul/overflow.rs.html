@@ -228,13 +228,6 @@
 <span id="206">206</span>
 <span id="207">207</span>
 <span id="208">208</span>
-<span id="209">209</span>
-<span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">T_Q</span>, <span class="ident">Z</span>};
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">sinsemilla::primitives</span> <span class="kw">as</span> <span class="ident">sinsemilla</span>, <span class="ident">utilities::lookup_range_check::LookupRangeCheckConfig</span>,
@@ -243,11 +236,10 @@
 <span class="kw">use</span> <span class="ident">halo2_proofs::circuit::AssignedCell</span>;
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit::Layouter</span>,
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>},
+    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Assigned</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>},
     <span class="ident">poly::Rotation</span>,
 };
 
-<span class="kw">use</span> <span class="ident">ff::Field</span>;
 <span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">pallas</span>};
 
 <span class="kw">use</span> <span class="ident">std::iter</span>;
@@ -386,13 +378,7 @@
 
                 <span class="comment">// Witness η = inv0(z_130), where inv0(x) = 0 if x = 0, 1/x otherwise</span>
                 {
-                    <span class="kw">let</span> <span class="ident">eta</span> <span class="op">=</span> <span class="ident">zs</span>[<span class="number">130</span>].<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">z_130</span><span class="op">|</span> {
-                        <span class="kw">if</span> <span class="ident">z_130</span>.<span class="ident">is_zero_vartime</span>() {
-                            <span class="ident">pallas::Base::zero</span>()
-                        } <span class="kw">else</span> {
-                            <span class="ident">z_130</span>.<span class="ident">invert</span>().<span class="ident">unwrap</span>()
-                        }
-                    });
+                    <span class="kw">let</span> <span class="ident">eta</span> <span class="op">=</span> <span class="ident">zs</span>[<span class="number">130</span>].<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">z_130</span><span class="op">|</span> <span class="ident">Assigned::from</span>(<span class="ident">z_130</span>).<span class="ident">invert</span>());
                     <span class="ident">region</span>.<span class="ident">assign_advice</span>(
                         <span class="op">|</span><span class="op">|</span> <span class="string">&quot;η = inv0(z_130)&quot;</span>,
                         <span class="self">self</span>.<span class="ident">advices</span>[<span class="number">0</span>],
@@ -451,5 +437,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
 </body></html>

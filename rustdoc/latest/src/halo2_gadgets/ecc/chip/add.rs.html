@@ -487,39 +487,10 @@
 <span id="465">465</span>
 <span id="466">466</span>
 <span id="467">467</span>
-<span id="468">468</span>
-<span id="469">469</span>
-<span id="470">470</span>
-<span id="471">471</span>
-<span id="472">472</span>
-<span id="473">473</span>
-<span id="474">474</span>
-<span id="475">475</span>
-<span id="476">476</span>
-<span id="477">477</span>
-<span id="478">478</span>
-<span id="479">479</span>
-<span id="480">480</span>
-<span id="481">481</span>
-<span id="482">482</span>
-<span id="483">483</span>
-<span id="484">484</span>
-<span id="485">485</span>
-<span id="486">486</span>
-<span id="487">487</span>
-<span id="488">488</span>
-<span id="489">489</span>
-<span id="490">490</span>
-<span id="491">491</span>
-<span id="492">492</span>
-<span id="493">493</span>
-<span id="494">494</span>
-<span id="495">495</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::EccPoint</span>;
-<span class="kw">use</span> <span class="ident">ff</span>::{<span class="ident">BatchInvert</span>, <span class="ident">Field</span>};
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
     <span class="ident">circuit::Region</span>,
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>},
+    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Assigned</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>},
     <span class="ident">poly::Rotation</span>,
 };
 <span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">pallas</span>};
@@ -744,58 +715,31 @@
         <span class="kw">let</span> (<span class="ident">x_p</span>, <span class="ident">y_p</span>) <span class="op">=</span> (<span class="ident">p</span>.<span class="ident">x</span>.<span class="ident">value</span>(), <span class="ident">p</span>.<span class="ident">y</span>.<span class="ident">value</span>());
         <span class="kw">let</span> (<span class="ident">x_q</span>, <span class="ident">y_q</span>) <span class="op">=</span> (<span class="ident">q</span>.<span class="ident">x</span>.<span class="ident">value</span>(), <span class="ident">q</span>.<span class="ident">y</span>.<span class="ident">value</span>());
 
-        <span class="comment">//   [alpha, beta, gamma, delta]</span>
-        <span class="comment">// = [inv0(x_q - x_p), inv0(x_p), inv0(x_q), inv0(y_q + y_p)]</span>
-        <span class="comment">// where inv0(x) = 0 if x = 0, 1/x otherwise.</span>
-        <span class="comment">//</span>
-        <span class="kw">let</span> (<span class="ident">alpha</span>, <span class="ident">beta</span>, <span class="ident">gamma</span>, <span class="ident">delta</span>) <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">inverses</span> <span class="op">=</span> <span class="ident">x_p</span>
-                .<span class="ident">zip</span>(<span class="ident">x_q</span>)
-                .<span class="ident">zip</span>(<span class="ident">y_p</span>)
-                .<span class="ident">zip</span>(<span class="ident">y_q</span>)
-                .<span class="ident">map</span>(<span class="op">|</span>(((<span class="ident">x_p</span>, <span class="ident">x_q</span>), <span class="ident">y_p</span>), <span class="ident">y_q</span>)<span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">alpha</span> <span class="op">=</span> <span class="ident">x_q</span> <span class="op">-</span> <span class="ident">x_p</span>;
-                    <span class="kw">let</span> <span class="ident">beta</span> <span class="op">=</span> <span class="ident">x_p</span>;
-                    <span class="kw">let</span> <span class="ident">gamma</span> <span class="op">=</span> <span class="ident">x_q</span>;
-                    <span class="kw">let</span> <span class="ident">delta</span> <span class="op">=</span> <span class="ident">y_q</span> <span class="op">+</span> <span class="ident">y_p</span>;
-
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">inverses</span> <span class="op">=</span> [<span class="ident">alpha</span>, <span class="kw-2">*</span><span class="ident">beta</span>, <span class="kw-2">*</span><span class="ident">gamma</span>, <span class="ident">delta</span>];
-                    <span class="ident">inverses</span>.<span class="ident">batch_invert</span>();
-                    <span class="ident">inverses</span>
-                });
-
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>([<span class="ident">alpha</span>, <span class="ident">beta</span>, <span class="ident">gamma</span>, <span class="ident">delta</span>]) <span class="op">=</span> <span class="ident">inverses</span> {
-                (<span class="prelude-val">Some</span>(<span class="ident">alpha</span>), <span class="prelude-val">Some</span>(<span class="ident">beta</span>), <span class="prelude-val">Some</span>(<span class="ident">gamma</span>), <span class="prelude-val">Some</span>(<span class="ident">delta</span>))
-            } <span class="kw">else</span> {
-                (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)
-            }
-        };
-
         <span class="comment">// Assign α = inv0(x_q - x_p)</span>
+        <span class="kw">let</span> <span class="ident">alpha</span> <span class="op">=</span> <span class="ident">x_p</span>.<span class="ident">zip</span>(<span class="ident">x_q</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">x_p</span>, <span class="ident">x_q</span>)<span class="op">|</span> (<span class="ident">x_q</span> <span class="op">-</span> <span class="ident">x_p</span>).<span class="ident">invert</span>());
         <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;α&quot;</span>, <span class="self">self</span>.<span class="ident">alpha</span>, <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">alpha</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>))<span class="question-mark">?</span>;
 
         <span class="comment">// Assign β = inv0(x_p)</span>
+        <span class="kw">let</span> <span class="ident">beta</span> <span class="op">=</span> <span class="ident">x_p</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">x_p</span><span class="op">|</span> <span class="ident">x_p</span>.<span class="ident">invert</span>());
         <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;β&quot;</span>, <span class="self">self</span>.<span class="ident">beta</span>, <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">beta</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>))<span class="question-mark">?</span>;
 
         <span class="comment">// Assign γ = inv0(x_q)</span>
+        <span class="kw">let</span> <span class="ident">gamma</span> <span class="op">=</span> <span class="ident">x_q</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">x_q</span><span class="op">|</span> <span class="ident">x_q</span>.<span class="ident">invert</span>());
         <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;γ&quot;</span>, <span class="self">self</span>.<span class="ident">gamma</span>, <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">gamma</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>))<span class="question-mark">?</span>;
 
         <span class="comment">// Assign δ = inv0(y_q + y_p) if x_q = x_p, 0 otherwise</span>
-        <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;δ&quot;</span>,
-            <span class="self">self</span>.<span class="ident">delta</span>,
-            <span class="ident">offset</span>,
-            <span class="op">|</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">x_p</span> <span class="op">=</span> <span class="ident">x_p</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>)<span class="question-mark">?</span>;
-                <span class="kw">let</span> <span class="ident">x_q</span> <span class="op">=</span> <span class="ident">x_q</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>)<span class="question-mark">?</span>;
-
+        <span class="kw">let</span> <span class="ident">delta</span> <span class="op">=</span> <span class="ident">x_p</span>
+            .<span class="ident">zip</span>(<span class="ident">x_q</span>)
+            .<span class="ident">zip</span>(<span class="ident">y_p</span>)
+            .<span class="ident">zip</span>(<span class="ident">y_q</span>)
+            .<span class="ident">map</span>(<span class="op">|</span>(((<span class="ident">x_p</span>, <span class="ident">x_q</span>), <span class="ident">y_p</span>), <span class="ident">y_q</span>)<span class="op">|</span> {
                 <span class="kw">if</span> <span class="ident">x_q</span> <span class="op">==</span> <span class="ident">x_p</span> {
-                    <span class="ident">delta</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>)
+                    (<span class="ident">y_q</span> <span class="op">+</span> <span class="ident">y_p</span>).<span class="ident">invert</span>()
                 } <span class="kw">else</span> {
-                    <span class="prelude-val">Ok</span>(<span class="ident">pallas::Base::zero</span>())
+                    <span class="ident">Assigned::Zero</span>
                 }
-            },
-        )<span class="question-mark">?</span>;
+            });
+        <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;δ&quot;</span>, <span class="self">self</span>.<span class="ident">delta</span>, <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">delta</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>))<span class="question-mark">?</span>;
 
         <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::collapsible_else_if</span>)]</span>
         <span class="comment">// Assign lambda</span>
@@ -813,13 +757,13 @@
                     } <span class="kw">else</span> {
                         <span class="kw">if</span> <span class="op">!</span><span class="ident">y_p</span>.<span class="ident">is_zero_vartime</span>() {
                             <span class="comment">// 3(x_p)^2</span>
-                            <span class="kw">let</span> <span class="ident">three_x_p_sq</span> <span class="op">=</span> <span class="ident">pallas::Base::from</span>(<span class="number">3</span>) <span class="op">*</span> <span class="ident">x_p</span>.<span class="ident">square</span>();
+                            <span class="kw">let</span> <span class="ident">three_x_p_sq</span> <span class="op">=</span> <span class="ident">x_p</span>.<span class="ident">square</span>() <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="number">3</span>);
                             <span class="comment">// 1 / 2(y_p)</span>
-                            <span class="kw">let</span> <span class="ident">inv_two_y_p</span> <span class="op">=</span> <span class="ident">y_p</span>.<span class="ident">invert</span>().<span class="ident">unwrap</span>() <span class="op">*</span> <span class="ident">pallas::Base::TWO_INV</span>;
+                            <span class="kw">let</span> <span class="ident">inv_two_y_p</span> <span class="op">=</span> <span class="ident">y_p</span>.<span class="ident">invert</span>() <span class="op">*</span> <span class="ident">pallas::Base::TWO_INV</span>;
                             <span class="comment">// λ = 3(x_p)^2 / 2(y_p)</span>
                             <span class="ident">three_x_p_sq</span> <span class="op">*</span> <span class="ident">inv_two_y_p</span>
                         } <span class="kw">else</span> {
-                            <span class="ident">pallas::Base::zero</span>()
+                            <span class="ident">Assigned::Zero</span>
                         }
                     }
                 });
@@ -846,7 +790,7 @@
                             (<span class="kw-2">*</span><span class="ident">x_p</span>, <span class="kw-2">*</span><span class="ident">y_p</span>)
                         } <span class="kw">else</span> <span class="kw">if</span> (<span class="ident">x_q</span> <span class="op">==</span> <span class="ident">x_p</span>) <span class="op">&amp;&amp;</span> (<span class="kw-2">*</span><span class="ident">y_q</span> <span class="op">==</span> <span class="op">-</span><span class="ident">y_p</span>) {
                             <span class="comment">// P + (-P) maps to (0,0)</span>
-                            (<span class="ident">pallas::Base::zero</span>(), <span class="ident">pallas::Base::zero</span>())
+                            (<span class="ident">Assigned::Zero</span>, <span class="ident">Assigned::Zero</span>)
                         } <span class="kw">else</span> {
                             <span class="comment">// x_r = λ^2 - x_p - x_q</span>
                             <span class="kw">let</span> <span class="ident">x_r</span> <span class="op">=</span> <span class="ident">lambda</span>.<span class="ident">square</span>() <span class="op">-</span> <span class="ident">x_p</span> <span class="op">-</span> <span class="ident">x_q</span>;
@@ -1011,5 +955,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (490324f7b 2022-05-26)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
 </body></html>
