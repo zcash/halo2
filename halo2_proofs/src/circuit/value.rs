@@ -263,6 +263,23 @@ where
     }
 }
 
+impl<V, O> Add for &Value<V>
+where
+    for<'v> &'v V: Add<Output = O>,
+{
+    type Output = Value<O>;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Value {
+            inner: self
+                .inner
+                .as_ref()
+                .zip(rhs.inner.as_ref())
+                .map(|(a, b)| a + b),
+        }
+    }
+}
+
 impl<V, O> Add<Value<&V>> for Value<V>
 where
     for<'v> V: Add<&'v V, Output = O>,
@@ -328,6 +345,23 @@ where
     }
 }
 
+impl<V, O> Sub for &Value<V>
+where
+    for<'v> &'v V: Sub<Output = O>,
+{
+    type Output = Value<O>;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Value {
+            inner: self
+                .inner
+                .as_ref()
+                .zip(rhs.inner.as_ref())
+                .map(|(a, b)| a - b),
+        }
+    }
+}
+
 impl<V, O> Sub<Value<&V>> for Value<V>
 where
     for<'v> V: Sub<&'v V, Output = O>,
@@ -389,6 +423,23 @@ where
     fn mul(self, rhs: Self) -> Self::Output {
         Value {
             inner: self.inner.zip(rhs.inner).map(|(a, b)| a * b),
+        }
+    }
+}
+
+impl<V, O> Mul for &Value<V>
+where
+    for<'v> &'v V: Mul<Output = O>,
+{
+    type Output = Value<O>;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Value {
+            inner: self
+                .inner
+                .as_ref()
+                .zip(rhs.inner.as_ref())
+                .map(|(a, b)| a * b),
         }
     }
 }
