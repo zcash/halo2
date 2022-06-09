@@ -25,7 +25,7 @@ impl<V> Default for Value<V> {
 
 impl<V> Value<V> {
     /// Constructs an unwitnessed value.
-    pub fn unknown() -> Self {
+    pub const fn unknown() -> Self {
         Self { inner: None }
     }
 
@@ -38,7 +38,7 @@ impl<V> Value<V> {
     ///
     /// let v = Value::known(37);
     /// ```
-    pub fn known(value: V) -> Self {
+    pub const fn known(value: V) -> Self {
         Self { inner: Some(value) }
     }
 
