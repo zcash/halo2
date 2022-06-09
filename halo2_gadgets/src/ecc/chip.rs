@@ -7,11 +7,11 @@ use crate::{
 };
 use arrayvec::ArrayVec;
 
-use ff::{Field, PrimeField};
+use ff::PrimeField;
 use group::prime::PrimeCurveAffine;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed},
+    plonk::{Advice, Assigned, Column, ConstraintSystem, Error, Fixed},
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
 
@@ -35,9 +35,13 @@ pub(crate) use mul::incomplete::DoubleAndAdd;
 #[derive(Clone, Debug)]
 pub struct EccPoint {
     /// x-coordinate
-    x: AssignedCell<pallas::Base, pallas::Base>,
+    ///
+    /// Stored as an `Assigned<F>` to enable batching inversions.
+    x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
     /// y-coordinate
-    y: AssignedCell<pallas::Base, pallas::Base>,
+    ///
+    /// Stored as an `Assigned<F>` to enable batching inversions.
+    y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
 }
 
 impl EccPoint {
@@ -46,8 +50,8 @@ impl EccPoint {
     /// This is an internal API that we only use where we know we have a valid curve point
     /// (specifically inside Sinsemilla).
     pub(crate) fn from_coordinates_unchecked(
-        x: AssignedCell<pallas::Base, pallas::Base>,
-        y: AssignedCell<pallas::Base, pallas::Base>,
+        x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+        y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
     ) -> Self {
         EccPoint { x, y }
     }
@@ -59,7 +63,7 @@ impl EccPoint {
                 if x.is_zero_vartime() && y.is_zero_vartime() {
                     Some(pallas::Affine::identity())
                 } else {
-                    Some(pallas::Affine::from_xy(*x, *y).unwrap())
+                    Some(pallas::Affine::from_xy(x.evaluate(), y.evaluate()).unwrap())
                 }
             }
             _ => None,
@@ -68,12 +72,12 @@ impl EccPoint {
     /// The cell containing the affine short-Weierstrass x-coordinate,
     /// or 0 for the zero point.
     pub fn x(&self) -> AssignedCell<pallas::Base, pallas::Base> {
-        self.x.clone()
+        self.x.clone().evaluate()
     }
     /// The cell containing the affine short-Weierstrass y-coordinate,
     /// or 0 for the zero point.
     pub fn y(&self) -> AssignedCell<pallas::Base, pallas::Base> {
-        self.y.clone()
+        self.y.clone().evaluate()
     }
 
     #[cfg(test)]
@@ -87,9 +91,13 @@ impl EccPoint {
 #[derive(Clone, Debug)]
 pub struct NonIdentityEccPoint {
     /// x-coordinate
-    x: AssignedCell<pallas::Base, pallas::Base>,
+    ///
+    /// Stored as an `Assigned<F>` to enable batching inversions.
+    x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
     /// y-coordinate
-    y: AssignedCell<pallas::Base, pallas::Base>,
+    ///
+    /// Stored as an `Assigned<F>` to enable batching inversions.
+    y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
 }
 
 impl NonIdentityEccPoint {
@@ -98,8 +106,8 @@ impl NonIdentityEccPoint {
     /// This is an internal API that we only use where we know we have a valid non-identity
     /// curve point (specifically inside Sinsemilla).
     pub(crate) fn from_coordinates_unchecked(
-        x: AssignedCell<pallas::Base, pallas::Base>,
-        y: AssignedCell<pallas::Base, pallas::Base>,
+        x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+        y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
     ) -> Self {
         NonIdentityEccPoint { x, y }
     }
@@ -109,18 +117,18 @@ impl NonIdentityEccPoint {
         match (self.x.value(), self.y.value()) {
             (Some(x), Some(y)) => {
                 assert!(!x.is_zero_vartime() && !y.is_zero_vartime());
-                Some(pallas::Affine::from_xy(*x, *y).unwrap())
+                Some(pallas::Affine::from_xy(x.evaluate(), y.evaluate()).unwrap())
             }
             _ => None,
         }
     }
     /// The cell containing the affine short-Weierstrass x-coordinate.
     pub fn x(&self) -> AssignedCell<pallas::Base, pallas::Base> {
-        self.x.clone()
+        self.x.clone().evaluate()
     }
     /// The cell containing the affine short-Weierstrass y-coordinate.
     pub fn y(&self) -> AssignedCell<pallas::Base, pallas::Base> {
-        self.y.clone()
+        self.y.clone().evaluate()
     }
 }
 

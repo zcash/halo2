@@ -12,7 +12,7 @@ use ff::PrimeField;
 use halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{AssignedCell, Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
+    plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
 use uint::construct_uint;
@@ -360,7 +360,7 @@ impl Config {
             if !lsb {
                 base.x.value().cloned()
             } else {
-                Some(pallas::Base::zero())
+                Some(Assigned::Zero)
             }
         } else {
             None
@@ -370,7 +370,7 @@ impl Config {
             if !lsb {
                 base.y.value().map(|y_p| -y_p)
             } else {
-                Some(pallas::Base::zero())
+                Some(Assigned::Zero)
             }
         } else {
             None
@@ -404,9 +404,9 @@ impl Config {
 
 #[derive(Clone, Debug)]
 // `x`-coordinate of the accumulator.
-struct X<F: FieldExt>(AssignedCell<F, F>);
+struct X<F: FieldExt>(AssignedCell<Assigned<F>, F>);
 impl<F: FieldExt> Deref for X<F> {
-    type Target = AssignedCell<F, F>;
+    type Target = AssignedCell<Assigned<F>, F>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -415,9 +415,9 @@ impl<F: FieldExt> Deref for X<F> {
 
 #[derive(Clone, Debug)]
 // `y`-coordinate of the accumulator.
-struct Y<F: FieldExt>(AssignedCell<F, F>);
+struct Y<F: FieldExt>(AssignedCell<Assigned<F>, F>);
 impl<F: FieldExt> Deref for Y<F> {
-    type Target = AssignedCell<F, F>;
+    type Target = AssignedCell<Assigned<F>, F>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -451,26 +451,24 @@ fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> 
         let k = scalar + t_q;
 
         // Little-endian bit representation of `k`.
-        let bitstring: Vec<bool> = {
+        let bitstring = {
             let mut le_bytes = [0u8; 32];
             k.to_little_endian(&mut le_bytes);
-            le_bytes.iter().fold(Vec::new(), |mut bitstring, byte| {
-                let bits = (0..8)
-                    .map(|shift| (byte >> shift) % 2 == 1)
-                    .collect::<Vec<_>>();
-                bitstring.extend_from_slice(&bits);
-                bitstring
-            })
+            le_bytes
+                .into_iter()
+                .flat_map(|byte| (0..8).map(move |shift| (byte >> shift) % 2 == 1))
         };
 
-        // Take the first 255 bits, and reverse to get the big-endian bit representation.
-        let mut bitstring = bitstring[0..pallas::Scalar::NUM_BITS as usize].to_vec();
-        bitstring.reverse();
-        bitstring
+        // Take the first 255 bits.
+        bitstring.take(pallas::Scalar::NUM_BITS as usize)
     });
 
     if let Some(bitstring) = bitstring {
-        bitstring.into_iter().map(Some).collect()
+        // Transpose.
+        let mut bitstring: Vec<_> = bitstring.map(Some).collect();
+        // Reverse to get the big-endian bit representation.
+        bitstring.reverse();
+        bitstring
     } else {
         vec![None; pallas::Scalar::NUM_BITS as usize]
     }

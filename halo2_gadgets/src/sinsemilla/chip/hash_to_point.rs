@@ -177,7 +177,7 @@ where
             }
         }
         Ok((
-            NonIdentityEccPoint::from_coordinates_unchecked(x_a.0.evaluate(), y_a.evaluate()),
+            NonIdentityEccPoint::from_coordinates_unchecked(x_a.0, y_a),
             zs_sum,
         ))
     }

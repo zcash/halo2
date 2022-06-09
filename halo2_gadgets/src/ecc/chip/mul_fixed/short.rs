@@ -177,7 +177,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                 // Conditionally negate `y`-coordinate
                 let y_val = if let Some(sign) = sign.value() {
                     if sign == &-pallas::Base::one() {
-                        magnitude_mul.y.value().cloned().map(|y: pallas::Base| -y)
+                        magnitude_mul.y.value().cloned().map(|y| -y)
                     } else {
                         magnitude_mul.y.value().cloned()
                     }

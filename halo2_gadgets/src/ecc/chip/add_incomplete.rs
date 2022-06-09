@@ -1,14 +1,12 @@
 use std::collections::HashSet;
 
 use super::NonIdentityEccPoint;
-use ff::Field;
-use group::Curve;
 use halo2_proofs::{
     circuit::Region,
     plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
-use pasta_curves::{arithmetic::CurveAffine, pallas};
+use pasta_curves::pallas;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Config {
@@ -121,20 +119,24 @@ impl Config {
         q.y.copy_advice(|| "y_q", region, self.y_qr, offset)?;
 
         // Compute the sum `P + Q = R`
-        let r = {
-            let p = p.point();
-            let q = q.point();
-            let r = p
-                .zip(q)
-                .map(|(p, q)| (p + q).to_affine().coordinates().unwrap());
-            let r_x = r.map(|r| *r.x());
-            let r_y = r.map(|r| *r.y());
-
-            (r_x, r_y)
-        };
+        let r = x_p
+            .zip(y_p)
+            .zip(x_q)
+            .zip(y_q)
+            .map(|(((x_p, y_p), x_q), y_q)| {
+                {
+                    // λ = (y_q - y_p)/(x_q - x_p)
+                    let lambda = (y_q - y_p) * (x_q - x_p).invert();
+                    // x_r = λ^2 - x_p - x_q
+                    let x_r = lambda.square() - x_p - x_q;
+                    // y_r = λ(x_p - x_r) - y_p
+                    let y_r = lambda * (x_p - x_r) - y_p;
+                    (x_r, y_r)
+                }
+            });
 
         // Assign the sum to `x_qr`, `y_qr` columns in the next row
-        let x_r = r.0;
+        let x_r = r.map(|r| r.0);
         let x_r_var = region.assign_advice(
             || "x_r",
             self.x_qr,
@@ -142,7 +144,7 @@ impl Config {
             || x_r.ok_or(Error::Synthesis),
         )?;
 
-        let y_r = r.1;
+        let y_r = r.map(|r| r.1);
         let y_r_var = region.assign_advice(
             || "y_r",
             self.y_qr,

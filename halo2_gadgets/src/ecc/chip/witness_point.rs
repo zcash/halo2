@@ -5,15 +5,16 @@ use group::prime::PrimeCurveAffine;
 use halo2_proofs::{
     circuit::{AssignedCell, Region},
     plonk::{
-        Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector, VirtualCells,
+        Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector,
+        VirtualCells,
     },
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
 
 type Coordinates = (
-    AssignedCell<pallas::Base, pallas::Base>,
-    AssignedCell<pallas::Base, pallas::Base>,
+    AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+    AssignedCell<Assigned<pallas::Base>, pallas::Base>,
 );
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -86,7 +87,7 @@ impl Config {
 
     fn assign_xy(
         &self,
-        value: Option<(pallas::Base, pallas::Base)>,
+        value: Option<(Assigned<pallas::Base>, Assigned<pallas::Base>)>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
     ) -> Result<Coordinates, Error> {
@@ -116,10 +117,10 @@ impl Config {
         let value = value.map(|value| {
             // Map the identity to (0, 0).
             if value == pallas::Affine::identity() {
-                (pallas::Base::zero(), pallas::Base::zero())
+                (Assigned::Zero, Assigned::Zero)
             } else {
                 let value = value.coordinates().unwrap();
-                (*value.x(), *value.y())
+                (value.x().into(), value.y().into())
             }
         });
 
@@ -146,7 +147,7 @@ impl Config {
 
         let value = value.map(|value| {
             let value = value.coordinates().unwrap();
-            (*value.x(), *value.y())
+            (value.x().into(), value.y().into())
         });
 
         self.assign_xy(value, offset, region)
