@@ -101,7 +101,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         Ok(EccScalarFixedShort {
             magnitude,
             sign,
-            running_sum: Some((*running_sum).as_slice().try_into().unwrap()),
+            running_sum: Some(running_sum.zs().try_into().unwrap()),
         })
     }
 

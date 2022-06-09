@@ -37,17 +37,10 @@ use std::marker::PhantomData;
 
 /// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
 #[derive(Debug)]
-pub struct RunningSum<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>(
-    Vec<AssignedCell<F, F>>,
-);
-impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> std::ops::Deref
-    for RunningSum<F, WINDOW_NUM_BITS>
-{
-    type Target = Vec<AssignedCell<F, F>>;
-
-    fn deref(&self) -> &Vec<AssignedCell<F, F>> {
-        &self.0
-    }
+pub struct RunningSum<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> {
+    zs: Vec<AssignedCell<F, F>>,
+    num_bits: usize,
+    strict: bool,
 }
 
 impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> RunningSum<F, WINDOW_NUM_BITS> {
@@ -55,15 +48,25 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> RunningSum<F, W
     pub(crate) fn windows(&self) -> Vec<Option<F>> {
         let mut windows = Vec::new();
         // k_i = z_i - (2^K * z_{i+1})
-        for i in 0..(self.0.len() - 1) {
-            let z_cur = self.0[i].value();
-            let z_next = self.0[i + 1].value();
+        for i in 0..(self.zs.len() - 1) {
+            let z_cur = self.zs[i].value();
+            let z_next = self.zs[i + 1].value();
             let window = z_cur
                 .zip(z_next)
                 .map(|(z_cur, z_next)| *z_cur - *z_next * F::from(1 << WINDOW_NUM_BITS));
             windows.push(window);
         }
         windows
+    }
+
+    /// The number of bits represented by the running sum.
+    pub(crate) fn num_bits(&self) -> usize {
+        self.num_bits
+    }
+
+    /// The intermediate values of the running sum.
+    pub(crate) fn zs(&self) -> &[AssignedCell<F, F>] {
+        &self.zs
     }
 }
 
@@ -231,7 +234,11 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
             region.constrain_constant(zs.last().unwrap().cell(), F::zero())?;
         }
 
-        Ok(RunningSum(zs))
+        Ok(RunningSum {
+            zs,
+            num_bits: word_num_bits,
+            strict,
+        })
     }
 }
 
@@ -300,14 +307,16 @@ mod tests {
                     || "decompose",
                     |mut region| {
                         let offset = 0;
-                        let zs = config.witness_decompose(
-                            &mut region,
-                            offset,
-                            self.alpha,
-                            self.strict,
-                            WORD_NUM_BITS,
-                            NUM_WINDOWS,
-                        )?;
+                        let zs = config
+                            .witness_decompose(
+                                &mut region,
+                                offset,
+                                self.alpha,
+                                self.strict,
+                                WORD_NUM_BITS,
+                                NUM_WINDOWS,
+                            )?
+                            .zs;
                         let alpha = zs[0].clone();
 
                         let offset = offset + NUM_WINDOWS + 1;
