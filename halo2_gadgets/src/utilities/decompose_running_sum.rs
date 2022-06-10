@@ -25,13 +25,10 @@
 use ff::PrimeFieldBits;
 use halo2_proofs::{
     circuit::{AssignedCell, Region, Value},
-    plonk::{
-        Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector, VirtualCells,
-    },
+    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector, VirtualCells},
     poly::Rotation,
 };
 
-use super::range_check;
 use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
@@ -45,7 +42,7 @@ pub struct RunningSum<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize
 
 impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> RunningSum<F, WINDOW_NUM_BITS> {
     /// Returns windows derived from the intermediate values of the running sum.
-    pub(crate) fn windows(&self) -> Vec<Option<F>> {
+    pub(crate) fn windows(&self) -> Vec<Value<F>> {
         let mut windows = Vec::new();
         // k_i = z_i - (2^K * z_{i+1})
         for i in 0..(self.zs.len() - 1) {
@@ -88,10 +85,6 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
 
     /// `perm` MUST include the advice column `z`.
     ///
-    /// # Panics
-    ///
-    /// Panics if WINDOW_NUM_BITS > 3.
-    ///
     /// # Side-effects
     ///
     /// `z` will be equality-enabled.
@@ -100,25 +93,19 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         q_range_check: Selector,
         z: Column<Advice>,
     ) -> Self {
-        assert!(WINDOW_NUM_BITS <= 3);
-
         meta.enable_equality(z);
 
-        let config = Self {
+        // It is the caller's responsibility to enforce the range-check using q_range_check.
+        // The selector q_range_check will be enabled on every row of the decomposition,
+        // but is not tied to a gate or expression within this helper.
+        //
+        // This is to support different range check methods (e.g. expression, lookup).
+
+        Self {
             q_range_check,
             z,
             _marker: PhantomData,
-        };
-
-        // https://p.z.cash/halo2-0.1:decompose-short-range
-        meta.create_gate("range check", |meta| {
-            let q_range_check = meta.query_selector(config.q_range_check);
-            let word = config.window_expr(meta);
-
-            Constraints::with_selector(q_range_check, Some(range_check(word, 1 << WINDOW_NUM_BITS)))
-        });
-
-        config
+        }
     }
 
     /// Expression for a window

@@ -2,7 +2,7 @@ use super::{
     add, add_incomplete, EccBaseFieldElemFixed, EccScalarFixed, EccScalarFixedShort, FixedPoint,
     NonIdentityEccPoint, FIXED_BASE_WINDOW_SIZE, H,
 };
-use crate::utilities::decompose_running_sum::RunningSumConfig;
+use crate::utilities::{decompose_running_sum::RunningSumConfig, range_check};
 
 use std::marker::PhantomData;
 
@@ -69,6 +69,17 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
 
         let q_running_sum = meta.selector();
         let running_sum_config = RunningSumConfig::configure(meta, q_running_sum, window);
+
+        // Range-check each window in the running sum decomposition.
+        meta.create_gate("range check", |meta| {
+            let q_range_check = meta.query_selector(running_sum_config.q_range_check());
+            let word = running_sum_config.window_expr(meta);
+
+            Constraints::with_selector(
+                q_range_check,
+                Some(range_check(word, 1 << FIXED_BASE_WINDOW_SIZE)),
+            )
+        });
 
         let config = Self {
             running_sum_config,
