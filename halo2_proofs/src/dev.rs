@@ -767,6 +767,7 @@ impl<F: FieldExt> MockProver<F> {
                                 assert!(table.binary_search(input).is_err());
 
                                 Some(VerifyFailure::Lookup {
+                                    name: lookup.name,
                                     lookup_index,
                                     location: FailureLocation::find_expressions(
                                         &self.cs,
@@ -979,7 +980,7 @@ mod tests {
                 let q = meta.complex_selector();
                 let table = meta.lookup_table_column();
 
-                meta.lookup(|cells| {
+                meta.lookup("lookup a", |cells| {
                     let a = cells.query_advice(a, Rotation::cur());
                     let q = cells.query_selector(q);
 
@@ -1056,6 +1057,7 @@ mod tests {
         assert_eq!(
             prover.verify(),
             Err(vec![VerifyFailure::Lookup {
+                name: "lookup a",
                 lookup_index: 0,
                 location: FailureLocation::InRegion {
                     region: (2, "Faulty synthesis").into(),
