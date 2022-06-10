@@ -33,7 +33,8 @@ impl<C: ColumnType> Column<C> {
         Column { index, column_type }
     }
 
-    pub(crate) fn index(&self) -> usize {
+    /// Index of this column.
+    pub fn index(&self) -> usize {
         self.index
     }
 
@@ -280,6 +281,18 @@ pub struct FixedQuery {
     pub(crate) rotation: Rotation,
 }
 
+impl FixedQuery {
+    /// Column index
+    pub fn column_index(&self) -> usize {
+        self.column_index
+    }
+
+    /// Rotation of this query
+    pub fn rotation(&self) -> Rotation {
+        self.rotation
+    }
+}
+
 /// Query of advice column at a certain relative location
 #[derive(Copy, Clone, Debug)]
 pub struct AdviceQuery {
@@ -291,6 +304,18 @@ pub struct AdviceQuery {
     pub(crate) rotation: Rotation,
 }
 
+impl AdviceQuery {
+    /// Column index
+    pub fn column_index(&self) -> usize {
+        self.column_index
+    }
+
+    /// Rotation of this query
+    pub fn rotation(&self) -> Rotation {
+        self.rotation
+    }
+}
+
 /// Query of instance column at a certain relative location
 #[derive(Copy, Clone, Debug)]
 pub struct InstanceQuery {
@@ -300,6 +325,18 @@ pub struct InstanceQuery {
     pub(crate) column_index: usize,
     /// Rotation of this query
     pub(crate) rotation: Rotation,
+}
+
+impl InstanceQuery {
+    /// Column index
+    pub fn column_index(&self) -> usize {
+        self.column_index
+    }
+
+    /// Rotation of this query
+    pub fn rotation(&self) -> Rotation {
+        self.rotation
+    }
 }
 
 /// A fixed column of a lookup table.
@@ -930,7 +967,7 @@ pub(crate) struct PointIndex(pub usize);
 /// A "virtual cell" is a PLONK cell that has been queried at a particular relative offset
 /// within a custom gate.
 #[derive(Clone, Debug)]
-pub(crate) struct VirtualCell {
+pub struct VirtualCell {
     pub(crate) column: Column<Any>,
     pub(crate) rotation: Rotation,
 }
@@ -1054,8 +1091,9 @@ impl<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> IntoIterato
     }
 }
 
+/// Gate
 #[derive(Clone, Debug)]
-pub(crate) struct Gate<F: Field> {
+pub struct Gate<F: Field> {
     name: &'static str,
     constraint_names: Vec<&'static str>,
     polys: Vec<Expression<F>>,
@@ -1074,7 +1112,8 @@ impl<F: Field> Gate<F> {
         self.constraint_names[constraint_index]
     }
 
-    pub(crate) fn polynomials(&self) -> &[Expression<F>] {
+    /// Returns constraints of this gate
+    pub fn polynomials(&self) -> &[Expression<F>] {
         &self.polys
     }
 
@@ -1647,6 +1686,56 @@ impl<F: Field> ConstraintSystem<F> {
                 // permutation polynomial between the roles of l_last, l_0
                 // and the interstitial values.)
             + 1 // for at least one row
+    }
+
+    /// Returns number of fixed columns
+    pub fn num_fixed_columns(&self) -> usize {
+        self.num_fixed_columns
+    }
+
+    /// Returns number of advice columns
+    pub fn num_advice_columns(&self) -> usize {
+        self.num_advice_columns
+    }
+
+    /// Returns number of instance columns
+    pub fn num_instance_columns(&self) -> usize {
+        self.num_instance_columns
+    }
+
+    /// Returns gates
+    pub fn gates(&self) -> &Vec<Gate<F>> {
+        &self.gates
+    }
+
+    /// Returns advice queries
+    pub fn advice_queries(&self) -> &Vec<(Column<Advice>, Rotation)> {
+        &self.advice_queries
+    }
+
+    /// Returns instance queries
+    pub fn instance_queries(&self) -> &Vec<(Column<Instance>, Rotation)> {
+        &self.instance_queries
+    }
+
+    /// Returns fixed queries
+    pub fn fixed_queries(&self) -> &Vec<(Column<Fixed>, Rotation)> {
+        &self.fixed_queries
+    }
+
+    /// Returns permutation argument
+    pub fn permutation(&self) -> &permutation::Argument {
+        &self.permutation
+    }
+
+    /// Returns lookup arguments
+    pub fn lookups(&self) -> &Vec<lookup::Argument<F>> {
+        &self.lookups
+    }
+
+    /// Returns constants
+    pub fn constants(&self) -> &Vec<Column<Fixed>> {
+        &self.constants
     }
 }
 

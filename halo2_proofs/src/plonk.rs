@@ -110,6 +110,21 @@ impl<C: CurveAffine> VerifyingKey<C> {
             cs: self.cs.pinned(),
         }
     }
+
+    /// Returns commitments of fixed polynomials
+    pub fn fixed_commitments(&self) -> &Vec<C> {
+        &self.fixed_commitments
+    }
+
+    /// Returns `VerifyingKey` of permutation
+    pub fn permutation(&self) -> &permutation::VerifyingKey<C> {
+        &self.permutation
+    }
+
+    /// Returns `ConstraintSystem`
+    pub fn cs(&self) -> &ConstraintSystem<C::Scalar> {
+        &self.cs
+    }
 }
 
 /// Minimal representation of a verification key that can be used to identify

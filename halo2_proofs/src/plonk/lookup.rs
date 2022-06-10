@@ -6,10 +6,10 @@ pub(crate) mod prover;
 pub(crate) mod verifier;
 
 #[derive(Clone)]
-pub(crate) struct Argument<F: Field> {
-    pub name: &'static str,
-    pub input_expressions: Vec<Expression<F>>,
-    pub table_expressions: Vec<Expression<F>>,
+pub struct Argument<F: Field> {
+    pub(crate) name: &'static str,
+    pub(crate) input_expressions: Vec<Expression<F>>,
+    pub(crate) table_expressions: Vec<Expression<F>>,
 }
 
 impl<F: Field> Debug for Argument<F> {
@@ -80,5 +80,15 @@ impl<F: Field> Argument<F> {
             // (1 - (l_last + l_blind)) z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
             2 + input_degree + table_degree,
         )
+    }
+
+    /// Returns input of this argument
+    pub fn input_expressions(&self) -> &Vec<Expression<F>> {
+        &self.input_expressions
+    }
+
+    /// Returns table of this argument
+    pub fn table_expressions(&self) -> &Vec<Expression<F>> {
+        &self.table_expressions
     }
 }
