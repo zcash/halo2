@@ -119,7 +119,7 @@ impl<V, W> Value<(V, W)> {
     /// Unzips a value containing a tuple of two values.
     ///
     /// If `self` is `Value::known((a, b)), this method returns
-    /// `(Value::known(s), Value::known(o))`. Otherwise,
+    /// `(Value::known(a), Value::known(b))`. Otherwise,
     /// `(Value::unknown(), Value::unknown())` is returned.
     pub fn unzip(self) -> (Value<V>, Value<W>) {
         match self.inner {
