@@ -674,6 +674,15 @@
 <span id="652">652</span>
 <span id="653">653</span>
 <span id="654">654</span>
+<span id="655">655</span>
+<span id="656">656</span>
+<span id="657">657</span>
+<span id="658">658</span>
+<span id="659">659</span>
+<span id="660">660</span>
+<span id="661">661</span>
+<span id="662">662</span>
+<span id="663">663</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">EccPoint</span>, <span class="ident">EccScalarFixedShort</span>, <span class="ident">FixedPoints</span>, <span class="ident">L_SCALAR_SHORT</span>, <span class="ident">NUM_WINDOWS_SHORT</span>};
@@ -851,15 +860,13 @@
                 <span class="ident">z_21</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;last_window&quot;</span>, <span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">super_config</span>.<span class="ident">u</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
 
                 <span class="comment">// Conditionally negate `y`-coordinate</span>
-                <span class="kw">let</span> <span class="ident">y_val</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">sign</span>) <span class="op">=</span> <span class="ident">sign</span>.<span class="ident">value</span>() {
+                <span class="kw">let</span> <span class="ident">y_val</span> <span class="op">=</span> <span class="ident">sign</span>.<span class="ident">value</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">sign</span><span class="op">|</span> {
                     <span class="kw">if</span> <span class="ident">sign</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="op">-</span><span class="ident">pallas::Base::one</span>() {
-                        <span class="ident">magnitude_mul</span>.<span class="ident">y</span>.<span class="ident">value</span>().<span class="ident">cloned</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">y</span><span class="op">|</span> <span class="op">-</span><span class="ident">y</span>)
+                        <span class="op">-</span><span class="ident">magnitude_mul</span>.<span class="ident">y</span>.<span class="ident">value</span>()
                     } <span class="kw">else</span> {
                         <span class="ident">magnitude_mul</span>.<span class="ident">y</span>.<span class="ident">value</span>().<span class="ident">cloned</span>()
                     }
-                } <span class="kw">else</span> {
-                    <span class="prelude-val">None</span>
-                };
+                });
 
                 <span class="comment">// Enable mul_fixed_short selector on final row</span>
                 <span class="self">self</span>.<span class="ident">q_mul_fixed_short</span>.<span class="ident">enable</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
@@ -869,7 +876,7 @@
                     <span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_var&quot;</span>,
                     <span class="self">self</span>.<span class="ident">super_config</span>.<span class="ident">add_config</span>.<span class="ident">y_p</span>,
                     <span class="ident">offset</span>,
-                    <span class="op">|</span><span class="op">|</span> <span class="ident">y_val</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
+                    <span class="op">|</span><span class="op">|</span> <span class="ident">y_val</span>,
                 )<span class="question-mark">?</span>;
 
                 <span class="prelude-val">Ok</span>(<span class="ident">EccPoint</span> {
@@ -889,34 +896,35 @@
             <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::FixedPoint</span>;
             <span class="kw">use</span> <span class="ident">group</span>::{<span class="ident">ff::PrimeField</span>, <span class="ident">Curve</span>};
 
-            <span class="kw">if</span> <span class="kw">let</span> (<span class="prelude-val">Some</span>(<span class="ident">magnitude</span>), <span class="prelude-val">Some</span>(<span class="ident">sign</span>)) <span class="op">=</span> (<span class="ident">scalar</span>.<span class="ident">magnitude</span>.<span class="ident">value</span>(), <span class="ident">scalar</span>.<span class="ident">sign</span>.<span class="ident">value</span>()) {
-                <span class="kw">let</span> <span class="ident">magnitude_is_valid</span> <span class="op">=</span> <span class="ident">magnitude</span> <span class="op">&lt;</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">pallas::Base::from</span>(<span class="number">0xFFFF_FFFF_FFFF_FFFFu64</span>);
-                <span class="kw">let</span> <span class="ident">sign_is_valid</span> <span class="op">=</span> <span class="ident">sign</span> <span class="op">*</span> <span class="ident">sign</span> <span class="op">==</span> <span class="ident">pallas::Base::one</span>();
-                <span class="kw">if</span> <span class="ident">magnitude_is_valid</span> <span class="op">&amp;&amp;</span> <span class="ident">sign_is_valid</span> {
-                    <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">scalar</span>.<span class="ident">magnitude</span>.<span class="ident">value</span>().<span class="ident">zip</span>(<span class="ident">scalar</span>.<span class="ident">sign</span>.<span class="ident">value</span>()).<span class="ident">map</span>(
-                        <span class="op">|</span>(<span class="ident">magnitude</span>, <span class="ident">sign</span>)<span class="op">|</span> {
+            <span class="ident">scalar</span>
+                .<span class="ident">magnitude</span>
+                .<span class="ident">value</span>()
+                .<span class="ident">zip</span>(<span class="ident">scalar</span>.<span class="ident">sign</span>.<span class="ident">value</span>())
+                .<span class="ident">zip</span>(<span class="ident">result</span>.<span class="ident">point</span>())
+                .<span class="ident">assert_if_known</span>(<span class="op">|</span>((<span class="ident">magnitude</span>, <span class="ident">sign</span>), <span class="ident">result</span>)<span class="op">|</span> {
+                    <span class="kw">let</span> <span class="ident">magnitude_is_valid</span> <span class="op">=</span>
+                        <span class="ident">magnitude</span> <span class="op">&lt;</span><span class="op">=</span> <span class="op">&amp;&amp;</span><span class="ident">pallas::Base::from</span>(<span class="number">0xFFFF_FFFF_FFFF_FFFFu64</span>);
+                    <span class="kw">let</span> <span class="ident">sign_is_valid</span> <span class="op">=</span> <span class="ident">sign</span>.<span class="ident">square</span>() <span class="op">==</span> <span class="ident">pallas::Base::one</span>();
+                    <span class="comment">// Only check the result if the magnitude and sign are valid.</span>
+                    <span class="op">!</span>(<span class="ident">magnitude_is_valid</span> <span class="op">&amp;&amp;</span> <span class="ident">sign_is_valid</span>) <span class="op">|</span><span class="op">|</span> {
+                        <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> {
                             <span class="comment">// Move magnitude from base field into scalar field (which always fits</span>
                             <span class="comment">// for Pallas).</span>
                             <span class="kw">let</span> <span class="ident">magnitude</span> <span class="op">=</span> <span class="ident">pallas::Scalar::from_repr</span>(<span class="ident">magnitude</span>.<span class="ident">to_repr</span>()).<span class="ident">unwrap</span>();
 
-                            <span class="kw">let</span> <span class="ident">sign</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">sign</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">pallas::Base::one</span>() {
+                            <span class="kw">let</span> <span class="ident">sign</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">sign</span> <span class="op">==</span> <span class="op">&amp;&amp;</span><span class="ident">pallas::Base::one</span>() {
                                 <span class="ident">pallas::Scalar::one</span>()
                             } <span class="kw">else</span> {
                                 <span class="op">-</span><span class="ident">pallas::Scalar::one</span>()
                             };
 
                             <span class="ident">magnitude</span> <span class="op">*</span> <span class="ident">sign</span>
-                        },
-                    );
-                    <span class="kw">let</span> <span class="ident">real_mul</span> <span class="op">=</span> <span class="ident">scalar</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">scalar</span><span class="op">|</span> <span class="ident">base</span>.<span class="ident">generator</span>() <span class="op">*</span> <span class="ident">scalar</span>);
+                        };
+                        <span class="kw">let</span> <span class="ident">real_mul</span> <span class="op">=</span> <span class="ident">base</span>.<span class="ident">generator</span>() <span class="op">*</span> <span class="ident">scalar</span>;
 
-                    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">point</span>();
-
-                    <span class="kw">if</span> <span class="kw">let</span> (<span class="prelude-val">Some</span>(<span class="ident">real_mul</span>), <span class="prelude-val">Some</span>(<span class="ident">result</span>)) <span class="op">=</span> (<span class="ident">real_mul</span>, <span class="ident">result</span>) {
-                        <span class="macro">assert_eq!</span>(<span class="ident">real_mul</span>.<span class="ident">to_affine</span>(), <span class="ident">result</span>);
+                        <span class="kw-2">&amp;</span><span class="ident">real_mul</span>.<span class="ident">to_affine</span>() <span class="op">==</span> <span class="ident">result</span>
                     }
-                }
-            }
+                });
         }
 
         <span class="prelude-val">Ok</span>((<span class="ident">result</span>, <span class="ident">scalar</span>))
@@ -928,7 +936,7 @@
     <span class="kw">use</span> <span class="ident">group</span>::{<span class="ident">ff::PrimeField</span>, <span class="ident">Curve</span>};
     <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
         <span class="ident">arithmetic::CurveAffine</span>,
-        <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Chip</span>, <span class="ident">Layouter</span>},
+        <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Chip</span>, <span class="ident">Layouter</span>, <span class="ident">Value</span>},
         <span class="ident">plonk</span>::{<span class="ident">Any</span>, <span class="ident">Error</span>},
     };
     <span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">pallas</span>};
@@ -958,9 +966,13 @@
             <span class="ident">sign</span>: <span class="ident">pallas::Base</span>,
         ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">MagnitudeSign</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">column</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">config</span>().<span class="ident">advices</span>[<span class="number">0</span>];
-            <span class="kw">let</span> <span class="ident">magnitude</span> <span class="op">=</span>
-                <span class="ident">chip</span>.<span class="ident">load_private</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;magnitude&quot;</span>), <span class="ident">column</span>, <span class="prelude-val">Some</span>(<span class="ident">magnitude</span>))<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">sign</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">load_private</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sign&quot;</span>), <span class="ident">column</span>, <span class="prelude-val">Some</span>(<span class="ident">sign</span>))<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">magnitude</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">load_private</span>(
+                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;magnitude&quot;</span>),
+                <span class="ident">column</span>,
+                <span class="ident">Value::known</span>(<span class="ident">magnitude</span>),
+            )<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">sign</span> <span class="op">=</span>
+                <span class="ident">chip</span>.<span class="ident">load_private</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sign&quot;</span>), <span class="ident">column</span>, <span class="ident">Value::known</span>(<span class="ident">sign</span>))<span class="question-mark">?</span>;
 
             <span class="prelude-val">Ok</span>((<span class="ident">magnitude</span>, <span class="ident">sign</span>))
         }
@@ -975,7 +987,7 @@
             <span class="kw">let</span> <span class="ident">expected</span> <span class="op">=</span> <span class="ident">NonIdentityPoint::new</span>(
                 <span class="ident">chip</span>,
                 <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;expected point&quot;</span>),
-                <span class="prelude-val">Some</span>((<span class="ident">base_val</span> <span class="op">*</span> <span class="ident">scalar_val</span>).<span class="ident">to_affine</span>()),
+                <span class="ident">Value::known</span>((<span class="ident">base_val</span> <span class="op">*</span> <span class="ident">scalar_val</span>).<span class="ident">to_affine</span>()),
             )<span class="question-mark">?</span>;
             <span class="ident">result</span>.<span class="ident">constrain_equal</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;constrain result&quot;</span>), <span class="kw-2">&amp;</span><span class="ident">expected</span>)
         }
@@ -1067,9 +1079,10 @@
                 )<span class="question-mark">?</span>;
                 <span class="ident">test_short</span>.<span class="ident">mul</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">name</span>), <span class="ident">by</span>)<span class="question-mark">?</span>
             };
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">is_identity</span>) <span class="op">=</span> <span class="ident">result</span>.<span class="ident">inner</span>().<span class="ident">is_identity</span>() {
-                <span class="macro">assert!</span>(<span class="ident">is_identity</span>);
-            }
+            <span class="ident">result</span>
+                .<span class="ident">inner</span>()
+                .<span class="ident">is_identity</span>()
+                .<span class="ident">assert_if_known</span>(<span class="op">|</span><span class="ident">is_identity</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">is_identity</span>);
         }
 
         <span class="prelude-val">Ok</span>(())
@@ -1089,10 +1102,10 @@
 
         <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
         <span class="kw">struct</span> <span class="ident">MyCircuit</span> {
-            <span class="ident">magnitude</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-            <span class="ident">sign</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
+            <span class="ident">magnitude</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
+            <span class="ident">sign</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
             <span class="comment">// For test checking</span>
-            <span class="ident">magnitude_error</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
+            <span class="ident">magnitude_error</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
         }
 
         <span class="kw">impl</span> <span class="ident">UtilitiesInstructions</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyCircuit</span> {
@@ -1193,41 +1206,41 @@
             <span class="kw">let</span> <span class="ident">circuits</span> <span class="op">=</span> [
                 <span class="comment">// 2^64</span>
                 <span class="ident">MyCircuit</span> {
-                    <span class="ident">magnitude</span>: <span class="prelude-val">Some</span>(<span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">64</span>)),
-                    <span class="ident">sign</span>: <span class="prelude-val">Some</span>(<span class="ident">pallas::Base::one</span>()),
-                    <span class="ident">magnitude_error</span>: <span class="prelude-val">Some</span>(<span class="ident">pallas::Base::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>)),
+                    <span class="ident">magnitude</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">64</span>)),
+                    <span class="ident">sign</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::one</span>()),
+                    <span class="ident">magnitude_error</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>)),
                 },
                 <span class="comment">// -2^64</span>
                 <span class="ident">MyCircuit</span> {
-                    <span class="ident">magnitude</span>: <span class="prelude-val">Some</span>(<span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">64</span>)),
-                    <span class="ident">sign</span>: <span class="prelude-val">Some</span>(<span class="op">-</span><span class="ident">pallas::Base::one</span>()),
-                    <span class="ident">magnitude_error</span>: <span class="prelude-val">Some</span>(<span class="ident">pallas::Base::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>)),
+                    <span class="ident">magnitude</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">64</span>)),
+                    <span class="ident">sign</span>: <span class="ident">Value::known</span>(<span class="op">-</span><span class="ident">pallas::Base::one</span>()),
+                    <span class="ident">magnitude_error</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>)),
                 },
                 <span class="comment">// 2^66</span>
                 <span class="ident">MyCircuit</span> {
-                    <span class="ident">magnitude</span>: <span class="prelude-val">Some</span>(<span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">66</span>)),
-                    <span class="ident">sign</span>: <span class="prelude-val">Some</span>(<span class="ident">pallas::Base::one</span>()),
-                    <span class="ident">magnitude_error</span>: <span class="prelude-val">Some</span>(<span class="ident">pallas::Base::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">3</span>)),
+                    <span class="ident">magnitude</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">66</span>)),
+                    <span class="ident">sign</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::one</span>()),
+                    <span class="ident">magnitude_error</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">3</span>)),
                 },
                 <span class="comment">// -2^66</span>
                 <span class="ident">MyCircuit</span> {
-                    <span class="ident">magnitude</span>: <span class="prelude-val">Some</span>(<span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">66</span>)),
-                    <span class="ident">sign</span>: <span class="prelude-val">Some</span>(<span class="op">-</span><span class="ident">pallas::Base::one</span>()),
-                    <span class="ident">magnitude_error</span>: <span class="prelude-val">Some</span>(<span class="ident">pallas::Base::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">3</span>)),
+                    <span class="ident">magnitude</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">66</span>)),
+                    <span class="ident">sign</span>: <span class="ident">Value::known</span>(<span class="op">-</span><span class="ident">pallas::Base::one</span>()),
+                    <span class="ident">magnitude_error</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">3</span>)),
                 },
                 <span class="comment">// 2^254</span>
                 <span class="ident">MyCircuit</span> {
-                    <span class="ident">magnitude</span>: <span class="prelude-val">Some</span>(<span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">127</span>).<span class="ident">square</span>()),
-                    <span class="ident">sign</span>: <span class="prelude-val">Some</span>(<span class="ident">pallas::Base::one</span>()),
-                    <span class="ident">magnitude_error</span>: <span class="prelude-val">Some</span>(
+                    <span class="ident">magnitude</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">127</span>).<span class="ident">square</span>()),
+                    <span class="ident">sign</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::one</span>()),
+                    <span class="ident">magnitude_error</span>: <span class="ident">Value::known</span>(
                         <span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">95</span>).<span class="ident">square</span>() <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="number">2</span>),
                     ),
                 },
                 <span class="comment">// -2^254</span>
                 <span class="ident">MyCircuit</span> {
-                    <span class="ident">magnitude</span>: <span class="prelude-val">Some</span>(<span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">127</span>).<span class="ident">square</span>()),
-                    <span class="ident">sign</span>: <span class="prelude-val">Some</span>(<span class="op">-</span><span class="ident">pallas::Base::one</span>()),
-                    <span class="ident">magnitude_error</span>: <span class="prelude-val">Some</span>(
+                    <span class="ident">magnitude</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">127</span>).<span class="ident">square</span>()),
+                    <span class="ident">sign</span>: <span class="ident">Value::known</span>(<span class="op">-</span><span class="ident">pallas::Base::one</span>()),
+                    <span class="ident">magnitude_error</span>: <span class="ident">Value::known</span>(
                         <span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">95</span>).<span class="ident">square</span>() <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="number">2</span>),
                     ),
                 },
@@ -1235,38 +1248,43 @@
 
             <span class="kw">for</span> <span class="ident">circuit</span> <span class="kw">in</span> <span class="ident">circuits</span>.<span class="ident">iter</span>() {
                 <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver</span>::<span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="ident">::run</span>(<span class="number">11</span>, <span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
-                <span class="macro">assert_eq!</span>(
-                    <span class="ident">prover</span>.<span class="ident">verify</span>(),
-                    <span class="prelude-val">Err</span>(<span class="macro">vec!</span>[
-                        <span class="ident">VerifyFailure::ConstraintNotSatisfied</span> {
-                            <span class="ident">constraint</span>: (
-                                (<span class="number">17</span>, <span class="string">&quot;Short fixed-base mul gate&quot;</span>).<span class="ident">into</span>(),
-                                <span class="number">0</span>,
-                                <span class="string">&quot;last_window_check&quot;</span>
-                            )
-                                .<span class="ident">into</span>(),
-                            <span class="ident">location</span>: <span class="ident">FailureLocation::InRegion</span> {
-                                <span class="ident">region</span>: (<span class="number">3</span>, <span class="string">&quot;Short fixed-base mul (most significant word)&quot;</span>).<span class="ident">into</span>(),
-                                <span class="ident">offset</span>: <span class="number">1</span>,
+                <span class="ident">circuit</span>.<span class="ident">magnitude_error</span>.<span class="ident">assert_if_known</span>(<span class="op">|</span><span class="ident">magnitude_error</span><span class="op">|</span> {
+                    <span class="macro">assert_eq!</span>(
+                        <span class="ident">prover</span>.<span class="ident">verify</span>(),
+                        <span class="prelude-val">Err</span>(<span class="macro">vec!</span>[
+                            <span class="ident">VerifyFailure::ConstraintNotSatisfied</span> {
+                                <span class="ident">constraint</span>: (
+                                    (<span class="number">17</span>, <span class="string">&quot;Short fixed-base mul gate&quot;</span>).<span class="ident">into</span>(),
+                                    <span class="number">0</span>,
+                                    <span class="string">&quot;last_window_check&quot;</span>,
+                                )
+                                    .<span class="ident">into</span>(),
+                                <span class="ident">location</span>: <span class="ident">FailureLocation::InRegion</span> {
+                                    <span class="ident">region</span>: (<span class="number">3</span>, <span class="string">&quot;Short fixed-base mul (most significant word)&quot;</span>)
+                                        .<span class="ident">into</span>(),
+                                    <span class="ident">offset</span>: <span class="number">1</span>,
+                                },
+                                <span class="ident">cell_values</span>: <span class="macro">vec!</span>[(
+                                    ((<span class="ident">Any::Advice</span>, <span class="number">5</span>).<span class="ident">into</span>(), <span class="number">0</span>).<span class="ident">into</span>(),
+                                    <span class="ident">format_value</span>(<span class="kw-2">*</span><span class="ident">magnitude_error</span>),
+                                )],
                             },
-                            <span class="ident">cell_values</span>: <span class="macro">vec!</span>[(
-                                ((<span class="ident">Any::Advice</span>, <span class="number">5</span>).<span class="ident">into</span>(), <span class="number">0</span>).<span class="ident">into</span>(),
-                                <span class="ident">format_value</span>(<span class="ident">circuit</span>.<span class="ident">magnitude_error</span>.<span class="ident">unwrap</span>()),
-                            )],
-                        },
-                        <span class="ident">VerifyFailure::Permutation</span> {
-                            <span class="ident">column</span>: (<span class="ident">Any::Fixed</span>, <span class="number">9</span>).<span class="ident">into</span>(),
-                            <span class="ident">location</span>: <span class="ident">FailureLocation::OutsideRegion</span> { <span class="ident">row</span>: <span class="number">0</span> },
-                        },
-                        <span class="ident">VerifyFailure::Permutation</span> {
-                            <span class="ident">column</span>: (<span class="ident">Any::Advice</span>, <span class="number">4</span>).<span class="ident">into</span>(),
-                            <span class="ident">location</span>: <span class="ident">FailureLocation::InRegion</span> {
-                                <span class="ident">region</span>: (<span class="number">2</span>, <span class="string">&quot;Short fixed-base mul (incomplete addition)&quot;</span>).<span class="ident">into</span>(),
-                                <span class="ident">offset</span>: <span class="number">22</span>,
+                            <span class="ident">VerifyFailure::Permutation</span> {
+                                <span class="ident">column</span>: (<span class="ident">Any::Fixed</span>, <span class="number">9</span>).<span class="ident">into</span>(),
+                                <span class="ident">location</span>: <span class="ident">FailureLocation::OutsideRegion</span> { <span class="ident">row</span>: <span class="number">0</span> },
                             },
-                        }
-                    ])
-                );
+                            <span class="ident">VerifyFailure::Permutation</span> {
+                                <span class="ident">column</span>: (<span class="ident">Any::Advice</span>, <span class="number">4</span>).<span class="ident">into</span>(),
+                                <span class="ident">location</span>: <span class="ident">FailureLocation::InRegion</span> {
+                                    <span class="ident">region</span>: (<span class="number">2</span>, <span class="string">&quot;Short fixed-base mul (incomplete addition)&quot;</span>)
+                                        .<span class="ident">into</span>(),
+                                    <span class="ident">offset</span>: <span class="number">22</span>,
+                                },
+                            },
+                        ])
+                    );
+                    <span class="bool-val">true</span>
+                });
             }
         }
 
@@ -1274,9 +1292,9 @@
         {
             <span class="kw">let</span> <span class="ident">magnitude_u64</span> <span class="op">=</span> <span class="ident">rand::random</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>();
             <span class="kw">let</span> <span class="ident">circuit</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {
-                <span class="ident">magnitude</span>: <span class="prelude-val">Some</span>(<span class="ident">pallas::Base::from</span>(<span class="ident">magnitude_u64</span>)),
-                <span class="ident">sign</span>: <span class="prelude-val">Some</span>(<span class="ident">pallas::Base::zero</span>()),
-                <span class="ident">magnitude_error</span>: <span class="prelude-val">None</span>,
+                <span class="ident">magnitude</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from</span>(<span class="ident">magnitude_u64</span>)),
+                <span class="ident">sign</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::zero</span>()),
+                <span class="ident">magnitude_error</span>: <span class="ident">Value::unknown</span>(),
             };
 
             <span class="kw">let</span> <span class="ident">negation_check_y</span> <span class="op">=</span> {
@@ -1329,5 +1347,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

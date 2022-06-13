@@ -397,6 +397,7 @@
 <span id="375">375</span>
 <span id="376">376</span>
 <span id="377">377</span>
+<span id="378">378</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Developer tools for investigating the cost of a circuit.</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -410,6 +411,7 @@
 <span class="kw">use</span> <span class="ident">group::prime::PrimeGroup</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">circuit::Value</span>,
     <span class="ident">plonk</span>::{
         <span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Assigned</span>, <span class="ident">Assignment</span>, <span class="ident">Circuit</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>,
         <span class="ident">FloorPlanner</span>, <span class="ident">Instance</span>, <span class="ident">Selector</span>,
@@ -467,8 +469,8 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">query_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="kw">_</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+    <span class="kw">fn</span> <span class="ident">query_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="kw">_</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">Value::unknown</span>())
     }
 
     <span class="kw">fn</span> <span class="ident">assign_advice</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">VR</span>, <span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
@@ -479,7 +481,7 @@
         <span class="kw">_</span>: <span class="ident">V</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
+        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span>,
         <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -495,7 +497,7 @@
         <span class="kw">_</span>: <span class="ident">V</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
+        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span>,
         <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -511,7 +513,7 @@
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
         <span class="kw">_</span>: <span class="ident">usize</span>,
-        <span class="kw">_</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="kw">_</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(())
     }
@@ -775,5 +777,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

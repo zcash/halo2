@@ -363,7 +363,7 @@
 <span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
 
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Chip</span>, <span class="ident">Layouter</span>},
+    <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Chip</span>, <span class="ident">Layouter</span>, <span class="ident">Value</span>},
     <span class="ident">plonk</span>::{
         <span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Fixed</span>, <span class="ident">Selector</span>,
         <span class="ident">TableColumn</span>, <span class="ident">VirtualCells</span>,
@@ -637,7 +637,7 @@
     <span class="kw">fn</span> <span class="ident">witness_message_piece</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">field_elem</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
+        <span class="ident">field_elem</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
         <span class="ident">num_words</span>: <span class="ident">usize</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::MessagePiece</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">clone</span>();
@@ -649,7 +649,7 @@
                     <span class="op">|</span><span class="op">|</span> <span class="string">&quot;witness message piece&quot;</span>,
                     <span class="ident">config</span>.<span class="ident">witness_pieces</span>,
                     <span class="number">0</span>,
-                    <span class="op">|</span><span class="op">|</span> <span class="ident">field_elem</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
+                    <span class="op">|</span><span class="op">|</span> <span class="ident">field_elem</span>,
                 )
             },
         )<span class="question-mark">?</span>;
@@ -675,5 +675,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

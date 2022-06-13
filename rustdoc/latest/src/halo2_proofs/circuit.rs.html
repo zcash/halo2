@@ -575,6 +575,8 @@
 <span id="553">553</span>
 <span id="554">554</span>
 <span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Traits and structs for implementing circuit components.</span>
 
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert::TryInto</span>, <span class="ident">fmt</span>, <span class="ident">marker::PhantomData</span>};
@@ -585,6 +587,9 @@
     <span class="ident">arithmetic::FieldExt</span>,
     <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Assigned</span>, <span class="ident">Column</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>, <span class="ident">Instance</span>, <span class="ident">Selector</span>, <span class="ident">TableColumn</span>},
 };
+
+<span class="kw">mod</span> <span class="ident">value</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">value::Value</span>;
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">floor_planner</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">floor_planner::single_pass::SimpleFloorPlanner</span>;
@@ -672,14 +677,14 @@
 <span class="doccomment">/// An assigned cell.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> {
-    <span class="ident">value</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>,
+    <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>,
     <span class="ident">cell</span>: <span class="ident">Cell</span>,
     <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">F</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Returns the value of the [`AssignedCell`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">value</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">V</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">value</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">V</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">value</span>.<span class="ident">as_ref</span>()
     }
 
@@ -694,8 +699,8 @@
     <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span><span class="op">&gt;</span>,
 {
     <span class="doccomment">/// Returns the field element value of the [`AssignedCell`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">value_field</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">into</span>())
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">value_field</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">value</span>.<span class="ident">to_field</span>()
     }
 }
 
@@ -706,7 +711,7 @@
     <span class="doccomment">/// If the denominator is zero, the returned cell&#39;s value is zero.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">evaluate</span>(<span class="self">self</span>) -&gt; <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span> {
         <span class="ident">AssignedCell</span> {
-            <span class="ident">value</span>: <span class="self">self</span>.<span class="ident">value</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">evaluate</span>()),
+            <span class="ident">value</span>: <span class="self">self</span>.<span class="ident">value</span>.<span class="ident">evaluate</span>(),
             <span class="ident">cell</span>: <span class="self">self</span>.<span class="ident">cell</span>,
             <span class="ident">_marker</span>: <span class="ident">Default::default</span>(),
         }
@@ -732,9 +737,8 @@
         <span class="ident">A</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     {
-        <span class="kw">let</span> <span class="ident">assigned_cell</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="ident">annotation</span>, <span class="ident">column</span>, <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> {
-            <span class="self">self</span>.<span class="ident">value</span>.<span class="ident">clone</span>().<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>)
-        })<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">assigned_cell</span> <span class="op">=</span>
+            <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="ident">annotation</span>, <span class="ident">column</span>, <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">value</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
         <span class="ident">region</span>.<span class="ident">constrain_equal</span>(<span class="ident">assigned_cell</span>.<span class="ident">cell</span>(), <span class="self">self</span>.<span class="ident">cell</span>())<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">assigned_cell</span>)
@@ -790,19 +794,19 @@
         <span class="kw-2">mut</span> <span class="ident">to</span>: <span class="ident">V</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnMut</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>,
+        <span class="ident">V</span>: <span class="ident">FnMut</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>,
         <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;vr</span><span class="op">&gt;</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;vr</span> <span class="ident">VR</span><span class="op">&gt;</span>,
         <span class="ident">A</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">value</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">Value::unknown</span>();
         <span class="kw">let</span> <span class="ident">cell</span> <span class="op">=</span>
             <span class="self">self</span>.<span class="ident">region</span>
                 .<span class="ident">assign_advice</span>(<span class="kw-2">&amp;</span><span class="op">|</span><span class="op">|</span> <span class="ident">annotation</span>().<span class="ident">into</span>(), <span class="ident">column</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;mut</span> <span class="op">|</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">to</span>()<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">value_f</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="ident">v</span>).<span class="ident">into</span>();
-                    <span class="ident">value</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">v</span>);
-                    <span class="prelude-val">Ok</span>(<span class="ident">value_f</span>)
+                    <span class="kw">let</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">to</span>();
+                    <span class="kw">let</span> <span class="ident">value_f</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">to_field</span>();
+                    <span class="ident">value</span> <span class="op">=</span> <span class="ident">v</span>;
+                    <span class="ident">value_f</span>
                 })<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">AssignedCell</span> {
@@ -838,7 +842,7 @@
         )<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">AssignedCell</span> {
-            <span class="ident">value</span>: <span class="prelude-val">Some</span>(<span class="ident">constant</span>),
+            <span class="ident">value</span>: <span class="ident">Value::known</span>(<span class="ident">constant</span>),
             <span class="ident">cell</span>,
             <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
         })
@@ -886,19 +890,19 @@
         <span class="kw-2">mut</span> <span class="ident">to</span>: <span class="ident">V</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnMut</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>,
+        <span class="ident">V</span>: <span class="ident">FnMut</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>,
         <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;vr</span><span class="op">&gt;</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;vr</span> <span class="ident">VR</span><span class="op">&gt;</span>,
         <span class="ident">A</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">value</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">Value::unknown</span>();
         <span class="kw">let</span> <span class="ident">cell</span> <span class="op">=</span>
             <span class="self">self</span>.<span class="ident">region</span>
                 .<span class="ident">assign_fixed</span>(<span class="kw-2">&amp;</span><span class="op">|</span><span class="op">|</span> <span class="ident">annotation</span>().<span class="ident">into</span>(), <span class="ident">column</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;mut</span> <span class="op">|</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">to</span>()<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">value_f</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="ident">v</span>).<span class="ident">into</span>();
-                    <span class="ident">value</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">v</span>);
-                    <span class="prelude-val">Ok</span>(<span class="ident">value_f</span>)
+                    <span class="kw">let</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">to</span>();
+                    <span class="kw">let</span> <span class="ident">value_f</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">to_field</span>();
+                    <span class="ident">value</span> <span class="op">=</span> <span class="ident">v</span>;
+                    <span class="ident">value_f</span>
                 })<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">AssignedCell</span> {
@@ -953,14 +957,14 @@
         <span class="kw-2">mut</span> <span class="ident">to</span>: <span class="ident">V</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnMut</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>,
+        <span class="ident">V</span>: <span class="ident">FnMut</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>,
         <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">A</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
     {
         <span class="self">self</span>.<span class="ident">table</span>
             .<span class="ident">assign_cell</span>(<span class="kw-2">&amp;</span><span class="op">|</span><span class="op">|</span> <span class="ident">annotation</span>().<span class="ident">into</span>(), <span class="ident">column</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;mut</span> <span class="op">|</span><span class="op">|</span> {
-                <span class="ident">to</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">into</span>())
+                <span class="ident">to</span>().<span class="ident">into_field</span>()
             })
     }
 }
@@ -1131,5 +1135,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

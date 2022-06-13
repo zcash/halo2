@@ -1031,7 +1031,7 @@
     <span class="ident">AssignedBits</span>, <span class="ident">BlockWord</span>, <span class="ident">SpreadInputs</span>, <span class="ident">SpreadVar</span>, <span class="ident">Table16Assignment</span>, <span class="ident">ROUNDS</span>, <span class="ident">STATE</span>,
 };
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit::Layouter</span>,
+    <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">Value</span>},
     <span class="ident">pasta::pallas</span>,
     <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
     <span class="ident">poly::Rotation</span>,
@@ -1054,12 +1054,12 @@
     <span class="kw">const</span> <span class="ident">D_LEN</span>: <span class="ident">usize</span>,
 <span class="op">&gt;</span>
 {
-    <span class="kw">fn</span> <span class="ident">spread_a</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">A_LEN</span>]<span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">spread_b</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">B_LEN</span>]<span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">spread_c</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">C_LEN</span>]<span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">spread_d</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">D_LEN</span>]<span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">spread_a</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">A_LEN</span>]<span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">spread_b</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">B_LEN</span>]<span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">spread_c</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">C_LEN</span>]<span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">spread_d</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">D_LEN</span>]<span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">xor_upper_sigma</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">64</span>]<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">xor_upper_sigma</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">64</span>]<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">spread_a</span>()
             .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_b</span>())
             .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_c</span>())
@@ -1155,15 +1155,15 @@
 }
 
 <span class="kw">impl</span> <span class="ident">UpperSigmaVar</span><span class="op">&lt;</span><span class="number">4</span>, <span class="number">22</span>, <span class="number">18</span>, <span class="number">20</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">AbcdVar</span> {
-    <span class="kw">fn</span> <span class="ident">spread_a</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">4</span>]<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">spread_a</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">4</span>]<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">a</span>.<span class="ident">spread</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="number">0</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_b</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">22</span>]<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">spread_b</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">22</span>]<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">b</span>.<span class="ident">spread</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="number">0</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_c</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">18</span>]<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">spread_c</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">18</span>]<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">c_lo</span>
             .<span class="ident">spread</span>
             .<span class="ident">value</span>()
@@ -1180,7 +1180,7 @@
             })
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_d</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">20</span>]<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">spread_d</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">20</span>]<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">d</span>.<span class="ident">spread</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="number">0</span>)
     }
 }
@@ -1244,7 +1244,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">UpperSigmaVar</span><span class="op">&lt;</span><span class="number">12</span>, <span class="number">10</span>, <span class="number">28</span>, <span class="number">14</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EfghVar</span> {
-    <span class="kw">fn</span> <span class="ident">spread_a</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">12</span>]<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">spread_a</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">12</span>]<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">a_lo</span>
             .<span class="ident">spread</span>
             .<span class="ident">value</span>()
@@ -1259,7 +1259,7 @@
             })
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_b</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">10</span>]<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">spread_b</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">10</span>]<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">b_lo</span>
             .<span class="ident">spread</span>
             .<span class="ident">value</span>()
@@ -1274,11 +1274,11 @@
             })
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_c</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">28</span>]<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">spread_c</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">28</span>]<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">c</span>.<span class="ident">spread</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="number">0</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_d</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">14</span>]<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">spread_d</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">14</span>]<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">d</span>.<span class="ident">spread</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="number">0</span>)
     }
 }
@@ -1293,7 +1293,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">RoundWordDense</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">value</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">value</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="number">0</span>
             .<span class="ident">value_u16</span>()
             .<span class="ident">zip</span>(<span class="self">self</span>.<span class="number">1</span>.<span class="ident">value_u16</span>())
@@ -1311,7 +1311,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">RoundWordSpread</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">value</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">value</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="number">0</span>
             .<span class="ident">value_u32</span>()
             .<span class="ident">zip</span>(<span class="self">self</span>.<span class="number">1</span>.<span class="ident">value_u32</span>())
@@ -1949,7 +1949,7 @@
         <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
         <span class="ident">state</span>: <span class="ident">State</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>[<span class="ident">BlockWord</span>; <span class="ident">DIGEST_SIZE</span>], <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">digest</span> <span class="op">=</span> [<span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0</span>)); <span class="ident">DIGEST_SIZE</span>];
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">digest</span> <span class="op">=</span> [<span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0</span>)); <span class="ident">DIGEST_SIZE</span>];
         <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
             <span class="op">|</span><span class="op">|</span> <span class="string">&quot;digest&quot;</span>,
             <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
@@ -2011,10 +2011,10 @@
 
                 <span class="kw">let</span> <span class="ident">digest</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">compression</span>.<span class="ident">digest</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">state</span>)<span class="question-mark">?</span>;
                 <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">digest_word</span>) <span class="kw">in</span> <span class="ident">digest</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-                    <span class="macro">assert_eq!</span>(
-                        (<span class="ident">digest_word</span>.<span class="number">0</span>.<span class="ident">unwrap</span>() <span class="kw">as</span> <span class="ident">u64</span> <span class="op">+</span> <span class="ident">IV</span>[<span class="ident">idx</span>] <span class="kw">as</span> <span class="ident">u64</span>) <span class="kw">as</span> <span class="ident">u32</span>,
-                        <span class="ident"><span class="kw">super</span>::compression_util::COMPRESSION_OUTPUT</span>[<span class="ident">idx</span>]
-                    );
+                    <span class="ident">digest_word</span>.<span class="number">0</span>.<span class="ident">assert_if_known</span>(<span class="op">|</span><span class="ident">digest_word</span><span class="op">|</span> {
+                        (<span class="kw-2">*</span><span class="ident">digest_word</span> <span class="kw">as</span> <span class="ident">u64</span> <span class="op">+</span> <span class="ident">IV</span>[<span class="ident">idx</span>] <span class="kw">as</span> <span class="ident">u64</span>) <span class="kw">as</span> <span class="ident">u32</span>
+                            <span class="op">==</span> <span class="ident"><span class="kw">super</span>::compression_util::COMPRESSION_OUTPUT</span>[<span class="ident">idx</span>]
+                    });
                 }
 
                 <span class="prelude-val">Ok</span>(())
@@ -2031,5 +2031,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

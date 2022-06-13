@@ -170,9 +170,19 @@
 <span id="148">148</span>
 <span id="149">149</span>
 <span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">RoundWord</span>, <span class="ident">StateWord</span>, <span class="ident">STATE</span>};
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">compression_util</span>::<span class="kw-2">*</span>, <span class="ident">CompressionConfig</span>, <span class="ident">State</span>};
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{<span class="ident">circuit::Region</span>, <span class="ident">pasta::pallas</span>, <span class="ident">plonk::Error</span>};
+<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
+    <span class="ident">circuit</span>::{<span class="ident">Region</span>, <span class="ident">Value</span>},
+    <span class="ident">pasta::pallas</span>,
+    <span class="ident">plonk::Error</span>,
+};
 
 <span class="kw">impl</span> <span class="ident">CompressionConfig</span> {
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::many_single_char_names</span>)]</span>
@@ -184,26 +194,28 @@
         <span class="kw">let</span> <span class="ident">a_7</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">3</span>];
 
         <span class="comment">// Decompose E into (6, 5, 14, 7)-bit chunks</span>
-        <span class="kw">let</span> <span class="ident">e</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_e</span>(<span class="ident">region</span>, <span class="ident">RoundIdx::Init</span>, <span class="prelude-val">Some</span>(<span class="ident">iv</span>[<span class="number">4</span>]))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">e</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_e</span>(<span class="ident">region</span>, <span class="ident">RoundIdx::Init</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">4</span>]))<span class="question-mark">?</span>;
 
         <span class="comment">// Decompose F, G</span>
-        <span class="kw">let</span> <span class="ident">f</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_f</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="prelude-val">Some</span>(<span class="ident">iv</span>[<span class="number">5</span>]))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">g</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_g</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="prelude-val">Some</span>(<span class="ident">iv</span>[<span class="number">6</span>]))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">f</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_f</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">5</span>]))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">g</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_g</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">6</span>]))<span class="question-mark">?</span>;
 
         <span class="comment">// Assign H</span>
         <span class="kw">let</span> <span class="ident">h_row</span> <span class="op">=</span> <span class="ident">get_h_row</span>(<span class="ident">RoundIdx::Init</span>);
-        <span class="kw">let</span> <span class="ident">h</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_word_halves_dense</span>(<span class="ident">region</span>, <span class="ident">h_row</span>, <span class="ident">a_7</span>, <span class="ident">h_row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">a_7</span>, <span class="prelude-val">Some</span>(<span class="ident">iv</span>[<span class="number">7</span>]))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">h</span> <span class="op">=</span>
+            <span class="self">self</span>.<span class="ident">assign_word_halves_dense</span>(<span class="ident">region</span>, <span class="ident">h_row</span>, <span class="ident">a_7</span>, <span class="ident">h_row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">a_7</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">7</span>]))<span class="question-mark">?</span>;
 
         <span class="comment">// Decompose A into (2, 11, 9, 10)-bit chunks</span>
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_a</span>(<span class="ident">region</span>, <span class="ident">RoundIdx::Init</span>, <span class="prelude-val">Some</span>(<span class="ident">iv</span>[<span class="number">0</span>]))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_a</span>(<span class="ident">region</span>, <span class="ident">RoundIdx::Init</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">0</span>]))<span class="question-mark">?</span>;
 
         <span class="comment">// Decompose B, C</span>
-        <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_b</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="prelude-val">Some</span>(<span class="ident">iv</span>[<span class="number">1</span>]))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_c</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="prelude-val">Some</span>(<span class="ident">iv</span>[<span class="number">2</span>]))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_b</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">1</span>]))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_c</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">2</span>]))<span class="question-mark">?</span>;
 
         <span class="comment">// Assign D</span>
         <span class="kw">let</span> <span class="ident">d_row</span> <span class="op">=</span> <span class="ident">get_d_row</span>(<span class="ident">RoundIdx::Init</span>);
-        <span class="kw">let</span> <span class="ident">d</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_word_halves_dense</span>(<span class="ident">region</span>, <span class="ident">d_row</span>, <span class="ident">a_7</span>, <span class="ident">d_row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">a_7</span>, <span class="prelude-val">Some</span>(<span class="ident">iv</span>[<span class="number">3</span>]))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">d</span> <span class="op">=</span>
+            <span class="self">self</span>.<span class="ident">assign_word_halves_dense</span>(<span class="ident">region</span>, <span class="ident">d_row</span>, <span class="ident">a_7</span>, <span class="ident">d_row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">a_7</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">3</span>]))<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">State::new</span>(
             <span class="ident">StateWord::A</span>(<span class="ident">a</span>),
@@ -272,7 +284,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
         <span class="ident">round_idx</span>: <span class="ident">InitialRound</span>,
-        <span class="ident">b_val</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+        <span class="ident">b_val</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RoundWord</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_decompose_b_row</span>(<span class="ident">round_idx</span>);
 
@@ -285,7 +297,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
         <span class="ident">round_idx</span>: <span class="ident">InitialRound</span>,
-        <span class="ident">c_val</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+        <span class="ident">c_val</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RoundWord</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_decompose_c_row</span>(<span class="ident">round_idx</span>);
 
@@ -298,7 +310,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
         <span class="ident">round_idx</span>: <span class="ident">InitialRound</span>,
-        <span class="ident">f_val</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+        <span class="ident">f_val</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RoundWord</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_decompose_f_row</span>(<span class="ident">round_idx</span>);
 
@@ -311,7 +323,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
         <span class="ident">round_idx</span>: <span class="ident">InitialRound</span>,
-        <span class="ident">g_val</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+        <span class="ident">g_val</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RoundWord</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_decompose_g_row</span>(<span class="ident">round_idx</span>);
 
@@ -321,5 +333,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

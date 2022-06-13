@@ -239,9 +239,17 @@
 <span id="217">217</span>
 <span id="218">218</span>
 <span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">util</span>::<span class="kw-2">*</span>, <span class="ident">AssignedBits</span>, <span class="ident">BlockWord</span>, <span class="ident">SpreadVar</span>, <span class="ident">SpreadWord</span>, <span class="ident">Table16Assignment</span>};
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">schedule_util</span>::<span class="kw-2">*</span>, <span class="ident">MessageScheduleConfig</span>};
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{<span class="ident">circuit::Region</span>, <span class="ident">pasta::pallas</span>, <span class="ident">plonk::Error</span>};
+<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
+    <span class="ident">circuit</span>::{<span class="ident">Region</span>, <span class="ident">Value</span>},
+    <span class="ident">pasta::pallas</span>,
+    <span class="ident">plonk::Error</span>,
+};
 <span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
 
 <span class="comment">// A word in subregion 1</span>
@@ -258,23 +266,23 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Subregion1Word</span> {
-    <span class="kw">fn</span> <span class="ident">spread_a</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">6</span>]<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">spread_a</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">6</span>]<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">a</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">spread</span>())
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_b</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">8</span>]<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">spread_b</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">8</span>]<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">b</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">spread</span>())
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_c</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">22</span>]<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">spread_c</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">22</span>]<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">spread_c</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="number">0</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_d</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">28</span>]<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">spread_d</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">28</span>]<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">spread_d</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="number">0</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">xor_lower_sigma_0</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">64</span>]<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">xor_lower_sigma_0</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">64</span>]<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">spread_a</span>()
             .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_b</span>())
             .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_c</span>())
@@ -341,7 +349,7 @@
     <span class="kw">fn</span> <span class="ident">decompose_subregion1_word</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">word</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span>,
+        <span class="ident">word</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span>,
         <span class="ident">index</span>: <span class="ident">usize</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Subregion1Word</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_word_row</span>(<span class="ident">index</span>);
@@ -358,7 +366,7 @@
                 <span class="ident">word</span>[<span class="number">18</span>..<span class="number">32</span>].<span class="ident">to_vec</span>(),
             ]
         });
-        <span class="kw">let</span> <span class="ident">pieces</span> <span class="op">=</span> <span class="ident">transpose_option_vec</span>(<span class="ident">pieces</span>, <span class="number">4</span>);
+        <span class="kw">let</span> <span class="ident">pieces</span> <span class="op">=</span> <span class="ident">pieces</span>.<span class="ident">transpose_vec</span>(<span class="number">4</span>);
 
         <span class="comment">// Assign `a` (3-bit piece)</span>
         <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span>
@@ -409,7 +417,7 @@
 
         <span class="comment">// Split `b` (4-bit chunk) into `b_hi` and `b_lo`</span>
         <span class="comment">// Assign `b_lo`, `spread_b_lo`</span>
-        <span class="kw">let</span> <span class="ident">b_lo</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">2</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">b</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">b</span><span class="op">|</span> <span class="ident">b</span>.<span class="number">0</span>[..<span class="number">2</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
+        <span class="kw">let</span> <span class="ident">b_lo</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">2</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">b</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">b</span><span class="op">|</span> <span class="ident">b</span>.<span class="number">0</span>[..<span class="number">2</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
         <span class="kw">let</span> <span class="ident">spread_b_lo</span> <span class="op">=</span> <span class="ident">b_lo</span>.<span class="ident">map</span>(<span class="ident">spread_bits</span>);
         {
             <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">2</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;b_lo&quot;</span>, <span class="ident">a_3</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>, <span class="ident">b_lo</span>)<span class="question-mark">?</span>;
@@ -419,7 +427,7 @@
 
         <span class="comment">// Split `b` (2-bit chunk) into `b_hi` and `b_lo`</span>
         <span class="comment">// Assign `b_hi`, `spread_b_hi`</span>
-        <span class="kw">let</span> <span class="ident">b_hi</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">2</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">b</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">b</span><span class="op">|</span> <span class="ident">b</span>.<span class="number">0</span>[<span class="number">2</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
+        <span class="kw">let</span> <span class="ident">b_hi</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">2</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">b</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">b</span><span class="op">|</span> <span class="ident">b</span>.<span class="number">0</span>[<span class="number">2</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
         <span class="kw">let</span> <span class="ident">spread_b_hi</span> <span class="op">=</span> <span class="ident">b_hi</span>.<span class="ident">map</span>(<span class="ident">spread_bits</span>);
         {
             <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">2</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;b_hi&quot;</span>, <span class="ident">a_5</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>, <span class="ident">b_hi</span>)<span class="question-mark">?</span>;
@@ -438,11 +446,11 @@
 
         <span class="comment">// Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}</span>
         <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">xor_lower_sigma_0</span>();
-        <span class="kw">let</span> <span class="ident">r_0</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>[..<span class="number">32</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
+        <span class="kw">let</span> <span class="ident">r_0</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>[..<span class="number">32</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
         <span class="kw">let</span> <span class="ident">r_0_even</span> <span class="op">=</span> <span class="ident">r_0</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
         <span class="kw">let</span> <span class="ident">r_0_odd</span> <span class="op">=</span> <span class="ident">r_0</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
 
-        <span class="kw">let</span> <span class="ident">r_1</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>[<span class="number">32</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
+        <span class="kw">let</span> <span class="ident">r_1</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>[<span class="number">32</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
         <span class="kw">let</span> <span class="ident">r_1_even</span> <span class="op">=</span> <span class="ident">r_1</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
         <span class="kw">let</span> <span class="ident">r_1_odd</span> <span class="op">=</span> <span class="ident">r_1</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
 
@@ -459,5 +467,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

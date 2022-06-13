@@ -159,7 +159,7 @@ representations of circuits.</p>
     let instance = Fp::one() + Fp::one();
     let lookup_table = vec![instance, a, a, Fp::zero()];
     let circuit: MyCircuit&lt;Fp&gt; = MyCircuit {
-        a: None,
+        a: Value::unknown(),
         lookup_table,
     };
 

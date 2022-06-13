@@ -122,19 +122,10 @@
 <span id="100">100</span>
 <span id="101">101</span>
 <span id="102">102</span>
-<span id="103">103</span>
-<span id="104">104</span>
-<span id="105">105</span>
-<span id="106">106</span>
-<span id="107">107</span>
-<span id="108">108</span>
-<span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident"><span class="kw">super</span>::DIGEST_SIZE</span>, <span class="ident">BlockWord</span>, <span class="ident">RoundWordDense</span>};
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">compression_util</span>::<span class="kw-2">*</span>, <span class="ident">CompressionConfig</span>, <span class="ident">State</span>};
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit::Region</span>,
+    <span class="ident">circuit</span>::{<span class="ident">Region</span>, <span class="ident">Value</span>},
     <span class="ident">pasta::pallas</span>,
     <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">Error</span>},
 };
@@ -172,10 +163,7 @@
             <span class="op">|</span><span class="op">|</span> <span class="string">&quot;a&quot;</span>,
             <span class="ident">a_5</span>,
             <span class="ident">abcd_row</span>,
-            <span class="op">|</span><span class="op">|</span> {
-                <span class="ident">a</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">a</span> <span class="kw">as</span> <span class="ident">u64</span>))
-                    .<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>)
-            },
+            <span class="op">|</span><span class="op">|</span> <span class="ident">a</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">a</span> <span class="kw">as</span> <span class="ident">u64</span>)),
         )<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_digest_word</span>(<span class="ident">region</span>, <span class="ident">abcd_row</span>, <span class="ident">a_6</span>, <span class="ident">a_7</span>, <span class="ident">a_8</span>, <span class="ident">b</span>.<span class="ident">dense_halves</span>)<span class="question-mark">?</span>;
@@ -194,10 +182,7 @@
             <span class="op">|</span><span class="op">|</span> <span class="string">&quot;e&quot;</span>,
             <span class="ident">a_5</span>,
             <span class="ident">efgh_row</span>,
-            <span class="op">|</span><span class="op">|</span> {
-                <span class="ident">e</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">e</span> <span class="kw">as</span> <span class="ident">u64</span>))
-                    .<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>)
-            },
+            <span class="op">|</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">e</span> <span class="kw">as</span> <span class="ident">u64</span>)),
         )<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">f</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_digest_word</span>(<span class="ident">region</span>, <span class="ident">efgh_row</span>, <span class="ident">a_6</span>, <span class="ident">a_7</span>, <span class="ident">a_8</span>, <span class="ident">f</span>.<span class="ident">dense_halves</span>)<span class="question-mark">?</span>;
@@ -224,7 +209,7 @@
         <span class="ident">hi_col</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
         <span class="ident">word_col</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
         <span class="ident">dense_halves</span>: <span class="ident">RoundWordDense</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="ident">dense_halves</span>.<span class="number">0</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;lo&quot;</span>, <span class="ident">region</span>, <span class="ident">lo_col</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
         <span class="ident">dense_halves</span>.<span class="number">1</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;hi&quot;</span>, <span class="ident">region</span>, <span class="ident">hi_col</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
 
@@ -233,15 +218,12 @@
             <span class="op">|</span><span class="op">|</span> <span class="string">&quot;word&quot;</span>,
             <span class="ident">word_col</span>,
             <span class="ident">row</span>,
-            <span class="op">|</span><span class="op">|</span> {
-                <span class="ident">val</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">val</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">val</span> <span class="kw">as</span> <span class="ident">u64</span>))
-                    .<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>)
-            },
+            <span class="op">|</span><span class="op">|</span> <span class="ident">val</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">val</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">val</span> <span class="kw">as</span> <span class="ident">u64</span>)),
         )<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">val</span>)
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

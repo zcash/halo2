@@ -118,7 +118,7 @@
 <span id="96">96</span>
 <span id="97">97</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit::Layouter</span>,
+    <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">Value</span>},
     <span class="ident">plonk</span>::{<span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">TableColumn</span>},
     <span class="ident">poly::Rotation</span>,
 };
@@ -204,10 +204,10 @@
                         <span class="op">|</span><span class="op">|</span> <span class="string">&quot;table_idx&quot;</span>,
                         <span class="self">self</span>.<span class="ident">table_idx</span>,
                         <span class="ident">index</span>,
-                        <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">pallas::Base::from</span>(<span class="ident">index</span> <span class="kw">as</span> <span class="ident">u64</span>)),
+                        <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from</span>(<span class="ident">index</span> <span class="kw">as</span> <span class="ident">u64</span>)),
                     )<span class="question-mark">?</span>;
-                    <span class="ident">table</span>.<span class="ident">assign_cell</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;table_x&quot;</span>, <span class="self">self</span>.<span class="ident">table_x</span>, <span class="ident">index</span>, <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="kw-2">*</span><span class="ident">x</span>))<span class="question-mark">?</span>;
-                    <span class="ident">table</span>.<span class="ident">assign_cell</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;table_y&quot;</span>, <span class="self">self</span>.<span class="ident">table_y</span>, <span class="ident">index</span>, <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="kw-2">*</span><span class="ident">y</span>))<span class="question-mark">?</span>;
+                    <span class="ident">table</span>.<span class="ident">assign_cell</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;table_x&quot;</span>, <span class="self">self</span>.<span class="ident">table_x</span>, <span class="ident">index</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="kw-2">*</span><span class="ident">x</span>))<span class="question-mark">?</span>;
+                    <span class="ident">table</span>.<span class="ident">assign_cell</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;table_y&quot;</span>, <span class="self">self</span>.<span class="ident">table_y</span>, <span class="ident">index</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="kw-2">*</span><span class="ident">y</span>))<span class="question-mark">?</span>;
                 }
                 <span class="prelude-val">Ok</span>(())
             },
@@ -215,5 +215,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

@@ -200,9 +200,17 @@
 <span id="178">178</span>
 <span id="179">179</span>
 <span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::AssignedBits</span>;
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::MessageScheduleConfig</span>;
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{<span class="ident">circuit::Region</span>, <span class="ident">pasta::pallas</span>, <span class="ident">plonk::Error</span>};
+<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
+    <span class="ident">circuit</span>::{<span class="ident">Region</span>, <span class="ident">Value</span>},
+    <span class="ident">pasta::pallas</span>,
+    <span class="ident">plonk::Error</span>,
+};
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident"><span class="kw">super</span>::BLOCK_SIZE</span>, <span class="ident">BlockWord</span>, <span class="ident">ROUNDS</span>};
@@ -259,22 +267,22 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">msg_schedule_test_input</span>() -&gt; [<span class="ident">BlockWord</span>; <span class="ident">BLOCK_SIZE</span>] {
     [
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b01100001011000100110001110000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="prelude-val">Some</span>(<span class="number">0b00000000000000000000000000011000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b01100001011000100110001110000000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
+        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000011000</span>)),
     ]
 }
 
@@ -351,7 +359,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assign_word_and_halves</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">word</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
+        <span class="ident">word</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
         <span class="ident">word_idx</span>: <span class="ident">usize</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span>, (<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>)), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="comment">// Rename these here for ease of matching the gates to the specification.</span>
@@ -381,5 +389,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

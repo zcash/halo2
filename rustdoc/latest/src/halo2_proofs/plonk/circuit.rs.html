@@ -1511,6 +1511,12 @@
 <span id="1489">1489</span>
 <span id="1490">1490</span>
 <span id="1491">1491</span>
+<span id="1492">1492</span>
+<span id="1493">1493</span>
+<span id="1494">1494</span>
+<span id="1495">1495</span>
+<span id="1496">1496</span>
+<span id="1497">1497</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">core::cmp::max</span>;
 <span class="kw">use</span> <span class="ident">core::ops</span>::{<span class="ident">Add</span>, <span class="ident">Mul</span>};
 <span class="kw">use</span> <span class="ident">ff::Field</span>;
@@ -1520,8 +1526,10 @@
 };
 
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">lookup</span>, <span class="ident">permutation</span>, <span class="ident">Assigned</span>, <span class="ident">Error</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::circuit::Layouter</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">circuit::Region</span>, <span class="ident">poly::Rotation</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">Region</span>, <span class="ident">Value</span>},
+    <span class="ident">poly::Rotation</span>,
+};
 
 <span class="kw">mod</span> <span class="ident">compress_selectors</span>;
 
@@ -1739,7 +1747,11 @@
 <span class="doccomment">/// Selectors are disabled on all rows by default, and must be explicitly enabled on each</span>
 <span class="doccomment">/// row when required:</span>
 <span class="doccomment">/// ```</span>
-<span class="doccomment">/// use halo2_proofs::{arithmetic::FieldExt, circuit::{Chip, Layouter}, plonk::{Advice, Column, Error, Selector}};</span>
+<span class="doccomment">/// use halo2_proofs::{</span>
+<span class="doccomment">///     arithmetic::FieldExt,</span>
+<span class="doccomment">///     circuit::{Chip, Layouter, Value},</span>
+<span class="doccomment">///     plonk::{Advice, Column, Error, Selector},</span>
+<span class="doccomment">/// };</span>
 <span class="doccomment">/// # use ff::Field;</span>
 <span class="doccomment">/// # use halo2_proofs::plonk::Fixed;</span>
 <span class="doccomment">///</span>
@@ -1753,8 +1765,8 @@
 <span class="doccomment">///     let config = chip.config();</span>
 <span class="doccomment">///     # let config: Config = todo!();</span>
 <span class="doccomment">///     layouter.assign_region(|| &quot;bar&quot;, |mut region| {</span>
-<span class="doccomment">///         region.assign_advice(|| &quot;a&quot;, config.a, 0, || Ok(F::one()))?;</span>
-<span class="doccomment">///         region.assign_advice(|| &quot;a&quot;, config.b, 1, || Ok(F::one()))?;</span>
+<span class="doccomment">///         region.assign_advice(|| &quot;a&quot;, config.a, 0, || Value::known(F::one()))?;</span>
+<span class="doccomment">///         region.assign_advice(|| &quot;a&quot;, config.b, 1, || Value::known(F::one()))?;</span>
 <span class="doccomment">///         config.s.enable(&amp;mut region, 1)</span>
 <span class="doccomment">///     })?;</span>
 <span class="doccomment">///     Ok(())</span>
@@ -1842,7 +1854,7 @@
     <span class="doccomment">/// Queries the cell of an instance column at a particular absolute row.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Returns the cell&#39;s value, if known.</span>
-    <span class="kw">fn</span> <span class="ident">query_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="ident">row</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">query_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="ident">row</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Assign an advice column value (witness)</span>
     <span class="kw">fn</span> <span class="ident">assign_advice</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">VR</span>, <span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
@@ -1853,7 +1865,7 @@
         <span class="ident">to</span>: <span class="ident">V</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
+        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span>,
         <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>;
@@ -1867,7 +1879,7 @@
         <span class="ident">to</span>: <span class="ident">V</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
+        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span>,
         <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>;
@@ -1886,7 +1898,7 @@
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
         <span class="ident">row</span>: <span class="ident">usize</span>,
-        <span class="ident">to</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">to</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Creates a new (sub)namespace and enters into it.</span>
@@ -3003,5 +3015,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

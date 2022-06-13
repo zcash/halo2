@@ -561,7 +561,6 @@
 <span id="539">539</span>
 <span id="540">540</span>
 <span id="541">541</span>
-<span id="542">542</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::fmt</span>;
 
 <span class="kw">use</span> <span class="ident">ff::Field</span>;
@@ -570,7 +569,7 @@
     <span class="ident">circuit</span>::{
         <span class="ident">floor_planner::single_pass::SimpleTableLayouter</span>,
         <span class="ident">layouter</span>::{<span class="ident">RegionColumn</span>, <span class="ident">RegionLayouter</span>, <span class="ident">RegionShape</span>, <span class="ident">TableLayouter</span>},
-        <span class="ident">Cell</span>, <span class="ident">Layouter</span>, <span class="ident">Region</span>, <span class="ident">RegionIndex</span>, <span class="ident">RegionStart</span>, <span class="ident">Table</span>,
+        <span class="ident">Cell</span>, <span class="ident">Layouter</span>, <span class="ident">Region</span>, <span class="ident">RegionIndex</span>, <span class="ident">RegionStart</span>, <span class="ident">Table</span>, <span class="ident">Value</span>,
     },
     <span class="ident">plonk</span>::{
         <span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Assigned</span>, <span class="ident">Assignment</span>, <span class="ident">Circuit</span>, <span class="ident">Column</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>, <span class="ident">FloorPlanner</span>, <span class="ident">Instance</span>,
@@ -690,7 +689,7 @@
                 <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Constant({:?})&quot;</span>, <span class="ident">value</span>.<span class="ident">evaluate</span>()),
                 <span class="ident">fixed_column</span>,
                 <span class="ident">fixed_row</span>,
-                <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">value</span>),
+                <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">value</span>),
             )<span class="question-mark">?</span>;
             <span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">copy</span>(
                 <span class="ident">fixed_column</span>.<span class="ident">into</span>(),
@@ -960,7 +959,7 @@
         <span class="ident">annotation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() -&gt; <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
         <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
         <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">to</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> (<span class="kw">dyn</span> <span class="ident">FnMut</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
+        <span class="ident">to</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> (<span class="kw">dyn</span> <span class="ident">FnMut</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Cell</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">assign_advice</span>(
             <span class="ident">annotation</span>,
@@ -983,7 +982,8 @@
         <span class="ident">offset</span>: <span class="ident">usize</span>,
         <span class="ident">constant</span>: <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Cell</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">advice</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_advice</span>(<span class="ident">annotation</span>, <span class="ident">column</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;mut</span> <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">constant</span>))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">advice</span> <span class="op">=</span>
+            <span class="self">self</span>.<span class="ident">assign_advice</span>(<span class="ident">annotation</span>, <span class="ident">column</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;mut</span> <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">constant</span>))<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">constrain_constant</span>(<span class="ident">advice</span>, <span class="ident">constant</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="ident">advice</span>)
@@ -996,12 +996,10 @@
         <span class="ident">row</span>: <span class="ident">usize</span>,
         <span class="ident">advice</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
         <span class="ident">offset</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Cell</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Cell</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">query_instance</span>(<span class="ident">instance</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">cell</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_advice</span>(<span class="ident">annotation</span>, <span class="ident">advice</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;mut</span> <span class="op">|</span><span class="op">|</span> {
-            <span class="ident">value</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">into</span>())
-        })<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">cell</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_advice</span>(<span class="ident">annotation</span>, <span class="ident">advice</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;mut</span> <span class="op">|</span><span class="op">|</span> <span class="ident">value</span>.<span class="ident">to_field</span>())<span class="question-mark">?</span>;
 
         <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">copy</span>(
             <span class="ident">cell</span>.<span class="ident">column</span>,
@@ -1018,7 +1016,7 @@
         <span class="ident">annotation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() -&gt; <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
         <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
         <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">to</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> (<span class="kw">dyn</span> <span class="ident">FnMut</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
+        <span class="ident">to</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> (<span class="kw">dyn</span> <span class="ident">FnMut</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Cell</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">assign_fixed</span>(
             <span class="ident">annotation</span>,
@@ -1105,5 +1103,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

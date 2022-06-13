@@ -522,6 +522,8 @@
 <span id="500">500</span>
 <span id="501">501</span>
 <span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ff::Field</span>;
 <span class="kw">use</span> <span class="ident">plotters</span>::{
     <span class="ident">coord::Shift</span>,
@@ -531,10 +533,12 @@
 <span class="kw">use</span> <span class="ident">std::collections::HashSet</span>;
 <span class="kw">use</span> <span class="ident">std::ops::Range</span>;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::circuit::layouter::RegionColumn</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::plonk</span>::{
-    <span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Assigned</span>, <span class="ident">Assignment</span>, <span class="ident">Circuit</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>,
-    <span class="ident">FloorPlanner</span>, <span class="ident">Instance</span>, <span class="ident">Selector</span>,
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">circuit</span>::{<span class="ident">layouter::RegionColumn</span>, <span class="ident">Value</span>},
+    <span class="ident">plonk</span>::{
+        <span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Assigned</span>, <span class="ident">Assignment</span>, <span class="ident">Circuit</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>,
+        <span class="ident">FloorPlanner</span>, <span class="ident">Instance</span>, <span class="ident">Selector</span>,
+    },
 };
 
 <span class="doccomment">/// Graphical renderer for circuit layouts.</span>
@@ -954,8 +958,8 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">query_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="kw">_</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+    <span class="kw">fn</span> <span class="ident">query_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="kw">_</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">Value::unknown</span>())
     }
 
     <span class="kw">fn</span> <span class="ident">assign_advice</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">VR</span>, <span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
@@ -966,7 +970,7 @@
         <span class="kw">_</span>: <span class="ident">V</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
+        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span>,
         <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -983,7 +987,7 @@
         <span class="kw">_</span>: <span class="ident">V</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
+        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span>,
         <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -1007,7 +1011,7 @@
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
         <span class="kw">_</span>: <span class="ident">usize</span>,
-        <span class="kw">_</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="kw">_</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(())
     }
@@ -1025,5 +1029,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

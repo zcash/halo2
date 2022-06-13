@@ -161,7 +161,7 @@ these in a way that makes the most sense for their optimization goals.</p>
     type Num;
 
     /// Loads a number into the circuit as a private input.
-    fn load_private(&amp;self, layouter: impl Layouter&lt;F&gt;, a: Option&lt;F&gt;) -&gt; Result&lt;Self::Num, Error&gt;;
+    fn load_private(&amp;self, layouter: impl Layouter&lt;F&gt;, a: Value&lt;F&gt;) -&gt; Result&lt;Self::Num, Error&gt;;
 
     /// Loads a number into the circuit as a fixed constant.
     fn load_constant(&amp;self, layouter: impl Layouter&lt;F&gt;, constant: F) -&gt; Result&lt;Self::Num, Error&gt;;
@@ -301,7 +301,7 @@ impl&lt;F: FieldExt&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
     fn load_private(
         &amp;self,
         mut layouter: impl Layouter&lt;F&gt;,
-        value: Option&lt;F&gt;,
+        value: Value&lt;F&gt;,
     ) -&gt; Result&lt;Self::Num, Error&gt; {
         let config = self.config();
 
@@ -309,12 +309,7 @@ impl&lt;F: FieldExt&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
             || &quot;load private&quot;,
             |mut region| {
                 region
-                    .assign_advice(
-                        || &quot;private input&quot;,
-                        config.advice[0],
-                        0,
-                        || value.ok_or(Error::Synthesis),
-                    )
+                    .assign_advice(|| &quot;private input&quot;, config.advice[0], 0, || value)
                     .map(Number)
             },
         )
@@ -362,17 +357,12 @@ impl&lt;F: FieldExt&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
 
                 // Now we can assign the multiplication result, which is to be assigned
                 // into the output position.
-                let value = a.0.value().and_then(|a| b.0.value().map(|b| *a * *b));
+                let value = a.0.value().copied() * b.0.value();
 
                 // Finally, we do the assignment to the output, returning a
                 // variable to be used in another part of the circuit.
                 region
-                    .assign_advice(
-                        || &quot;lhs * rhs&quot;,
-                        config.advice[0],
-                        1,
-                        || value.ok_or(Error::Synthesis),
-                    )
+                    .assign_advice(|| &quot;lhs * rhs&quot;, config.advice[0], 1, || value)
                     .map(Number)
             },
         )
@@ -401,8 +391,8 @@ build our circuit!</p>
 #[derive(Default)]
 struct MyCircuit&lt;F: FieldExt&gt; {
     constant: F,
-    a: Option&lt;F&gt;,
-    b: Option&lt;F&gt;,
+    a: Value&lt;F&gt;,
+    b: Value&lt;F&gt;,
 }
 
 impl&lt;F: FieldExt&gt; Circuit&lt;F&gt; for MyCircuit&lt;F&gt; {
@@ -480,8 +470,8 @@ in the circuit, and tell us exactly what is failing (if anything).</p>
     // Instantiate the circuit with the private inputs.
     let circuit = MyCircuit {
         constant,
-        a: Some(a),
-        b: Some(b),
+        a: Value::known(a),
+        b: Value::known(b),
     };
 
     // Arrange the public input. We expose the multiplication result in row 0

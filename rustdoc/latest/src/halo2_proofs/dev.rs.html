@@ -1087,6 +1087,31 @@
 <span id="1065">1065</span>
 <span id="1066">1066</span>
 <span id="1067">1067</span>
+<span id="1068">1068</span>
+<span id="1069">1069</span>
+<span id="1070">1070</span>
+<span id="1071">1071</span>
+<span id="1072">1072</span>
+<span id="1073">1073</span>
+<span id="1074">1074</span>
+<span id="1075">1075</span>
+<span id="1076">1076</span>
+<span id="1077">1077</span>
+<span id="1078">1078</span>
+<span id="1079">1079</span>
+<span id="1080">1080</span>
+<span id="1081">1081</span>
+<span id="1082">1082</span>
+<span id="1083">1083</span>
+<span id="1084">1084</span>
+<span id="1085">1085</span>
+<span id="1086">1086</span>
+<span id="1087">1087</span>
+<span id="1088">1088</span>
+<span id="1089">1089</span>
+<span id="1090">1090</span>
+<span id="1091">1091</span>
+<span id="1092">1092</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Tools for developing circuits.</span>
 
 <span class="kw">use</span> <span class="ident">std::collections::HashMap</span>;
@@ -1100,6 +1125,7 @@
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::plonk::Assigned</span>;
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">arithmetic</span>::{<span class="ident">FieldExt</span>, <span class="ident">Group</span>},
+    <span class="ident">circuit</span>,
     <span class="ident">plonk</span>::{
         <span class="ident">permutation</span>, <span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Assignment</span>, <span class="ident">Circuit</span>, <span class="ident">Column</span>, <span class="ident">ColumnType</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>,
         <span class="ident">Expression</span>, <span class="ident">Fixed</span>, <span class="ident">FloorPlanner</span>, <span class="ident">Instance</span>, <span class="ident">Selector</span>, <span class="ident">VirtualCell</span>,
@@ -1256,7 +1282,7 @@
 <span class="doccomment">/// ```</span>
 <span class="doccomment">/// use halo2_proofs::{</span>
 <span class="doccomment">///     arithmetic::FieldExt,</span>
-<span class="doccomment">///     circuit::{Layouter, SimpleFloorPlanner},</span>
+<span class="doccomment">///     circuit::{Layouter, SimpleFloorPlanner, Value},</span>
 <span class="doccomment">///     dev::{FailureLocation, MockProver, VerifyFailure},</span>
 <span class="doccomment">///     pasta::Fp,</span>
 <span class="doccomment">///     plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Selector},</span>
@@ -1274,8 +1300,8 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// #[derive(Clone, Default)]</span>
 <span class="doccomment">/// struct MyCircuit {</span>
-<span class="doccomment">///     a: Option&lt;u64&gt;,</span>
-<span class="doccomment">///     b: Option&lt;u64&gt;,</span>
+<span class="doccomment">///     a: Value&lt;u64&gt;,</span>
+<span class="doccomment">///     b: Value&lt;u64&gt;,</span>
 <span class="doccomment">/// }</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// impl&lt;F: FieldExt&gt; Circuit&lt;F&gt; for MyCircuit {</span>
@@ -1309,15 +1335,13 @@
 <span class="doccomment">///         layouter.assign_region(|| &quot;Example region&quot;, |mut region| {</span>
 <span class="doccomment">///             config.s.enable(&amp;mut region, 0)?;</span>
 <span class="doccomment">///             region.assign_advice(|| &quot;a&quot;, config.a, 0, || {</span>
-<span class="doccomment">///                 self.a.map(|v| F::from(v)).ok_or(Error::Synthesis)</span>
+<span class="doccomment">///                 self.a.map(F::from)</span>
 <span class="doccomment">///             })?;</span>
 <span class="doccomment">///             region.assign_advice(|| &quot;b&quot;, config.b, 0, || {</span>
-<span class="doccomment">///                 self.b.map(|v| F::from(v)).ok_or(Error::Synthesis)</span>
+<span class="doccomment">///                 self.b.map(F::from)</span>
 <span class="doccomment">///             })?;</span>
 <span class="doccomment">///             region.assign_advice(|| &quot;c&quot;, config.c, 0, || {</span>
-<span class="doccomment">///                 self.a</span>
-<span class="doccomment">///                     .and_then(|a| self.b.map(|b| F::from(a * b)))</span>
-<span class="doccomment">///                     .ok_or(Error::Synthesis)</span>
+<span class="doccomment">///                 (self.a * self.b).map(F::from)</span>
 <span class="doccomment">///             })?;</span>
 <span class="doccomment">///             Ok(())</span>
 <span class="doccomment">///         })</span>
@@ -1326,8 +1350,8 @@
 <span class="doccomment">///</span>
 <span class="doccomment">/// // Assemble the private inputs to the circuit.</span>
 <span class="doccomment">/// let circuit = MyCircuit {</span>
-<span class="doccomment">///     a: Some(2),</span>
-<span class="doccomment">///     b: Some(4),</span>
+<span class="doccomment">///     a: Value::known(2),</span>
+<span class="doccomment">///     b: Value::known(4),</span>
 <span class="doccomment">/// };</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// // This circuit has no public inputs.</span>
@@ -1429,7 +1453,11 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">query_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="ident">row</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">query_instance</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>,
+        <span class="ident">row</span>: <span class="ident">usize</span>,
+    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">circuit::Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">row</span>) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::not_enough_rows_available</span>(<span class="self">self</span>.<span class="ident">k</span>));
         }
@@ -1437,7 +1465,7 @@
         <span class="self">self</span>.<span class="ident">instance</span>
             .<span class="ident">get</span>(<span class="ident">column</span>.<span class="ident">index</span>())
             .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">column</span><span class="op">|</span> <span class="ident">column</span>.<span class="ident">get</span>(<span class="ident">row</span>))
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">v</span>))
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">circuit::Value::known</span>(<span class="kw-2">*</span><span class="ident">v</span>))
             .<span class="ident">ok_or</span>(<span class="ident">Error::BoundsFailure</span>)
     }
 
@@ -1449,7 +1477,7 @@
         <span class="ident">to</span>: <span class="ident">V</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
+        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">circuit::Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span>,
         <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -1467,7 +1495,8 @@
             .<span class="ident">advice</span>
             .<span class="ident">get_mut</span>(<span class="ident">column</span>.<span class="ident">index</span>())
             .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">get_mut</span>(<span class="ident">row</span>))
-            .<span class="ident">ok_or</span>(<span class="ident">Error::BoundsFailure</span>)<span class="question-mark">?</span> <span class="op">=</span> <span class="ident">CellValue::Assigned</span>(<span class="ident">to</span>()<span class="question-mark">?</span>.<span class="ident">into</span>().<span class="ident">evaluate</span>());
+            .<span class="ident">ok_or</span>(<span class="ident">Error::BoundsFailure</span>)<span class="question-mark">?</span> <span class="op">=</span>
+            <span class="ident">CellValue::Assigned</span>(<span class="ident">to</span>().<span class="ident">into_field</span>().<span class="ident">evaluate</span>().<span class="ident">assign</span>()<span class="question-mark">?</span>);
 
         <span class="prelude-val">Ok</span>(())
     }
@@ -1480,7 +1509,7 @@
         <span class="ident">to</span>: <span class="ident">V</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
     <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
+        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">circuit::Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span>,
         <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
         <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -1498,7 +1527,8 @@
             .<span class="ident">fixed</span>
             .<span class="ident">get_mut</span>(<span class="ident">column</span>.<span class="ident">index</span>())
             .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">get_mut</span>(<span class="ident">row</span>))
-            .<span class="ident">ok_or</span>(<span class="ident">Error::BoundsFailure</span>)<span class="question-mark">?</span> <span class="op">=</span> <span class="ident">CellValue::Assigned</span>(<span class="ident">to</span>()<span class="question-mark">?</span>.<span class="ident">into</span>().<span class="ident">evaluate</span>());
+            .<span class="ident">ok_or</span>(<span class="ident">Error::BoundsFailure</span>)<span class="question-mark">?</span> <span class="op">=</span>
+            <span class="ident">CellValue::Assigned</span>(<span class="ident">to</span>().<span class="ident">into_field</span>().<span class="ident">evaluate</span>().<span class="ident">assign</span>()<span class="question-mark">?</span>);
 
         <span class="prelude-val">Ok</span>(())
     }
@@ -1522,14 +1552,14 @@
         <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
         <span class="ident">col</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
         <span class="ident">from_row</span>: <span class="ident">usize</span>,
-        <span class="ident">to</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">to</span>: <span class="ident">circuit::Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">from_row</span>) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::not_enough_rows_available</span>(<span class="self">self</span>.<span class="ident">k</span>));
         }
 
         <span class="kw">for</span> <span class="ident">row</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">usable_rows</span>.<span class="ident">clone</span>().<span class="ident">skip</span>(<span class="ident">from_row</span>) {
-            <span class="self">self</span>.<span class="ident">assign_fixed</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;&quot;</span>, <span class="ident">col</span>, <span class="ident">row</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">to</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>))<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="ident">assign_fixed</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;&quot;</span>, <span class="ident">col</span>, <span class="ident">row</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">to</span>)<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())
@@ -1965,7 +1995,7 @@
 
     <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">FailureLocation</span>, <span class="ident">MockProver</span>, <span class="ident">VerifyFailure</span>};
     <span class="kw">use</span> <span class="kw">crate</span>::{
-        <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">SimpleFloorPlanner</span>},
+        <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">SimpleFloorPlanner</span>, <span class="ident">Value</span>},
         <span class="ident">plonk</span>::{
             <span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Circuit</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>,
             <span class="ident">TableColumn</span>,
@@ -2022,7 +2052,7 @@
                         <span class="ident">config</span>.<span class="ident">q</span>.<span class="ident">enable</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="number">1</span>)<span class="question-mark">?</span>;
 
                         <span class="comment">// Assign a = 0.</span>
-                        <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;a&quot;</span>, <span class="ident">config</span>.<span class="ident">a</span>, <span class="number">0</span>, <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">Fp::zero</span>()))<span class="question-mark">?</span>;
+                        <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;a&quot;</span>, <span class="ident">config</span>.<span class="ident">a</span>, <span class="number">0</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">Fp::zero</span>()))<span class="question-mark">?</span>;
 
                         <span class="comment">// BUG: Forget to assign b = 0! This could go unnoticed during</span>
                         <span class="comment">// development, because cell values default to zero, which in this</span>
@@ -2100,7 +2130,7 @@
                                     <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;table[{}] = {}&quot;</span>, <span class="ident">i</span>, <span class="number">2</span> <span class="op">*</span> <span class="ident">i</span>),
                                     <span class="ident">config</span>.<span class="ident">table</span>,
                                     <span class="ident">i</span> <span class="op">-</span> <span class="number">1</span>,
-                                    <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">Fp::from</span>(<span class="number">2</span> <span class="op">*</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>)),
+                                    <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">Fp::from</span>(<span class="number">2</span> <span class="op">*</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>)),
                                 )
                             })
                             .<span class="ident">fold</span>(<span class="prelude-val">Ok</span>(()), <span class="op">|</span><span class="ident">acc</span>, <span class="ident">res</span><span class="op">|</span> <span class="ident">acc</span>.<span class="ident">and</span>(<span class="ident">res</span>))
@@ -2115,8 +2145,18 @@
                         <span class="ident">config</span>.<span class="ident">q</span>.<span class="ident">enable</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="number">1</span>)<span class="question-mark">?</span>;
 
                         <span class="comment">// Assign a = 2 and a = 6.</span>
-                        <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;a = 2&quot;</span>, <span class="ident">config</span>.<span class="ident">a</span>, <span class="number">0</span>, <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">Fp::from</span>(<span class="number">2</span>)))<span class="question-mark">?</span>;
-                        <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;a = 6&quot;</span>, <span class="ident">config</span>.<span class="ident">a</span>, <span class="number">1</span>, <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">Fp::from</span>(<span class="number">6</span>)))<span class="question-mark">?</span>;
+                        <span class="ident">region</span>.<span class="ident">assign_advice</span>(
+                            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;a = 2&quot;</span>,
+                            <span class="ident">config</span>.<span class="ident">a</span>,
+                            <span class="number">0</span>,
+                            <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">Fp::from</span>(<span class="number">2</span>)),
+                        )<span class="question-mark">?</span>;
+                        <span class="ident">region</span>.<span class="ident">assign_advice</span>(
+                            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;a = 6&quot;</span>,
+                            <span class="ident">config</span>.<span class="ident">a</span>,
+                            <span class="number">1</span>,
+                            <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">Fp::from</span>(<span class="number">6</span>)),
+                        )<span class="question-mark">?</span>;
 
                         <span class="prelude-val">Ok</span>(())
                     },
@@ -2130,10 +2170,20 @@
                         <span class="ident">config</span>.<span class="ident">q</span>.<span class="ident">enable</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="number">1</span>)<span class="question-mark">?</span>;
 
                         <span class="comment">// Assign a = 4.</span>
-                        <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;a = 4&quot;</span>, <span class="ident">config</span>.<span class="ident">a</span>, <span class="number">0</span>, <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">Fp::from</span>(<span class="number">4</span>)))<span class="question-mark">?</span>;
+                        <span class="ident">region</span>.<span class="ident">assign_advice</span>(
+                            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;a = 4&quot;</span>,
+                            <span class="ident">config</span>.<span class="ident">a</span>,
+                            <span class="number">0</span>,
+                            <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">Fp::from</span>(<span class="number">4</span>)),
+                        )<span class="question-mark">?</span>;
 
                         <span class="comment">// BUG: Assign a = 5, which doesn&#39;t exist in the table!</span>
-                        <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;a = 5&quot;</span>, <span class="ident">config</span>.<span class="ident">a</span>, <span class="number">1</span>, <span class="op">|</span><span class="op">|</span> <span class="prelude-val">Ok</span>(<span class="ident">Fp::from</span>(<span class="number">5</span>)))<span class="question-mark">?</span>;
+                        <span class="ident">region</span>.<span class="ident">assign_advice</span>(
+                            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;a = 5&quot;</span>,
+                            <span class="ident">config</span>.<span class="ident">a</span>,
+                            <span class="number">1</span>,
+                            <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">Fp::from</span>(<span class="number">5</span>)),
+                        )<span class="question-mark">?</span>;
 
                         <span class="prelude-val">Ok</span>(())
                     },
@@ -2155,5 +2205,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

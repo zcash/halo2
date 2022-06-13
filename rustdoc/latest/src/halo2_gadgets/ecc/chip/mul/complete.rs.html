@@ -216,22 +216,12 @@
 <span id="194">194</span>
 <span id="195">195</span>
 <span id="196">196</span>
-<span id="197">197</span>
-<span id="198">198</span>
-<span id="199">199</span>
-<span id="200">200</span>
-<span id="201">201</span>
-<span id="202">202</span>
-<span id="203">203</span>
-<span id="204">204</span>
-<span id="205">205</span>
-<span id="206">206</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">add</span>, <span class="ident">EccPoint</span>};
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">COMPLETE_RANGE</span>, <span class="ident">X</span>, <span class="ident">Y</span>, <span class="ident">Z</span>};
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities</span>::{<span class="ident">bool_check</span>, <span class="ident">ternary</span>};
 
 <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit::Region</span>,
+    <span class="ident">circuit</span>::{<span class="ident">Region</span>, <span class="ident">Value</span>},
     <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>},
     <span class="ident">poly::Rotation</span>,
 };
@@ -316,7 +306,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
         <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">bits</span>: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>],
+        <span class="ident">bits</span>: <span class="kw-2">&amp;</span>[<span class="ident">Value</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>],
         <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">EccPoint</span>,
         <span class="ident">x_a</span>: <span class="ident">X</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
         <span class="ident">y_a</span>: <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
@@ -367,15 +357,10 @@
             <span class="comment">// Update `z`.</span>
             <span class="ident">z</span> <span class="op">=</span> {
                 <span class="comment">// z_next = z_cur * 2 + k_next</span>
-                <span class="kw">let</span> <span class="ident">z_val</span> <span class="op">=</span> <span class="ident">z</span>.<span class="ident">value</span>().<span class="ident">zip</span>(<span class="ident">k</span>.<span class="ident">as_ref</span>()).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">z_val</span>, <span class="ident">k</span>)<span class="op">|</span> {
-                    <span class="ident">pallas::Base::from</span>(<span class="number">2</span>) <span class="op">*</span> <span class="ident">z_val</span> <span class="op">+</span> <span class="ident">pallas::Base::from</span>(<span class="kw-2">*</span><span class="ident">k</span> <span class="kw">as</span> <span class="ident">u64</span>)
-                });
-                <span class="kw">let</span> <span class="ident">z_cell</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="string">&quot;z&quot;</span>,
-                    <span class="self">self</span>.<span class="ident">z_complete</span>,
-                    <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span> <span class="op">+</span> <span class="number">2</span>,
-                    <span class="op">|</span><span class="op">|</span> <span class="ident">z_val</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
-                )<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">z_val</span> <span class="op">=</span> <span class="ident">z</span>.<span class="ident">value</span>() <span class="op">*</span> <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from</span>(<span class="number">2</span>))
+                    <span class="op">+</span> <span class="ident">k</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">k</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">k</span> <span class="kw">as</span> <span class="ident">u64</span>));
+                <span class="kw">let</span> <span class="ident">z_cell</span> <span class="op">=</span>
+                    <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;z&quot;</span>, <span class="self">self</span>.<span class="ident">z_complete</span>, <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span> <span class="op">+</span> <span class="number">2</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">z_val</span>)<span class="question-mark">?</span>;
                 <span class="ident">Z</span>(<span class="ident">z_cell</span>)
             };
             <span class="ident">zs</span>.<span class="ident">push</span>(<span class="ident">z</span>.<span class="ident">clone</span>());
@@ -405,12 +390,7 @@
                 <span class="comment">// fine because we are just assigning the same value to the same cell</span>
                 <span class="comment">// twice, and then applying an equality constraint between the cell and</span>
                 <span class="comment">// itself (which the permutation argument treats as a no-op).</span>
-                <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_p&quot;</span>,
-                    <span class="self">self</span>.<span class="ident">add_config</span>.<span class="ident">y_p</span>,
-                    <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span>,
-                    <span class="op">|</span><span class="op">|</span> <span class="ident">y_p</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
-                )<span class="question-mark">?</span>
+                <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_p&quot;</span>, <span class="self">self</span>.<span class="ident">add_config</span>.<span class="ident">y_p</span>, <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">y_p</span>)<span class="question-mark">?</span>
             };
 
             <span class="comment">// U = P if the bit is set; U = -P is the bit is not set.</span>
@@ -433,5 +413,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

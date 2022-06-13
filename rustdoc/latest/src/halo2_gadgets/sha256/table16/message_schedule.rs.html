@@ -473,6 +473,8 @@
 <span id="451">451</span>
 <span id="452">452</span>
 <span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
 
 <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident"><span class="kw">super</span>::BLOCK_SIZE</span>, <span class="ident">AssignedBits</span>, <span class="ident">BlockWord</span>, <span class="ident">SpreadInputs</span>, <span class="ident">Table16Assignment</span>, <span class="ident">ROUNDS</span>};
@@ -910,8 +912,10 @@
                 <span class="comment">// Run message_scheduler to get W_[0..64]</span>
                 <span class="kw">let</span> (<span class="ident">w</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">config</span>.<span class="ident">message_schedule</span>.<span class="ident">process</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">inputs</span>)<span class="question-mark">?</span>;
                 <span class="kw">for</span> (<span class="ident">word</span>, <span class="ident">test_word</span>) <span class="kw">in</span> <span class="ident">w</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">MSG_SCHEDULE_TEST_OUTPUT</span>.<span class="ident">iter</span>()) {
-                    <span class="kw">let</span> <span class="ident">word</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="ident">lebs2ip</span>(<span class="ident">word</span>.<span class="ident">value</span>().<span class="ident">unwrap</span>()) <span class="kw">as</span> <span class="ident">u32</span>;
-                    <span class="macro">assert_eq!</span>(<span class="ident">word</span>, <span class="kw-2">*</span><span class="ident">test_word</span>);
+                    <span class="ident">word</span>.<span class="ident">value</span>().<span class="ident">assert_if_known</span>(<span class="op">|</span><span class="ident">bits</span><span class="op">|</span> {
+                        <span class="kw">let</span> <span class="ident">word</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="ident">lebs2ip</span>(<span class="ident">bits</span>) <span class="kw">as</span> <span class="ident">u32</span>;
+                        <span class="ident">word</span> <span class="op">==</span> <span class="kw-2">*</span><span class="ident">test_word</span>
+                    });
                 }
                 <span class="prelude-val">Ok</span>(())
             }
@@ -927,5 +931,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>

@@ -215,19 +215,6 @@
 <span id="193">193</span>
 <span id="194">194</span>
 <span id="195">195</span>
-<span id="196">196</span>
-<span id="197">197</span>
-<span id="198">198</span>
-<span id="199">199</span>
-<span id="200">200</span>
-<span id="201">201</span>
-<span id="202">202</span>
-<span id="203">203</span>
-<span id="204">204</span>
-<span id="205">205</span>
-<span id="206">206</span>
-<span id="207">207</span>
-<span id="208">208</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::collections::HashSet</span>;
 
 <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::NonIdentityEccPoint</span>;
@@ -325,20 +312,14 @@
         <span class="ident">x_p</span>.<span class="ident">zip</span>(<span class="ident">y_p</span>)
             .<span class="ident">zip</span>(<span class="ident">x_q</span>)
             .<span class="ident">zip</span>(<span class="ident">y_q</span>)
-            .<span class="ident">map</span>(<span class="op">|</span>(((<span class="ident">x_p</span>, <span class="ident">y_p</span>), <span class="ident">x_q</span>), <span class="ident">y_q</span>)<span class="op">|</span> {
+            .<span class="ident">error_if_known_and</span>(<span class="op">|</span>(((<span class="ident">x_p</span>, <span class="ident">y_p</span>), <span class="ident">x_q</span>), <span class="ident">y_q</span>)<span class="op">|</span> {
                 <span class="comment">// P is point at infinity</span>
-                <span class="kw">if</span> (<span class="ident">x_p</span>.<span class="ident">is_zero_vartime</span>() <span class="op">&amp;&amp;</span> <span class="ident">y_p</span>.<span class="ident">is_zero_vartime</span>())
+                (<span class="ident">x_p</span>.<span class="ident">is_zero_vartime</span>() <span class="op">&amp;&amp;</span> <span class="ident">y_p</span>.<span class="ident">is_zero_vartime</span>())
                 <span class="comment">// Q is point at infinity</span>
                 <span class="op">|</span><span class="op">|</span> (<span class="ident">x_q</span>.<span class="ident">is_zero_vartime</span>() <span class="op">&amp;&amp;</span> <span class="ident">y_q</span>.<span class="ident">is_zero_vartime</span>())
                 <span class="comment">// x_p = x_q</span>
                 <span class="op">|</span><span class="op">|</span> (<span class="ident">x_p</span> <span class="op">==</span> <span class="ident">x_q</span>)
-                {
-                    <span class="prelude-val">Err</span>(<span class="ident">Error::Synthesis</span>)
-                } <span class="kw">else</span> {
-                    <span class="prelude-val">Ok</span>(())
-                }
-            })
-            .<span class="ident">transpose</span>()<span class="question-mark">?</span>;
+            })<span class="question-mark">?</span>;
 
         <span class="comment">// Copy point `p` into `x_p`, `y_p` columns</span>
         <span class="ident">p</span>.<span class="ident">x</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;x_p&quot;</span>, <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">x_p</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
@@ -367,20 +348,10 @@
 
         <span class="comment">// Assign the sum to `x_qr`, `y_qr` columns in the next row</span>
         <span class="kw">let</span> <span class="ident">x_r</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>.<span class="number">0</span>);
-        <span class="kw">let</span> <span class="ident">x_r_var</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;x_r&quot;</span>,
-            <span class="self">self</span>.<span class="ident">x_qr</span>,
-            <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>,
-            <span class="op">|</span><span class="op">|</span> <span class="ident">x_r</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
-        )<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">x_r_var</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;x_r&quot;</span>, <span class="self">self</span>.<span class="ident">x_qr</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">x_r</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">y_r</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>.<span class="number">1</span>);
-        <span class="kw">let</span> <span class="ident">y_r_var</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_r&quot;</span>,
-            <span class="self">self</span>.<span class="ident">y_qr</span>,
-            <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>,
-            <span class="op">|</span><span class="op">|</span> <span class="ident">y_r</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>),
-        )<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">y_r_var</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_r&quot;</span>, <span class="self">self</span>.<span class="ident">y_qr</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">y_r</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">NonIdentityEccPoint</span> {
             <span class="ident">x</span>: <span class="ident">x_r_var</span>,
@@ -394,7 +365,10 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="ident">group::Curve</span>;
-    <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{<span class="ident">circuit::Layouter</span>, <span class="ident">plonk::Error</span>};
+    <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
+        <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">Value</span>},
+        <span class="ident">plonk::Error</span>,
+    };
     <span class="kw">use</span> <span class="ident">pasta_curves::pallas</span>;
 
     <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::ecc</span>::{<span class="ident">EccInstructions</span>, <span class="ident">NonIdentityPoint</span>};
@@ -418,7 +392,7 @@
             <span class="kw">let</span> <span class="ident">witnessed_result</span> <span class="op">=</span> <span class="ident">NonIdentityPoint::new</span>(
                 <span class="ident">chip</span>,
                 <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;witnessed P + Q&quot;</span>),
-                <span class="prelude-val">Some</span>((<span class="ident">p_val</span> <span class="op">+</span> <span class="ident">q_val</span>).<span class="ident">to_affine</span>()),
+                <span class="ident">Value::known</span>((<span class="ident">p_val</span> <span class="op">+</span> <span class="ident">q_val</span>).<span class="ident">to_affine</span>()),
             )<span class="question-mark">?</span>;
             <span class="ident">result</span>.<span class="ident">constrain_equal</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;constrain P + Q&quot;</span>), <span class="kw-2">&amp;</span><span class="ident">witnessed_result</span>)<span class="question-mark">?</span>;
         }
@@ -437,5 +411,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (7466d5492 2022-06-08)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.63.0-nightly (546c826f0 2022-06-12)" ></div>
 </body></html>
