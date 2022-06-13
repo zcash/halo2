@@ -95,20 +95,14 @@ impl Config {
         x_p.zip(y_p)
             .zip(x_q)
             .zip(y_q)
-            .map(|(((x_p, y_p), x_q), y_q)| {
+            .error_if_known_and(|(((x_p, y_p), x_q), y_q)| {
                 // P is point at infinity
-                if (x_p.is_zero_vartime() && y_p.is_zero_vartime())
+                (x_p.is_zero_vartime() && y_p.is_zero_vartime())
                 // Q is point at infinity
                 || (x_q.is_zero_vartime() && y_q.is_zero_vartime())
                 // x_p = x_q
                 || (x_p == x_q)
-                {
-                    Err(Error::Synthesis)
-                } else {
-                    Ok(())
-                }
-            })
-            .transpose()?;
+            })?;
 
         // Copy point `p` into `x_p`, `y_p` columns
         p.x.copy_advice(|| "x_p", region, self.x_p, offset)?;
@@ -137,20 +131,10 @@ impl Config {
 
         // Assign the sum to `x_qr`, `y_qr` columns in the next row
         let x_r = r.map(|r| r.0);
-        let x_r_var = region.assign_advice(
-            || "x_r",
-            self.x_qr,
-            offset + 1,
-            || x_r.ok_or(Error::Synthesis),
-        )?;
+        let x_r_var = region.assign_advice(|| "x_r", self.x_qr, offset + 1, || x_r)?;
 
         let y_r = r.map(|r| r.1);
-        let y_r_var = region.assign_advice(
-            || "y_r",
-            self.y_qr,
-            offset + 1,
-            || y_r.ok_or(Error::Synthesis),
-        )?;
+        let y_r_var = region.assign_advice(|| "y_r", self.y_qr, offset + 1, || y_r)?;
 
         let result = NonIdentityEccPoint {
             x: x_r_var,
@@ -164,7 +148,10 @@ impl Config {
 #[cfg(test)]
 pub mod tests {
     use group::Curve;
-    use halo2_proofs::{circuit::Layouter, plonk::Error};
+    use halo2_proofs::{
+        circuit::{Layouter, Value},
+        plonk::Error,
+    };
     use pasta_curves::pallas;
 
     use crate::ecc::{EccInstructions, NonIdentityPoint};
@@ -188,7 +175,7 @@ pub mod tests {
             let witnessed_result = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "witnessed P + Q"),
-                Some((p_val + q_val).to_affine()),
+                Value::known((p_val + q_val).to_affine()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain P + Q"), &witnessed_result)?;
         }

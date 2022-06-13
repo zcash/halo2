@@ -3,7 +3,7 @@ use super::{EccPoint, NonIdentityEccPoint};
 use group::prime::PrimeCurveAffine;
 
 use halo2_proofs::{
-    circuit::{AssignedCell, Region},
+    circuit::{AssignedCell, Region, Value},
     plonk::{
         Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector,
         VirtualCells,
@@ -87,19 +87,17 @@ impl Config {
 
     fn assign_xy(
         &self,
-        value: Option<(Assigned<pallas::Base>, Assigned<pallas::Base>)>,
+        value: Value<(Assigned<pallas::Base>, Assigned<pallas::Base>)>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
     ) -> Result<Coordinates, Error> {
         // Assign `x` value
         let x_val = value.map(|value| value.0);
-        let x_var =
-            region.assign_advice(|| "x", self.x, offset, || x_val.ok_or(Error::Synthesis))?;
+        let x_var = region.assign_advice(|| "x", self.x, offset, || x_val)?;
 
         // Assign `y` value
         let y_val = value.map(|value| value.1);
-        let y_var =
-            region.assign_advice(|| "y", self.y, offset, || y_val.ok_or(Error::Synthesis))?;
+        let y_var = region.assign_advice(|| "y", self.y, offset, || y_val)?;
 
         Ok((x_var, y_var))
     }
@@ -107,7 +105,7 @@ impl Config {
     /// Assigns a point that can be the identity.
     pub(super) fn point(
         &self,
-        value: Option<pallas::Affine>,
+        value: Value<pallas::Affine>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
     ) -> Result<EccPoint, Error> {
@@ -131,19 +129,15 @@ impl Config {
     /// Assigns a non-identity point.
     pub(super) fn point_non_id(
         &self,
-        value: Option<pallas::Affine>,
+        value: Value<pallas::Affine>,
         offset: usize,
         region: &mut Region<'_, pallas::Base>,
     ) -> Result<NonIdentityEccPoint, Error> {
         // Enable `q_point_non_id` selector
         self.q_point_non_id.enable(region, offset)?;
 
-        if let Some(value) = value {
-            // Return an error if the point is the identity.
-            if value == pallas::Affine::identity() {
-                return Err(Error::Synthesis);
-            }
-        };
+        // Return an error if the point is the identity.
+        value.error_if_known_and(|value| value == &pallas::Affine::identity())?;
 
         let value = value.map(|value| {
             let value = value.coordinates().unwrap();
@@ -173,7 +167,7 @@ pub mod tests {
         NonIdentityPoint::new(
             chip,
             layouter.namespace(|| "witness identity"),
-            Some(pallas::Affine::identity()),
+            Value::known(pallas::Affine::identity()),
         )
         .expect_err("witnessing 𝒪 should return an error");
     }

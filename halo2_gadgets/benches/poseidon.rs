@@ -1,6 +1,6 @@
 use ff::Field;
 use halo2_proofs::{
-    circuit::{Layouter, SimpleFloorPlanner},
+    circuit::{Layouter, SimpleFloorPlanner, Value},
     pasta::Fp,
     plonk::{
         create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column,
@@ -26,10 +26,10 @@ struct HashCircuit<S, const WIDTH: usize, const RATE: usize, const L: usize>
 where
     S: Spec<Fp, WIDTH, RATE> + Clone + Copy,
 {
-    message: Option<[Fp; L]>,
+    message: Value<[Fp; L]>,
     // For the purpose of this test, witness the result.
     // TODO: Move this into an instance column.
-    output: Option<Fp>,
+    output: Value<Fp>,
     _spec: PhantomData<S>,
 }
 
@@ -49,8 +49,8 @@ where
 
     fn without_witnesses(&self) -> Self {
         Self {
-            message: None,
-            output: None,
+            message: Value::unknown(),
+            output: Value::unknown(),
             _spec: PhantomData,
         }
     }
@@ -92,7 +92,7 @@ where
                         || format!("load message_{}", i),
                         config.input[i],
                         0,
-                        || value.ok_or(Error::Synthesis),
+                        || value,
                     )
                 };
 
@@ -110,12 +110,8 @@ where
         layouter.assign_region(
             || "constrain output",
             |mut region| {
-                let expected_var = region.assign_advice(
-                    || "load output",
-                    config.input[0],
-                    0,
-                    || self.output.ok_or(Error::Synthesis),
-                )?;
+                let expected_var =
+                    region.assign_advice(|| "load output", config.input[0], 0, || self.output)?;
                 region.constrain_equal(output.cell(), expected_var.cell())
             },
         )
@@ -191,8 +187,8 @@ fn bench_poseidon<S, const WIDTH: usize, const RATE: usize, const L: usize>(
     let params: Params<vesta::Affine> = Params::new(K);
 
     let empty_circuit = HashCircuit::<S, WIDTH, RATE, L> {
-        message: None,
-        output: None,
+        message: Value::unknown(),
+        output: Value::unknown(),
         _spec: PhantomData,
     };
 
@@ -212,8 +208,8 @@ fn bench_poseidon<S, const WIDTH: usize, const RATE: usize, const L: usize>(
     let output = poseidon::Hash::<_, S, ConstantLength<L>, WIDTH, RATE>::init().hash(message);
 
     let circuit = HashCircuit::<S, WIDTH, RATE, L> {
-        message: Some(message),
-        output: Some(output),
+        message: Value::known(message),
+        output: Value::known(output),
         _spec: PhantomData,
     };
 

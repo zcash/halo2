@@ -3,7 +3,7 @@ use std::iter;
 
 use halo2_proofs::{
     arithmetic::FieldExt,
-    circuit::{AssignedCell, Cell, Chip, Layouter, Region},
+    circuit::{AssignedCell, Cell, Chip, Layouter, Region, Value},
     plonk::{
         Advice, Any, Column, ConstraintSystem, Constraints, Error, Expression, Fixed, Selector,
     },
@@ -349,7 +349,7 @@ impl<
                             || format!("load pad_{}", i),
                             config.rc_b[i],
                             1,
-                            || Ok(padding_value),
+                            || Value::known(padding_value),
                         )?,
                         _ => panic!("Input is not padded"),
                     };
@@ -367,20 +367,18 @@ impl<
 
                 // Constrain the output.
                 let constrain_output_word = |i: usize| {
-                    let value = initial_state[i].0.value().and_then(|initial_word| {
-                        input
+                    let value = initial_state[i].0.value().copied()
+                        + input
                             .get(i)
                             .map(|word| word.0.value().cloned())
                             // The capacity element is never altered by the input.
-                            .unwrap_or_else(|| Some(F::zero()))
-                            .map(|input_word| *initial_word + input_word)
-                    });
+                            .unwrap_or_else(|| Value::known(F::zero()));
                     region
                         .assign_advice(
                             || format!("load output_{}", i),
                             config.state[i],
                             2,
-                            || value.ok_or(Error::Synthesis),
+                            || value,
                         )
                         .map(StateWord)
                 };
@@ -424,7 +422,7 @@ impl<F: FieldExt> Var<F> for StateWord<F> {
         self.0.cell()
     }
 
-    fn value(&self) -> Option<F> {
+    fn value(&self) -> Value<F> {
         self.0.value().cloned()
     }
 }
@@ -446,7 +444,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                     .value()
                     .map(|v| *v + config.round_constants[round][idx])
             });
-            let r: Option<Vec<F>> = q.map(|q| q.map(|q| q.pow(&config.alpha))).collect();
+            let r: Value<Vec<F>> = q.map(|q| q.map(|q| q.pow(&config.alpha))).collect();
             let m = &config.m_reg;
             let state = m.iter().map(|m_i| {
                 r.as_ref().map(|r| {
@@ -469,9 +467,9 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
     ) -> Result<Self, Error> {
         Self::round(region, config, round, offset, config.s_partial, |region| {
             let m = &config.m_reg;
-            let p: Option<Vec<_>> = self.0.iter().map(|word| word.0.value().cloned()).collect();
+            let p: Value<Vec<_>> = self.0.iter().map(|word| word.0.value().cloned()).collect();
 
-            let r: Option<Vec<_>> = p.map(|p| {
+            let r: Value<Vec<_>> = p.map(|p| {
                 let r_0 = (p[0] + config.round_constants[round][0]).pow(&config.alpha);
                 let r_i = p[1..]
                     .iter()
@@ -484,10 +482,10 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                 || format!("round_{} partial_sbox", round),
                 config.partial_sbox,
                 offset,
-                || r.as_ref().map(|r| r[0]).ok_or(Error::Synthesis),
+                || r.as_ref().map(|r| r[0]),
             )?;
 
-            let p_mid: Option<Vec<_>> = m
+            let p_mid: Value<Vec<_>> = m
                 .iter()
                 .map(|m_i| {
                     r.as_ref().map(|r| {
@@ -504,14 +502,14 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                     || format!("round_{} rc_{}", round + 1, i),
                     config.rc_b[i],
                     offset,
-                    || Ok(config.round_constants[round + 1][i]),
+                    || Value::known(config.round_constants[round + 1][i]),
                 )
             };
             for i in 0..WIDTH {
                 load_round_constant(i)?;
             }
 
-            let r_mid: Option<Vec<_>> = p_mid.map(|p| {
+            let r_mid: Value<Vec<_>> = p_mid.map(|p| {
                 let r_0 = (p[0] + config.round_constants[round + 1][0]).pow(&config.alpha);
                 let r_i = p[1..]
                     .iter()
@@ -520,7 +518,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                 std::iter::empty().chain(Some(r_0)).chain(r_i).collect()
             });
 
-            let state: Vec<Option<_>> = m
+            let state: Vec<Value<_>> = m
                 .iter()
                 .map(|m_i| {
                     r_mid.as_ref().map(|r| {
@@ -557,7 +555,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
         round: usize,
         offset: usize,
         round_gate: Selector,
-        round_fn: impl FnOnce(&mut Region<F>) -> Result<(usize, [Option<F>; WIDTH]), Error>,
+        round_fn: impl FnOnce(&mut Region<F>) -> Result<(usize, [Value<F>; WIDTH]), Error>,
     ) -> Result<Self, Error> {
         // Enable the required gate.
         round_gate.enable(region, offset)?;
@@ -568,7 +566,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                 || format!("round_{} rc_{}", round, i),
                 config.rc_a[i],
                 offset,
-                || Ok(config.round_constants[round][i]),
+                || Value::known(config.round_constants[round][i]),
             )
         };
         for i in 0..WIDTH {
@@ -584,7 +582,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                 || format!("round_{} state_{}", next_round, i),
                 config.state[i],
                 offset + 1,
-                || value.ok_or(Error::Synthesis),
+                || value,
             )?;
             Ok(StateWord(var))
         };
@@ -598,7 +596,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
 mod tests {
     use group::ff::{Field, PrimeField};
     use halo2_proofs::{
-        circuit::{Layouter, SimpleFloorPlanner},
+        circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
         pasta::Fp,
         plonk::{Circuit, ConstraintSystem, Error},
@@ -653,12 +651,12 @@ mod tests {
                 || "prepare initial state",
                 |mut region| {
                     let state_word = |i: usize| {
-                        let value = Some(Fp::from(i as u64));
+                        let value = Value::known(Fp::from(i as u64));
                         let var = region.assign_advice(
                             || format!("load state_{}", i),
                             config.state[i],
                             0,
-                            || value.ok_or(Error::Synthesis),
+                            || value,
                         )?;
                         Ok(StateWord(var))
                     };
@@ -697,7 +695,7 @@ mod tests {
                             || format!("load final_state_{}", i),
                             config.state[i],
                             0,
-                            || Ok(expected_final_state[i]),
+                            || Value::known(expected_final_state[i]),
                         )?;
                         region.constrain_equal(final_state[i].0.cell(), var.cell())
                     };
@@ -726,10 +724,10 @@ mod tests {
         const RATE: usize,
         const L: usize,
     > {
-        message: Option<[Fp; L]>,
+        message: Value<[Fp; L]>,
         // For the purpose of this test, witness the result.
         // TODO: Move this into an instance column.
-        output: Option<Fp>,
+        output: Value<Fp>,
         _spec: PhantomData<S>,
     }
 
@@ -741,8 +739,8 @@ mod tests {
 
         fn without_witnesses(&self) -> Self {
             Self {
-                message: None,
-                output: None,
+                message: Value::unknown(),
+                output: Value::unknown(),
                 _spec: PhantomData,
             }
         }
@@ -781,7 +779,7 @@ mod tests {
                             || format!("load message_{}", i),
                             config.state[i],
                             0,
-                            || value.ok_or(Error::Synthesis),
+                            || value,
                         )
                     };
 
@@ -803,7 +801,7 @@ mod tests {
                         || "load output",
                         config.state[0],
                         0,
-                        || self.output.ok_or(Error::Synthesis),
+                        || self.output,
                     )?;
                     region.constrain_equal(output.cell(), expected_var.cell())
                 },
@@ -821,8 +819,8 @@ mod tests {
 
         let k = 6;
         let circuit = HashCircuit::<OrchardNullifier, 3, 2, 2> {
-            message: Some(message),
-            output: Some(output),
+            message: Value::known(message),
+            output: Value::known(output),
             _spec: PhantomData,
         };
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
@@ -839,8 +837,8 @@ mod tests {
 
         let k = 7;
         let circuit = HashCircuit::<OrchardNullifier, 3, 2, 3> {
-            message: Some(message),
-            output: Some(output),
+            message: Value::known(message),
+            output: Value::known(output),
             _spec: PhantomData,
         };
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
@@ -859,8 +857,8 @@ mod tests {
 
             let k = 6;
             let circuit = HashCircuit::<OrchardNullifier, 3, 2, 2> {
-                message: Some(message),
-                output: Some(output),
+                message: Value::known(message),
+                output: Value::known(output),
                 _spec: PhantomData,
             };
             let prover = MockProver::run(k, &circuit, vec![]).unwrap();
@@ -880,8 +878,8 @@ mod tests {
             .unwrap();
 
         let circuit = HashCircuit::<OrchardNullifier, 3, 2, 2> {
-            message: None,
-            output: None,
+            message: Value::unknown(),
+            output: Value::unknown(),
             _spec: PhantomData,
         };
         halo2_proofs::dev::CircuitLayout::default()

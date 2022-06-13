@@ -1,7 +1,7 @@
 //! Chip implementing a Merkle hash using Sinsemilla as the hash function.
 
 use halo2_proofs::{
-    circuit::{AssignedCell, Chip, Layouter},
+    circuit::{AssignedCell, Chip, Layouter, Value},
     plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
@@ -234,7 +234,7 @@ where
             self.clone(),
             layouter.namespace(|| "Witness a = a_0 || a_1"),
             [
-                RangeConstrained::bitrange_of(Some(&pallas::Base::from(l as u64)), 0..10),
+                RangeConstrained::bitrange_of(Value::known(&pallas::Base::from(l as u64)), 0..10),
                 RangeConstrained::bitrange_of(left.value(), 0..240),
             ],
         )?;
@@ -382,30 +382,33 @@ where
 
             use group::ff::PrimeFieldBits;
 
-            if let (Some(left), Some(right)) = (left.value(), right.value()) {
-                let l = i2lebsp::<10>(l as u64);
-                let left: Vec<_> = left
-                    .to_le_bits()
-                    .iter()
-                    .by_vals()
-                    .take(pallas::Base::NUM_BITS as usize)
-                    .collect();
-                let right: Vec<_> = right
-                    .to_le_bits()
-                    .iter()
-                    .by_vals()
-                    .take(pallas::Base::NUM_BITS as usize)
-                    .collect();
-                let merkle_crh = HashDomain::from_Q(Q.into());
+            left.value()
+                .zip(right.value())
+                .zip(hash.value())
+                .assert_if_known(|((left, right), hash)| {
+                    let l = i2lebsp::<10>(l as u64);
+                    let left: Vec<_> = left
+                        .to_le_bits()
+                        .iter()
+                        .by_vals()
+                        .take(pallas::Base::NUM_BITS as usize)
+                        .collect();
+                    let right: Vec<_> = right
+                        .to_le_bits()
+                        .iter()
+                        .by_vals()
+                        .take(pallas::Base::NUM_BITS as usize)
+                        .collect();
+                    let merkle_crh = HashDomain::from_Q(Q.into());
 
-                let mut message = l.to_vec();
-                message.extend_from_slice(&left);
-                message.extend_from_slice(&right);
+                    let mut message = l.to_vec();
+                    message.extend_from_slice(&left);
+                    message.extend_from_slice(&right);
 
-                let expected = merkle_crh.hash(message.into_iter()).unwrap();
+                    let expected = merkle_crh.hash(message.into_iter()).unwrap();
 
-                assert_eq!(expected.to_repr(), hash.value().unwrap().to_repr());
-            }
+                    expected.to_repr() == hash.to_repr()
+                });
         }
 
         Ok(hash)
@@ -431,8 +434,8 @@ where
     fn swap(
         &self,
         layouter: impl Layouter<pallas::Base>,
-        pair: (Self::Var, Option<pallas::Base>),
-        swap: Option<bool>,
+        pair: (Self::Var, Value<pallas::Base>),
+        swap: Value<bool>,
     ) -> Result<(Self::Var, Self::Var), Error> {
         let config = self.config().cond_swap_config.clone();
         let chip = CondSwapChip::<pallas::Base>::construct(config);
@@ -499,7 +502,7 @@ where
     fn witness_message_piece(
         &self,
         layouter: impl Layouter<pallas::Base>,
-        value: Option<pallas::Base>,
+        value: Value<pallas::Base>,
         num_words: usize,
     ) -> Result<Self::MessagePiece, Error> {
         let config = self.config().sinsemilla_config.clone();

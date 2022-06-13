@@ -2,7 +2,7 @@
 
 use super::{bool_check, ternary, UtilitiesInstructions};
 use halo2_proofs::{
-    circuit::{AssignedCell, Chip, Layouter},
+    circuit::{AssignedCell, Chip, Layouter, Value},
     plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
@@ -20,8 +20,8 @@ pub trait CondSwapInstructions<F: FieldExt>: UtilitiesInstructions<F> {
     fn swap(
         &self,
         layouter: impl Layouter<F>,
-        pair: (Self::Var, Option<F>),
-        swap: Option<bool>,
+        pair: (Self::Var, Value<F>),
+        swap: Value<bool>,
     ) -> Result<(Self::Var, Self::Var), Error>;
 }
 
@@ -72,8 +72,8 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
     fn swap(
         &self,
         mut layouter: impl Layouter<F>,
-        pair: (Self::Var, Option<F>),
-        swap: Option<bool>,
+        pair: (Self::Var, Value<F>),
+        swap: Value<bool>,
     ) -> Result<(Self::Var, Self::Var), Error> {
         let config = self.config();
 
@@ -87,21 +87,11 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                 let a = pair.0.copy_advice(|| "copy a", &mut region, config.a, 0)?;
 
                 // Witness `b` value
-                let b = region.assign_advice(
-                    || "witness b",
-                    config.b,
-                    0,
-                    || pair.1.ok_or(Error::Synthesis),
-                )?;
+                let b = region.assign_advice(|| "witness b", config.b, 0, || pair.1)?;
 
                 // Witness `swap` value
                 let swap_val = swap.map(|swap| F::from(swap as u64));
-                region.assign_advice(
-                    || "swap",
-                    config.swap,
-                    0,
-                    || swap_val.ok_or(Error::Synthesis),
-                )?;
+                region.assign_advice(|| "swap", config.swap, 0, || swap_val)?;
 
                 // Conditionally swap a
                 let a_swapped = {
@@ -111,12 +101,7 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                         .zip(swap)
                         .map(|((a, b), swap)| if swap { b } else { a })
                         .cloned();
-                    region.assign_advice(
-                        || "a_swapped",
-                        config.a_swapped,
-                        0,
-                        || a_swapped.ok_or(Error::Synthesis),
-                    )?
+                    region.assign_advice(|| "a_swapped", config.a_swapped, 0, || a_swapped)?
                 };
 
                 // Conditionally swap b
@@ -127,12 +112,7 @@ impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
                         .zip(swap)
                         .map(|((a, b), swap)| if swap { a } else { b })
                         .cloned();
-                    region.assign_advice(
-                        || "b_swapped",
-                        config.b_swapped,
-                        0,
-                        || b_swapped.ok_or(Error::Synthesis),
-                    )?
+                    region.assign_advice(|| "b_swapped", config.b_swapped, 0, || b_swapped)?
                 };
 
                 // Return swapped pair
@@ -217,7 +197,7 @@ mod tests {
     use super::{CondSwapChip, CondSwapConfig, CondSwapInstructions};
     use group::ff::Field;
     use halo2_proofs::{
-        circuit::{Layouter, SimpleFloorPlanner},
+        circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
@@ -228,9 +208,9 @@ mod tests {
     fn cond_swap() {
         #[derive(Default)]
         struct MyCircuit<F: FieldExt> {
-            a: Option<F>,
-            b: Option<F>,
-            swap: Option<bool>,
+            a: Value<F>,
+            b: Value<F>,
+            swap: Value<bool>,
         }
 
         impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
@@ -269,17 +249,18 @@ mod tests {
                     self.swap,
                 )?;
 
-                if let Some(swap) = self.swap {
-                    if swap {
-                        // Check that `a` and `b` have been swapped
-                        assert_eq!(swapped_pair.0.value().unwrap(), &self.b.unwrap());
-                        assert_eq!(swapped_pair.1.value().unwrap(), a.value().unwrap());
-                    } else {
-                        // Check that `a` and `b` have not been swapped
-                        assert_eq!(swapped_pair.0.value().unwrap(), a.value().unwrap());
-                        assert_eq!(swapped_pair.1.value().unwrap(), &self.b.unwrap());
-                    }
-                }
+                self.swap
+                    .zip(a.value().zip(self.b.as_ref()))
+                    .zip(swapped_pair.0.value().zip(swapped_pair.1.value()))
+                    .assert_if_known(|((swap, (a, b)), (a_swapped, b_swapped))| {
+                        if *swap {
+                            // Check that `a` and `b` have been swapped
+                            (a_swapped == b) && (b_swapped == a)
+                        } else {
+                            // Check that `a` and `b` have not been swapped
+                            (a_swapped == a) && (b_swapped == b)
+                        }
+                    });
 
                 Ok(())
             }
@@ -290,9 +271,9 @@ mod tests {
         // Test swap case
         {
             let circuit: MyCircuit<Base> = MyCircuit {
-                a: Some(Base::random(rng)),
-                b: Some(Base::random(rng)),
-                swap: Some(true),
+                a: Value::known(Base::random(rng)),
+                b: Value::known(Base::random(rng)),
+                swap: Value::known(true),
             };
             let prover = MockProver::<Base>::run(3, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
@@ -301,9 +282,9 @@ mod tests {
         // Test non-swap case
         {
             let circuit: MyCircuit<Base> = MyCircuit {
-                a: Some(Base::random(rng)),
-                b: Some(Base::random(rng)),
-                swap: Some(false),
+                a: Value::known(Base::random(rng)),
+                b: Value::known(Base::random(rng)),
+                swap: Value::known(false),
             };
             let prover = MockProver::<Base>::run(3, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));

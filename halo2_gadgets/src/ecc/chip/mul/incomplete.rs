@@ -2,7 +2,7 @@ use super::super::NonIdentityEccPoint;
 use super::{X, Y, Z};
 use crate::utilities::bool_check;
 use halo2_proofs::{
-    circuit::Region,
+    circuit::{Region, Value},
     plonk::{
         Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector, VirtualCells,
     },
@@ -229,7 +229,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
         base: &NonIdentityEccPoint,
-        bits: &[Option<bool>],
+        bits: &[Value<bool>],
         acc: (X<pallas::Base>, Y<pallas::Base>, Z<pallas::Base>),
     ) -> Result<(X<pallas::Base>, Y<pallas::Base>, Vec<Z<pallas::Base>>), Error> {
         // Check that we have the correct number of bits for this double-and-add.
@@ -239,17 +239,16 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         let (x_p, y_p) = (base.x.value().cloned(), base.y.value().cloned());
         let (x_a, y_a) = (acc.0.value().cloned(), acc.1.value().cloned());
 
-        if let (Some(x_a), Some(y_a), Some(x_p), Some(y_p)) = (x_a, y_a, x_p, y_p) {
-            // A is point at infinity
-            if (x_p.is_zero_vartime() && y_p.is_zero_vartime())
-            // Q is point at infinity
-            || (x_a.is_zero_vartime() && y_a.is_zero_vartime())
-            // x_p = x_a
-            || (x_p == x_a)
-            {
-                return Err(Error::Synthesis);
-            }
-        }
+        x_a.zip(y_a)
+            .zip(x_p.zip(y_p))
+            .error_if_known_and(|((x_a, y_a), (x_p, y_p))| {
+                // A is point at infinity
+                (x_p.is_zero_vartime() && y_p.is_zero_vartime())
+                // Q is point at infinity
+                || (x_a.is_zero_vartime() && y_a.is_zero_vartime())
+                // x_p = x_a
+                || (x_p == x_a)
+            })?;
 
         // Set q_mul values
         {
@@ -302,27 +301,12 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
                 .value()
                 .zip(k.as_ref())
                 .map(|(z_val, k)| pallas::Base::from(2) * z_val + pallas::Base::from(*k as u64));
-            z = region.assign_advice(
-                || "z",
-                self.z,
-                row + offset,
-                || z_val.ok_or(Error::Synthesis),
-            )?;
+            z = region.assign_advice(|| "z", self.z, row + offset, || z_val)?;
             zs.push(Z(z.clone()));
 
             // Assign `x_p`, `y_p`
-            region.assign_advice(
-                || "x_p",
-                self.double_and_add.x_p,
-                row + offset,
-                || x_p.ok_or(Error::Synthesis),
-            )?;
-            region.assign_advice(
-                || "y_p",
-                self.y_p,
-                row + offset,
-                || y_p.ok_or(Error::Synthesis),
-            )?;
+            region.assign_advice(|| "x_p", self.double_and_add.x_p, row + offset, || x_p)?;
+            region.assign_advice(|| "y_p", self.y_p, row + offset, || y_p)?;
 
             // If the bit is set, use `y`; if the bit is not set, use `-y`
             let y_p = y_p
@@ -339,7 +323,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
                 || "lambda1",
                 self.double_and_add.lambda_1,
                 row + offset,
-                || lambda1.ok_or(Error::Synthesis),
+                || lambda1,
             )?;
 
             // x_R = λ1^2 - x_A - x_P
@@ -361,25 +345,18 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
                 || "lambda2",
                 self.double_and_add.lambda_2,
                 row + offset,
-                || lambda2.ok_or(Error::Synthesis),
+                || lambda2,
             )?;
 
             // Compute and assign `x_a` for the next row
-            let x_a_new = lambda2
-                .zip(x_a.value())
-                .zip(x_r)
-                .map(|((lambda2, x_a), x_r)| lambda2.square() - x_a - x_r);
-            y_a = lambda2
-                .zip(x_a.value().cloned())
-                .zip(x_a_new)
-                .zip(y_a)
-                .map(|(((lambda2, x_a), x_a_new), y_a)| lambda2 * (x_a - x_a_new) - y_a);
+            let x_a_new = lambda2.square() - x_a.value() - x_r;
+            y_a = lambda2 * (x_a.value() - x_a_new) - y_a;
             let x_a_val = x_a_new;
             x_a = region.assign_advice(
                 || "x_a",
                 self.double_and_add.x_a,
                 row + offset + 1,
-                || x_a_val.ok_or(Error::Synthesis),
+                || x_a_val,
             )?;
         }
 
@@ -388,7 +365,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
             || "y_a",
             self.double_and_add.lambda_1,
             offset + NUM_BITS,
-            || y_a.ok_or(Error::Synthesis),
+            || y_a,
         )?;
 
         Ok((X(x_a), Y(y_a), zs))

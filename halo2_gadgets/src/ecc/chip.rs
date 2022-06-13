@@ -10,7 +10,7 @@ use arrayvec::ArrayVec;
 use ff::PrimeField;
 use group::prime::PrimeCurveAffine;
 use halo2_proofs::{
-    circuit::{AssignedCell, Chip, Layouter},
+    circuit::{AssignedCell, Chip, Layouter, Value},
     plonk::{Advice, Assigned, Column, ConstraintSystem, Error, Fixed},
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
@@ -57,17 +57,14 @@ impl EccPoint {
     }
 
     /// Returns the value of this curve point, if known.
-    pub fn point(&self) -> Option<pallas::Affine> {
-        match (self.x.value(), self.y.value()) {
-            (Some(x), Some(y)) => {
-                if x.is_zero_vartime() && y.is_zero_vartime() {
-                    Some(pallas::Affine::identity())
-                } else {
-                    Some(pallas::Affine::from_xy(x.evaluate(), y.evaluate()).unwrap())
-                }
+    pub fn point(&self) -> Value<pallas::Affine> {
+        self.x.value().zip(self.y.value()).map(|(x, y)| {
+            if x.is_zero_vartime() && y.is_zero_vartime() {
+                pallas::Affine::identity()
+            } else {
+                pallas::Affine::from_xy(x.evaluate(), y.evaluate()).unwrap()
             }
-            _ => None,
-        }
+        })
     }
     /// The cell containing the affine short-Weierstrass x-coordinate,
     /// or 0 for the zero point.
@@ -81,7 +78,7 @@ impl EccPoint {
     }
 
     #[cfg(test)]
-    fn is_identity(&self) -> Option<bool> {
+    fn is_identity(&self) -> Value<bool> {
         self.x.value().map(|x| x.is_zero_vartime())
     }
 }
@@ -113,14 +110,11 @@ impl NonIdentityEccPoint {
     }
 
     /// Returns the value of this curve point, if known.
-    pub fn point(&self) -> Option<pallas::Affine> {
-        match (self.x.value(), self.y.value()) {
-            (Some(x), Some(y)) => {
-                assert!(!x.is_zero_vartime() && !y.is_zero_vartime());
-                Some(pallas::Affine::from_xy(x.evaluate(), y.evaluate()).unwrap())
-            }
-            _ => None,
-        }
+    pub fn point(&self) -> Value<pallas::Affine> {
+        self.x.value().zip(self.y.value()).map(|(x, y)| {
+            assert!(!x.is_zero_vartime() && !y.is_zero_vartime());
+            pallas::Affine::from_xy(x.evaluate(), y.evaluate()).unwrap()
+        })
     }
     /// The cell containing the affine short-Weierstrass x-coordinate.
     pub fn x(&self) -> AssignedCell<pallas::Base, pallas::Base> {
@@ -336,7 +330,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
 /// each `k_i` is in the range [0..2^3).
 #[derive(Clone, Debug)]
 pub struct EccScalarFixed {
-    value: Option<pallas::Scalar>,
+    value: Value<pallas::Scalar>,
     /// The circuit-assigned windows representing this scalar, or `None` if the scalar has
     /// not been used yet.
     windows: Option<ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS }>>,
@@ -450,7 +444,7 @@ where
     fn witness_point(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        value: Option<pallas::Affine>,
+        value: Value<pallas::Affine>,
     ) -> Result<Self::Point, Error> {
         let config = self.config().witness_point;
         layouter.assign_region(
@@ -462,7 +456,7 @@ where
     fn witness_point_non_id(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        value: Option<pallas::Affine>,
+        value: Value<pallas::Affine>,
     ) -> Result<Self::NonIdentityPoint, Error> {
         let config = self.config().witness_point;
         layouter.assign_region(
@@ -474,7 +468,7 @@ where
     fn witness_scalar_var(
         &self,
         _layouter: &mut impl Layouter<pallas::Base>,
-        _value: Option<pallas::Scalar>,
+        _value: Value<pallas::Scalar>,
     ) -> Result<Self::ScalarVar, Error> {
         // This is unimplemented for halo2_gadgets v0.1.0.
         todo!()
@@ -483,7 +477,7 @@ where
     fn witness_scalar_fixed(
         &self,
         _layouter: &mut impl Layouter<pallas::Base>,
-        value: Option<pallas::Scalar>,
+        value: Value<pallas::Scalar>,
     ) -> Result<Self::ScalarFixed, Error> {
         Ok(EccScalarFixed {
             value,

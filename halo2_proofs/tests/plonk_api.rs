@@ -3,12 +3,12 @@
 
 use assert_matches::assert_matches;
 use halo2_proofs::arithmetic::{CurveAffine, FieldExt};
-use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner};
+use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::pasta::{Eq, EqAffine, Fp};
 use halo2_proofs::plonk::{
-    create_proof, keygen_pk, keygen_vk, verify_proof, Advice, BatchVerifier, Circuit, Column,
-    ConstraintSystem, Error, Fixed, SingleVerifier, TableColumn, VerificationStrategy,
+    create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Assigned, BatchVerifier, Circuit,
+    Column, ConstraintSystem, Error, Fixed, SingleVerifier, TableColumn, VerificationStrategy,
 };
 use halo2_proofs::poly::commitment::{Guard, MSM};
 use halo2_proofs::poly::{commitment::Params, Rotation};
@@ -51,18 +51,18 @@ fn plonk_api() {
             f: F,
         ) -> Result<(Cell, Cell, Cell), Error>
         where
-            F: FnMut() -> Result<(FF, FF, FF), Error>;
+            F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>;
         fn raw_add<F>(
             &self,
             layouter: &mut impl Layouter<FF>,
             f: F,
         ) -> Result<(Cell, Cell, Cell), Error>
         where
-            F: FnMut() -> Result<(FF, FF, FF), Error>;
+            F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>;
         fn copy(&self, layouter: &mut impl Layouter<FF>, a: Cell, b: Cell) -> Result<(), Error>;
         fn public_input<F>(&self, layouter: &mut impl Layouter<FF>, f: F) -> Result<Cell, Error>
         where
-            F: FnMut() -> Result<FF, Error>;
+            F: FnMut() -> Value<FF>;
         fn lookup_table(
             &self,
             layouter: &mut impl Layouter<FF>,
@@ -72,7 +72,7 @@ fn plonk_api() {
 
     #[derive(Clone)]
     struct MyCircuit<F: FieldExt> {
-        a: Option<F>,
+        a: Value<F>,
         lookup_table: Vec<F>,
     }
 
@@ -97,7 +97,7 @@ fn plonk_api() {
             mut f: F,
         ) -> Result<(Cell, Cell, Cell), Error>
         where
-            F: FnMut() -> Result<(FF, FF, FF), Error>,
+            F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>,
         {
             layouter.assign_region(
                 || "raw_multiply",
@@ -108,39 +108,44 @@ fn plonk_api() {
                         self.config.a,
                         0,
                         || {
-                            value = Some(f()?);
-                            Ok(value.ok_or(Error::Synthesis)?.0)
+                            value = Some(f());
+                            value.unwrap().map(|v| v.0)
                         },
                     )?;
                     region.assign_advice(
                         || "lhs^4",
                         self.config.d,
                         0,
-                        || Ok(value.ok_or(Error::Synthesis)?.0.square().square()),
+                        || value.unwrap().map(|v| v.0).square().square(),
                     )?;
                     let rhs = region.assign_advice(
                         || "rhs",
                         self.config.b,
                         0,
-                        || Ok(value.ok_or(Error::Synthesis)?.1),
+                        || value.unwrap().map(|v| v.1),
                     )?;
                     region.assign_advice(
                         || "rhs^4",
                         self.config.e,
                         0,
-                        || Ok(value.ok_or(Error::Synthesis)?.1.square().square()),
+                        || value.unwrap().map(|v| v.1).square().square(),
                     )?;
                     let out = region.assign_advice(
                         || "out",
                         self.config.c,
                         0,
-                        || Ok(value.ok_or(Error::Synthesis)?.2),
+                        || value.unwrap().map(|v| v.2),
                     )?;
 
-                    region.assign_fixed(|| "a", self.config.sa, 0, || Ok(FF::zero()))?;
-                    region.assign_fixed(|| "b", self.config.sb, 0, || Ok(FF::zero()))?;
-                    region.assign_fixed(|| "c", self.config.sc, 0, || Ok(FF::one()))?;
-                    region.assign_fixed(|| "a * b", self.config.sm, 0, || Ok(FF::one()))?;
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::zero()))?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::zero()))?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
+                    region.assign_fixed(
+                        || "a * b",
+                        self.config.sm,
+                        0,
+                        || Value::known(FF::one()),
+                    )?;
                     Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
             )
@@ -151,7 +156,7 @@ fn plonk_api() {
             mut f: F,
         ) -> Result<(Cell, Cell, Cell), Error>
         where
-            F: FnMut() -> Result<(FF, FF, FF), Error>,
+            F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>,
         {
             layouter.assign_region(
                 || "raw_add",
@@ -162,39 +167,44 @@ fn plonk_api() {
                         self.config.a,
                         0,
                         || {
-                            value = Some(f()?);
-                            Ok(value.ok_or(Error::Synthesis)?.0)
+                            value = Some(f());
+                            value.unwrap().map(|v| v.0)
                         },
                     )?;
                     region.assign_advice(
                         || "lhs^4",
                         self.config.d,
                         0,
-                        || Ok(value.ok_or(Error::Synthesis)?.0.square().square()),
+                        || value.unwrap().map(|v| v.0).square().square(),
                     )?;
                     let rhs = region.assign_advice(
                         || "rhs",
                         self.config.b,
                         0,
-                        || Ok(value.ok_or(Error::Synthesis)?.1),
+                        || value.unwrap().map(|v| v.1),
                     )?;
                     region.assign_advice(
                         || "rhs^4",
                         self.config.e,
                         0,
-                        || Ok(value.ok_or(Error::Synthesis)?.1.square().square()),
+                        || value.unwrap().map(|v| v.1).square().square(),
                     )?;
                     let out = region.assign_advice(
                         || "out",
                         self.config.c,
                         0,
-                        || Ok(value.ok_or(Error::Synthesis)?.2),
+                        || value.unwrap().map(|v| v.2),
                     )?;
 
-                    region.assign_fixed(|| "a", self.config.sa, 0, || Ok(FF::one()))?;
-                    region.assign_fixed(|| "b", self.config.sb, 0, || Ok(FF::one()))?;
-                    region.assign_fixed(|| "c", self.config.sc, 0, || Ok(FF::one()))?;
-                    region.assign_fixed(|| "a * b", self.config.sm, 0, || Ok(FF::zero()))?;
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::one()))?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::one()))?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
+                    region.assign_fixed(
+                        || "a * b",
+                        self.config.sm,
+                        0,
+                        || Value::known(FF::zero()),
+                    )?;
                     Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
             )
@@ -215,13 +225,18 @@ fn plonk_api() {
         }
         fn public_input<F>(&self, layouter: &mut impl Layouter<FF>, mut f: F) -> Result<Cell, Error>
         where
-            F: FnMut() -> Result<FF, Error>,
+            F: FnMut() -> Value<FF>,
         {
             layouter.assign_region(
                 || "public_input",
                 |mut region| {
                     let value = region.assign_advice(|| "value", self.config.a, 0, &mut f)?;
-                    region.assign_fixed(|| "public", self.config.sp, 0, || Ok(FF::one()))?;
+                    region.assign_fixed(
+                        || "public",
+                        self.config.sp,
+                        0,
+                        || Value::known(FF::one()),
+                    )?;
 
                     Ok(value.cell())
                 },
@@ -236,7 +251,12 @@ fn plonk_api() {
                 || "",
                 |mut table| {
                     for (index, &value) in values.iter().enumerate() {
-                        table.assign_cell(|| "table col", self.config.sl, index, || Ok(value))?;
+                        table.assign_cell(
+                            || "table col",
+                            self.config.sl,
+                            index,
+                            || Value::known(value),
+                        )?;
                     }
                     Ok(())
                 },
@@ -251,7 +271,7 @@ fn plonk_api() {
 
         fn without_witnesses(&self) -> Self {
             Self {
-                a: None,
+                a: Value::unknown(),
                 lookup_table: self.lookup_table.clone(),
             }
         }
@@ -353,25 +373,20 @@ fn plonk_api() {
         ) -> Result<(), Error> {
             let cs = StandardPlonk::new(config);
 
-            let _ = cs.public_input(&mut layouter, || Ok(F::one() + F::one()))?;
+            let _ = cs.public_input(&mut layouter, || Value::known(F::one() + F::one()))?;
 
             for _ in 0..10 {
-                let mut a_squared = None;
+                let a: Value<Assigned<_>> = self.a.into();
+                let mut a_squared = Value::unknown();
                 let (a0, _, c0) = cs.raw_multiply(&mut layouter, || {
-                    a_squared = self.a.map(|a| a.square());
-                    Ok((
-                        self.a.ok_or(Error::Synthesis)?,
-                        self.a.ok_or(Error::Synthesis)?,
-                        a_squared.ok_or(Error::Synthesis)?,
-                    ))
+                    a_squared = a.square();
+                    a.zip(a_squared).map(|(a, a_squared)| (a, a, a_squared))
                 })?;
                 let (a1, b1, _) = cs.raw_add(&mut layouter, || {
-                    let fin = a_squared.and_then(|a2| self.a.map(|a| a + a2));
-                    Ok((
-                        self.a.ok_or(Error::Synthesis)?,
-                        a_squared.ok_or(Error::Synthesis)?,
-                        fin.ok_or(Error::Synthesis)?,
-                    ))
+                    let fin = a_squared + a;
+                    a.zip(a_squared)
+                        .zip(fin)
+                        .map(|((a, a_squared), fin)| (a, a_squared, fin))
                 })?;
                 cs.copy(&mut layouter, a0, a1)?;
                 cs.copy(&mut layouter, b1, c0)?;
@@ -388,12 +403,12 @@ fn plonk_api() {
     let lookup_table = vec![instance, a, a, Fp::zero()];
 
     let empty_circuit: MyCircuit<Fp> = MyCircuit {
-        a: None,
+        a: Value::unknown(),
         lookup_table: lookup_table.clone(),
     };
 
     let circuit: MyCircuit<Fp> = MyCircuit {
-        a: Some(a),
+        a: Value::known(a),
         lookup_table,
     };
 

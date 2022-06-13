@@ -1,6 +1,10 @@
 use super::super::{RoundWord, StateWord, STATE};
 use super::{compression_util::*, CompressionConfig, State};
-use halo2_proofs::{circuit::Region, pasta::pallas, plonk::Error};
+use halo2_proofs::{
+    circuit::{Region, Value},
+    pasta::pallas,
+    plonk::Error,
+};
 
 impl CompressionConfig {
     #[allow(clippy::many_single_char_names)]
@@ -12,26 +16,28 @@ impl CompressionConfig {
         let a_7 = self.extras[3];
 
         // Decompose E into (6, 5, 14, 7)-bit chunks
-        let e = self.decompose_e(region, RoundIdx::Init, Some(iv[4]))?;
+        let e = self.decompose_e(region, RoundIdx::Init, Value::known(iv[4]))?;
 
         // Decompose F, G
-        let f = self.decompose_f(region, InitialRound, Some(iv[5]))?;
-        let g = self.decompose_g(region, InitialRound, Some(iv[6]))?;
+        let f = self.decompose_f(region, InitialRound, Value::known(iv[5]))?;
+        let g = self.decompose_g(region, InitialRound, Value::known(iv[6]))?;
 
         // Assign H
         let h_row = get_h_row(RoundIdx::Init);
-        let h = self.assign_word_halves_dense(region, h_row, a_7, h_row + 1, a_7, Some(iv[7]))?;
+        let h =
+            self.assign_word_halves_dense(region, h_row, a_7, h_row + 1, a_7, Value::known(iv[7]))?;
 
         // Decompose A into (2, 11, 9, 10)-bit chunks
-        let a = self.decompose_a(region, RoundIdx::Init, Some(iv[0]))?;
+        let a = self.decompose_a(region, RoundIdx::Init, Value::known(iv[0]))?;
 
         // Decompose B, C
-        let b = self.decompose_b(region, InitialRound, Some(iv[1]))?;
-        let c = self.decompose_c(region, InitialRound, Some(iv[2]))?;
+        let b = self.decompose_b(region, InitialRound, Value::known(iv[1]))?;
+        let c = self.decompose_c(region, InitialRound, Value::known(iv[2]))?;
 
         // Assign D
         let d_row = get_d_row(RoundIdx::Init);
-        let d = self.assign_word_halves_dense(region, d_row, a_7, d_row + 1, a_7, Some(iv[3]))?;
+        let d =
+            self.assign_word_halves_dense(region, d_row, a_7, d_row + 1, a_7, Value::known(iv[3]))?;
 
         Ok(State::new(
             StateWord::A(a),
@@ -100,7 +106,7 @@ impl CompressionConfig {
         &self,
         region: &mut Region<'_, pallas::Base>,
         round_idx: InitialRound,
-        b_val: Option<u32>,
+        b_val: Value<u32>,
     ) -> Result<RoundWord, Error> {
         let row = get_decompose_b_row(round_idx);
 
@@ -113,7 +119,7 @@ impl CompressionConfig {
         &self,
         region: &mut Region<'_, pallas::Base>,
         round_idx: InitialRound,
-        c_val: Option<u32>,
+        c_val: Value<u32>,
     ) -> Result<RoundWord, Error> {
         let row = get_decompose_c_row(round_idx);
 
@@ -126,7 +132,7 @@ impl CompressionConfig {
         &self,
         region: &mut Region<'_, pallas::Base>,
         round_idx: InitialRound,
-        f_val: Option<u32>,
+        f_val: Value<u32>,
     ) -> Result<RoundWord, Error> {
         let row = get_decompose_f_row(round_idx);
 
@@ -139,7 +145,7 @@ impl CompressionConfig {
         &self,
         region: &mut Region<'_, pallas::Base>,
         round_idx: InitialRound,
-        g_val: Option<u32>,
+        g_val: Value<u32>,
     ) -> Result<RoundWord, Error> {
         let row = get_decompose_g_row(round_idx);
 

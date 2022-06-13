@@ -24,7 +24,7 @@
 
 use ff::PrimeFieldBits;
 use halo2_proofs::{
-    circuit::{AssignedCell, Region},
+    circuit::{AssignedCell, Region, Value},
     plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
@@ -107,17 +107,12 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         &self,
         region: &mut Region<'_, F>,
         offset: usize,
-        alpha: Option<F>,
+        alpha: Value<F>,
         strict: bool,
         word_num_bits: usize,
         num_windows: usize,
     ) -> Result<RunningSum<F>, Error> {
-        let z_0 = region.assign_advice(
-            || "z_0 = alpha",
-            self.z,
-            offset,
-            || alpha.ok_or(Error::Synthesis),
-        )?;
+        let z_0 = region.assign_advice(|| "z_0 = alpha", self.z, offset, || alpha)?;
         self.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
     }
 
@@ -170,17 +165,10 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         }
 
         // Decompose base field element into K-bit words.
-        let words: Vec<Option<u8>> = {
-            let words = z_0
-                .value()
-                .map(|word| super::decompose_word::<F>(word, word_num_bits, WINDOW_NUM_BITS));
-
-            if let Some(words) = words {
-                words.into_iter().map(Some).collect()
-            } else {
-                vec![None; num_windows]
-            }
-        };
+        let words = z_0
+            .value()
+            .map(|word| super::decompose_word::<F>(word, word_num_bits, WINDOW_NUM_BITS))
+            .transpose_vec(num_windows);
 
         // Initialize empty vector to store running sum values [z_0, ..., z_W].
         let mut zs: Vec<AssignedCell<F, F>> = vec![z_0.clone()];
@@ -189,20 +177,18 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
         // Assign running sum `z_{i+1}` = (z_i - k_i) / (2^K) for i = 0..=n-1.
         // Outside of this helper, z_0 = alpha must have already been loaded into the
         // `z` column at `offset`.
-        let two_pow_k_inv = F::from(1 << WINDOW_NUM_BITS as u64).invert().unwrap();
+        let two_pow_k_inv = Value::known(F::from(1 << WINDOW_NUM_BITS as u64).invert().unwrap());
         for (i, word) in words.iter().enumerate() {
             // z_next = (z_cur - word) / (2^K)
             let z_next = {
+                let z_cur_val = z.value().copied();
                 let word = word.map(|word| F::from(word as u64));
-                let z_next_val = z
-                    .value()
-                    .zip(word)
-                    .map(|(z_cur_val, word)| (*z_cur_val - word) * two_pow_k_inv);
+                let z_next_val = (z_cur_val - word) * two_pow_k_inv;
                 region.assign_advice(
                     || format!("z_{:?}", i + 1),
                     self.z,
                     offset + i + 1,
-                    || z_next_val.ok_or(Error::Synthesis),
+                    || z_next_val,
                 )?
             };
 
@@ -247,7 +233,7 @@ mod tests {
             const WINDOW_NUM_BITS: usize,
             const NUM_WINDOWS: usize,
         > {
-            alpha: Option<F>,
+            alpha: Value<F>,
             strict: bool,
         }
 
@@ -263,7 +249,7 @@ mod tests {
 
             fn without_witnesses(&self) -> Self {
                 Self {
-                    alpha: None,
+                    alpha: Value::unknown(),
                     strict: self.strict,
                 }
             }
@@ -320,7 +306,7 @@ mod tests {
             // Strict full decomposition should pass.
             let circuit: MyCircuit<pallas::Base, L_BASE, FIXED_BASE_WINDOW_SIZE, { NUM_WINDOWS }> =
                 MyCircuit {
-                    alpha: Some(alpha),
+                    alpha: Value::known(alpha),
                     strict: true,
                 };
             let prover = MockProver::<pallas::Base>::run(8, &circuit, vec![]).unwrap();
@@ -338,7 +324,7 @@ mod tests {
                 FIXED_BASE_WINDOW_SIZE,
                 { NUM_WINDOWS_SHORT },
             > = MyCircuit {
-                alpha: Some(alpha),
+                alpha: Value::known(alpha),
                 strict: true,
             };
             let prover = MockProver::<pallas::Base>::run(8, &circuit, vec![]).unwrap();
@@ -356,7 +342,7 @@ mod tests {
                 FIXED_BASE_WINDOW_SIZE,
                 { NUM_WINDOWS_SHORT },
             > = MyCircuit {
-                alpha: Some(alpha),
+                alpha: Value::known(alpha),
                 strict: true,
             };
             let prover = MockProver::<pallas::Base>::run(8, &circuit, vec![]).unwrap();
@@ -395,7 +381,7 @@ mod tests {
                 FIXED_BASE_WINDOW_SIZE,
                 { NUM_WINDOWS_SHORT },
             > = MyCircuit {
-                alpha: Some(alpha),
+                alpha: Value::known(alpha),
                 strict: false,
             };
             let prover = MockProver::<pallas::Base>::run(8, &circuit, vec![]).unwrap();

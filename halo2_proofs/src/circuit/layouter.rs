@@ -6,7 +6,7 @@ use std::fmt;
 
 use ff::Field;
 
-use super::{Cell, RegionIndex};
+use super::{Cell, RegionIndex, Value};
 use crate::plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector, TableColumn};
 
 /// Helper trait for implementing a custom [`Layouter`].
@@ -54,7 +54,7 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Value<Assigned<F>> + 'v),
     ) -> Result<Cell, Error>;
 
     /// Assigns a constant value to the column `advice` at `offset` within this region.
@@ -82,7 +82,7 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
         row: usize,
         advice: Column<Advice>,
         offset: usize,
-    ) -> Result<(Cell, Option<F>), Error>;
+    ) -> Result<(Cell, Value<F>), Error>;
 
     /// Assign a fixed value
     fn assign_fixed<'v>(
@@ -90,7 +90,7 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Value<Assigned<F>> + 'v),
     ) -> Result<Cell, Error>;
 
     /// Constrains a cell to have a constant value.
@@ -118,7 +118,7 @@ pub trait TableLayouter<F: Field>: fmt::Debug {
         annotation: &'v (dyn Fn() -> String + 'v),
         column: TableColumn,
         offset: usize,
-        to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
+        to: &'v mut (dyn FnMut() -> Value<Assigned<F>> + 'v),
     ) -> Result<(), Error>;
 }
 
@@ -214,7 +214,7 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         _: &'v (dyn Fn() -> String + 'v),
         column: Column<Advice>,
         offset: usize,
-        _to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
+        _to: &'v mut (dyn FnMut() -> Value<Assigned<F>> + 'v),
     ) -> Result<Cell, Error> {
         self.columns.insert(Column::<Any>::from(column).into());
         self.row_count = cmp::max(self.row_count, offset + 1);
@@ -234,7 +234,7 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         constant: Assigned<F>,
     ) -> Result<Cell, Error> {
         // The rest is identical to witnessing an advice cell.
-        self.assign_advice(annotation, column, offset, &mut || Ok(constant))
+        self.assign_advice(annotation, column, offset, &mut || Value::known(constant))
     }
 
     fn assign_advice_from_instance<'v>(
@@ -244,7 +244,7 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         _: usize,
         advice: Column<Advice>,
         offset: usize,
-    ) -> Result<(Cell, Option<F>), Error> {
+    ) -> Result<(Cell, Value<F>), Error> {
         self.columns.insert(Column::<Any>::from(advice).into());
         self.row_count = cmp::max(self.row_count, offset + 1);
 
@@ -254,7 +254,7 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
                 row_offset: offset,
                 column: advice.into(),
             },
-            None,
+            Value::unknown(),
         ))
     }
 
@@ -263,7 +263,7 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         _: &'v (dyn Fn() -> String + 'v),
         column: Column<Fixed>,
         offset: usize,
-        _to: &'v mut (dyn FnMut() -> Result<Assigned<F>, Error> + 'v),
+        _to: &'v mut (dyn FnMut() -> Value<Assigned<F>> + 'v),
     ) -> Result<Cell, Error> {
         self.columns.insert(Column::<Any>::from(column).into());
         self.row_count = cmp::max(self.row_count, offset + 1);

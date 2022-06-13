@@ -6,6 +6,48 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- `halo2_gadgets::utilities::RangeConstrained<F, Value<F>>::bitrange_of`
+
+### Changed
+All APIs that represented witnessed values as `Option<V>` now represent them as
+`halo2_proofs::circuit::Value<V>`. The core API changes are listed below.
+
+- The following APIs now take `Value<_>` instead of `Option<_>`:
+  - `halo2_gadgets::ecc`:
+    - `EccInstructions::{witness_point, witness_point_non_id}`
+    - `EccInstructions::{witness_scalar_var, witness_scalar_fixed}`
+    - `ScalarVar::new`
+    - `ScalarFixed::new`
+    - `NonIdentityPoint::new`
+    - `Point::new`
+  - `halo2_gadgets::sinsemilla`:
+    - `SinsemillaInstructions::witness_message_piece`
+    - `MessagePiece::{from_field_elem, from_subpieces}`
+  - `halo2_gadgets::sinsemilla::merkle`:
+    - `MerklePath::construct`
+  - `halo2_gadgets::utilities`:
+    - `UtilitiesInstructions::load_private`
+    - `RangeConstrained::witness_short`
+  - `halo2_gadgets::utilities::cond_swap`:
+    - `CondSwapInstructions::swap`
+  - `halo2_gadgets::utilities::decompose_running_sum`:
+    - `RunningSumConfig::witness_decompose`
+  - `halo2_gadgets::utilities::lookup_range_check`:
+    - `LookupRangeCheckConfig::{witness_check, witness_short_check}`
+- The following APIs now return `Value<_>` instead of `Option<_>`:
+  - `halo2_gadgets::ecc::chip`:
+    - `EccPoint::{point, is_identity}`
+    - `NonIdentityEccPoint::point`
+  - `halo2_gadgets::utilities`:
+    - `FieldValue::value`
+    - `Var::value`
+    - `RangeConstrained::value`
+- `halo2_gadgets::sha256::BlockWord` is now a newtype wrapper around
+  `Value<u32>` instead of `Option<u32>`.
+
+### Removed
+- `halo2_gadgets::utilities::RangeConstrained<F, Option<F>>::bitrange_of`
 
 ## [0.1.0] - 2022-05-10
 ### Added

@@ -14,7 +14,7 @@ use crate::{
 use std::marker::PhantomData;
 
 use halo2_proofs::{
-    circuit::{AssignedCell, Chip, Layouter},
+    circuit::{AssignedCell, Chip, Layouter, Value},
     plonk::{
         Advice, Column, ConstraintSystem, Constraints, Error, Expression, Fixed, Selector,
         TableColumn, VirtualCells,
@@ -288,7 +288,7 @@ where
     fn witness_message_piece(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
-        field_elem: Option<pallas::Base>,
+        field_elem: Value<pallas::Base>,
         num_words: usize,
     ) -> Result<Self::MessagePiece, Error> {
         let config = self.config().clone();
@@ -300,7 +300,7 @@ where
                     || "witness message piece",
                     config.witness_pieces,
                     0,
-                    || field_elem.ok_or(Error::Synthesis),
+                    || field_elem,
                 )
             },
         )?;

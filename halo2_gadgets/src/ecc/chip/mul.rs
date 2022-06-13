@@ -11,7 +11,7 @@ use std::{
 use ff::PrimeField;
 use halo2_proofs::{
     arithmetic::FieldExt,
-    circuit::{AssignedCell, Layouter, Region},
+    circuit::{AssignedCell, Layouter, Region, Value},
     plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
@@ -270,9 +270,9 @@ impl Config {
                     let real_mul = base.zip(alpha).map(|(base, alpha)| base * alpha);
                     let result = result.point();
 
-                    if let (Some(real_mul), Some(result)) = (real_mul, result) {
-                        assert_eq!(real_mul.to_affine(), result);
-                    }
+                    real_mul
+                        .zip(result)
+                        .assert_if_known(|(real_mul, result)| &real_mul.to_affine() == result);
                 }
 
                 let zs = {
@@ -327,7 +327,7 @@ impl Config {
         base: &NonIdentityEccPoint,
         acc: EccPoint,
         z_1: Z<pallas::Base>,
-        lsb: Option<bool>,
+        lsb: Value<bool>,
     ) -> Result<(EccPoint, Z<pallas::Base>), Error> {
         // Enforce switching logic on LSB using a custom gate
         self.q_mul_lsb.enable(region, offset)?;
@@ -343,7 +343,7 @@ impl Config {
                 || "z_0",
                 self.complete_config.z_complete,
                 offset + 1,
-                || z_0_val.ok_or(Error::Synthesis),
+                || z_0_val,
             )?;
 
             Z(z_0_cell)
@@ -356,39 +356,24 @@ impl Config {
             .copy_advice(|| "copy base_y", region, self.add_config.y_p, offset + 1)?;
 
         // If `lsb` is 0, return `Acc + (-P)`. If `lsb` is 1, simply return `Acc + 0`.
-        let x = if let Some(lsb) = lsb {
+        let x = lsb.and_then(|lsb| {
             if !lsb {
                 base.x.value().cloned()
             } else {
-                Some(Assigned::Zero)
+                Value::known(Assigned::Zero)
             }
-        } else {
-            None
-        };
+        });
 
-        let y = if let Some(lsb) = lsb {
+        let y = lsb.and_then(|lsb| {
             if !lsb {
-                base.y.value().map(|y_p| -y_p)
+                -base.y.value()
             } else {
-                Some(Assigned::Zero)
+                Value::known(Assigned::Zero)
             }
-        } else {
-            None
-        };
+        });
 
-        let x_cell = region.assign_advice(
-            || "x",
-            self.add_config.x_p,
-            offset,
-            || x.ok_or(Error::Synthesis),
-        )?;
-
-        let y_cell = region.assign_advice(
-            || "y",
-            self.add_config.y_p,
-            offset,
-            || y.ok_or(Error::Synthesis),
-        )?;
+        let x_cell = region.assign_advice(|| "x", self.add_config.x_p, offset, || x)?;
+        let y_cell = region.assign_advice(|| "y", self.add_config.y_p, offset, || y)?;
 
         let p = EccPoint {
             x: x_cell,
@@ -436,7 +421,7 @@ impl<F: FieldExt> Deref for Z<F> {
 }
 
 // https://p.z.cash/halo2-0.1:ecc-var-mul-witness-scalar?partial
-fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> {
+fn decompose_for_scalar_mul(scalar: Value<&pallas::Base>) -> Vec<Value<bool>> {
     construct_uint! {
         struct U256(4);
     }
@@ -460,18 +445,16 @@ fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> 
         };
 
         // Take the first 255 bits.
-        bitstring.take(pallas::Scalar::NUM_BITS as usize)
+        bitstring
+            .take(pallas::Scalar::NUM_BITS as usize)
+            .collect::<Vec<_>>()
     });
 
-    if let Some(bitstring) = bitstring {
-        // Transpose.
-        let mut bitstring: Vec<_> = bitstring.map(Some).collect();
-        // Reverse to get the big-endian bit representation.
-        bitstring.reverse();
-        bitstring
-    } else {
-        vec![None; pallas::Scalar::NUM_BITS as usize]
-    }
+    // Transpose.
+    let mut bitstring = bitstring.transpose_vec(pallas::Scalar::NUM_BITS as usize);
+    // Reverse to get the big-endian bit representation.
+    bitstring.reverse();
+    bitstring
 }
 
 #[cfg(test)]
@@ -481,7 +464,7 @@ pub mod tests {
         Curve,
     };
     use halo2_proofs::{
-        circuit::{Chip, Layouter},
+        circuit::{Chip, Layouter, Value},
         plonk::Error,
     };
     use pasta_curves::pallas;
@@ -519,7 +502,7 @@ pub mod tests {
             let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),
-                Some((base_val * scalar).to_affine()),
+                Value::known((base_val * scalar).to_affine()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain result"), &expected)
         }
@@ -531,7 +514,7 @@ pub mod tests {
                 let scalar = chip.load_private(
                     layouter.namespace(|| "random scalar"),
                     column,
-                    Some(scalar_val),
+                    Value::known(scalar_val),
                 )?;
                 let scalar = ScalarVar::from_base(
                     chip.clone(),
@@ -554,8 +537,11 @@ pub mod tests {
         {
             let scalar_val = pallas::Base::zero();
             let (result, _) = {
-                let scalar =
-                    chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_val))?;
+                let scalar = chip.load_private(
+                    layouter.namespace(|| "zero"),
+                    column,
+                    Value::known(scalar_val),
+                )?;
                 let scalar = ScalarVar::from_base(
                     chip.clone(),
                     layouter.namespace(|| "ScalarVar from_base"),
@@ -563,17 +549,21 @@ pub mod tests {
                 )?;
                 p.mul(layouter.namespace(|| "[0]B"), scalar)?
             };
-            if let Some(is_identity) = result.inner().is_identity() {
-                assert!(is_identity);
-            }
+            result
+                .inner()
+                .is_identity()
+                .assert_if_known(|is_identity| *is_identity);
         }
 
         // [-1]B (the largest possible base field element)
         {
             let scalar_val = -pallas::Base::one();
             let (result, _) = {
-                let scalar =
-                    chip.load_private(layouter.namespace(|| "-1"), column, Some(scalar_val))?;
+                let scalar = chip.load_private(
+                    layouter.namespace(|| "-1"),
+                    column,
+                    Value::known(scalar_val),
+                )?;
                 let scalar = ScalarVar::from_base(
                     chip.clone(),
                     layouter.namespace(|| "ScalarVar from_base"),

@@ -7,10 +7,12 @@ use std::cmp;
 use std::collections::HashSet;
 use std::ops::Range;
 
-use crate::circuit::layouter::RegionColumn;
-use crate::plonk::{
-    Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
-    FloorPlanner, Instance, Selector,
+use crate::{
+    circuit::{layouter::RegionColumn, Value},
+    plonk::{
+        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
+        FloorPlanner, Instance, Selector,
+    },
 };
 
 /// Graphical renderer for circuit layouts.
@@ -430,8 +432,8 @@ impl<F: Field> Assignment<F> for Layout {
         Ok(())
     }
 
-    fn query_instance(&self, _: Column<Instance>, _: usize) -> Result<Option<F>, Error> {
-        Ok(None)
+    fn query_instance(&self, _: Column<Instance>, _: usize) -> Result<Value<F>, Error> {
+        Ok(Value::unknown())
     }
 
     fn assign_advice<V, VR, A, AR>(
@@ -442,7 +444,7 @@ impl<F: Field> Assignment<F> for Layout {
         _: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
@@ -459,7 +461,7 @@ impl<F: Field> Assignment<F> for Layout {
         _: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
@@ -483,7 +485,7 @@ impl<F: Field> Assignment<F> for Layout {
         &mut self,
         _: Column<Fixed>,
         _: usize,
-        _: Option<Assigned<F>>,
+        _: Value<Assigned<F>>,
     ) -> Result<(), Error> {
         Ok(())
     }

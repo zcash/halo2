@@ -250,6 +250,13 @@ impl<F: Field> Mul<F> for Assigned<F> {
     }
 }
 
+impl<F: Field> Mul<F> for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn mul(self, rhs: F) -> Assigned<F> {
+        *self * rhs
+    }
+}
+
 impl<F: Field> Mul<&Assigned<F>> for Assigned<F> {
     type Output = Assigned<F>;
     fn mul(self, rhs: &Assigned<F>) -> Assigned<F> {

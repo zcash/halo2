@@ -5,9 +5,8 @@ use crate::{
     sinsemilla::primitives::{self as sinsemilla, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S},
 };
 
-use halo2_proofs::circuit::AssignedCell;
 use halo2_proofs::{
-    circuit::{Chip, Region},
+    circuit::{AssignedCell, Chip, Region, Value},
     plonk::{Assigned, Error},
 };
 
@@ -56,9 +55,14 @@ where
         let mut y_a: Y<pallas::Base> = {
             // Enable `q_sinsemilla4` on the first row.
             config.q_sinsemilla4.enable(region, offset)?;
-            region.assign_fixed(|| "fixed y_q", config.fixed_y_q, offset, || Ok(y_q))?;
+            region.assign_fixed(
+                || "fixed y_q",
+                config.fixed_y_q,
+                offset,
+                || Value::known(y_q),
+            )?;
 
-            (Some(y_q.into())).into()
+            Value::known(y_q.into()).into()
         };
 
         // Constrain the initial x_q to equal the x-coordinate of the domain's `Q`.
@@ -95,12 +99,8 @@ where
         // Assign the final y_a.
         let y_a = {
             // Assign the final y_a.
-            let y_a_cell = region.assign_advice(
-                || "y_a",
-                config.double_and_add.lambda_1,
-                offset,
-                || y_a.ok_or(Error::Synthesis),
-            )?;
+            let y_a_cell =
+                region.assign_advice(|| "y_a", config.double_and_add.lambda_1, offset, || y_a.0)?;
 
             // Assign lambda_2 and x_p zero values since they are queried
             // in the gate. (The actual values do not matter since they are
@@ -110,13 +110,13 @@ where
                     || "dummy lambda2",
                     config.double_and_add.lambda_2,
                     offset,
-                    || Ok(pallas::Base::zero()),
+                    || Value::known(pallas::Base::zero()),
                 )?;
                 region.assign_advice(
                     || "dummy x_p",
                     config.double_and_add.x_p,
                     offset,
-                    || Ok(pallas::Base::zero()),
+                    || Value::known(pallas::Base::zero()),
                 )?;
             }
 
@@ -127,55 +127,44 @@ where
         #[allow(non_snake_case)]
         // Check equivalence to result from primitives::sinsemilla::hash_to_point
         {
-            use crate::sinsemilla::{
-                message::MessagePiece,
-                primitives::{K, S_PERSONALIZATION},
-            };
+            use crate::sinsemilla::primitives::{K, S_PERSONALIZATION};
 
             use group::{prime::PrimeCurveAffine, Curve};
             use pasta_curves::arithmetic::CurveExt;
 
-            let field_elems: Option<Vec<pallas::Base>> =
-                message.iter().map(|piece| piece.field_elem()).collect();
+            let field_elems: Value<Vec<_>> = message
+                .iter()
+                .map(|piece| piece.field_elem().map(|elem| (elem, piece.num_words())))
+                .collect();
 
-            if field_elems.is_some() && x_a.value().is_some() && y_a.value().is_some() {
-                // Get message as a bitstring.
-                let bitstring: Vec<bool> = message
-                    .iter()
-                    .flat_map(|piece: &MessagePiece<pallas::Base, K>| {
-                        piece
-                            .field_elem()
-                            .unwrap()
-                            .to_le_bits()
-                            .into_iter()
-                            .take(K * piece.num_words())
-                    })
-                    .collect();
+            field_elems
+                .zip(x_a.value().zip(y_a.value()))
+                .assert_if_known(|(field_elems, (x_a, y_a))| {
+                    // Get message as a bitstring.
+                    let bitstring: Vec<bool> = field_elems
+                        .iter()
+                        .flat_map(|(elem, num_words)| {
+                            elem.to_le_bits().into_iter().take(K * num_words)
+                        })
+                        .collect();
 
-                let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
-                let S = |chunk: &[bool]| hasher_S(&lebs2ip_k(chunk).to_le_bytes());
+                    let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
+                    let S = |chunk: &[bool]| hasher_S(&lebs2ip_k(chunk).to_le_bytes());
 
-                // We can use complete addition here because it differs from
-                // incomplete addition with negligible probability.
-                let expected_point = bitstring
-                    .chunks(K)
-                    .fold(Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
-                let actual_point = pallas::Affine::from_xy(
-                    x_a.value().unwrap().evaluate(),
-                    y_a.value().unwrap().evaluate(),
-                )
-                .unwrap();
-                assert_eq!(expected_point.to_affine(), actual_point);
-            }
+                    // We can use complete addition here because it differs from
+                    // incomplete addition with negligible probability.
+                    let expected_point = bitstring
+                        .chunks(K)
+                        .fold(Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
+                    let actual_point =
+                        pallas::Affine::from_xy(x_a.evaluate(), y_a.evaluate()).unwrap();
+                    expected_point.to_affine() == actual_point
+                });
         }
 
-        if let Some(x_a) = x_a.value() {
-            if let Some(y_a) = y_a.value() {
-                if x_a.is_zero_vartime() || y_a.is_zero_vartime() {
-                    return Err(Error::Synthesis);
-                }
-            }
-        }
+        x_a.value()
+            .zip(y_a.value())
+            .error_if_known_and(|(x_a, y_a)| x_a.is_zero_vartime() || y_a.is_zero_vartime())?;
         Ok((
             NonIdentityEccPoint::from_coordinates_unchecked(x_a.0, y_a),
             zs_sum,
@@ -224,7 +213,7 @@ where
                     || "q_s2 = 1",
                     config.q_sinsemilla2,
                     offset + row,
-                    || Ok(pallas::Base::one()),
+                    || Value::known(pallas::Base::one()),
                 )?;
             }
 
@@ -241,7 +230,7 @@ where
                 config.q_sinsemilla2,
                 offset + piece.num_words() - 1,
                 || {
-                    Ok(if final_piece {
+                    Value::known(if final_piece {
                         pallas::Base::from(2)
                     } else {
                         pallas::Base::zero()
@@ -251,7 +240,7 @@ where
         }
 
         // Message piece as K * piece.length bitstring
-        let bitstring: Option<Vec<bool>> = piece.field_elem().map(|value| {
+        let bitstring: Value<Vec<bool>> = piece.field_elem().map(|value| {
             value
                 .to_le_bits()
                 .into_iter()
@@ -259,7 +248,7 @@ where
                 .collect()
         });
 
-        let words: Option<Vec<u32>> = bitstring.map(|bitstring| {
+        let words: Value<Vec<u32>> = bitstring.map(|bitstring| {
             bitstring
                 .chunks_exact(sinsemilla::K)
                 .map(lebs2ip_k)
@@ -267,19 +256,15 @@ where
         });
 
         // Get (x_p, y_p) for each word.
-        let generators: Option<Vec<(pallas::Base, pallas::Base)>> = words.clone().map(|words| {
+        let generators: Value<Vec<(pallas::Base, pallas::Base)>> = words.clone().map(|words| {
             words
                 .iter()
                 .map(|word| SINSEMILLA_S[*word as usize])
                 .collect()
         });
 
-        // Convert `words` from `Option<Vec<u32>>` to `Vec<Option<u32>>`
-        let words: Vec<Option<u32>> = if let Some(words) = words {
-            words.into_iter().map(Some).collect()
-        } else {
-            vec![None; piece.num_words()]
-        };
+        // Convert `words` from `Value<Vec<u32>>` to `Vec<Value<u32>>`
+        let words = words.transpose_vec(piece.num_words());
 
         // Decompose message piece into `K`-bit pieces with a running sum `z`.
         let zs = {
@@ -302,19 +287,18 @@ where
             // We end up with z_n = 0. (z_n is not directly encoded as a cell value;
             // it is implicitly taken as 0 by adjusting the definition of m_{i+1}.)
             let mut z = piece.field_elem();
-            let inv_2_k = pallas::Base::from_repr(INV_TWO_POW_K).unwrap();
+            let inv_2_k = Value::known(pallas::Base::from_repr(INV_TWO_POW_K).unwrap());
 
             // We do not assign the final z_n as it is constrained to be zero.
             for (idx, word) in words[0..(words.len() - 1)].iter().enumerate() {
+                let word = word.map(|word| pallas::Base::from(word as u64));
                 // z_{i + 1} = (z_i - m_{i + 1}) / 2^K
-                z = z
-                    .zip(*word)
-                    .map(|(z, word)| (z - pallas::Base::from(word as u64)) * inv_2_k);
+                z = (z - word) * inv_2_k;
                 let cell = region.assign_advice(
                     || format!("z_{:?}", idx + 1),
                     config.bits,
                     offset + idx + 1,
-                    || z.ok_or(Error::Synthesis),
+                    || z,
                 )?;
                 zs.push(cell)
             }
@@ -325,64 +309,43 @@ where
         // The accumulator x-coordinate provided by the caller MUST have been assigned
         // within this region.
 
-        let generators: Vec<Option<(pallas::Base, pallas::Base)>> =
-            if let Some(generators) = generators {
-                generators.into_iter().map(Some).collect()
-            } else {
-                vec![None; piece.num_words()]
-            };
+        let generators = generators.transpose_vec(piece.num_words());
 
         for (row, gen) in generators.iter().enumerate() {
             let x_p = gen.map(|gen| gen.0);
             let y_p = gen.map(|gen| gen.1);
 
             // Assign `x_p`
-            region.assign_advice(
-                || "x_p",
-                config.double_and_add.x_p,
-                offset + row,
-                || x_p.ok_or(Error::Synthesis),
-            )?;
+            region.assign_advice(|| "x_p", config.double_and_add.x_p, offset + row, || x_p)?;
 
             // Compute and assign `lambda_1`
             let lambda_1 = {
-                let lambda_1 = x_a
-                    .value()
-                    .zip(y_a.0)
-                    .zip(x_p)
-                    .zip(y_p)
-                    .map(|(((x_a, y_a), x_p), y_p)| (y_a - y_p) * (x_a - x_p).invert());
+                let lambda_1 = (y_a.0 - y_p) * (x_a.value() - x_p).invert();
 
                 // Assign lambda_1
                 region.assign_advice(
                     || "lambda_1",
                     config.double_and_add.lambda_1,
                     offset + row,
-                    || lambda_1.ok_or(Error::Synthesis),
+                    || lambda_1,
                 )?;
 
                 lambda_1
             };
 
             // Compute `x_r`
-            let x_r = lambda_1
-                .zip(x_a.value())
-                .zip(x_p)
-                .map(|((lambda_1, x_a), x_p)| lambda_1.square() - x_a - x_p);
+            let x_r = lambda_1.square() - x_a.value() - x_p;
 
             // Compute and assign `lambda_2`
             let lambda_2 = {
-                let lambda_2 = x_a.value().zip(y_a.0).zip(x_r).zip(lambda_1).map(
-                    |(((x_a, y_a), x_r), lambda_1)| {
-                        y_a * pallas::Base::from(2) * (x_a - x_r).invert() - lambda_1
-                    },
-                );
+                let lambda_2 =
+                    y_a.0 * pallas::Base::from(2) * (x_a.value() - x_r).invert() - lambda_1;
 
                 region.assign_advice(
                     || "lambda_2",
                     config.double_and_add.lambda_2,
                     offset + row,
-                    || lambda_2.ok_or(Error::Synthesis),
+                    || lambda_2,
                 )?;
 
                 lambda_2
@@ -390,28 +353,21 @@ where
 
             // Compute and assign `x_a` for the next row.
             let x_a_new: X<pallas::Base> = {
-                let x_a_new = lambda_2
-                    .zip(x_a.value())
-                    .zip(x_r)
-                    .map(|((lambda_2, x_a), x_r)| lambda_2.square() - x_a - x_r);
+                let x_a_new = lambda_2.square() - x_a.value() - x_r;
 
                 let x_a_cell = region.assign_advice(
                     || "x_a",
                     config.double_and_add.x_a,
                     offset + row + 1,
-                    || x_a_new.ok_or(Error::Synthesis),
+                    || x_a_new,
                 )?;
 
                 x_a_cell.into()
             };
 
             // Compute y_a for the next row.
-            let y_a_new: Y<pallas::Base> = lambda_2
-                .zip(x_a.value())
-                .zip(x_a_new.value())
-                .zip(y_a.0)
-                .map(|(((lambda_2, x_a), x_a_new), y_a)| lambda_2 * (x_a - x_a_new) - y_a)
-                .into();
+            let y_a_new: Y<pallas::Base> =
+                (lambda_2 * (x_a.value() - x_a_new.value()) - y_a.0).into();
 
             // Update the mutable `x_a`, `y_a` variables.
             x_a = x_a_new;
@@ -444,18 +400,18 @@ impl<F: FieldExt> Deref for X<F> {
 /// This is never actually witnessed until the last round, since it
 /// can be derived from other variables. Thus it only exists as a field
 /// element, not a `CellValue`.
-struct Y<F: FieldExt>(Option<Assigned<F>>);
+struct Y<F: FieldExt>(Value<Assigned<F>>);
 
-impl<F: FieldExt> From<Option<Assigned<F>>> for Y<F> {
-    fn from(value: Option<Assigned<F>>) -> Self {
+impl<F: FieldExt> From<Value<Assigned<F>>> for Y<F> {
+    fn from(value: Value<Assigned<F>>) -> Self {
         Y(value)
     }
 }
 
 impl<F: FieldExt> Deref for Y<F> {
-    type Target = Option<Assigned<F>>;
+    type Target = Value<Assigned<F>>;
 
-    fn deref(&self) -> &Option<Assigned<F>> {
+    fn deref(&self) -> &Value<Assigned<F>> {
         &self.0
     }
 }

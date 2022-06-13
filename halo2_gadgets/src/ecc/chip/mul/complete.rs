@@ -3,7 +3,7 @@ use super::{COMPLETE_RANGE, X, Y, Z};
 use crate::utilities::{bool_check, ternary};
 
 use halo2_proofs::{
-    circuit::Region,
+    circuit::{Region, Value},
     plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
@@ -88,7 +88,7 @@ impl Config {
         &self,
         region: &mut Region<'_, pallas::Base>,
         offset: usize,
-        bits: &[Option<bool>],
+        bits: &[Value<bool>],
         base: &EccPoint,
         x_a: X<pallas::Base>,
         y_a: Y<pallas::Base>,
@@ -139,15 +139,10 @@ impl Config {
             // Update `z`.
             z = {
                 // z_next = z_cur * 2 + k_next
-                let z_val = z.value().zip(k.as_ref()).map(|(z_val, k)| {
-                    pallas::Base::from(2) * z_val + pallas::Base::from(*k as u64)
-                });
-                let z_cell = region.assign_advice(
-                    || "z",
-                    self.z_complete,
-                    row + offset + 2,
-                    || z_val.ok_or(Error::Synthesis),
-                )?;
+                let z_val = z.value() * Value::known(pallas::Base::from(2))
+                    + k.map(|k| pallas::Base::from(k as u64));
+                let z_cell =
+                    region.assign_advice(|| "z", self.z_complete, row + offset + 2, || z_val)?;
                 Z(z_cell)
             };
             zs.push(z.clone());
@@ -177,12 +172,7 @@ impl Config {
                 // fine because we are just assigning the same value to the same cell
                 // twice, and then applying an equality constraint between the cell and
                 // itself (which the permutation argument treats as a no-op).
-                region.assign_advice(
-                    || "y_p",
-                    self.add_config.y_p,
-                    row + offset,
-                    || y_p.ok_or(Error::Synthesis),
-                )?
+                region.assign_advice(|| "y_p", self.add_config.y_p, row + offset, || y_p)?
             };
 
             // U = P if the bit is set; U = -P is the bit is not set.
