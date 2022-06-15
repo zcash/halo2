@@ -26,6 +26,7 @@ equivalent objects in Halo 2 (which builds on the nomenclature from the Halo pap
 | $\bar{\omega}$ |   `s_poly_blind`    |
 |   $\bar{C}$    | `s_poly_commitment` |
 |     $h(X)$     |       $g(X)$        |
+|      $U$       |         $G$         |
 |   $\omega'$    |   `blind` / $\xi$   |
 |  $\mathbf{c}$  |    $\mathbf{a}$     |
 |      $c$       | $a = \mathbf{a}_0$  |
