@@ -83,6 +83,24 @@ impl<'params, C: CurveAffine, R: RngCore> BatchVerifier<'params, C, R> {
     pub fn finalize(self) -> bool {
         self.msm.eval()
     }
+
+    /// Finalizes the batch, checks its validity, and returns the RNG for subsequent use.
+    ///
+    /// Returns `Some(rng)` if all proofs were valid. This allows the RNG to be used for
+    /// subsequent purposes (for example, batch-verifying proofs for Orchard bundles, and
+    /// then batch-verifying their signatures) without requiring multiple RNGs or running
+    /// into lifetime issues.
+    ///
+    /// Returns `None` if *some* proof was invalid. If the caller needs to identify
+    /// specific failing proofs, it must re-process the proofs separately.
+    #[must_use]
+    pub fn finalize_and_return_rng(self) -> Option<R> {
+        if self.msm.eval() {
+            Some(self.rng)
+        } else {
+            None
+        }
+    }
 }
 
 impl<'params, C: CurveAffine, R: RngCore> VerificationStrategy<'params, C>
