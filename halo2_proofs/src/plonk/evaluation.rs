@@ -404,7 +404,7 @@ impl<C: CurveAffine> Evaluator<C> {
                         let result_a = self.add_expression(a);
                         let result_b = self.add_expression(b_int);
                         if result_a == ValueSource::Constant(0) {
-                            result_b
+                            self.add_calculation(Calculation::Negate(result_b))
                         } else if result_b == ValueSource::Constant(0) {
                             result_a
                         } else {
