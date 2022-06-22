@@ -44,6 +44,8 @@ pub struct VerifyingKey<C: CurveAffine> {
     fixed_commitments: Vec<C>,
     permutation: permutation::VerifyingKey<C>,
     cs: ConstraintSystem<C::Scalar>,
+    /// Cached maximum degree of `cs` (which doesn't change after construction).
+    cs_degree: usize,
     /// The representative of this `VerifyingKey` in transcripts.
     transcript_repr: C::Scalar,
 }
@@ -55,11 +57,15 @@ impl<C: CurveAffine> VerifyingKey<C> {
         permutation: permutation::VerifyingKey<C>,
         cs: ConstraintSystem<C::Scalar>,
     ) -> Self {
+        // Compute cached values.
+        let cs_degree = cs.degree();
+
         let mut vk = Self {
             domain,
             fixed_commitments,
             permutation,
             cs,
+            cs_degree,
             // Temporary, this is not pinned.
             transcript_repr: C::Scalar::zero(),
         };

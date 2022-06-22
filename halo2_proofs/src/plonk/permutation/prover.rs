@@ -69,8 +69,8 @@ impl Argument {
         // We need to multiply by z(X) and (1 - (l_last(X) + l_blind(X))). This
         // will never underflow because of the requirement of at least a degree
         // 3 circuit for the permutation argument.
-        assert!(pk.vk.cs.degree() >= 3);
-        let chunk_len = pk.vk.cs.degree() - 2;
+        assert!(pk.vk.cs_degree >= 3);
+        let chunk_len = pk.vk.cs_degree - 2;
         let blinding_factors = pk.vk.cs.blinding_factors();
 
         // Each column gets its own delta power.
@@ -211,7 +211,7 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Committed<C, Ev> {
         Constructed<C>,
         impl Iterator<Item = poly::Ast<Ev, C::Scalar, ExtendedLagrangeCoeff>> + 'a,
     ) {
-        let chunk_len = pk.vk.cs.degree() - 2;
+        let chunk_len = pk.vk.cs_degree - 2;
         let blinding_factors = pk.vk.cs.blinding_factors();
         let last_rotation = Rotation(-((blinding_factors + 1) as i32));
 
