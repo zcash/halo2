@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["ecc","Elliptic curve operations."],["poseidon","The Poseidon algebraic hash function."],["sha256","The SHA-256 hash function."],["sinsemilla","The Sinsemilla hash function."],["utilities","Utility gadgets."]]});
+window.SIDEBAR_ITEMS = {"mod":[["ecc","Elliptic curve operations."],["poseidon","The Poseidon algebraic hash function."],["sha256","The SHA-256 hash function."],["sinsemilla","The Sinsemilla hash function."],["utilities","Utility gadgets."]]};

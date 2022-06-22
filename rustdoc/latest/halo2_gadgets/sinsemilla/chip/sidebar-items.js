@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["SinsemillaChip","A chip that implements 10-bit Sinsemilla using a lookup table and 5 advice columns."],["SinsemillaConfig","Configuration for the Sinsemilla hash chip"]]});
+window.SIDEBAR_ITEMS = {"struct":[["SinsemillaChip","A chip that implements 10-bit Sinsemilla using a lookup table and 5 advice columns."],["SinsemillaConfig","Configuration for the Sinsemilla hash chip"]]};
