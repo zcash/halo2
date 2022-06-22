@@ -234,12 +234,12 @@ where
         .map(|poly| params.commit_lagrange(poly, Blind::default()).to_affine())
         .collect();
 
-    Ok(VerifyingKey {
+    Ok(VerifyingKey::from_parts(
         domain,
         fixed_commitments,
-        permutation: permutation_vk,
+        permutation_vk,
         cs,
-    })
+    ))
 }
 
 /// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `Circuit`.

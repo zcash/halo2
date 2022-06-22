@@ -39,7 +39,7 @@ impl Argument {
         vk: &plonk::VerifyingKey<C>,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
-        let chunk_len = vk.cs.degree() - 2;
+        let chunk_len = vk.cs_degree - 2;
 
         let permutation_product_commitments = self
             .columns
@@ -114,7 +114,7 @@ impl<C: CurveAffine> Evaluated<C> {
         gamma: ChallengeGamma<C>,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = C::Scalar> + 'a {
-        let chunk_len = vk.cs.degree() - 2;
+        let chunk_len = vk.cs_degree - 2;
         iter::empty()
             // Enforce only for the first set.
             // l_0(X) * (1 - z_0(X)) = 0
