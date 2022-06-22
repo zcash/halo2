@@ -3,6 +3,8 @@ use crate::arithmetic::{best_multiexp, CurveAffine};
 use ff::Field;
 use group::Group;
 
+use std::collections::BTreeMap;
+
 /// A multiscalar multiplication in the polynomial commitment scheme
 #[derive(Debug, Clone)]
 pub struct MSM<'a, C: CurveAffine> {
@@ -10,8 +12,10 @@ pub struct MSM<'a, C: CurveAffine> {
     g_scalars: Option<Vec<C::Scalar>>,
     w_scalar: Option<C::Scalar>,
     u_scalar: Option<C::Scalar>,
-    other_scalars: Vec<C::Scalar>,
-    other_bases: Vec<C>,
+    // TODO: we could make C: Ord somehow and use it as the key instead of this
+    // hacky approach that wastes ~64 bytes of memory for the pasta curves per
+    // entry.
+    other: BTreeMap<(C::Base, C::Base), (C::Scalar, C)>,
 }
 
 impl<'a, C: CurveAffine> MSM<'a, C> {
@@ -20,23 +24,25 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         let g_scalars = None;
         let w_scalar = None;
         let u_scalar = None;
-        let other_scalars = vec![];
-        let other_bases = vec![];
+        let other = BTreeMap::new();
 
         MSM {
             params,
             g_scalars,
             w_scalar,
             u_scalar,
-            other_scalars,
-            other_bases,
+            other,
         }
     }
 
     /// Add another multiexp into this one
     pub fn add_msm(&mut self, other: &Self) {
-        self.other_scalars.extend(other.other_scalars.iter());
-        self.other_bases.extend(other.other_bases.iter());
+        for (&point, entry) in other.other.iter() {
+            self.other
+                .entry(point)
+                .and_modify(|e| e.0 += entry.0)
+                .or_insert(*entry);
+        }
 
         if let Some(g_scalars) = &other.g_scalars {
             self.add_to_g_scalars(g_scalars);
@@ -53,8 +59,15 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
 
     /// Add arbitrary term (the scalar and the point)
     pub fn append_term(&mut self, scalar: C::Scalar, point: C) {
-        self.other_scalars.push(scalar);
-        self.other_bases.push(point);
+        if !bool::from(point.is_identity()) {
+            let xy = point.coordinates().unwrap();
+            let xy = (*xy.x(), *xy.y());
+
+            self.other
+                .entry(xy)
+                .and_modify(|e| e.0 += scalar)
+                .or_insert((scalar, point));
+        }
     }
 
     /// Add a value to the first entry of `g_scalars`.
@@ -99,10 +112,8 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
             }
         }
 
-        if !self.other_scalars.is_empty() {
-            for other_scalar in self.other_scalars.iter_mut() {
-                *other_scalar *= &factor;
-            }
+        for other in self.other.values_mut() {
+            other.0 *= factor;
         }
 
         self.w_scalar = self.w_scalar.map(|a| a * &factor);
@@ -114,12 +125,12 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         let len = self.g_scalars.as_ref().map(|v| v.len()).unwrap_or(0)
             + self.w_scalar.map(|_| 1).unwrap_or(0)
             + self.u_scalar.map(|_| 1).unwrap_or(0)
-            + self.other_scalars.len();
+            + self.other.len();
         let mut scalars: Vec<C::Scalar> = Vec::with_capacity(len);
         let mut bases: Vec<C> = Vec::with_capacity(len);
 
-        scalars.extend(&self.other_scalars);
-        bases.extend(&self.other_bases);
+        scalars.extend(self.other.values().map(|e| e.0));
+        bases.extend(self.other.values().map(|e| e.1));
 
         if let Some(w_scalar) = self.w_scalar {
             scalars.push(w_scalar);
