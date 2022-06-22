@@ -1,5 +1,5 @@
 use super::Params;
-use crate::arithmetic::{best_multiexp, parallelize, CurveAffine};
+use crate::arithmetic::{best_multiexp, CurveAffine};
 use ff::Field;
 use group::Group;
 
@@ -73,11 +73,9 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
     pub fn add_to_g_scalars(&mut self, scalars: &[C::Scalar]) {
         assert_eq!(scalars.len(), self.params.n as usize);
         if let Some(g_scalars) = &mut self.g_scalars {
-            parallelize(g_scalars, |g_scalars, start| {
-                for (g_scalar, scalar) in g_scalars.iter_mut().zip(scalars[start..].iter()) {
-                    *g_scalar += scalar;
-                }
-            })
+            for (g_scalar, scalar) in g_scalars.iter_mut().zip(scalars.iter()) {
+                *g_scalar += scalar;
+            }
         } else {
             self.g_scalars = Some(scalars.to_vec());
         }
@@ -96,19 +94,15 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
     /// Scale all scalars in the MSM by some scaling factor
     pub fn scale(&mut self, factor: C::Scalar) {
         if let Some(g_scalars) = &mut self.g_scalars {
-            parallelize(g_scalars, |g_scalars, _| {
-                for g_scalar in g_scalars {
-                    *g_scalar *= &factor;
-                }
-            })
+            for g_scalar in g_scalars {
+                *g_scalar *= &factor;
+            }
         }
 
         if !self.other_scalars.is_empty() {
-            parallelize(&mut self.other_scalars, |other_scalars, _| {
-                for other_scalar in other_scalars {
-                    *other_scalar *= &factor;
-                }
-            })
+            for other_scalar in self.other_scalars.iter_mut() {
+                *other_scalar *= &factor;
+            }
         }
 
         self.w_scalar = self.w_scalar.map(|a| a * &factor);
