@@ -522,8 +522,8 @@
         <span class="comment">// We need to multiply by z(X) and (1 - (l_last(X) + l_blind(X))). This</span>
         <span class="comment">// will never underflow because of the requirement of at least a degree</span>
         <span class="comment">// 3 circuit for the permutation argument.</span>
-        <span class="macro">assert!</span>(<span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">degree</span>() <span class="op">&gt;</span><span class="op">=</span> <span class="number">3</span>);
-        <span class="kw">let</span> <span class="ident">chunk_len</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">degree</span>() <span class="op">-</span> <span class="number">2</span>;
+        <span class="macro">assert!</span>(<span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs_degree</span> <span class="op">&gt;</span><span class="op">=</span> <span class="number">3</span>);
+        <span class="kw">let</span> <span class="ident">chunk_len</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs_degree</span> <span class="op">-</span> <span class="number">2</span>;
         <span class="kw">let</span> <span class="ident">blinding_factors</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">blinding_factors</span>();
 
         <span class="comment">// Each column gets its own delta power.</span>
@@ -664,7 +664,7 @@
         <span class="ident">Constructed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
         <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">poly::Ast</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
     ) {
-        <span class="kw">let</span> <span class="ident">chunk_len</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">degree</span>() <span class="op">-</span> <span class="number">2</span>;
+        <span class="kw">let</span> <span class="ident">chunk_len</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs_degree</span> <span class="op">-</span> <span class="number">2</span>;
         <span class="kw">let</span> <span class="ident">blinding_factors</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">blinding_factors</span>();
         <span class="kw">let</span> <span class="ident">last_rotation</span> <span class="op">=</span> <span class="ident">Rotation</span>(<span class="op">-</span>((<span class="ident">blinding_factors</span> <span class="op">+</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">i32</span>));
 

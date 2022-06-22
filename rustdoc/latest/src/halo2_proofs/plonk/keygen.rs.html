@@ -591,12 +591,12 @@
         .<span class="ident">map</span>(<span class="op">|</span><span class="ident">poly</span><span class="op">|</span> <span class="ident">params</span>.<span class="ident">commit_lagrange</span>(<span class="ident">poly</span>, <span class="ident">Blind::default</span>()).<span class="ident">to_affine</span>())
         .<span class="ident">collect</span>();
 
-    <span class="prelude-val">Ok</span>(<span class="ident">VerifyingKey</span> {
+    <span class="prelude-val">Ok</span>(<span class="ident">VerifyingKey::from_parts</span>(
         <span class="ident">domain</span>,
         <span class="ident">fixed_commitments</span>,
-        <span class="ident">permutation</span>: <span class="ident">permutation_vk</span>,
+        <span class="ident">permutation_vk</span>,
         <span class="ident">cs</span>,
-    })
+    ))
 }
 
 <span class="doccomment">/// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `Circuit`.</span>

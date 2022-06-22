@@ -312,7 +312,7 @@
         <span class="ident">vk</span>: <span class="kw-2">&amp;</span><span class="ident">plonk::VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
         <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
     ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">chunk_len</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">degree</span>() <span class="op">-</span> <span class="number">2</span>;
+        <span class="kw">let</span> <span class="ident">chunk_len</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">cs_degree</span> <span class="op">-</span> <span class="number">2</span>;
 
         <span class="kw">let</span> <span class="ident">permutation_product_commitments</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">columns</span>
@@ -387,7 +387,7 @@
         <span class="ident">gamma</span>: <span class="ident">ChallengeGamma</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
         <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
     ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">C::Scalar</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span> {
-        <span class="kw">let</span> <span class="ident">chunk_len</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">degree</span>() <span class="op">-</span> <span class="number">2</span>;
+        <span class="kw">let</span> <span class="ident">chunk_len</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">cs_degree</span> <span class="op">-</span> <span class="number">2</span>;
         <span class="ident">iter::empty</span>()
             <span class="comment">// Enforce only for the first set.</span>
             <span class="comment">// l_0(X) * (1 - z_0(X)) = 0</span>
