@@ -6,6 +6,8 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.2.0] - 2022-06-23
 ### Added
 - `halo2_proofs::circuit::Value`, a more usable and type-safe replacement for
   `Option<V>` in circuit synthesis.
