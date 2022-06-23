@@ -365,6 +365,8 @@
 <span id="344">344</span>
 <span id="345">345</span>
 <span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ff::Field</span>;
 <span class="kw">use</span> <span class="ident">group::Curve</span>;
 <span class="kw">use</span> <span class="ident">rand_core::RngCore</span>;
@@ -381,7 +383,9 @@
 };
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::transcript</span>::{<span class="ident">read_n_points</span>, <span class="ident">read_n_scalars</span>, <span class="ident">EncodedChallenge</span>, <span class="ident">TranscriptRead</span>};
 
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;batch&quot;</span>)]</span>
 <span class="kw">mod</span> <span class="ident">batch</span>;
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;batch&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">batch::BatchVerifier</span>;
 
 <span class="doccomment">/// Trait representing a strategy for verifying Halo 2 proofs.</span>

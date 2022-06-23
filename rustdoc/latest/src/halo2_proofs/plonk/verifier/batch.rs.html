@@ -138,6 +138,7 @@
 <span id="117">117</span>
 <span id="118">118</span>
 <span id="119">119</span>
+<span id="120">120</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">io</span>, <span class="ident">marker::PhantomData</span>};
 
 <span class="kw">use</span> <span class="ident">group::ff::Field</span>;
@@ -187,7 +188,8 @@
     <span class="ident">proof</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 }
 
-<span class="doccomment">/// A verifier that checks multiple proofs in a batch.</span>
+<span class="doccomment">/// A verifier that checks multiple proofs in a batch. **This requires the</span>
+<span class="doccomment">/// `batch` crate feature to be enabled.**</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BatchVerifier</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
     <span class="ident">items</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">BatchItem</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>,
