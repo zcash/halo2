@@ -50,6 +50,7 @@ ff = "0.12"
 group = "0.12"
 pasta_curves = "0.4"
 rand_core = { version = "0.6", default-features = false }
+tracing = "0.1"
 blake2b_simd = "1"
 
 # Developer tooling dependencies

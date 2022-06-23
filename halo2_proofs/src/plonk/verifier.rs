@@ -14,6 +14,9 @@ use crate::poly::{
 };
 use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
 
+mod batch;
+pub use batch::BatchVerifier;
+
 /// Trait representing a strategy for verifying Halo 2 proofs.
 pub trait VerificationStrategy<'params, C: CurveAffine> {
     /// The output type of this verification strategy after processing a proof.
@@ -56,70 +59,6 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for SingleVerifie
         } else {
             Err(Error::ConstraintSystemFailure)
         }
-    }
-}
-
-/// A verifier that checks multiple proofs in a batch.
-#[derive(Debug)]
-pub struct BatchVerifier<'params, C: CurveAffine, R: RngCore> {
-    msm: MSM<'params, C>,
-    rng: R,
-}
-
-impl<'params, C: CurveAffine, R: RngCore> BatchVerifier<'params, C, R> {
-    /// Constructs a new batch verifier.
-    pub fn new(params: &'params Params<C>, rng: R) -> Self {
-        BatchVerifier {
-            msm: MSM::new(params),
-            rng,
-        }
-    }
-
-    /// Finalizes the batch and checks its validity.
-    ///
-    /// Returns `false` if *some* proof was invalid. If the caller needs to identify
-    /// specific failing proofs, it must re-process the proofs separately.
-    #[must_use]
-    pub fn finalize(self) -> bool {
-        self.msm.eval()
-    }
-
-    /// Finalizes the batch, checks its validity, and returns the RNG for subsequent use.
-    ///
-    /// Returns `Some(rng)` if all proofs were valid. This allows the RNG to be used for
-    /// subsequent purposes (for example, batch-verifying proofs for Orchard bundles, and
-    /// then batch-verifying their signatures) without requiring multiple RNGs or running
-    /// into lifetime issues.
-    ///
-    /// Returns `None` if *some* proof was invalid. If the caller needs to identify
-    /// specific failing proofs, it must re-process the proofs separately.
-    #[must_use]
-    pub fn finalize_and_return_rng(self) -> Option<R> {
-        if self.msm.eval() {
-            Some(self.rng)
-        } else {
-            None
-        }
-    }
-}
-
-impl<'params, C: CurveAffine, R: RngCore> VerificationStrategy<'params, C>
-    for BatchVerifier<'params, C, R>
-{
-    type Output = Self;
-
-    fn process<E: EncodedChallenge<C>>(
-        mut self,
-        f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
-    ) -> Result<Self::Output, Error> {
-        // Scale the MSM by a random factor to ensure that if the existing MSM
-        // has is_zero() == false then this argument won't be able to interfere
-        // with it to make it true, with high probability.
-        self.msm.scale(C::Scalar::random(&mut self.rng));
-
-        let guard = f(self.msm)?;
-        let msm = guard.use_challenges();
-        Ok(Self { msm, rng: self.rng })
     }
 }
 

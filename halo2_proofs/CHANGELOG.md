@@ -10,8 +10,6 @@ and this project adheres to Rust's notion of
 - `halo2_proofs::circuit::Value`, a more usable and type-safe replacement for
   `Option<V>` in circuit synthesis.
 - `impl Mul<F: Field> for &Assigned<F>`
-- `halo2_proofs::plonk`:
-  - `BatchVerifier::finalize_and_return_rng`
 
 ### Changed
 All APIs that represented witnessed values as `Option<V>` now represent them as
@@ -41,6 +39,9 @@ All APIs that represented witnessed values as `Option<V>` now represent them as
   `Result<(Cell, Option<F>), Error>`:
   - `halo2_proofs::circuit::layouter`:
     - `RegionLayouter::assign_advice_from_instance`
+- `halo2_proofs::plonk::BatchVerifier` has been rewritten. It is no longer a
+  verification strategy to be used with `verify_proof`, but instead manages the
+  entire batch verification process.
 
 ## [0.1.0] - 2022-05-10
 ### Added
