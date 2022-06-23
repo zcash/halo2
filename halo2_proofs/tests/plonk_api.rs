@@ -566,32 +566,22 @@ fn plonk_api() {
         //
 
         {
-            let strategy = BatchVerifier::new(&params, OsRng);
+            let mut batch = BatchVerifier::new();
 
             // First proof.
-            let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
-            let strategy = verify_proof(
-                &params,
-                pk.get_vk(),
-                strategy,
-                &[&[&pubinputs[..]], &[&pubinputs[..]]],
-                &mut transcript,
-            )
-            .unwrap();
+            batch.add_proof(
+                vec![vec![pubinputs.clone()], vec![pubinputs.clone()]],
+                proof.clone(),
+            );
 
             // "Second" proof (just the first proof again).
-            let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
-            let strategy = verify_proof(
-                &params,
-                pk.get_vk(),
-                strategy,
-                &[&[&pubinputs[..]], &[&pubinputs[..]]],
-                &mut transcript,
-            )
-            .unwrap();
+            batch.add_proof(
+                vec![vec![pubinputs.clone()], vec![pubinputs.clone()]],
+                proof,
+            );
 
             // Check the batch.
-            assert!(strategy.finalize());
+            assert!(batch.finalize(&params, pk.get_vk()));
         }
     }
 
