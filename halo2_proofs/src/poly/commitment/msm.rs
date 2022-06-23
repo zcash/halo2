@@ -12,10 +12,8 @@ pub struct MSM<'a, C: CurveAffine> {
     g_scalars: Option<Vec<C::Scalar>>,
     w_scalar: Option<C::Scalar>,
     u_scalar: Option<C::Scalar>,
-    // TODO: we could make C: Ord somehow and use it as the key instead of this
-    // hacky approach that wastes ~64 bytes of memory for the pasta curves per
-    // entry.
-    other: BTreeMap<(C::Base, C::Base), (C::Scalar, C)>,
+    // x-coordinate -> (scalar, y-coordinate)
+    other: BTreeMap<C::Base, (C::Scalar, C::Base)>,
 }
 
 impl<'a, C: CurveAffine> MSM<'a, C> {
@@ -37,11 +35,18 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
 
     /// Add another multiexp into this one
     pub fn add_msm(&mut self, other: &Self) {
-        for (&point, entry) in other.other.iter() {
+        for (x, (scalar, y)) in other.other.iter() {
             self.other
-                .entry(point)
-                .and_modify(|e| e.0 += entry.0)
-                .or_insert(*entry);
+                .entry(*x)
+                .and_modify(|(our_scalar, our_y)| {
+                    if our_y == y {
+                        *our_scalar += *scalar;
+                    } else {
+                        assert!(*our_y == -*y);
+                        *our_scalar -= *scalar;
+                    }
+                })
+                .or_insert((*scalar, *y));
         }
 
         if let Some(g_scalars) = &other.g_scalars {
@@ -61,12 +66,20 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
     pub fn append_term(&mut self, scalar: C::Scalar, point: C) {
         if !bool::from(point.is_identity()) {
             let xy = point.coordinates().unwrap();
-            let xy = (*xy.x(), *xy.y());
+            let x = *xy.x();
+            let y = *xy.y();
 
             self.other
-                .entry(xy)
-                .and_modify(|e| e.0 += scalar)
-                .or_insert((scalar, point));
+                .entry(x)
+                .and_modify(|(our_scalar, our_y)| {
+                    if *our_y == y {
+                        *our_scalar += scalar;
+                    } else {
+                        assert!(*our_y == -y);
+                        *our_scalar -= scalar;
+                    }
+                })
+                .or_insert((scalar, y));
         }
     }
 
@@ -129,8 +142,12 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         let mut scalars: Vec<C::Scalar> = Vec::with_capacity(len);
         let mut bases: Vec<C> = Vec::with_capacity(len);
 
-        scalars.extend(self.other.values().map(|e| e.0));
-        bases.extend(self.other.values().map(|e| e.1));
+        scalars.extend(self.other.values().map(|(scalar, _)| scalar));
+        bases.extend(
+            self.other
+                .iter()
+                .map(|(x, (_, y))| C::from_xy(*x, *y).unwrap()),
+        );
 
         if let Some(w_scalar) = self.w_scalar {
             scalars.push(w_scalar);
@@ -150,5 +167,54 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         assert_eq!(scalars.len(), len);
 
         bool::from(best_multiexp(&scalars, &bases).is_identity())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::poly::commitment::{Params, MSM};
+    use group::Curve;
+    use pasta_curves::{arithmetic::CurveAffine, EpAffine, Fp, Fq};
+
+    #[test]
+    fn msm_arithmetic() {
+        let base = EpAffine::from_xy(-Fp::one(), Fp::from(2)).unwrap();
+        let base_viol = (base + base).to_affine();
+
+        let params = Params::new(4);
+        let mut a: MSM<EpAffine> = MSM::new(&params);
+        a.append_term(Fq::one(), base);
+        // a = [1] P
+        assert!(!a.clone().eval());
+        a.append_term(Fq::one(), base);
+        // a = [1+1] P
+        assert!(!a.clone().eval());
+        a.append_term(-Fq::one(), base_viol);
+        // a = [1+1] P + [-1] 2P
+        assert!(a.clone().eval());
+        let b = a.clone();
+
+        // Append a point that is the negation of an existing one.
+        a.append_term(Fq::from(4), -base);
+        // a = [1+1-4] P + [-1] 2P
+        assert!(!a.clone().eval());
+        a.append_term(Fq::from(2), base_viol);
+        // a = [1+1-4] P + [-1+2] 2P
+        assert!(a.clone().eval());
+
+        // Add two MSMs with common bases.
+        a.scale(Fq::from(3));
+        a.add_msm(&b);
+        // a = [3*(1+1)+(1+1-4)] P + [3*(-1)+(-1+2)] 2P
+        assert!(a.clone().eval());
+
+        let mut c: MSM<EpAffine> = MSM::new(&params);
+        c.append_term(Fq::from(2), base);
+        c.append_term(Fq::one(), -base_viol);
+        // c = [2] P + [1] (-2P)
+        assert!(c.clone().eval());
+        // Add two MSMs with bases that differ only in sign.
+        a.add_msm(&c);
+        assert!(a.eval());
     }
 }
