@@ -958,7 +958,7 @@
         } <span class="kw">else</span> {
             <span class="ident">point</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>
                 .<span class="ident">get_omega_inv</span>()
-                .<span class="ident">pow_vartime</span>(<span class="kw-2">&amp;</span>[(<span class="ident">rotation</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">i64</span>).<span class="ident">abs</span>() <span class="kw">as</span> <span class="ident">u64</span>]);
+                .<span class="ident">pow_vartime</span>(<span class="kw-2">&amp;</span>[(<span class="ident">rotation</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">i64</span>).<span class="ident">unsigned_abs</span>()]);
         }
         <span class="ident">point</span>
     }
