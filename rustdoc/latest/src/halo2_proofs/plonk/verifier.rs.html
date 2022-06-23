@@ -365,67 +365,6 @@
 <span id="344">344</span>
 <span id="345">345</span>
 <span id="346">346</span>
-<span id="347">347</span>
-<span id="348">348</span>
-<span id="349">349</span>
-<span id="350">350</span>
-<span id="351">351</span>
-<span id="352">352</span>
-<span id="353">353</span>
-<span id="354">354</span>
-<span id="355">355</span>
-<span id="356">356</span>
-<span id="357">357</span>
-<span id="358">358</span>
-<span id="359">359</span>
-<span id="360">360</span>
-<span id="361">361</span>
-<span id="362">362</span>
-<span id="363">363</span>
-<span id="364">364</span>
-<span id="365">365</span>
-<span id="366">366</span>
-<span id="367">367</span>
-<span id="368">368</span>
-<span id="369">369</span>
-<span id="370">370</span>
-<span id="371">371</span>
-<span id="372">372</span>
-<span id="373">373</span>
-<span id="374">374</span>
-<span id="375">375</span>
-<span id="376">376</span>
-<span id="377">377</span>
-<span id="378">378</span>
-<span id="379">379</span>
-<span id="380">380</span>
-<span id="381">381</span>
-<span id="382">382</span>
-<span id="383">383</span>
-<span id="384">384</span>
-<span id="385">385</span>
-<span id="386">386</span>
-<span id="387">387</span>
-<span id="388">388</span>
-<span id="389">389</span>
-<span id="390">390</span>
-<span id="391">391</span>
-<span id="392">392</span>
-<span id="393">393</span>
-<span id="394">394</span>
-<span id="395">395</span>
-<span id="396">396</span>
-<span id="397">397</span>
-<span id="398">398</span>
-<span id="399">399</span>
-<span id="400">400</span>
-<span id="401">401</span>
-<span id="402">402</span>
-<span id="403">403</span>
-<span id="404">404</span>
-<span id="405">405</span>
-<span id="406">406</span>
-<span id="407">407</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ff::Field</span>;
 <span class="kw">use</span> <span class="ident">group::Curve</span>;
 <span class="kw">use</span> <span class="ident">rand_core::RngCore</span>;
@@ -441,6 +380,9 @@
     <span class="ident">multiopen</span>::{<span class="self">self</span>, <span class="ident">VerifierQuery</span>},
 };
 <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::transcript</span>::{<span class="ident">read_n_points</span>, <span class="ident">read_n_scalars</span>, <span class="ident">EncodedChallenge</span>, <span class="ident">TranscriptRead</span>};
+
+<span class="kw">mod</span> <span class="ident">batch</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">batch::BatchVerifier</span>;
 
 <span class="doccomment">/// Trait representing a strategy for verifying Halo 2 proofs.</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">VerificationStrategy</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
@@ -484,70 +426,6 @@
         } <span class="kw">else</span> {
             <span class="prelude-val">Err</span>(<span class="ident">Error::ConstraintSystemFailure</span>)
         }
-    }
-}
-
-<span class="doccomment">/// A verifier that checks multiple proofs in a batch.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BatchVerifier</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">R</span>: <span class="ident">RngCore</span><span class="op">&gt;</span> {
-    <span class="ident">msm</span>: <span class="ident">MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="ident">rng</span>: <span class="ident">R</span>,
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">R</span>: <span class="ident">RngCore</span><span class="op">&gt;</span> <span class="ident">BatchVerifier</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>, <span class="ident">R</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Constructs a new batch verifier.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params</span> <span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">rng</span>: <span class="ident">R</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">BatchVerifier</span> {
-            <span class="ident">msm</span>: <span class="ident">MSM::new</span>(<span class="ident">params</span>),
-            <span class="ident">rng</span>,
-        }
-    }
-
-    <span class="doccomment">/// Finalizes the batch and checks its validity.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns `false` if *some* proof was invalid. If the caller needs to identify</span>
-    <span class="doccomment">/// specific failing proofs, it must re-process the proofs separately.</span>
-    <span class="attribute">#[<span class="ident">must_use</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">finalize</span>(<span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">msm</span>.<span class="ident">eval</span>()
-    }
-
-    <span class="doccomment">/// Finalizes the batch, checks its validity, and returns the RNG for subsequent use.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns `Some(rng)` if all proofs were valid. This allows the RNG to be used for</span>
-    <span class="doccomment">/// subsequent purposes (for example, batch-verifying proofs for Orchard bundles, and</span>
-    <span class="doccomment">/// then batch-verifying their signatures) without requiring multiple RNGs or running</span>
-    <span class="doccomment">/// into lifetime issues.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns `None` if *some* proof was invalid. If the caller needs to identify</span>
-    <span class="doccomment">/// specific failing proofs, it must re-process the proofs separately.</span>
-    <span class="attribute">#[<span class="ident">must_use</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">finalize_and_return_rng</span>(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">R</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">msm</span>.<span class="ident">eval</span>() {
-            <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">rng</span>)
-        } <span class="kw">else</span> {
-            <span class="prelude-val">None</span>
-        }
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">R</span>: <span class="ident">RngCore</span><span class="op">&gt;</span> <span class="ident">VerificationStrategy</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">BatchVerifier</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>, <span class="ident">R</span><span class="op">&gt;</span>
-{
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span>;
-
-    <span class="kw">fn</span> <span class="ident">process</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>(
-        <span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">f</span>: <span class="kw">impl</span> <span class="ident">FnOnce</span>(<span class="ident">MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Guard</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Output</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Scale the MSM by a random factor to ensure that if the existing MSM</span>
-        <span class="comment">// has is_zero() == false then this argument won&#39;t be able to interfere</span>
-        <span class="comment">// with it to make it true, with high probability.</span>
-        <span class="self">self</span>.<span class="ident">msm</span>.<span class="ident">scale</span>(<span class="ident">C::Scalar::random</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">rng</span>));
-
-        <span class="kw">let</span> <span class="ident">guard</span> <span class="op">=</span> <span class="ident">f</span>(<span class="self">self</span>.<span class="ident">msm</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">msm</span> <span class="op">=</span> <span class="ident">guard</span>.<span class="ident">use_challenges</span>();
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">msm</span>, <span class="ident">rng</span>: <span class="self">self</span>.<span class="ident">rng</span> })
     }
 }
 
