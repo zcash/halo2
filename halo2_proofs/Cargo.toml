@@ -1,6 +1,6 @@
 [package]
 name = "halo2_proofs"
-version = "0.1.0"
+version = "0.2.0"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
     "Ying Tong Lai <yingtong@electriccoin.co>",

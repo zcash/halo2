@@ -6,6 +6,8 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.2.0] - 2022-06-23
 ### Added
 - `halo2_gadgets::utilities::RangeConstrained<F, Value<F>>::bitrange_of`
 
@@ -13,6 +15,7 @@ and this project adheres to Rust's notion of
 All APIs that represented witnessed values as `Option<V>` now represent them as
 `halo2_proofs::circuit::Value<V>`. The core API changes are listed below.
 
+- Migrated to `halo2_proofs 0.2.0`.
 - The following APIs now take `Value<_>` instead of `Option<_>`:
   - `halo2_gadgets::ecc`:
     - `EccInstructions::{witness_point, witness_point_non_id}`

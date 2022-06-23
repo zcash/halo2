@@ -335,6 +335,8 @@ mod tests {
         }
     }
 
+    #[allow(clippy::assign_op_pattern)]
+    #[allow(clippy::ptr_offset_with_cast)]
     #[test]
     fn test_bitrange_subset() {
         let rng = OsRng;

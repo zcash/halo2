@@ -421,6 +421,8 @@ impl<F: FieldExt> Deref for Z<F> {
 }
 
 // https://p.z.cash/halo2-0.1:ecc-var-mul-witness-scalar?partial
+#[allow(clippy::assign_op_pattern)]
+#[allow(clippy::ptr_offset_with_cast)]
 fn decompose_for_scalar_mul(scalar: Value<&pallas::Base>) -> Vec<Value<bool>> {
     construct_uint! {
         struct U256(4);
