@@ -390,7 +390,7 @@ impl<G: Group> EvaluationDomain<G> {
         } else {
             point *= &self
                 .get_omega_inv()
-                .pow_vartime(&[(rotation.0 as i64).abs() as u64]);
+                .pow_vartime(&[(rotation.0 as i64).unsigned_abs()]);
         }
         point
     }
