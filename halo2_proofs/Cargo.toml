@@ -68,9 +68,11 @@ rand_core = { version = "0.6", default-features = false, features = ["getrandom"
 getrandom = { version = "0.2", features = ["js"] }
 
 [features]
+default = ["batch"]
 dev-graph = ["plotters", "tabbycat"]
 gadget-traces = ["backtrace"]
 sanity-checks = []
+batch = ["rand_core/getrandom"]
 
 [lib]
 bench = false

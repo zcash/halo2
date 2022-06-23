@@ -14,7 +14,9 @@ use crate::poly::{
 };
 use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
 
+#[cfg(feature = "batch")]
 mod batch;
+#[cfg(feature = "batch")]
 pub use batch::BatchVerifier;
 
 /// Trait representing a strategy for verifying Halo 2 proofs.

@@ -43,7 +43,8 @@ All APIs that represented witnessed values as `Option<V>` now represent them as
     - `RegionLayouter::assign_advice_from_instance`
 - `halo2_proofs::plonk::BatchVerifier` has been rewritten. It is no longer a
   verification strategy to be used with `verify_proof`, but instead manages the
-  entire batch verification process.
+  entire batch verification process. The `batch` crate feature (enabled by
+  default) must be enabled to use the batch verifier.
 
 ## [0.1.0] - 2022-05-10
 ### Added

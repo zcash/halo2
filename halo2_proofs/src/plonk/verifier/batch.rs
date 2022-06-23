@@ -47,7 +47,8 @@ struct BatchItem<C: CurveAffine> {
     proof: Vec<u8>,
 }
 
-/// A verifier that checks multiple proofs in a batch.
+/// A verifier that checks multiple proofs in a batch. **This requires the
+/// `batch` crate feature to be enabled.**
 #[derive(Debug, Default)]
 pub struct BatchVerifier<C: CurveAffine> {
     items: Vec<BatchItem<C>>,
