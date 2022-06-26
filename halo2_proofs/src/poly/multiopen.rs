@@ -51,16 +51,16 @@ pub struct ProverQuery<'a, C: CurveAffine> {
 
 /// A polynomial query at a point
 #[derive(Debug, Clone)]
-pub struct VerifierQuery<'r, 'params: 'r, C: CurveAffine> {
+pub struct VerifierQuery<'r, C: CurveAffine> {
     /// point at which polynomial is queried
     point: C::Scalar,
     /// commitment to polynomial
-    commitment: CommitmentReference<'r, 'params, C>,
+    commitment: CommitmentReference<'r, C>,
     /// evaluation of polynomial at query point
     eval: C::Scalar,
 }
 
-impl<'r, 'params: 'r, C: CurveAffine> VerifierQuery<'r, 'params, C> {
+impl<'r, C: CurveAffine> VerifierQuery<'r, C> {
     /// Create a new verifier query based on a commitment
     pub fn new_commitment(commitment: &'r C, point: C::Scalar, eval: C::Scalar) -> Self {
         VerifierQuery {
@@ -71,11 +71,7 @@ impl<'r, 'params: 'r, C: CurveAffine> VerifierQuery<'r, 'params, C> {
     }
 
     /// Create a new verifier query based on a linear combination of commitments
-    pub fn new_msm(
-        msm: &'r commitment::MSM<'params, C>,
-        point: C::Scalar,
-        eval: C::Scalar,
-    ) -> Self {
+    pub fn new_msm(msm: &'r commitment::MSM<C>, point: C::Scalar, eval: C::Scalar) -> Self {
         VerifierQuery {
             point,
             eval,
@@ -85,12 +81,12 @@ impl<'r, 'params: 'r, C: CurveAffine> VerifierQuery<'r, 'params, C> {
 }
 
 #[derive(Copy, Clone, Debug)]
-enum CommitmentReference<'r, 'params: 'r, C: CurveAffine> {
+enum CommitmentReference<'r, C: CurveAffine> {
     Commitment(&'r C),
-    MSM(&'r commitment::MSM<'params, C>),
+    MSM(&'r commitment::MSM<C>),
 }
 
-impl<'r, 'params: 'r, C: CurveAffine> PartialEq for CommitmentReference<'r, 'params, C> {
+impl<'r, C: CurveAffine> PartialEq for CommitmentReference<'r, C> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (&CommitmentReference::Commitment(a), &CommitmentReference::Commitment(b)) => {
@@ -333,7 +329,7 @@ fn test_roundtrip() {
         .unwrap();
 
         // Should fail.
-        assert!(!guard.use_challenges().eval());
+        assert!(!guard.use_challenges().eval(&params));
     }
 
     {
@@ -355,7 +351,7 @@ fn test_roundtrip() {
         .unwrap();
 
         // Should succeed.
-        assert!(guard.use_challenges().eval());
+        assert!(guard.use_challenges().eval(&params));
     }
 }
 

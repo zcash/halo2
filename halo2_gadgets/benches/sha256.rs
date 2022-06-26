@@ -134,7 +134,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
 
     c.bench_function(&verifier_name, |b| {
         b.iter(|| {
-            let strategy = SingleVerifier::new(&params);
+            let strategy = SingleVerifier::new(params.n());
             let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
             assert!(verify_proof(&params, pk.get_vk(), strategy, &[], &mut transcript).is_ok());
         });

@@ -30,8 +30,8 @@ pub struct PartiallyEvaluated<C: CurveAffine> {
     random_eval: C::Scalar,
 }
 
-pub struct Evaluated<'params, C: CurveAffine> {
-    h_commitment: MSM<'params, C>,
+pub struct Evaluated<C: CurveAffine> {
+    h_commitment: MSM<C>,
     random_poly_commitment: C,
     expected_h_eval: C::Scalar,
     random_eval: C::Scalar,
@@ -116,14 +116,11 @@ impl<C: CurveAffine> PartiallyEvaluated<C> {
     }
 }
 
-impl<'params, C: CurveAffine> Evaluated<'params, C> {
+impl<C: CurveAffine> Evaluated<C> {
     pub(in crate::plonk) fn queries<'r>(
         &'r self,
         x: ChallengeX<C>,
-    ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone
-    where
-        'params: 'r,
-    {
+    ) -> impl Iterator<Item = VerifierQuery<'r, C>> + Clone {
         iter::empty()
             .chain(Some(VerifierQuery::new_msm(
                 &self.h_commitment,

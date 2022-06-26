@@ -115,6 +115,11 @@ impl<C: CurveAffine> Params<C> {
         }
     }
 
+    /// Returns size of coefficients
+    pub fn n(&self) -> u64 {
+        self.n
+    }
+
     /// This computes a commitment to a polynomial described by the provided
     /// slice of coefficients. The commitment will be blinded by the blinding
     /// factor `r`.
@@ -154,7 +159,7 @@ impl<C: CurveAffine> Params<C> {
     /// Generates an empty multiscalar multiplication struct using the
     /// appropriate params.
     pub fn empty_msm(&self) -> MSM<C> {
-        MSM::new(self)
+        MSM::new(self.n)
     }
 
     /// Getter for g generators
@@ -366,11 +371,11 @@ fn test_opening_proof() {
     {
         // Test use_challenges()
         let msm_challenges = guard.clone().use_challenges();
-        assert!(msm_challenges.eval());
+        assert!(msm_challenges.eval(&params));
 
         // Test use_g()
-        let g = guard.compute_g();
-        let (msm_g, _accumulator) = guard.clone().use_g(g);
-        assert!(msm_g.eval());
+        let g = guard.compute_g(&params);
+        let (msm_g, _accumulator) = guard.use_g(g);
+        assert!(msm_g.eval(&params));
     }
 }

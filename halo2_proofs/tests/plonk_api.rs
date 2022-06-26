@@ -466,7 +466,7 @@ fn plonk_api() {
     {
         // Check that a hardcoded proof is satisfied
         let proof = include_bytes!("plonk_api_proof.bin");
-        let strategy = SingleVerifier::new(&params);
+        let strategy = SingleVerifier::new(params.n());
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
         assert!(verify_proof(
             &params,
@@ -500,7 +500,7 @@ fn plonk_api() {
 
         // Test single-verifier strategy.
         {
-            let strategy = SingleVerifier::new(&params);
+            let strategy = SingleVerifier::new(params.n());
             let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
             assert!(verify_proof(
                 &params,
@@ -516,31 +516,28 @@ fn plonk_api() {
         // Test accumulation-based strategy.
         //
 
-        struct AccumulationVerifier<'params, C: CurveAffine> {
-            msm: MSM<'params, C>,
+        struct AccumulationVerifier<C: CurveAffine> {
+            msm: MSM<C>,
         }
 
-        impl<'params, C: CurveAffine> AccumulationVerifier<'params, C> {
-            fn new(params: &'params Params<C>) -> Self {
-                AccumulationVerifier {
-                    msm: MSM::new(params),
-                }
+        impl<'params, C: CurveAffine> AccumulationVerifier<C> {
+            fn new(n: u64) -> Self {
+                AccumulationVerifier { msm: MSM::new(n) }
             }
         }
 
-        impl<'params, C: CurveAffine> VerificationStrategy<'params, C>
-            for AccumulationVerifier<'params, C>
-        {
+        impl<C: CurveAffine> VerificationStrategy<C> for AccumulationVerifier<C> {
             type Output = ();
 
             fn process<E: EncodedChallenge<C>>(
                 self,
-                f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
+                params: &Params<C>,
+                f: impl FnOnce(MSM<C>) -> Result<Guard<C, E>, Error>,
             ) -> Result<Self::Output, Error> {
                 let guard = f(self.msm)?;
-                let g = guard.compute_g();
+                let g = guard.compute_g(params);
                 let (msm, _) = guard.use_g(g);
-                if msm.eval() {
+                if msm.eval(params) {
                     Ok(())
                 } else {
                     Err(Error::ConstraintSystemFailure)
@@ -549,7 +546,7 @@ fn plonk_api() {
         }
 
         {
-            let strategy = AccumulationVerifier::new(&params);
+            let strategy = AccumulationVerifier::new(params.n());
             let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
             assert!(verify_proof(
                 &params,
