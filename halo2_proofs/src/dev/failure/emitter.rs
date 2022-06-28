@@ -103,33 +103,33 @@ pub(super) fn expression_to_string<F: Field>(
     expr.evaluate(
         &util::format_value,
         &|_| panic!("virtual selectors are removed during optimization"),
-        &|query, column, rotation| {
+        &|query| {
             if let Some(label) = layout
-                .get(&rotation.0)
-                .and_then(|row| row.get(&(Any::Fixed, column).into()))
+                .get(&query.rotation.0)
+                .and_then(|row| row.get(&(Any::Fixed, query.column_index).into()))
             {
                 label.clone()
-            } else if rotation.0 == 0 {
+            } else if query.rotation.0 == 0 {
                 // This is most likely a merged selector
-                format!("S{}", query)
+                format!("S{}", query.index)
             } else {
                 // No idea how we'd get here...
-                format!("F{}@{}", column, rotation.0)
+                format!("F{}@{}", query.column_index, query.rotation.0)
             }
         },
-        &|_, column, rotation| {
+        &|query| {
             layout
-                .get(&rotation.0)
+                .get(&query.rotation.0)
                 .unwrap()
-                .get(&(Any::Advice, column).into())
+                .get(&(Any::Advice, query.column_index).into())
                 .unwrap()
                 .clone()
         },
-        &|_, column, rotation| {
+        &|query| {
             layout
-                .get(&rotation.0)
+                .get(&query.rotation.0)
                 .unwrap()
-                .get(&(Any::Instance, column).into())
+                .get(&(Any::Instance, query.column_index).into())
                 .unwrap()
                 .clone()
         },

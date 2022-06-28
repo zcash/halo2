@@ -5,7 +5,11 @@ use std::iter;
 use group::ff::Field;
 use pasta_curves::arithmetic::FieldExt;
 
-use super::{metadata, util, MockProver, Region};
+use super::{
+    metadata,
+    util::{self, AnyQuery},
+    MockProver, Region,
+};
 use crate::{
     dev::Value,
     plonk::{Any, Column, ConstraintSystem, Expression, Gate},
@@ -55,9 +59,9 @@ impl FailureLocation {
                 expression.evaluate(
                     &|_| vec![],
                     &|_| panic!("virtual selectors are removed during optimization"),
-                    &|index, _, _| vec![cs.fixed_queries[index].0.into()],
-                    &|index, _, _| vec![cs.advice_queries[index].0.into()],
-                    &|index, _, _| vec![cs.instance_queries[index].0.into()],
+                    &|query| vec![cs.fixed_queries[query.index].0.into()],
+                    &|query| vec![cs.advice_queries[query.index].0.into()],
+                    &|query| vec![cs.instance_queries[query.index].0.into()],
                     &|a| a,
                     &|mut a, mut b| {
                         a.append(&mut b);
@@ -387,9 +391,9 @@ fn render_lookup<F: FieldExt>(
         expr.evaluate(
             &|_| panic!("no constants in table expressions"),
             &|_| panic!("no selectors in table expressions"),
-            &|_, column, _| format!("F{}", column),
-            &|_, _, _| panic!("no advice columns in table expressions"),
-            &|_, _, _| panic!("no instance columns in table expressions"),
+            &|query| format!("F{}", query.column_index),
+            &|_| panic!("no advice columns in table expressions"),
+            &|_| panic!("no instance columns in table expressions"),
             &|_| panic!("no negations in table expressions"),
             &|_, _| panic!("no sums in table expressions"),
             &|_, _| panic!("no products in table expressions"),
@@ -397,14 +401,19 @@ fn render_lookup<F: FieldExt>(
         )
     });
 
-    fn cell_value<'a, F: FieldExt>(
+    fn cell_value<'a, F: FieldExt, Q: Into<AnyQuery> + Copy>(
         column_type: Any,
-        load: impl Fn(usize, usize, Rotation) -> Value<F> + 'a,
-    ) -> impl Fn(usize, usize, Rotation) -> BTreeMap<metadata::VirtualCell, String> + 'a {
-        move |query_index, column_index, rotation| {
+        load: impl Fn(Q) -> Value<F> + 'a,
+    ) -> impl Fn(Q) -> BTreeMap<metadata::VirtualCell, String> + 'a {
+        move |query| {
+            let AnyQuery {
+                column_index,
+                rotation,
+                ..
+            } = query.into();
             Some((
                 ((column_type, column_index).into(), rotation.0).into(),
-                match load(query_index, column_index, rotation) {
+                match load(query) {
                     Value::Real(v) => util::format_value(v),
                     Value::Poison => unreachable!(),
                 },

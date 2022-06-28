@@ -109,14 +109,20 @@ impl<F: FieldExt> Argument<F> {
                     expression.evaluate(
                         &|scalar| poly::Ast::ConstantTerm(scalar),
                         &|_| panic!("virtual selectors are removed during optimization"),
-                        &|_, column_index, rotation| {
-                            fixed_values[column_index].with_rotation(rotation).into()
+                        &|query| {
+                            fixed_values[query.column_index]
+                                .with_rotation(query.rotation)
+                                .into()
                         },
-                        &|_, column_index, rotation| {
-                            advice_values[column_index].with_rotation(rotation).into()
+                        &|query| {
+                            advice_values[query.column_index]
+                                .with_rotation(query.rotation)
+                                .into()
                         },
-                        &|_, column_index, rotation| {
-                            instance_values[column_index].with_rotation(rotation).into()
+                        &|query| {
+                            instance_values[query.column_index]
+                                .with_rotation(query.rotation)
+                                .into()
                         },
                         &|a| -a,
                         &|a, b| a + b,
@@ -132,14 +138,20 @@ impl<F: FieldExt> Argument<F> {
                     expression.evaluate(
                         &|scalar| poly::Ast::ConstantTerm(scalar),
                         &|_| panic!("virtual selectors are removed during optimization"),
-                        &|_, column_index, rotation| {
-                            fixed_cosets[column_index].with_rotation(rotation).into()
+                        &|query| {
+                            fixed_cosets[query.column_index]
+                                .with_rotation(query.rotation)
+                                .into()
                         },
-                        &|_, column_index, rotation| {
-                            advice_cosets[column_index].with_rotation(rotation).into()
+                        &|query| {
+                            advice_cosets[query.column_index]
+                                .with_rotation(query.rotation)
+                                .into()
                         },
-                        &|_, column_index, rotation| {
-                            instance_cosets[column_index].with_rotation(rotation).into()
+                        &|query| {
+                            instance_cosets[query.column_index]
+                                .with_rotation(query.rotation)
+                                .into()
                         },
                         &|a| -a,
                         &|a, b| a + b,
