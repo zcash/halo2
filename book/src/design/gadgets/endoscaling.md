@@ -93,9 +93,9 @@ $\mathbf{b}_{i,2j-2} = z_{i,j} - 4 z_{i,j+1} - 2\mathbf{b}_{i,2j-1}$
 
 $\begin{array}{rl}
   (0, 0) &\rightarrow (G_x, -G_y) \\
-  (0, 1) &\rightarrow (ζ \cdot G_x, -G_y) \\
+  (0, 1) &\rightarrow (\zeta \cdot G_x, -G_y) \\
   (1, 0) &\rightarrow (G_x, G_y) \\
-  (1, 1) &\rightarrow (ζ \cdot G_x, G_y)
+  (1, 1) &\rightarrow (\zeta \cdot G_x, G_y)
 \end{array}$
 
 let $S(i, j) = \begin{cases}
@@ -130,9 +130,12 @@ Without inner loop optimization: $c = 8r$
 Split $\mathbf{r}$ into $K$-bit chunks $r_{0..=u-1}$.
 
 $\mathsf{Acc} := 2(\zeta + 1)$
+
 for $i$ from $N/K - 1$ down to $0$:
-    look up $s = \mathsf{endoscale\_scalar}(r_i)$
-    $\mathsf{Acc} := 2^{K/2} \cdot \mathsf{Acc} + s$
+
+$\hspace{2em}$ look up $s = \mathsf{endoscale\_scalar}(r_i)$
+
+$\hspace{2em}$ $\mathsf{Acc} := 2^{K/2} \cdot \mathsf{Acc} + s$
 
 #### Handling partial chunks
 
@@ -140,14 +143,17 @@ Suppose that $\mathbf{r}$ is not a multiple of $K$ bits. In that case we will ha
 The unoptimized algorithm for computing the table is:
 
 $(a, b) := (0, 0)$
-for $i$ from $K/2 − 1$ down to $0$:
-    let $(\mathbf{c}_i, \mathbf{d}_i) = \begin{cases}
-    (0, 2\mathbf{r}_{2i} − 1),&\text{if } \mathbf{r}_{2i+1} = 0 \\
-    (2\mathbf{r}_{2i} − 1, 0),&\text{otherwise}
-\end{cases}$
-    $(a, b) := (2a + \mathbf{c}_i, 2b + \mathbf{d}_i)$
 
-Output $[a \cdot ζ_q + b]\, P$.
+for $i$ from $K/2 − 1$ down to $0$:
+
+$\hspace{2em}$ let $(\mathbf{c}_i, \mathbf{d}_i) = \begin{cases}
+(0, 2\mathbf{r}_{2i} − 1),&\text{if } \mathbf{r}_{2i+1} = 0 \\
+(2\mathbf{r}_{2i} − 1, 0),&\text{otherwise}
+\end{cases}$
+
+$(a, b) := (2a + \mathbf{c}_i, 2b + \mathbf{d}_i)$
+
+Output $[a \cdot \zeta_q + b]\, P$.
 
 We want to derive the table output for $K'$ when $\mathbf{r} = r_u$ from the table output for $K$.
 Pad $r_u$ to $K$ bits on the right (high-order bits) with zeros.
@@ -155,31 +161,24 @@ Pad $r_u$ to $K$ bits on the right (high-order bits) with zeros.
 So the effect of running the above algorithm for the padding bits will be:
 
 $(a, b) := (0, 0)$
-for $i$ from $K/2 − 1$ down to $K'/2$:
-    $b := 2b - 1$
+
+for $i$ from $0$ up to $(K-K')/2 − 1$:
+
+$\hspace{2em} b := 2b - 1$
 
 (which is equivalent to $(a, b) := (0, 1 - 2^{(K-K')/2})$)
 
-for $i$ from $K'/2 − 1$ down to $0$:
-    let $(\mathbf{c}_i, \mathbf{d}_i) = \begin{cases}
-    (0, 2\mathbf{r}_{2i} − 1),&\text{if } \mathbf{r}_{2i+1} = 0 \\
-    (2\mathbf{r}_{2i} − 1, 0),&\text{otherwise}
-\end{cases}$
-    $(a, b) := (2a + \mathbf{c}_i, 2b + \mathbf{d}_i)$
+for $i$ from $(K-K')/2$ up to $K/2 − 1$:
 
-Output $[a \cdot ζ_q + b]\, P$.
+$\hspace{2em}$ let $(\mathbf{c}_i, \mathbf{d}_i) = \begin{cases}
+(0, 2\mathbf{r}_{2i} − 1),&\text{if } \mathbf{r}_{2i+1} = 0 \\
+(2\mathbf{r}_{2i} − 1, 0),&\text{otherwise}
+\end{cases}$
+
+$\hspace{2em} (a, b) := (2a + \mathbf{c}_i, 2b + \mathbf{d}_i)$
+
+Output $[a \cdot \zeta_q + b]\, P$.
 
 So now we need to adjust the result of the table lookup to take account that we initialized $(a, b)$ to $(0, 1 - 2^{(K-K')/2})$ instead of $(0, 0)$.
 
 The offset for $b$ will get multiplied by $2^{K'/2}$, which means that we need to subtract $(1 - 2^{(K-K')/2}) \cdot 2^{K'/2}$.
-
-## Notes
-
-$(r, P) \mapsto [\mathbf{n}(r)] P$ (Algorithm 1)
-$r \mapsto \mathbf{n}(r)$ (Algorithm 2)
-
-Algorithm 1 is more efficient than applying Algorithm 2 to $r$ and then computing $[\mathbf{n}(r)] P$.
-
-https://github.com/zcash/halo2/issues/249
-
-if $\mathbf{n}$ is 1-1, then $\mathbf{n}^{-1}(y) = x \Leftrightarrow y = \mathbf{n}(x)$
