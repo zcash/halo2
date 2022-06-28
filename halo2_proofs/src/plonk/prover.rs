@@ -552,14 +552,20 @@ pub fn create_proof<
                             expr.evaluate(
                                 &poly::Ast::ConstantTerm,
                                 &|_| panic!("virtual selectors are removed during optimization"),
-                                &|_, column_index, rotation| {
-                                    fixed_cosets[column_index].with_rotation(rotation).into()
+                                &|query| {
+                                    fixed_cosets[query.column_index]
+                                        .with_rotation(query.rotation)
+                                        .into()
                                 },
-                                &|_, column_index, rotation| {
-                                    advice_cosets[column_index].with_rotation(rotation).into()
+                                &|query| {
+                                    advice_cosets[query.column_index]
+                                        .with_rotation(query.rotation)
+                                        .into()
                                 },
-                                &|_, column_index, rotation| {
-                                    instance_cosets[column_index].with_rotation(rotation).into()
+                                &|query| {
+                                    instance_cosets[query.column_index]
+                                        .with_rotation(query.rotation)
+                                        .into()
                                 },
                                 &|a| -a,
                                 &|a, b| a + b,

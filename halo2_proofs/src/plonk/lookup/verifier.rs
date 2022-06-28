@@ -119,9 +119,9 @@ impl<C: CurveAffine> Evaluated<C> {
                         expression.evaluate(
                             &|scalar| scalar,
                             &|_| panic!("virtual selectors are removed during optimization"),
-                            &|index, _, _| fixed_evals[index],
-                            &|index, _, _| advice_evals[index],
-                            &|index, _, _| instance_evals[index],
+                            &|query| fixed_evals[query.index],
+                            &|query| advice_evals[query.index],
+                            &|query| instance_evals[query.index],
                             &|a| -a,
                             &|a, b| a + &b,
                             &|a, b| a * &b,
