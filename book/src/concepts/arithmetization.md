@@ -19,13 +19,13 @@ A PLONKish circuit depends on a ***configuration***:
 
 * A subset of the columns that can participate in equality constraints.
 
-* A ***polynomial degree bound***.
+* A ***maximum constraint degree***.
 
 * A sequence of ***polynomial constraints***. These are multivariate polynomials over
   $\mathbb{F}$ that must evaluate to zero *for each row*. The variables in a polynomial
   constraint may refer to a cell in a given column of the current row, or a given column of
   another row relative to this one (with wrap-around, i.e. taken modulo $n$). The maximum
-  degree of each polynomial is given by the polynomial degree bound.
+  degree of each polynomial is given by the maximum constraint degree.
 
 * A sequence of ***lookup arguments*** defined over tuples of ***input expressions***
   (which are multivariate polynomials as above) and ***table columns***.
