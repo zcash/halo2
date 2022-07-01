@@ -6,6 +6,47 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.2.0] - 2022-06-23
+### Added
+- `halo2_proofs::circuit::Value`, a more usable and type-safe replacement for
+  `Option<V>` in circuit synthesis.
+- `impl Mul<F: Field> for &Assigned<F>`
+
+### Changed
+All APIs that represented witnessed values as `Option<V>` now represent them as
+`halo2_proofs::circuit::Value<V>`. The core API changes are listed below.
+
+- The following APIs now take `Value<_>` instead of `Option<_>`:
+  - `halo2_proofs::plonk`:
+    - `Assignment::fill_from_row`
+- The following APIs now take value closures that return `Value<V>` instead of
+  `Result<V, Error>`:
+  - `halo2_proofs::circuit`:
+    - `Region::{assign_advice, assign_fixed}`
+    - `Table::assign_cell`
+  - `halo2_proofs::circuit::layouter`:
+    - `RegionLayouter::{assign_advice, assign_fixed}`
+    - `TableLayouter::assign_cell`
+  - `halo2_proofs::plonk`:
+    - `Assignment::{assign_advice, assign_fixed}`
+- The following APIs now return `Value<_>` instead of `Option<_>`:
+  - `halo2_proofs::circuit`:
+    - `AssignedCell::{value, value_field}`
+- The following APIs now return `Result<Value<F>, Error>` instead of
+  `Result<Option<F>, Error>`:
+  - `halo2_proofs::plonk`:
+    - `Assignment::query_instance`
+- The following APIs now return `Result<(Cell, Value<F>), Error>` instead of
+  `Result<(Cell, Option<F>), Error>`:
+  - `halo2_proofs::circuit::layouter`:
+    - `RegionLayouter::assign_advice_from_instance`
+- `halo2_proofs::plonk::BatchVerifier` has been rewritten. It is no longer a
+  verification strategy to be used with `verify_proof`, but instead manages the
+  entire batch verification process. The `batch` crate feature (enabled by
+  default) must be enabled to use the batch verifier.
+
+## [0.1.0] - 2022-05-10
 ### Added
 - `halo2_proofs::dev`:
   - `MockProver::assert_satisfied`, for requiring that a circuit is satisfied.

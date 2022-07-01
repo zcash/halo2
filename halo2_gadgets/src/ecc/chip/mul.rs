@@ -1,6 +1,6 @@
 use super::{add, EccPoint, NonIdentityEccPoint, ScalarVar, T_Q};
 use crate::{
-    primitives::sinsemilla,
+    sinsemilla::primitives as sinsemilla,
     utilities::{bool_check, lookup_range_check::LookupRangeCheckConfig, ternary},
 };
 use std::{
@@ -11,8 +11,8 @@ use std::{
 use ff::PrimeField;
 use halo2_proofs::{
     arithmetic::FieldExt,
-    circuit::{AssignedCell, Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
+    circuit::{AssignedCell, Layouter, Region, Value},
+    plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
 use uint::construct_uint;
@@ -20,7 +20,7 @@ use uint::construct_uint;
 use pasta_curves::pallas;
 
 mod complete;
-mod incomplete;
+pub(super) mod incomplete;
 mod overflow;
 
 /// Number of bits for which complete addition needs to be used in variable-base
@@ -35,7 +35,7 @@ const INCOMPLETE_RANGE: Range<usize> = 0..INCOMPLETE_LEN;
 // The `hi` half is k_{254} to k_{130} inclusive (length 125 bits).
 // (It is a coincidence that k_{130} matches the boundary of the
 // overflow check described in [the book](https://zcash.github.io/halo2/design/gadgets/ecc/var-base-scalar-mul.html#overflow-check).)
-const INCOMPLETE_HI_RANGE: Range<usize> = 0..(INCOMPLETE_LEN / 2);
+const INCOMPLETE_HI_RANGE: Range<usize> = 0..INCOMPLETE_HI_LEN;
 const INCOMPLETE_HI_LEN: usize = INCOMPLETE_LEN / 2;
 
 // Bits k_{254} to k_{4} inclusive are used in incomplete addition.
@@ -92,7 +92,7 @@ impl Config {
         config.create_gate(meta);
 
         assert_eq!(
-            config.hi_config.x_p, config.lo_config.x_p,
+            config.hi_config.double_and_add.x_p, config.lo_config.double_and_add.x_p,
             "x_p is shared across hi and lo halves."
         );
         assert_eq!(
@@ -110,7 +110,7 @@ impl Config {
                 "incomplete config z cannot overlap with complete addition columns."
             );
             assert!(
-                !add_config_outputs.contains(&config.hi_config.lambda1),
+                !add_config_outputs.contains(&config.hi_config.double_and_add.lambda_1),
                 "incomplete config lambda1 cannot overlap with complete addition columns."
             );
         }
@@ -120,7 +120,7 @@ impl Config {
                 "incomplete config z cannot overlap with complete addition columns."
             );
             assert!(
-                !add_config_outputs.contains(&config.lo_config.lambda1),
+                !add_config_outputs.contains(&config.lo_config.double_and_add.lambda_1),
                 "incomplete config lambda1 cannot overlap with complete addition columns."
             );
         }
@@ -130,6 +130,7 @@ impl Config {
 
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // If `lsb` is 0, (x, y) = (x_p, -y_p). If `lsb` is 1, (x, y) = (0,0).
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-lsb-gate?partial
         meta.create_gate("LSB check", |meta| {
             let q_mul_lsb = meta.query_selector(self.q_mul_lsb);
 
@@ -184,7 +185,7 @@ impl Config {
                 let bits_incomplete_lo = &bits[INCOMPLETE_LO_RANGE];
                 let lsb = bits[pallas::Scalar::NUM_BITS as usize - 1];
 
-                // Initialize the accumulator `acc = [2]base`
+                // Initialize the accumulator `acc = [2]base` using complete addition.
                 let acc =
                     self.add_config
                         .assign_region(&base_point, &base_point, offset, &mut region)?;
@@ -192,7 +193,12 @@ impl Config {
                 // Increase the offset by 1 after complete addition.
                 let offset = offset + 1;
 
-                // Initialize the running sum for scalar decomposition to zero
+                // Initialize the running sum for scalar decomposition to zero.
+                //
+                // `incomplete::Config::double_and_add` will copy this cell directly into
+                // itself. This is fine because we are just assigning the same value to
+                // the same cell twice, and then applying an equality constraint between
+                // the cell and itself (which the permutation argument treats as a no-op).
                 let z_init = Z(region.assign_advice_from_constant(
                     || "z_init = 0",
                     self.hi_config.z,
@@ -225,6 +231,7 @@ impl Config {
                 // Then, the final assignment of double-and-add was made on row + offset + 1.
                 // Outside of incomplete addition, we must account for these offset increases by adding
                 // 2 to the incomplete addition length.
+                assert!(INCOMPLETE_LO_RANGE.len() >= INCOMPLETE_HI_RANGE.len());
                 let offset = offset + INCOMPLETE_LO_RANGE.len() + 2;
 
                 // Complete addition
@@ -263,9 +270,9 @@ impl Config {
                     let real_mul = base.zip(alpha).map(|(base, alpha)| base * alpha);
                     let result = result.point();
 
-                    if let (Some(real_mul), Some(result)) = (real_mul, result) {
-                        assert_eq!(real_mul.to_affine(), result);
-                    }
+                    real_mul
+                        .zip(result)
+                        .assert_if_known(|(real_mul, result)| &real_mul.to_affine() == result);
                 }
 
                 let zs = {
@@ -311,6 +318,8 @@ impl Config {
     /// | x_p  | y_p  | acc_x | acc_y | complete addition  | z_1 | q_mul_lsb = 1
     /// |base_x|base_y| res_x | res_y |   |   |    |   |   | z_0 |
     /// ```
+    ///
+    /// [Specification](https://p.z.cash/halo2-0.1:ecc-var-mul-lsb-gate?partial).
     fn process_lsb(
         &self,
         region: &mut Region<'_, pallas::Base>,
@@ -318,7 +327,7 @@ impl Config {
         base: &NonIdentityEccPoint,
         acc: EccPoint,
         z_1: Z<pallas::Base>,
-        lsb: Option<bool>,
+        lsb: Value<bool>,
     ) -> Result<(EccPoint, Z<pallas::Base>), Error> {
         // Enforce switching logic on LSB using a custom gate
         self.q_mul_lsb.enable(region, offset)?;
@@ -334,7 +343,7 @@ impl Config {
                 || "z_0",
                 self.complete_config.z_complete,
                 offset + 1,
-                || z_0_val.ok_or(Error::Synthesis),
+                || z_0_val,
             )?;
 
             Z(z_0_cell)
@@ -347,39 +356,24 @@ impl Config {
             .copy_advice(|| "copy base_y", region, self.add_config.y_p, offset + 1)?;
 
         // If `lsb` is 0, return `Acc + (-P)`. If `lsb` is 1, simply return `Acc + 0`.
-        let x = if let Some(lsb) = lsb {
+        let x = lsb.and_then(|lsb| {
             if !lsb {
                 base.x.value().cloned()
             } else {
-                Some(pallas::Base::zero())
+                Value::known(Assigned::Zero)
             }
-        } else {
-            None
-        };
+        });
 
-        let y = if let Some(lsb) = lsb {
+        let y = lsb.and_then(|lsb| {
             if !lsb {
-                base.y.value().map(|y_p| -y_p)
+                -base.y.value()
             } else {
-                Some(pallas::Base::zero())
+                Value::known(Assigned::Zero)
             }
-        } else {
-            None
-        };
+        });
 
-        let x_cell = region.assign_advice(
-            || "x",
-            self.add_config.x_p,
-            offset,
-            || x.ok_or(Error::Synthesis),
-        )?;
-
-        let y_cell = region.assign_advice(
-            || "y",
-            self.add_config.y_p,
-            offset,
-            || y.ok_or(Error::Synthesis),
-        )?;
+        let x_cell = region.assign_advice(|| "x", self.add_config.x_p, offset, || x)?;
+        let y_cell = region.assign_advice(|| "y", self.add_config.y_p, offset, || y)?;
 
         let p = EccPoint {
             x: x_cell,
@@ -395,9 +389,9 @@ impl Config {
 
 #[derive(Clone, Debug)]
 // `x`-coordinate of the accumulator.
-struct X<F: FieldExt>(AssignedCell<F, F>);
+struct X<F: FieldExt>(AssignedCell<Assigned<F>, F>);
 impl<F: FieldExt> Deref for X<F> {
-    type Target = AssignedCell<F, F>;
+    type Target = AssignedCell<Assigned<F>, F>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -406,9 +400,9 @@ impl<F: FieldExt> Deref for X<F> {
 
 #[derive(Clone, Debug)]
 // `y`-coordinate of the accumulator.
-struct Y<F: FieldExt>(AssignedCell<F, F>);
+struct Y<F: FieldExt>(AssignedCell<Assigned<F>, F>);
 impl<F: FieldExt> Deref for Y<F> {
-    type Target = AssignedCell<F, F>;
+    type Target = AssignedCell<Assigned<F>, F>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -426,7 +420,10 @@ impl<F: FieldExt> Deref for Z<F> {
     }
 }
 
-fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> {
+// https://p.z.cash/halo2-0.1:ecc-var-mul-witness-scalar?partial
+#[allow(clippy::assign_op_pattern)]
+#[allow(clippy::ptr_offset_with_cast)]
+fn decompose_for_scalar_mul(scalar: Value<&pallas::Base>) -> Vec<Value<bool>> {
     construct_uint! {
         struct U256(4);
     }
@@ -440,30 +437,26 @@ fn decompose_for_scalar_mul(scalar: Option<&pallas::Base>) -> Vec<Option<bool>> 
         let t_q = U256::from_little_endian(&T_Q.to_le_bytes());
         let k = scalar + t_q;
 
-        // Big-endian bit representation of `k`.
-        let bitstring: Vec<bool> = {
+        // Little-endian bit representation of `k`.
+        let bitstring = {
             let mut le_bytes = [0u8; 32];
             k.to_little_endian(&mut le_bytes);
-            le_bytes.iter().fold(Vec::new(), |mut bitstring, byte| {
-                let bits = (0..8)
-                    .map(|shift| (byte >> shift) % 2 == 1)
-                    .collect::<Vec<_>>();
-                bitstring.extend_from_slice(&bits);
-                bitstring
-            })
+            le_bytes
+                .into_iter()
+                .flat_map(|byte| (0..8).map(move |shift| (byte >> shift) % 2 == 1))
         };
 
         // Take the first 255 bits.
-        let mut bitstring = bitstring[0..pallas::Scalar::NUM_BITS as usize].to_vec();
-        bitstring.reverse();
         bitstring
+            .take(pallas::Scalar::NUM_BITS as usize)
+            .collect::<Vec<_>>()
     });
 
-    if let Some(bitstring) = bitstring {
-        bitstring.into_iter().map(Some).collect()
-    } else {
-        vec![None; pallas::Scalar::NUM_BITS as usize]
-    }
+    // Transpose.
+    let mut bitstring = bitstring.transpose_vec(pallas::Scalar::NUM_BITS as usize);
+    // Reverse to get the big-endian bit representation.
+    bitstring.reverse();
+    bitstring
 }
 
 #[cfg(test)]
@@ -473,7 +466,7 @@ pub mod tests {
         Curve,
     };
     use halo2_proofs::{
-        circuit::{Chip, Layouter},
+        circuit::{Chip, Layouter, Value},
         plonk::Error,
     };
     use pasta_curves::pallas;
@@ -511,7 +504,7 @@ pub mod tests {
             let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),
-                Some((base_val * scalar).to_affine()),
+                Value::known((base_val * scalar).to_affine()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain result"), &expected)
         }
@@ -523,7 +516,7 @@ pub mod tests {
                 let scalar = chip.load_private(
                     layouter.namespace(|| "random scalar"),
                     column,
-                    Some(scalar_val),
+                    Value::known(scalar_val),
                 )?;
                 let scalar = ScalarVar::from_base(
                     chip.clone(),
@@ -546,8 +539,11 @@ pub mod tests {
         {
             let scalar_val = pallas::Base::zero();
             let (result, _) = {
-                let scalar =
-                    chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_val))?;
+                let scalar = chip.load_private(
+                    layouter.namespace(|| "zero"),
+                    column,
+                    Value::known(scalar_val),
+                )?;
                 let scalar = ScalarVar::from_base(
                     chip.clone(),
                     layouter.namespace(|| "ScalarVar from_base"),
@@ -555,17 +551,21 @@ pub mod tests {
                 )?;
                 p.mul(layouter.namespace(|| "[0]B"), scalar)?
             };
-            if let Some(is_identity) = result.inner().is_identity() {
-                assert!(is_identity);
-            }
+            result
+                .inner()
+                .is_identity()
+                .assert_if_known(|is_identity| *is_identity);
         }
 
         // [-1]B (the largest possible base field element)
         {
             let scalar_val = -pallas::Base::one();
             let (result, _) = {
-                let scalar =
-                    chip.load_private(layouter.namespace(|| "-1"), column, Some(scalar_val))?;
+                let scalar = chip.load_private(
+                    layouter.namespace(|| "-1"),
+                    column,
+                    Value::known(scalar_val),
+                )?;
                 let scalar = ScalarVar::from_base(
                     chip.clone(),
                     layouter.namespace(|| "ScalarVar from_base"),

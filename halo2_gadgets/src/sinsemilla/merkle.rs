@@ -1,17 +1,14 @@
 //! Gadgets for implementing a Merkle tree with Sinsemilla.
 
 use halo2_proofs::{
-    circuit::{Chip, Layouter},
+    circuit::{Chip, Layouter, Value},
     plonk::Error,
 };
 use pasta_curves::arithmetic::CurveAffine;
 
 use super::{HashDomains, SinsemillaInstructions};
 
-use crate::utilities::{
-    cond_swap::CondSwapInstructions, i2lebsp, transpose_option_array, UtilitiesInstructions,
-};
-use std::iter;
+use crate::utilities::{cond_swap::CondSwapInstructions, i2lebsp, UtilitiesInstructions};
 
 pub mod chip;
 
@@ -55,15 +52,15 @@ pub struct MerklePath<
     const PATH_LENGTH: usize,
     const K: usize,
     const MAX_WORDS: usize,
+    const PAR: usize,
 > where
     MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
 {
-    chip_1: MerkleChip,
-    chip_2: MerkleChip,
+    chips: [MerkleChip; PAR],
     domain: MerkleChip::HashDomains,
-    leaf_pos: Option<u32>,
+    leaf_pos: Value<u32>,
     // The Merkle path is ordered from leaves to root.
-    path: Option<[C::Base; PATH_LENGTH]>,
+    path: Value<[C::Base; PATH_LENGTH]>,
 }
 
 impl<
@@ -72,21 +69,27 @@ impl<
         const PATH_LENGTH: usize,
         const K: usize,
         const MAX_WORDS: usize,
-    > MerklePath<C, MerkleChip, PATH_LENGTH, K, MAX_WORDS>
+        const PAR: usize,
+    > MerklePath<C, MerkleChip, PATH_LENGTH, K, MAX_WORDS, PAR>
 where
     MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
 {
     /// Constructs a [`MerklePath`].
+    ///
+    /// A circuit may have many more columns available than are required by a single
+    /// `MerkleChip`. To make better use of the available circuit area, the `MerklePath`
+    /// gadget will distribute its path hashing across each `MerkleChip` in `chips`, such
+    /// that each chip processes `ceil(PATH_LENGTH / PAR)` layers (with the last chip
+    /// processing fewer layers if the division is inexact).
     pub fn construct(
-        chip_1: MerkleChip,
-        chip_2: MerkleChip,
+        chips: [MerkleChip; PAR],
         domain: MerkleChip::HashDomains,
-        leaf_pos: Option<u32>,
-        path: Option<[C::Base; PATH_LENGTH]>,
+        leaf_pos: Value<u32>,
+        path: Value<[C::Base; PATH_LENGTH]>,
     ) -> Self {
+        assert_ne!(PAR, 0);
         Self {
-            chip_1,
-            chip_2,
+            chips,
             domain,
             leaf_pos,
             path,
@@ -101,31 +104,35 @@ impl<
         const PATH_LENGTH: usize,
         const K: usize,
         const MAX_WORDS: usize,
-    > MerklePath<C, MerkleChip, PATH_LENGTH, K, MAX_WORDS>
+        const PAR: usize,
+    > MerklePath<C, MerkleChip, PATH_LENGTH, K, MAX_WORDS, PAR>
 where
     MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
 {
     /// Calculates the root of the tree containing the given leaf at this Merkle path.
+    ///
+    /// Implements [Zcash Protocol Specification Section 4.9: Merkle Path Validity][merklepath].
+    ///
+    /// [merklepath]: https://zips.z.cash/protocol/protocol.pdf#merklepath
     pub fn calculate_root(
         &self,
         mut layouter: impl Layouter<C::Base>,
         leaf: MerkleChip::Var,
     ) -> Result<MerkleChip::Var, Error> {
-        // A Sinsemilla chip uses 5 advice columns, but the full Orchard action circuit
-        // uses 10 advice columns. We distribute the path hashing across two Sinsemilla
-        // chips to make better use of the available circuit area.
-        let chips = iter::empty()
-            .chain(iter::repeat(self.chip_1.clone()).take(PATH_LENGTH / 2))
-            .chain(iter::repeat(self.chip_2.clone()));
+        // Each chip processes `ceil(PATH_LENGTH / PAR)` layers.
+        let layers_per_chip = (PATH_LENGTH + PAR - 1) / PAR;
+
+        // Assign each layer to a chip.
+        let chips = (0..PATH_LENGTH).map(|i| self.chips[i / layers_per_chip].clone());
 
         // The Merkle path is ordered from leaves to root, which is consistent with the
         // little-endian representation of `pos` below.
-        let path = transpose_option_array(self.path);
+        let path = self.path.transpose_array();
 
         // Get position as a PATH_LENGTH-bit bitstring (little-endian bit order).
-        let pos: [Option<bool>; PATH_LENGTH] = {
-            let pos: Option<[bool; PATH_LENGTH]> = self.leaf_pos.map(|pos| i2lebsp(pos as u64));
-            transpose_option_array(pos)
+        let pos: [Value<bool>; PATH_LENGTH] = {
+            let pos: Value<[bool; PATH_LENGTH]> = self.leaf_pos.map(|pos| i2lebsp(pos as u64));
+            pos.transpose_array()
         };
 
         let Q = self.domain.Q();
@@ -138,6 +145,9 @@ where
             // we have `l` = 32 - 31 - 1 = 0.
             // On the other hand, when `layer = 0` (the final sibling on the Merkle path),
             // we have `l` = 32 - 0 - 1 = 31.
+
+            // Constrain which of (node, sibling) is (left, right) with a conditional swap
+            // tied to the current bit of the position.
             let pair = {
                 let pair = (node, *sibling);
 
@@ -145,11 +155,10 @@ where
                 chip.swap(layouter.namespace(|| "node position"), pair, *pos)?
             };
 
-            // Each `hash_layer` consists of 52 Sinsemilla words:
-            //  - l (10 bits) = 1 word
-            //  - left (255 bits) || right (255 bits) = 51 words (510 bits)
+            // Compute the node in layer l from its children:
+            //     M^l_i = MerkleCRH(l, M^{l+1}_{2i}, M^{l+1}_{2i+1})
             node = chip.hash_layer(
-                layouter.namespace(|| format!("hash l {}", l)),
+                layouter.namespace(|| format!("MerkleCRH({}, left, right)", l)),
                 Q,
                 l,
                 pair.0,
@@ -180,7 +189,7 @@ pub mod tests {
 
     use group::ff::{Field, PrimeField, PrimeFieldBits};
     use halo2_proofs::{
-        circuit::{Layouter, SimpleFloorPlanner},
+        circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
         pasta::pallas,
         plonk::{Circuit, ConstraintSystem, Error},
@@ -193,9 +202,9 @@ pub mod tests {
 
     #[derive(Default)]
     struct MyCircuit {
-        leaf: Option<pallas::Base>,
-        leaf_pos: Option<u32>,
-        merkle_path: Option<[pallas::Base; MERKLE_DEPTH]>,
+        leaf: Value<pallas::Base>,
+        leaf_pos: Value<u32>,
+        merkle_path: Value<[pallas::Base; MERKLE_DEPTH]>,
     }
 
     impl Circuit<pallas::Base> for MyCircuit {
@@ -286,8 +295,7 @@ pub mod tests {
             )?;
 
             let path = MerklePath {
-                chip_1,
-                chip_2,
+                chips: [chip_1, chip_2],
                 domain: TestHashDomain,
                 leaf_pos: self.leaf_pos,
                 path: self.merkle_path,
@@ -296,46 +304,52 @@ pub mod tests {
             let computed_final_root =
                 path.calculate_root(layouter.namespace(|| "calculate root"), leaf)?;
 
-            if let Some(leaf_pos) = self.leaf_pos {
-                // The expected final root
-                let final_root = self.merkle_path.unwrap().iter().enumerate().fold(
-                    self.leaf.unwrap(),
-                    |node, (l, sibling)| {
-                        let l = l as u8;
-                        let (left, right) = if leaf_pos & (1 << l) == 0 {
-                            (&node, sibling)
-                        } else {
-                            (sibling, &node)
-                        };
+            self.leaf
+                .zip(self.leaf_pos)
+                .zip(self.merkle_path)
+                .zip(computed_final_root.value())
+                .assert_if_known(|(((leaf, leaf_pos), merkle_path), computed_final_root)| {
+                    // The expected final root
+                    let final_root =
+                        merkle_path
+                            .iter()
+                            .enumerate()
+                            .fold(*leaf, |node, (l, sibling)| {
+                                let l = l as u8;
+                                let (left, right) = if leaf_pos & (1 << l) == 0 {
+                                    (&node, sibling)
+                                } else {
+                                    (sibling, &node)
+                                };
 
-                        use crate::primitives::sinsemilla;
-                        let merkle_crh = sinsemilla::HashDomain::from_Q(TestHashDomain.Q().into());
+                                use crate::sinsemilla::primitives as sinsemilla;
+                                let merkle_crh =
+                                    sinsemilla::HashDomain::from_Q(TestHashDomain.Q().into());
 
-                        merkle_crh
-                            .hash(
-                                iter::empty()
-                                    .chain(i2lebsp::<10>(l as u64).iter().copied())
-                                    .chain(
-                                        left.to_le_bits()
-                                            .iter()
-                                            .by_vals()
-                                            .take(pallas::Base::NUM_BITS as usize),
+                                merkle_crh
+                                    .hash(
+                                        iter::empty()
+                                            .chain(i2lebsp::<10>(l as u64).iter().copied())
+                                            .chain(
+                                                left.to_le_bits()
+                                                    .iter()
+                                                    .by_vals()
+                                                    .take(pallas::Base::NUM_BITS as usize),
+                                            )
+                                            .chain(
+                                                right
+                                                    .to_le_bits()
+                                                    .iter()
+                                                    .by_vals()
+                                                    .take(pallas::Base::NUM_BITS as usize),
+                                            ),
                                     )
-                                    .chain(
-                                        right
-                                            .to_le_bits()
-                                            .iter()
-                                            .by_vals()
-                                            .take(pallas::Base::NUM_BITS as usize),
-                                    ),
-                            )
-                            .unwrap_or(pallas::Base::zero())
-                    },
-                );
+                                    .unwrap_or(pallas::Base::zero())
+                            });
 
-                // Check the computed final root against the expected final root.
-                assert_eq!(computed_final_root.value().unwrap(), &final_root);
-            }
+                    // Check the computed final root against the expected final root.
+                    computed_final_root == &&final_root
+                });
 
             Ok(())
         }
@@ -357,9 +371,9 @@ pub mod tests {
         // The root is provided as a public input in the Orchard circuit.
 
         let circuit = MyCircuit {
-            leaf: Some(leaf),
-            leaf_pos: Some(pos),
-            merkle_path: Some(path.try_into().unwrap()),
+            leaf: Value::known(leaf),
+            leaf_pos: Value::known(pos),
+            merkle_path: Value::known(path.try_into().unwrap()),
         };
 
         let prover = MockProver::run(11, &circuit, vec![]).unwrap();

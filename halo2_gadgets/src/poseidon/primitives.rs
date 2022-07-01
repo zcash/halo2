@@ -291,7 +291,7 @@ pub trait Domain<F: FieldExt, const RATE: usize> {
 
 /// A Poseidon hash function used with constant input length.
 ///
-/// Domain specified in section 4.2 of https://eprint.iacr.org/2019/458.pdf
+/// Domain specified in [ePrint 2019/458 section 4.2](https://eprint.iacr.org/2019/458.pdf).
 #[derive(Clone, Copy, Debug)]
 pub struct ConstantLength<const L: usize>;
 

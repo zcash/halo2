@@ -1,13 +1,15 @@
 use super::{T_Q, Z};
-use crate::{primitives::sinsemilla, utilities::lookup_range_check::LookupRangeCheckConfig};
+use crate::{
+    sinsemilla::primitives as sinsemilla, utilities::lookup_range_check::LookupRangeCheckConfig,
+};
+
 use halo2_proofs::circuit::AssignedCell;
 use halo2_proofs::{
     circuit::Layouter,
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
+    plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
 
-use ff::Field;
 use pasta_curves::{arithmetic::FieldExt, pallas};
 
 use std::iter;
@@ -44,6 +46,7 @@ impl Config {
     }
 
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-overflow
         meta.create_gate("overflow checks", |meta| {
             let q_mul_overflow = meta.query_selector(self.q_mul_overflow);
 
@@ -118,7 +121,7 @@ impl Config {
                         || "s = alpha + k_254 ⋅ 2^130",
                         self.advices[0],
                         0,
-                        || s_val.ok_or(Error::Synthesis),
+                        || s_val,
                     )
                 },
             )?
@@ -145,18 +148,12 @@ impl Config {
 
                 // Witness η = inv0(z_130), where inv0(x) = 0 if x = 0, 1/x otherwise
                 {
-                    let eta = zs[130].value().map(|z_130| {
-                        if z_130.is_zero_vartime() {
-                            pallas::Base::zero()
-                        } else {
-                            z_130.invert().unwrap()
-                        }
-                    });
+                    let eta = zs[130].value().map(|z_130| Assigned::from(z_130).invert());
                     region.assign_advice(
                         || "η = inv0(z_130)",
                         self.advices[0],
                         offset + 2,
-                        || eta.ok_or(Error::Synthesis),
+                        || eta,
                     )?;
                 }
 

@@ -2,7 +2,7 @@
 use ff::PrimeFieldBits;
 use halo2_proofs::{
     arithmetic::FieldExt,
-    circuit::{AssignedCell, Cell},
+    circuit::{AssignedCell, Cell, Value},
 };
 use std::fmt::Debug;
 
@@ -58,7 +58,7 @@ impl<F: FieldExt + PrimeFieldBits, const K: usize> MessagePiece<F, K> {
         self.cell_value.cell()
     }
 
-    pub fn field_elem(&self) -> Option<F> {
+    pub fn field_elem(&self) -> Value<F> {
         self.cell_value.value().cloned()
     }
 

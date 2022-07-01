@@ -82,6 +82,13 @@ impl<F: Field> Neg for Assigned<F> {
     }
 }
 
+impl<F: Field> Neg for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn neg(self) -> Self::Output {
+        -*self
+    }
+}
+
 impl<F: Field> Add for Assigned<F> {
     type Output = Assigned<F>;
     fn add(self, rhs: Assigned<F>) -> Assigned<F> {
@@ -121,10 +128,31 @@ impl<F: Field> Add<F> for Assigned<F> {
     }
 }
 
+impl<F: Field> Add<F> for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn add(self, rhs: F) -> Assigned<F> {
+        *self + rhs
+    }
+}
+
 impl<F: Field> Add<&Assigned<F>> for Assigned<F> {
     type Output = Assigned<F>;
     fn add(self, rhs: &Self) -> Assigned<F> {
         self + *rhs
+    }
+}
+
+impl<F: Field> Add<Assigned<F>> for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn add(self, rhs: Assigned<F>) -> Assigned<F> {
+        *self + rhs
+    }
+}
+
+impl<F: Field> Add<&Assigned<F>> for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn add(self, rhs: &Assigned<F>) -> Assigned<F> {
+        *self + *rhs
     }
 }
 
@@ -154,10 +182,31 @@ impl<F: Field> Sub<F> for Assigned<F> {
     }
 }
 
+impl<F: Field> Sub<F> for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn sub(self, rhs: F) -> Assigned<F> {
+        *self - rhs
+    }
+}
+
 impl<F: Field> Sub<&Assigned<F>> for Assigned<F> {
     type Output = Assigned<F>;
     fn sub(self, rhs: &Self) -> Assigned<F> {
         self - *rhs
+    }
+}
+
+impl<F: Field> Sub<Assigned<F>> for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn sub(self, rhs: Assigned<F>) -> Assigned<F> {
+        *self - rhs
+    }
+}
+
+impl<F: Field> Sub<&Assigned<F>> for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn sub(self, rhs: &Assigned<F>) -> Assigned<F> {
+        *self - *rhs
     }
 }
 
@@ -198,6 +247,13 @@ impl<F: Field> Mul<F> for Assigned<F> {
     type Output = Assigned<F>;
     fn mul(self, rhs: F) -> Assigned<F> {
         self * Self::Trivial(rhs)
+    }
+}
+
+impl<F: Field> Mul<F> for &Assigned<F> {
+    type Output = Assigned<F>;
+    fn mul(self, rhs: F) -> Assigned<F> {
+        *self * rhs
     }
 }
 

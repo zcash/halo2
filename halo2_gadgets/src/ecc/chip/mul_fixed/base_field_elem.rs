@@ -1,8 +1,9 @@
 use super::super::{EccBaseFieldElemFixed, EccPoint, FixedPoints, NUM_WINDOWS, T_P};
 use super::H_BASE;
 
+use crate::utilities::bool_check;
 use crate::{
-    primitives::sinsemilla,
+    sinsemilla::primitives as sinsemilla,
     utilities::{bitrange_subset, lookup_range_check::LookupRangeCheckConfig, range_check},
 };
 
@@ -57,6 +58,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
         // Check that the base field element is canonical.
+        // https://p.z.cash/halo2-0.1:ecc-fixed-mul-base-canonicity
         meta.create_gate("Canonicity checks", |meta| {
             let q_mul_fixed_base_field = meta.query_selector(self.q_mul_fixed_base_field);
 
@@ -84,7 +86,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                 // Range-constrain α_1 to be 2 bits
                 let alpha_1_range_check = range_check(alpha_1.clone(), 1 << 2);
                 // Boolean-constrain α_2
-                let alpha_2_range_check = range_check(alpha_2.clone(), 1 << 1);
+                let alpha_2_range_check = bool_check(alpha_2.clone());
                 // Check that α_1 + 2^2 α_2 = z_84_alpha
                 let z_84_alpha_check = z_84_alpha.clone()
                     - (alpha_1.clone() + alpha_2.clone() * pallas::Base::from(1 << 2));
@@ -140,7 +142,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                     )))
                     .chain(Some((
                         "MSB = 1 => a_43 = 0 or 1",
-                        alpha_2.clone() * range_check(a_43, 2),
+                        alpha_2.clone() * bool_check(a_43),
                     )))
                     .chain(Some((
                         "MSB = 1 => z_13_alpha_0_prime = 0",
@@ -225,9 +227,9 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             let real_mul = scalar.map(|scalar| base.generator() * scalar);
             let result = result.point();
 
-            if let (Some(real_mul), Some(result)) = (real_mul, result) {
-                assert_eq!(real_mul.to_affine(), result);
-            }
+            real_mul
+                .zip(result)
+                .assert_if_known(|(real_mul, result)| &real_mul.to_affine() == result);
         }
 
         // We want to enforce canonicity of a 255-bit base field element, α.
@@ -324,7 +326,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                         || "α_1 = α[252..=253]",
                         self.canon_advices[1],
                         offset,
-                        || alpha_1.ok_or(Error::Synthesis),
+                        || alpha_1,
                     )?;
 
                     // Witness the MSB α_2 = α[254]
@@ -333,7 +335,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                         || "α_2 = α[254]",
                         self.canon_advices[2],
                         offset,
-                        || alpha_2.ok_or(Error::Synthesis),
+                        || alpha_2,
                     )?;
                 }
 
@@ -380,7 +382,7 @@ pub mod tests {
         Curve,
     };
     use halo2_proofs::{
-        circuit::{Chip, Layouter},
+        circuit::{Chip, Layouter, Value},
         plonk::Error,
     };
     use pasta_curves::pallas;
@@ -430,7 +432,7 @@ pub mod tests {
             let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),
-                Some((base_val * scalar).to_affine()),
+                Value::known((base_val * scalar).to_affine()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain result"), &expected)
         }
@@ -442,7 +444,7 @@ pub mod tests {
                 let scalar_fixed = chip.load_private(
                     layouter.namespace(|| "random base field element"),
                     column,
-                    Some(scalar_fixed),
+                    Value::known(scalar_fixed),
                 )?;
                 base.mul(layouter.namespace(|| "random [a]B"), scalar_fixed)?
             };
@@ -470,7 +472,7 @@ pub mod tests {
                 let scalar_fixed = chip.load_private(
                     layouter.namespace(|| "mul with double"),
                     column,
-                    Some(scalar_fixed),
+                    Value::known(scalar_fixed),
                 )?;
                 base.mul(layouter.namespace(|| "mul with double"), scalar_fixed)?
             };
@@ -488,21 +490,28 @@ pub mod tests {
         {
             let scalar_fixed = pallas::Base::zero();
             let result = {
-                let scalar_fixed =
-                    chip.load_private(layouter.namespace(|| "zero"), column, Some(scalar_fixed))?;
+                let scalar_fixed = chip.load_private(
+                    layouter.namespace(|| "zero"),
+                    column,
+                    Value::known(scalar_fixed),
+                )?;
                 base.mul(layouter.namespace(|| "mul by zero"), scalar_fixed)?
             };
-            if let Some(is_identity) = result.inner().is_identity() {
-                assert!(is_identity);
-            }
+            result
+                .inner()
+                .is_identity()
+                .assert_if_known(|is_identity| *is_identity);
         }
 
         // [-1]B is the largest base field element
         {
             let scalar_fixed = -pallas::Base::one();
             let result = {
-                let scalar_fixed =
-                    chip.load_private(layouter.namespace(|| "-1"), column, Some(scalar_fixed))?;
+                let scalar_fixed = chip.load_private(
+                    layouter.namespace(|| "-1"),
+                    column,
+                    Value::known(scalar_fixed),
+                )?;
                 base.mul(layouter.namespace(|| "mul by -1"), scalar_fixed)?
             };
             constrain_equal_non_id(

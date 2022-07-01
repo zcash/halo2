@@ -1,8 +1,7 @@
 use super::EccPoint;
-use ff::{BatchInvert, Field};
 use halo2_proofs::{
     circuit::Region,
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
+    plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
 use pasta_curves::{arithmetic::FieldExt, pallas};
@@ -89,7 +88,8 @@ impl Config {
     }
 
     fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
-        meta.create_gate("complete addition gates", |meta| {
+        // https://p.z.cash/halo2-0.1:ecc-complete-addition
+        meta.create_gate("complete addition", |meta| {
             let q_add = meta.query_selector(self.q_add);
             let x_p = meta.query_advice(self.x_p, Rotation::cur());
             let y_p = meta.query_advice(self.y_p, Rotation::cur());
@@ -109,14 +109,20 @@ impl Config {
             let delta = meta.query_advice(self.delta, Rotation::cur());
 
             // Useful composite expressions
+            // (x_q − x_p)
+            let x_q_minus_x_p = x_q.clone() - x_p.clone();
+            // (x_p - x_r)
+            let x_p_minus_x_r = x_p.clone() - x_r.clone();
+            // (y_q + y_p)
+            let y_q_plus_y_p = y_q.clone() + y_p.clone();
             // α ⋅(x_q - x_p)
-            let if_alpha = (x_q.clone() - x_p.clone()) * alpha;
+            let if_alpha = x_q_minus_x_p.clone() * alpha;
             // β ⋅ x_p
             let if_beta = x_p.clone() * beta;
             // γ ⋅ x_q
             let if_gamma = x_q.clone() * gamma;
-            // δ ⋅(y_p + y_q)
-            let if_delta = (y_q.clone() + y_p.clone()) * delta;
+            // δ ⋅(y_q + y_p)
+            let if_delta = y_q_plus_y_p.clone() * delta;
 
             // Useful constants
             let one = Expression::Constant(pallas::Base::one());
@@ -125,13 +131,11 @@ impl Config {
 
             // (x_q − x_p)⋅((x_q − x_p)⋅λ − (y_q−y_p)) = 0
             let poly1 = {
-                let x_q_minus_x_p = x_q.clone() - x_p.clone(); // (x_q − x_p)
-
                 let y_q_minus_y_p = y_q.clone() - y_p.clone(); // (y_q − y_p)
                 let incomplete = x_q_minus_x_p.clone() * lambda.clone() - y_q_minus_y_p; // (x_q − x_p)⋅λ − (y_q−y_p)
 
                 // q_add ⋅(x_q − x_p)⋅((x_q − x_p)⋅λ − (y_q−y_p))
-                x_q_minus_x_p * incomplete
+                x_q_minus_x_p.clone() * incomplete
             };
 
             // (1 - (x_q - x_p)⋅α)⋅(2y_p ⋅λ - 3x_p^2) = 0
@@ -144,70 +148,58 @@ impl Config {
                 (one.clone() - if_alpha.clone()) * tangent_line
             };
 
-            // x_p⋅x_q⋅(x_q - x_p)⋅(λ^2 - x_p - x_q - x_r) = 0
-            let secant_line = lambda.clone().square() - x_p.clone() - x_q.clone() - x_r.clone(); // (λ^2 - x_p - x_q - x_r)
-            let poly3 = {
-                let x_q_minus_x_p = x_q.clone() - x_p.clone(); // (x_q - x_p)
+            // (λ^2 - x_p - x_q - x_r)
+            let nonexceptional_x_r =
+                lambda.clone().square() - x_p.clone() - x_q.clone() - x_r.clone();
+            // (λ ⋅(x_p - x_r) - y_p - y_r)
+            let nonexceptional_y_r = lambda * x_p_minus_x_r - y_p.clone() - y_r.clone();
 
-                // x_p⋅x_q⋅(x_q - x_p)⋅(λ^2 - x_p - x_q - x_r)
-                x_p.clone() * x_q.clone() * x_q_minus_x_p * secant_line.clone()
-            };
+            // x_p⋅x_q⋅(x_q - x_p)⋅(λ^2 - x_p - x_q - x_r) = 0
+            let poly3a =
+                x_p.clone() * x_q.clone() * x_q_minus_x_p.clone() * nonexceptional_x_r.clone();
 
             // x_p⋅x_q⋅(x_q - x_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r) = 0
-            let poly4 = {
-                let x_q_minus_x_p = x_q.clone() - x_p.clone(); // (x_q - x_p)
-                let x_p_minus_x_r = x_p.clone() - x_r.clone(); // (x_p - x_r)
-
-                // x_p⋅x_q⋅(x_q - x_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r)
-                x_p.clone()
-                    * x_q.clone()
-                    * x_q_minus_x_p
-                    * (lambda.clone() * x_p_minus_x_r - y_p.clone() - y_r.clone())
-            };
+            let poly3b = x_p.clone() * x_q.clone() * x_q_minus_x_p * nonexceptional_y_r.clone();
 
             // x_p⋅x_q⋅(y_q + y_p)⋅(λ^2 - x_p - x_q - x_r) = 0
-            let poly5 = {
-                let y_q_plus_y_p = y_q.clone() + y_p.clone(); // (y_q + y_p)
-
-                // x_p⋅x_q⋅(y_q + y_p)⋅(λ^2 - x_p - x_q - x_r)
-                x_p.clone() * x_q.clone() * y_q_plus_y_p * secant_line
-            };
+            let poly3c = x_p.clone() * x_q.clone() * y_q_plus_y_p.clone() * nonexceptional_x_r;
 
             // x_p⋅x_q⋅(y_q + y_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r) = 0
-            let poly6 = {
-                let y_q_plus_y_p = y_q.clone() + y_p.clone(); // (y_q + y_p)
-                let x_p_minus_x_r = x_p.clone() - x_r.clone(); // (x_p - x_r)
-
-                // x_p⋅x_q⋅(y_q + y_p)⋅(λ ⋅(x_p - x_r) - y_p - y_r)
-                x_p.clone()
-                    * x_q.clone()
-                    * y_q_plus_y_p
-                    * (lambda * x_p_minus_x_r - y_p.clone() - y_r.clone())
-            };
+            let poly3d = x_p.clone() * x_q.clone() * y_q_plus_y_p * nonexceptional_y_r;
 
             // (1 - x_p * β) * (x_r - x_q) = 0
-            let poly7 = (one.clone() - if_beta.clone()) * (x_r.clone() - x_q);
+            let poly4a = (one.clone() - if_beta.clone()) * (x_r.clone() - x_q);
 
             // (1 - x_p * β) * (y_r - y_q) = 0
-            let poly8 = (one.clone() - if_beta) * (y_r.clone() - y_q);
+            let poly4b = (one.clone() - if_beta) * (y_r.clone() - y_q);
 
             // (1 - x_q * γ) * (x_r - x_p) = 0
-            let poly9 = (one.clone() - if_gamma.clone()) * (x_r.clone() - x_p);
+            let poly5a = (one.clone() - if_gamma.clone()) * (x_r.clone() - x_p);
 
             // (1 - x_q * γ) * (y_r - y_p) = 0
-            let poly10 = (one.clone() - if_gamma) * (y_r.clone() - y_p);
+            let poly5b = (one.clone() - if_gamma) * (y_r.clone() - y_p);
 
             // ((1 - (x_q - x_p) * α - (y_q + y_p) * δ)) * x_r
-            let poly11 = (one.clone() - if_alpha.clone() - if_delta.clone()) * x_r;
+            let poly6a = (one.clone() - if_alpha.clone() - if_delta.clone()) * x_r;
 
             // ((1 - (x_q - x_p) * α - (y_q + y_p) * δ)) * y_r
-            let poly12 = (one - if_alpha - if_delta) * y_r;
+            let poly6b = (one - if_alpha - if_delta) * y_r;
 
             Constraints::with_selector(
                 q_add,
                 [
-                    poly1, poly2, poly3, poly4, poly5, poly6, poly7, poly8, poly9, poly10, poly11,
-                    poly12,
+                    ("1", poly1),
+                    ("2", poly2),
+                    ("3a", poly3a),
+                    ("3b", poly3b),
+                    ("3c", poly3c),
+                    ("3d", poly3d),
+                    ("4a", poly4a),
+                    ("4b", poly4b),
+                    ("5a", poly5a),
+                    ("5b", poly5b),
+                    ("6a", poly6a),
+                    ("6b", poly6b),
                 ],
             )
         });
@@ -234,58 +226,31 @@ impl Config {
         let (x_p, y_p) = (p.x.value(), p.y.value());
         let (x_q, y_q) = (q.x.value(), q.y.value());
 
-        //   [alpha, beta, gamma, delta]
-        // = [inv0(x_q - x_p), inv0(x_p), inv0(x_q), inv0(y_q + y_p)]
-        // where inv0(x) = 0 if x = 0, 1/x otherwise.
-        //
-        let (alpha, beta, gamma, delta) = {
-            let inverses = x_p
-                .zip(x_q)
-                .zip(y_p)
-                .zip(y_q)
-                .map(|(((x_p, x_q), y_p), y_q)| {
-                    let alpha = x_q - x_p;
-                    let beta = x_p;
-                    let gamma = x_q;
-                    let delta = y_q + y_p;
-
-                    let mut inverses = [alpha, *beta, *gamma, delta];
-                    inverses.batch_invert();
-                    inverses
-                });
-
-            if let Some([alpha, beta, gamma, delta]) = inverses {
-                (Some(alpha), Some(beta), Some(gamma), Some(delta))
-            } else {
-                (None, None, None, None)
-            }
-        };
-
         // Assign α = inv0(x_q - x_p)
-        region.assign_advice(|| "α", self.alpha, offset, || alpha.ok_or(Error::Synthesis))?;
+        let alpha = (x_q - x_p).invert();
+        region.assign_advice(|| "α", self.alpha, offset, || alpha)?;
 
         // Assign β = inv0(x_p)
-        region.assign_advice(|| "β", self.beta, offset, || beta.ok_or(Error::Synthesis))?;
+        let beta = x_p.invert();
+        region.assign_advice(|| "β", self.beta, offset, || beta)?;
 
         // Assign γ = inv0(x_q)
-        region.assign_advice(|| "γ", self.gamma, offset, || gamma.ok_or(Error::Synthesis))?;
+        let gamma = x_q.invert();
+        region.assign_advice(|| "γ", self.gamma, offset, || gamma)?;
 
         // Assign δ = inv0(y_q + y_p) if x_q = x_p, 0 otherwise
-        region.assign_advice(
-            || "δ",
-            self.delta,
-            offset,
-            || {
-                let x_p = x_p.ok_or(Error::Synthesis)?;
-                let x_q = x_q.ok_or(Error::Synthesis)?;
-
+        let delta = x_p
+            .zip(x_q)
+            .zip(y_p)
+            .zip(y_q)
+            .map(|(((x_p, x_q), y_p), y_q)| {
                 if x_q == x_p {
-                    delta.ok_or(Error::Synthesis)
+                    (y_q + y_p).invert()
                 } else {
-                    Ok(pallas::Base::zero())
+                    Assigned::Zero
                 }
-            },
-        )?;
+            });
+        region.assign_advice(|| "δ", self.delta, offset, || delta)?;
 
         #[allow(clippy::collapsible_else_if)]
         // Assign lambda
@@ -303,22 +268,17 @@ impl Config {
                     } else {
                         if !y_p.is_zero_vartime() {
                             // 3(x_p)^2
-                            let three_x_p_sq = pallas::Base::from(3) * x_p.square();
+                            let three_x_p_sq = x_p.square() * pallas::Base::from(3);
                             // 1 / 2(y_p)
-                            let inv_two_y_p = y_p.invert().unwrap() * pallas::Base::TWO_INV;
+                            let inv_two_y_p = y_p.invert() * pallas::Base::TWO_INV;
                             // λ = 3(x_p)^2 / 2(y_p)
                             three_x_p_sq * inv_two_y_p
                         } else {
-                            pallas::Base::zero()
+                            Assigned::Zero
                         }
                     }
                 });
-        region.assign_advice(
-            || "λ",
-            self.lambda,
-            offset,
-            || lambda.ok_or(Error::Synthesis),
-        )?;
+        region.assign_advice(|| "λ", self.lambda, offset, || lambda)?;
 
         // Calculate (x_r, y_r)
         let r =
@@ -336,7 +296,7 @@ impl Config {
                             (*x_p, *y_p)
                         } else if (x_q == x_p) && (*y_q == -y_p) {
                             // P + (-P) maps to (0,0)
-                            (pallas::Base::zero(), pallas::Base::zero())
+                            (Assigned::Zero, Assigned::Zero)
                         } else {
                             // x_r = λ^2 - x_p - x_q
                             let x_r = lambda.square() - x_p - x_q;
@@ -349,21 +309,11 @@ impl Config {
 
         // Assign x_r
         let x_r = r.map(|r| r.0);
-        let x_r_cell = region.assign_advice(
-            || "x_r",
-            self.x_qr,
-            offset + 1,
-            || x_r.ok_or(Error::Synthesis),
-        )?;
+        let x_r_cell = region.assign_advice(|| "x_r", self.x_qr, offset + 1, || x_r)?;
 
         // Assign y_r
         let y_r = r.map(|r| r.1);
-        let y_r_cell = region.assign_advice(
-            || "y_r",
-            self.y_qr,
-            offset + 1,
-            || y_r.ok_or(Error::Synthesis),
-        )?;
+        let y_r_cell = region.assign_advice(|| "y_r", self.y_qr, offset + 1, || y_r)?;
 
         let result = EccPoint {
             x: x_r_cell,
@@ -380,9 +330,9 @@ impl Config {
             let real_sum = p.zip(q).map(|(p, q)| p + q);
             let result = result.point();
 
-            if let (Some(real_sum), Some(result)) = (real_sum, result) {
-                assert_eq!(real_sum.to_affine(), result);
-            }
+            real_sum
+                .zip(result)
+                .assert_if_known(|(real_sum, result)| &real_sum.to_affine() == result);
         }
 
         Ok(result)
@@ -392,7 +342,10 @@ impl Config {
 #[cfg(test)]
 pub mod tests {
     use group::{prime::PrimeCurveAffine, Curve};
-    use halo2_proofs::{circuit::Layouter, plonk::Error};
+    use halo2_proofs::{
+        circuit::{Layouter, Value},
+        plonk::Error,
+    };
     use pasta_curves::{arithmetic::CurveExt, pallas};
 
     use crate::ecc::{chip::EccPoint, EccInstructions, NonIdentityPoint};
@@ -415,9 +368,10 @@ pub mod tests {
         // Check complete addition P + (-P)
         let zero = {
             let result = p.add(layouter.namespace(|| "P + (-P)"), p_neg)?;
-            if let Some(is_identity) = result.inner().is_identity() {
-                assert!(is_identity);
-            }
+            result
+                .inner()
+                .is_identity()
+                .assert_if_known(|is_identity| *is_identity);
             result
         };
 
@@ -433,7 +387,7 @@ pub mod tests {
             let witnessed_result = NonIdentityPoint::new(
                 chip.clone(),
                 layouter.namespace(|| "witnessed P + Q"),
-                Some((p_val + q_val).to_affine()),
+                Value::known((p_val + q_val).to_affine()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain P + Q"), &witnessed_result)?;
         }
@@ -444,7 +398,7 @@ pub mod tests {
             let witnessed_result = NonIdentityPoint::new(
                 chip.clone(),
                 layouter.namespace(|| "witnessed P + P"),
-                Some((p_val + p_val).to_affine()),
+                Value::known((p_val + p_val).to_affine()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain P + P"), &witnessed_result)?;
         }
@@ -466,7 +420,7 @@ pub mod tests {
         let endo_p = NonIdentityPoint::new(
             chip.clone(),
             layouter.namespace(|| "endo(P)"),
-            Some(endo_p.to_affine()),
+            Value::known(endo_p.to_affine()),
         )?;
         p.add(layouter.namespace(|| "P + endo(P)"), &endo_p)?;
 
@@ -475,7 +429,7 @@ pub mod tests {
         let endo_p_neg = NonIdentityPoint::new(
             chip.clone(),
             layouter.namespace(|| "endo(-P)"),
-            Some(endo_p_neg.to_affine()),
+            Value::known(endo_p_neg.to_affine()),
         )?;
         p.add(layouter.namespace(|| "P + endo(-P)"), &endo_p_neg)?;
 
@@ -484,7 +438,7 @@ pub mod tests {
         let endo_2_p = NonIdentityPoint::new(
             chip.clone(),
             layouter.namespace(|| "endo^2(P)"),
-            Some(endo_2_p.to_affine()),
+            Value::known(endo_2_p.to_affine()),
         )?;
         p.add(layouter.namespace(|| "P + endo^2(P)"), &endo_2_p)?;
 
@@ -493,7 +447,7 @@ pub mod tests {
         let endo_2_p_neg = NonIdentityPoint::new(
             chip,
             layouter.namespace(|| "endo^2(-P)"),
-            Some(endo_2_p_neg.to_affine()),
+            Value::known(endo_2_p_neg.to_affine()),
         )?;
         p.add(layouter.namespace(|| "P + endo^2(-P)"), &endo_2_p_neg)?;
 

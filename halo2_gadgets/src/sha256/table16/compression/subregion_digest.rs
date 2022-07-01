@@ -1,7 +1,7 @@
 use super::super::{super::DIGEST_SIZE, BlockWord, RoundWordDense};
 use super::{compression_util::*, CompressionConfig, State};
 use halo2_proofs::{
-    circuit::Region,
+    circuit::{Region, Value},
     pasta::pallas,
     plonk::{Advice, Column, Error},
 };
@@ -39,10 +39,7 @@ impl CompressionConfig {
             || "a",
             a_5,
             abcd_row,
-            || {
-                a.map(|a| pallas::Base::from(a as u64))
-                    .ok_or(Error::Synthesis)
-            },
+            || a.map(|a| pallas::Base::from(a as u64)),
         )?;
 
         let b = self.assign_digest_word(region, abcd_row, a_6, a_7, a_8, b.dense_halves)?;
@@ -61,10 +58,7 @@ impl CompressionConfig {
             || "e",
             a_5,
             efgh_row,
-            || {
-                e.map(|e| pallas::Base::from(e as u64))
-                    .ok_or(Error::Synthesis)
-            },
+            || e.map(|e| pallas::Base::from(e as u64)),
         )?;
 
         let f = self.assign_digest_word(region, efgh_row, a_6, a_7, a_8, f.dense_halves)?;
@@ -91,7 +85,7 @@ impl CompressionConfig {
         hi_col: Column<Advice>,
         word_col: Column<Advice>,
         dense_halves: RoundWordDense,
-    ) -> Result<Option<u32>, Error> {
+    ) -> Result<Value<u32>, Error> {
         dense_halves.0.copy_advice(|| "lo", region, lo_col, row)?;
         dense_halves.1.copy_advice(|| "hi", region, hi_col, row)?;
 
@@ -100,10 +94,7 @@ impl CompressionConfig {
             || "word",
             word_col,
             row,
-            || {
-                val.map(|val| pallas::Base::from(val as u64))
-                    .ok_or(Error::Synthesis)
-            },
+            || val.map(|val| pallas::Base::from(val as u64)),
         )?;
 
         Ok(val)

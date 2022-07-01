@@ -2,16 +2,16 @@
 
 use super::{BaseFitsInScalarInstructions, EccInstructions, FixedPoints};
 use crate::{
-    primitives::sinsemilla,
+    sinsemilla::primitives as sinsemilla,
     utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
 };
 use arrayvec::ArrayVec;
 
-use ff::Field;
+use ff::PrimeField;
 use group::prime::PrimeCurveAffine;
 use halo2_proofs::{
-    circuit::{AssignedCell, Chip, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed},
+    circuit::{AssignedCell, Chip, Layouter, Value},
+    plonk::{Advice, Assigned, Column, ConstraintSystem, Error, Fixed},
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
 
@@ -26,15 +26,22 @@ pub(super) mod witness_point;
 
 pub use constants::*;
 
+// Exposed for Sinsemilla.
+pub(crate) use mul::incomplete::DoubleAndAdd;
+
 /// A curve point represented in affine (x, y) coordinates, or the
 /// identity represented as (0, 0).
 /// Each coordinate is assigned to a cell.
 #[derive(Clone, Debug)]
 pub struct EccPoint {
     /// x-coordinate
-    x: AssignedCell<pallas::Base, pallas::Base>,
+    ///
+    /// Stored as an `Assigned<F>` to enable batching inversions.
+    x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
     /// y-coordinate
-    y: AssignedCell<pallas::Base, pallas::Base>,
+    ///
+    /// Stored as an `Assigned<F>` to enable batching inversions.
+    y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
 }
 
 impl EccPoint {
@@ -43,38 +50,35 @@ impl EccPoint {
     /// This is an internal API that we only use where we know we have a valid curve point
     /// (specifically inside Sinsemilla).
     pub(crate) fn from_coordinates_unchecked(
-        x: AssignedCell<pallas::Base, pallas::Base>,
-        y: AssignedCell<pallas::Base, pallas::Base>,
+        x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+        y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
     ) -> Self {
         EccPoint { x, y }
     }
 
     /// Returns the value of this curve point, if known.
-    pub fn point(&self) -> Option<pallas::Affine> {
-        match (self.x.value(), self.y.value()) {
-            (Some(x), Some(y)) => {
-                if x.is_zero_vartime() && y.is_zero_vartime() {
-                    Some(pallas::Affine::identity())
-                } else {
-                    Some(pallas::Affine::from_xy(*x, *y).unwrap())
-                }
+    pub fn point(&self) -> Value<pallas::Affine> {
+        self.x.value().zip(self.y.value()).map(|(x, y)| {
+            if x.is_zero_vartime() && y.is_zero_vartime() {
+                pallas::Affine::identity()
+            } else {
+                pallas::Affine::from_xy(x.evaluate(), y.evaluate()).unwrap()
             }
-            _ => None,
-        }
+        })
     }
     /// The cell containing the affine short-Weierstrass x-coordinate,
     /// or 0 for the zero point.
     pub fn x(&self) -> AssignedCell<pallas::Base, pallas::Base> {
-        self.x.clone()
+        self.x.clone().evaluate()
     }
     /// The cell containing the affine short-Weierstrass y-coordinate,
     /// or 0 for the zero point.
     pub fn y(&self) -> AssignedCell<pallas::Base, pallas::Base> {
-        self.y.clone()
+        self.y.clone().evaluate()
     }
 
     #[cfg(test)]
-    fn is_identity(&self) -> Option<bool> {
+    fn is_identity(&self) -> Value<bool> {
         self.x.value().map(|x| x.is_zero_vartime())
     }
 }
@@ -84,9 +88,13 @@ impl EccPoint {
 #[derive(Clone, Debug)]
 pub struct NonIdentityEccPoint {
     /// x-coordinate
-    x: AssignedCell<pallas::Base, pallas::Base>,
+    ///
+    /// Stored as an `Assigned<F>` to enable batching inversions.
+    x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
     /// y-coordinate
-    y: AssignedCell<pallas::Base, pallas::Base>,
+    ///
+    /// Stored as an `Assigned<F>` to enable batching inversions.
+    y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
 }
 
 impl NonIdentityEccPoint {
@@ -95,29 +103,26 @@ impl NonIdentityEccPoint {
     /// This is an internal API that we only use where we know we have a valid non-identity
     /// curve point (specifically inside Sinsemilla).
     pub(crate) fn from_coordinates_unchecked(
-        x: AssignedCell<pallas::Base, pallas::Base>,
-        y: AssignedCell<pallas::Base, pallas::Base>,
+        x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+        y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
     ) -> Self {
         NonIdentityEccPoint { x, y }
     }
 
     /// Returns the value of this curve point, if known.
-    pub fn point(&self) -> Option<pallas::Affine> {
-        match (self.x.value(), self.y.value()) {
-            (Some(x), Some(y)) => {
-                assert!(!x.is_zero_vartime() && !y.is_zero_vartime());
-                Some(pallas::Affine::from_xy(*x, *y).unwrap())
-            }
-            _ => None,
-        }
+    pub fn point(&self) -> Value<pallas::Affine> {
+        self.x.value().zip(self.y.value()).map(|(x, y)| {
+            assert!(!x.is_zero_vartime() && !y.is_zero_vartime());
+            pallas::Affine::from_xy(x.evaluate(), y.evaluate()).unwrap()
+        })
     }
     /// The cell containing the affine short-Weierstrass x-coordinate.
     pub fn x(&self) -> AssignedCell<pallas::Base, pallas::Base> {
-        self.x.clone()
+        self.x.clone().evaluate()
     }
     /// The cell containing the affine short-Weierstrass y-coordinate.
     pub fn y(&self) -> AssignedCell<pallas::Base, pallas::Base> {
-        self.y.clone()
+        self.y.clone().evaluate()
     }
 }
 
@@ -130,7 +135,7 @@ impl From<NonIdentityEccPoint> for EccPoint {
     }
 }
 
-/// Configuration for the ECC chip
+/// Configuration for [`EccChip`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[allow(non_snake_case)]
 pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>> {
@@ -210,7 +215,7 @@ pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
     fn generator(&self) -> C;
 
     /// Returns the $u$ values for this fixed point.
-    fn u(&self) -> Vec<[[u8; 32]; H]>;
+    fn u(&self) -> Vec<[<C::Base as PrimeField>::Repr; H]>;
 
     /// Returns the $z$ value for this fixed point.
     fn z(&self) -> Vec<u64>;
@@ -221,7 +226,7 @@ pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
     }
 }
 
-/// A chip implementing EccInstructions
+/// An [`EccInstructions`] chip that uses 10 advice columns.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EccChip<FixedPoints: super::FixedPoints<pallas::Affine>> {
     config: EccConfig<FixedPoints>,
@@ -283,8 +288,6 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
             meta,
             lagrange_coeffs,
             advices[4],
-            advices[0],
-            advices[1],
             advices[5],
             add,
             add_incomplete,
@@ -327,8 +330,10 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
 /// each `k_i` is in the range [0..2^3).
 #[derive(Clone, Debug)]
 pub struct EccScalarFixed {
-    value: Option<pallas::Scalar>,
-    windows: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS }>,
+    value: Value<pallas::Scalar>,
+    /// The circuit-assigned windows representing this scalar, or `None` if the scalar has
+    /// not been used yet.
+    windows: Option<ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS }>>,
 }
 
 // TODO: Make V a `u64`
@@ -353,7 +358,10 @@ type MagnitudeSign = (MagnitudeCell, SignCell);
 pub struct EccScalarFixedShort {
     magnitude: MagnitudeCell,
     sign: SignCell,
-    running_sum: ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS_SHORT + 1 }>,
+    /// The circuit-assigned running sum constraining this signed short scalar, or `None`
+    /// if the scalar has not been used yet.
+    running_sum:
+        Option<ArrayVec<AssignedCell<pallas::Base, pallas::Base>, { NUM_WINDOWS_SHORT + 1 }>>,
 }
 
 /// A base field element used for fixed-base scalar multiplication.
@@ -391,7 +399,9 @@ pub enum ScalarVar {
     /// However, the only use of variable-base scalar mul in the Orchard protocol
     /// is in deriving diversified addresses `[ivk] g_d`,  and `ivk` is guaranteed
     /// to be in the base field of the curve. (See non-normative notes in
-    /// https://zips.z.cash/protocol/nu5.pdf#orchardkeycomponents.)
+    /// [4.2.3 Orchard Key Components][orchardkeycomponents].)
+    ///
+    /// [orchardkeycomponents]: https://zips.z.cash/protocol/protocol.pdf#orchardkeycomponents
     BaseFieldElem(AssignedCell<pallas::Base, pallas::Base>),
     /// A full-width scalar. This is unimplemented for halo2_gadgets v0.1.0.
     FullWidth,
@@ -434,7 +444,7 @@ where
     fn witness_point(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        value: Option<pallas::Affine>,
+        value: Value<pallas::Affine>,
     ) -> Result<Self::Point, Error> {
         let config = self.config().witness_point;
         layouter.assign_region(
@@ -446,7 +456,7 @@ where
     fn witness_point_non_id(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        value: Option<pallas::Affine>,
+        value: Value<pallas::Affine>,
     ) -> Result<Self::NonIdentityPoint, Error> {
         let config = self.config().witness_point;
         layouter.assign_region(
@@ -458,10 +468,35 @@ where
     fn witness_scalar_var(
         &self,
         _layouter: &mut impl Layouter<pallas::Base>,
-        _value: Option<pallas::Scalar>,
+        _value: Value<pallas::Scalar>,
     ) -> Result<Self::ScalarVar, Error> {
         // This is unimplemented for halo2_gadgets v0.1.0.
         todo!()
+    }
+
+    fn witness_scalar_fixed(
+        &self,
+        _layouter: &mut impl Layouter<pallas::Base>,
+        value: Value<pallas::Scalar>,
+    ) -> Result<Self::ScalarFixed, Error> {
+        Ok(EccScalarFixed {
+            value,
+            // This chip uses lazy witnessing.
+            windows: None,
+        })
+    }
+
+    fn scalar_fixed_from_signed_short(
+        &self,
+        _layouter: &mut impl Layouter<pallas::Base>,
+        (magnitude, sign): MagnitudeSign,
+    ) -> Result<Self::ScalarFixedShort, Error> {
+        Ok(EccScalarFixedShort {
+            magnitude,
+            sign,
+            // This chip uses lazy constraining.
+            running_sum: None,
+        })
     }
 
     fn extract_p<Point: Into<Self::Point> + Clone>(point: &Point) -> Self::X {
@@ -519,7 +554,7 @@ where
     fn mul_fixed(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        scalar: Option<pallas::Scalar>,
+        scalar: &Self::ScalarFixed,
         base: &<Self::FixedPoints as FixedPoints<pallas::Affine>>::FullScalar,
     ) -> Result<(Self::Point, Self::ScalarFixed), Error> {
         let config = self.config().mul_fixed_full.clone();
@@ -533,13 +568,13 @@ where
     fn mul_fixed_short(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
-        magnitude_sign: MagnitudeSign,
+        scalar: &Self::ScalarFixedShort,
         base: &<Self::FixedPoints as FixedPoints<pallas::Affine>>::ShortScalar,
     ) -> Result<(Self::Point, Self::ScalarFixedShort), Error> {
         let config = self.config().mul_fixed_short.clone();
         config.assign(
             layouter.namespace(|| format!("short fixed-base mul of {:?}", base)),
-            magnitude_sign,
+            scalar,
             base,
         )
     }

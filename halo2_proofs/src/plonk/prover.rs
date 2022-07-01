@@ -12,15 +12,16 @@ use super::{
     lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
     ChallengeY, Error, ProvingKey,
 };
-use crate::poly::{
-    self,
-    commitment::{Blind, Params},
-    multiopen::{self, ProverQuery},
-    Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
-};
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine, FieldExt},
+    circuit::Value,
     plonk::Assigned,
+    poly::{
+        self,
+        commitment::{Blind, Params},
+        multiopen::{self, ProverQuery},
+        Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial,
+    },
 };
 use crate::{
     poly::batch_invert_assigned,
@@ -171,7 +172,7 @@ pub fn create_proof<
                     &self,
                     column: Column<Instance>,
                     row: usize,
-                ) -> Result<Option<F>, Error> {
+                ) -> Result<Value<F>, Error> {
                     if !self.usable_rows.contains(&row) {
                         return Err(Error::not_enough_rows_available(self.k));
                     }
@@ -179,7 +180,7 @@ pub fn create_proof<
                     self.instances
                         .get(column.index())
                         .and_then(|column| column.get(row))
-                        .map(|v| Some(*v))
+                        .map(|v| Value::known(*v))
                         .ok_or(Error::BoundsFailure)
                 }
 
@@ -191,7 +192,7 @@ pub fn create_proof<
                     to: V,
                 ) -> Result<(), Error>
                 where
-                    V: FnOnce() -> Result<VR, Error>,
+                    V: FnOnce() -> Value<VR>,
                     VR: Into<Assigned<F>>,
                     A: FnOnce() -> AR,
                     AR: Into<String>,
@@ -204,7 +205,7 @@ pub fn create_proof<
                         .advice
                         .get_mut(column.index())
                         .and_then(|v| v.get_mut(row))
-                        .ok_or(Error::BoundsFailure)? = to()?.into();
+                        .ok_or(Error::BoundsFailure)? = to().into_field().assign()?;
 
                     Ok(())
                 }
@@ -217,7 +218,7 @@ pub fn create_proof<
                     _: V,
                 ) -> Result<(), Error>
                 where
-                    V: FnOnce() -> Result<VR, Error>,
+                    V: FnOnce() -> Value<VR>,
                     VR: Into<Assigned<F>>,
                     A: FnOnce() -> AR,
                     AR: Into<String>,
@@ -243,7 +244,7 @@ pub fn create_proof<
                     &mut self,
                     _: Column<Fixed>,
                     _: usize,
-                    _: Option<Assigned<F>>,
+                    _: Value<Assigned<F>>,
                 ) -> Result<(), Error> {
                     Ok(())
                 }

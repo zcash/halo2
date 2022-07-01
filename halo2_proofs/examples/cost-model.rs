@@ -102,7 +102,7 @@ impl FromStr for Poly {
 
 #[derive(Debug)]
 struct Lookup {
-    columns: usize,
+    _columns: usize,
     input_deg: usize,
     table_deg: usize,
 }
@@ -112,11 +112,11 @@ impl FromStr for Lookup {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut parts = s.split(',');
-        let columns = parts.next().unwrap().parse()?;
+        let _columns = parts.next().unwrap().parse()?;
         let input_deg = parts.next().unwrap().parse()?;
         let table_deg = parts.next().unwrap().parse()?;
         Ok(Lookup {
-            columns,
+            _columns,
             input_deg,
             table_deg,
         })
