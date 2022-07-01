@@ -11,7 +11,7 @@ pub use pasta_curves::arithmetic::*;
 
 mod fft;
 mod multiexp;
-use fft::{parallel_fft, serial_fft, swap_bit_reverse};
+use fft::*;
 use multiexp::{multiexp_serial, small_multiexp};
 
 /// Performs a multi-exponentiation operation.
@@ -51,6 +51,7 @@ pub fn best_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
     let n = a.len() as usize;
     assert_eq!(n, 1 << log_n);
 
+    // bit reverse permutation
     swap_bit_reverse(a, n, log_n);
 
     // precompute twiddle factors
@@ -65,19 +66,37 @@ pub fn best_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
     if log_n <= log_threads() {
         serial_fft(a, n, log_n, &twiddles)
     } else {
-        parallel_fft(a, n, 1, &twiddles)
+        let (left, right) = a.split_at_mut(n / 2);
+        parallel_fft(left, right, n / 2, 2, &twiddles);
+        parallel_butterfly_arithmetic(left, right, 1, &twiddles)
     }
 }
 
-/// Performs a radix-$2$ inverse Fast-Fourier Transformation (FFT)
+/// Performs a radix-$2$ inverse Fast-Fourier Transformation (iFFT)
 pub fn best_ifft<G: Group>(a: &mut [G], omega_inv: G::Scalar, log_n: u32, divisor: G::Scalar) {
-    best_fft(a, omega_inv, log_n);
-    parallelize(a, |a, _| {
-        for coeff in a {
-            // Finish iFFT
-            coeff.group_scale(&divisor);
-        }
-    });
+    let n = a.len() as usize;
+    assert_eq!(n, 1 << log_n);
+
+    // bit reverse permutation
+    swap_bit_reverse(a, n, log_n);
+
+    // precompute twiddle factors
+    let twiddles: Vec<_> = (0..(n / 2) as usize)
+        .scan(G::Scalar::one(), |w, _| {
+            let tw = *w;
+            w.group_scale(&omega_inv);
+            Some(tw)
+        })
+        .collect();
+
+    if log_n <= log_threads() {
+        serial_fft(a, n, log_n, &twiddles);
+        a.iter_mut().for_each(|a| a.group_scale(&divisor))
+    } else {
+        let (left, right) = a.split_at_mut(n / 2);
+        parallel_fft(left, right, n / 2, 2, &twiddles);
+        parallel_butterfly_arithmetic_with_divisor(left, right, 1, &twiddles, divisor)
+    }
 }
 
 /// This evaluates a provided polynomial (in coefficient form) at `point`.
