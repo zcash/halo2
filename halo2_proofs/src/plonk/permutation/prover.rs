@@ -104,7 +104,7 @@ impl Argument {
                     Any::Fixed => fixed,
                     Any::Instance => instance,
                 };
-                parallelize(&mut modified_values, |modified_values, start| {
+                parallelize(&mut modified_values, 8, |modified_values, start| {
                     for ((modified_values, value), permuted_value) in modified_values
                         .iter_mut()
                         .zip(values[column.index()][start..].iter())
@@ -127,7 +127,7 @@ impl Argument {
                     Any::Fixed => fixed,
                     Any::Instance => instance,
                 };
-                parallelize(&mut modified_values, |modified_values, start| {
+                parallelize(&mut modified_values, 16, |modified_values, start| {
                     let mut deltaomega = deltaomega * &omega.pow_vartime(&[start as u64, 0, 0, 0]);
                     for (modified_values, value) in modified_values
                         .iter_mut()

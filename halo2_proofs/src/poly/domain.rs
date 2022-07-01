@@ -313,7 +313,7 @@ impl<G: Group> EvaluationDomain<G> {
 
         // Divide to obtain the quotient polynomial in the coset evaluation
         // domain.
-        parallelize(&mut a.values, |h, mut index| {
+        parallelize(&mut a.values, 8, |h, mut index| {
             for h in h {
                 h.group_scale(&self.t_evaluations[index % self.t_evaluations.len()]);
                 index += 1;
@@ -339,7 +339,7 @@ impl<G: Group> EvaluationDomain<G> {
         } else {
             [self.g_coset_inv, self.g_coset]
         };
-        parallelize(a, |a, mut index| {
+        parallelize(a, 8, |a, mut index| {
             for a in a {
                 // Distribute powers to move into/from coset
                 let i = index % (coset_powers.len() + 1);

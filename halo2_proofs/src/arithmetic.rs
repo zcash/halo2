@@ -72,7 +72,7 @@ pub fn best_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
 /// Performs a radix-$2$ inverse Fast-Fourier Transformation (FFT)
 pub fn best_ifft<G: Group>(a: &mut [G], omega_inv: G::Scalar, log_n: u32, divisor: G::Scalar) {
     best_fft(a, omega_inv, log_n);
-    parallelize(a, |a, _| {
+    parallelize(a, 8, |a, _| {
         for coeff in a {
             // Finish iFFT
             coeff.group_scale(&divisor);
