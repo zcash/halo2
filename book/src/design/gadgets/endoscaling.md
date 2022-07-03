@@ -79,7 +79,7 @@ $\hspace{2em}$for $j$ in $0..N/2$:
 $\hspace{4em}$  $P := (P + S(i, j)) + P$
 
 
-## Circuit cost
+#### Circuit cost
 
 Define a running sum $z_{i,j} = \sum\limits_{k=2j}^{t} (\mathbf{b}_{i,k} \cdot 2^{t−k})$
 
@@ -181,4 +181,84 @@ Output $[a \cdot \zeta_q + b]\, P$.
 
 So now we need to adjust the result of the table lookup to take account that we initialized $(a, b)$ to $(0, 1 - 2^{(K-K')/2})$ instead of $(0, 0)$.
 
-The offset for $b$ will get multiplied by $2^{K'/2}$, which means that we need to subtract $(1 - 2^{(K-K')/2}) \cdot 2^{K'/2}$.
+The offset for $b$ will get multiplied by $2^{K'/2}$, which means that we need to subtract $(1 - 2^{(K-K')/2}) \cdot 2^{K'/2} = (2^{K'/2} - 2^{K/2})$.
+
+#### Circuit costs
+
+##### Initial chunk
+In the case where the bitstring length is a multiple of $K$, we witness the first
+full chunk like so:
+
+$$
+\begin{array}{|c|c|c|c|c|}
+  \texttt{z}   & \texttt{acc} & \texttt{endoscalars\_copy} & \texttt{q\_init} & \texttt{q\_lookup} \\\hline
+     z[u]      &     acc_1    &      \texttt{endo}(r_u)    &         1        &           1        \\\hline
+     z[u-1]    &              &                            &         0        &           0        \\\hline
+\end{array}
+$$
+
+with the following constraints:
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+2 & q_\text{init} \cdot [(\texttt{init\_acc} \cdot 2^{K / 2} + \texttt{endo}(r_u))  - acc_1] = 0 \\\hline
+\end{array}
+$$
+
+where $\texttt{init\_acc} = 2 \cdot (\zeta + 1)$.
+As before, $q_{lookup}$ looks up the tuple $(z[u-1] - z[u] * 2^K, \texttt{endo}(r_u)).$
+
+If the first chunk is a $K'$-bit partial chunk, it has been right-padded with $K - K'$ zeros.
+We constrain it in its own region:
+
+$$
+\begin{array}{|c|c|c|c|c|}
+  \texttt{z}   & \texttt{acc} & \texttt{endoscalars\_copy} & \texttt{q\_partial} & \texttt{q\_lookup} & \texttt{q\_short\_range\_check} \\\hline
+     z[u]      &      r_u     &      \texttt{endo}(r_u)    &          1          &           1        &                 1               \\\hline
+     z[u-1]    &    acc_1     &          2^{K'/2}          &          0          &           0        &                 0               \\\hline
+\end{array}
+$$
+
+with the following constraints:
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+2 & q_\text{partial} \cdot [(z[u-1] - z[u] \cdot 2^K) - r_u] = 0 \\\hline
+2 & q_\text{partial} \cdot [(\texttt{init\_acc} \cdot 2^{K' / 2} + \texttt{shifted\_endo})  - acc_1] = 0 \\\hline
+\end{array}
+$$
+
+where $\texttt{init\_acc} = 2 \cdot (\zeta + 1),$ and $\texttt{shifted\_endo} = \texttt{endo}(r_u) - (2^{K'/2} - 2^{K/2})$.
+
+As before, $q_{lookup}$ looks up the tuple $(z[u-1] - z[u] * 2^K, \texttt{endo}(r_u)).$
+Additionally, we do a $\texttt{q\_short\_range\_check}(r_u, K')$ to check that $r_u$ is
+indeed a $K'$-bit value. (see [Lookup short range check](./decomposition.md#short-range-check).)
+
+##### Steady state
+After initializing the first chunk, we proceed with the remaining chunks in the steady state:
+
+$$
+\begin{array}{|c|c|c|c|c|}
+  \texttt{z}   & \texttt{acc} & \texttt{endoscalars\_copy} & \texttt{q\_endoscale} & \texttt{q\_lookup} \\\hline
+     z[i]      &  acc_{u-i+1} &      \texttt{endo}(r_i)    &           1           &           1        \\\hline
+     z[i-1]    &  acc_{u-i}   &   \texttt{endo}(r_{i-1})   &           1           &           1        \\\hline
+     z[i-2]    &              &                            &           0           &           0        \\\hline
+
+\end{array}
+$$
+
+with the following constraints:
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+2 & q_\text{endoscale} \cdot [(acc_{u-i+1} \cdot 2^{K / 2} + \texttt{endo}(r_i))  - acc_{u-i}] = 0 \\\hline
+\end{array}
+$$
+
+As before, $q_{lookup}$ looks up the tuple $(z[i-1] - z[i] * 2^K, \texttt{endo}(r_i)).$
