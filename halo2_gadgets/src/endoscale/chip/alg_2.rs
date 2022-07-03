@@ -556,10 +556,42 @@ where
 
     pub(super) fn constrain_bitstring(
         &self,
-        mut _layouter: &mut impl Layouter<C::Base>,
-        _bitstring: &Bitstring<C::Base, K>,
-        _pub_input_rows: Vec<usize>,
+        layouter: &mut impl Layouter<C::Base>,
+        bitstring: &Bitstring<C::Base, K>,
+        pub_input_rows: Vec<usize>,
     ) -> Result<(), Error> {
-        todo!()
+        layouter.assign_region(
+            || "Recover bitstring from endoscalars",
+            |mut region| {
+                let offset = 0;
+
+                // Copy the running sum.
+                let running_sum_len = bitstring.running_sum.zs().len();
+                for (idx, z) in bitstring.running_sum.zs().iter().rev().enumerate() {
+                    z.copy_advice(
+                        || format!("z[{:?}]", running_sum_len - idx),
+                        &mut region,
+                        self.running_sum_chunks.z(),
+                        offset + idx,
+                    )?;
+                }
+
+                // For each chunk, lookup the (chunk, endoscalar) pair.
+                for (idx, pub_input_row) in pub_input_rows.iter().rev().enumerate() {
+                    self.q_lookup.enable(&mut region, offset + idx)?;
+
+                    // Copy endoscalar from given row on instance column
+                    region.assign_advice_from_instance(
+                        || format!("Endoscalar at row {:?}", pub_input_row),
+                        self.endoscalars,
+                        *pub_input_row,
+                        self.endoscalars_copy,
+                        offset + idx,
+                    )?;
+                }
+
+                Ok(())
+            },
+        )
     }
 }
