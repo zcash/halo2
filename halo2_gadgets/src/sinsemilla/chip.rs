@@ -5,10 +5,7 @@ use super::{
     primitives as sinsemilla, CommitDomains, HashDomains, SinsemillaInstructions,
 };
 use crate::{
-    ecc::{
-        chip::{DoubleAndAdd, NonIdentityEccPoint},
-        FixedPoints,
-    },
+    ecc::{chip::NonIdentityEccPoint, FixedPoints},
     utilities::lookup_range_check::LookupRangeCheckConfig,
 };
 use std::marker::PhantomData;
@@ -27,6 +24,51 @@ mod generator_table;
 use generator_table::GeneratorTableConfig;
 
 mod hash_to_point;
+
+// TODO: Replace this with utilities::DoubleAndAdd
+
+/// A helper struct for implementing single-row double-and-add using incomplete addition.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) struct DoubleAndAdd {
+    // x-coordinate of the accumulator in each double-and-add iteration.
+    pub(crate) x_a: Column<Advice>,
+    // x-coordinate of the point being added in each double-and-add iteration.
+    pub(crate) x_p: Column<Advice>,
+    // lambda1 in each double-and-add iteration.
+    pub(crate) lambda_1: Column<Advice>,
+    // lambda2 in each double-and-add iteration.
+    pub(crate) lambda_2: Column<Advice>,
+}
+
+impl DoubleAndAdd {
+    /// Derives the expression `x_r = lambda_1^2 - x_a - x_p`.
+    pub(crate) fn x_r(
+        &self,
+        meta: &mut VirtualCells<pallas::Base>,
+        rotation: Rotation,
+    ) -> Expression<pallas::Base> {
+        let x_a = meta.query_advice(self.x_a, rotation);
+        let x_p = meta.query_advice(self.x_p, rotation);
+        let lambda_1 = meta.query_advice(self.lambda_1, rotation);
+        lambda_1.square() - x_a - x_p
+    }
+
+    /// Derives the expression `Y_A = (lambda_1 + lambda_2) * (x_a - x_r)`.
+    ///
+    /// Note that this is missing the factor of `1/2`; the Sinsemilla constraints factor
+    /// it out, so we leave it up to the caller to handle it.
+    #[allow(non_snake_case)]
+    pub(crate) fn Y_A(
+        &self,
+        meta: &mut VirtualCells<pallas::Base>,
+        rotation: Rotation,
+    ) -> Expression<pallas::Base> {
+        let x_a = meta.query_advice(self.x_a, rotation);
+        let lambda_1 = meta.query_advice(self.lambda_1, rotation);
+        let lambda_2 = meta.query_advice(self.lambda_2, rotation);
+        (lambda_1 + lambda_2) * (x_a - self.x_r(meta, rotation))
+    }
+}
 
 /// Configuration for the Sinsemilla hash chip
 #[derive(Eq, PartialEq, Clone, Debug)]

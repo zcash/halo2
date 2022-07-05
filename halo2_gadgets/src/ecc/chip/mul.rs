@@ -1,7 +1,12 @@
 use super::{add, EccPoint, NonIdentityEccPoint, ScalarVar, T_Q};
 use crate::{
     sinsemilla::primitives as sinsemilla,
-    utilities::{bool_check, lookup_range_check::LookupRangeCheckConfig, ternary},
+    utilities::{
+        bool_check,
+        double_and_add::{X, Y},
+        lookup_range_check::LookupRangeCheckConfig,
+        ternary,
+    },
 };
 use std::{
     convert::TryInto,
@@ -210,7 +215,7 @@ impl Config {
                     offset,
                     base,
                     bits_incomplete_hi,
-                    (X(acc.x), Y(acc.y), z_init.clone()),
+                    (X(acc.x), acc.y, z_init.clone()),
                 )?;
 
                 // Double-and-add (incomplete addition) for the `lo` half of the scalar decomposition
@@ -379,28 +384,6 @@ impl Config {
         let result = self.add_config.assign_region(&p, &acc, offset, region)?;
 
         Ok((result, z_0))
-    }
-}
-
-#[derive(Clone, Debug)]
-// `x`-coordinate of the accumulator.
-struct X<F: Field>(AssignedCell<Assigned<F>, F>);
-impl<F: Field> Deref for X<F> {
-    type Target = AssignedCell<Assigned<F>, F>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-#[derive(Clone, Debug)]
-// `y`-coordinate of the accumulator.
-struct Y<F: Field>(AssignedCell<Assigned<F>, F>);
-impl<F: Field> Deref for Y<F> {
-    type Target = AssignedCell<Assigned<F>, F>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
     }
 }
 

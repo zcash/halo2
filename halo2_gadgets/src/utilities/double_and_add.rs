@@ -2,6 +2,7 @@
 
 use std::marker::PhantomData;
 
+use ff::PrimeField;
 use halo2_proofs::{
     arithmetic::CurveAffine,
     circuit::{AssignedCell, Region, Value},
@@ -10,7 +11,6 @@ use halo2_proofs::{
     },
     poly::Rotation,
 };
-use ff::PrimeField;
 
 /// A helper struct for implementing single-row double-and-add using incomplete addition.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

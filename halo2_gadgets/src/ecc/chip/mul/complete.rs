@@ -1,10 +1,10 @@
 use super::super::{add, EccPoint};
-use super::{COMPLETE_RANGE, X, Y, Z};
+use super::{COMPLETE_RANGE, X, Z};
 use crate::utilities::{bool_check, ternary};
 
 use halo2_proofs::{
-    circuit::{Region, Value},
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
+    circuit::{AssignedCell, Region, Value},
+    plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
 
@@ -91,7 +91,7 @@ impl Config {
         bits: &[Value<bool>],
         base: &EccPoint,
         x_a: X<pallas::Base>,
-        y_a: Y<pallas::Base>,
+        y_a: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
         z: Z<pallas::Base>,
     ) -> Result<(EccPoint, Vec<Z<pallas::Base>>), Error> {
         // Make sure we have the correct number of bits for the complete addition
@@ -109,7 +109,7 @@ impl Config {
         }
 
         // Use x_a, y_a output from incomplete addition
-        let mut acc = EccPoint::from_coordinates_unchecked(x_a.0, y_a.0);
+        let mut acc = EccPoint::from_coordinates_unchecked(x_a.0, y_a);
 
         // Copy running sum `z` from incomplete addition
         let mut z = {
