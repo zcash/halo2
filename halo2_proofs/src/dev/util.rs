@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use group::ff::Field;
 use pasta_curves::arithmetic::FieldExt;
 
-use super::{metadata, CellValue, Value};
+use super::{metadata, CellValue, InstanceValue, Value};
 use crate::{
     plonk::{
         AdviceQuery, Any, Column, ColumnType, Expression, FixedQuery, Gate, InstanceQuery,
@@ -90,12 +90,13 @@ pub(super) fn load_instance<'a, F: FieldExt, T: ColumnType, Q: Into<AnyQuery> + 
     n: i32,
     row: i32,
     queries: &'a [(Column<T>, Rotation)],
-    cells: &'a [Vec<F>],
+    cells: &'a [Vec<InstanceValue<F>>],
 ) -> impl Fn(Q) -> Value<F> + 'a {
     move |query| {
         let (column, at) = &queries[query.into().index];
         let resolved_row = (row + at.0) % n;
-        Value::Real(cells[column.index()][resolved_row as usize])
+        let cell = &cells[column.index()][resolved_row as usize];
+        Value::Real(cell.value())
     }
 }
 
