@@ -11,6 +11,7 @@ use std::ops::Range;
 
 pub mod cond_swap;
 pub mod decompose_running_sum;
+pub mod double_and_add;
 pub mod lookup_range_check;
 
 /// A type that has a value at either keygen or proving time.
