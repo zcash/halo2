@@ -49,9 +49,9 @@ struct Region {
     /// The selectors that have been enabled in this region. All other selectors are by
     /// construction not enabled.
     enabled_selectors: HashMap<Selector, Vec<usize>>,
-    /// The cells assigned in this region. We store this as a `Vec` so that if any cells
+    /// The cells assigned in this region. We store this as a `HashMap` with count so that if any cells
     /// are double-assigned, they will be visibly darker.
-    cells: Vec<(Column<Any>, usize)>,
+    cells: HashMap<(Column<Any>, usize), usize>,
 }
 
 impl Region {
@@ -307,7 +307,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             columns: HashSet::default(),
             rows: None,
             enabled_selectors: HashMap::default(),
-            cells: vec![],
+            cells: HashMap::default(),
         });
     }
 
@@ -374,7 +374,11 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
 
         if let Some(region) = self.current_region.as_mut() {
             region.update_extent(column.into(), row);
-            region.cells.push((column.into(), row));
+            region
+                .cells
+                .entry((column.into(), row))
+                .and_modify(|count| *count += 1)
+                .or_default();
         }
 
         *self
@@ -406,7 +410,11 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
 
         if let Some(region) = self.current_region.as_mut() {
             region.update_extent(column.into(), row);
-            region.cells.push((column.into(), row));
+            region
+                .cells
+                .entry((column.into(), row))
+                .and_modify(|count| *count += 1)
+                .or_default();
         }
 
         *self
@@ -579,7 +587,7 @@ impl<F: FieldExt> MockProver<F> {
                                 let cell_row = ((gate_row + n + cell.rotation.0) % n) as usize;
 
                                 // Check that it was assigned!
-                                if r.cells.contains(&(cell.column, cell_row)) {
+                                if r.cells.contains_key(&(cell.column, cell_row)) {
                                     None
                                 } else {
                                     Some(VerifyFailure::CellNotAssigned {
