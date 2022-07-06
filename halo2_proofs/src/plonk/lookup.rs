@@ -1,22 +1,34 @@
 use super::circuit::Expression;
 use ff::Field;
+use std::fmt::{self, Debug};
 
 pub(crate) mod prover;
 pub(crate) mod verifier;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub(crate) struct Argument<F: Field> {
+    pub name: &'static str,
     pub input_expressions: Vec<Expression<F>>,
     pub table_expressions: Vec<Expression<F>>,
+}
+
+impl<F: Field> Debug for Argument<F> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Argument")
+            .field("input_expressions", &self.input_expressions)
+            .field("table_expressions", &self.table_expressions)
+            .finish()
+    }
 }
 
 impl<F: Field> Argument<F> {
     /// Constructs a new lookup argument.
     ///
     /// `table_map` is a sequence of `(input, table)` tuples.
-    pub fn new(table_map: Vec<(Expression<F>, Expression<F>)>) -> Self {
+    pub fn new(name: &'static str, table_map: Vec<(Expression<F>, Expression<F>)>) -> Self {
         let (input_expressions, table_expressions) = table_map.into_iter().unzip();
         Argument {
+            name,
             input_expressions,
             table_expressions,
         }

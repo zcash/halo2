@@ -182,7 +182,7 @@ impl<F: FieldExt> SpreadTableChip<F> {
         let table_dense = meta.lookup_table_column();
         let table_spread = meta.lookup_table_column();
 
-        meta.lookup(|meta| {
+        meta.lookup("lookup", |meta| {
             let tag_cur = meta.query_advice(input_tag, Rotation::cur());
             let dense_cur = meta.query_advice(input_dense, Rotation::cur());
             let spread_cur = meta.query_advice(input_spread, Rotation::cur());
