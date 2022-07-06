@@ -46,43 +46,6 @@ Note that unlike a simple Pedersen commitment, this commitment scheme ($\textsf{
 ## Efficient implementation
 The aim of the design is to optimize the number of bits that can be processed for each step of the algorithm (which requires a doubling and addition in $\mathbb{G}$) for a given table size. Using a single table of size $2^k$ group elements, we can process $k$ bits at a time.
 
-### Incomplete addition
-
-In each step of Sinsemilla we want to compute $A_{i+1} := (A_i \;⸭\; P_i) \;⸭\; A_i$. Let
-$R_i := A_i \;⸭\; P_i$ be the intermediate result such that $A_{i+1} := A_i \;⸭\; R_i$.
-Recalling the [incomplete addition formulae](ecc/addition.md#incomplete-addition):
-
-$$
-\begin{aligned}
-x_3 &= \left(\frac{y_1 - y_2}{x_1 - x_2}\right)^2 - x_1 - x_2 \\
-y_3 &= \frac{y_1 - y_2}{x_1 - x_2} \cdot (x_1 - x_3) - y_1 \\
-\end{aligned}
-$$
-
-Let $\lambda = \frac{y_1 - y_2}{x_1 - x_2}$. Substituting the coordinates for each of the
-incomplete additions in turn, and rearranging, we get
-
-$$
-\begin{aligned}
-\lambda_{1,i} &= \frac{y_{A,i} - y_{P,i}}{x_{A,i} - x_{P,i}} \\
-&\implies y_{A,i} - y_{P,i} = \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) \\
-&\implies y_{P,i} = y_{A,i} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) \\
-x_{R,i} &= \lambda_{1,i}^2 - x_{A,i} - x_{P,i} \\
-y_{R,i} &= \lambda_{1,i} \cdot (x_{A,i} - x_{R,i}) - y_{A,i} \\
-\end{aligned}
-$$
-and
-$$
-\begin{aligned}
-\lambda_{2,i} &= \frac{y_{A,i} - y_{R,i}}{x_{A,i} - x_{R,i}} \\
-&\implies y_{A,i} - y_{R,i} = \lambda_{2,i} \cdot (x_{A,i} - x_{R,i}) \\
-&\implies y_{A,i} - \left( \lambda_{1,i} \cdot (x_{A,i} - x_{R,i}) - y_{A,i} \right) = \lambda_{2,i} \cdot (x_{A,i} - x_{R,i}) \\
-&\implies 2 \cdot y_{A,i} = (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i}) \\
-x_{A,i+1} &= \lambda_{2,i}^2 - x_{A,i} - x_{R,i} \\
-y_{A,i+1} &= \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - y_{A,i}. \\
-\end{aligned}
-$$
-
 ### Constraint program
 Let $\mathcal{P} = \left\{(j,\, x_{P[j]},\, y_{P[j]}) \text{ for } j \in \{0..2^k - 1\}\right\}$.
 
@@ -92,13 +55,9 @@ Output: $(x_{A,n},\, y_{A,n})$.
 
 - $(x_{A,0},\, y_{A,0}) = Q$
 - for $i$ from $0$ up to $n-1$:
-  - $y_{P,i} = y_{A,i} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i})$
-  - $x_{R,i} = \lambda_{1,i}^2 - x_{A,i} - x_{P,i}$
-  - $2 \cdot y_{A,i} = (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i})$
-  - $(m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P}$
-  - $\lambda_{2,i}^2 = x_{A,i+1} + x_{R,i} + x_{A,i}$
-  - $\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) = y_{A,i} + y_{A,i+1}$
-
+  - $(m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P}$, where $y_{P,i} = y_{A,i} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i})$
+  - $x_{A,i+1} = \lambda_{2,i}^2 - x_{A,i} - x_{R,i}$ (secant check)
+  - $y_{A,i+1} = \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - y_{A,i}$ (gradient check)
 
 ## PLONK / Halo 2 constraints
 
@@ -218,26 +177,27 @@ $x_Q$, $z_0$, $z'_0$, etc. are copied in using equality constraints.
 $$
 \begin{array}{lrcl}
 \text{For } i \in [0, n), \text{ let} &x_{R,i} &=& \lambda_{1,i}^2 - x_{A,i} - x_{P,i} \\
-                                      &Y_{A,i} &=& (\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i}) \\
-                                      &y_{P,i} &=& Y_{A,i}/2 - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) \\
+                                      &Y_{a,i} &=& \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - x_{R,i})}{2} \\
+                                      &y_{P,i} &=& y_{A,i} - \lambda_{1,i} \cdot (x_{A,i} - x_{P,i}) \\
                                       &m_{i+1} &=& z_{i} - q_{run,i} \cdot z_{i+1} \cdot 2^k \\
                                       &q_{run} &=& q_{S2} - q_{S3} \\
                                       &q_{S3}  &=& q_{S2} \cdot (q_{S2} - 1)
 \end{array}
 $$
 
-The Halo 2 circuit API can automatically substitute $y_{P,i}$, $x_{R,i}$, $Y_{A,i}$, and
-$Y_{A,i+1}$, so we don't need to do that manually.
+The Halo 2 circuit API can automatically substitute $y_{P,i}$, $x_{R,i}$, $y_{A,i}$, and
+$y_{A,i+1}$, so we don't need to do that manually.
 
 - $x_{A,0} = x_Q$
-- $2 \cdot y_Q = Y_{A,0}$
+- $y_Q = y_{A,0}$
 - for $i$ from $0$ up to $n-1$:
   - $(m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P}$
-  - $\lambda_{2,i}^2 = x_{A,i+1} + x_{R,i} + x_{A,i}$
-  - $4 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) = 2 \cdot Y_{A,i} + (2 - q_{S3}) \cdot Y_{A,i+1} + 2 q_{S3} \cdot y_{A,n}$
+  - $q_{S1} \cdot ((\lambda_{2,i}^2 - x_{A,i+1} + x_{R,i} + x_{A,i})) = 0$
+  - $(q_{S1} \cdot (1 - \frac{q_{S3}}{2})) \cdot (\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - y_{A,i} - y_{A, i+1})$
+  - $(q_{S1} \cdot \frac{q_{S3}}{2}) \cdot (\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - y_{A,i} - y_{A,n})$
 
-Note that each term of the last constraint is multiplied by $4$ relative to the constraint program given earlier. This is a small optimization that avoids divisions by $2$.
-
+#### Steady-state
+On each row $i$ from $0$ up to $n-1$, we lookup the tuple $(m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P}$.
 By gating the lookup expression on $q_{S1}$, we avoid the need to fill in unused cells with dummy values to pass the lookup argument. The optimized lookup value (using a default index of $0$) is:
 
 $$
@@ -250,13 +210,52 @@ $$
 
 This increases the degree of the lookup argument to $6$.
 
+The $q_{S1}$ selector is passed to the [double-and-add](../double-and-add.md)
+helper as  $\texttt{q\_secant}$, which means that the double-and-add secant
+check is activated on each row where $q_{S1} = 1$:
+
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-4   & q_{S4} \cdot (2 \cdot y_Q - Y_{A,0}) = 0 \\\hline
-6   & q_{S1,i} \Rightarrow (m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P} \\\hline
-3   & q_{S1,i} \cdot \big(\lambda_{2,i}^2 - (x_{A,i+1} + x_{R,i} + x_{A,i})\big) \\\hline
-5   & q_{S1,i} \cdot \left(4 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - (2 \cdot Y_{A,i} + (2 - q_{S3,i}) \cdot Y_{A,i+1} + 2 \cdot q_{S3,i} \cdot y_{A,n})\right) = 0 \\\hline
+      3       & q_{S1} \cdot ((\lambda_{2,i}^2 - x_{A,i+1} + x_{R,i} + x_{A,i})) \\\hline
+\end{array}
+$$
+
+The composite selector $q_{S1} \cdot (1 - \frac{q_{S3}}{2})$ is passed to the
+[double-and-add](../double-and-add.md) helper as  $\texttt{q\_gradient}$, which
+means that the double-and-add gradient check is activated on each row where
+$q_{S1} \cdot (1 - \frac{q_{S3}}{2}) = 1$:
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+      5       & (q_{S1} \cdot (1 - \frac{q_{S3}}{2})) \cdot (\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - y_{A,i} - y_{A, i+1}) \\\hline
+\end{array}
+$$
+
+#### Initialization
+$y_{A,0}$ is initialized to be the fixed value $y_Q$. This constraint is
+activated when the selector $q_{S4} = 1$:
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+4   & q_{S4} \cdot (y_Q - y_{A,0}) = 0 \\\hline
+\end{array}
+$$
+
+#### Finalization
+The final row of the double-and-add is a special case where we witness and
+constrain $y_{A,n}$ instead of simply deriving it. This is activated by the
+composite selector $q_{S1} \cdot \frac{q_{S3}}{2}$:
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+5   & q_{S1,i} \cdot \frac{q_{S3,i}}{2} \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - (y_{A,i} + y_{A,n})\right) = 0 \\\hline
 \end{array}
 $$
