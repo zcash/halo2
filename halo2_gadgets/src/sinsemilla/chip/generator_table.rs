@@ -1,4 +1,3 @@
-use group::ff::PrimeField;
 use halo2_proofs::{
     circuit::{Layouter, Value},
     plonk::{ConstraintSystem, Error, Expression, TableColumn},
@@ -41,7 +40,7 @@ impl GeneratorTableConfig {
         meta.lookup(|meta| {
             let q_s1 = meta.query_selector(config.q_sinsemilla1);
             let q_s2 = meta.query_fixed(config.q_sinsemilla2);
-            let q_s3 = config.q_s3(meta);
+            let q_s3 = super::q_s3(meta, config.q_sinsemilla2);
             let q_run = q_s2 - q_s3;
 
             // m_{i+1} = z_{i} - 2^K * q_{run,i} * z_{i + 1}
@@ -55,14 +54,8 @@ impl GeneratorTableConfig {
 
             let x_p = meta.query_advice(config.double_and_add.x_p, Rotation::cur());
 
-            // y_{p,i} = (Y_{A,i} / 2) - lambda1 * (x_{A,i} - x_{P,i})
-            let y_p = {
-                let lambda1 = meta.query_advice(config.double_and_add.lambda_1, Rotation::cur());
-                let x_a = meta.query_advice(config.double_and_add.x_a, Rotation::cur());
-                let Y_A = config.double_and_add.Y_A(meta, Rotation::cur());
-
-                (Y_A * pallas::Base::TWO_INV) - (lambda1 * (x_a - x_p.clone()))
-            };
+            // y_{p,i} = y_{a,i} - lambda1 * (x_{A,i} - x_{P,i})
+            let y_p = config.double_and_add.y_p(meta, Rotation::cur());
 
             // Lookup expressions default to the first entry when `q_s1`
             // is not enabled.
