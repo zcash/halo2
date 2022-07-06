@@ -15,7 +15,7 @@ use std::io;
 #[derive(Debug, Clone)]
 pub(crate) struct Argument {
     /// A sequence of columns involved in the argument.
-    columns: Vec<Column<Any>>,
+    pub(super) columns: Vec<Column<Any>>,
 }
 
 impl Argument {

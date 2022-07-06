@@ -70,23 +70,16 @@ impl<C: CurveAffine> Committed<C> {
         'params,
         P: ParamsProver<'params, C>,
         E: EncodedChallenge<C>,
-        Ev: Copy + Send + Sync,
         R: RngCore,
         T: TranscriptWrite<C, E>,
     >(
         self,
         params: &P,
         domain: &EvaluationDomain<C::Scalar>,
-        evaluator: poly::Evaluator<Ev, C::Scalar, ExtendedLagrangeCoeff>,
-        expressions: impl Iterator<Item = poly::Ast<Ev, C::Scalar, ExtendedLagrangeCoeff>>,
-        y: ChallengeY<C>,
+        h_poly: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
         mut rng: R,
         transcript: &mut T,
     ) -> Result<Constructed<C>, Error> {
-        // Evaluate the h(X) polynomial's constraint system expressions for the constraints provided
-        let h_poly = poly::Ast::distribute_powers(expressions, *y); // Fold the gates together with the y challenge
-        let h_poly = evaluator.evaluate(&h_poly, domain); // Evaluate the h(X) polynomial
-
         // Divide by t(X) = X^{params.n} - 1.
         let h_poly = domain.divide_by_vanishing_poly(h_poly);
 

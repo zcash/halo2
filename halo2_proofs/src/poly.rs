@@ -14,7 +14,6 @@ use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, RangeFrom, RangeFull,
 /// Generic commitment scheme structures
 pub mod commitment;
 mod domain;
-mod evaluator;
 mod query;
 mod strategy;
 
@@ -28,7 +27,6 @@ pub mod kzg;
 mod multiopen_test;
 
 pub use domain::*;
-pub use evaluator::*;
 pub use query::{ProverQuery, VerifierQuery};
 pub use strategy::{Guard, VerificationStrategy};
 
