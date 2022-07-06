@@ -1243,6 +1243,25 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
+    /// Add a lookup argument for some input expressions and table expressions.
+    ///
+    /// `table_map` returns a map between input expressions and the table expressions
+    /// they need to match.
+    pub fn lookup_any(
+        &mut self,
+        name: &'static str,
+        table_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, Expression<F>)>,
+    ) -> usize {
+        let mut cells = VirtualCells::new(self);
+        let table_map = table_map(&mut cells);
+
+        let index = self.lookups.len();
+
+        self.lookups.push(lookup::Argument::new(name, table_map));
+
+        index
+    }
+
     fn query_fixed_index(&mut self, column: Column<Fixed>, at: Rotation) -> usize {
         // Return existing query, if it exists
         for (index, fixed_query) in self.fixed_queries.iter().enumerate() {
