@@ -558,7 +558,31 @@ impl<F: FieldExt> MockProver<F> {
     /// Returns `Ok(())` if this `MockProver` is satisfied, or a list of errors indicating
     /// the reasons that the circuit is not satisfied.
     pub fn verify(&self) -> Result<(), Vec<VerifyFailure>> {
+        self.verify_at_rows(self.usable_rows.clone(), self.usable_rows.clone())
+    }
+
+    /// Returns `Ok(())` if this `MockProver` is satisfied, or a list of errors indicating
+    /// the reasons that the circuit is not satisfied.
+    /// Constraints are only checked at `gate_row_ids`,
+    /// and lookup inputs are only checked at `lookup_input_row_ids`
+    pub fn verify_at_rows<I: Clone + Iterator<Item = usize>>(
+        &self,
+        gate_row_ids: I,
+        lookup_input_row_ids: I,
+    ) -> Result<(), Vec<VerifyFailure>> {
         let n = self.n as i32;
+
+        // check all the row ids are valid
+        for row_id in gate_row_ids.clone() {
+            if !self.usable_rows.contains(&row_id) {
+                panic!("invalid gate row id {}", row_id)
+            }
+        }
+        for row_id in lookup_input_row_ids.clone() {
+            if !self.usable_rows.contains(&row_id) {
+                panic!("invalid lookup row id {}", row_id)
+            }
+        }
 
         // Check that within each region, all cells used in instantiated gates have been
         // assigned to.
@@ -611,8 +635,14 @@ impl<F: FieldExt> MockProver<F> {
                 .iter()
                 .enumerate()
                 .flat_map(|(gate_index, gate)| {
-                    // We iterate from n..2n so we can just reduce to handle wrapping.
-                    (n..(2 * n)).flat_map(move |row| {
+                    let blinding_rows =
+                        (self.n as usize - (self.cs.blinding_factors() + 1))..(self.n as usize);
+                    (gate_row_ids
+                        .clone()
+                        .into_iter()
+                        .chain(blinding_rows.into_iter()))
+                    .flat_map(move |row| {
+                        let row = row as i32 + n;
                         gate.polynomials().iter().enumerate().filter_map(
                             move |(poly_index, poly)| match poly.evaluate_lazy(
                                 &|scalar| Value::Real(scalar),
@@ -751,9 +781,9 @@ impl<F: FieldExt> MockProver<F> {
                         .collect();
                     table.sort_unstable();
 
-                    let mut inputs: Vec<(Vec<_>, usize)> = self
-                        .usable_rows
+                    let mut inputs: Vec<(Vec<_>, usize)> = lookup_input_row_ids
                         .clone()
+                        .into_iter()
                         .filter_map(|input_row| {
                             let t = lookup
                                 .input_expressions
