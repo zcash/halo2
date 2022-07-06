@@ -295,6 +295,11 @@ impl TableColumn {
     pub(crate) fn inner(&self) -> Column<Fixed> {
         self.inner
     }
+
+    /// Enable equality on this TableColumn.
+    pub fn enable_equality<F: Field>(&self, meta: &mut ConstraintSystem<F>) {
+        meta.enable_equality(self.inner)
+    }
 }
 
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
