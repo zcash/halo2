@@ -1,0 +1,27 @@
+name: Prover Bench on halo2 PR
+on:
+  pull_request:
+    types: [labeled ,  ready_for_review]
+jobs:
+  Prover-benches-via-repo-dispatch-from-halo2-fork:
+    if: ${{ github.event.label.name == 'benchmarks' }}
+    runs-on: ubuntu-latest
+    env:
+      GH_USER: ${{ github.actor }}
+      _TOKEN: ${{ secrets.BENCHMARKER }}
+      REVISION: ${{ github.event.pull_request.head.sha }}
+      REPO: ${{ github.event.repository.name }}
+      PR_NUMBER: ${{ github.event.number }}
+    steps:
+      - name: Install curl
+        run: |
+          sudo apt-get update
+          sudo apt-get install curl
+      - name: Send repo api call
+        run: |
+          curl \
+           -X POST \
+           -H "Accept: application/vnd.github.v3+json" \
+           -u ZKEVMBOT:${{ env._TOKEN }} \
+           https://api.github.com/repos/appliedzkp/zkevm-circuits/actions/workflows/ProverBenchFromHalo2.yml/dispatches \
+           -d "{\"ref\":\"main\",\"inputs\":{\"halo2pr\":\"${{ env.PR_NUMBER }}\",\"revision\":\"${{ env.REVISION }}\",\"event-type\":\"halo2_wfdispatch\",\"ghuser\": \"${{ env.GH_USER }}\"}}"
