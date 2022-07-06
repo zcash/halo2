@@ -614,7 +614,7 @@ impl<F: FieldExt> MockProver<F> {
                     // We iterate from n..2n so we can just reduce to handle wrapping.
                     (n..(2 * n)).flat_map(move |row| {
                         gate.polynomials().iter().enumerate().filter_map(
-                            move |(poly_index, poly)| match poly.evaluate(
+                            move |(poly_index, poly)| match poly.evaluate_lazy(
                                 &|scalar| Value::Real(scalar),
                                 &|_| panic!("virtual selectors are removed during optimization"),
                                 &util::load(n, row, &self.cs.fixed_queries, &self.fixed),
@@ -629,6 +629,7 @@ impl<F: FieldExt> MockProver<F> {
                                 &|a, b| a + b,
                                 &|a, b| a * b,
                                 &|a, scalar| a * scalar,
+                                &Value::Real(F::zero()),
                             ) {
                                 Value::Real(x) if x.is_zero_vartime() => None,
                                 Value::Real(_) => Some(VerifyFailure::ConstraintNotSatisfied {
@@ -678,7 +679,7 @@ impl<F: FieldExt> MockProver<F> {
                 .enumerate()
                 .flat_map(|(lookup_index, lookup)| {
                     let load = |expression: &Expression<F>, row| {
-                        expression.evaluate(
+                        expression.evaluate_lazy(
                             &|scalar| Value::Real(scalar),
                             &|_| panic!("virtual selectors are removed during optimization"),
                             &|query| {
@@ -710,6 +711,7 @@ impl<F: FieldExt> MockProver<F> {
                             &|a, b| a + b,
                             &|a, b| a * b,
                             &|a, scalar| a * scalar,
+                            &Value::Real(F::zero()),
                         )
                     };
 
