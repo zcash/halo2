@@ -336,10 +336,13 @@ fn main() {
 
     // ANCHOR: create-proof
     let params: Params<EqAffine> = halo2_proofs::poly::commitment::Params::new(k);
-    let vk = keygen_vk(&params, &circuit).unwrap();
-    let proof_path = "./proof";
 
+    // Generate verification key.
+    let vk = keygen_vk(&params, &circuit).unwrap();
+
+    // Generate proving key.
     let pk = keygen_pk(&params, vk, &circuit).unwrap();
+
     let mut transcript = Blake2bWrite::<_, vesta::Affine, _>::init(vec![]);
 
     create_proof(
@@ -354,6 +357,7 @@ fn main() {
     // ANCHOR_END: create-proof
 
     // ANCHOR: write-proof
+    let proof_path = "./proof";
     let proof = transcript.finalize();
     File::create(Path::new(proof_path))
         .expect("Failed to create proof file")
@@ -362,9 +366,9 @@ fn main() {
     println!("proof written to {}", proof_path);
     // ANCHOR_END: write-proof
 
+    // ANCHOR: verify-proof
     let mut transcript_proof = Blake2bRead::init(&proof[..]);
 
-    // ANCHOR: verify-proof
     println!(
         "{:?}",
         verify_proof(
