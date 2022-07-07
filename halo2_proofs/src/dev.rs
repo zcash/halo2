@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use std::fmt;
 use std::iter;
 use std::ops::{Add, Mul, Neg, Range};
+use std::time::{Duration, Instant};
 
 use ff::Field;
 
@@ -701,6 +702,8 @@ impl<F: FieldExt> MockProver<F> {
                     })
                 });
 
+        let mut cached_table = Vec::new();
+        let mut cached_table_identifier = Vec::new();
         // Check that all lookups exist in their respective tables.
         let lookup_errors =
             self.cs
@@ -760,26 +763,36 @@ impl<F: FieldExt> MockProver<F> {
                         .map(move |c| load(c, self.usable_rows.end - 1))
                         .collect();
 
-                    // In the real prover, the lookup expressions are never enforced on
-                    // unusable rows, due to the (1 - (l_last(X) + l_blind(X))) term.
-                    let mut table: Vec<Vec<_>> = self
-                        .usable_rows
-                        .clone()
-                        .filter_map(|table_row| {
-                            let t = lookup
-                                .table_expressions
-                                .iter()
-                                .map(move |c| load(c, table_row))
-                                .collect();
+                    let table_identifier = lookup
+                        .table_expressions
+                        .iter()
+                        .map(Expression::identifier)
+                        .collect::<Vec<_>>();
+                    if table_identifier != cached_table_identifier {
+                        cached_table_identifier = table_identifier;
 
-                            if t != fill_row {
-                                Some(t)
-                            } else {
-                                None
-                            }
-                        })
-                        .collect();
-                    table.sort_unstable();
+                        // In the real prover, the lookup expressions are never enforced on
+                        // unusable rows, due to the (1 - (l_last(X) + l_blind(X))) term.
+                        cached_table = self
+                            .usable_rows
+                            .clone()
+                            .filter_map(|table_row| {
+                                let t = lookup
+                                    .table_expressions
+                                    .iter()
+                                    .map(move |c| load(c, table_row))
+                                    .collect();
+
+                                if t != fill_row {
+                                    Some(t)
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        cached_table.sort_unstable();
+                    }
+                    let table = &cached_table;
 
                     let mut inputs: Vec<(Vec<_>, usize)> = lookup_input_row_ids
                         .clone()
