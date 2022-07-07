@@ -19,6 +19,12 @@ use crate::{
     },
     poly::Rotation,
 };
+use rayon::{
+    iter::{
+        IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
+    },
+    slice::ParallelSliceMut,
+};
 
 pub mod metadata;
 mod util;
@@ -883,6 +889,365 @@ impl<F: FieldExt> MockProver<F> {
                             })
                         }
                     })
+                })
+        };
+
+        let mut errors: Vec<_> = iter::empty()
+            .chain(selector_errors)
+            .chain(gate_errors)
+            .chain(lookup_errors)
+            .chain(perm_errors)
+            .collect();
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            // Remove any duplicate `ConstraintPoisoned` errors (we check all unavailable
+            // rows in case the trigger is row-specific, but the error message only points
+            // at the constraint).
+            errors.dedup_by(|a, b| match (a, b) {
+                (
+                    a @ VerifyFailure::ConstraintPoisoned { .. },
+                    b @ VerifyFailure::ConstraintPoisoned { .. },
+                ) => a == b,
+                _ => false,
+            });
+            Err(errors)
+        }
+    }
+
+    /// Returns `Ok(())` if this `MockProver` is satisfied, or a list of errors indicating
+    /// the reasons that the circuit is not satisfied.
+    /// Constraints and lookup are checked at `usable_rows`, parallelly.
+    pub fn verify_par(&self) -> Result<(), Vec<VerifyFailure>> {
+        self.verify_at_rows_par(self.usable_rows.clone(), self.usable_rows.clone())
+    }
+
+    /// Returns `Ok(())` if this `MockProver` is satisfied, or a list of errors indicating
+    /// the reasons that the circuit is not satisfied.
+    /// Constraints are only checked at `gate_row_ids`,
+    /// and lookup inputs are only checked at `lookup_input_row_ids`, parallelly.
+    pub fn verify_at_rows_par<I: Clone + Iterator<Item = usize>>(
+        &self,
+        gate_row_ids: I,
+        lookup_input_row_ids: I,
+    ) -> Result<(), Vec<VerifyFailure>> {
+        let n = self.n as i32;
+
+        let gate_row_ids = gate_row_ids.collect::<Vec<_>>();
+        let lookup_input_row_ids = lookup_input_row_ids.collect::<Vec<_>>();
+
+        // check all the row ids are valid
+        gate_row_ids.par_iter().for_each(|row_id| {
+            if !self.usable_rows.contains(row_id) {
+                panic!("invalid gate row id {}", row_id);
+            }
+        });
+        lookup_input_row_ids.par_iter().for_each(|row_id| {
+            if !self.usable_rows.contains(row_id) {
+                panic!("invalid gate row id {}", row_id);
+            }
+        });
+
+        // Check that within each region, all cells used in instantiated gates have been
+        // assigned to.
+        let selector_errors = self.regions.iter().enumerate().flat_map(|(r_i, r)| {
+            r.enabled_selectors.iter().flat_map(move |(selector, at)| {
+                // Find the gates enabled by this selector
+                self.cs
+                    .gates
+                    .iter()
+                    // Assume that if a queried selector is enabled, the user wants to use the
+                    // corresponding gate in some way.
+                    //
+                    // TODO: This will trip up on the reverse case, where leaving a selector
+                    // un-enabled keeps a gate enabled. We could alternatively require that
+                    // every selector is explicitly enabled or disabled on every row? But that
+                    // seems messy and confusing.
+                    .enumerate()
+                    .filter(move |(_, g)| g.queried_selectors().contains(selector))
+                    .flat_map(move |(gate_index, gate)| {
+                        at.par_iter()
+                            .flat_map(move |selector_row| {
+                                // Selectors are queried with no rotation.
+                                let gate_row = *selector_row as i32;
+
+                                gate.queried_cells()
+                                    .iter()
+                                    .filter_map(move |cell| {
+                                        // Determine where this cell should have been assigned.
+                                        let cell_row =
+                                            ((gate_row + n + cell.rotation.0) % n) as usize;
+
+                                        // Check that it was assigned!
+                                        if r.cells.contains_key(&(cell.column, cell_row)) {
+                                            None
+                                        } else {
+                                            Some(VerifyFailure::CellNotAssigned {
+                                                gate: (gate_index, gate.name()).into(),
+                                                region: (r_i, r.name.clone()).into(),
+                                                gate_offset: *selector_row,
+                                                column: cell.column,
+                                                offset: cell_row as isize
+                                                    - r.rows.unwrap().0 as isize,
+                                            })
+                                        }
+                                    })
+                                    .collect::<Vec<_>>()
+                            })
+                            .collect::<Vec<_>>()
+                    })
+            })
+        });
+
+        // Check that all gates are satisfied for all rows.
+        let gate_errors = self
+            .cs
+            .gates
+            .iter()
+            .enumerate()
+            .flat_map(|(gate_index, gate)| {
+                let blinding_rows =
+                    (self.n as usize - (self.cs.blinding_factors() + 1))..(self.n as usize);
+                (gate_row_ids
+                    .clone()
+                    .into_par_iter()
+                    .chain(blinding_rows.into_par_iter()))
+                .flat_map(move |row| {
+                    let row = row as i32 + n;
+                    gate.polynomials()
+                        .iter()
+                        .enumerate()
+                        .filter_map(move |(poly_index, poly)| {
+                            match poly.evaluate_lazy(
+                                &|scalar| Value::Real(scalar),
+                                &|_| panic!("virtual selectors are removed during optimization"),
+                                &util::load(n, row, &self.cs.fixed_queries, &self.fixed),
+                                &util::load(n, row, &self.cs.advice_queries, &self.advice),
+                                &util::load_instance(
+                                    n,
+                                    row,
+                                    &self.cs.instance_queries,
+                                    &self.instance,
+                                ),
+                                &|a| -a,
+                                &|a, b| a + b,
+                                &|a, b| a * b,
+                                &|a, scalar| a * scalar,
+                                &Value::Real(F::zero()),
+                            ) {
+                                Value::Real(x) if x.is_zero_vartime() => None,
+                                Value::Real(_) => Some(VerifyFailure::ConstraintNotSatisfied {
+                                    constraint: (
+                                        (gate_index, gate.name()).into(),
+                                        poly_index,
+                                        gate.constraint_name(poly_index),
+                                    )
+                                        .into(),
+                                    location: FailureLocation::find_expressions(
+                                        &self.cs,
+                                        &self.regions,
+                                        (row - n) as usize,
+                                        Some(poly).into_iter(),
+                                    ),
+                                    cell_values: util::cell_values(
+                                        gate,
+                                        poly,
+                                        &util::load(n, row, &self.cs.fixed_queries, &self.fixed),
+                                        &util::load(n, row, &self.cs.advice_queries, &self.advice),
+                                        &util::load_instance(
+                                            n,
+                                            row,
+                                            &self.cs.instance_queries,
+                                            &self.instance,
+                                        ),
+                                    ),
+                                }),
+                                Value::Poison => Some(VerifyFailure::ConstraintPoisoned {
+                                    constraint: (
+                                        (gate_index, gate.name()).into(),
+                                        poly_index,
+                                        gate.constraint_name(poly_index),
+                                    )
+                                        .into(),
+                                }),
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>()
+            });
+
+        let mut cached_table = Vec::new();
+        let mut cached_table_identifier = Vec::new();
+        // Check that all lookups exist in their respective tables.
+        let lookup_errors =
+            self.cs
+                .lookups
+                .iter()
+                .enumerate()
+                .flat_map(|(lookup_index, lookup)| {
+                    let load = |expression: &Expression<F>, row| {
+                        expression.evaluate_lazy(
+                            &|scalar| Value::Real(scalar),
+                            &|_| panic!("virtual selectors are removed during optimization"),
+                            &|query| {
+                                self.fixed[query.column_index]
+                                    [(row as i32 + n + query.rotation.0) as usize % n as usize]
+                                    .into()
+                            },
+                            &|query| {
+                                self.advice[query.column_index]
+                                    [(row as i32 + n + query.rotation.0) as usize % n as usize]
+                                    .into()
+                            },
+                            &|query| {
+                                Value::Real(
+                                    self.instance[query.column_index]
+                                        [(row as i32 + n + query.rotation.0) as usize % n as usize],
+                                )
+                            },
+                            &|a| -a,
+                            &|a, b| a + b,
+                            &|a, b| a * b,
+                            &|a, scalar| a * scalar,
+                            &Value::Real(F::zero()),
+                        )
+                    };
+
+                    assert!(lookup.table_expressions.len() == lookup.input_expressions.len());
+                    assert!(self.usable_rows.end > 0);
+
+                    // We optimize on the basis that the table might have been filled so that the last
+                    // usable row now has the fill contents (it doesn't matter if there was no filling).
+                    // Note that this "fill row" necessarily exists in the table, and we use that fact to
+                    // slightly simplify the optimization: we're only trying to check that all input rows
+                    // are contained in the table, and so we can safely just drop input rows that
+                    // match the fill row.
+                    let fill_row: Vec<_> = lookup
+                        .table_expressions
+                        .iter()
+                        .map(move |c| load(c, self.usable_rows.end - 1))
+                        .collect();
+
+                    let table_identifier = lookup
+                        .table_expressions
+                        .iter()
+                        .map(Expression::identifier)
+                        .collect::<Vec<_>>();
+                    if table_identifier != cached_table_identifier {
+                        cached_table_identifier = table_identifier;
+
+                        // In the real prover, the lookup expressions are never enforced on
+                        // unusable rows, due to the (1 - (l_last(X) + l_blind(X))) term.
+                        cached_table = self
+                            .usable_rows
+                            .clone()
+                            .into_par_iter()
+                            .filter_map(|table_row| {
+                                let t = lookup
+                                    .table_expressions
+                                    .iter()
+                                    .map(move |c| load(c, table_row))
+                                    .collect();
+
+                                if t != fill_row {
+                                    Some(t)
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        cached_table.par_sort_unstable();
+                    }
+                    let table = &cached_table;
+
+                    let mut inputs: Vec<(Vec<_>, usize)> = lookup_input_row_ids
+                        .clone()
+                        .into_par_iter()
+                        .filter_map(|input_row| {
+                            let t = lookup
+                                .input_expressions
+                                .iter()
+                                .map(move |c| load(c, input_row))
+                                .collect();
+
+                            if t != fill_row {
+                                // Also keep track of the original input row, since we're going to sort.
+                                Some((t, input_row))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect();
+                    inputs.par_sort_unstable();
+
+                    inputs
+                        .par_iter()
+                        .filter_map(move |(input, input_row)| {
+                            if table.binary_search(input).is_err() {
+                                Some(VerifyFailure::Lookup {
+                                    name: lookup.name,
+                                    lookup_index,
+                                    location: FailureLocation::find_expressions(
+                                        &self.cs,
+                                        &self.regions,
+                                        *input_row,
+                                        lookup.input_expressions.iter(),
+                                    ),
+                                })
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                });
+
+        // Check that permutations preserve the original values of the cells.
+        let perm_errors = {
+            // Original values of columns involved in the permutation.
+            let original = |column, row| {
+                self.cs
+                    .permutation
+                    .get_columns()
+                    .get(column)
+                    .map(|c: &Column<Any>| match c.column_type() {
+                        Any::Advice => self.advice[c.index()][row],
+                        Any::Fixed => self.fixed[c.index()][row],
+                        Any::Instance => CellValue::Assigned(self.instance[c.index()][row]),
+                    })
+                    .unwrap()
+            };
+
+            // Iterate over each column of the permutation
+            self.permutation
+                .mapping
+                .iter()
+                .enumerate()
+                .flat_map(move |(column, values)| {
+                    // Iterate over each row of the column to check that the cell's
+                    // value is preserved by the mapping.
+                    values
+                        .par_iter()
+                        .enumerate()
+                        .filter_map(move |(row, cell)| {
+                            let original_cell = original(column, row);
+                            let permuted_cell = original(cell.0, cell.1);
+                            if original_cell == permuted_cell {
+                                None
+                            } else {
+                                let columns = self.cs.permutation.get_columns();
+                                let column = columns.get(column).unwrap();
+                                Some(VerifyFailure::Permutation {
+                                    column: (*column).into(),
+                                    location: FailureLocation::find(
+                                        &self.regions,
+                                        row,
+                                        Some(column).into_iter().cloned().collect(),
+                                    ),
+                                })
+                            }
+                        })
+                        .collect::<Vec<_>>()
                 })
         };
 
