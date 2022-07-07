@@ -162,7 +162,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         let col = self
             .fixed
             .get_mut(column.index())
-            .ok_or(Error::query_out_of_bounds(column.index(), 0))?;
+            .ok_or(Error::QueryOutOfBounds(format!("column: {:?}", &column)))?;
 
         let filler = to.assign()?;
         for row in self.usable_rows.clone().skip(from_row) {

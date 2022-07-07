@@ -16,13 +16,8 @@ pub enum Error {
     InvalidInstances,
     /// The constraint system is not satisfied.
     ConstraintSystemFailure,
-    /// Out of bounds query passed to a backend.
-    QueryOutOfBounds {
-        /// Column index of the query
-        col: usize,
-        /// Row index of the query
-        row: usize,
-    },
+    /// And out of bounds query passed to a backend.
+    QueryOutOfBounds(String),
     /// Not enough usable rows for circuit assignment.
     AssignOutOfBounds,
     /// Opening error
@@ -58,10 +53,6 @@ impl Error {
     pub(crate) fn not_enough_rows_available(current_k: u32) -> Self {
         Error::NotEnoughRowsAvailable { current_k }
     }
-    /// Constructs an `Error::QueryOutOfBounds`.
-    pub(crate) fn query_out_of_bounds(col: usize, row: usize) -> Self {
-        Error::QueryOutOfBounds { col, row }
-    }
 }
 
 impl fmt::Display for Error {
@@ -70,12 +61,7 @@ impl fmt::Display for Error {
             Error::Synthesis(err) => write!(f, "Synthesis error: {:?}", err),
             Error::InvalidInstances => write!(f, "Provided instances do not match the circuit"),
             Error::ConstraintSystemFailure => write!(f, "The constraint system is not satisfied"),
-            Error::QueryOutOfBounds { row, col} => write!(
-                f,
-                "Query at col:{} row:{} is out of bounds",
-                row,
-                col,
-            ),
+            Error::QueryOutOfBounds(query) => write!(f, "The query `{:?}` is out of bounds", query),
             Error::AssignOutOfBounds => write!(f, "Not enough rows for circuit assignments. Try using a larger value of k"),
             Error::Opening => write!(f, "Multi-opening proof was invalid"),
             Error::Transcript(e) => write!(f, "Transcript error: {}", e),
