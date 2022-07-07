@@ -312,7 +312,7 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
 fn main() {
     use halo2_proofs::pasta::Fp;
 
-    // ANCHOR: test-circuit
+    // ANCHOR: construct-circuit
     // The number of rows in our circuit cannot exceed 2^k. Since our example
     // circuit is very small, we can pick a very small value here.
     let k = 4;
@@ -332,7 +332,9 @@ fn main() {
         a: Value::known(a),
         b: Value::known(b),
     };
+    // ANCHOR_END: construct-circuit
 
+    // ANCHOR: create-proof
     let params: Params<EqAffine> = halo2_proofs::poly::commitment::Params::new(k);
     let vk = keygen_vk(&params, &circuit).unwrap();
     let proof_path = "./proof";
@@ -349,16 +351,20 @@ fn main() {
         &mut transcript,
     )
     .expect("Failed to create proof");
+    // ANCHOR_END: create-proof
 
+    // ANCHOR: write-proof
     let proof = transcript.finalize();
     File::create(Path::new(proof_path))
         .expect("Failed to create proof file")
         .write_all(&proof[..])
         .expect("Failed to write proof");
     println!("proof written to {}", proof_path);
+    // ANCHOR_END: write-proof
 
     let mut transcript_proof = Blake2bRead::init(&proof[..]);
-    // Verify the proof.
+
+    // ANCHOR: verify-proof
     println!(
         "{:?}",
         verify_proof(
@@ -369,4 +375,5 @@ fn main() {
             &mut transcript_proof
         )
     );
+    // ANCHOR_END: verify-proof
 }

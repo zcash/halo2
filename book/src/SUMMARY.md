@@ -9,6 +9,7 @@
 - [User Documentation](user.md)
   - [Developer tools](user/dev-tools.md)
   - [A simple example](user/simple-example.md)
+  - [An End-to-End example](user/e2e-example.md)
   - [Lookup tables](user/lookup-tables.md)
   - [Gadgets](user/gadgets.md)
   - [Tips and tricks](user/tips-and-tricks.md)
