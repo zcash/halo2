@@ -158,14 +158,14 @@ and verifier).</p>
 <p>A subset of the columns that can participate in equality constraints.</p>
 </li>
 <li>
-<p>A <em><strong>polynomial degree bound</strong></em>.</p>
+<p>A <em><strong>maximum constraint degree</strong></em>.</p>
 </li>
 <li>
 <p>A sequence of <em><strong>polynomial constraints</strong></em>. These are multivariate polynomials over
 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68889em;vertical-align:0em;"></span><span class="mord mathbb">F</span></span></span></span> that must evaluate to zero <em>for each row</em>. The variables in a polynomial
 constraint may refer to a cell in a given column of the current row, or a given column of
 another row relative to this one (with wrap-around, i.e. taken modulo <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">n</span></span></span></span>). The maximum
-degree of each polynomial is given by the polynomial degree bound.</p>
+degree of each polynomial is given by the maximum constraint degree.</p>
 </li>
 <li>
 <p>A sequence of <em><strong>lookup arguments</strong></em> defined over tuples of <em><strong>input expressions</strong></em>

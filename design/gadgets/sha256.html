@@ -146,8 +146,7 @@ but internally splits these blocks into 32-bit chunks. We therefore designed the
 gadget to consume input in 32-bit chunks.</p>
 <h2 id="chip-instructions"><a class="header" href="#chip-instructions">Chip instructions</a></h2>
 <p>The SHA-256 gadget requires a chip with the following instructions:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span><span class="boring">extern crate halo2_proofs;
 </span><span class="boring">use halo2_proofs::plonk::Error;
