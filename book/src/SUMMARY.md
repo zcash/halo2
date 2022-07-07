@@ -40,6 +40,7 @@
     - [Double-and-add](design/gadgets/double-and-add.md)
     - [SHA-256](design/gadgets/sha256.md)
       - [16-bit table chip](design/gadgets/sha256/table16.md)
+    - [Endoscaling](design/gadgets/endoscaling.md)
 - [Background Material](background.md)
   - [Fields](background/fields.md)
   - [Polynomials](background/polynomials.md)
