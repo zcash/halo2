@@ -62,7 +62,7 @@ impl Assembly {
         if left_row >= self.mapping[left_column].len()
             || right_row >= self.mapping[right_column].len()
         {
-            return Err(Error::BoundsFailure);
+            return Err(Error::AssignOutOfBounds);
         }
 
         // See book/src/design/permutation.md for a description of this algorithm.

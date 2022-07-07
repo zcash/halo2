@@ -352,7 +352,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             .get(column.index())
             .and_then(|column| column.get(row))
             .map(|v| circuit::Value::known(*v))
-            .ok_or(Error::BoundsFailure)
+            .ok_or(Error::query_out_of_bounds(column.index(), row))
     }
 
     fn assign_advice<V, VR, A, AR>(
@@ -381,7 +381,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             .advice
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? =
+            .ok_or(Error::AssignOutOfBounds)? =
             CellValue::Assigned(to().into_field().evaluate().assign()?);
 
         Ok(())
@@ -413,7 +413,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             .fixed
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? =
+            .ok_or(Error::AssignOutOfBounds)? =
             CellValue::Assigned(to().into_field().evaluate().assign()?);
 
         Ok(())
