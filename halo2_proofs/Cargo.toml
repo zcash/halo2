@@ -80,3 +80,9 @@ bench = false
 [[example]]
 name = "circuit-layout"
 required-features = ["dev-graph"]
+
+[[example]]
+name = "simple-example"
+
+[[example]]
+name = "e2e-example"
