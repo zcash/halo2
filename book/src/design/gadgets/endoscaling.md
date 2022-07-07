@@ -58,38 +58,39 @@ $P := [2] \sum_{i=0}^{m-1} (G_i + \phi(G_i))$
 
 for $j$ in $0..N/2$:
 
-$\hspace{2em} \mathrm{Inner} := S(0, j)$
-
-$\hspace{2em}$  for $i$ in $1..m$:
-
-$\hspace{4em}$    $\mathrm{Inner} := \mathrm{Inner} \;⸭\; S(i, j)$
-
-$\hspace{2em}$  $P := (P \;⸭\; \mathrm{Inner}) \;⸭\; P$
-
+$$
+\begin{array}{l}
+\mathrm{Inner} := S(0, j) \\
+\text{for $i$ in $1..m$:} \\
+\hspace{2em} \mathrm{Inner} := \mathrm{Inner} \;⸭\; S(i, j) \\
+P := (P \;⸭\; \mathrm{Inner}) \;⸭\; P \\
+\end{array}
+$$
 which is equivalent to (using complete addition)
 
-$P := \mathcal{O}$
-
-for $i$ in $0..m$:
-
-$\hspace{2em} P := [2] (G_i + \phi(G_i))$
-
-$\hspace{2em}$for $j$ in $0..N/2$:
-
-$\hspace{4em}$  $P := (P + S(i, j)) + P$
-
+$$
+\begin{array}{l}
+P := \mathcal{O} \\
+\text{for $i$ in $0..m$:} \\
+\hspace{2em} P := [2] (G_i + \phi(G_i)) \\
+\hspace{2em} \text{for $j$ in $0..N/2$:} \\
+\hspace{4em} P := (P + S(i, j)) + P \\
+\end{array}
+$$
 
 #### Circuit cost
+We decompose each $\mathbf{r}_i$ chunk into two-bit chunks:
 
-Define a running sum $z_{i,j} = \sum\limits_{k=2j}^{t} (\mathbf{b}_{i,k} \cdot 2^{t−k})$
+$$
+\mathbf{r} = c_0 + 4 \cdot c_1 + ... + 4^{N/2 - 1} \cdot c_{N/2 -1}
+$$
 
-* $z_{i,t/2} = 0$
-* $z_{i,t/2-1} = 2\mathbf{b}_{i,t-1} + \mathbf{b}_{i,t-2}$
-* $z_{i,0} = b_i$
+with a running sum $z_j, j \in [0..(N/2)).$ $z_0$ is initialized as
+$z_0 = \mathbf{r}$. Each subsequent $z_j$ is calculated as:
+$z_j = (z_{j-1} - c_{j-1}) \cdot 2^{-2}$. The final $z_{N/2} = 0$.
 
-$z_{i,j} = 4 z_{i,j+1} + 2\mathbf{b}_{i,2j-1} + \mathbf{b}_{i,2j-2}$
-
-$\mathbf{b}_{i,2j-2} = z_{i,j} - 4 z_{i,j+1} - 2\mathbf{b}_{i,2j-1}$
+Each $c_j$ is further broken down as $c_j = b_{j,0} + 2 \cdot b_{j,1}$.
+The tuple $(b_0, b_1)$ maps to the endoscaled points:
 
 $\begin{array}{rl}
   (0, 0) &\rightarrow (G_x, -G_y) \\
@@ -98,32 +99,135 @@ $\begin{array}{rl}
   (1, 1) &\rightarrow (\zeta \cdot G_x, G_y)
 \end{array}$
 
-let $S(i, j) = \begin{cases}
-  [2\mathbf{b}_{i,2j} - 1] G_i, &\text{ if } \mathbf{b}_{i,2j+1} = 0 \\
-  \phi([2 \cdot \mathbf{b}_{i,2j} - 1] G_i), &\text{ otherwise}
-\end{cases}$
+which are accumulated using the [double-and-add](./double-and-add.md) algorithm.
 
-$S_x(i, j) = (\mathbf{b}_{i,2j+1} \cdot (\zeta - 1) + 1) \cdot G_{i,x}$
-$S_y(i, j) = (2\mathbf{b}_{i,2j} - 1) \cdot G_{i,y}$
-
-
-Let $r$ be the number of incomplete additions we're doing per row.
-For $r = 2$:
+Let $r$ be the number of incomplete additions we're doing per row. For $r = 1$:
 
 $$
 \begin{array}{|c|c|c|c|c|c|}
 \hline
-z_{i,j} & \mathbf{b}_{i,2j+1} & z_{i',j} & \mathbf{b}_{i',2j+1} & P_x & P_y & Inner_x & Inner_y & \lambda_1 & \lambda_2 & \lambda_3 & G_{i,x} & G_{i,y}  & G_{i',x} & G_{i',y}\\\hline
-. & . & \\
-\hline
+      z     &       b_0      &       b_1      &  x_G  &  y_G  &       x_a       &        x_p      &            \lambda_1          &       \lambda_2      & q_{endoscale\_base} & q_{init} & q_{double}&  q_{add\_incomplete} &  q_{dbl\_and\_add}  & q_{final} \\\hline
+            &                &                &       &       &       x_G       &        y_G      & x_{\phi(G)} = \zeta \cdot x_G &           y_G        &         0           &     0    &      0    &           1          &         0           &     0     \\\hline
+            &                &                &       &       & x_{G + \phi(G)} & y_{G + \phi(G)} &           x_{InitAcc}         &       y_{InitAcc}    &         0           &     1    &      1    &           0          &         0           &     0     \\\hline
+   z_{N/2}  & b_{0,N/2 - 1}  &  b_{1,N/2 - 1} &  x_G  &  y_G  &   x_{InitAcc}   &  x_{P, N/2 - 1} &      \lambda_{1, N/2 - 1}     & \lambda_{2, N/2 - 1} &         1           &     0    &      0    &           0          &         1           &     0     \\\hline
+z_{N/2 - 1} & b_{0,N/2 - 2}  &  b_{1,N/2 - 2} &  x_G  &  y_G  &  x_{A, N/2 - 2} &  x_{P, N/2 - 2} &      \lambda_{1, N/2 - 2}     & \lambda_{2, N/2 - 2} &         0           &     0    &      0    &           0          &         1           &     0     \\\hline
+     ...    &       ...      &       ...      &  ...  &  ...  &       ...       &       ...       &               ...             &          ...         &        ...          &    ...   &     ...   &          ...         &        ...          &    ...    \\\hline
+     z_1    &    b_{0, 0}    &    b_{1, 0}    &  x_G  &  y_G  &     x_{A,0}     &     x_{P,0}     &          \lambda_{1,0}        &     \lambda_{2,0}    &         0           &     0    &      0    &           0          &         0           &     1     \\\hline
+     z_0    &                &                &       &       &   x_{A,final}   &                 &           y_{A,final}         &                      &                     &          &           &                      &                     &           \\\hline
 \end{array}
 $$
 
-$Inner = S_{i,j}\;⸭\;S_{i',j}$
-$P_{j+1} = (P_j\;⸭\;Inner)\;⸭\;P_j$
+For each row $j$ from $N/2$ down to $0$, we check the decomposition and the
+endoscaling map.
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hlinev
+       3      & q_{endoscale\_base} \cdot \BoolCheck(b_0) = 0 \\\hline
+       3      & q_{endoscale\_base} \cdot \BoolCheck(b_1) = 0 \\\hline
+       2      & q_{endoscale\_base} \cdot [(z_{j - 1} - z_{j} \cdot 2^{-2}) - (b_0 + 2\cdot b_1)] = 0 \\\hline
+       3      & q_{endoscale\_base} \cdot b_0 \cdot (y_p - y_G) + (1 - b_0) \cdot (y_p + y_G) = 0 \\\hline
+       3      & q_{endoscale\_base} \cdot b_1 \cdot (x_p - \zeta \cdot x_G) + (1 - b_1) \cdot (x_p - x_G) = 0 \\\hline
+\end{array}
+$$
+where
+$$
+y_p = y_a - \lambda_1 \cdot (x_a - x_p)
+$$
 
-With inner loop optimization: $c = 3 + 6r$
-Without inner loop optimization: $c = 8r$
+The $q_\dbl\_and\_add$ selector is also passed to the [double-and-add](../double-and-add.md)
+helper as $\texttt{q\_gradient}$, which means that the double-and-add gradient
+check is activated on each row where $q_\dbl\_and\_add = 1$:
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+      3       & q_\dbl\_and\_add \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}\right) = 0 \\\hline
+\end{array}
+$$
+
+This composite selector $q_\dbl\_and\_add + q\_final$ is passed to the
+[double-and-add](../double-and-add.md) helper as $\texttt{q\_secant}$
+which means that the double-and-add secant check is activated on each row
+where $q_\dbl\_and\_add + q\_final = 1$:
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+3 & (q_\dbl\_and\_add + q\_final) \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - x_{R,i} - x_{A,i}\right) = 0 \\\hline
+\end{array}
+$$
+where
+$$
+\begin{aligned}
+x_{R,i} &= \lambda_{1,i}^2 - x_{A,i} - x_T, \\
+y_{A,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2},\\
+y_{A,i-1}^\text{witnessed} &\text{ is witnessed.}
+\end{aligned}
+$$
+
+##### Initialization
+To initialize the double-and-add, we set the accumulator to $InitAcc = [2](\phi(P) + P)$.
+In the case where $P$ is a fixed base, we copy it in from a fixed column; if
+$P$ is a variable base, we require it to be provided as a `NonIdentityEccPoint`
+from the ECC gadget, and copy in the $x$ and $y$ coordinates.
+
+(The initial section of the layout has been reproduced here for ease of reference.)
+
+$$
+\begin{array}{|c|c|c|c|c|c|}
+\hline
+       x_a      &        x_p      &           \lambda_1           &        \lambda_2        &  q\_init  &  q\_add\_incomplete &  q\_double \\\hline
+       x_P      &        y_P      &          x_{\phi(P)}          &    y_{\phi(P)} = y_P    &     0     &          1          &      0     \\\hline
+x_{P + \phi(P)} & y_{P + \phi(P)} &          x_{InitAcc}          &     y_{InitAcc}         &     1     &          0          &      1     \\\hline
+   x_{N/2 - 1}  &  x_{N/2 - 1,p}  &      \lambda_{N/2 - 1, 1}     & \lambda_{N/2 - 1, 2}    &     0     &          0          &      0     \\\hline
+\end{array}
+$$
+
+We use the [incomplete addition](./ecc/addition.md#incomplete-addition) helper
+to perform the first incomplete addition of $\phi(P) + P$. The result is then
+passed into the doubling helper to get the initial accumulator $[2](\phi(P) + P)$.
+
+The $q\_{init}$ selector checks that:
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+       2      & q\_init \cdot \left(\zeta \cdot x_P - x_{\phi(P)}\right) = 0 \\\hline
+       3      & q\_init \cdot (y_{InitAcc} - y_{A,N/2 - 1}) = 0 \\\hline
+\end{array}
+$$
+
+where
+$$
+y_{A,N/2 - 1} = \frac{(\lambda_{1,N/2 - 1} + \lambda_{2,N/2 - 1}) \cdot (x_{A,N/2 - 1} - (\lambda_{1,N/2 - 1}^2 - x_{InitAcc} - x_T))}{2}
+$$
+
+#### Finalization
+In the final section of the double-and-add algorithm, we witness the $y$ coordinate
+of the accumulator and check that it is consistent with the previous values.
+
+(The final section of the layout has been reproduced here for ease of reference.)
+
+$$
+\begin{array}{|c|c|c|c|c|c|}
+\hline
+      z     &       b_0      &       b_1      &  x_G  &  y_G  &       x_a       &        x_p      &            \lambda_1          &       \lambda_2      & q_{final} \\\hline
+     z_1    &    b_{0, 0}    &    b_{1, 0}    &  x_G  &  y_G  &     x_{A,0}     &     x_{P,0}     &          \lambda_{1,0}        &     \lambda_{2,0}    &     1     \\\hline
+     z_0    &                &                &       &       &   x_{A,final}   &                 &           y_{A,final}         &                      &           \\\hline
+\end{array}
+$$
+
+The $q\_final$ selector checks that:
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+       2      & q\_final \cdot \left(\lambda_{2,0} \cdot (x_{A,0} - x_{A, final}) - y_{A,0} - y_{A, final}\right) = 0 \\\hline
+\end{array}
+$$
 
 ### Algorithm 2
 
