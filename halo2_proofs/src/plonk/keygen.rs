@@ -45,14 +45,38 @@ where
 
 /// Assembly to be used in circuit synthesis.
 #[derive(Debug)]
-struct Assembly<F: Field> {
-    k: u32,
+struct Assembled<F: Field> {
     fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
     permutation: permutation::keygen::Assembly,
     selectors: Vec<Vec<bool>>,
+}
+
+/// Assembly to be used in circuit synthesis.
+#[derive(Debug)]
+struct Assembly<F: Field> {
+    k: u32,
+    assembled: Assembled<F>,
     // A range of available rows for assignment and copies.
     usable_rows: Range<usize>,
     _marker: std::marker::PhantomData<F>,
+}
+
+impl<F: Field> Assembly<F> {
+    fn new<C: CurveAffine<Scalar = F>>(
+        params: &Params<C>, domain: &EvaluationDomain<F>, cs: &ConstraintSystem<F>) -> Self {
+        Assembly {
+            k: params.k,
+            assembled: Assembled{
+                fixed: vec![domain.empty_lagrange_assigned(); cs.num_fixed_columns],
+                permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.permutation),
+                selectors: vec![vec![false; params.n as usize]; cs.num_selectors],
+            },
+            usable_rows: 0..params.n as usize - (cs.blinding_factors() + 1),
+            _marker: std::marker::PhantomData,
+        }
+    }
+
+    fn finish
 }
 
 impl<F: Field> Assignment<F> for Assembly<F> {
@@ -253,7 +277,8 @@ where
     ConcreteCircuit: Circuit<C::Scalar>,
 {
     let mut cs = ConstraintSystem::default();
-    let config = ConcreteCircuit::configure(&mut cs);
+    // Virtual columns only
+    let virtual_config = ConcreteCircuit::configure(&mut cs);
 
     let cs = cs;
 
@@ -261,20 +286,23 @@ where
         return Err(Error::not_enough_rows_available(params.k));
     }
 
-    let mut assembly: Assembly<C::Scalar> = Assembly {
-        k: params.k,
-        fixed: vec![vk.domain.empty_lagrange_assigned(); cs.num_fixed_columns],
-        permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.permutation),
-        selectors: vec![vec![false; params.n as usize]; cs.num_selectors],
-        usable_rows: 0..params.n as usize - (cs.blinding_factors() + 1),
-        _marker: std::marker::PhantomData,
-    };
+    /// Refactor to have proper constructor
+    let assembly_input: Assembly<C::Scalar> = Assembly::new(params, vk.domain, cs);
+
+    /// START:FLOOR PLANNER
+    let assembled = ConcreteCircuit::FloorPlanner::run(
+        assembly_input,
+        circuit,
+        virtual_config,
+        cs,
+    )
 
     // Synthesize the circuit to obtain URS
+    // Does runtime changes to the virtual_config
     ConcreteCircuit::FloorPlanner::synthesize(
         &mut assembly,
         circuit,
-        config,
+        virtual_config,
         cs.constants.clone(),
     )?;
 
@@ -285,6 +313,11 @@ where
             .into_iter()
             .map(|poly| vk.domain.lagrange_from_vec(poly)),
     );
+
+    /// END:FLOOR PLANNER
+
+
+    // EVERYTHING BEFORE THIS HAS BEEN DONE IN KEYGEN_VK :-))))))))))))))))))
 
     let fixed_polys: Vec<_> = fixed
         .iter()
