@@ -340,13 +340,16 @@ fn main() {
     let params: Params<EqAffine> = halo2_proofs::poly::commitment::Params::new(k);
 
     // Generate verification key.
+    println!("Generating Verification Key");
     let vk = keygen_vk(&params, &circuit).unwrap();
 
     // Generate proving key.
+    println!("Generating Proving Key from Verification Key");
     let pk = keygen_pk(&params, vk, &circuit).unwrap();
 
     let mut transcript = Blake2bWrite::<_, vesta::Affine, _>::init(vec![]);
 
+    println!("Generating Proof!");
     create_proof(
         &params,
         &pk,
@@ -355,7 +358,7 @@ fn main() {
         &mut OsRng,
         &mut transcript,
     )
-    .expect("Failed to create proof");
+    .expect("Failed to create proof!");
 
     // ANCHOR_END: create-proof
     // ANCHOR: write-proof
@@ -366,23 +369,32 @@ fn main() {
         .expect("Failed to create proof file")
         .write_all(&proof[..])
         .expect("Failed to write proof");
-    println!("proof written to {}", proof_path);
+    println!("Proof written to: {}", proof_path);
 
     // ANCHOR_END: write-proof
     // ANCHOR: verify-proof
 
     let mut transcript_proof = Blake2bRead::init(&proof[..]);
 
-    println!(
-        "{:?}",
-        verify_proof(
-            &params,
-            pk.get_vk(),
-            SingleVerifier::new(&params),
-            &[&[&[c]]],
-            &mut transcript_proof
-        )
+    // Verify the proof
+    println!("Verifying Proof");
+    let verified_proof_result = verify_proof(
+        &params,
+        pk.get_vk(),
+        SingleVerifier::new(&params),
+        &[&[&[c]]],
+        &mut transcript_proof,
     );
+
+    // Print "OK(())" if the proof is valid or an error message otherwise.
+    if verified_proof_result.is_ok() {
+        println!("Proof verified!");
+    } else {
+        println!(
+            "Proof verification failed! {}",
+            verified_proof_result.err().unwrap()
+        );
+    }
 
     // ANCHOR_END: verify-proof
 }
