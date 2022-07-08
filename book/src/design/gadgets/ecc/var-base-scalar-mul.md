@@ -306,15 +306,24 @@ $\mathbf{z}_i$ cannot overflow for any $i \geq 1$, because it is a weighted sum 
 
 However, $\mathbf{z}_0 = \alpha + t_q$ *can* overflow $[0, p)$.
 
+> Note: for full-width scalar mul, it may not be possible to represent $\mathbf{z}_0$ in the base field (e.g. when the base field is Pasta's $\mathbb{F}_p$ and $p < q$).
+> In that case, we need to special-case the row that would mention $\mathbf{z}_0$ so that it is correct for whatever representation we use for a full-width scalar.
+> Our representation for $k$ will be the pair $(\mathbb{k}_{254}, k' = k - 2^{254} \cdot \mathbb{k}_{254})$.
+> We'll use $k'$ in place of $\alpha + t_q$ for $\mathbf{z}_0$, constraining $k'$ to 254 bits so that it fits in an $\mathbb{F}_p$ element.
+> Then we just have to generalize the argument below to work for $k' \in [0, 2 \cdot t_q)$ (because the maximum value of $\alpha + t_q$ is $q - 1 + t_q = 2^{254} + t_q - 1 + t_q$).
+
 Since overflow can only occur in the final step that constrains $\mathbf{z}_0 = 2 \cdot \mathbf{z}_1 + \mathbf{k}_0$, we have $\mathbf{z}_0 = k \pmod{p}$. It is then sufficient to also check that $\mathbf{z}_0 = \alpha + t_q \pmod{p}$ (so that $k = \alpha + t_q \pmod{p}$) and that $k \in [t_q, p + t_q)$. These conditions together imply that $k = \alpha + t_q$ as an integer, and so $2^{254} + k = \alpha \pmod{q}$ as required.
 
 > Note: the bits $\mathbf{k}_{254..0}$ do not represent a value reduced modulo $q$, but rather a representation of the unreduced $\alpha + t_q$.
 
 ### Optimized check for $k \in [t_q, p + t_q)$
 
-Since $t_p + t_q < 2^{130}$, we have $$[t_q, p + t_q) = [t_q, t_q + 2^{130}) \;\cup\; [2^{130}, 2^{254}) \;\cup\; \big([2^{254}, 2^{254} + 2^{130}) \;\cap\; [p + t_q - 2^{130}, p + t_q)\big).$$
+Since $t_p + t_q < 2^{130}$ (also true if $p$ and $q$ are swapped), we have $$[t_q, p + t_q) = [t_q, t_q + 2^{130}) \;\cup\; [2^{130}, 2^{254}) \;\cup\; \big([2^{254}, 2^{254} + 2^{130}) \;\cap\; [p + t_q - 2^{130}, p + t_q)\big).$$
 
 We may assume that $k = \alpha + t_q \pmod{p}$.
+
+(This is true for the use of variable-base scalar mul in Orchard, where we know that $\alpha < p$. If is also true if we swap $p$ and $q$ so that we have $p > q$.
+It is *not* true for a full-width scalar $\alpha \geq p$ when $p < q$.)
 
 Therefore,
 $\begin{array}{rcl}
