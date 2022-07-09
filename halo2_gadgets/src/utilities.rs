@@ -186,8 +186,6 @@ pub fn decompose_word<F: PrimeFieldBits>(
     word_num_bits: usize,
     window_num_bits: usize,
 ) -> Vec<u8> {
-    assert!(window_num_bits <= 8);
-
     // Pad bits to multiple of window_num_bits
     let padding = (window_num_bits - (word_num_bits % window_num_bits)) % window_num_bits;
     let bits: Vec<bool> = word
