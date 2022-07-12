@@ -214,7 +214,7 @@ mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::{FailureLocation, MockProver, VerifyFailure},
-        plonk::{Any, Circuit, ConstraintSystem, Error},
+        plonk::{Any, Circuit, ConstraintSystem, Error, Phase::First},
     };
     use pasta_curves::{arithmetic::FieldExt, pallas};
     use rand::rngs::OsRng;
@@ -358,14 +358,14 @@ mod tests {
                         location: FailureLocation::OutsideRegion { row: 1 },
                     },
                     VerifyFailure::Permutation {
-                        column: (Any::Advice, 0).into(),
+                        column: (Any::Advice { phase: First }, 0).into(),
                         location: FailureLocation::InRegion {
                             region: (0, "decompose").into(),
                             offset: 22,
                         },
                     },
                     VerifyFailure::Permutation {
-                        column: (Any::Advice, 0).into(),
+                        column: (Any::Advice { phase: First }, 0).into(),
                         location: FailureLocation::InRegion {
                             region: (0, "decompose").into(),
                             offset: 45,

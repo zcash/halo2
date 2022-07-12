@@ -93,6 +93,7 @@ impl<F: FieldExt> Argument<F> {
         advice_cosets: &'a [poly::AstLeaf<Ec, ExtendedLagrangeCoeff>],
         fixed_cosets: &'a [poly::AstLeaf<Ec, ExtendedLagrangeCoeff>],
         instance_cosets: &'a [poly::AstLeaf<Ec, ExtendedLagrangeCoeff>],
+        challenges: &'a [C::Scalar],
         mut rng: R,
         transcript: &mut T,
     ) -> Result<Permuted<C, Ec>, Error>
@@ -112,12 +113,13 @@ impl<F: FieldExt> Argument<F> {
                         &|_, column_index, rotation| {
                             fixed_values[column_index].with_rotation(rotation).into()
                         },
-                        &|_, column_index, rotation| {
+                        &|_, column_index, rotation, _| {
                             advice_values[column_index].with_rotation(rotation).into()
                         },
                         &|_, column_index, rotation| {
                             instance_values[column_index].with_rotation(rotation).into()
                         },
+                        &|challenge| poly::Ast::ConstantTerm(challenges[challenge.index()]),
                         &|a| -a,
                         &|a, b| a + b,
                         &|a, b| a * b,
@@ -135,12 +137,13 @@ impl<F: FieldExt> Argument<F> {
                         &|_, column_index, rotation| {
                             fixed_cosets[column_index].with_rotation(rotation).into()
                         },
-                        &|_, column_index, rotation| {
+                        &|_, column_index, rotation, _| {
                             advice_cosets[column_index].with_rotation(rotation).into()
                         },
                         &|_, column_index, rotation| {
                             instance_cosets[column_index].with_rotation(rotation).into()
                         },
+                        &|challenge| poly::Ast::ConstantTerm(challenges[challenge.index()]),
                         &|a| -a,
                         &|a, b| a + b,
                         &|a, b| a * b,

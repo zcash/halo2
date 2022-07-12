@@ -6,15 +6,16 @@ use std::fmt;
 use std::iter;
 use std::ops::{Add, Mul, Neg, Range};
 
+use blake2b_simd::blake2b;
 use ff::Field;
 
-use crate::plonk::Assigned;
 use crate::{
     arithmetic::{FieldExt, Group},
     circuit,
     plonk::{
-        permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
-        Expression, Fixed, FloorPlanner, Instance, Selector, VirtualCell,
+        permutation, Advice, Any, Assigned, Assignment, Challenge, Circuit, Column, ColumnType,
+        ConstraintSystem, Error, Expression, Fixed, FloorPlanner, Instance, Phase, Selector,
+        VirtualCell,
     },
     poly::Rotation,
 };
@@ -171,7 +172,7 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 ///     circuit::{Layouter, SimpleFloorPlanner, Value},
 ///     dev::{FailureLocation, MockProver, VerifyFailure},
 ///     pasta::Fp,
-///     plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Selector},
+///     plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Phase::First, Selector},
 ///     poly::Rotation,
 /// };
 /// const K: u32 = 5;
@@ -253,9 +254,9 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 ///             offset: 0,
 ///         },
 ///         cell_values: vec![
-///             (((Any::Advice, 0).into(), 0).into(), "0x2".to_string()),
-///             (((Any::Advice, 1).into(), 0).into(), "0x4".to_string()),
-///             (((Any::Advice, 2).into(), 0).into(), "0x8".to_string()),
+///             (((Any::Advice { phase: First }, 0).into(), 0).into(), "0x2".to_string()),
+///             (((Any::Advice { phase: First }, 1).into(), 0).into(), "0x4".to_string()),
+///             (((Any::Advice { phase: First }, 2).into(), 0).into(), "0x8".to_string()),
 ///         ],
 ///     }])
 /// );
@@ -288,6 +289,8 @@ pub struct MockProver<F: Group + Field> {
     instance: Vec<Vec<F>>,
 
     selectors: Vec<Vec<bool>>,
+
+    challenges: Vec<F>,
 
     permutation: permutation::keygen::Assembly,
 
@@ -451,6 +454,10 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         Ok(())
     }
 
+    fn get_challenge(&self, challenge: Challenge) -> circuit::Value<F> {
+        circuit::Value::known(self.challenges[challenge.index()])
+    }
+
     fn push_namespace<NR, N>(&mut self, _: N)
     where
         NR: Into<String>,
@@ -518,6 +525,17 @@ impl<F: FieldExt> MockProver<F> {
         let permutation = permutation::keygen::Assembly::new(n, &cs.permutation);
         let constants = cs.constants.clone();
 
+        // Use hash chain to derive deterministic challenges for testing
+        let challenges = {
+            let mut hash: [u8; 64] = blake2b(b"Halo2-MockProver").as_bytes().try_into().unwrap();
+            iter::repeat_with(|| {
+                hash = blake2b(&hash).as_bytes().try_into().unwrap();
+                F::from_bytes_wide(&hash)
+            })
+            .take(cs.num_challenges)
+            .collect()
+        };
+
         let mut prover = MockProver {
             k,
             n: n as u32,
@@ -528,6 +546,7 @@ impl<F: FieldExt> MockProver<F> {
             advice,
             instance,
             selectors,
+            challenges,
             permutation,
             usable_rows: 0..usable_rows,
         };
@@ -610,13 +629,18 @@ impl<F: FieldExt> MockProver<F> {
                                 &|scalar| Value::Real(scalar),
                                 &|_| panic!("virtual selectors are removed during optimization"),
                                 &util::load(n, row, &self.cs.fixed_queries, &self.fixed),
-                                &util::load(n, row, &self.cs.advice_queries, &self.advice),
+                                &|index, column, rotation, _| {
+                                    util::load(n, row, &self.cs.advice_queries, &self.advice)(
+                                        index, column, rotation,
+                                    )
+                                },
                                 &util::load_instance(
                                     n,
                                     row,
                                     &self.cs.instance_queries,
                                     &self.instance,
                                 ),
+                                &|challenge| Value::Real(self.challenges[challenge.index()]),
                                 &|a| -a,
                                 &|a, b| a + b,
                                 &|a, b| a * b,
@@ -681,7 +705,7 @@ impl<F: FieldExt> MockProver<F> {
                                     [(row as i32 + n + rotation) as usize % n as usize]
                                     .into()
                             },
-                            &|index, _, _| {
+                            &|index, _, _, _| {
                                 let query = self.cs.advice_queries[index];
                                 let column_index = query.0.index();
                                 let rotation = query.1 .0;
@@ -698,6 +722,7 @@ impl<F: FieldExt> MockProver<F> {
                                         [(row as i32 + n + rotation) as usize % n as usize],
                                 )
                             },
+                            &|challenge| Value::Real(self.challenges[challenge.index()]),
                             &|a| -a,
                             &|a, b| a + b,
                             &|a, b| a * b,
@@ -796,7 +821,7 @@ impl<F: FieldExt> MockProver<F> {
                     .get_columns()
                     .get(column)
                     .map(|c: &Column<Any>| match c.column_type() {
-                        Any::Advice => self.advice[c.index()][row],
+                        Any::Advice { .. } => self.advice[c.index()][row],
                         Any::Fixed => self.fixed[c.index()][row],
                         Any::Instance => CellValue::Assigned(self.instance[c.index()][row]),
                     })
@@ -883,8 +908,8 @@ mod tests {
     use crate::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         plonk::{
-            Advice, Any, Circuit, Column, ConstraintSystem, Error, Expression, Selector,
-            TableColumn,
+            Advice, Any, Circuit, Column, ConstraintSystem, Error, Expression, Phase::First,
+            Selector, TableColumn,
         },
         poly::Rotation,
     };
@@ -956,7 +981,7 @@ mod tests {
                 gate: (0, "Equality check").into(),
                 region: (0, "Faulty synthesis".to_owned()).into(),
                 gate_offset: 1,
-                column: Column::new(1, Any::Advice),
+                column: Column::new(1, Any::Advice { phase: First }),
                 offset: 1,
             }])
         );

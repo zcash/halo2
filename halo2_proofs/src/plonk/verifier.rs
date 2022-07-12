@@ -4,15 +4,17 @@ use rand_core::RngCore;
 use std::iter;
 
 use super::{
-    vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
+    vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error, Phase,
     VerifyingKey,
 };
-use crate::arithmetic::{CurveAffine, FieldExt};
-use crate::poly::{
-    commitment::{Blind, Guard, Params, MSM},
-    multiopen::{self, VerifierQuery},
+use crate::{
+    arithmetic::{CurveAffine, FieldExt},
+    poly::{
+        commitment::{Blind, Guard, Params, MSM},
+        multiopen::{self, VerifierQuery},
+    },
+    transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead},
 };
-use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
 
 #[cfg(feature = "batch")]
 mod batch;
@@ -116,12 +118,30 @@ pub fn verify_proof<
         }
     }
 
-    let advice_commitments = (0..num_proofs)
-        .map(|_| -> Result<Vec<_>, _> {
-            // Hash the prover's advice commitments into the transcript
-            read_n_points(transcript, vk.cs.num_advice_columns)
+    // Hash the prover's advice commitments into the transcript and squeeze challenges
+    let (advice_commitments, challenges) = (0..num_proofs)
+        .map(|_| {
+            let mut commitment = vec![C::default(); vk.cs.num_advice_columns];
+            let mut challenge = vec![C::Scalar::zero(); vk.cs.num_challenges];
+            for current_phase in [Phase::First, Phase::Second, Phase::Third] {
+                for (phase, commitment) in
+                    vk.cs.advice_column_phase.iter().zip(commitment.iter_mut())
+                {
+                    if current_phase == *phase {
+                        *commitment = transcript.read_point()?;
+                    }
+                }
+                for (phase, challenge) in vk.cs.challenge_phase.iter().zip(challenge.iter_mut()) {
+                    if current_phase == *phase {
+                        *challenge = *transcript.squeeze_challenge_scalar::<()>();
+                    }
+                }
+            }
+            Ok((commitment, challenge))
         })
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, Error>>()?
+        .into_iter()
+        .unzip::<_, _, Vec<_>, Vec<_>>();
 
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
@@ -221,62 +241,69 @@ pub fn verify_proof<
         let expressions = advice_evals
             .iter()
             .zip(instance_evals.iter())
+            .zip(challenges.iter())
             .zip(permutations_evaluated.iter())
             .zip(lookups_evaluated.iter())
-            .flat_map(|(((advice_evals, instance_evals), permutation), lookups)| {
-                let fixed_evals = &fixed_evals;
-                std::iter::empty()
-                    // Evaluate the circuit using the custom gates provided
-                    .chain(vk.cs.gates.iter().flat_map(move |gate| {
-                        gate.polynomials().iter().map(move |poly| {
-                            poly.evaluate(
-                                &|scalar| scalar,
-                                &|_| panic!("virtual selectors are removed during optimization"),
-                                &|index, _, _| fixed_evals[index],
-                                &|index, _, _| advice_evals[index],
-                                &|index, _, _| instance_evals[index],
-                                &|a| -a,
-                                &|a, b| a + &b,
-                                &|a, b| a * &b,
-                                &|a, scalar| a * &scalar,
-                            )
-                        })
-                    }))
-                    .chain(permutation.expressions(
-                        vk,
-                        &vk.cs.permutation,
-                        &permutations_common,
-                        advice_evals,
-                        fixed_evals,
-                        instance_evals,
-                        l_0,
-                        l_last,
-                        l_blind,
-                        beta,
-                        gamma,
-                        x,
-                    ))
-                    .chain(
-                        lookups
-                            .iter()
-                            .zip(vk.cs.lookups.iter())
-                            .flat_map(move |(p, argument)| {
-                                p.expressions(
-                                    l_0,
-                                    l_last,
-                                    l_blind,
-                                    argument,
-                                    theta,
-                                    beta,
-                                    gamma,
-                                    advice_evals,
-                                    fixed_evals,
-                                    instance_evals,
+            .flat_map(
+                |((((advice_evals, instance_evals), challenges), permutation), lookups)| {
+                    let fixed_evals = &fixed_evals;
+                    std::iter::empty()
+                        // Evaluate the circuit using the custom gates provided
+                        .chain(vk.cs.gates.iter().flat_map(move |gate| {
+                            gate.polynomials().iter().map(move |poly| {
+                                poly.evaluate(
+                                    &|scalar| scalar,
+                                    &|_| {
+                                        panic!("virtual selectors are removed during optimization")
+                                    },
+                                    &|index, _, _| fixed_evals[index],
+                                    &|index, _, _, _| advice_evals[index],
+                                    &|index, _, _| instance_evals[index],
+                                    &|challenge| challenges[challenge.index()],
+                                    &|a| -a,
+                                    &|a, b| a + &b,
+                                    &|a, b| a * &b,
+                                    &|a, scalar| a * &scalar,
                                 )
                             })
-                            .into_iter(),
-                    )
-            });
+                        }))
+                        .chain(permutation.expressions(
+                            vk,
+                            &vk.cs.permutation,
+                            &permutations_common,
+                            advice_evals,
+                            fixed_evals,
+                            instance_evals,
+                            l_0,
+                            l_last,
+                            l_blind,
+                            beta,
+                            gamma,
+                            x,
+                        ))
+                        .chain(
+                            lookups
+                                .iter()
+                                .zip(vk.cs.lookups.iter())
+                                .flat_map(move |(p, argument)| {
+                                    p.expressions(
+                                        l_0,
+                                        l_last,
+                                        l_blind,
+                                        argument,
+                                        theta,
+                                        beta,
+                                        gamma,
+                                        advice_evals,
+                                        fixed_evals,
+                                        instance_evals,
+                                        challenges,
+                                    )
+                                })
+                                .into_iter(),
+                        )
+                },
+            );
 
         vanishing.verify(params, expressions, y, xn)
     };

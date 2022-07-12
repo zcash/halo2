@@ -1,13 +1,12 @@
 use ff::Field;
 use group::Curve;
 use rand_core::RngCore;
-use std::iter;
-use std::ops::RangeTo;
+use std::{collections::HashMap, iter, mem, ops::RangeTo};
 
 use super::{
     circuit::{
-        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
-        Selector,
+        Advice, Any, Assignment, Challenge, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner,
+        Instance, Phase, Selector,
     },
     lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
     ChallengeY, Error, ProvingKey,
@@ -128,209 +127,276 @@ pub fn create_proof<
         pub advice_blinds: Vec<Blind<C::Scalar>>,
     }
 
-    let advice: Vec<AdviceSingle<C>> = circuits
+    struct WitnessCollection<'a, F: Field> {
+        k: u32,
+        current_phase: Phase,
+        advice: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
+        challenges: HashMap<usize, F>,
+        instances: &'a [&'a [F]],
+        usable_rows: RangeTo<usize>,
+        _marker: std::marker::PhantomData<F>,
+    }
+
+    impl<'a, F: Field> Assignment<F> for WitnessCollection<'a, F> {
+        fn enter_region<NR, N>(&mut self, _: N)
+        where
+            NR: Into<String>,
+            N: FnOnce() -> NR,
+        {
+            // Do nothing; we don't care about regions in this context.
+        }
+
+        fn exit_region(&mut self) {
+            // Do nothing; we don't care about regions in this context.
+        }
+
+        fn enable_selector<A, AR>(&mut self, _: A, _: &Selector, _: usize) -> Result<(), Error>
+        where
+            A: FnOnce() -> AR,
+            AR: Into<String>,
+        {
+            // We only care about advice columns here
+
+            Ok(())
+        }
+
+        fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Value<F>, Error> {
+            if !self.usable_rows.contains(&row) {
+                return Err(Error::not_enough_rows_available(self.k));
+            }
+
+            self.instances
+                .get(column.index())
+                .and_then(|column| column.get(row))
+                .map(|v| Value::known(*v))
+                .ok_or(Error::BoundsFailure)
+        }
+
+        fn assign_advice<V, VR, A, AR>(
+            &mut self,
+            _: A,
+            column: Column<Advice>,
+            row: usize,
+            to: V,
+        ) -> Result<(), Error>
+        where
+            V: FnOnce() -> Value<VR>,
+            VR: Into<Assigned<F>>,
+            A: FnOnce() -> AR,
+            AR: Into<String>,
+        {
+            // Ignore assignment of advice column in different phase than current one.
+            if self.current_phase != column.column_type().phase() {
+                return Ok(());
+            }
+
+            if !self.usable_rows.contains(&row) {
+                return Err(Error::not_enough_rows_available(self.k));
+            }
+
+            *self
+                .advice
+                .get_mut(column.index())
+                .and_then(|v| v.get_mut(row))
+                .ok_or(Error::BoundsFailure)? = to().into_field().assign()?;
+
+            Ok(())
+        }
+
+        fn assign_fixed<V, VR, A, AR>(
+            &mut self,
+            _: A,
+            _: Column<Fixed>,
+            _: usize,
+            _: V,
+        ) -> Result<(), Error>
+        where
+            V: FnOnce() -> Value<VR>,
+            VR: Into<Assigned<F>>,
+            A: FnOnce() -> AR,
+            AR: Into<String>,
+        {
+            // We only care about advice columns here
+
+            Ok(())
+        }
+
+        fn copy(
+            &mut self,
+            _: Column<Any>,
+            _: usize,
+            _: Column<Any>,
+            _: usize,
+        ) -> Result<(), Error> {
+            // We only care about advice columns here
+
+            Ok(())
+        }
+
+        fn fill_from_row(
+            &mut self,
+            _: Column<Fixed>,
+            _: usize,
+            _: Value<Assigned<F>>,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+
+        fn get_challenge(&self, challenge: Challenge) -> Value<F> {
+            self.challenges
+                .get(&challenge.index())
+                .cloned()
+                .map(Value::known)
+                .unwrap_or_else(Value::unknown)
+        }
+
+        fn push_namespace<NR, N>(&mut self, _: N)
+        where
+            NR: Into<String>,
+            N: FnOnce() -> NR,
+        {
+            // Do nothing; we don't care about namespaces in this context.
+        }
+
+        fn pop_namespace(&mut self, _: Option<String>) {
+            // Do nothing; we don't care about namespaces in this context.
+        }
+    }
+
+    let collect_advice_challenge = |(circuit, instances): (&_, &&[&[_]])| -> Result<_, Error> {
+        let unusable_rows_start = params.n as usize - (meta.blinding_factors() + 1);
+
+        let mut witness = WitnessCollection {
+            k: params.k,
+            current_phase: Phase::First,
+            advice: vec![domain.empty_lagrange_assigned(); meta.num_advice_columns],
+            instances,
+            challenges: HashMap::with_capacity(meta.num_challenges),
+            // The prover will not be allowed to assign values to advice
+            // cells that exist within inactive rows, which include some
+            // number of blinding factors and an extra row for use in the
+            // permutation argument.
+            usable_rows: ..unusable_rows_start,
+            _marker: std::marker::PhantomData,
+        };
+
+        let mut advice_values = vec![None; meta.num_advice_columns];
+        let mut advice_polys = vec![None; meta.num_advice_columns];
+        let mut advice_cosets = vec![None; meta.num_advice_columns];
+        let mut advice_blinds = vec![None; meta.num_advice_columns];
+
+        for current_phase in [Phase::First, Phase::Second, Phase::Third] {
+            let column_indices = meta
+                .advice_column_phase
+                .iter()
+                .enumerate()
+                .filter_map(|(column_index, phase)| {
+                    if current_phase == *phase {
+                        Some(column_index)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            if !column_indices.is_empty() {
+                witness.current_phase = current_phase;
+
+                // Synthesize the circuit to obtain the witness and other information.
+                ConcreteCircuit::FloorPlanner::synthesize(
+                    &mut witness,
+                    circuit,
+                    config.clone(),
+                    meta.constants.clone(),
+                )?;
+
+                let advice = mem::replace(
+                    &mut witness.advice,
+                    vec![domain.empty_lagrange_assigned(); meta.num_advice_columns],
+                );
+                let mut advice = batch_invert_assigned::<C::Scalar>(
+                    meta.advice_column_phase
+                        .iter()
+                        .zip(advice.into_iter())
+                        .filter_map(|(phase, advice)| {
+                            if current_phase == *phase {
+                                Some(advice)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect(),
+                );
+
+                // Add blinding factors to advice columns
+                for advice in &mut advice {
+                    for cell in &mut advice[unusable_rows_start..] {
+                        *cell = C::Scalar::random(&mut rng);
+                    }
+                }
+
+                // Compute commitments to advice column polynomials
+                let blinds: Vec<_> = advice
+                    .iter()
+                    .map(|_| Blind(C::Scalar::random(&mut rng)))
+                    .collect();
+                let advice_commitments_projective: Vec<_> = advice
+                    .iter()
+                    .zip(blinds.iter())
+                    .map(|(poly, blind)| params.commit_lagrange(poly, *blind))
+                    .collect();
+                let mut advice_commitments =
+                    vec![C::identity(); advice_commitments_projective.len()];
+                C::Curve::batch_normalize(&advice_commitments_projective, &mut advice_commitments);
+                let advice_commitments = advice_commitments;
+                drop(advice_commitments_projective);
+
+                for commitment in &advice_commitments {
+                    transcript.write_point(*commitment)?;
+                }
+
+                for ((column_index, advice), blind) in column_indices.iter().zip(advice).zip(blinds)
+                {
+                    let poly = domain.lagrange_to_coeff(advice.clone());
+                    advice_values[*column_index] = Some(advice);
+                    advice_blinds[*column_index] = Some(blind);
+                    advice_polys[*column_index] = Some(poly.clone());
+                    advice_cosets[*column_index] = Some(domain.coeff_to_extended(poly.clone()));
+                }
+            }
+
+            for (index, phase) in meta.challenge_phase.iter().enumerate() {
+                if current_phase == *phase {
+                    let existing = witness
+                        .challenges
+                        .insert(index, *transcript.squeeze_challenge_scalar::<()>());
+                    assert!(existing.is_none());
+                }
+            }
+        }
+
+        let advice = AdviceSingle::<C> {
+            advice_values: advice_values.into_iter().map(Option::unwrap).collect(),
+            advice_polys: advice_polys.into_iter().map(Option::unwrap).collect(),
+            advice_cosets: advice_cosets.into_iter().map(Option::unwrap).collect(),
+            advice_blinds: advice_blinds.into_iter().map(Option::unwrap).collect(),
+        };
+
+        assert_eq!(witness.challenges.len(), meta.num_challenges);
+        let challenges = (0..meta.num_challenges)
+            .map(|index| witness.challenges.remove(&index).unwrap())
+            .collect::<Vec<_>>();
+
+        Ok((advice, challenges))
+    };
+
+    let (advice, challenges) = circuits
         .iter()
         .zip(instances.iter())
-        .map(|(circuit, instances)| -> Result<AdviceSingle<C>, Error> {
-            struct WitnessCollection<'a, F: Field> {
-                k: u32,
-                pub advice: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
-                instances: &'a [&'a [F]],
-                usable_rows: RangeTo<usize>,
-                _marker: std::marker::PhantomData<F>,
-            }
-
-            impl<'a, F: Field> Assignment<F> for WitnessCollection<'a, F> {
-                fn enter_region<NR, N>(&mut self, _: N)
-                where
-                    NR: Into<String>,
-                    N: FnOnce() -> NR,
-                {
-                    // Do nothing; we don't care about regions in this context.
-                }
-
-                fn exit_region(&mut self) {
-                    // Do nothing; we don't care about regions in this context.
-                }
-
-                fn enable_selector<A, AR>(
-                    &mut self,
-                    _: A,
-                    _: &Selector,
-                    _: usize,
-                ) -> Result<(), Error>
-                where
-                    A: FnOnce() -> AR,
-                    AR: Into<String>,
-                {
-                    // We only care about advice columns here
-
-                    Ok(())
-                }
-
-                fn query_instance(
-                    &self,
-                    column: Column<Instance>,
-                    row: usize,
-                ) -> Result<Value<F>, Error> {
-                    if !self.usable_rows.contains(&row) {
-                        return Err(Error::not_enough_rows_available(self.k));
-                    }
-
-                    self.instances
-                        .get(column.index())
-                        .and_then(|column| column.get(row))
-                        .map(|v| Value::known(*v))
-                        .ok_or(Error::BoundsFailure)
-                }
-
-                fn assign_advice<V, VR, A, AR>(
-                    &mut self,
-                    _: A,
-                    column: Column<Advice>,
-                    row: usize,
-                    to: V,
-                ) -> Result<(), Error>
-                where
-                    V: FnOnce() -> Value<VR>,
-                    VR: Into<Assigned<F>>,
-                    A: FnOnce() -> AR,
-                    AR: Into<String>,
-                {
-                    if !self.usable_rows.contains(&row) {
-                        return Err(Error::not_enough_rows_available(self.k));
-                    }
-
-                    *self
-                        .advice
-                        .get_mut(column.index())
-                        .and_then(|v| v.get_mut(row))
-                        .ok_or(Error::BoundsFailure)? = to().into_field().assign()?;
-
-                    Ok(())
-                }
-
-                fn assign_fixed<V, VR, A, AR>(
-                    &mut self,
-                    _: A,
-                    _: Column<Fixed>,
-                    _: usize,
-                    _: V,
-                ) -> Result<(), Error>
-                where
-                    V: FnOnce() -> Value<VR>,
-                    VR: Into<Assigned<F>>,
-                    A: FnOnce() -> AR,
-                    AR: Into<String>,
-                {
-                    // We only care about advice columns here
-
-                    Ok(())
-                }
-
-                fn copy(
-                    &mut self,
-                    _: Column<Any>,
-                    _: usize,
-                    _: Column<Any>,
-                    _: usize,
-                ) -> Result<(), Error> {
-                    // We only care about advice columns here
-
-                    Ok(())
-                }
-
-                fn fill_from_row(
-                    &mut self,
-                    _: Column<Fixed>,
-                    _: usize,
-                    _: Value<Assigned<F>>,
-                ) -> Result<(), Error> {
-                    Ok(())
-                }
-
-                fn push_namespace<NR, N>(&mut self, _: N)
-                where
-                    NR: Into<String>,
-                    N: FnOnce() -> NR,
-                {
-                    // Do nothing; we don't care about namespaces in this context.
-                }
-
-                fn pop_namespace(&mut self, _: Option<String>) {
-                    // Do nothing; we don't care about namespaces in this context.
-                }
-            }
-
-            let unusable_rows_start = params.n as usize - (meta.blinding_factors() + 1);
-
-            let mut witness = WitnessCollection {
-                k: params.k,
-                advice: vec![domain.empty_lagrange_assigned(); meta.num_advice_columns],
-                instances,
-                // The prover will not be allowed to assign values to advice
-                // cells that exist within inactive rows, which include some
-                // number of blinding factors and an extra row for use in the
-                // permutation argument.
-                usable_rows: ..unusable_rows_start,
-                _marker: std::marker::PhantomData,
-            };
-
-            // Synthesize the circuit to obtain the witness and other information.
-            ConcreteCircuit::FloorPlanner::synthesize(
-                &mut witness,
-                circuit,
-                config.clone(),
-                meta.constants.clone(),
-            )?;
-
-            let mut advice = batch_invert_assigned(witness.advice);
-
-            // Add blinding factors to advice columns
-            for advice in &mut advice {
-                for cell in &mut advice[unusable_rows_start..] {
-                    *cell = C::Scalar::random(&mut rng);
-                }
-            }
-
-            // Compute commitments to advice column polynomials
-            let advice_blinds: Vec<_> = advice
-                .iter()
-                .map(|_| Blind(C::Scalar::random(&mut rng)))
-                .collect();
-            let advice_commitments_projective: Vec<_> = advice
-                .iter()
-                .zip(advice_blinds.iter())
-                .map(|(poly, blind)| params.commit_lagrange(poly, *blind))
-                .collect();
-            let mut advice_commitments = vec![C::identity(); advice_commitments_projective.len()];
-            C::Curve::batch_normalize(&advice_commitments_projective, &mut advice_commitments);
-            let advice_commitments = advice_commitments;
-            drop(advice_commitments_projective);
-
-            for commitment in &advice_commitments {
-                transcript.write_point(*commitment)?;
-            }
-
-            let advice_polys: Vec<_> = advice
-                .clone()
-                .into_iter()
-                .map(|poly| domain.lagrange_to_coeff(poly))
-                .collect();
-
-            let advice_cosets: Vec<_> = advice_polys
-                .iter()
-                .map(|poly| domain.coeff_to_extended(poly.clone()))
-                .collect();
-
-            Ok(AdviceSingle {
-                advice_values: advice,
-                advice_polys,
-                advice_cosets,
-                advice_blinds,
-            })
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+        .map(collect_advice_challenge)
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .unzip::<_, _, Vec<_>, Vec<_>>();
 
     // Create polynomial evaluator context for values.
     let mut value_evaluator = poly::new_evaluator(|| {});
@@ -416,38 +482,47 @@ pub fn create_proof<
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
 
-    let lookups: Vec<Vec<lookup::prover::Permuted<C, _>>> = instance_values
-        .iter()
-        .zip(instance_cosets.iter())
-        .zip(advice_values.iter())
-        .zip(advice_cosets.iter())
-        .map(|(((instance_values, instance_cosets), advice_values), advice_cosets)| -> Result<Vec<_>, Error> {
-            // Construct and commit to permuted values for each lookup
-            pk.vk
-                .cs
-                .lookups
-                .iter()
-                .map(|lookup| {
-                    lookup.commit_permuted(
-                        pk,
-                        params,
-                        domain,
-                        &value_evaluator,
-                        &mut coset_evaluator,
-                        theta,
-                        advice_values,
-                        &fixed_values,
-                        instance_values,
-                        advice_cosets,
-                        &fixed_cosets,
-                        instance_cosets,
-                        &mut rng,
-                        transcript,
-                    )
-                })
-                .collect()
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    let lookups: Vec<Vec<lookup::prover::Permuted<C, _>>> =
+        instance_values
+            .iter()
+            .zip(instance_cosets.iter())
+            .zip(advice_values.iter())
+            .zip(advice_cosets.iter())
+            .zip(challenges.iter())
+            .map(
+                |(
+                    (((instance_values, instance_cosets), advice_values), advice_cosets),
+                    challenges,
+                )|
+                 -> Result<Vec<_>, Error> {
+                    // Construct and commit to permuted values for each lookup
+                    pk.vk
+                        .cs
+                        .lookups
+                        .iter()
+                        .map(|lookup| {
+                            lookup.commit_permuted(
+                                pk,
+                                params,
+                                domain,
+                                &value_evaluator,
+                                &mut coset_evaluator,
+                                theta,
+                                advice_values,
+                                &fixed_values,
+                                instance_values,
+                                advice_cosets,
+                                &fixed_cosets,
+                                instance_cosets,
+                                challenges,
+                                &mut rng,
+                                transcript,
+                            )
+                        })
+                        .collect()
+                },
+            )
+            .collect::<Result<Vec<_>, _>>()?;
 
     // Sample beta challenge
     let beta: ChallengeBeta<_> = transcript.squeeze_challenge_scalar();
@@ -540,10 +615,14 @@ pub fn create_proof<
     let expressions = advice_cosets
         .iter()
         .zip(instance_cosets.iter())
+        .zip(challenges.iter())
         .zip(permutation_expressions.into_iter())
         .zip(lookup_expressions.into_iter())
         .flat_map(
-            |(((advice_cosets, instance_cosets), permutation_expressions), lookup_expressions)| {
+            |(
+                (((advice_cosets, instance_cosets), challenges), permutation_expressions),
+                lookup_expressions,
+            )| {
                 let fixed_cosets = &fixed_cosets;
                 iter::empty()
                     // Custom constraints
@@ -555,12 +634,13 @@ pub fn create_proof<
                                 &|_, column_index, rotation| {
                                     fixed_cosets[column_index].with_rotation(rotation).into()
                                 },
-                                &|_, column_index, rotation| {
+                                &|_, column_index, rotation, _| {
                                     advice_cosets[column_index].with_rotation(rotation).into()
                                 },
                                 &|_, column_index, rotation| {
                                     instance_cosets[column_index].with_rotation(rotation).into()
                                 },
+                                &|challenge| poly::Ast::ConstantTerm(challenges[challenge.index()]),
                                 &|a| -a,
                                 &|a, b| a + b,
                                 &|a, b| a * b,

@@ -6,6 +6,19 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- `halo2_proofs::plonk`:
+  - `ConstraintSystem::advice_column_in` for allocating a new advice column in
+    given phase.
+  - `ConstraintSystem::challenge_usable_after` for requesting a challenge that
+    is usable after the given phase.
+  - `Assignment::get_challenge` for querying the challenge value. Returns 
+    `Value::unknown()` if the current synthesis phase is before the challenge
+    can be queried.
+- `halo2_proofs::circuit`:
+  - `Layouter::get_challenge` for querying the challenge value. Returns 
+    `Value::unknown()` if the current synthesis phase is before the challenge
+    can be queried.
 
 ## [0.2.0] - 2022-06-23
 ### Added

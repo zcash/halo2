@@ -59,7 +59,7 @@ pub(super) fn render_cell_layout(
                 &format!(
                     "{}{}",
                     match column.column_type {
-                        Any::Advice => "A",
+                        Any::Advice { .. } => "A",
                         Any::Fixed => "F",
                         Any::Instance => "I",
                     },
@@ -117,11 +117,11 @@ pub(super) fn expression_to_string<F: Field>(
                 format!("F{}@{}", column, rotation.0)
             }
         },
-        &|_, column, rotation| {
+        &|_, column, rotation, phase| {
             layout
                 .get(&rotation.0)
                 .unwrap()
-                .get(&(Any::Advice, column).into())
+                .get(&(Any::Advice { phase }, column).into())
                 .unwrap()
                 .clone()
         },
@@ -133,6 +133,7 @@ pub(super) fn expression_to_string<F: Field>(
                 .unwrap()
                 .clone()
         },
+        &|challenge| format!("C{}", challenge.index()),
         &|a| {
             if a.contains(' ') {
                 format!("-({})", a)

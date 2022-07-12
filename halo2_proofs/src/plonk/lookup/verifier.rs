@@ -102,6 +102,7 @@ impl<C: CurveAffine> Evaluated<C> {
         advice_evals: &[C::Scalar],
         fixed_evals: &[C::Scalar],
         instance_evals: &[C::Scalar],
+        challenges: &[C::Scalar],
     ) -> impl Iterator<Item = C::Scalar> + 'a {
         let active_rows = C::Scalar::one() - (l_last + l_blind);
 
@@ -120,8 +121,9 @@ impl<C: CurveAffine> Evaluated<C> {
                             &|scalar| scalar,
                             &|_| panic!("virtual selectors are removed during optimization"),
                             &|index, _, _| fixed_evals[index],
-                            &|index, _, _| advice_evals[index],
+                            &|index, _, _, _| advice_evals[index],
                             &|index, _, _| instance_evals[index],
+                            &|challenge| challenges[challenge.index()],
                             &|a| -a,
                             &|a, b| a + &b,
                             &|a, b| a * &b,
