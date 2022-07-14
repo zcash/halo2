@@ -102,7 +102,7 @@ impl<F: Field, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE> {
                         let expr = (0..WIDTH)
                             .map(|idx| {
                                 let state_cur = meta.query_advice(state[idx], Rotation::cur());
-                                let rc_a = meta.query_fixed(rc_a[idx], Rotation::cur());
+                                let rc_a = meta.query_fixed(rc_a[idx]);
                                 pow_5(state_cur + rc_a) * m_reg[next_idx][idx]
                             })
                             .reduce(|acc, term| acc + term)
@@ -117,8 +117,8 @@ impl<F: Field, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE> {
             let cur_0 = meta.query_advice(state[0], Rotation::cur());
             let mid_0 = meta.query_advice(partial_sbox, Rotation::cur());
 
-            let rc_a0 = meta.query_fixed(rc_a[0], Rotation::cur());
-            let rc_b0 = meta.query_fixed(rc_b[0], Rotation::cur());
+            let rc_a0 = meta.query_fixed(rc_a[0]);
+            let rc_b0 = meta.query_fixed(rc_b[0]);
 
             let s_partial = meta.query_selector(s_partial);
 
@@ -127,7 +127,7 @@ impl<F: Field, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE> {
                 let mid = mid_0.clone() * m_reg[idx][0];
                 (1..WIDTH).fold(mid, |acc, cur_idx| {
                     let cur = meta.query_advice(state[cur_idx], Rotation::cur());
-                    let rc_a = meta.query_fixed(rc_a[cur_idx], Rotation::cur());
+                    let rc_a = meta.query_fixed(rc_a[cur_idx]);
                     acc + (cur + rc_a) * m_reg[idx][cur_idx]
                 })
             };
@@ -143,7 +143,7 @@ impl<F: Field, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE> {
             };
 
             let partial_round_linear = |idx: usize, meta: &mut VirtualCells<F>| {
-                let rc_b = meta.query_fixed(rc_b[idx], Rotation::cur());
+                let rc_b = meta.query_fixed(rc_b[idx]);
                 mid(idx, meta) + rc_b - next(idx, meta)
             };
 

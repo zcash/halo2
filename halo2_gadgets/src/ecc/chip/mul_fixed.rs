@@ -137,7 +137,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
     ) -> Vec<(&'static str, Expression<pallas::Base>)> {
         let y_p = meta.query_advice(self.add_config.y_p, Rotation::cur());
         let x_p = meta.query_advice(self.add_config.x_p, Rotation::cur());
-        let z = meta.query_fixed(self.fixed_z, Rotation::cur());
+        let z = meta.query_fixed(self.fixed_z);
         let u = meta.query_advice(self.u, Rotation::cur());
 
         let window_pow: Vec<Expression<pallas::Base>> = (0..H)
@@ -150,9 +150,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
 
         let interpolated_x = window_pow.iter().zip(self.lagrange_coeffs.iter()).fold(
             Expression::Constant(pallas::Base::zero()),
-            |acc, (window_pow, coeff)| {
-                acc + (window_pow.clone() * meta.query_fixed(*coeff, Rotation::cur()))
-            },
+            |acc, (window_pow, coeff)| acc + (window_pow.clone() * meta.query_fixed(*coeff)),
         );
 
         // Check interpolation of x-coordinate

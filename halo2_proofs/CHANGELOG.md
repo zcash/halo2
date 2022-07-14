@@ -31,6 +31,8 @@ and this project adheres to Rust's notion of
   - `VirtualCells`
     - `query_any` now panics if a non-`cur` `Rotation` is used with the
       `Column<Fixed>` variant.
+    - `query_fixed` now no longer takes a `Rotation` argument,
+      and can only be used to query the current rotation.
 
 ## [0.2.0] - 2022-06-23
 ### Added
