@@ -162,16 +162,9 @@ impl<C: CurveAffine> Evaluated<C> {
                         for (eval, permutation_eval) in columns
                             .iter()
                             .map(|&column| match column.column_type() {
-                                Any::Advice => {
-                                    advice_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
-                                }
-                                Any::Fixed => {
-                                    fixed_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
-                                }
-                                Any::Instance => {
-                                    instance_evals
-                                        [vk.cs.get_any_query_index(column, Rotation::cur())]
-                                }
+                                Any::Advice => advice_evals[vk.cs.get_any_query_index(column)],
+                                Any::Fixed => fixed_evals[vk.cs.get_any_query_index(column)],
+                                Any::Instance => instance_evals[vk.cs.get_any_query_index(column)],
                             })
                             .zip(permutation_evals.iter())
                         {
@@ -182,15 +175,9 @@ impl<C: CurveAffine> Evaluated<C> {
                         let mut current_delta = (*beta * &*x)
                             * &(C::Scalar::DELTA.pow_vartime([(chunk_index * chunk_len) as u64]));
                         for eval in columns.iter().map(|&column| match column.column_type() {
-                            Any::Advice => {
-                                advice_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
-                            }
-                            Any::Fixed => {
-                                fixed_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
-                            }
-                            Any::Instance => {
-                                instance_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
-                            }
+                            Any::Advice => advice_evals[vk.cs.get_any_query_index(column)],
+                            Any::Fixed => fixed_evals[vk.cs.get_any_query_index(column)],
+                            Any::Instance => instance_evals[vk.cs.get_any_query_index(column)],
                         }) {
                             right *= &(eval + &current_delta + &*gamma);
                             current_delta *= &C::Scalar::DELTA;

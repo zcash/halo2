@@ -1169,17 +1169,18 @@ impl<F: Field> ConstraintSystem<F> {
         panic!("get_instance_query_index called for non-existent query");
     }
 
-    pub(crate) fn get_any_query_index(&self, column: Column<Any>, at: Rotation) -> usize {
+    pub(crate) fn get_any_query_index(&self, column: Column<Any>) -> usize {
         match column.column_type() {
-            Any::Advice => {
-                self.get_advice_query_index(Column::<Advice>::try_from(column).unwrap(), at)
-            }
-            Any::Fixed => {
-                self.get_fixed_query_index(Column::<Fixed>::try_from(column).unwrap(), at)
-            }
-            Any::Instance => {
-                self.get_instance_query_index(Column::<Instance>::try_from(column).unwrap(), at)
-            }
+            Any::Advice => self.get_advice_query_index(
+                Column::<Advice>::try_from(column).unwrap(),
+                Rotation::cur(),
+            ),
+            Any::Fixed => self
+                .get_fixed_query_index(Column::<Fixed>::try_from(column).unwrap(), Rotation::cur()),
+            Any::Instance => self.get_instance_query_index(
+                Column::<Instance>::try_from(column).unwrap(),
+                Rotation::cur(),
+            ),
         }
     }
 
@@ -1526,11 +1527,20 @@ impl<'a, F: Field> VirtualCells<'a, F> {
     }
 
     /// Query an Any column at a relative position
+    ///
+    /// # Panics
+    ///
+    /// Panics if query_fixed is called with a non-cur Rotation.
     pub fn query_any<C: Into<Column<Any>>>(&mut self, column: C, at: Rotation) -> Expression<F> {
         let column = column.into();
         match column.column_type() {
             Any::Advice => self.query_advice(Column::<Advice>::try_from(column).unwrap(), at),
-            Any::Fixed => self.query_fixed(Column::<Fixed>::try_from(column).unwrap(), at),
+            Any::Fixed => {
+                if at != Rotation::cur() {
+                    panic!("Fixed columns can only be queried at the current rotation");
+                }
+                self.query_fixed(Column::<Fixed>::try_from(column).unwrap(), at)
+            }
             Any::Instance => self.query_instance(Column::<Instance>::try_from(column).unwrap(), at),
         }
     }
