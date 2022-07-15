@@ -607,7 +607,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::poly::Rotation</span>;
+    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">plonk::FixedQuery</span>, <span class="ident">poly::Rotation</span>};
     <span class="kw">use</span> <span class="ident">pasta_curves::Fp</span>;
     <span class="kw">use</span> <span class="ident">proptest::collection</span>::{<span class="ident">vec</span>, <span class="ident">SizeRange</span>};
     <span class="kw">use</span> <span class="ident">proptest::prelude</span>::<span class="kw-2">*</span>;
@@ -658,11 +658,11 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">query</span> <span class="op">=</span> <span class="number">0</span>;
             <span class="kw">let</span> (<span class="ident">combination_assignments</span>, <span class="ident">selector_assignments</span>) <span class="op">=</span>
                 <span class="ident">process</span>::<span class="op">&lt;</span><span class="ident">Fp</span>, <span class="kw">_</span><span class="op">&gt;</span>(<span class="ident">selectors</span>.<span class="ident">clone</span>(), <span class="ident">max_degree</span>, <span class="op">|</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">Expression::Fixed</span> {
-                        <span class="ident">query_index</span>: <span class="ident">query</span>,
+                    <span class="kw">let</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">Expression::Fixed</span>(<span class="ident">FixedQuery</span> {
+                        <span class="ident">index</span>: <span class="ident">query</span>,
                         <span class="ident">column_index</span>: <span class="ident">query</span>,
                         <span class="ident">rotation</span>: <span class="ident">Rotation::cur</span>(),
-                    };
+                    });
                     <span class="ident">query</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
                     <span class="ident">tmp</span>
                 });
@@ -696,13 +696,13 @@
                     <span class="kw">let</span> <span class="ident">eval</span> <span class="op">=</span> <span class="ident">selector</span>.<span class="ident">expression</span>.<span class="ident">evaluate</span>(
                         <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>,
                         <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;should not occur in returned expressions&quot;</span>),
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query_index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> {
+                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
                             <span class="comment">// Should be the correct combination in the expression</span>
-                            <span class="macro">assert_eq!</span>(<span class="ident">selector</span>.<span class="ident">combination_index</span>, <span class="ident">query_index</span>);
+                            <span class="macro">assert_eq!</span>(<span class="ident">selector</span>.<span class="ident">combination_index</span>, <span class="ident">query</span>.<span class="ident">index</span>);
                             <span class="ident">assignment</span>
                         },
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;should not occur in returned expressions&quot;</span>),
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;should not occur in returned expressions&quot;</span>),
+                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;should not occur in returned expressions&quot;</span>),
+                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;should not occur in returned expressions&quot;</span>),
                         <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="op">-</span><span class="ident">a</span>,
                         <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>,
                         <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>,
@@ -728,5 +728,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (7665c3543 2022-07-06)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
 </body></html>

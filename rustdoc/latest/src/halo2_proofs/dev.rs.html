@@ -1786,24 +1786,24 @@
                         <span class="ident">expression</span>.<span class="ident">evaluate</span>(
                             <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">scalar</span><span class="op">|</span> <span class="ident">Value::Real</span>(<span class="ident">scalar</span>),
                             <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
-                            <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> {
-                                <span class="kw">let</span> <span class="ident">query</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">fixed_queries</span>[<span class="ident">index</span>];
+                            <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
+                                <span class="kw">let</span> <span class="ident">query</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">fixed_queries</span>[<span class="ident">query</span>.<span class="ident">index</span>];
                                 <span class="kw">let</span> <span class="ident">column_index</span> <span class="op">=</span> <span class="ident">query</span>.<span class="number">0</span>.<span class="ident">index</span>();
                                 <span class="kw">let</span> <span class="ident">rotation</span> <span class="op">=</span> <span class="ident">query</span>.<span class="number">1</span> .<span class="number">0</span>;
                                 <span class="self">self</span>.<span class="ident">fixed</span>[<span class="ident">column_index</span>]
                                     [(<span class="ident">row</span> <span class="kw">as</span> <span class="ident">i32</span> <span class="op">+</span> <span class="ident">n</span> <span class="op">+</span> <span class="ident">rotation</span>) <span class="kw">as</span> <span class="ident">usize</span> <span class="op">%</span> <span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>]
                                     .<span class="ident">into</span>()
                             },
-                            <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> {
-                                <span class="kw">let</span> <span class="ident">query</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">advice_queries</span>[<span class="ident">index</span>];
+                            <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
+                                <span class="kw">let</span> <span class="ident">query</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">advice_queries</span>[<span class="ident">query</span>.<span class="ident">index</span>];
                                 <span class="kw">let</span> <span class="ident">column_index</span> <span class="op">=</span> <span class="ident">query</span>.<span class="number">0</span>.<span class="ident">index</span>();
                                 <span class="kw">let</span> <span class="ident">rotation</span> <span class="op">=</span> <span class="ident">query</span>.<span class="number">1</span> .<span class="number">0</span>;
                                 <span class="self">self</span>.<span class="ident">advice</span>[<span class="ident">column_index</span>]
                                     [(<span class="ident">row</span> <span class="kw">as</span> <span class="ident">i32</span> <span class="op">+</span> <span class="ident">n</span> <span class="op">+</span> <span class="ident">rotation</span>) <span class="kw">as</span> <span class="ident">usize</span> <span class="op">%</span> <span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>]
                                     .<span class="ident">into</span>()
                             },
-                            <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">index</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">|</span> {
-                                <span class="kw">let</span> <span class="ident">query</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">instance_queries</span>[<span class="ident">index</span>];
+                            <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
+                                <span class="kw">let</span> <span class="ident">query</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">cs</span>.<span class="ident">instance_queries</span>[<span class="ident">query</span>.<span class="ident">index</span>];
                                 <span class="kw">let</span> <span class="ident">column_index</span> <span class="op">=</span> <span class="ident">query</span>.<span class="number">0</span>.<span class="ident">index</span>();
                                 <span class="kw">let</span> <span class="ident">rotation</span> <span class="op">=</span> <span class="ident">query</span>.<span class="number">1</span> .<span class="number">0</span>;
                                 <span class="ident">Value::Real</span>(
@@ -2204,5 +2204,5 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (7665c3543 2022-07-06)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
 </body></html>

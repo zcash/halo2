@@ -675,6 +675,18 @@
 <span id="654">654</span>
 <span id="655">655</span>
 <span id="656">656</span>
+<span id="657">657</span>
+<span id="658">658</span>
+<span id="659">659</span>
+<span id="660">660</span>
+<span id="661">661</span>
+<span id="662">662</span>
+<span id="663">663</span>
+<span id="664">664</span>
+<span id="665">665</span>
+<span id="666">666</span>
+<span id="667">667</span>
+<span id="668">668</span>
 </pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{
     <span class="ident">circuit::Expression</span>, <span class="ident">ChallengeBeta</span>, <span class="ident">ChallengeGamma</span>, <span class="ident">ChallengeTheta</span>, <span class="ident">ChallengeX</span>, <span class="ident">Error</span>,
     <span class="ident">ProvingKey</span>,
@@ -786,14 +798,20 @@
                     <span class="ident">expression</span>.<span class="ident">evaluate</span>(
                         <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">scalar</span><span class="op">|</span> <span class="ident">poly::Ast::ConstantTerm</span>(<span class="ident">scalar</span>),
                         <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span>, <span class="ident">column_index</span>, <span class="ident">rotation</span><span class="op">|</span> {
-                            <span class="ident">fixed_values</span>[<span class="ident">column_index</span>].<span class="ident">with_rotation</span>(<span class="ident">rotation</span>).<span class="ident">into</span>()
+                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
+                            <span class="ident">fixed_values</span>[<span class="ident">query</span>.<span class="ident">column_index</span>]
+                                .<span class="ident">with_rotation</span>(<span class="ident">query</span>.<span class="ident">rotation</span>)
+                                .<span class="ident">into</span>()
                         },
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span>, <span class="ident">column_index</span>, <span class="ident">rotation</span><span class="op">|</span> {
-                            <span class="ident">advice_values</span>[<span class="ident">column_index</span>].<span class="ident">with_rotation</span>(<span class="ident">rotation</span>).<span class="ident">into</span>()
+                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
+                            <span class="ident">advice_values</span>[<span class="ident">query</span>.<span class="ident">column_index</span>]
+                                .<span class="ident">with_rotation</span>(<span class="ident">query</span>.<span class="ident">rotation</span>)
+                                .<span class="ident">into</span>()
                         },
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span>, <span class="ident">column_index</span>, <span class="ident">rotation</span><span class="op">|</span> {
-                            <span class="ident">instance_values</span>[<span class="ident">column_index</span>].<span class="ident">with_rotation</span>(<span class="ident">rotation</span>).<span class="ident">into</span>()
+                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
+                            <span class="ident">instance_values</span>[<span class="ident">query</span>.<span class="ident">column_index</span>]
+                                .<span class="ident">with_rotation</span>(<span class="ident">query</span>.<span class="ident">rotation</span>)
+                                .<span class="ident">into</span>()
                         },
                         <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="op">-</span><span class="ident">a</span>,
                         <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>,
@@ -809,14 +827,20 @@
                     <span class="ident">expression</span>.<span class="ident">evaluate</span>(
                         <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">scalar</span><span class="op">|</span> <span class="ident">poly::Ast::ConstantTerm</span>(<span class="ident">scalar</span>),
                         <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span>, <span class="ident">column_index</span>, <span class="ident">rotation</span><span class="op">|</span> {
-                            <span class="ident">fixed_cosets</span>[<span class="ident">column_index</span>].<span class="ident">with_rotation</span>(<span class="ident">rotation</span>).<span class="ident">into</span>()
+                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
+                            <span class="ident">fixed_cosets</span>[<span class="ident">query</span>.<span class="ident">column_index</span>]
+                                .<span class="ident">with_rotation</span>(<span class="ident">query</span>.<span class="ident">rotation</span>)
+                                .<span class="ident">into</span>()
                         },
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span>, <span class="ident">column_index</span>, <span class="ident">rotation</span><span class="op">|</span> {
-                            <span class="ident">advice_cosets</span>[<span class="ident">column_index</span>].<span class="ident">with_rotation</span>(<span class="ident">rotation</span>).<span class="ident">into</span>()
+                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
+                            <span class="ident">advice_cosets</span>[<span class="ident">query</span>.<span class="ident">column_index</span>]
+                                .<span class="ident">with_rotation</span>(<span class="ident">query</span>.<span class="ident">rotation</span>)
+                                .<span class="ident">into</span>()
                         },
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span>, <span class="ident">column_index</span>, <span class="ident">rotation</span><span class="op">|</span> {
-                            <span class="ident">instance_cosets</span>[<span class="ident">column_index</span>].<span class="ident">with_rotation</span>(<span class="ident">rotation</span>).<span class="ident">into</span>()
+                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
+                            <span class="ident">instance_cosets</span>[<span class="ident">query</span>.<span class="ident">column_index</span>]
+                                .<span class="ident">with_rotation</span>(<span class="ident">query</span>.<span class="ident">rotation</span>)
+                                .<span class="ident">into</span>()
                         },
                         <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="op">-</span><span class="ident">a</span>,
                         <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>,
@@ -1332,5 +1356,5 @@
     ))
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (7665c3543 2022-07-06)" ></div>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
 </body></html>
