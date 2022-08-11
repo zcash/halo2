@@ -1,4 +1,5 @@
 use ff::Field;
+use pasta_curves::arithmetic::FieldExt;
 use plotters::{
     coord::Shift,
     prelude::{DrawingArea, DrawingAreaErrorKind, DrawingBackend},
@@ -10,8 +11,8 @@ use std::ops::Range;
 use crate::{
     circuit::{layouter::RegionColumn, Value},
     plonk::{
-        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
-        FloorPlanner, Instance, Selector,
+        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, DynamicTable, Error,
+        Fixed, FloorPlanner, Instance, Selector,
     },
 };
 
@@ -85,7 +86,7 @@ impl CircuitLayout {
     }
 
     /// Renders the given circuit on the given drawing area.
-    pub fn render<F: Field, ConcreteCircuit: Circuit<F>, DB: DrawingBackend>(
+    pub fn render<F: FieldExt, ConcreteCircuit: Circuit<F>, DB: DrawingBackend>(
         self,
         k: u32,
         circuit: &ConcreteCircuit,
@@ -98,7 +99,7 @@ impl CircuitLayout {
         // Collect the layout details.
         let mut cs = ConstraintSystem::default();
         let config = ConcreteCircuit::configure(&mut cs);
-        let mut layout = Layout::new(k, n, cs.num_selectors);
+        let mut layout = Layout::new(k, n, cs.num_selectors, cs.dynamic_tables.len());
         ConcreteCircuit::FloorPlanner::synthesize(
             &mut layout,
             circuit,
@@ -109,6 +110,8 @@ impl CircuitLayout {
         let (cs, selector_polys) = cs.compress_selectors(layout.selectors);
         let non_selector_fixed_columns = cs.num_fixed_columns - selector_polys.len();
 
+        let (cs, _tag_polys) = cs.compress_dynamic_table_tags(layout.dynamic_tables.clone());
+
         // Figure out what order to render the columns in.
         // TODO: For now, just render them in the order they were configured.
         let total_columns = cs.num_instance_columns + cs.num_advice_columns + cs.num_fixed_columns;
@@ -116,6 +119,7 @@ impl CircuitLayout {
             let column: Column<Any> = match column {
                 RegionColumn::Column(col) => col,
                 RegionColumn::Selector(selector) => cs.selector_map[selector.0].into(),
+                RegionColumn::TableTag(tag_col) => cs.dynamic_table_tag_map[tag_col.index()].into(),
             };
             column.index()
                 + match column.column_type() {
@@ -350,10 +354,12 @@ struct Layout {
     equality: Vec<(Column<Any>, usize, Column<Any>, usize)>,
     /// Selector assignments used for optimization pass
     selectors: Vec<Vec<bool>>,
+    /// A map between DynamicTable.index, and rows included.
+    dynamic_tables: Vec<Vec<bool>>,
 }
 
 impl Layout {
-    fn new(k: u32, n: usize, num_selectors: usize) -> Self {
+    fn new(k: u32, n: usize, num_selectors: usize, dynamic_tables_len: usize) -> Self {
         Layout {
             k,
             regions: vec![],
@@ -366,6 +372,8 @@ impl Layout {
             equality: vec![],
             /// Selector assignments used for optimization pass
             selectors: vec![vec![false; n]; num_selectors],
+            /// Dynamic table assignments used for optimization pass
+            dynamic_tables: vec![vec![false; n]; dynamic_tables_len],
         }
     }
 
@@ -429,6 +437,16 @@ impl<F: Field> Assignment<F> for Layout {
         }
 
         self.update((*selector).into(), row);
+        Ok(())
+    }
+
+    fn add_row_to_table(&mut self, table: &DynamicTable, row: usize) -> Result<(), Error> {
+        self.dynamic_tables[table.index.index()][row] = true;
+
+        for column in table.columns.iter() {
+            self.update((*column).into(), row);
+        }
+
         Ok(())
     }
 

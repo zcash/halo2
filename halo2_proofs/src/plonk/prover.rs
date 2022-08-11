@@ -15,7 +15,7 @@ use super::{
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine, FieldExt},
     circuit::Value,
-    plonk::Assigned,
+    plonk::{Assigned, DynamicTable},
     poly::{
         self,
         commitment::{Blind, Params},
@@ -167,6 +167,12 @@ pub fn create_proof<
                     A: FnOnce() -> AR,
                     AR: Into<String>,
                 {
+                    // We only care about advice columns here
+
+                    Ok(())
+                }
+
+                fn add_row_to_table(&mut self, _: &DynamicTable, _: usize) -> Result<(), Error> {
                     // We only care about advice columns here
 
                     Ok(())
@@ -556,6 +562,7 @@ pub fn create_proof<
                             expr.evaluate(
                                 &poly::Ast::ConstantTerm,
                                 &|_| panic!("virtual selectors are removed during optimization"),
+                                &|_| panic!("virtual columns are removed during optimization"),
                                 &|query| {
                                     fixed_cosets[query.column_index]
                                         .with_rotation(query.rotation)

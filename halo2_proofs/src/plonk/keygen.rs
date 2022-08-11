@@ -10,7 +10,8 @@ use super::{
         Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
         Selector,
     },
-    permutation, Assigned, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
+    permutation, Assigned, DynamicTable, Error, LagrangeCoeff, Polynomial, ProvingKey,
+    VerifyingKey,
 };
 use crate::{
     arithmetic::CurveAffine,
@@ -50,6 +51,8 @@ struct Assembly<F: Field> {
     fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
     permutation: permutation::keygen::Assembly,
     selectors: Vec<Vec<bool>>,
+    /// A map between DynamicTable.index, and rows included.
+    dynamic_tables: Vec<Vec<bool>>,
     // A range of available rows for assignment and copies.
     usable_rows: Range<usize>,
     _marker: std::marker::PhantomData<F>,
@@ -78,6 +81,16 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         }
 
         self.selectors[selector.0][row] = true;
+
+        Ok(())
+    }
+
+    fn add_row_to_table(&mut self, table: &DynamicTable, row: usize) -> Result<(), Error> {
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::not_enough_rows_available(self.k));
+        }
+
+        self.dynamic_tables[table.index.index()][row] = true;
 
         Ok(())
     }
@@ -205,6 +218,7 @@ where
         fixed: vec![domain.empty_lagrange_assigned(); cs.num_fixed_columns],
         permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.permutation),
         selectors: vec![vec![false; params.n as usize]; cs.num_selectors],
+        dynamic_tables: vec![vec![false; params.n as usize]; cs.dynamic_tables.len()],
         usable_rows: 0..params.n as usize - (cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
     };
@@ -221,6 +235,13 @@ where
     let (cs, selector_polys) = cs.compress_selectors(assembly.selectors);
     fixed.extend(
         selector_polys
+            .into_iter()
+            .map(|poly| domain.lagrange_from_vec(poly)),
+    );
+
+    let (cs, dynamic_table_polys) = cs.compress_dynamic_table_tags(assembly.dynamic_tables);
+    fixed.extend(
+        dynamic_table_polys
             .into_iter()
             .map(|poly| domain.lagrange_from_vec(poly)),
     );
@@ -266,6 +287,7 @@ where
         fixed: vec![vk.domain.empty_lagrange_assigned(); cs.num_fixed_columns],
         permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.permutation),
         selectors: vec![vec![false; params.n as usize]; cs.num_selectors],
+        dynamic_tables: vec![vec![false; params.n as usize]; cs.dynamic_tables.len()],
         usable_rows: 0..params.n as usize - (cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
     };
@@ -282,6 +304,13 @@ where
     let (cs, selector_polys) = cs.compress_selectors(assembly.selectors);
     fixed.extend(
         selector_polys
+            .into_iter()
+            .map(|poly| vk.domain.lagrange_from_vec(poly)),
+    );
+
+    let (cs, dynamic_table_polys) = cs.compress_dynamic_table_tags(assembly.dynamic_tables);
+    fixed.extend(
+        dynamic_table_polys
             .into_iter()
             .map(|poly| vk.domain.lagrange_from_vec(poly)),
     );

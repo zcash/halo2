@@ -4,8 +4,8 @@ use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 use crate::{
     circuit::Value,
     plonk::{
-        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
-        FloorPlanner, Instance, Selector,
+        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, DynamicTable, Error,
+        Fixed, FloorPlanner, Instance, Selector,
     },
 };
 
@@ -78,11 +78,7 @@ struct Graph {
 }
 
 impl<F: Field> Assignment<F> for Graph {
-    fn enter_region<NR, N>(&mut self, _: N)
-    where
-        NR: Into<String>,
-        N: FnOnce() -> NR,
-    {
+    fn enter_region<NR, N>(&mut self, _: N) {
         // Do nothing; we don't care about regions in this context.
     }
 
@@ -96,6 +92,10 @@ impl<F: Field> Assignment<F> for Graph {
         AR: Into<String>,
     {
         // Do nothing; we don't care about cells in this context.
+        Ok(())
+    }
+
+    fn add_row_to_table(&mut self, _: &DynamicTable, _: usize) -> Result<(), Error> {
         Ok(())
     }
 

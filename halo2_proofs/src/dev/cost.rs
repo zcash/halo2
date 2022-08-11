@@ -13,8 +13,8 @@ use group::prime::PrimeGroup;
 use crate::{
     circuit::Value,
     plonk::{
-        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
-        FloorPlanner, Instance, Selector,
+        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, DynamicTable, Error,
+        Fixed, FloorPlanner, Instance, Selector,
     },
     poly::Rotation,
 };
@@ -44,6 +44,8 @@ pub struct CircuitCost<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> {
 
 struct Assembly {
     selectors: Vec<Vec<bool>>,
+    /// A map between DynamicTable.index, and rows included.
+    dynamic_tables: Vec<Vec<bool>>,
 }
 
 impl<F: Field> Assignment<F> for Assembly {
@@ -65,6 +67,12 @@ impl<F: Field> Assignment<F> for Assembly {
         AR: Into<String>,
     {
         self.selectors[selector.0][row] = true;
+
+        Ok(())
+    }
+
+    fn add_row_to_table(&mut self, table: &DynamicTable, row: usize) -> Result<(), Error> {
+        self.dynamic_tables[table.index.index()][row] = true;
 
         Ok(())
     }
@@ -141,6 +149,7 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
         let config = ConcreteCircuit::configure(&mut cs);
         let mut assembly = Assembly {
             selectors: vec![vec![false; 1 << k]; cs.num_selectors],
+            dynamic_tables: vec![vec![false; 1 << k]; cs.dynamic_tables.len()],
         };
         ConcreteCircuit::FloorPlanner::synthesize(
             &mut assembly,
@@ -150,6 +159,7 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
         )
         .unwrap();
         let (cs, _) = cs.compress_selectors(assembly.selectors);
+        let (cs, _) = cs.compress_dynamic_table_tags(assembly.dynamic_tables);
 
         assert!((1 << k) >= cs.minimum_rows());
 

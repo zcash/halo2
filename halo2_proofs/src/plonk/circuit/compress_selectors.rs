@@ -99,32 +99,8 @@ where
         .collect();
 
     // All of the remaining `selectors` are simple. Let's try to combine them.
-    // First, we compute the exclusion matrix that has (j, k) = true if selector
-    // j and selector k conflict -- that is, they are both enabled on the same
-    // row. This matrix is symmetric and the diagonal entries are false, so we
-    // only need to store the lower triangular entries.
-    let mut exclusion_matrix = (0..selectors.len())
-        .map(|i| vec![false; i])
-        .collect::<Vec<_>>();
-
-    for (i, rows) in selectors
-        .iter()
-        .map(|selector| &selector.activations)
-        .enumerate()
-    {
-        // Loop over the selectors previous to this one
-        for (j, other_selector) in selectors.iter().enumerate().take(i) {
-            // Look at what selectors are active at the same row
-            if rows
-                .iter()
-                .zip(other_selector.activations.iter())
-                .any(|(l, r)| l & r)
-            {
-                // Mark them as incompatible
-                exclusion_matrix[i][j] = true;
-            }
-        }
-    }
+    let exclusion_matrix =
+        exclusion_matrix(&selectors, |selector| selector.activations.iter().cloned());
 
     // Simple selectors that we've added to combinations already.
     let mut added = vec![false; selectors.len()];
@@ -229,6 +205,35 @@ where
     (combination_assignments, selector_assignments)
 }
 
+/// Compute an exclusion matrix for the provided virtual_columns (simple selectors, table tags).
+/// Caller must provide a closure `rows`, to create an iterator over a column's rows.
+/// The iterator must return true if the cell has been assigned.
+pub fn exclusion_matrix<'a, C, A: Iterator<Item = bool>>(
+    virtual_columns: &'a [C],
+    rows: impl Fn(&'a C) -> A,
+) -> Vec<Vec<bool>> {
+    // First, we compute the exclusion matrix that has (j, k) = true if assignment
+    // j and k conflict -- that is, they are both assigned on the same
+    // row. This matrix is symmetric and the diagonal entries are false, so we
+    // only need to store the lower triangular entries.
+    let mut exclusion_matrix = (0..virtual_columns.len())
+        .map(|i| vec![false; i])
+        .collect::<Vec<_>>();
+
+    for (i, vc) in virtual_columns.iter().enumerate() {
+        // Loop over the columns previous to this one
+        for (j, other_selector) in virtual_columns.iter().enumerate().take(i) {
+            // Look at what virtual columns are assigned at the same row
+            if rows(vc).zip(rows(other_selector)).any(|(l, r)| l & r) {
+                // Mark them as incompatible
+                exclusion_matrix[i][j] = true;
+            }
+        }
+    }
+
+    exclusion_matrix
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -320,6 +325,7 @@ mod tests {
                 {
                     let eval = selector.expression.evaluate(
                         &|c| c,
+                        &|_| panic!("should not occur in returned expressions"),
                         &|_| panic!("should not occur in returned expressions"),
                         &|query| {
                             // Should be the correct combination in the expression

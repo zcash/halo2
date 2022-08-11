@@ -9,6 +9,7 @@ use super::{
     util::{self, AnyQuery},
     MockProver, Region,
 };
+use crate::plonk::DynamicTable;
 use crate::{
     dev::Value,
     plonk::{Any, Column, ConstraintSystem, Expression, Gate},
@@ -57,6 +58,7 @@ impl FailureLocation {
                 expression.evaluate(
                     &|_| vec![],
                     &|_| panic!("virtual selectors are removed during optimization"),
+                    &|_| panic!("virtual columns are removed during optimization"),
                     &|query| vec![cs.fixed_queries[query.index].0.into()],
                     &|query| vec![cs.advice_queries[query.index].0.into()],
                     &|query| vec![cs.instance_queries[query.index].0.into()],
@@ -108,6 +110,17 @@ impl FailureLocation {
 /// The reasons why a particular circuit is not satisfied.
 #[derive(Debug, PartialEq)]
 pub enum VerifyFailure {
+    /// A cell used in an active gate was not assigned to.
+    DynamicTableCellNotAssigned {
+        /// The tag of the table containing a unassigned cell.
+        dynamic_table: DynamicTable,
+        /// The region in which this cell should be assigned.
+        region: metadata::Region,
+        /// The column in which this cell should be assigned.
+        column: Column<Any>,
+        /// The offset (relative to the start of the region) at which this cell should be assigned.
+        offset: usize,
+    },
     /// A cell used in an active gate was not assigned to.
     CellNotAssigned {
         /// The index of the active gate.
@@ -173,6 +186,18 @@ pub enum VerifyFailure {
 impl fmt::Display for VerifyFailure {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            VerifyFailure::DynamicTableCellNotAssigned {
+                dynamic_table,
+                region,
+                column,
+                offset,
+            } => {
+                write!(
+                    f,
+                    "{} includes the row at offset {} in the {}, which requires cell in column {:?} be assigned.",
+                    dynamic_table, offset, region, column
+                )
+            }
             Self::CellNotAssigned {
                 gate,
                 region,
@@ -347,6 +372,7 @@ fn render_constraint_not_satisfied<F: Field>(
     }
 }
 
+// TODO handle dynamic lookups
 /// Renders `VerifyFailure::Lookup`.
 ///
 /// ```text
@@ -389,6 +415,7 @@ fn render_lookup<F: FieldExt>(
         expr.evaluate(
             &|_| panic!("no constants in table expressions"),
             &|_| panic!("no selectors in table expressions"),
+            &|_| panic!("no virtual columns in table expressions"),
             &|query| format!("F{}", query.column_index),
             &|_| panic!("no advice columns in table expressions"),
             &|_| panic!("no instance columns in table expressions"),
@@ -439,6 +466,7 @@ fn render_lookup<F: FieldExt>(
         let cell_values = input.evaluate(
             &|_| BTreeMap::default(),
             &|_| panic!("virtual selectors are removed during optimization"),
+            &|_| panic!("virtual columns are removed during optimization"),
             &cell_value(
                 Any::Fixed,
                 &util::load(n, row, &cs.fixed_queries, &prover.fixed),

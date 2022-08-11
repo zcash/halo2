@@ -120,6 +120,7 @@ impl<C: CurveAffine> Evaluated<C> {
                         expression.evaluate(
                             &|scalar| scalar,
                             &|_| panic!("virtual selectors are removed during optimization"),
+                            &|_| panic!("virtual columns are removed during optimization"),
                             &|query| fixed_evals[query.index],
                             &|query| advice_evals[query.index],
                             &|query| instance_evals[query.index],

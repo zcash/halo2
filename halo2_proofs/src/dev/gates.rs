@@ -1,6 +1,7 @@
 use std::{
     collections::BTreeSet,
     fmt::{self, Write},
+    iter,
 };
 
 use ff::PrimeField;
@@ -119,6 +120,7 @@ impl CircuitGates {
                         expression: constraint.evaluate(
                             &util::format_value,
                             &|selector| format!("S{}", selector.0),
+                            &|virtual_col| format!("T{}", virtual_col.0.index()),
                             &|query| format!("F{}@{}", query.column_index, query.rotation.0),
                             &|query| format!("A{}@{}", query.column_index, query.rotation.0),
                             &|query| format!("I{}@{}", query.column_index, query.rotation.0),
@@ -152,7 +154,10 @@ impl CircuitGates {
                         ),
                         queries: constraint.evaluate(
                             &|_| BTreeSet::default(),
-                            &|selector| vec![format!("S{}", selector.0)].into_iter().collect(),
+                            &|selector| iter::once(format!("S{}", selector.0)).collect(),
+                            &|virtual_col| {
+                                iter::once(format!("V{}", virtual_col.0.index())).collect()
+                            },
                             &|query| {
                                 vec![format!("F{}@{}", query.column_index, query.rotation.0)]
                                     .into_iter()
@@ -190,6 +195,7 @@ impl CircuitGates {
             .flat_map(|gate| {
                 gate.polynomials().iter().map(|poly| {
                     poly.evaluate(
+                        &|_| (0, 0, 0),
                         &|_| (0, 0, 0),
                         &|_| (0, 0, 0),
                         &|_| (0, 0, 0),

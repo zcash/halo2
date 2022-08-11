@@ -143,6 +143,7 @@ pub(super) fn cell_values<'a, F: FieldExt>(
     let cell_values = poly.evaluate(
         &|_| BTreeMap::default(),
         &|_| panic!("virtual selectors are removed during optimization"),
+        &|_| panic!("virtual columns are removed during optimization"),
         &cell_value(virtual_cells, load_fixed),
         &cell_value(virtual_cells, load_advice),
         &cell_value(virtual_cells, load_instance),
