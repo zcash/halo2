@@ -2,10 +2,10 @@ use super::{util::*, AssignedBits};
 use halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{Chip, Layouter, Region, Value},
-    pasta::pallas,
     plonk::{Advice, Column, ConstraintSystem, Error, TableColumn},
     poly::Rotation,
 };
+use halo2curves::pasta::pallas;
 use std::convert::TryInto;
 use std::marker::PhantomData;
 
@@ -291,9 +291,9 @@ mod tests {
         arithmetic::FieldExt,
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
-        pasta::Fp,
         plonk::{Advice, Circuit, Column, ConstraintSystem, Error},
     };
+    use halo2curves::pasta::Fp;
 
     #[test]
     fn lookup_table() {

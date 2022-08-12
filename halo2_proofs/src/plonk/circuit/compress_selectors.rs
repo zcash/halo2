@@ -233,7 +233,7 @@ where
 mod tests {
     use super::*;
     use crate::{plonk::FixedQuery, poly::Rotation};
-    use pasta_curves::Fp;
+    use halo2curves::pasta::Fp;
     use proptest::collection::{vec, SizeRange};
     use proptest::prelude::*;
 

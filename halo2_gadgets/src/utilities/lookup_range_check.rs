@@ -395,7 +395,7 @@ mod tests {
         dev::{FailureLocation, MockProver, VerifyFailure},
         plonk::{Circuit, ConstraintSystem, Error},
     };
-    use pasta_curves::{arithmetic::FieldExt, pallas};
+    use halo2curves::{pasta::pallas, FieldExt};
 
     use std::{convert::TryInto, marker::PhantomData};
 

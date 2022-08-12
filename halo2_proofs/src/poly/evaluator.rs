@@ -9,7 +9,7 @@ use std::{
 };
 
 use group::ff::Field;
-use pasta_curves::arithmetic::FieldExt;
+use halo2curves::FieldExt;
 
 use super::{
     Basis, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
@@ -650,7 +650,7 @@ impl BasisOps for ExtendedLagrangeCoeff {
 mod tests {
     use std::iter;
 
-    use pasta_curves::pallas;
+    use halo2curves::pasta::pallas;
 
     use super::{get_chunk_params, new_evaluator, Ast, BasisOps, Evaluator};
     use crate::{

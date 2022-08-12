@@ -5,10 +5,10 @@ use super::multicore;
 pub use ff::Field;
 use group::{
     ff::{BatchInvert, PrimeField},
-    Group as _,
+    Curve, Group as _,
 };
 
-pub use pasta_curves::arithmetic::*;
+pub use halo2curves::{CurveAffine, CurveExt, FieldExt, Group};
 
 fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut C::Curve) {
     let coeffs: Vec<_> = coeffs.iter().map(|a| a.to_repr()).collect();
@@ -273,6 +273,33 @@ pub fn recursive_butterfly_arithmetic<G: Group>(
     }
 }
 
+/// Convert coefficient bases group elements to lagrange basis by inverse FFT.
+pub fn g_to_lagrange<C: CurveAffine>(g_projective: Vec<C::Curve>, k: u32) -> Vec<C> {
+    let n_inv = C::Scalar::TWO_INV.pow_vartime(&[k as u64, 0, 0, 0]);
+    let mut omega_inv = C::Scalar::ROOT_OF_UNITY_INV;
+    for _ in k..C::Scalar::S {
+        omega_inv = omega_inv.square();
+    }
+
+    let mut g_lagrange_projective = g_projective;
+    best_fft(&mut g_lagrange_projective, omega_inv, k);
+    parallelize(&mut g_lagrange_projective, |g, _| {
+        for g in g.iter_mut() {
+            *g *= n_inv;
+        }
+    });
+
+    let mut g_lagrange = vec![C::identity(); 1 << k];
+    parallelize(&mut g_lagrange, |g_lagrange, starts| {
+        C::Curve::batch_normalize(
+            &g_lagrange_projective[starts..(starts + g_lagrange.len())],
+            g_lagrange,
+        );
+    });
+
+    g_lagrange
+}
+
 /// This evaluates a provided polynomial (in coefficient form) at `point`.
 pub fn eval_polynomial<F: Field>(poly: &[F], point: F) -> F {
     // TODO: parallelize?
@@ -410,11 +437,19 @@ pub fn lagrange_interpolate<F: FieldExt>(points: &[F], evals: &[F]) -> Vec<F> {
     }
 }
 
+pub(crate) fn evaluate_vanishing_polynomial<F: FieldExt>(roots: &[F], z: F) -> F {
+    roots.iter().fold(F::one(), |acc, point| (z - point) * acc)
+}
+
+pub(crate) fn powers<F: FieldExt>(base: F) -> impl Iterator<Item = F> {
+    std::iter::successors(Some(F::one()), move |power| Some(base * power))
+}
+
 #[cfg(test)]
 use rand_core::OsRng;
 
 #[cfg(test)]
-use crate::pasta::Fp;
+use crate::halo2curves::pasta::Fp;
 
 #[test]
 fn test_lagrange_interpolate() {

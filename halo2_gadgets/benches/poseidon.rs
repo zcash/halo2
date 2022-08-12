@@ -1,15 +1,13 @@
 use ff::Field;
 use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
-    pasta::Fp,
     plonk::{
         create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column,
-        ConstraintSystem, Error, SingleVerifier,
+        ConstraintSystem, Error,
     },
-    poly::commitment::Params,
     transcript::{Blake2bRead, Blake2bWrite, Challenge255},
 };
-use pasta_curves::{pallas, vesta};
+use halo2curves::pasta::{pallas, vesta, EqAffine, Fp};
 
 use halo2_gadgets::poseidon::{
     primitives::{self as poseidon, ConstantLength, Spec},
@@ -20,6 +18,19 @@ use std::marker::PhantomData;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use rand::rngs::OsRng;
+
+use halo2_proofs::{
+    poly::{
+        commitment::ParamsProver,
+        ipa::{
+            commitment::{IPACommitmentScheme, ParamsIPA},
+            multiopen::ProverIPA,
+            strategy::SingleStrategy,
+        },
+        VerificationStrategy,
+    },
+    transcript::{TranscriptReadBuffer, TranscriptWriterBuffer},
+};
 
 #[derive(Clone, Copy)]
 struct HashCircuit<S, const WIDTH: usize, const RATE: usize, const L: usize>
@@ -184,7 +195,7 @@ fn bench_poseidon<S, const WIDTH: usize, const RATE: usize, const L: usize>(
     S: Spec<Fp, WIDTH, RATE> + Copy + Clone,
 {
     // Initialize the polynomial commitment parameters
-    let params: Params<vesta::Affine> = Params::new(K);
+    let params: ParamsIPA<vesta::Affine> = ParamsIPA::new(K);
 
     let empty_circuit = HashCircuit::<S, WIDTH, RATE, L> {
         message: Value::unknown(),
@@ -216,21 +227,35 @@ fn bench_poseidon<S, const WIDTH: usize, const RATE: usize, const L: usize>(
     c.bench_function(&prover_name, |b| {
         b.iter(|| {
             // Create a proof
-            let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
-            create_proof(&params, &pk, &[circuit], &[&[]], &mut rng, &mut transcript)
-                .expect("proof generation should not fail")
+            let mut transcript = Blake2bWrite::<_, EqAffine, Challenge255<_>>::init(vec![]);
+            create_proof::<IPACommitmentScheme<_>, ProverIPA<_>, _, _, _, _>(
+                &params,
+                &pk,
+                &[circuit],
+                &[&[]],
+                &mut rng,
+                &mut transcript,
+            )
+            .expect("proof generation should not fail")
         })
     });
 
     // Create a proof
-    let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
-    create_proof(&params, &pk, &[circuit], &[&[]], &mut rng, &mut transcript)
-        .expect("proof generation should not fail");
+    let mut transcript = Blake2bWrite::<_, EqAffine, Challenge255<_>>::init(vec![]);
+    create_proof::<IPACommitmentScheme<_>, ProverIPA<_>, _, _, _, _>(
+        &params,
+        &pk,
+        &[circuit],
+        &[&[]],
+        &mut rng,
+        &mut transcript,
+    )
+    .expect("proof generation should not fail");
     let proof = transcript.finalize();
 
     c.bench_function(&verifier_name, |b| {
         b.iter(|| {
-            let strategy = SingleVerifier::new(&params);
+            let strategy = SingleStrategy::new(&params);
             let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
             assert!(verify_proof(&params, pk.get_vk(), strategy, &[&[]], &mut transcript).is_ok());
         });

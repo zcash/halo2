@@ -5,7 +5,7 @@ use halo2_gadgets::{
     sinsemilla::primitives as sinsemilla,
 };
 
-use pasta_curves::pallas;
+use halo2curves::pasta::pallas;
 #[cfg(unix)]
 use pprof::criterion::{Output, PProfProfiler};
 use rand::{rngs::OsRng, Rng};

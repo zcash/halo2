@@ -6,7 +6,7 @@ use halo2_proofs::{
     plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
-use pasta_curves::arithmetic::FieldExt;
+use halo2curves::FieldExt;
 use std::marker::PhantomData;
 
 /// Instructions for a conditional swap gadget.
@@ -201,7 +201,7 @@ mod tests {
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
-    use pasta_curves::{arithmetic::FieldExt, pallas::Base};
+    use halo2curves::{pasta::pallas::Base, FieldExt};
     use rand::rngs::OsRng;
 
     #[test]

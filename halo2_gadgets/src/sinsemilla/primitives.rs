@@ -2,7 +2,7 @@
 
 use group::{Curve, Wnaf};
 use halo2_proofs::arithmetic::{CurveAffine, CurveExt};
-use pasta_curves::pallas;
+use halo2curves::pasta::pallas;
 use subtle::CtOption;
 
 mod addition;
@@ -245,7 +245,7 @@ impl CommitDomain {
 #[cfg(test)]
 mod tests {
     use super::{Pad, K};
-    use pasta_curves::{arithmetic::CurveExt, pallas};
+    use halo2curves::{pasta::pallas, CurveExt};
 
     #[test]
     fn pad() {
@@ -292,7 +292,7 @@ mod tests {
     fn sinsemilla_s() {
         use super::sinsemilla_s::SINSEMILLA_S;
         use group::Curve;
-        use pasta_curves::arithmetic::CurveAffine;
+        use halo2curves::CurveAffine;
 
         let hasher = pallas::Point::hash_to_curve(super::S_PERSONALIZATION);
 

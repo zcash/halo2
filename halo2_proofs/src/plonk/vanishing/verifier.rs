@@ -7,7 +7,7 @@ use crate::{
     plonk::{Error, VerifyingKey},
     poly::{
         commitment::{Params, MSM},
-        multiopen::VerifierQuery,
+        VerifierQuery,
     },
     transcript::{read_n_points, EncodedChallenge, TranscriptRead},
 };
@@ -30,8 +30,8 @@ pub struct PartiallyEvaluated<C: CurveAffine> {
     random_eval: C::Scalar,
 }
 
-pub struct Evaluated<'params, C: CurveAffine> {
-    h_commitment: MSM<'params, C>,
+pub struct Evaluated<C: CurveAffine, M: MSM<C>> {
+    h_commitment: M,
     random_poly_commitment: C,
     expected_h_eval: C::Scalar,
     random_eval: C::Scalar,
@@ -87,13 +87,13 @@ impl<C: CurveAffine> Constructed<C> {
 }
 
 impl<C: CurveAffine> PartiallyEvaluated<C> {
-    pub(in crate::plonk) fn verify(
+    pub(in crate::plonk) fn verify<'params, P: Params<'params, C>>(
         self,
-        params: &Params<C>,
+        params: &'params P,
         expressions: impl Iterator<Item = C::Scalar>,
         y: ChallengeY<C>,
         xn: C::Scalar,
-    ) -> Evaluated<C> {
+    ) -> Evaluated<C, P::MSM> {
         let expected_h_eval = expressions.fold(C::Scalar::zero(), |h_eval, v| h_eval * &*y + &v);
         let expected_h_eval = expected_h_eval * ((xn - C::Scalar::one()).invert().unwrap());
 
@@ -103,7 +103,9 @@ impl<C: CurveAffine> PartiallyEvaluated<C> {
                 .rev()
                 .fold(params.empty_msm(), |mut acc, commitment| {
                     acc.scale(xn);
-                    acc.append_term(C::Scalar::one(), *commitment);
+                    let commitment: C::CurveExt = (*commitment).into();
+                    acc.append_term(C::Scalar::one(), commitment);
+
                     acc
                 });
 
@@ -116,14 +118,11 @@ impl<C: CurveAffine> PartiallyEvaluated<C> {
     }
 }
 
-impl<'params, C: CurveAffine> Evaluated<'params, C> {
-    pub(in crate::plonk) fn queries<'r>(
-        &'r self,
+impl<C: CurveAffine, M: MSM<C>> Evaluated<C, M> {
+    pub(in crate::plonk) fn queries(
+        &self,
         x: ChallengeX<C>,
-    ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone
-    where
-        'params: 'r,
-    {
+    ) -> impl Iterator<Item = VerifierQuery<C, M>> + Clone {
         iter::empty()
             .chain(Some(VerifierQuery::new_msm(
                 &self.h_commitment,

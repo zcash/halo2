@@ -8,7 +8,7 @@ use halo2_proofs::{
     plonk::{ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
-use pasta_curves::pallas;
+use halo2curves::pasta::pallas;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
@@ -254,7 +254,7 @@ pub mod tests {
         circuit::{AssignedCell, Chip, Layouter, Value},
         plonk::{Any, Error},
     };
-    use pasta_curves::{arithmetic::FieldExt, pallas};
+    use halo2curves::{pasta::pallas, FieldExt};
 
     use crate::{
         ecc::{

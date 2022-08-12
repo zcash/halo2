@@ -10,9 +10,8 @@ use crate::{
     plonk::{ChallengeX, ChallengeY, Error},
     poly::{
         self,
-        commitment::{Blind, Params},
-        multiopen::ProverQuery,
-        Coeff, EvaluationDomain, ExtendedLagrangeCoeff, Polynomial,
+        commitment::{Blind, ParamsProver},
+        Coeff, EvaluationDomain, ExtendedLagrangeCoeff, Polynomial, ProverQuery,
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
@@ -35,8 +34,14 @@ pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> Argument<C> {
-    pub(in crate::plonk) fn commit<E: EncodedChallenge<C>, R: RngCore, T: TranscriptWrite<C, E>>(
-        params: &Params<C>,
+    pub(in crate::plonk) fn commit<
+        'params,
+        P: ParamsProver<'params, C>,
+        E: EncodedChallenge<C>,
+        R: RngCore,
+        T: TranscriptWrite<C, E>,
+    >(
+        params: &P,
         domain: &EvaluationDomain<C::Scalar>,
         mut rng: R,
         transcript: &mut T,
@@ -62,13 +67,15 @@ impl<C: CurveAffine> Argument<C> {
 
 impl<C: CurveAffine> Committed<C> {
     pub(in crate::plonk) fn construct<
+        'params,
+        P: ParamsProver<'params, C>,
         E: EncodedChallenge<C>,
         Ev: Copy + Send + Sync,
         R: RngCore,
         T: TranscriptWrite<C, E>,
     >(
         self,
-        params: &Params<C>,
+        params: &P,
         domain: &EvaluationDomain<C::Scalar>,
         evaluator: poly::Evaluator<Ev, C::Scalar, ExtendedLagrangeCoeff>,
         expressions: impl Iterator<Item = poly::Ast<Ev, C::Scalar, ExtendedLagrangeCoeff>>,
@@ -88,7 +95,7 @@ impl<C: CurveAffine> Committed<C> {
 
         // Split h(X) up into pieces
         let h_pieces = h_poly
-            .chunks_exact(params.n as usize)
+            .chunks_exact(params.n() as usize)
             .map(|v| domain.coeff_from_vec(v.to_vec()))
             .collect::<Vec<_>>();
         drop(h_poly);

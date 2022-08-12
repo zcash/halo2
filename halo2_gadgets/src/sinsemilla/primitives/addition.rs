@@ -1,7 +1,7 @@
 use std::ops::Add;
 
 use group::{cofactor::CofactorCurveAffine, Group};
-use pasta_curves::pallas;
+use halo2curves::pasta::pallas;
 use subtle::{ConstantTimeEq, CtOption};
 
 /// P ∪ {⊥}

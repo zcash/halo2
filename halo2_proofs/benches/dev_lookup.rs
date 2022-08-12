@@ -6,7 +6,7 @@ use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::Rotation;
-use pasta_curves::pallas;
+use halo2curves::pasta::pallas;
 
 use std::marker::PhantomData;
 

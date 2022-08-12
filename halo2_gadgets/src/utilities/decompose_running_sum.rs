@@ -30,7 +30,7 @@ use halo2_proofs::{
 };
 
 use super::range_check;
-use pasta_curves::arithmetic::FieldExt;
+use halo2curves::FieldExt;
 use std::marker::PhantomData;
 
 /// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
@@ -216,7 +216,7 @@ mod tests {
         dev::{FailureLocation, MockProver, VerifyFailure},
         plonk::{Any, Circuit, ConstraintSystem, Error},
     };
-    use pasta_curves::{arithmetic::FieldExt, pallas};
+    use halo2curves::{pasta::pallas, FieldExt};
     use rand::rngs::OsRng;
 
     use crate::ecc::chip::{

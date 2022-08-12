@@ -26,7 +26,7 @@
 
 pub mod arithmetic;
 pub mod circuit;
-pub use pasta_curves as pasta;
+pub use halo2curves;
 mod multicore;
 pub mod plonk;
 pub mod poly;

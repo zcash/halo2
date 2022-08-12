@@ -3,7 +3,7 @@ use std::fmt;
 use std::iter;
 
 use group::ff::Field;
-use pasta_curves::arithmetic::FieldExt;
+use halo2curves::FieldExt;
 
 use super::{
     metadata,

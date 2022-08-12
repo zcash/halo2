@@ -367,7 +367,7 @@ impl<F: Field> Assigned<F> {
 
 #[cfg(test)]
 mod tests {
-    use pasta_curves::Fp;
+    use halo2curves::pasta::Fp;
 
     use super::Assigned;
     // We use (numerator, denominator) in the comments below to denote a rational.
@@ -451,7 +451,7 @@ mod proptests {
     };
 
     use group::ff::Field;
-    use pasta_curves::{arithmetic::FieldExt, Fp};
+    use halo2curves::{pasta::Fp, FieldExt};
     use proptest::{collection::vec, prelude::*, sample::select};
 
     use super::Assigned;

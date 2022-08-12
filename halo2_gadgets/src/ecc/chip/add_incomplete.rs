@@ -6,7 +6,7 @@ use halo2_proofs::{
     plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
-use pasta_curves::pallas;
+use halo2curves::pasta::pallas;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Config {
@@ -152,7 +152,7 @@ pub mod tests {
         circuit::{Layouter, Value},
         plonk::Error,
     };
-    use pasta_curves::pallas;
+    use halo2curves::pasta::pallas;
 
     use crate::ecc::{EccInstructions, NonIdentityPoint};
 

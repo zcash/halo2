@@ -13,7 +13,7 @@ use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter, Value},
     plonk::{Advice, Assigned, Column, ConstraintSystem, Error, Fixed},
 };
-use pasta_curves::{arithmetic::CurveAffine, pallas};
+use halo2curves::{pasta::pallas, CurveAffine};
 
 use std::convert::TryInto;
 

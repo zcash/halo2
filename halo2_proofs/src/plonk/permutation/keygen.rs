@@ -6,7 +6,7 @@ use crate::{
     arithmetic::{CurveAffine, FieldExt},
     plonk::{Any, Column, Error},
     poly::{
-        commitment::{Blind, Params},
+        commitment::{Blind, CommitmentScheme, Params},
         EvaluationDomain,
     },
 };
@@ -97,17 +97,17 @@ impl Assembly {
         Ok(())
     }
 
-    pub(crate) fn build_vk<C: CurveAffine>(
+    pub(crate) fn build_vk<'params, C: CurveAffine, P: Params<'params, C>>(
         self,
-        params: &Params<C>,
+        params: &P,
         domain: &EvaluationDomain<C::Scalar>,
         p: &Argument,
     ) -> VerifyingKey<C> {
         // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
-        let mut omega_powers = Vec::with_capacity(params.n as usize);
+        let mut omega_powers = Vec::with_capacity(params.n() as usize);
         {
             let mut cur = C::Scalar::one();
-            for _ in 0..params.n {
+            for _ in 0..params.n() {
                 omega_powers.push(cur);
                 cur *= &domain.get_omega();
             }
@@ -150,17 +150,17 @@ impl Assembly {
         VerifyingKey { commitments }
     }
 
-    pub(crate) fn build_pk<C: CurveAffine>(
+    pub(crate) fn build_pk<'params, C: CurveAffine, P: Params<'params, C>>(
         self,
-        params: &Params<C>,
+        params: &P,
         domain: &EvaluationDomain<C::Scalar>,
         p: &Argument,
     ) -> ProvingKey<C> {
         // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
-        let mut omega_powers = Vec::with_capacity(params.n as usize);
+        let mut omega_powers = Vec::with_capacity(params.n() as usize);
         {
             let mut cur = C::Scalar::one();
-            for _ in 0..params.n {
+            for _ in 0..params.n() {
                 omega_powers.push(cur);
                 cur *= &domain.get_omega();
             }

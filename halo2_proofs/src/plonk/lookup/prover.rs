@@ -8,8 +8,8 @@ use crate::{
     poly::{
         self,
         commitment::{Blind, Params},
-        multiopen::ProverQuery,
-        Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
+        Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, ProverQuery,
+        Rotation,
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
@@ -73,7 +73,9 @@ impl<F: FieldExt> Argument<F> {
     /// The Permuted<C> struct is used to update the Lookup, and is then returned.
     pub(in crate::plonk) fn commit_permuted<
         'a,
+        'params: 'a,
         C,
+        P: Params<'params, C>,
         E: EncodedChallenge<C>,
         Ev: Copy + Send + Sync,
         Ec: Copy + Send + Sync,
@@ -82,7 +84,7 @@ impl<F: FieldExt> Argument<F> {
     >(
         &self,
         pk: &ProvingKey<C>,
-        params: &Params<C>,
+        params: &P,
         domain: &EvaluationDomain<C::Scalar>,
         value_evaluator: &poly::Evaluator<Ev, C::Scalar, LagrangeCoeff>,
         coset_evaluator: &mut poly::Evaluator<Ec, C::Scalar, ExtendedLagrangeCoeff>,
@@ -186,7 +188,7 @@ impl<F: FieldExt> Argument<F> {
             compress_expressions(&self.table_expressions);
 
         // Permute compressed (InputExpression, TableExpression) pair
-        let (permuted_input_expression, permuted_table_expression) = permute_expression_pair::<C, _>(
+        let (permuted_input_expression, permuted_table_expression) = permute_expression_pair(
             pk,
             params,
             domain,
@@ -246,13 +248,15 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
     /// is used to populate the Product<C> struct. The Product<C> struct is
     /// added to the Lookup and finally returned by the method.
     pub(in crate::plonk) fn commit_product<
+        'params,
+        P: Params<'params, C>,
         E: EncodedChallenge<C>,
         R: RngCore,
         T: TranscriptWrite<C, E>,
     >(
         self,
         pk: &ProvingKey<C>,
-        params: &Params<C>,
+        params: &P,
         theta: ChallengeTheta<C>,
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
@@ -272,7 +276,7 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
         // s_j(X) is the jth table expression in this lookup,
         // s'(X) is the compression of the permuted table expressions,
         // and i is the ith row of the expression.
-        let mut lookup_product = vec![C::Scalar::zero(); params.n as usize];
+        let mut lookup_product = vec![C::Scalar::zero(); params.n() as usize];
         // Denominator uses the permuted input expression and permuted table expression
         parallelize(&mut lookup_product, |lookup_product, start| {
             for ((lookup_product, permuted_input_value), permuted_table_value) in lookup_product
@@ -337,11 +341,11 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
             })
             // Take all rows including the "last" row which should
             // be a boolean (and ideally 1, else soundness is broken)
-            .take(params.n as usize - blinding_factors)
+            .take(params.n() as usize - blinding_factors)
             // Chain random blinding factors.
             .chain((0..blinding_factors).map(|_| C::Scalar::random(&mut rng)))
             .collect::<Vec<_>>();
-        assert_eq!(z.len(), params.n as usize);
+        assert_eq!(z.len(), params.n() as usize);
         let z = pk.vk.domain.lagrange_from_vec(z);
 
         #[cfg(feature = "sanity-checks")]
@@ -349,7 +353,7 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
         // It can be used for debugging purposes.
         {
             // While in Lagrange basis, check that product is correctly constructed
-            let u = (params.n as usize) - (blinding_factors + 1);
+            let u = (params.n() as usize) - (blinding_factors + 1);
 
             // l_0(X) * (1 - z(X)) = 0
             assert_eq!(z[0], C::Scalar::one());
@@ -581,16 +585,16 @@ type ExpressionPair<F> = (Polynomial<F, LagrangeCoeff>, Polynomial<F, LagrangeCo
 /// - the first row in a sequence of like values in A' is the row
 ///   that has the corresponding value in S'.
 /// This method returns (A', S') if no errors are encountered.
-fn permute_expression_pair<C: CurveAffine, R: RngCore>(
+fn permute_expression_pair<'params, C: CurveAffine, P: Params<'params, C>, R: RngCore>(
     pk: &ProvingKey<C>,
-    params: &Params<C>,
+    params: &P,
     domain: &EvaluationDomain<C::Scalar>,
     mut rng: R,
     input_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
     table_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
 ) -> Result<ExpressionPair<C::Scalar>, Error> {
     let blinding_factors = pk.vk.cs.blinding_factors();
-    let usable_rows = params.n as usize - (blinding_factors + 1);
+    let usable_rows = params.n() as usize - (blinding_factors + 1);
 
     let mut permuted_input_expression: Vec<C::Scalar> = input_expression.to_vec();
     permuted_input_expression.truncate(usable_rows);
@@ -643,8 +647,8 @@ fn permute_expression_pair<C: CurveAffine, R: RngCore>(
     permuted_input_expression
         .extend((0..(blinding_factors + 1)).map(|_| C::Scalar::random(&mut rng)));
     permuted_table_coeffs.extend((0..(blinding_factors + 1)).map(|_| C::Scalar::random(&mut rng)));
-    assert_eq!(permuted_input_expression.len(), params.n as usize);
-    assert_eq!(permuted_table_coeffs.len(), params.n as usize);
+    assert_eq!(permuted_input_expression.len(), params.n() as usize);
+    assert_eq!(permuted_table_coeffs.len(), params.n() as usize);
 
     #[cfg(feature = "sanity-checks")]
     {

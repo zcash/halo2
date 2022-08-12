@@ -6,10 +6,7 @@ use group::{
     Curve,
 };
 use halo2_proofs::arithmetic::lagrange_interpolate;
-use pasta_curves::{
-    arithmetic::{CurveAffine, FieldExt},
-    pallas,
-};
+use halo2curves::{pasta::pallas, CurveAffine, FieldExt};
 
 /// Window size for fixed-base scalar multiplication
 pub const FIXED_BASE_WINDOW_SIZE: usize = 3;
@@ -233,10 +230,7 @@ pub fn test_lagrange_coeffs<C: CurveAffine>(base: C, num_windows: usize) {
 #[cfg(test)]
 mod tests {
     use group::{ff::Field, Curve, Group};
-    use pasta_curves::{
-        arithmetic::{CurveAffine, FieldExt},
-        pallas,
-    };
+    use halo2curves::{pasta::pallas, CurveAffine, FieldExt};
     use proptest::prelude::*;
 
     use super::{compute_window_table, find_zs_and_us, test_lagrange_coeffs, H, NUM_WINDOWS};

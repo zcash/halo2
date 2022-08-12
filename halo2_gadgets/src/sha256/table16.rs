@@ -4,9 +4,9 @@ use std::marker::PhantomData;
 use super::Sha256Instructions;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter, Region, Value},
-    pasta::pallas,
     plonk::{Advice, Any, Assigned, Column, ConstraintSystem, Error},
 };
+use halo2curves::pasta::pallas;
 
 mod compression;
 mod gates;
@@ -456,9 +456,9 @@ mod tests {
     use super::{message_schedule::msg_schedule_test_input, Table16Chip, Table16Config};
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
-        pasta::pallas,
         plonk::{Circuit, ConstraintSystem, Error},
     };
+    use halo2curves::pasta::pallas;
 
     #[test]
     fn print_sha256_circuit() {

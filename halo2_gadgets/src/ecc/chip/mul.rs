@@ -17,7 +17,7 @@ use halo2_proofs::{
 };
 use uint::construct_uint;
 
-use pasta_curves::pallas;
+use halo2curves::pasta::pallas;
 
 mod complete;
 pub(super) mod incomplete;
@@ -469,7 +469,7 @@ pub mod tests {
         circuit::{Chip, Layouter, Value},
         plonk::Error,
     };
-    use pasta_curves::pallas;
+    use halo2curves::pasta::pallas;
     use rand::rngs::OsRng;
 
     use crate::{

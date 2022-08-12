@@ -2,9 +2,9 @@ use super::super::{super::DIGEST_SIZE, BlockWord, RoundWordDense};
 use super::{compression_util::*, CompressionConfig, State};
 use halo2_proofs::{
     circuit::{Region, Value},
-    pasta::pallas,
     plonk::{Advice, Column, Error},
 };
+use halo2curves::pasta::pallas;
 
 impl CompressionConfig {
     #[allow(clippy::many_single_char_names)]

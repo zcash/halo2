@@ -13,8 +13,7 @@ use crate::{
     poly::{
         self,
         commitment::{Blind, Params},
-        multiopen::ProverQuery,
-        Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
+        Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, ProverQuery, Rotation,
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
@@ -44,14 +43,16 @@ pub(crate) struct Evaluated<C: CurveAffine> {
 
 impl Argument {
     pub(in crate::plonk) fn commit<
+        'params,
         C: CurveAffine,
+        P: Params<'params, C>,
         E: EncodedChallenge<C>,
         Ev: Copy + Send + Sync,
         R: RngCore,
         T: TranscriptWrite<C, E>,
     >(
         &self,
-        params: &Params<C>,
+        params: &P,
         pk: &plonk::ProvingKey<C>,
         pkey: &ProvingKey<C>,
         advice: &[Polynomial<C::Scalar, LagrangeCoeff>],
@@ -94,7 +95,7 @@ impl Argument {
             // where p_j(X) is the jth column in this permutation,
             // and i is the ith row of the column.
 
-            let mut modified_values = vec![C::Scalar::one(); params.n as usize];
+            let mut modified_values = vec![C::Scalar::one(); params.n() as usize];
 
             // Iterate over each column of the permutation
             for (&column, permuted_column_values) in columns.iter().zip(permutations.iter()) {
@@ -152,7 +153,7 @@ impl Argument {
             // Compute the evaluations of the permutation product polynomial
             // over our domain, starting with z[0] = 1
             let mut z = vec![last_z];
-            for row in 1..(params.n as usize) {
+            for row in 1..(params.n() as usize) {
                 let mut tmp = z[row - 1];
 
                 tmp *= &modified_values[row - 1];
@@ -160,11 +161,11 @@ impl Argument {
             }
             let mut z = domain.lagrange_from_vec(z);
             // Set blinding factors
-            for z in &mut z[params.n as usize - blinding_factors..] {
+            for z in &mut z[params.n() as usize - blinding_factors..] {
                 *z = C::Scalar::random(&mut rng);
             }
             // Set new last_z
-            last_z = z[params.n as usize - (blinding_factors + 1)];
+            last_z = z[params.n() as usize - (blinding_factors + 1)];
 
             let blind = Blind(C::Scalar::random(&mut rng));
 

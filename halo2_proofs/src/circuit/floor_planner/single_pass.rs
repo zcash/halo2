@@ -452,7 +452,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
 
 #[cfg(test)]
 mod tests {
-    use pasta_curves::vesta;
+    use halo2curves::pasta::vesta;
 
     use super::SimpleFloorPlanner;
     use crate::{

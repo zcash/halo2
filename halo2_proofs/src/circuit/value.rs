@@ -639,7 +639,7 @@ impl<V> Value<V> {
     ///
     /// If you have a `Value<F: Field>`, convert it to `Value<Assigned<F>>` first:
     /// ```
-    /// # use pasta_curves::pallas::Base as F;
+    /// # use halo2curves::pasta::pallas::Base as F;
     /// use halo2_proofs::{circuit::Value, plonk::Assigned};
     ///
     /// let v = Value::known(F::from(2));

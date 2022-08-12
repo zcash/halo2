@@ -2,9 +2,9 @@
 extern crate criterion;
 
 use crate::arithmetic::best_fft;
-use crate::pasta::Fp;
 use group::ff::Field;
 use halo2_proofs::*;
+use halo2curves::pasta::Fp;
 
 use criterion::{BenchmarkId, Criterion};
 use rand_core::OsRng;

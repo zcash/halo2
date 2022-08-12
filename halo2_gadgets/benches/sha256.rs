@@ -1,13 +1,10 @@
 use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
-    pasta::{pallas, EqAffine},
-    plonk::{
-        create_proof, keygen_pk, keygen_vk, verify_proof, Circuit, ConstraintSystem, Error,
-        SingleVerifier,
-    },
+    plonk::{create_proof, keygen_pk, keygen_vk, verify_proof, Circuit, ConstraintSystem, Error},
     poly::commitment::Params,
     transcript::{Blake2bRead, Blake2bWrite, Challenge255},
 };
+use halo2curves::pasta::{pallas, EqAffine};
 use rand::rngs::OsRng;
 
 use std::{
@@ -19,6 +16,18 @@ use std::{
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use halo2_gadgets::sha256::{BlockWord, Sha256, Table16Chip, Table16Config, BLOCK_SIZE};
+
+use halo2_proofs::{
+    poly::{
+        commitment::ParamsProver,
+        ipa::{
+            commitment::{IPACommitmentScheme, ParamsIPA},
+            multiopen::{ProverIPA, VerifierIPA},
+            strategy::AccumulatorStrategy,
+        },
+    },
+    transcript::{TranscriptReadBuffer, TranscriptWriterBuffer},
+};
 
 #[allow(dead_code)]
 fn bench(name: &str, k: u32, c: &mut Criterion) {
@@ -80,7 +89,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
     // Initialize the polynomial commitment parameters
     let params_path = Path::new("./benches/sha256_assets/sha256_params");
     if File::open(&params_path).is_err() {
-        let params: Params<EqAffine> = Params::new(k);
+        let params: ParamsIPA<EqAffine> = ParamsIPA::new(k);
         let mut buf = Vec::new();
 
         params.write(&mut buf).expect("Failed to write params");
@@ -91,8 +100,8 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
     }
 
     let params_fs = File::open(&params_path).expect("couldn't load sha256_params");
-    let params: Params<EqAffine> =
-        Params::read::<_>(&mut BufReader::new(params_fs)).expect("Failed to read params");
+    let params: ParamsIPA<EqAffine> =
+        ParamsIPA::read::<_>(&mut BufReader::new(params_fs)).expect("Failed to read params");
 
     let empty_circuit: MyCircuit = MyCircuit {};
 
@@ -119,8 +128,15 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
     let proof_path = Path::new("./benches/sha256_assets/sha256_proof");
     if File::open(&proof_path).is_err() {
         let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
-        create_proof(&params, &pk, &[circuit], &[], OsRng, &mut transcript)
-            .expect("proof generation should not fail");
+        create_proof::<IPACommitmentScheme<_>, ProverIPA<_>, _, _, _, _>(
+            &params,
+            &pk,
+            &[circuit],
+            &[],
+            OsRng,
+            &mut transcript,
+        )
+        .expect("proof generation should not fail");
         let proof: Vec<u8> = transcript.finalize();
         let mut file = File::create(&proof_path).expect("Failed to create sha256_proof");
         file.write_all(&proof[..]).expect("Failed to write proof");
@@ -134,9 +150,18 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
 
     c.bench_function(&verifier_name, |b| {
         b.iter(|| {
-            let strategy = SingleVerifier::new(&params);
+            use halo2_proofs::poly::VerificationStrategy;
+            let strategy = AccumulatorStrategy::new(&params);
             let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
-            assert!(verify_proof(&params, pk.get_vk(), strategy, &[], &mut transcript).is_ok());
+            let strategy = verify_proof::<IPACommitmentScheme<_>, VerifierIPA<_>, _, _, _>(
+                &params,
+                pk.get_vk(),
+                strategy,
+                &[],
+                &mut transcript,
+            )
+            .unwrap();
+            assert!(strategy.finalize());
         });
     });
 }
