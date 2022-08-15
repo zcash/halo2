@@ -23,7 +23,7 @@ use crate::{
     poly::{
         self,
         commitment::{Blind, CommitmentScheme, Params, Prover},
-        Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, ProverQuery,
+        Basis, Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, ProverQuery,
     },
 };
 use crate::{
@@ -72,7 +72,6 @@ pub fn create_proof<
     struct InstanceSingle<C: CurveAffine> {
         pub instance_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
         pub instance_polys: Vec<Polynomial<C::Scalar, Coeff>>,
-        pub instance_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     }
 
     let instance: Vec<InstanceSingle<Scheme::Curve>> = instances
@@ -117,31 +116,23 @@ pub fn create_proof<
                 })
                 .collect();
 
-            let instance_cosets: Vec<_> = instance_polys
-                .iter()
-                .map(|poly| domain.coeff_to_extended(poly.clone()))
-                .collect();
-
             Ok(InstanceSingle {
                 instance_values,
                 instance_polys,
-                instance_cosets,
             })
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    struct AdviceSingle<C: CurveAffine> {
-        pub advice_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
-        pub advice_polys: Vec<Polynomial<C::Scalar, Coeff>>,
-        pub advice_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
+    struct AdviceSingle<C: CurveAffine, B: Basis> {
+        pub advice_polys: Vec<Polynomial<C::Scalar, B>>,
         pub advice_blinds: Vec<Blind<C::Scalar>>,
     }
 
-    let advice: Vec<AdviceSingle<Scheme::Curve>> = circuits
+    let advice: Vec<AdviceSingle<Scheme::Curve, LagrangeCoeff>> = circuits
         .iter()
         .zip(instances.iter())
         .map(
-            |(circuit, instances)| -> Result<AdviceSingle<Scheme::Curve>, Error> {
+            |(circuit, instances)| -> Result<AdviceSingle<Scheme::Curve, LagrangeCoeff>, Error> {
                 struct WitnessCollection<'a, F: Field> {
                     k: u32,
                     pub advice: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
@@ -326,21 +317,8 @@ pub fn create_proof<
                     transcript.write_point(*commitment)?;
                 }
 
-                let advice_polys: Vec<_> = advice
-                    .clone()
-                    .into_iter()
-                    .map(|poly| domain.lagrange_to_coeff(poly))
-                    .collect();
-
-                let advice_cosets: Vec<_> = advice_polys
-                    .iter()
-                    .map(|poly| domain.coeff_to_extended(poly.clone()))
-                    .collect();
-
                 Ok(AdviceSingle {
-                    advice_values: advice,
-                    advice_polys,
-                    advice_cosets,
+                    advice_polys: advice,
                     advice_blinds,
                 })
             },
@@ -365,7 +343,7 @@ pub fn create_proof<
                         params,
                         domain,
                         theta,
-                        &advice.advice_values,
+                        &advice.advice_polys,
                         &pk.fixed_values,
                         &instance.instance_values,
                         &mut rng,
@@ -391,7 +369,7 @@ pub fn create_proof<
                 params,
                 pk,
                 &pk.permutation,
-                &advice.advice_values,
+                &advice.advice_polys,
                 &pk.fixed_values,
                 &instance.instance_values,
                 beta,
@@ -419,11 +397,36 @@ pub fn create_proof<
     // Obtain challenge for keeping all separate gates linearly independent
     let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
 
+    // Calculate the advice polys
+    let advice: Vec<AdviceSingle<Scheme::Curve, Coeff>> = advice
+        .into_iter()
+        .map(
+            |AdviceSingle {
+                 advice_polys,
+                 advice_blinds,
+             }| {
+                AdviceSingle {
+                    advice_polys: advice_polys
+                        .into_iter()
+                        .map(|poly| domain.lagrange_to_coeff(poly))
+                        .collect::<Vec<_>>(),
+                    advice_blinds,
+                }
+            },
+        )
+        .collect();
+
     // Evaluate the h(X) polynomial
     let h_poly = pk.ev.evaluate_h(
         pk,
-        advice.iter().map(|a| &a.advice_cosets).collect(),
-        instance.iter().map(|i| &i.instance_cosets).collect(),
+        &advice
+            .iter()
+            .map(|a| a.advice_polys.as_slice())
+            .collect::<Vec<_>>(),
+        &instance
+            .iter()
+            .map(|i| i.instance_polys.as_slice())
+            .collect::<Vec<_>>(),
         *y,
         *beta,
         *gamma,

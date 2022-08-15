@@ -274,8 +274,8 @@ impl<C: CurveAffine> Evaluator<C> {
     pub(in crate::plonk) fn evaluate_h(
         &self,
         pk: &ProvingKey<C>,
-        advice: Vec<&Vec<Polynomial<C::ScalarExt, ExtendedLagrangeCoeff>>>,
-        instance: Vec<&Vec<Polynomial<C::ScalarExt, ExtendedLagrangeCoeff>>>,
+        advice_polys: &[&[Polynomial<C::ScalarExt, Coeff>]],
+        instance_polys: &[&[Polynomial<C::ScalarExt, Coeff>]],
         y: C::ScalarExt,
         beta: C::ScalarExt,
         gamma: C::ScalarExt,
@@ -294,6 +294,26 @@ impl<C: CurveAffine> Evaluator<C> {
         let l_last = &pk.l_last;
         let l_active_row = &pk.l_active_row;
         let p = &pk.vk.cs.permutation;
+
+        // Calculate the advice and instance cosets
+        let advice: Vec<Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>> = advice_polys
+            .iter()
+            .map(|advice_polys| {
+                advice_polys
+                    .iter()
+                    .map(|poly| domain.coeff_to_extended(poly.clone()))
+                    .collect()
+            })
+            .collect();
+        let instance: Vec<Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>> = instance_polys
+            .iter()
+            .map(|instance_polys| {
+                instance_polys
+                    .iter()
+                    .map(|poly| domain.coeff_to_extended(poly.clone()))
+                    .collect()
+            })
+            .collect();
 
         let mut values = domain.empty_extended();
 
