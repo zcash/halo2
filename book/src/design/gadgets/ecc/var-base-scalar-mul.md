@@ -322,9 +322,9 @@ k \in [t_q, p + t_q) &\Leftrightarrow& \big(k \in [t_q, t_q + 2^{130}) \;\vee\; 
                      &               & \big(k \in [2^{254}, 2^{254} + 2^{130}) \;\wedge\; k \in [p + t_q - 2^{130}, p + t_q)\big) \\
                      \\
                      &\Leftrightarrow& \big(\mathbf{k}_{254} = 0 \implies (k \in [t_q, t_q + 2^{130}) \;\vee\; k \in [2^{130}, 2^{254}))\big) \;\wedge \\
-                     &               & \big(\mathbf{k}_{254} = 1 \implies (k \in [2^{254}, 2^{254} + 2^{130}) \;\wedge\; k \in [p + t_q - 2^{130}, p + t_q)\big) \\
+                     &               & \big(\mathbf{k}_{254} = 1 \implies (k \in [2^{254}, 2^{254} + 2^{130}) \;\wedge\; k \in [p + t_q - 2^{130}, p + t_q))\big) \\
                      \\
-                     &\Leftrightarrow& \big(\mathbf{k}_{254} = 0 \implies (\alpha \in [0, 2^{130}) \;\vee\; k \in [2^{130}, 2^{254})\big) \;\wedge \\
+                     &\Leftrightarrow& \big(\mathbf{k}_{254} = 0 \implies (\alpha \in [0, 2^{130}) \;\vee\; k \in [2^{130}, 2^{254}))\big) \;\wedge \\
                      &               & \big(\mathbf{k}_{254} = 1 \implies (k \in [2^{254}, 2^{254} + 2^{130}) \;\wedge\; (\alpha + 2^{130}) \bmod p \in [0, 2^{130}))\big) \;\;Ⓐ
 \end{array}$
 
