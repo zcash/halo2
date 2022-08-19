@@ -35,7 +35,7 @@ struct Gate {
 ///     plonk::{Circuit, ConstraintSystem, Error},
 ///     poly::Rotation,
 /// };
-/// use pairing::bn256::Fr;
+/// use pasta_curves::pallas;
 ///
 /// #[derive(Copy, Clone)]
 /// struct MyConfig {}
@@ -76,7 +76,7 @@ struct Gate {
 ///     }
 /// }
 ///
-/// let gates = CircuitGates::collect::<Fr, MyCircuit>();
+/// let gates = CircuitGates::collect::<pallas::Base, MyCircuit>();
 /// assert_eq!(
 ///     format!("{}", gates),
 ///     r#####"R1CS constraint:

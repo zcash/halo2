@@ -199,11 +199,11 @@ impl<C: CurveAffine> Evaluated<C> {
             )
     }
 
-    pub(in crate::plonk) fn queries<'r>(
+    pub(in crate::plonk) fn queries<'r, 'params: 'r>(
         &'r self,
         vk: &'r plonk::VerifyingKey<C>,
         x: ChallengeX<C>,
-    ) -> impl Iterator<Item = VerifierQuery<'r, C>> + Clone {
+    ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone {
         let blinding_factors = vk.cs.blinding_factors();
         let x_next = vk.domain.rotate_omega(*x, Rotation::next());
         let x_last = vk
@@ -218,13 +218,11 @@ impl<C: CurveAffine> Evaluated<C> {
                     .chain(Some(VerifierQuery::new_commitment(
                         &set.permutation_product_commitment,
                         *x,
-                        Rotation::cur(),
                         set.permutation_product_eval,
                     )))
                     .chain(Some(VerifierQuery::new_commitment(
                         &set.permutation_product_commitment,
                         x_next,
-                        Rotation::next(),
                         set.permutation_product_next_eval,
                     )))
             }))
@@ -233,7 +231,6 @@ impl<C: CurveAffine> Evaluated<C> {
                 Some(VerifierQuery::new_commitment(
                     &set.permutation_product_commitment,
                     x_last,
-                    Rotation(-((blinding_factors + 1) as i32)),
                     set.permutation_product_last_eval.unwrap(),
                 ))
             }))
@@ -241,17 +238,15 @@ impl<C: CurveAffine> Evaluated<C> {
 }
 
 impl<C: CurveAffine> CommonEvaluated<C> {
-    pub(in crate::plonk) fn queries<'r>(
+    pub(in crate::plonk) fn queries<'r, 'params: 'r>(
         &'r self,
         vkey: &'r VerifyingKey<C>,
         x: ChallengeX<C>,
-    ) -> impl Iterator<Item = VerifierQuery<'r, C>> + Clone {
+    ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone {
         // Open permutation commitments for each permutation argument at x
         vkey.commitments
             .iter()
             .zip(self.permutation_evals.iter())
-            .map(move |(commitment, &eval)| {
-                VerifierQuery::new_commitment(commitment, *x, Rotation::cur(), eval)
-            })
+            .map(move |(commitment, &eval)| VerifierQuery::new_commitment(commitment, *x, eval))
     }
 }
