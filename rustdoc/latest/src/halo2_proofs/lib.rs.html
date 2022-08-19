@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_proofs/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_proofs/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -55,42 +49,41 @@
 <span id="34">34</span>
 <span id="35">35</span>
 <span id="36">36</span>
-</pre><pre class="rust"><code><span class="doccomment">//! # halo2_proofs</span>
+</pre><pre class="rust"><code><span class="doccomment">//! # halo2_proofs
 
-<span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">feature</span>(<span class="ident">doc_cfg</span>))]</span>
-<span class="comment">// Build without warnings on stable 1.51 and later.</span>
-<span class="attribute">#![<span class="ident">allow</span>(<span class="ident">unknown_lints</span>)]</span>
-<span class="comment">// Disable old lint warnings until our MSRV is at least 1.51.</span>
-<span class="attribute">#![<span class="ident">allow</span>(<span class="ident">renamed_and_removed_lints</span>)]</span>
-<span class="comment">// Use the old lint name to build without warnings until our MSRV is at least 1.51.</span>
-<span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy::unknown_clippy_lints</span>)]</span>
-<span class="comment">// The actual lints we want to disable.</span>
-<span class="attribute">#![<span class="ident">allow</span>(
-    <span class="ident">clippy::op_ref</span>,
-    <span class="ident">clippy::assign_op_pattern</span>,
-    <span class="ident">clippy::too_many_arguments</span>,
-    <span class="ident">clippy::suspicious_arithmetic_impl</span>,
-    <span class="ident">clippy::many_single_char_names</span>,
-    <span class="ident">clippy::same_item_push</span>,
-    <span class="ident">clippy::upper_case_acronyms</span>
+</span><span class="attribute">#![cfg_attr(docsrs, feature(doc_cfg))]</span>
+<span class="comment">// Build without warnings on stable 1.51 and later.
+</span><span class="attribute">#![allow(unknown_lints)]</span>
+<span class="comment">// Disable old lint warnings until our MSRV is at least 1.51.
+</span><span class="attribute">#![allow(renamed_and_removed_lints)]</span>
+<span class="comment">// Use the old lint name to build without warnings until our MSRV is at least 1.51.
+</span><span class="attribute">#![allow(clippy::unknown_clippy_lints)]</span>
+<span class="comment">// The actual lints we want to disable.
+</span><span class="attribute">#![allow(
+    clippy::op_ref,
+    clippy::assign_op_pattern,
+    clippy::too_many_arguments,
+    clippy::suspicious_arithmetic_impl,
+    clippy::many_single_char_names,
+    clippy::same_item_push,
+    clippy::upper_case_acronyms
 )]</span>
-<span class="attribute">#![<span class="ident">deny</span>(<span class="ident">broken_intra_doc_links</span>)]</span>
-<span class="attribute">#![<span class="ident">deny</span>(<span class="ident">missing_debug_implementations</span>)]</span>
-<span class="attribute">#![<span class="ident">deny</span>(<span class="ident">missing_docs</span>)]</span>
-<span class="attribute">#![<span class="ident">deny</span>(<span class="ident">unsafe_code</span>)]</span>
-<span class="comment">// Remove this once we update pasta_curves</span>
-<span class="attribute">#![<span class="ident">allow</span>(<span class="ident">unused_imports</span>)]</span>
+<span class="attribute">#![deny(broken_intra_doc_links)]</span>
+<span class="attribute">#![deny(missing_debug_implementations)]</span>
+<span class="attribute">#![deny(missing_docs)]</span>
+<span class="attribute">#![deny(unsafe_code)]</span>
+<span class="comment">// Remove this once we update pasta_curves
+</span><span class="attribute">#![allow(unused_imports)]</span>
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">arithmetic</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">circuit</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">pasta_curves</span> <span class="kw">as</span> <span class="ident">pasta</span>;
-<span class="kw">mod</span> <span class="ident">multicore</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">plonk</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">poly</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">transcript</span>;
+<span class="kw">pub mod </span>arithmetic;
+<span class="kw">pub mod </span>circuit;
+<span class="kw">pub use </span>pasta_curves <span class="kw">as </span>pasta;
+<span class="kw">mod </span>multicore;
+<span class="kw">pub mod </span>plonk;
+<span class="kw">pub mod </span>poly;
+<span class="kw">pub mod </span>transcript;
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">dev</span>;
-<span class="kw">mod</span> <span class="ident">helpers</span>;
+<span class="kw">pub mod </span>dev;
+<span class="kw">mod </span>helpers;
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

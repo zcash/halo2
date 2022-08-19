@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -1450,33 +1444,33 @@
 <span id="1429">1429</span>
 <span id="1430">1430</span>
 <span id="1431">1431</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Constants for using Poseidon with the Vesta field.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! The constants can be reproduced by running the following Sage script from</span>
-<span class="doccomment">//! [this repository](https://github.com/daira/pasta-hadeshash):</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! ```text</span>
-<span class="doccomment">//! sage generate_parameters_grain.sage 1 0 255 3 8 56 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001</span>
-<span class="doccomment">//! ```</span>
-<span class="kw">use</span> <span class="ident">pasta_curves::vesta</span>;
+</pre><pre class="rust"><code><span class="doccomment">//! Constants for using Poseidon with the Vesta field.
+//!
+//! The constants can be reproduced by running the following Sage script from
+//! [this repository](https://github.com/daira/pasta-hadeshash):
+//!
+//! ```text
+//! sage generate_parameters_grain.sage 1 0 255 3 8 56 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001
+//! ```
+</span><span class="kw">use </span>pasta_curves::vesta;
 
-<span class="comment">// Number of round constants: 192</span>
-<span class="comment">// Round constants for GF(p):</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">ROUND_CONSTANTS</span>: [[<span class="ident">vesta::Base</span>; <span class="number">3</span>]; <span class="number">64</span>] <span class="op">=</span> [
+<span class="comment">// Number of round constants: 192
+// Round constants for GF(p):
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>ROUND_CONSTANTS: [[vesta::Base; <span class="number">3</span>]; <span class="number">64</span>] = [
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x5753_8c25_9642_6303</span>,
             <span class="number">0x4e71_162f_3100_3b70</span>,
             <span class="number">0x353f_628f_76d1_10f3</span>,
             <span class="number">0x360d_7470_611e_473d</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xbdb7_4213_bf63_188b</span>,
             <span class="number">0x4908_ac2f_12eb_e06f</span>,
             <span class="number">0x5dc3_c6c5_febf_aa31</span>,
             <span class="number">0x2bab_94d7_ae22_2d13</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x0939_d927_53cc_5dc8</span>,
             <span class="number">0xef77_e7d7_3676_6c5d</span>,
             <span class="number">0x2bf0_3e1a_29aa_871f</span>,
@@ -1484,19 +1478,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x1425_9dce_5377_82b2</span>,
             <span class="number">0x03cc_0a60_141e_894e</span>,
             <span class="number">0x955d_55db_56dc_57c1</span>,
             <span class="number">0x3270_661e_6892_8b3a</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xce9f_b9ff_c345_afb3</span>,
             <span class="number">0xb407_c370_f2b5_a1cc</span>,
             <span class="number">0xa0b7_afe4_e205_7299</span>,
             <span class="number">0x073f_116f_0412_2e25</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x8eba_d76f_c715_54d8</span>,
             <span class="number">0x55c9_cd20_61ae_93ca</span>,
             <span class="number">0x7aff_d09c_1f53_f5fd</span>,
@@ -1504,19 +1498,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x2d8c_cbe2_92ef_eead</span>,
             <span class="number">0x634d_24fc_6e25_59f2</span>,
             <span class="number">0x651e_2cfc_7406_28ca</span>,
             <span class="number">0x2703_26ee_039d_f19e</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xa068_fc37_c182_e274</span>,
             <span class="number">0x8af8_95bc_e012_f182</span>,
             <span class="number">0xdc10_0fe7_fcfa_5491</span>,
             <span class="number">0x27c6_642a_c633_bc66</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x9ca1_8682_e26d_7ff9</span>,
             <span class="number">0x710e_1fb6_ab97_6a45</span>,
             <span class="number">0xd27f_5739_6989_129d</span>,
@@ -1524,19 +1518,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xc832_d824_261a_35ea</span>,
             <span class="number">0xf4f6_fb3f_9054_d373</span>,
             <span class="number">0x14b9_d6a9_c84d_d678</span>,
             <span class="number">0x162a_14c6_2f9a_89b8</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xf798_2466_7b5b_6bec</span>,
             <span class="number">0xac0a_1fc7_1e2c_f0c0</span>,
             <span class="number">0x2af6_f79e_3127_feea</span>,
             <span class="number">0x2d19_3e0f_76de_586b</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x5d0b_f58d_c8a4_aa94</span>,
             <span class="number">0x4fef_f829_8499_0ff8</span>,
             <span class="number">0x8169_6ef1_104e_674f</span>,
@@ -1544,19 +1538,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x6198_785f_0cd6_b9af</span>,
             <span class="number">0xb8d9_e2d4_f314_f46f</span>,
             <span class="number">0x1d04_5341_6d3e_235c</span>,
             <span class="number">0x1cba_f2b3_71da_c6a8</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x343e_0761_0f3f_ede5</span>,
             <span class="number">0x293c_4ab0_38fd_bbdc</span>,
             <span class="number">0x0e6c_49d0_61b6_b5f4</span>,
             <span class="number">0x1d5b_2777_692c_205b</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xf60e_971b_8d73_b04f</span>,
             <span class="number">0x06a9_adb0_c1e6_f962</span>,
             <span class="number">0xaa30_535b_dd74_9a7e</span>,
@@ -1564,19 +1558,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x035a_1366_1f22_418b</span>,
             <span class="number">0xde40_fbe2_6d04_7b05</span>,
             <span class="number">0x8bd5_bae3_6969_299f</span>,
             <span class="number">0x2de1_1886_b180_11ca</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xbc99_8884_ba96_a721</span>,
             <span class="number">0x2ab9_395c_449b_e947</span>,
             <span class="number">0x0d5b_4a3f_1841_dcd8</span>,
             <span class="number">0x2e07_de17_80b8_a70d</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x825e_4c2b_b749_25ca</span>,
             <span class="number">0x2504_40a9_9d6b_8af3</span>,
             <span class="number">0xbbdb_63db_d52d_ad16</span>,
@@ -1584,19 +1578,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x816c_0594_22dc_705e</span>,
             <span class="number">0x6ce5_1135_07f9_6de9</span>,
             <span class="number">0x0d13_5dc6_39fb_09a4</span>,
             <span class="number">0x2eb1_b254_17fe_1767</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xb8b1_bdf4_953b_d82c</span>,
             <span class="number">0xff36_c661_d26c_c42d</span>,
             <span class="number">0x8c24_cb44_c3fa_b48a</span>,
             <span class="number">0x115c_d0a0_643c_fb98</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xde80_1612_311d_04cd</span>,
             <span class="number">0xbb57_ddf1_4e0f_958a</span>,
             <span class="number">0x066d_7378_b999_868b</span>,
@@ -1604,19 +1598,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xf520_9d14_b248_20ca</span>,
             <span class="number">0x0f16_0bf9_f71e_967f</span>,
             <span class="number">0x2a83_0aa1_6241_2cd9</span>,
             <span class="number">0x17bf_1b93_c4c7_e01a</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x05c8_6f2e_7dc2_93c5</span>,
             <span class="number">0xe03c_0354_bd8c_fd38</span>,
             <span class="number">0xa24f_8456_369c_85df</span>,
             <span class="number">0x35b4_1a7a_c4f3_c571</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x72ac_156a_f435_d09e</span>,
             <span class="number">0x64e1_4d3b_eb2d_ddde</span>,
             <span class="number">0x4359_2799_4849_bea9</span>,
@@ -1624,19 +1618,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x2716_18d8_74b1_4c6d</span>,
             <span class="number">0x08e2_8644_2a2d_3eb2</span>,
             <span class="number">0x4950_856d_c907_d575</span>,
             <span class="number">0x2cc6_8100_31dc_1b0d</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x91f3_18c0_9f0c_b566</span>,
             <span class="number">0x9e51_7aa9_3b78_341d</span>,
             <span class="number">0x0596_18e2_afd2_ef99</span>,
             <span class="number">0x25bd_bbed_a1bd_e8c1</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xc631_3487_073f_7f7b</span>,
             <span class="number">0x2a5e_d0a2_7b61_926c</span>,
             <span class="number">0xb95f_33c2_5dde_8ac0</span>,
@@ -1644,19 +1638,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xe7bb_cef0_2eb5_866c</span>,
             <span class="number">0x5e6a_6fd1_5db8_9365</span>,
             <span class="number">0x9aa6_111f_4de0_0948</span>,
             <span class="number">0x272a_5587_8a08_442b</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x9b92_5b3c_5b21_e0e2</span>,
             <span class="number">0xa6eb_ba01_1694_dd12</span>,
             <span class="number">0xefa1_3c4e_60e2_6239</span>,
             <span class="number">0x2d5b_308b_0cf0_2cdf</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xef38_c57c_3116_73ac</span>,
             <span class="number">0x44df_f42f_18b4_6c56</span>,
             <span class="number">0xdd5d_293d_72e2_e5f2</span>,
@@ -1664,19 +1658,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x9b71_26d9_b468_60df</span>,
             <span class="number">0x7639_8265_3442_0311</span>,
             <span class="number">0xfa69_c3a2_ad52_f76d</span>,
             <span class="number">0x1b10_bb7a_82af_ce39</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x90d2_7f6a_00b7_dfc8</span>,
             <span class="number">0xd1b3_6968_ba04_05c0</span>,
             <span class="number">0xc79c_2df7_dc98_a3be</span>,
             <span class="number">0x0f1e_7505_ebd9_1d2f</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xff45_7756_b819_bb20</span>,
             <span class="number">0x797f_d6e3_f18e_b1ca</span>,
             <span class="number">0x537a_7497_a3b4_3f46</span>,
@@ -1684,19 +1678,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xf0bc_3e73_2ecb_26f6</span>,
             <span class="number">0x5cad_11eb_f0f7_ceb8</span>,
             <span class="number">0xfa3c_a61c_0ed1_5bc5</span>,
             <span class="number">0x3a5c_bb6d_e450_b481</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x8655_27cb_ca91_5982</span>,
             <span class="number">0x51ba_a6e2_0f89_2b62</span>,
             <span class="number">0xd920_86e2_53b4_39d6</span>,
             <span class="number">0x3dab_54bc_9bef_688d</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x3680_45ac_f2b7_1ae3</span>,
             <span class="number">0x4c24_b33b_410f_efd4</span>,
             <span class="number">0xe280_d316_7012_3f74</span>,
@@ -1704,19 +1698,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xa7fc_32d2_2f18_b9d3</span>,
             <span class="number">0xb8d2_de72_e3d2_c9ec</span>,
             <span class="number">0xc6f0_39ea_1973_a63e</span>,
             <span class="number">0x068d_6b46_08aa_e810</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x2b5d_fcc5_5725_55df</span>,
             <span class="number">0xb868_a7d7_e1f1_f69a</span>,
             <span class="number">0x0ee2_58c9_b8fd_fccd</span>,
             <span class="number">0x366e_bfaf_a3ad_381c</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xe6bc_229e_95bc_76b1</span>,
             <span class="number">0x7ef6_6d89_d044_d022</span>,
             <span class="number">0x04db_3024_f41d_3f56</span>,
@@ -1724,19 +1718,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xe534_c88f_e53d_85fe</span>,
             <span class="number">0xcf82_c25f_99dc_01a4</span>,
             <span class="number">0xd58b_7750_a3bc_2fe1</span>,
             <span class="number">0x2166_8f01_6a80_63c0</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x4bef_429b_c533_1608</span>,
             <span class="number">0xe34d_ea56_439f_e195</span>,
             <span class="number">0x1bc7_4936_3e98_a768</span>,
             <span class="number">0x39d0_0994_a8a5_046a</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x770c_956f_60d8_81b3</span>,
             <span class="number">0xb163_d416_05d3_9f99</span>,
             <span class="number">0x6b20_3bbe_12fb_3425</span>,
@@ -1744,19 +1738,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x9794_a9f7_c336_eab2</span>,
             <span class="number">0xbe0b_c829_fe5e_66c6</span>,
             <span class="number">0xe5f1_7b9e_0ee0_cab6</span>,
             <span class="number">0x0277_45a9_cddf_ad95</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x5202_5657_abd8_aee0</span>,
             <span class="number">0x2fa4_3fe2_0a45_c78d</span>,
             <span class="number">0x788d_695c_61e9_3212</span>,
             <span class="number">0x1cec_0803_c504_b635</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xd387_2a95_59a0_3a73</span>,
             <span class="number">0xed50_82c8_dbf3_1365</span>,
             <span class="number">0x7207_7448_ef87_cc6e</span>,
@@ -1764,19 +1758,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x0017_79e3_a1d3_57f4</span>,
             <span class="number">0x27fe_ba35_975e_e7e5</span>,
             <span class="number">0xf419_b848_e5d6_94bf</span>,
             <span class="number">0x1723_d145_2c9c_f02d</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x9dab_1ee4_dcf9_6622</span>,
             <span class="number">0x21c3_f776_f572_836d</span>,
             <span class="number">0xfcc0_573d_7e61_3694</span>,
             <span class="number">0x1739_d180_a160_10bd</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x7029_0452_042d_048d</span>,
             <span class="number">0xfafa_96fb_eb0a_b893</span>,
             <span class="number">0xacce_3239_1794_b627</span>,
@@ -1784,19 +1778,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x670b_cf6f_8b48_5dcd</span>,
             <span class="number">0x8f3b_d43f_9926_0621</span>,
             <span class="number">0x4a86_9553_c9d0_07f8</span>,
             <span class="number">0x153e_e614_2e53_5e33</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xd258_d2e2_b778_2172</span>,
             <span class="number">0x968a_d442_4af8_3700</span>,
             <span class="number">0x635e_f7e7_a430_b486</span>,
             <span class="number">0x0c45_bfd3_a69a_aa65</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x0e56_33d2_51f7_3307</span>,
             <span class="number">0x6897_ac0a_8ffa_5ff1</span>,
             <span class="number">0xf2d5_6aec_8314_4600</span>,
@@ -1804,19 +1798,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xac9d_36a8_b751_6d63</span>,
             <span class="number">0x3f87_b28f_1c1b_e4bd</span>,
             <span class="number">0x8cd1_726b_7cba_b8ee</span>,
             <span class="number">0x315d_2ac8_ebdb_ac3c</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x299c_e44e_a423_d8e1</span>,
             <span class="number">0xc9bb_60d1_f695_9879</span>,
             <span class="number">0xcfae_c23d_2b16_883f</span>,
             <span class="number">0x1b84_7271_2d02_eef4</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xc4a5_4041_98ad_f70c</span>,
             <span class="number">0x367d_2c54_e369_28c9</span>,
             <span class="number">0xbd0b_70fa_2255_eb6f</span>,
@@ -1824,19 +1818,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xbbe5_23ae_f9ab_107a</span>,
             <span class="number">0x4a16_073f_738f_7e0c</span>,
             <span class="number">0x687f_4e51_b2e1_dcd3</span>,
             <span class="number">0x1360_52d2_6bb3_d373</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x676c_36c2_4ef9_67dd</span>,
             <span class="number">0x7b3c_fbb8_7303_2681</span>,
             <span class="number">0xc1bd_d859_a123_2a1d</span>,
             <span class="number">0x16c9_6bee_f6a0_a848</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x067e_ec7f_2d63_40c4</span>,
             <span class="number">0x0123_87ba_b4f1_662d</span>,
             <span class="number">0x2ab7_fed8_f499_a9fb</span>,
@@ -1844,19 +1838,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xaf1d_ff20_4c92_2f86</span>,
             <span class="number">0xfc06_772c_1c04_11a6</span>,
             <span class="number">0x39e2_4219_8897_d17c</span>,
             <span class="number">0x0c59_93d1_75e8_1f66</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xbbf5_3f67_b1f8_7b15</span>,
             <span class="number">0xf248_87ad_48e1_7759</span>,
             <span class="number">0xfcda_655d_1ba9_c8f9</span>,
             <span class="number">0x03bf_7a3f_7bd0_43da</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x9b5c_d09e_36d8_be62</span>,
             <span class="number">0x4c8f_9cbe_69f0_e827</span>,
             <span class="number">0xb0cf_9995_67f0_0e73</span>,
@@ -1864,19 +1858,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xafea_99a2_ec6c_595a</span>,
             <span class="number">0x3af5_bf77_c1c4_2652</span>,
             <span class="number">0x5a39_768c_480d_61e1</span>,
             <span class="number">0x171f_528c_cf65_8437</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x5a05_63b9_b8e9_f1d5</span>,
             <span class="number">0x812c_3286_ee70_0067</span>,
             <span class="number">0x196e_4185_9b35_ef88</span>,
             <span class="number">0x12f4_175c_4ab4_5afc</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x0e74_d4d3_6911_8b79</span>,
             <span class="number">0x7e23_e1aa_be96_cfab</span>,
             <span class="number">0x8f8f_dcf8_00a9_ac69</span>,
@@ -1884,19 +1878,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x9871_2c65_678c_fd30</span>,
             <span class="number">0x984b_c8f2_e4c1_b69e</span>,
             <span class="number">0x1a89_920e_2504_c3b3</span>,
             <span class="number">0x10f2_a685_df4a_27c8</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xe8a1_6728_cc9d_4918</span>,
             <span class="number">0x5457_3c93_33c5_6321</span>,
             <span class="number">0x1d8d_93d5_4ab9_1a0e</span>,
             <span class="number">0x09e5_f497_90c8_a0e2</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x609a_7403_47cf_5fea</span>,
             <span class="number">0x42d1_7ed6_ee0f_ab7e</span>,
             <span class="number">0x2bf3_5705_d9f8_4a34</span>,
@@ -1904,19 +1898,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x3a75_8af6_fa84_e0e8</span>,
             <span class="number">0xc634_debd_281b_76a6</span>,
             <span class="number">0x4915_62fa_f2b1_90d3</span>,
             <span class="number">0x058e_e73b_a9f3_f293</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x621a_1325_10a4_3904</span>,
             <span class="number">0x092c_b921_19bc_76be</span>,
             <span class="number">0xcd0f_1fc5_5b1a_3250</span>,
             <span class="number">0x232f_99cc_911e_ddd9</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xc3b9_7c1e_301b_c213</span>,
             <span class="number">0xf9ef_d52c_a6bc_2961</span>,
             <span class="number">0x86c2_2c6c_5d48_69f0</span>,
@@ -1924,19 +1918,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xbf6b_3431_ba94_e9bc</span>,
             <span class="number">0x2938_8842_744a_1210</span>,
             <span class="number">0xa1c9_291d_5860_2f51</span>,
             <span class="number">0x1376_dce6_5800_30c6</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x6454_843c_5486_d7b3</span>,
             <span class="number">0x072b_a8b0_2d92_e722</span>,
             <span class="number">0x2b33_56c3_8238_f761</span>,
             <span class="number">0x1793_199e_6fd6_ba34</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x06a3_f1d3_b433_311b</span>,
             <span class="number">0x3c66_160d_c62a_acac</span>,
             <span class="number">0x9fee_9c20_c87a_67df</span>,
@@ -1944,19 +1938,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x30d6_e3fd_516b_47a8</span>,
             <span class="number">0xdbe0_b77f_ae77_e1d0</span>,
             <span class="number">0xdf8f_f37f_e2d8_edf8</span>,
             <span class="number">0x3514_d5e9_066b_b160</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x1937_7427_137a_81c7</span>,
             <span class="number">0xff45_3d6f_900f_144a</span>,
             <span class="number">0xf919_a00d_abbf_5fa5</span>,
             <span class="number">0x30cd_3006_931a_d636</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x5b6a_7422_0692_b506</span>,
             <span class="number">0x8f9e_4b2c_ae2e_bb51</span>,
             <span class="number">0x41f8_1a5c_f613_c8df</span>,
@@ -1964,19 +1958,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x73f6_66cb_86a4_8e8e</span>,
             <span class="number">0x851b_3a59_c990_fafc</span>,
             <span class="number">0xa35e_9613_e7f5_fe92</span>,
             <span class="number">0x035b_461c_02d7_9d19</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x7cfb_f86a_3aa0_4780</span>,
             <span class="number">0x92b1_283c_2d5f_ccde</span>,
             <span class="number">0x5bc0_0eed_d56b_93e0</span>,
             <span class="number">0x23a9_9280_79d1_75bd</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xf1e4_ccd7_3fa0_0a82</span>,
             <span class="number">0xb5e2_ea34_36ee_f957</span>,
             <span class="number">0xf159_4a07_63c6_11ab</span>,
@@ -1984,19 +1978,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xbbf0_4f52_52de_4279</span>,
             <span class="number">0x3889_c578_6344_6d88</span>,
             <span class="number">0x4962_ae3c_0da1_7e31</span>,
             <span class="number">0x39fc_e308_b7d4_3c57</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x3b57_e344_89b5_3fad</span>,
             <span class="number">0xbef0_0a08_c6ed_38d2</span>,
             <span class="number">0xc0fd_f016_62f6_0d22</span>,
             <span class="number">0x1aae_1883_3f8e_1d3a</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x5551_3e03_3398_513f</span>,
             <span class="number">0x27c1_b3fd_8f85_d8a8</span>,
             <span class="number">0x8b2e_80c0_64fd_83ed</span>,
@@ -2004,19 +1998,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x5244_ca74_9b73_e481</span>,
             <span class="number">0xdcf6_af28_30a5_0287</span>,
             <span class="number">0x16dd_1a87_ca22_e1cc</span>,
             <span class="number">0x275a_03e4_5add_a7c3</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x58a2_53cf_b6a9_5786</span>,
             <span class="number">0x07e5_6145_3fc5_648b</span>,
             <span class="number">0xeb08_e47e_5fea_bcf8</span>,
             <span class="number">0x2e5a_10f0_8b5a_b8bb</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xe033_d82c_efe7_8ce3</span>,
             <span class="number">0xc141_a5b6_d594_bec4</span>,
             <span class="number">0xb84e_9c33_3b29_32f1</span>,
@@ -2024,19 +2018,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x5cec_7e7b_338f_be1b</span>,
             <span class="number">0x52f9_332f_bffc_fbbd</span>,
             <span class="number">0x7b92_ce81_0e14_a400</span>,
             <span class="number">0x193a_e592_1d78_b5de</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x6022_4be6_7248_e82c</span>,
             <span class="number">0x3743_84f4_a072_8205</span>,
             <span class="number">0x8911_1fb2_c466_0281</span>,
             <span class="number">0x3097_898a_5d00_11a4</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x5499_80de_8629_30f5</span>,
             <span class="number">0x1979_b2d1_c465_b4d9</span>,
             <span class="number">0x5717_82fd_96ce_54b4</span>,
@@ -2044,19 +2038,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x37ea_32a9_71d1_7884</span>,
             <span class="number">0xdbc7_f5cb_4609_3421</span>,
             <span class="number">0x8813_6287_ce37_6b08</span>,
             <span class="number">0x2eb0_4ea7_c01d_97ec</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xead3_726f_1af2_e7b0</span>,
             <span class="number">0x861c_bda4_7680_4e6c</span>,
             <span class="number">0x2302_a1c2_2e49_baec</span>,
             <span class="number">0x3642_5347_ea03_f641</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xecd6_27e5_9590_d09e</span>,
             <span class="number">0x3f5b_5ca5_a19a_9701</span>,
             <span class="number">0xcc99_6cd8_5c98_a1d8</span>,
@@ -2064,19 +2058,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x59be_ce31_f0a3_1e95</span>,
             <span class="number">0xde01_212e_e458_8f89</span>,
             <span class="number">0x1f05_636c_610b_89aa</span>,
             <span class="number">0x1301_80e4_4e29_24db</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x9ea8_e7bc_7926_3550</span>,
             <span class="number">0xdf77_93cc_89e5_b52f</span>,
             <span class="number">0x7327_5aca_ed5f_579c</span>,
             <span class="number">0x219e_9773_7d39_79ba</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x9c12_635d_f251_d153</span>,
             <span class="number">0x3b06_72dd_7d42_cbb4</span>,
             <span class="number">0x3461_363f_81c4_89a2</span>,
@@ -2084,19 +2078,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x2861_ce16_f219_d5a9</span>,
             <span class="number">0x4ad0_4470_45a7_c5aa</span>,
             <span class="number">0x2072_4b92_7a0c_a81c</span>,
             <span class="number">0x0e59_e6f3_32d7_ed37</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x43b0_a3fc_ff20_36bd</span>,
             <span class="number">0x172c_c07b_9d33_fbf9</span>,
             <span class="number">0x3d73_6946_7222_697a</span>,
             <span class="number">0x1b06_4342_d51a_4275</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x3eb3_1022_8a0e_5f6c</span>,
             <span class="number">0x78fa_9fb9_1712_21b7</span>,
             <span class="number">0x2f36_3c55_b288_2e0b</span>,
@@ -2104,19 +2098,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xe46f_6d42_9874_0107</span>,
             <span class="number">0x8ad7_1ea7_15be_0573</span>,
             <span class="number">0x63df_7a76_e858_a4aa</span>,
             <span class="number">0x23e4_ab37_183a_cba4</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xfca9_95e2_b599_14a1</span>,
             <span class="number">0xacfe_1464_0de0_44f2</span>,
             <span class="number">0x5d33_094e_0bed_a75b</span>,
             <span class="number">0x2795_d5c5_fa42_8022</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xc26d_909d_ee8b_53c0</span>,
             <span class="number">0xa668_7c3d_f16c_8fe4</span>,
             <span class="number">0xd765_f26d_d03f_4c45</span>,
@@ -2124,19 +2118,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xe7fe_a6bd_f347_1380</span>,
             <span class="number">0xe84b_5beb_ae4e_501d</span>,
             <span class="number">0xf7bf_86e8_9280_827f</span>,
             <span class="number">0x0072_e45c_c676_b08e</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xd0c5_4dde_b26b_86c0</span>,
             <span class="number">0xb648_29e2_d40e_41bd</span>,
             <span class="number">0xe2ab_e4c5_18ce_599e</span>,
             <span class="number">0x13de_7054_8487_4bb5</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x3891_5b43_2a99_59a5</span>,
             <span class="number">0x82bb_18e5_af1b_05bb</span>,
             <span class="number">0x3159_50f1_211d_efe8</span>,
@@ -2144,19 +2138,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x3407_0cbe_e268_86a0</span>,
             <span class="number">0xae4d_23b0_b41b_e9a8</span>,
             <span class="number">0xbb4e_4a14_00cc_d2c4</span>,
             <span class="number">0x2780_b9e7_5b55_676e</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x9405_5920_98b4_056f</span>,
             <span class="number">0xdc4d_8fbe_fe24_405a</span>,
             <span class="number">0xf803_33ec_8563_4ac9</span>,
             <span class="number">0x3a57_0d4d_7c4e_7ac3</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x78d2_b247_8995_20b4</span>,
             <span class="number">0xe2cc_1507_bebd_cc62</span>,
             <span class="number">0xf347_c247_fcf0_9294</span>,
@@ -2164,19 +2158,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x2e8c_88f7_7074_70e0</span>,
             <span class="number">0x0b50_bb2e_b82d_f74d</span>,
             <span class="number">0xd261_4a19_7c6b_794b</span>,
             <span class="number">0x14f5_9baa_03cd_0ca4</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xbe52_476e_0a16_f3be</span>,
             <span class="number">0xa51d_54ed_e661_67f5</span>,
             <span class="number">0x6f54_6e17_04c3_9c60</span>,
             <span class="number">0x307d_efee_925d_fb43</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x380b_67d8_0473_dce3</span>,
             <span class="number">0x6611_0683_6adf_e5e7</span>,
             <span class="number">0x7a07_e767_4b5a_2621</span>,
@@ -2184,19 +2178,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x15aa_f1f7_7125_89dd</span>,
             <span class="number">0xb8ee_335d_8828_4cbe</span>,
             <span class="number">0xca2a_d0fb_5667_2500</span>,
             <span class="number">0x2301_ef9c_63ea_84c5</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x5e68_478c_4d60_27a9</span>,
             <span class="number">0xc861_82d1_b424_6b58</span>,
             <span class="number">0xd10f_4cd5_2be9_7f6b</span>,
             <span class="number">0x029a_5a47_da79_a488</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x2cc4_f962_eaae_2260</span>,
             <span class="number">0xf97f_e46b_6a92_5428</span>,
             <span class="number">0x2360_d17d_890e_55cb</span>,
@@ -2204,19 +2198,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xc0ca_b915_d536_3d9f</span>,
             <span class="number">0xa5f2_404c_d7b3_5eb0</span>,
             <span class="number">0x18e8_57a9_8d49_8cf7</span>,
             <span class="number">0x2670_3e48_c03b_81ca</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xf691_123a_e112_b928</span>,
             <span class="number">0xf443_88bd_6b89_221e</span>,
             <span class="number">0x88ac_8d25_a246_03f1</span>,
             <span class="number">0x0486_82a3_5b32_65bc</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x3ab7_defc_b8d8_03e2</span>,
             <span class="number">0x91d6_e171_5164_775e</span>,
             <span class="number">0xd72c_ddc6_cf06_b507</span>,
@@ -2224,19 +2218,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xbcd7_9541_4a6e_2e86</span>,
             <span class="number">0x43b3_60f6_386a_86d7</span>,
             <span class="number">0x1689_426d_ce05_fcd8</span>,
             <span class="number">0x31aa_0eeb_868c_626d</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xed77_f5d5_76b9_9cc3</span>,
             <span class="number">0x90ef_d8f4_1b20_78b2</span>,
             <span class="number">0x057a_bad3_764c_104b</span>,
             <span class="number">0x2394_64f7_5bf7_b6af</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xb2cb_4873_07c1_cecf</span>,
             <span class="number">0xa5cc_47c5_9654_b2a7</span>,
             <span class="number">0xa45e_19ed_813a_54ab</span>,
@@ -2244,19 +2238,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x1f73_1532_2f65_8735</span>,
             <span class="number">0x777c_7a92_1a06_2e9d</span>,
             <span class="number">0x576a_4ad2_5986_0fb1</span>,
             <span class="number">0x21fb_bdbb_7367_0734</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x6743_2400_3fc5_2146</span>,
             <span class="number">0x5b86_d294_63d3_1564</span>,
             <span class="number">0xd937_1ca2_eb95_acf3</span>,
             <span class="number">0x31b8_6f3c_f017_05d4</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x7045_f48a_a4eb_4f6f</span>,
             <span class="number">0x1354_1d65_157e_e1ce</span>,
             <span class="number">0x05ef_1736_d090_56f6</span>,
@@ -2264,19 +2258,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x5a13_a58d_2001_1e2f</span>,
             <span class="number">0xf4d5_239c_11d0_eafa</span>,
             <span class="number">0xd558_f36e_65f8_eca7</span>,
             <span class="number">0x1233_ca93_6ec2_4671</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x6e70_af0a_7a92_4b3a</span>,
             <span class="number">0x8780_58d0_234a_576f</span>,
             <span class="number">0xc437_846d_8e0b_2b30</span>,
             <span class="number">0x27d4_52a4_3ac7_dea2</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xa025_76b9_4392_f980</span>,
             <span class="number">0x6a30_641a_1c3d_87b2</span>,
             <span class="number">0xe816_ea8d_a493_e0fa</span>,
@@ -2284,19 +2278,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x608c_6f7a_61b5_6e55</span>,
             <span class="number">0xf185_8466_4f8c_ab49</span>,
             <span class="number">0xc398_8bae_e42e_4b10</span>,
             <span class="number">0x36c7_22f0_efcc_8803</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x6e49_ac17_0dbb_7fcd</span>,
             <span class="number">0x85c3_8899_a7b5_a833</span>,
             <span class="number">0x08b0_f2ec_89cc_aa37</span>,
             <span class="number">0x02b3_ff48_861e_339b</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xa8c5_ae03_ad98_e405</span>,
             <span class="number">0x6fc3_ff4c_49eb_59ad</span>,
             <span class="number">0x6016_2f44_27bc_657b</span>,
@@ -2304,19 +2298,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x2e06_cc4a_f33b_0a06</span>,
             <span class="number">0xad3d_e8be_46ed_9693</span>,
             <span class="number">0xf875_3ade_b9d7_cee2</span>,
             <span class="number">0x3fc2_a13f_127f_96a4</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xc120_80ac_117e_e15f</span>,
             <span class="number">0x00cb_3d62_1e17_1d80</span>,
             <span class="number">0x1bd6_3434_ac8c_419f</span>,
             <span class="number">0x0c41_a6e4_8dd2_3a51</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x9685_213e_9692_f5e1</span>,
             <span class="number">0x72aa_ad7e_4e75_339d</span>,
             <span class="number">0xed44_7653_7169_084e</span>,
@@ -2324,19 +2318,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x0ad0_1184_567b_027c</span>,
             <span class="number">0xb81c_f735_cc9c_39c0</span>,
             <span class="number">0x9d34_96a3_d9fe_05ec</span>,
             <span class="number">0x0355_7a8f_7b38_a17f</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x45bc_b5ac_0082_6abc</span>,
             <span class="number">0x060f_4336_3d81_8e54</span>,
             <span class="number">0xee97_6d34_282f_1a37</span>,
             <span class="number">0x0b5f_5955_2f49_8735</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x2f29_09e1_7e22_b0df</span>,
             <span class="number">0xf5d6_46e5_7507_e548</span>,
             <span class="number">0xfedb_b185_70dc_7300</span>,
@@ -2344,19 +2338,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xf71e_ed73_f15b_3326</span>,
             <span class="number">0xcf1c_b37c_3b03_2af6</span>,
             <span class="number">0xc787_be97_020a_7fdd</span>,
             <span class="number">0x1d78_5005_a7a0_0592</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x0acf_bfb2_23f8_f00d</span>,
             <span class="number">0xa590_b88a_3b06_0294</span>,
             <span class="number">0x0ba5_fedc_b8f2_5bd2</span>,
             <span class="number">0x1ad7_72c2_73d9_c6df</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xc1ce_13d6_0f2f_5031</span>,
             <span class="number">0x8105_10eb_61f0_672d</span>,
             <span class="number">0xa78f_3275_c278_234b</span>,
@@ -2364,19 +2358,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x8337_f5e0_7923_a853</span>,
             <span class="number">0xe224_3134_6945_7b8e</span>,
             <span class="number">0xce6f_8ffe_a103_1b6d</span>,
             <span class="number">0x2080_0f44_1b4a_0526</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xa33d_7bed_89a4_408a</span>,
             <span class="number">0x36cd_c8ee_d662_ad37</span>,
             <span class="number">0x6eea_2cd4_9f43_12b4</span>,
             <span class="number">0x3d5a_d61d_7b65_f938</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x3bbb_ae94_cc19_5284</span>,
             <span class="number">0x1df9_6cc0_3ea4_b26d</span>,
             <span class="number">0x02c5_f91b_e4dd_8e3d</span>,
@@ -2384,19 +2378,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xc527_1c29_7852_819e</span>,
             <span class="number">0x646c_49f9_b46c_bf19</span>,
             <span class="number">0xb87d_b1e2_af3e_a923</span>,
             <span class="number">0x25e5_2be5_07c9_2760</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x5c38_0ab7_01b5_2ea9</span>,
             <span class="number">0xa34c_83a3_485c_6b2d</span>,
             <span class="number">0x7109_6d8b_1b98_3c98</span>,
             <span class="number">0x1c49_2d64_c157_aaa4</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xa20c_0b3d_a0da_4ca3</span>,
             <span class="number">0xd434_87bc_288d_f682</span>,
             <span class="number">0xf4e6_c5e7_a573_f592</span>,
@@ -2404,19 +2398,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x7ea3_3c93_e408_33cf</span>,
             <span class="number">0x584e_9e62_a7f9_554e</span>,
             <span class="number">0x6869_5c0c_d7cb_f43d</span>,
             <span class="number">0x1090_b1b4_d2be_be7a</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xe383_e1ec_3baa_8d69</span>,
             <span class="number">0x1b21_8e35_ecf2_328e</span>,
             <span class="number">0x68f5_ce5c_bed1_9cad</span>,
             <span class="number">0x33e3_8018_a801_387a</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xb76b_0b3d_787e_e953</span>,
             <span class="number">0x5f4a_02d2_8729_e3ae</span>,
             <span class="number">0xeef8_d83d_0e87_6bac</span>,
@@ -2424,19 +2418,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xef7c_e6a0_1326_5477</span>,
             <span class="number">0xbb08_9387_0367_ec6c</span>,
             <span class="number">0x4474_2de8_8c5a_b0d5</span>,
             <span class="number">0x1678_be3c_c9c6_7993</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xaf5d_4789_3348_f766</span>,
             <span class="number">0xdaf1_8183_55b1_3b4f</span>,
             <span class="number">0x7ff9_c6be_546e_928a</span>,
             <span class="number">0x3780_bd1e_01f3_4c22</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xa123_8032_0d7c_c1de</span>,
             <span class="number">0x5d11_e69a_a6c0_b98c</span>,
             <span class="number">0x0786_018e_7cb7_7267</span>,
@@ -2444,19 +2438,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x1799_603e_855c_e731</span>,
             <span class="number">0xc486_894d_76e0_c33b</span>,
             <span class="number">0x160b_4155_2f29_31c8</span>,
             <span class="number">0x354a_fd0a_2f9d_0b26</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x8b99_7ee0_6be1_bff3</span>,
             <span class="number">0x60b0_0dbe_1fac_ed07</span>,
             <span class="number">0x2d8a_ffa6_2905_c5a5</span>,
             <span class="number">0x00cd_6d29_f166_eadc</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x08d0_6419_1708_2f2c</span>,
             <span class="number">0xc60d_0197_3f18_3057</span>,
             <span class="number">0xdbe0_e3d7_cdbc_66ef</span>,
@@ -2464,19 +2458,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xfa08_dd98_0638_7577</span>,
             <span class="number">0xafe3_ca1d_b8d4_f529</span>,
             <span class="number">0xe48d_2370_d7d1_a142</span>,
             <span class="number">0x1463_36e2_5db5_181d</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xa901_d3ce_84de_0ad4</span>,
             <span class="number">0x022e_54b4_9c13_d907</span>,
             <span class="number">0x997a_2116_3e2e_43df</span>,
             <span class="number">0x0005_d8e0_85fd_72ee</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x1c36_f313_4196_4484</span>,
             <span class="number">0x6f8e_bc1d_2296_021a</span>,
             <span class="number">0x0dd5_e61c_8a4e_8642</span>,
@@ -2484,19 +2478,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xd7a0_0c03_d2e0_baaa</span>,
             <span class="number">0xfa97_ec80_ad30_7a52</span>,
             <span class="number">0x561c_6fff_1534_6878</span>,
             <span class="number">0x0118_9910_671b_c16b</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x63fd_8ac5_7a95_ca8c</span>,
             <span class="number">0x4c0f_7e00_1df4_90aa</span>,
             <span class="number">0x5229_dfaa_0123_1a45</span>,
             <span class="number">0x162a_7c80_f4d2_d12e</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x32e6_9efb_22f4_0b96</span>,
             <span class="number">0xcaff_31b4_fda3_2124</span>,
             <span class="number">0x2604_e4af_b09f_8603</span>,
@@ -2504,19 +2498,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xc0a0_180f_8cbf_c0d2</span>,
             <span class="number">0xf444_d10d_63a7_4e2c</span>,
             <span class="number">0xe16a_4d60_3d5a_808e</span>,
             <span class="number">0x0978_e5c5_1e1e_5649</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x03f4_460e_bc35_1b6e</span>,
             <span class="number">0x0508_7d90_3bda_cfd1</span>,
             <span class="number">0xebe1_9bbd_ce25_1011</span>,
             <span class="number">0x1bdc_ee3a_aca9_cd25</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xf619_64bf_3ade_7670</span>,
             <span class="number">0x0c94_7321_e007_5e3f</span>,
             <span class="number">0xe494_7914_0b19_44fd</span>,
@@ -2524,19 +2518,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xc326_7da6_e94a_dc50</span>,
             <span class="number">0x39ee_99c1_cc6e_5dda</span>,
             <span class="number">0xbc26_cc88_3a19_87e1</span>,
             <span class="number">0x1f3e_91d8_63c1_6922</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x0f85_b4ac_2c36_7406</span>,
             <span class="number">0xfa66_1465_c656_ad99</span>,
             <span class="number">0xef5c_08f8_478f_663a</span>,
             <span class="number">0x1af4_7a48_a601_6a49</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x0eab_cd87_e7d0_1b15</span>,
             <span class="number">0x1c36_98b0_a2e3_da10</span>,
             <span class="number">0x009d_5733_8c69_3505</span>,
@@ -2544,19 +2538,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x8b94_7721_8967_3476</span>,
             <span class="number">0xe10c_e2b7_069f_4dbd</span>,
             <span class="number">0x68d0_b024_f591_b520</span>,
             <span class="number">0x1660_a8cd_e7fe_c553</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x9d8d_0f67_fdaa_79d5</span>,
             <span class="number">0x3963_c2c1_f558_6e2f</span>,
             <span class="number">0x1303_9363_34dd_1132</span>,
             <span class="number">0x0f6d_9919_29d5_e4e7</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x7a43_3091_e1ce_2d3a</span>,
             <span class="number">0x4e7f_da77_0712_f343</span>,
             <span class="number">0xcc62_5eaa_ab52_b4dc</span>,
@@ -2564,19 +2558,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x3797_b2d8_3760_43b3</span>,
             <span class="number">0xd8ca_f468_976f_0472</span>,
             <span class="number">0x214f_7c67_84ac_b565</span>,
             <span class="number">0x14a3_23b9_9b90_0331</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x347f_ef2c_00f0_953a</span>,
             <span class="number">0x718b_7fbc_7788_af78</span>,
             <span class="number">0xec01_ea79_642d_5760</span>,
             <span class="number">0x1904_76b5_80cb_9277</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xff4e_7e6f_b268_dfd7</span>,
             <span class="number">0x9660_902b_6008_7651</span>,
             <span class="number">0xa424_63d3_0b44_2b6f</span>,
@@ -2584,19 +2578,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xf983_387e_a045_6203</span>,
             <span class="number">0xe365_0013_04f9_a11e</span>,
             <span class="number">0x0dbe_8fd2_270a_6795</span>,
             <span class="number">0x3877_a955_8636_7567</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x39c0_af0f_e01f_4a06</span>,
             <span class="number">0x6011_8c53_a218_1352</span>,
             <span class="number">0x5df3_9a2c_c63d_dc0a</span>,
             <span class="number">0x2d89_4691_240f_e953</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x1aca_9eaf_9bba_9850</span>,
             <span class="number">0x5914_e855_eeb4_4aa1</span>,
             <span class="number">0x7ef7_1780_2016_6189</span>,
@@ -2604,19 +2598,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x33f5_09a7_4ad9_d39b</span>,
             <span class="number">0x272e_1cc6_c36a_2968</span>,
             <span class="number">0x505a_05f2_a6ae_834c</span>,
             <span class="number">0x2fe7_6be7_cff7_23e2</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x0df9_fa97_277f_a8b4</span>,
             <span class="number">0xd15b_ff84_0dda_e8a5</span>,
             <span class="number">0x9299_81d7_cfce_253b</span>,
             <span class="number">0x187a_a448_f391_e3ca</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xf0c6_6af5_ffc7_3736</span>,
             <span class="number">0x663c_cf7b_2ffe_4b5e</span>,
             <span class="number">0x007a_b3aa_3617_f422</span>,
@@ -2624,19 +2618,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x2f9b_20f1_fbd4_9791</span>,
             <span class="number">0x1975_b962_f6cb_8e0b</span>,
             <span class="number">0x3bc4_ca99_02c5_2acb</span>,
             <span class="number">0x030d_dbb4_7049_3f16</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x3a1c_62ca_8fbf_2525</span>,
             <span class="number">0x8fb8_ab9d_60ea_17b2</span>,
             <span class="number">0x950b_0ab1_8d35_46df</span>,
             <span class="number">0x3130_fbaf_fb5a_a82a</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x43a8_7618_0dc3_82e0</span>,
             <span class="number">0x15ce_2ead_2fcd_051e</span>,
             <span class="number">0x4f74_d74b_ac2e_e457</span>,
@@ -2644,19 +2638,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x26de_98a8_736d_1d11</span>,
             <span class="number">0x7d8e_471a_9fb9_5fef</span>,
             <span class="number">0xac9d_91b0_930d_ac75</span>,
             <span class="number">0x3499_7991_9015_394f</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xccfc_b618_31d5_c775</span>,
             <span class="number">0x3bf9_3da6_fff3_1d95</span>,
             <span class="number">0x2305_cd7a_921e_c5f1</span>,
             <span class="number">0x027c_c4ef_e3fb_35dd</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xc3fa_2629_635d_27de</span>,
             <span class="number">0x67f1_c6b7_3147_64af</span>,
             <span class="number">0x61b7_1a36_9868_2ad2</span>,
@@ -2664,19 +2658,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x77c5_b024_8483_71ae</span>,
             <span class="number">0x6041_4abe_362d_01c9</span>,
             <span class="number">0x10f1_cc6d_f8b4_bcd7</span>,
             <span class="number">0x1f69_7cac_4d07_feb7</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x786a_dd24_4aa0_ef29</span>,
             <span class="number">0x3145_c478_0631_09d6</span>,
             <span class="number">0x26e6_c851_fbd5_72a6</span>,
             <span class="number">0x267a_750f_e5d7_cfbc</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x180e_2b4d_3e75_6f65</span>,
             <span class="number">0xaf28_5fa8_2ce4_fae5</span>,
             <span class="number">0x678c_9996_d9a4_72c8</span>,
@@ -2684,19 +2678,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x79c4_7c57_3ac4_10f7</span>,
             <span class="number">0x7e3b_83af_4a4b_a3ba</span>,
             <span class="number">0x2186_c303_8ea0_5e69</span>,
             <span class="number">0x1745_569a_0a3e_3014</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x1e03_8852_2696_191f</span>,
             <span class="number">0xfdff_66c6_f3b5_ffe1</span>,
             <span class="number">0xeca5_1207_78a5_6711</span>,
             <span class="number">0x2986_3d54_6e7e_7c0d</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x2f22_5e63_66bf_e390</span>,
             <span class="number">0xa79a_03df_8339_94c6</span>,
             <span class="number">0xbf06_bae4_9ef8_53f6</span>,
@@ -2704,19 +2698,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xf4f6_331a_8b26_5d15</span>,
             <span class="number">0xf745_f45d_350d_41d4</span>,
             <span class="number">0xe18b_1499_060d_a366</span>,
             <span class="number">0x02e0_e121_b0f3_dfef</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x078a_e6aa_1510_54b7</span>,
             <span class="number">0x6904_0173_6d44_a653</span>,
             <span class="number">0xb89e_f73a_40a2_b274</span>,
             <span class="number">0x0d0a_a46e_76a6_a278</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x9a4d_532c_7b6e_0958</span>,
             <span class="number">0x392d_de71_0f1f_06db</span>,
             <span class="number">0xeee5_45f3_fa6d_3d08</span>,
@@ -2724,19 +2718,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x961f_c818_dcbb_66b5</span>,
             <span class="number">0xc9f2_b325_7530_dafe</span>,
             <span class="number">0xd97a_11d6_3088_f5d9</span>,
             <span class="number">0x2901_ec61_942d_34aa</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xfdf5_44b9_63d1_fdc7</span>,
             <span class="number">0x22ff_a2a2_af9f_a3e3</span>,
             <span class="number">0xf431_d544_34a3_e0cf</span>,
             <span class="number">0x2020_4a21_05d2_2e7e</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x1211_b9e2_190d_6852</span>,
             <span class="number">0xa004_abe8_e015_28c4</span>,
             <span class="number">0x5c1e_3e9e_27a5_71c3</span>,
@@ -2745,32 +2739,32 @@
     ],
 ];
 
-<span class="comment">// n: 255</span>
-<span class="comment">// t: 3</span>
-<span class="comment">// N: 765</span>
-<span class="comment">// Result Algorithm 1:</span>
-<span class="comment">//  [True, 0]</span>
-<span class="comment">// Result Algorithm 2:</span>
-<span class="comment">//  [True, None]</span>
-<span class="comment">// Result Algorithm 3:</span>
-<span class="comment">//  [True, None]</span>
-<span class="comment">// Prime number: 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001</span>
-<span class="comment">// MDS matrix:</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">MDS</span>: [[<span class="ident">vesta::Base</span>; <span class="number">3</span>]; <span class="number">3</span>] <span class="op">=</span> [
+<span class="comment">// n: 255
+// t: 3
+// N: 765
+// Result Algorithm 1:
+//  [True, 0]
+// Result Algorithm 2:
+//  [True, None]
+// Result Algorithm 3:
+//  [True, None]
+// Prime number: 0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001
+// MDS matrix:
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>MDS: [[vesta::Base; <span class="number">3</span>]; <span class="number">3</span>] = [
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xeb4f_1f74_2963_421f</span>,
             <span class="number">0x5f71_0afc_43dd_c5f6</span>,
             <span class="number">0x9191_3f56_cf21_af2b</span>,
             <span class="number">0x1853_b497_7c6f_a227</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x45e5_1db6_ac6f_e4a7</span>,
             <span class="number">0x5a0f_a4df_a500_bcad</span>,
             <span class="number">0x63f4_84c1_0fcf_0586</span>,
             <span class="number">0x3d83_1189_cfbb_c452</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xd188_37f9_8347_f137</span>,
             <span class="number">0x3f89_65c7_8083_8a94</span>,
             <span class="number">0x4ba8_8b9e_4017_19c0</span>,
@@ -2778,19 +2772,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x84fd_7923_337c_f77e</span>,
             <span class="number">0x2896_f8d0_fd5c_9a75</span>,
             <span class="number">0x8e9d_c529_f471_8f83</span>,
             <span class="number">0x35e2_6e39_8450_6279</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x3eb9_24f5_6fff_7908</span>,
             <span class="number">0x3641_cecf_3a2a_5a8a</span>,
             <span class="number">0x00cd_7dbe_a799_70ab</span>,
             <span class="number">0x10a8_1663_02cb_753c</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xb672_27c1_a141_ae94</span>,
             <span class="number">0x198e_1aee_777e_2521</span>,
             <span class="number">0xf434_92ce_5121_4b00</span>,
@@ -2798,19 +2792,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xabcb_d614_eaf5_eba1</span>,
             <span class="number">0xa90f_28b0_cb31_76fb</span>,
             <span class="number">0xcb2e_ab86_ef31_d915</span>,
             <span class="number">0x07b8_5627_c832_782a</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xc255_efd0_06b5_db1c</span>,
             <span class="number">0xb5d9_85dc_1630_a4b2</span>,
             <span class="number">0x9756_4e1b_5d1a_c72f</span>,
             <span class="number">0x2a2d_e13e_70f2_7e16</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xcffd_f529_3334_29fc</span>,
             <span class="number">0x21e3_af7e_f123_32cd</span>,
             <span class="number">0xfff5_40a8_7327_c7ce</span>,
@@ -2819,21 +2813,21 @@
     ],
 ];
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">MDS_INV</span>: [[<span class="ident">vesta::Base</span>; <span class="number">3</span>]; <span class="number">3</span>] <span class="op">=</span> [
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>MDS_INV: [[vesta::Base; <span class="number">3</span>]; <span class="number">3</span>] = [
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xb204_ddc6_5e58_2044</span>,
             <span class="number">0x47a6_0484_b0a9_9c91</span>,
             <span class="number">0xcaf5_4d78_24c1_200e</span>,
             <span class="number">0x36df_4950_21cf_7828</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x6a6b_94ad_aa0d_9c9e</span>,
             <span class="number">0xe2cd_38b9_59d4_61ff</span>,
             <span class="number">0xe43e_c4bf_3e0d_f00c</span>,
             <span class="number">0x034f_beae_4650_c2c7</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xa862_7a02_8c1a_f7d6</span>,
             <span class="number">0x841b_ebf1_a15b_746e</span>,
             <span class="number">0x1fd5_6832_d0ab_5570</span>,
@@ -2841,19 +2835,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x3470_d5c5_53bc_9d20</span>,
             <span class="number">0x1f95_660f_eb5d_b121</span>,
             <span class="number">0xdd31_97ac_c894_9076</span>,
             <span class="number">0x2d08_703d_48ec_d7dc</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x6b5b_42b0_67d8_30f3</span>,
             <span class="number">0x6169_b6fa_721a_470e</span>,
             <span class="number">0xeff3_18a2_8983_158a</span>,
             <span class="number">0x2db1_0ecd_507a_2f27</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0xfbae_b537_d278_4760</span>,
             <span class="number">0x0068_e709_07e7_089d</span>,
             <span class="number">0x926a_5fc0_cc1e_f726</span>,
@@ -2861,19 +2855,19 @@
         ]),
     ],
     [
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x3a5a_ca10_7129_6e61</span>,
             <span class="number">0x4ad4_442e_96c9_d5e8</span>,
             <span class="number">0x5432_f0c0_b908_a411</span>,
             <span class="number">0x2a64_2dca_695d_744d</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x1bd9_bfcb_be02_5ff1</span>,
             <span class="number">0x24f6_ad43_b703_ad90</span>,
             <span class="number">0xebb7_238d_f00d_17e7</span>,
             <span class="number">0x114e_c796_fb40_3f5f</span>,
         ]),
-        <span class="ident">vesta::Base::from_raw</span>([
+        vesta::Base::from_raw([
             <span class="number">0x67f0_642e_14a9_c3bf</span>,
             <span class="number">0xf6a6_9176_7069_7a97</span>,
             <span class="number">0x0408_110d_c66e_b147</span>,
@@ -2882,5 +2876,4 @@
     ],
 ];
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

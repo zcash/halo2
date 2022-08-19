@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_proofs/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_proofs/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -576,563 +570,562 @@
 <span id="555">555</span>
 <span id="556">556</span>
 <span id="557">557</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Traits and structs for implementing circuit components.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Traits and structs for implementing circuit components.
 
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert::TryInto</span>, <span class="ident">fmt</span>, <span class="ident">marker::PhantomData</span>};
+</span><span class="kw">use </span>std::{convert::TryInto, fmt, marker::PhantomData};
 
-<span class="kw">use</span> <span class="ident">ff::Field</span>;
+<span class="kw">use </span>ff::Field;
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">arithmetic::FieldExt</span>,
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Assigned</span>, <span class="ident">Column</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>, <span class="ident">Instance</span>, <span class="ident">Selector</span>, <span class="ident">TableColumn</span>},
+<span class="kw">use crate</span>::{
+    arithmetic::FieldExt,
+    plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector, TableColumn},
 };
 
-<span class="kw">mod</span> <span class="ident">value</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">value::Value</span>;
+<span class="kw">mod </span>value;
+<span class="kw">pub use </span>value::Value;
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">floor_planner</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">floor_planner::single_pass::SimpleFloorPlanner</span>;
+<span class="kw">pub mod </span>floor_planner;
+<span class="kw">pub use </span>floor_planner::single_pass::SimpleFloorPlanner;
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">layouter</span>;
+<span class="kw">pub mod </span>layouter;
 
-<span class="doccomment">/// A chip implements a set of instructions that can be used by gadgets.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The chip stores state that is required at circuit synthesis time in</span>
-<span class="doccomment">/// [`Chip::Config`], which can be fetched via [`Chip::config`].</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The chip also loads any fixed configuration needed at synthesis time</span>
-<span class="doccomment">/// using its own implementation of `load`, and stores it in [`Chip::Loaded`].</span>
-<span class="doccomment">/// This can be accessed via [`Chip::loaded`].</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>: <span class="ident">Sized</span> {
-    <span class="doccomment">/// A type that holds the configuration for this chip, and any other state it may need</span>
-    <span class="doccomment">/// during circuit synthesis, that can be derived during [`Circuit::configure`].</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [`Circuit::configure`]: crate::plonk::Circuit::configure</span>
-    <span class="kw">type</span> <span class="ident">Config</span>: <span class="ident">fmt::Debug</span> <span class="op">+</span> <span class="ident">Clone</span>;
+<span class="doccomment">/// A chip implements a set of instructions that can be used by gadgets.
+///
+/// The chip stores state that is required at circuit synthesis time in
+/// [`Chip::Config`], which can be fetched via [`Chip::config`].
+///
+/// The chip also loads any fixed configuration needed at synthesis time
+/// using its own implementation of `load`, and stores it in [`Chip::Loaded`].
+/// This can be accessed via [`Chip::loaded`].
+</span><span class="kw">pub trait </span>Chip&lt;F: FieldExt&gt;: Sized {
+    <span class="doccomment">/// A type that holds the configuration for this chip, and any other state it may need
+    /// during circuit synthesis, that can be derived during [`Circuit::configure`].
+    ///
+    /// [`Circuit::configure`]: crate::plonk::Circuit::configure
+    </span><span class="kw">type </span>Config: fmt::Debug + Clone;
 
-    <span class="doccomment">/// A type that holds any general chip state that needs to be loaded at the start of</span>
-    <span class="doccomment">/// [`Circuit::synthesize`]. This might simply be `()` for some chips.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [`Circuit::synthesize`]: crate::plonk::Circuit::synthesize</span>
-    <span class="kw">type</span> <span class="ident">Loaded</span>: <span class="ident">fmt::Debug</span> <span class="op">+</span> <span class="ident">Clone</span>;
+    <span class="doccomment">/// A type that holds any general chip state that needs to be loaded at the start of
+    /// [`Circuit::synthesize`]. This might simply be `()` for some chips.
+    ///
+    /// [`Circuit::synthesize`]: crate::plonk::Circuit::synthesize
+    </span><span class="kw">type </span>Loaded: fmt::Debug + Clone;
 
-    <span class="doccomment">/// The chip holds its own configuration.</span>
-    <span class="kw">fn</span> <span class="ident">config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Config</span>;
+    <span class="doccomment">/// The chip holds its own configuration.
+    </span><span class="kw">fn </span>config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Config;
 
-    <span class="doccomment">/// Provides access to general chip state loaded at the beginning of circuit</span>
-    <span class="doccomment">/// synthesis.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Panics if called before `Chip::load`.</span>
-    <span class="kw">fn</span> <span class="ident">loaded</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Loaded</span>;
+    <span class="doccomment">/// Provides access to general chip state loaded at the beginning of circuit
+    /// synthesis.
+    ///
+    /// Panics if called before `Chip::load`.
+    </span><span class="kw">fn </span>loaded(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Loaded;
 }
 
-<span class="doccomment">/// Index of a region in a layouter</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RegionIndex</span>(<span class="ident">usize</span>);
+<span class="doccomment">/// Index of a region in a layouter
+</span><span class="attribute">#[derive(Clone, Copy, Debug)]</span>
+<span class="kw">pub struct </span>RegionIndex(usize);
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RegionIndex</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">idx</span>: <span class="ident">usize</span>) -&gt; <span class="ident">RegionIndex</span> {
-        <span class="ident">RegionIndex</span>(<span class="ident">idx</span>)
+<span class="kw">impl </span>From&lt;usize&gt; <span class="kw">for </span>RegionIndex {
+    <span class="kw">fn </span>from(idx: usize) -&gt; RegionIndex {
+        RegionIndex(idx)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">std::ops::Deref</span> <span class="kw">for</span> <span class="ident">RegionIndex</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">usize</span>;
+<span class="kw">impl </span>std::ops::Deref <span class="kw">for </span>RegionIndex {
+    <span class="kw">type </span>Target = usize;
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
+}
+
+<span class="doccomment">/// Starting row of a region in a layouter
+</span><span class="attribute">#[derive(Clone, Copy, Debug, PartialEq, Eq)]</span>
+<span class="kw">pub struct </span>RegionStart(usize);
+
+<span class="kw">impl </span>From&lt;usize&gt; <span class="kw">for </span>RegionStart {
+    <span class="kw">fn </span>from(idx: usize) -&gt; RegionStart {
+        RegionStart(idx)
     }
 }
 
-<span class="doccomment">/// Starting row of a region in a layouter</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RegionStart</span>(<span class="ident">usize</span>);
+<span class="kw">impl </span>std::ops::Deref <span class="kw">for </span>RegionStart {
+    <span class="kw">type </span>Target = usize;
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RegionStart</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">idx</span>: <span class="ident">usize</span>) -&gt; <span class="ident">RegionStart</span> {
-        <span class="ident">RegionStart</span>(<span class="ident">idx</span>)
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
+}
+
+<span class="doccomment">/// A pointer to a cell within a circuit.
+</span><span class="attribute">#[derive(Clone, Copy, Debug)]</span>
+<span class="kw">pub struct </span>Cell {
+    <span class="doccomment">/// Identifies the region in which this cell resides.
+    </span>region_index: RegionIndex,
+    <span class="doccomment">/// The relative offset of this cell within its region.
+    </span>row_offset: usize,
+    <span class="doccomment">/// The column of this cell.
+    </span>column: Column&lt;Any&gt;,
+}
+
+<span class="doccomment">/// An assigned cell.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>AssignedCell&lt;V, F: Field&gt; {
+    value: Value&lt;V&gt;,
+    cell: Cell,
+    _marker: PhantomData&lt;F&gt;,
+}
+
+<span class="kw">impl</span>&lt;V, F: Field&gt; AssignedCell&lt;V, F&gt; {
+    <span class="doccomment">/// Returns the value of the [`AssignedCell`].
+    </span><span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;<span class="kw-2">&amp;</span>V&gt; {
+        <span class="self">self</span>.value.as_ref()
+    }
+
+    <span class="doccomment">/// Returns the cell.
+    </span><span class="kw">pub fn </span>cell(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cell {
+        <span class="self">self</span>.cell
     }
 }
 
-<span class="kw">impl</span> <span class="ident">std::ops::Deref</span> <span class="kw">for</span> <span class="ident">RegionStart</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">usize</span>;
-
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
-    }
-}
-
-<span class="doccomment">/// A pointer to a cell within a circuit.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Cell</span> {
-    <span class="doccomment">/// Identifies the region in which this cell resides.</span>
-    <span class="ident">region_index</span>: <span class="ident">RegionIndex</span>,
-    <span class="doccomment">/// The relative offset of this cell within its region.</span>
-    <span class="ident">row_offset</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// The column of this cell.</span>
-    <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>,
-}
-
-<span class="doccomment">/// An assigned cell.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> {
-    <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>,
-    <span class="ident">cell</span>: <span class="ident">Cell</span>,
-    <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Returns the value of the [`AssignedCell`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">value</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">V</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">value</span>.<span class="ident">as_ref</span>()
-    }
-
-    <span class="doccomment">/// Returns the cell.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cell</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Cell</span> {
-        <span class="self">self</span>.<span class="ident">cell</span>
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">F</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, F: Field&gt; AssignedCell&lt;V, F&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; Assigned&lt;F&gt;: From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V&gt;,
 {
-    <span class="doccomment">/// Returns the field element value of the [`AssignedCell`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">value_field</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">value</span>.<span class="ident">to_field</span>()
+    <span class="doccomment">/// Returns the field element value of the [`AssignedCell`].
+    </span><span class="kw">pub fn </span>value_field(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;Assigned&lt;F&gt;&gt; {
+        <span class="self">self</span>.value.to_field()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Evaluates this assigned cell&#39;s value directly, performing an unbatched inversion</span>
-    <span class="doccomment">/// if necessary.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If the denominator is zero, the returned cell&#39;s value is zero.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">evaluate</span>(<span class="self">self</span>) -&gt; <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="ident">AssignedCell</span> {
-            <span class="ident">value</span>: <span class="self">self</span>.<span class="ident">value</span>.<span class="ident">evaluate</span>(),
-            <span class="ident">cell</span>: <span class="self">self</span>.<span class="ident">cell</span>,
-            <span class="ident">_marker</span>: <span class="ident">Default::default</span>(),
+<span class="kw">impl</span>&lt;F: Field&gt; AssignedCell&lt;Assigned&lt;F&gt;, F&gt; {
+    <span class="doccomment">/// Evaluates this assigned cell&#39;s value directly, performing an unbatched inversion
+    /// if necessary.
+    ///
+    /// If the denominator is zero, the returned cell&#39;s value is zero.
+    </span><span class="kw">pub fn </span>evaluate(<span class="self">self</span>) -&gt; AssignedCell&lt;F, F&gt; {
+        AssignedCell {
+            value: <span class="self">self</span>.value.evaluate(),
+            cell: <span class="self">self</span>.cell,
+            _marker: Default::default(),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>: <span class="ident">Clone</span>, <span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">F</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V: Clone, F: Field&gt; AssignedCell&lt;V, F&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; Assigned&lt;F&gt;: From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V&gt;,
 {
-    <span class="doccomment">/// Copies the value to a given advice cell and constrains them to be equal.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns an error if either this cell or the given cell are in columns</span>
-    <span class="doccomment">/// where equality has not been enabled.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">copy_advice</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
+    <span class="doccomment">/// Copies the value to a given advice cell and constrains them to be equal.
+    ///
+    /// Returns an error if either this cell or the given cell are in columns
+    /// where equality has not been enabled.
+    </span><span class="kw">pub fn </span>copy_advice&lt;A, AR&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">annotation</span>: <span class="ident">A</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+        annotation: A,
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, F&gt;,
+        column: Column&lt;Advice&gt;,
+        offset: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt;
+    <span class="kw">where
+        </span>A: Fn() -&gt; AR,
+        AR: Into&lt;String&gt;,
     {
-        <span class="kw">let</span> <span class="ident">assigned_cell</span> <span class="op">=</span>
-            <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="ident">annotation</span>, <span class="ident">column</span>, <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">value</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
-        <span class="ident">region</span>.<span class="ident">constrain_equal</span>(<span class="ident">assigned_cell</span>.<span class="ident">cell</span>(), <span class="self">self</span>.<span class="ident">cell</span>())<span class="question-mark">?</span>;
+        <span class="kw">let </span>assigned_cell =
+            region.assign_advice(annotation, column, offset, || <span class="self">self</span>.value.clone())<span class="question-mark">?</span>;
+        region.constrain_equal(assigned_cell.cell(), <span class="self">self</span>.cell())<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">assigned_cell</span>)
+        <span class="prelude-val">Ok</span>(assigned_cell)
     }
 }
 
-<span class="doccomment">/// A region of the circuit in which a [`Chip`] can assign cells.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Inside a region, the chip may freely use relative offsets; the [`Layouter`] will</span>
-<span class="doccomment">/// treat these assignments as a single &quot;region&quot; within the circuit.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The [`Layouter`] is allowed to optimise between regions as it sees fit. Chips must use</span>
-<span class="doccomment">/// [`Region::constrain_equal`] to copy in variables assigned in other regions.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// TODO: It would be great if we could constrain the columns in these types to be</span>
-<span class="doccomment">/// &quot;logical&quot; columns that are guaranteed to correspond to the chip (and have come from</span>
-<span class="doccomment">/// `Chip::Config`).</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> {
-    <span class="ident">region</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">layouter::RegionLayouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A region of the circuit in which a [`Chip`] can assign cells.
+///
+/// Inside a region, the chip may freely use relative offsets; the [`Layouter`] will
+/// treat these assignments as a single &quot;region&quot; within the circuit.
+///
+/// The [`Layouter`] is allowed to optimise between regions as it sees fit. Chips must use
+/// [`Region::constrain_equal`] to copy in variables assigned in other regions.
+///
+/// TODO: It would be great if we could constrain the columns in these types to be
+/// &quot;logical&quot; columns that are guaranteed to correspond to the chip (and have come from
+/// `Chip::Config`).
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>Region&lt;<span class="lifetime">&#39;r</span>, F: Field&gt; {
+    region: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span><span class="kw-2">mut </span><span class="kw">dyn </span>layouter::RegionLayouter&lt;F&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">layouter::RegionLayouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">region</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">layouter::RegionLayouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Region</span> { <span class="ident">region</span> }
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;r</span>, F: Field&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span><span class="kw-2">mut </span><span class="kw">dyn </span>layouter::RegionLayouter&lt;F&gt;&gt; <span class="kw">for </span>Region&lt;<span class="lifetime">&#39;r</span>, F&gt; {
+    <span class="kw">fn </span>from(region: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span><span class="kw-2">mut </span><span class="kw">dyn </span>layouter::RegionLayouter&lt;F&gt;) -&gt; <span class="self">Self </span>{
+        Region { region }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Enables a selector at the given offset.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">enable_selector</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">annotation</span>: <span class="ident">A</span>,
-        <span class="ident">selector</span>: <span class="kw-2">&amp;</span><span class="ident">Selector</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;r</span>, F: Field&gt; Region&lt;<span class="lifetime">&#39;r</span>, F&gt; {
+    <span class="doccomment">/// Enables a selector at the given offset.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>enable_selector&lt;A, AR&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        annotation: A,
+        selector: <span class="kw-2">&amp;</span>Selector,
+        offset: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+    <span class="kw">where
+        </span>A: Fn() -&gt; AR,
+        AR: Into&lt;String&gt;,
     {
-        <span class="self">self</span>.<span class="ident">region</span>
-            .<span class="ident">enable_selector</span>(<span class="kw-2">&amp;</span><span class="op">|</span><span class="op">|</span> <span class="ident">annotation</span>().<span class="ident">into</span>(), <span class="ident">selector</span>, <span class="ident">offset</span>)
+        <span class="self">self</span>.region
+            .enable_selector(<span class="kw-2">&amp;</span>|| annotation().into(), selector, offset)
     }
 
-    <span class="doccomment">/// Assign an advice column value (witness).</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assign_advice</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span>, <span class="ident">V</span>, <span class="ident">VR</span>, <span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">annotation</span>: <span class="ident">A</span>,
-        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="kw-2">mut</span> <span class="ident">to</span>: <span class="ident">V</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnMut</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>,
-        <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;vr</span><span class="op">&gt;</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;vr</span> <span class="ident">VR</span><span class="op">&gt;</span>,
-        <span class="ident">A</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Assign an advice column value (witness).
+    ///
+    /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.
+    </span><span class="kw">pub fn </span>assign_advice&lt;<span class="lifetime">&#39;v</span>, V, VR, A, AR&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span><span class="kw-2">mut </span><span class="self">self</span>,
+        annotation: A,
+        column: Column&lt;Advice&gt;,
+        offset: usize,
+        <span class="kw-2">mut </span>to: V,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;AssignedCell&lt;VR, F&gt;, Error&gt;
+    <span class="kw">where
+        </span>V: FnMut() -&gt; Value&lt;VR&gt; + <span class="lifetime">&#39;v</span>,
+        <span class="kw">for</span>&lt;<span class="lifetime">&#39;vr</span>&gt; Assigned&lt;F&gt;: From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;vr </span>VR&gt;,
+        A: Fn() -&gt; AR,
+        AR: Into&lt;String&gt;,
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">Value::unknown</span>();
-        <span class="kw">let</span> <span class="ident">cell</span> <span class="op">=</span>
-            <span class="self">self</span>.<span class="ident">region</span>
-                .<span class="ident">assign_advice</span>(<span class="kw-2">&amp;</span><span class="op">|</span><span class="op">|</span> <span class="ident">annotation</span>().<span class="ident">into</span>(), <span class="ident">column</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;mut</span> <span class="op">|</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">to</span>();
-                    <span class="kw">let</span> <span class="ident">value_f</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">to_field</span>();
-                    <span class="ident">value</span> <span class="op">=</span> <span class="ident">v</span>;
-                    <span class="ident">value_f</span>
+        <span class="kw">let </span><span class="kw-2">mut </span>value = Value::unknown();
+        <span class="kw">let </span>cell =
+            <span class="self">self</span>.region
+                .assign_advice(<span class="kw-2">&amp;</span>|| annotation().into(), column, offset, <span class="kw-2">&amp;mut </span>|| {
+                    <span class="kw">let </span>v = to();
+                    <span class="kw">let </span>value_f = v.to_field();
+                    value = v;
+                    value_f
                 })<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">AssignedCell</span> {
-            <span class="ident">value</span>,
-            <span class="ident">cell</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+        <span class="prelude-val">Ok</span>(AssignedCell {
+            value,
+            cell,
+            _marker: PhantomData,
         })
     }
 
-    <span class="doccomment">/// Assigns a constant value to the column `advice` at `offset` within this region.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The constant value will be assigned to a cell within one of the fixed columns</span>
-    <span class="doccomment">/// configured via `ConstraintSystem::enable_constant`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns the advice cell.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assign_advice_from_constant</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">annotation</span>: <span class="ident">A</span>,
-        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">constant</span>: <span class="ident">VR</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;vr</span><span class="op">&gt;</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;vr</span> <span class="ident">VR</span><span class="op">&gt;</span>,
-        <span class="ident">A</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Assigns a constant value to the column `advice` at `offset` within this region.
+    ///
+    /// The constant value will be assigned to a cell within one of the fixed columns
+    /// configured via `ConstraintSystem::enable_constant`.
+    ///
+    /// Returns the advice cell.
+    </span><span class="kw">pub fn </span>assign_advice_from_constant&lt;VR, A, AR&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        annotation: A,
+        column: Column&lt;Advice&gt;,
+        offset: usize,
+        constant: VR,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;AssignedCell&lt;VR, F&gt;, Error&gt;
+    <span class="kw">where
+        for</span>&lt;<span class="lifetime">&#39;vr</span>&gt; Assigned&lt;F&gt;: From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;vr </span>VR&gt;,
+        A: Fn() -&gt; AR,
+        AR: Into&lt;String&gt;,
     {
-        <span class="kw">let</span> <span class="ident">cell</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">region</span>.<span class="ident">assign_advice_from_constant</span>(
-            <span class="kw-2">&amp;</span><span class="op">|</span><span class="op">|</span> <span class="ident">annotation</span>().<span class="ident">into</span>(),
-            <span class="ident">column</span>,
-            <span class="ident">offset</span>,
-            (<span class="kw-2">&amp;</span><span class="ident">constant</span>).<span class="ident">into</span>(),
+        <span class="kw">let </span>cell = <span class="self">self</span>.region.assign_advice_from_constant(
+            <span class="kw-2">&amp;</span>|| annotation().into(),
+            column,
+            offset,
+            (<span class="kw-2">&amp;</span>constant).into(),
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">AssignedCell</span> {
-            <span class="ident">value</span>: <span class="ident">Value::known</span>(<span class="ident">constant</span>),
-            <span class="ident">cell</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+        <span class="prelude-val">Ok</span>(AssignedCell {
+            value: Value::known(constant),
+            cell,
+            _marker: PhantomData,
         })
     }
 
-    <span class="doccomment">/// Assign the value of the instance column&#39;s cell at absolute location</span>
-    <span class="doccomment">/// `row` to the column `advice` at `offset` within this region.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns the advice cell, and its value if known.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assign_advice_from_instance</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">annotation</span>: <span class="ident">A</span>,
-        <span class="ident">instance</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-        <span class="ident">advice</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Assign the value of the instance column&#39;s cell at absolute location
+    /// `row` to the column `advice` at `offset` within this region.
+    ///
+    /// Returns the advice cell, and its value if known.
+    </span><span class="kw">pub fn </span>assign_advice_from_instance&lt;A, AR&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        annotation: A,
+        instance: Column&lt;Instance&gt;,
+        row: usize,
+        advice: Column&lt;Advice&gt;,
+        offset: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;AssignedCell&lt;F, F&gt;, Error&gt;
+    <span class="kw">where
+        </span>A: Fn() -&gt; AR,
+        AR: Into&lt;String&gt;,
     {
-        <span class="kw">let</span> (<span class="ident">cell</span>, <span class="ident">value</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">region</span>.<span class="ident">assign_advice_from_instance</span>(
-            <span class="kw-2">&amp;</span><span class="op">|</span><span class="op">|</span> <span class="ident">annotation</span>().<span class="ident">into</span>(),
-            <span class="ident">instance</span>,
-            <span class="ident">row</span>,
-            <span class="ident">advice</span>,
-            <span class="ident">offset</span>,
+        <span class="kw">let </span>(cell, value) = <span class="self">self</span>.region.assign_advice_from_instance(
+            <span class="kw-2">&amp;</span>|| annotation().into(),
+            instance,
+            row,
+            advice,
+            offset,
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">AssignedCell</span> {
-            <span class="ident">value</span>,
-            <span class="ident">cell</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+        <span class="prelude-val">Ok</span>(AssignedCell {
+            value,
+            cell,
+            _marker: PhantomData,
         })
     }
 
-    <span class="doccomment">/// Assign a fixed value.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assign_fixed</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span>, <span class="ident">V</span>, <span class="ident">VR</span>, <span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">annotation</span>: <span class="ident">A</span>,
-        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="kw-2">mut</span> <span class="ident">to</span>: <span class="ident">V</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">VR</span>, <span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnMut</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>,
-        <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;vr</span><span class="op">&gt;</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;vr</span> <span class="ident">VR</span><span class="op">&gt;</span>,
-        <span class="ident">A</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Assign a fixed value.
+    ///
+    /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.
+    </span><span class="kw">pub fn </span>assign_fixed&lt;<span class="lifetime">&#39;v</span>, V, VR, A, AR&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span><span class="kw-2">mut </span><span class="self">self</span>,
+        annotation: A,
+        column: Column&lt;Fixed&gt;,
+        offset: usize,
+        <span class="kw-2">mut </span>to: V,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;AssignedCell&lt;VR, F&gt;, Error&gt;
+    <span class="kw">where
+        </span>V: FnMut() -&gt; Value&lt;VR&gt; + <span class="lifetime">&#39;v</span>,
+        <span class="kw">for</span>&lt;<span class="lifetime">&#39;vr</span>&gt; Assigned&lt;F&gt;: From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;vr </span>VR&gt;,
+        A: Fn() -&gt; AR,
+        AR: Into&lt;String&gt;,
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">Value::unknown</span>();
-        <span class="kw">let</span> <span class="ident">cell</span> <span class="op">=</span>
-            <span class="self">self</span>.<span class="ident">region</span>
-                .<span class="ident">assign_fixed</span>(<span class="kw-2">&amp;</span><span class="op">|</span><span class="op">|</span> <span class="ident">annotation</span>().<span class="ident">into</span>(), <span class="ident">column</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;mut</span> <span class="op">|</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">to</span>();
-                    <span class="kw">let</span> <span class="ident">value_f</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">to_field</span>();
-                    <span class="ident">value</span> <span class="op">=</span> <span class="ident">v</span>;
-                    <span class="ident">value_f</span>
+        <span class="kw">let </span><span class="kw-2">mut </span>value = Value::unknown();
+        <span class="kw">let </span>cell =
+            <span class="self">self</span>.region
+                .assign_fixed(<span class="kw-2">&amp;</span>|| annotation().into(), column, offset, <span class="kw-2">&amp;mut </span>|| {
+                    <span class="kw">let </span>v = to();
+                    <span class="kw">let </span>value_f = v.to_field();
+                    value = v;
+                    value_f
                 })<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">AssignedCell</span> {
-            <span class="ident">value</span>,
-            <span class="ident">cell</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+        <span class="prelude-val">Ok</span>(AssignedCell {
+            value,
+            cell,
+            _marker: PhantomData,
         })
     }
 
-    <span class="doccomment">/// Constrains a cell to have a constant value.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns an error if the cell is in a column where equality has not been enabled.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">constrain_constant</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">cell</span>: <span class="ident">Cell</span>, <span class="ident">constant</span>: <span class="ident">VR</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Constrains a cell to have a constant value.
+    ///
+    /// Returns an error if the cell is in a column where equality has not been enabled.
+    </span><span class="kw">pub fn </span>constrain_constant&lt;VR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cell: Cell, constant: VR) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+    <span class="kw">where
+        </span>VR: Into&lt;Assigned&lt;F&gt;&gt;,
     {
-        <span class="self">self</span>.<span class="ident">region</span>.<span class="ident">constrain_constant</span>(<span class="ident">cell</span>, <span class="ident">constant</span>.<span class="ident">into</span>())
+        <span class="self">self</span>.region.constrain_constant(cell, constant.into())
     }
 
-    <span class="doccomment">/// Constrains two cells to have the same value.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns an error if either of the cells are in columns where equality</span>
-    <span class="doccomment">/// has not been enabled.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">constrain_equal</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">left</span>: <span class="ident">Cell</span>, <span class="ident">right</span>: <span class="ident">Cell</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">region</span>.<span class="ident">constrain_equal</span>(<span class="ident">left</span>, <span class="ident">right</span>)
-    }
-}
-
-<span class="doccomment">/// A lookup table in the circuit.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Table</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> {
-    <span class="ident">table</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">layouter::TableLayouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">layouter::TableLayouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Table</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">table</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">layouter::TableLayouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Table</span> { <span class="ident">table</span> }
+    <span class="doccomment">/// Constrains two cells to have the same value.
+    ///
+    /// Returns an error if either of the cells are in columns where equality
+    /// has not been enabled.
+    </span><span class="kw">pub fn </span>constrain_equal(<span class="kw-2">&amp;mut </span><span class="self">self</span>, left: Cell, right: Cell) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="self">self</span>.region.constrain_equal(left, right)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Table</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Assigns a fixed value to a table cell.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns an error if the table cell has already been assigned to.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assign_cell</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span>, <span class="ident">V</span>, <span class="ident">VR</span>, <span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">annotation</span>: <span class="ident">A</span>,
-        <span class="ident">column</span>: <span class="ident">TableColumn</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="kw-2">mut</span> <span class="ident">to</span>: <span class="ident">V</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnMut</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>,
-        <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">A</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A lookup table in the circuit.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>Table&lt;<span class="lifetime">&#39;r</span>, F: Field&gt; {
+    table: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span><span class="kw-2">mut </span><span class="kw">dyn </span>layouter::TableLayouter&lt;F&gt;,
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;r</span>, F: Field&gt; From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span><span class="kw-2">mut </span><span class="kw">dyn </span>layouter::TableLayouter&lt;F&gt;&gt; <span class="kw">for </span>Table&lt;<span class="lifetime">&#39;r</span>, F&gt; {
+    <span class="kw">fn </span>from(table: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span><span class="kw-2">mut </span><span class="kw">dyn </span>layouter::TableLayouter&lt;F&gt;) -&gt; <span class="self">Self </span>{
+        Table { table }
+    }
+}
+
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;r</span>, F: Field&gt; Table&lt;<span class="lifetime">&#39;r</span>, F&gt; {
+    <span class="doccomment">/// Assigns a fixed value to a table cell.
+    ///
+    /// Returns an error if the table cell has already been assigned to.
+    ///
+    /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.
+    </span><span class="kw">pub fn </span>assign_cell&lt;<span class="lifetime">&#39;v</span>, V, VR, A, AR&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span><span class="kw-2">mut </span><span class="self">self</span>,
+        annotation: A,
+        column: TableColumn,
+        offset: usize,
+        <span class="kw-2">mut </span>to: V,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+    <span class="kw">where
+        </span>V: FnMut() -&gt; Value&lt;VR&gt; + <span class="lifetime">&#39;v</span>,
+        VR: Into&lt;Assigned&lt;F&gt;&gt;,
+        A: Fn() -&gt; AR,
+        AR: Into&lt;String&gt;,
     {
-        <span class="self">self</span>.<span class="ident">table</span>
-            .<span class="ident">assign_cell</span>(<span class="kw-2">&amp;</span><span class="op">|</span><span class="op">|</span> <span class="ident">annotation</span>().<span class="ident">into</span>(), <span class="ident">column</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;mut</span> <span class="op">|</span><span class="op">|</span> {
-                <span class="ident">to</span>().<span class="ident">into_field</span>()
+        <span class="self">self</span>.table
+            .assign_cell(<span class="kw-2">&amp;</span>|| annotation().into(), column, offset, <span class="kw-2">&amp;mut </span>|| {
+                to().into_field()
             })
     }
 }
 
-<span class="doccomment">/// A layout strategy within a circuit. The layouter is chip-agnostic and applies its</span>
-<span class="doccomment">/// strategy to the context and config it is given.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This abstracts over the circuit assignments, handling row indices etc.</span>
-<span class="doccomment">///</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Represents the type of the &quot;root&quot; of this layouter, so that nested namespaces</span>
-    <span class="doccomment">/// can minimize indirection.</span>
-    <span class="kw">type</span> <span class="ident">Root</span>: <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
+<span class="doccomment">/// A layout strategy within a circuit. The layouter is chip-agnostic and applies its
+/// strategy to the context and config it is given.
+///
+/// This abstracts over the circuit assignments, handling row indices etc.
+///
+</span><span class="kw">pub trait </span>Layouter&lt;F: Field&gt; {
+    <span class="doccomment">/// Represents the type of the &quot;root&quot; of this layouter, so that nested namespaces
+    /// can minimize indirection.
+    </span><span class="kw">type </span>Root: Layouter&lt;F&gt;;
 
-    <span class="doccomment">/// Assign a region of gates to an absolute row number.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Inside the closure, the chip may freely use relative offsets; the `Layouter` will</span>
-    <span class="doccomment">/// treat these assignments as a single &quot;region&quot; within the circuit. Outside this</span>
-    <span class="doccomment">/// closure, the `Layouter` is allowed to optimise as it sees fit.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// ```ignore</span>
-    <span class="doccomment">/// fn assign_region(&amp;mut self, || &quot;region name&quot;, |region| {</span>
-    <span class="doccomment">///     let config = chip.config();</span>
-    <span class="doccomment">///     region.assign_advice(config.a, offset, || { Some(value)});</span>
-    <span class="doccomment">/// });</span>
-    <span class="doccomment">/// ```</span>
-    <span class="kw">fn</span> <span class="ident">assign_region</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span>, <span class="ident">N</span>, <span class="ident">NR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="ident">N</span>, <span class="ident">assignment</span>: <span class="ident">A</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AR</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">FnMut</span>(<span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">NR</span>,
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// Assign a region of gates to an absolute row number.
+    ///
+    /// Inside the closure, the chip may freely use relative offsets; the `Layouter` will
+    /// treat these assignments as a single &quot;region&quot; within the circuit. Outside this
+    /// closure, the `Layouter` is allowed to optimise as it sees fit.
+    ///
+    /// ```ignore
+    /// fn assign_region(&amp;mut self, || &quot;region name&quot;, |region| {
+    ///     let config = chip.config();
+    ///     region.assign_advice(config.a, offset, || { Some(value)});
+    /// });
+    /// ```
+    </span><span class="kw">fn </span>assign_region&lt;A, AR, N, NR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: N, assignment: A) -&gt; <span class="prelude-ty">Result</span>&lt;AR, Error&gt;
+    <span class="kw">where
+        </span>A: FnMut(Region&lt;<span class="lifetime">&#39;_</span>, F&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;AR, Error&gt;,
+        N: Fn() -&gt; NR,
+        NR: Into&lt;String&gt;;
 
-    <span class="doccomment">/// Assign a table region to an absolute row number.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// ```ignore</span>
-    <span class="doccomment">/// fn assign_table(&amp;mut self, || &quot;table name&quot;, |table| {</span>
-    <span class="doccomment">///     let config = chip.config();</span>
-    <span class="doccomment">///     table.assign_fixed(config.a, offset, || { Some(value)});</span>
-    <span class="doccomment">/// });</span>
-    <span class="doccomment">/// ```</span>
-    <span class="kw">fn</span> <span class="ident">assign_table</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">N</span>, <span class="ident">NR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="ident">N</span>, <span class="ident">assignment</span>: <span class="ident">A</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">FnMut</span>(<span class="ident">Table</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">NR</span>,
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// Assign a table region to an absolute row number.
+    ///
+    /// ```ignore
+    /// fn assign_table(&amp;mut self, || &quot;table name&quot;, |table| {
+    ///     let config = chip.config();
+    ///     table.assign_fixed(config.a, offset, || { Some(value)});
+    /// });
+    /// ```
+    </span><span class="kw">fn </span>assign_table&lt;A, N, NR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: N, assignment: A) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+    <span class="kw">where
+        </span>A: FnMut(Table&lt;<span class="lifetime">&#39;_</span>, F&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;,
+        N: Fn() -&gt; NR,
+        NR: Into&lt;String&gt;;
 
-    <span class="doccomment">/// Constrains a [`Cell`] to equal an instance column&#39;s row value at an</span>
-    <span class="doccomment">/// absolute position.</span>
-    <span class="kw">fn</span> <span class="ident">constrain_instance</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">cell</span>: <span class="ident">Cell</span>,
-        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// Constrains a [`Cell`] to equal an instance column&#39;s row value at an
+    /// absolute position.
+    </span><span class="kw">fn </span>constrain_instance(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        cell: Cell,
+        column: Column&lt;Instance&gt;,
+        row: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
-    <span class="doccomment">/// Gets the &quot;root&quot; of this assignment, bypassing the namespacing.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Not intended for downstream consumption; use [`Layouter::namespace`] instead.</span>
-    <span class="kw">fn</span> <span class="ident">get_root</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Root</span>;
+    <span class="doccomment">/// Gets the &quot;root&quot; of this assignment, bypassing the namespacing.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    </span><span class="kw">fn </span>get_root(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Root;
 
-    <span class="doccomment">/// Creates a new (sub)namespace and enters into it.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Not intended for downstream consumption; use [`Layouter::namespace`] instead.</span>
-    <span class="kw">fn</span> <span class="ident">push_namespace</span><span class="op">&lt;</span><span class="ident">NR</span>, <span class="ident">N</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name_fn</span>: <span class="ident">N</span>)
-    <span class="kw">where</span>
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">NR</span>;
+    <span class="doccomment">/// Creates a new (sub)namespace and enters into it.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    </span><span class="kw">fn </span>push_namespace&lt;NR, N&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name_fn: N)
+    <span class="kw">where
+        </span>NR: Into&lt;String&gt;,
+        N: FnOnce() -&gt; NR;
 
-    <span class="doccomment">/// Exits out of the existing namespace.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Not intended for downstream consumption; use [`Layouter::namespace`] instead.</span>
-    <span class="kw">fn</span> <span class="ident">pop_namespace</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">gadget_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>);
+    <span class="doccomment">/// Exits out of the existing namespace.
+    ///
+    /// Not intended for downstream consumption; use [`Layouter::namespace`] instead.
+    </span><span class="kw">fn </span>pop_namespace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, gadget_name: <span class="prelude-ty">Option</span>&lt;String&gt;);
 
-    <span class="doccomment">/// Enters into a namespace.</span>
-    <span class="kw">fn</span> <span class="ident">namespace</span><span class="op">&lt;</span><span class="ident">NR</span>, <span class="ident">N</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name_fn</span>: <span class="ident">N</span>) -&gt; <span class="ident">NamespacedLayouter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span>, <span class="ident"><span class="self">Self</span>::Root</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">NR</span>,
+    <span class="doccomment">/// Enters into a namespace.
+    </span><span class="kw">fn </span>namespace&lt;NR, N&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name_fn: N) -&gt; NamespacedLayouter&lt;<span class="lifetime">&#39;_</span>, F, <span class="self">Self</span>::Root&gt;
+    <span class="kw">where
+        </span>NR: Into&lt;String&gt;,
+        N: FnOnce() -&gt; NR,
     {
-        <span class="self">self</span>.<span class="ident">get_root</span>().<span class="ident">push_namespace</span>(<span class="ident">name_fn</span>);
+        <span class="self">self</span>.get_root().push_namespace(name_fn);
 
-        <span class="ident">NamespacedLayouter</span>(<span class="self">self</span>.<span class="ident">get_root</span>(), <span class="ident">PhantomData</span>)
+        NamespacedLayouter(<span class="self">self</span>.get_root(), PhantomData)
     }
 }
 
-<span class="doccomment">/// This is a &quot;namespaced&quot; layouter which borrows a `Layouter` (pushing a namespace</span>
-<span class="doccomment">/// context) and, when dropped, pops out of the namespace context.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NamespacedLayouter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">L</span>: <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">L</span>, <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>);
+<span class="doccomment">/// This is a &quot;namespaced&quot; layouter which borrows a `Layouter` (pushing a namespace
+/// context) and, when dropped, pops out of the namespace context.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>NamespacedLayouter&lt;<span class="lifetime">&#39;a</span>, F: Field, L: Layouter&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>L, PhantomData&lt;F&gt;);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">L</span>: <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">NamespacedLayouter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">L</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Root</span> <span class="op">=</span> <span class="ident">L::Root</span>;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, F: Field, L: Layouter&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; Layouter&lt;F&gt; <span class="kw">for </span>NamespacedLayouter&lt;<span class="lifetime">&#39;a</span>, F, L&gt; {
+    <span class="kw">type </span>Root = L::Root;
 
-    <span class="kw">fn</span> <span class="ident">assign_region</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span>, <span class="ident">N</span>, <span class="ident">NR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="ident">N</span>, <span class="ident">assignment</span>: <span class="ident">A</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AR</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">FnMut</span>(<span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">NR</span>,
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">fn </span>assign_region&lt;A, AR, N, NR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: N, assignment: A) -&gt; <span class="prelude-ty">Result</span>&lt;AR, Error&gt;
+    <span class="kw">where
+        </span>A: FnMut(Region&lt;<span class="lifetime">&#39;_</span>, F&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;AR, Error&gt;,
+        N: Fn() -&gt; NR,
+        NR: Into&lt;String&gt;,
     {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">assign_region</span>(<span class="ident">name</span>, <span class="ident">assignment</span>)
+        <span class="self">self</span>.<span class="number">0</span>.assign_region(name, assignment)
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_table</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">N</span>, <span class="ident">NR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="ident">N</span>, <span class="ident">assignment</span>: <span class="ident">A</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">FnMut</span>(<span class="ident">Table</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">NR</span>,
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">fn </span>assign_table&lt;A, N, NR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: N, assignment: A) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+    <span class="kw">where
+        </span>A: FnMut(Table&lt;<span class="lifetime">&#39;_</span>, F&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;,
+        N: Fn() -&gt; NR,
+        NR: Into&lt;String&gt;,
     {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">assign_table</span>(<span class="ident">name</span>, <span class="ident">assignment</span>)
+        <span class="self">self</span>.<span class="number">0</span>.assign_table(name, assignment)
     }
 
-    <span class="kw">fn</span> <span class="ident">constrain_instance</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">cell</span>: <span class="ident">Cell</span>,
-        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">constrain_instance</span>(<span class="ident">cell</span>, <span class="ident">column</span>, <span class="ident">row</span>)
+    <span class="kw">fn </span>constrain_instance(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        cell: Cell,
+        column: Column&lt;Instance&gt;,
+        row: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.constrain_instance(cell, column, row)
     }
 
-    <span class="kw">fn</span> <span class="ident">get_root</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Root</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">get_root</span>()
+    <span class="kw">fn </span>get_root(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Root {
+        <span class="self">self</span>.<span class="number">0</span>.get_root()
     }
 
-    <span class="kw">fn</span> <span class="ident">push_namespace</span><span class="op">&lt;</span><span class="ident">NR</span>, <span class="ident">N</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">_name_fn</span>: <span class="ident">N</span>)
-    <span class="kw">where</span>
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">NR</span>,
+    <span class="kw">fn </span>push_namespace&lt;NR, N&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _name_fn: N)
+    <span class="kw">where
+        </span>NR: Into&lt;String&gt;,
+        N: FnOnce() -&gt; NR,
     {
         <span class="macro">panic!</span>(<span class="string">&quot;Only the root&#39;s push_namespace should be called&quot;</span>);
     }
 
-    <span class="kw">fn</span> <span class="ident">pop_namespace</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">_gadget_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) {
+    <span class="kw">fn </span>pop_namespace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _gadget_name: <span class="prelude-ty">Option</span>&lt;String&gt;) {
         <span class="macro">panic!</span>(<span class="string">&quot;Only the root&#39;s pop_namespace should be called&quot;</span>);
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">L</span>: <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">NamespacedLayouter</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">L</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="kw">let</span> <span class="ident">gadget_name</span> <span class="op">=</span> {
-            <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;gadget-traces&quot;</span>)]</span>
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, F: Field, L: Layouter&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; Drop <span class="kw">for </span>NamespacedLayouter&lt;<span class="lifetime">&#39;a</span>, F, L&gt; {
+    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="kw">let </span>gadget_name = {
+            <span class="attribute">#[cfg(feature = <span class="string">&quot;gadget-traces&quot;</span>)]</span>
             {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gadget_name</span> <span class="op">=</span> <span class="prelude-val">None</span>;
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">is_second_frame</span> <span class="op">=</span> <span class="bool-val">false</span>;
-                <span class="ident">backtrace::trace</span>(<span class="op">|</span><span class="ident">frame</span><span class="op">|</span> {
-                    <span class="kw">if</span> <span class="ident">is_second_frame</span> {
-                        <span class="comment">// Resolve this instruction pointer to a symbol name.</span>
-                        <span class="ident">backtrace::resolve_frame</span>(<span class="ident">frame</span>, <span class="op">|</span><span class="ident">symbol</span><span class="op">|</span> {
-                            <span class="ident">gadget_name</span> <span class="op">=</span> <span class="ident">symbol</span>.<span class="ident">name</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">name</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;{:#}&quot;</span>, <span class="ident">name</span>));
+                <span class="kw">let </span><span class="kw-2">mut </span>gadget_name = <span class="prelude-val">None</span>;
+                <span class="kw">let </span><span class="kw-2">mut </span>is_second_frame = <span class="bool-val">false</span>;
+                backtrace::trace(|frame| {
+                    <span class="kw">if </span>is_second_frame {
+                        <span class="comment">// Resolve this instruction pointer to a symbol name.
+                        </span>backtrace::resolve_frame(frame, |symbol| {
+                            gadget_name = symbol.name().map(|name| <span class="macro">format!</span>(<span class="string">&quot;{:#}&quot;</span>, name));
                         });
 
-                        <span class="comment">// We are done!</span>
-                        <span class="bool-val">false</span>
-                    } <span class="kw">else</span> {
-                        <span class="comment">// We want the next frame.</span>
-                        <span class="ident">is_second_frame</span> <span class="op">=</span> <span class="bool-val">true</span>;
-                        <span class="bool-val">true</span>
-                    }
+                        <span class="comment">// We are done!
+                        </span><span class="bool-val">false
+                    </span>} <span class="kw">else </span>{
+                        <span class="comment">// We want the next frame.
+                        </span>is_second_frame = <span class="bool-val">true</span>;
+                        <span class="bool-val">true
+                    </span>}
                 });
-                <span class="ident">gadget_name</span>
+                gadget_name
             }
 
-            <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;gadget-traces&quot;</span>))]</span>
-            <span class="prelude-val">None</span>
-        };
+            <span class="attribute">#[cfg(not(feature = <span class="string">&quot;gadget-traces&quot;</span>))]</span>
+            <span class="prelude-val">None
+        </span>};
 
-        <span class="self">self</span>.<span class="ident">get_root</span>().<span class="ident">pop_namespace</span>(<span class="ident">gadget_name</span>);
+        <span class="self">self</span>.get_root().pop_namespace(gadget_name);
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

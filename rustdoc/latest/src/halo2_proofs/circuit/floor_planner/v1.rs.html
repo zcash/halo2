@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -560,141 +554,141 @@
 <span id="539">539</span>
 <span id="540">540</span>
 <span id="541">541</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::fmt</span>;
+</pre><pre class="rust"><code><span class="kw">use </span>std::fmt;
 
-<span class="kw">use</span> <span class="ident">ff::Field</span>;
+<span class="kw">use </span>ff::Field;
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">circuit</span>::{
-        <span class="ident">floor_planner::single_pass::SimpleTableLayouter</span>,
-        <span class="ident">layouter</span>::{<span class="ident">RegionColumn</span>, <span class="ident">RegionLayouter</span>, <span class="ident">RegionShape</span>, <span class="ident">TableLayouter</span>},
-        <span class="ident">Cell</span>, <span class="ident">Layouter</span>, <span class="ident">Region</span>, <span class="ident">RegionIndex</span>, <span class="ident">RegionStart</span>, <span class="ident">Table</span>, <span class="ident">Value</span>,
+<span class="kw">use crate</span>::{
+    circuit::{
+        floor_planner::single_pass::SimpleTableLayouter,
+        layouter::{RegionColumn, RegionLayouter, RegionShape, TableLayouter},
+        Cell, Layouter, Region, RegionIndex, RegionStart, Table, Value,
     },
-    <span class="ident">plonk</span>::{
-        <span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Assigned</span>, <span class="ident">Assignment</span>, <span class="ident">Circuit</span>, <span class="ident">Column</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>, <span class="ident">FloorPlanner</span>, <span class="ident">Instance</span>,
-        <span class="ident">Selector</span>, <span class="ident">TableColumn</span>,
+    plonk::{
+        Advice, Any, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Instance,
+        Selector, TableColumn,
     },
 };
 
-<span class="kw">mod</span> <span class="ident">strategy</span>;
+<span class="kw">mod </span>strategy;
 
-<span class="doccomment">/// The version 1 [`FloorPlanner`] provided by `halo2`.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// - No column optimizations are performed. Circuit configuration is left entirely to the</span>
-<span class="doccomment">///   circuit designer.</span>
-<span class="doccomment">/// - A dual-pass layouter is used to measures regions prior to assignment.</span>
-<span class="doccomment">/// - Regions are measured as rectangles, bounded on the cells they assign.</span>
-<span class="doccomment">/// - Regions are laid out using a greedy first-fit strategy, after sorting regions by</span>
-<span class="doccomment">///   their &quot;advice area&quot; (number of advice columns * rows).</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">V1</span>;
+<span class="doccomment">/// The version 1 [`FloorPlanner`] provided by `halo2`.
+///
+/// - No column optimizations are performed. Circuit configuration is left entirely to the
+///   circuit designer.
+/// - A dual-pass layouter is used to measures regions prior to assignment.
+/// - Regions are measured as rectangles, bounded on the cells they assign.
+/// - Regions are laid out using a greedy first-fit strategy, after sorting regions by
+///   their &quot;advice area&quot; (number of advice columns * rows).
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>V1;
 
-<span class="kw">struct</span> <span class="ident">V1Plan</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="ident">cs</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">CS</span>,
-    <span class="doccomment">/// Stores the starting row for each region.</span>
-    <span class="ident">regions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RegionStart</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Stores the constants to be assigned, and the cells to which they are copied.</span>
-    <span class="ident">constants</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Cell</span>)<span class="op">&gt;</span>,
-    <span class="doccomment">/// Stores the table fixed columns.</span>
-    <span class="ident">table_columns</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TableColumn</span><span class="op">&gt;</span>,
+<span class="kw">struct </span>V1Plan&lt;<span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; {
+    cs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>CS,
+    <span class="doccomment">/// Stores the starting row for each region.
+    </span>regions: Vec&lt;RegionStart&gt;,
+    <span class="doccomment">/// Stores the constants to be assigned, and the cells to which they are copied.
+    </span>constants: Vec&lt;(Assigned&lt;F&gt;, Cell)&gt;,
+    <span class="doccomment">/// Stores the table fixed columns.
+    </span>table_columns: Vec&lt;TableColumn&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">fmt::Debug</span> <span class="kw">for</span> <span class="ident">V1Plan</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
-        <span class="ident">f</span>.<span class="ident">debug_struct</span>(<span class="string">&quot;floor_planner::V1Plan&quot;</span>).<span class="ident">finish</span>()
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; fmt::Debug <span class="kw">for </span>V1Plan&lt;<span class="lifetime">&#39;a</span>, F, CS&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+        f.debug_struct(<span class="string">&quot;floor_planner::V1Plan&quot;</span>).finish()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">V1Plan</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Creates a new v1 layouter.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">cs</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">CS</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="ident">V1Plan</span> {
-            <span class="ident">cs</span>,
-            <span class="ident">regions</span>: <span class="macro">vec!</span>[],
-            <span class="ident">constants</span>: <span class="macro">vec!</span>[],
-            <span class="ident">table_columns</span>: <span class="macro">vec!</span>[],
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt;&gt; V1Plan&lt;<span class="lifetime">&#39;a</span>, F, CS&gt; {
+    <span class="doccomment">/// Creates a new v1 layouter.
+    </span><span class="kw">pub fn </span>new(cs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>CS) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>ret = V1Plan {
+            cs,
+            regions: <span class="macro">vec!</span>[],
+            constants: <span class="macro">vec!</span>[],
+            table_columns: <span class="macro">vec!</span>[],
         };
-        <span class="prelude-val">Ok</span>(<span class="ident">ret</span>)
+        <span class="prelude-val">Ok</span>(ret)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">FloorPlanner</span> <span class="kw">for</span> <span class="ident">V1</span> {
-    <span class="kw">fn</span> <span class="ident">synthesize</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">C</span>: <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>(
-        <span class="ident">cs</span>: <span class="kw-2">&amp;mut</span> <span class="ident">CS</span>,
-        <span class="ident">circuit</span>: <span class="kw-2">&amp;</span><span class="ident">C</span>,
-        <span class="ident">config</span>: <span class="ident">C::Config</span>,
-        <span class="ident">constants</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">plan</span> <span class="op">=</span> <span class="ident">V1Plan::new</span>(<span class="ident">cs</span>)<span class="question-mark">?</span>;
+<span class="kw">impl </span>FloorPlanner <span class="kw">for </span>V1 {
+    <span class="kw">fn </span>synthesize&lt;F: Field, CS: Assignment&lt;F&gt;, C: Circuit&lt;F&gt;&gt;(
+        cs: <span class="kw-2">&amp;mut </span>CS,
+        circuit: <span class="kw-2">&amp;</span>C,
+        config: C::Config,
+        constants: Vec&lt;Column&lt;Fixed&gt;&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>plan = V1Plan::new(cs)<span class="question-mark">?</span>;
 
-        <span class="comment">// First pass: measure the regions within the circuit.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">measure</span> <span class="op">=</span> <span class="ident">MeasurementPass::new</span>();
+        <span class="comment">// First pass: measure the regions within the circuit.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>measure = MeasurementPass::new();
         {
-            <span class="kw">let</span> <span class="ident">pass</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">measure</span>;
-            <span class="ident">circuit</span>
-                .<span class="ident">without_witnesses</span>()
-                .<span class="ident">synthesize</span>(<span class="ident">config</span>.<span class="ident">clone</span>(), <span class="ident">V1Pass</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">CS</span><span class="op">&gt;</span><span class="ident">::measure</span>(<span class="ident">pass</span>))<span class="question-mark">?</span>;
+            <span class="kw">let </span>pass = <span class="kw-2">&amp;mut </span>measure;
+            circuit
+                .without_witnesses()
+                .synthesize(config.clone(), V1Pass::&lt;<span class="kw">_</span>, CS&gt;::measure(pass))<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// Planning:</span>
-        <span class="comment">// - Position the regions.</span>
-        <span class="kw">let</span> (<span class="ident">regions</span>, <span class="ident">column_allocations</span>) <span class="op">=</span> <span class="ident">strategy::slot_in_biggest_advice_first</span>(<span class="ident">measure</span>.<span class="ident">regions</span>);
-        <span class="ident">plan</span>.<span class="ident">regions</span> <span class="op">=</span> <span class="ident">regions</span>;
+        <span class="comment">// Planning:
+        // - Position the regions.
+        </span><span class="kw">let </span>(regions, column_allocations) = strategy::slot_in_biggest_advice_first(measure.regions);
+        plan.regions = regions;
 
-        <span class="comment">// - Determine how many rows our planned circuit will require.</span>
-        <span class="kw">let</span> <span class="ident">first_unassigned_row</span> <span class="op">=</span> <span class="ident">column_allocations</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">a</span>)<span class="op">|</span> <span class="ident">a</span>.<span class="ident">unbounded_interval_start</span>())
-            .<span class="ident">max</span>()
-            .<span class="ident">unwrap_or</span>(<span class="number">0</span>);
+        <span class="comment">// - Determine how many rows our planned circuit will require.
+        </span><span class="kw">let </span>first_unassigned_row = column_allocations
+            .iter()
+            .map(|(<span class="kw">_</span>, a)| a.unbounded_interval_start())
+            .max()
+            .unwrap_or(<span class="number">0</span>);
 
-        <span class="comment">// - Position the constants within those rows.</span>
-        <span class="kw">let</span> <span class="ident">fixed_allocations</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">constants</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> {
+        <span class="comment">// - Position the constants within those rows.
+        </span><span class="kw">let </span>fixed_allocations: Vec&lt;<span class="kw">_</span>&gt; = constants
+            .into_iter()
+            .map(|c| {
                 (
-                    <span class="ident">c</span>,
-                    <span class="ident">column_allocations</span>
-                        .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">Column</span>::<span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="ident">::from</span>(<span class="ident">c</span>).<span class="ident">into</span>())
-                        .<span class="ident">cloned</span>()
-                        .<span class="ident">unwrap_or_default</span>(),
+                    c,
+                    column_allocations
+                        .get(<span class="kw-2">&amp;</span>Column::&lt;Any&gt;::from(c).into())
+                        .cloned()
+                        .unwrap_or_default(),
                 )
             })
-            .<span class="ident">collect</span>();
-        <span class="kw">let</span> <span class="ident">constant_positions</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> {
-            <span class="ident">fixed_allocations</span>.<span class="ident">iter</span>().<span class="ident">flat_map</span>(<span class="op">|</span>(<span class="ident">c</span>, <span class="ident">a</span>)<span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">c</span>;
-                <span class="ident">a</span>.<span class="ident">free_intervals</span>(<span class="number">0</span>, <span class="prelude-val">Some</span>(<span class="ident">first_unassigned_row</span>))
-                    .<span class="ident">flat_map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">range</span>().<span class="ident">unwrap</span>().<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">i</span><span class="op">|</span> (<span class="ident">c</span>, <span class="ident">i</span>)))
+            .collect();
+        <span class="kw">let </span>constant_positions = || {
+            fixed_allocations.iter().flat_map(|(c, a)| {
+                <span class="kw">let </span>c = <span class="kw-2">*</span>c;
+                a.free_intervals(<span class="number">0</span>, <span class="prelude-val">Some</span>(first_unassigned_row))
+                    .flat_map(<span class="kw">move </span>|e| e.range().unwrap().map(<span class="kw">move </span>|i| (c, i)))
             })
         };
 
-        <span class="comment">// Second pass:</span>
-        <span class="comment">// - Assign the regions.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">assign</span> <span class="op">=</span> <span class="ident">AssignmentPass::new</span>(<span class="kw-2">&amp;mut</span> <span class="ident">plan</span>);
+        <span class="comment">// Second pass:
+        // - Assign the regions.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>assign = AssignmentPass::new(<span class="kw-2">&amp;mut </span>plan);
         {
-            <span class="kw">let</span> <span class="ident">pass</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">assign</span>;
-            <span class="ident">circuit</span>.<span class="ident">synthesize</span>(<span class="ident">config</span>, <span class="ident">V1Pass::assign</span>(<span class="ident">pass</span>))<span class="question-mark">?</span>;
+            <span class="kw">let </span>pass = <span class="kw-2">&amp;mut </span>assign;
+            circuit.synthesize(config, V1Pass::assign(pass))<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// - Assign the constants.</span>
-        <span class="kw">if</span> <span class="ident">constant_positions</span>().<span class="ident">count</span>() <span class="op">&lt;</span> <span class="ident">plan</span>.<span class="ident">constants</span>.<span class="ident">len</span>() {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::NotEnoughColumnsForConstants</span>);
+        <span class="comment">// - Assign the constants.
+        </span><span class="kw">if </span>constant_positions().count() &lt; plan.constants.len() {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::NotEnoughColumnsForConstants);
         }
-        <span class="kw">for</span> ((<span class="ident">fixed_column</span>, <span class="ident">fixed_row</span>), (<span class="ident">value</span>, <span class="ident">advice</span>)) <span class="kw">in</span>
-            <span class="ident">constant_positions</span>().<span class="ident">zip</span>(<span class="ident">plan</span>.<span class="ident">constants</span>.<span class="ident">into_iter</span>())
+        <span class="kw">for </span>((fixed_column, fixed_row), (value, advice)) <span class="kw">in
+            </span>constant_positions().zip(plan.constants.into_iter())
         {
-            <span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">assign_fixed</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Constant({:?})&quot;</span>, <span class="ident">value</span>.<span class="ident">evaluate</span>()),
-                <span class="ident">fixed_column</span>,
-                <span class="ident">fixed_row</span>,
-                <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">value</span>),
+            plan.cs.assign_fixed(
+                || <span class="macro">format!</span>(<span class="string">&quot;Constant({:?})&quot;</span>, value.evaluate()),
+                fixed_column,
+                fixed_row,
+                || Value::known(value),
             )<span class="question-mark">?</span>;
-            <span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">copy</span>(
-                <span class="ident">fixed_column</span>.<span class="ident">into</span>(),
-                <span class="ident">fixed_row</span>,
-                <span class="ident">advice</span>.<span class="ident">column</span>,
-                <span class="kw-2">*</span><span class="ident">plan</span>.<span class="ident">regions</span>[<span class="kw-2">*</span><span class="ident">advice</span>.<span class="ident">region_index</span>] <span class="op">+</span> <span class="ident">advice</span>.<span class="ident">row_offset</span>,
+            plan.cs.copy(
+                fixed_column.into(),
+                fixed_row,
+                advice.column,
+                <span class="kw-2">*</span>plan.regions[<span class="kw-2">*</span>advice.region_index] + advice.row_offset,
             )<span class="question-mark">?</span>;
         }
 
@@ -702,390 +696,390 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">enum</span> <span class="ident">Pass</span><span class="op">&lt;</span><span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="ident">Measurement</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;p</span> <span class="kw-2">mut</span> <span class="ident">MeasurementPass</span>),
-    <span class="ident">Assignment</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;p</span> <span class="kw-2">mut</span> <span class="ident">AssignmentPass</span><span class="op">&lt;</span><span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span>),
+<span class="attribute">#[derive(Debug)]</span>
+<span class="kw">enum </span>Pass&lt;<span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; {
+    Measurement(<span class="kw-2">&amp;</span><span class="lifetime">&#39;p </span><span class="kw-2">mut </span>MeasurementPass),
+    Assignment(<span class="kw-2">&amp;</span><span class="lifetime">&#39;p </span><span class="kw-2">mut </span>AssignmentPass&lt;<span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, F, CS&gt;),
 }
 
-<span class="doccomment">/// A single pass of the [`V1`] layouter.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">V1Pass</span><span class="op">&lt;</span><span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="ident">Pass</span><span class="op">&lt;</span><span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span>);
+<span class="doccomment">/// A single pass of the [`V1`] layouter.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>V1Pass&lt;<span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt;(Pass&lt;<span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, F, CS&gt;);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">V1Pass</span><span class="op">&lt;</span><span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">measure</span>(<span class="ident">pass</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;p</span> <span class="kw-2">mut</span> <span class="ident">MeasurementPass</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">V1Pass</span>(<span class="ident">Pass::Measurement</span>(<span class="ident">pass</span>))
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; V1Pass&lt;<span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, F, CS&gt; {
+    <span class="kw">fn </span>measure(pass: <span class="kw-2">&amp;</span><span class="lifetime">&#39;p </span><span class="kw-2">mut </span>MeasurementPass) -&gt; <span class="self">Self </span>{
+        V1Pass(Pass::Measurement(pass))
     }
 
-    <span class="kw">fn</span> <span class="ident">assign</span>(<span class="ident">pass</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;p</span> <span class="kw-2">mut</span> <span class="ident">AssignmentPass</span><span class="op">&lt;</span><span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">V1Pass</span>(<span class="ident">Pass::Assignment</span>(<span class="ident">pass</span>))
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">V1Pass</span><span class="op">&lt;</span><span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Root</span> <span class="op">=</span> <span class="self">Self</span>;
-
-    <span class="kw">fn</span> <span class="ident">assign_region</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span>, <span class="ident">N</span>, <span class="ident">NR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="ident">N</span>, <span class="ident">assignment</span>: <span class="ident">A</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AR</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">FnMut</span>(<span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">NR</span>,
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    {
-        <span class="kw">match</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="number">0</span> {
-            <span class="ident">Pass::Measurement</span>(<span class="ident">pass</span>) =&gt; <span class="ident">pass</span>.<span class="ident">assign_region</span>(<span class="ident">assignment</span>),
-            <span class="ident">Pass::Assignment</span>(<span class="ident">pass</span>) =&gt; <span class="ident">pass</span>.<span class="ident">assign_region</span>(<span class="ident">name</span>, <span class="ident">assignment</span>),
-        }
-    }
-
-    <span class="kw">fn</span> <span class="ident">assign_table</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">N</span>, <span class="ident">NR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="ident">N</span>, <span class="ident">assignment</span>: <span class="ident">A</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">FnMut</span>(<span class="ident">Table</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">NR</span>,
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    {
-        <span class="kw">match</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="number">0</span> {
-            <span class="ident">Pass::Measurement</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(()),
-            <span class="ident">Pass::Assignment</span>(<span class="ident">pass</span>) =&gt; <span class="ident">pass</span>.<span class="ident">assign_table</span>(<span class="ident">name</span>, <span class="ident">assignment</span>),
-        }
-    }
-
-    <span class="kw">fn</span> <span class="ident">constrain_instance</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">cell</span>: <span class="ident">Cell</span>,
-        <span class="ident">instance</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="number">0</span> {
-            <span class="ident">Pass::Measurement</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(()),
-            <span class="ident">Pass::Assignment</span>(<span class="ident">pass</span>) =&gt; <span class="ident">pass</span>.<span class="ident">constrain_instance</span>(<span class="ident">cell</span>, <span class="ident">instance</span>, <span class="ident">row</span>),
-        }
-    }
-
-    <span class="kw">fn</span> <span class="ident">get_root</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident"><span class="self">Self</span>::Root</span> {
-        <span class="self">self</span>
-    }
-
-    <span class="kw">fn</span> <span class="ident">push_namespace</span><span class="op">&lt;</span><span class="ident">NR</span>, <span class="ident">N</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name_fn</span>: <span class="ident">N</span>)
-    <span class="kw">where</span>
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">NR</span>,
-    {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Pass::Assignment</span>(<span class="ident">pass</span>) <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="number">0</span> {
-            <span class="ident">pass</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">push_namespace</span>(<span class="ident">name_fn</span>);
-        }
-    }
-
-    <span class="kw">fn</span> <span class="ident">pop_namespace</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">gadget_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Pass::Assignment</span>(<span class="ident">pass</span>) <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="number">0</span> {
-            <span class="ident">pass</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">pop_namespace</span>(<span class="ident">gadget_name</span>);
-        }
+    <span class="kw">fn </span>assign(pass: <span class="kw-2">&amp;</span><span class="lifetime">&#39;p </span><span class="kw-2">mut </span>AssignmentPass&lt;<span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, F, CS&gt;) -&gt; <span class="self">Self </span>{
+        V1Pass(Pass::Assignment(pass))
     }
 }
 
-<span class="doccomment">/// Measures the circuit.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MeasurementPass</span> {
-    <span class="ident">regions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RegionShape</span><span class="op">&gt;</span>,
-}
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; Layouter&lt;F&gt; <span class="kw">for </span>V1Pass&lt;<span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, F, CS&gt; {
+    <span class="kw">type </span>Root = <span class="self">Self</span>;
 
-<span class="kw">impl</span> <span class="ident">MeasurementPass</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident">MeasurementPass</span> { <span class="ident">regions</span>: <span class="macro">vec!</span>[] }
+    <span class="kw">fn </span>assign_region&lt;A, AR, N, NR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: N, assignment: A) -&gt; <span class="prelude-ty">Result</span>&lt;AR, Error&gt;
+    <span class="kw">where
+        </span>A: FnMut(Region&lt;<span class="lifetime">&#39;_</span>, F&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;AR, Error&gt;,
+        N: Fn() -&gt; NR,
+        NR: Into&lt;String&gt;,
+    {
+        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.<span class="number">0 </span>{
+            Pass::Measurement(pass) =&gt; pass.assign_region(assignment),
+            Pass::Assignment(pass) =&gt; pass.assign_region(name, assignment),
+        }
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_region</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">assignment</span>: <span class="ident">A</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AR</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">FnMut</span>(<span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
+    <span class="kw">fn </span>assign_table&lt;A, N, NR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: N, assignment: A) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+    <span class="kw">where
+        </span>A: FnMut(Table&lt;<span class="lifetime">&#39;_</span>, F&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;,
+        N: Fn() -&gt; NR,
+        NR: Into&lt;String&gt;,
     {
-        <span class="kw">let</span> <span class="ident">region_index</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">regions</span>.<span class="ident">len</span>();
+        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.<span class="number">0 </span>{
+            Pass::Measurement(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(()),
+            Pass::Assignment(pass) =&gt; pass.assign_table(name, assignment),
+        }
+    }
 
-        <span class="comment">// Get shape of the region.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">shape</span> <span class="op">=</span> <span class="ident">RegionShape::new</span>(<span class="ident">region_index</span>.<span class="ident">into</span>());
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="kw">dyn</span> <span class="ident">RegionLayouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">shape</span>;
-            <span class="ident">assignment</span>(<span class="ident">region</span>.<span class="ident">into</span>())
+    <span class="kw">fn </span>constrain_instance(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        cell: Cell,
+        instance: Column&lt;Instance&gt;,
+        row: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.<span class="number">0 </span>{
+            Pass::Measurement(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(()),
+            Pass::Assignment(pass) =&gt; pass.constrain_instance(cell, instance, row),
+        }
+    }
+
+    <span class="kw">fn </span>get_root(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Root {
+        <span class="self">self
+    </span>}
+
+    <span class="kw">fn </span>push_namespace&lt;NR, N&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name_fn: N)
+    <span class="kw">where
+        </span>NR: Into&lt;String&gt;,
+        N: FnOnce() -&gt; NR,
+    {
+        <span class="kw">if let </span>Pass::Assignment(pass) = <span class="kw-2">&amp;mut </span><span class="self">self</span>.<span class="number">0 </span>{
+            pass.plan.cs.push_namespace(name_fn);
+        }
+    }
+
+    <span class="kw">fn </span>pop_namespace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, gadget_name: <span class="prelude-ty">Option</span>&lt;String&gt;) {
+        <span class="kw">if let </span>Pass::Assignment(pass) = <span class="kw-2">&amp;mut </span><span class="self">self</span>.<span class="number">0 </span>{
+            pass.plan.cs.pop_namespace(gadget_name);
+        }
+    }
+}
+
+<span class="doccomment">/// Measures the circuit.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>MeasurementPass {
+    regions: Vec&lt;RegionShape&gt;,
+}
+
+<span class="kw">impl </span>MeasurementPass {
+    <span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
+        MeasurementPass { regions: <span class="macro">vec!</span>[] }
+    }
+
+    <span class="kw">fn </span>assign_region&lt;F: Field, A, AR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>assignment: A) -&gt; <span class="prelude-ty">Result</span>&lt;AR, Error&gt;
+    <span class="kw">where
+        </span>A: FnMut(Region&lt;<span class="lifetime">&#39;_</span>, F&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;AR, Error&gt;,
+    {
+        <span class="kw">let </span>region_index = <span class="self">self</span>.regions.len();
+
+        <span class="comment">// Get shape of the region.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>shape = RegionShape::new(region_index.into());
+        <span class="kw">let </span>result = {
+            <span class="kw">let </span>region: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>RegionLayouter&lt;F&gt; = <span class="kw-2">&amp;mut </span>shape;
+            assignment(region.into())
         }<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">regions</span>.<span class="ident">push</span>(<span class="ident">shape</span>);
+        <span class="self">self</span>.regions.push(shape);
 
-        <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
+        <span class="prelude-val">Ok</span>(result)
     }
 }
 
-<span class="doccomment">/// Assigns the circuit.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AssignmentPass</span><span class="op">&lt;</span><span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="ident">plan</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;p</span> <span class="kw-2">mut</span> <span class="ident">V1Plan</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Counter tracking which region we need to assign next.</span>
-    <span class="ident">region_index</span>: <span class="ident">usize</span>,
+<span class="doccomment">/// Assigns the circuit.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>AssignmentPass&lt;<span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; {
+    plan: <span class="kw-2">&amp;</span><span class="lifetime">&#39;p </span><span class="kw-2">mut </span>V1Plan&lt;<span class="lifetime">&#39;a</span>, F, CS&gt;,
+    <span class="doccomment">/// Counter tracking which region we need to assign next.
+    </span>region_index: usize,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">AssignmentPass</span><span class="op">&lt;</span><span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">plan</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;p</span> <span class="kw-2">mut</span> <span class="ident">V1Plan</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">AssignmentPass</span> {
-            <span class="ident">plan</span>,
-            <span class="ident">region_index</span>: <span class="number">0</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; AssignmentPass&lt;<span class="lifetime">&#39;p</span>, <span class="lifetime">&#39;a</span>, F, CS&gt; {
+    <span class="kw">fn </span>new(plan: <span class="kw-2">&amp;</span><span class="lifetime">&#39;p </span><span class="kw-2">mut </span>V1Plan&lt;<span class="lifetime">&#39;a</span>, F, CS&gt;) -&gt; <span class="self">Self </span>{
+        AssignmentPass {
+            plan,
+            region_index: <span class="number">0</span>,
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_region</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span>, <span class="ident">N</span>, <span class="ident">NR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="ident">N</span>, <span class="kw-2">mut</span> <span class="ident">assignment</span>: <span class="ident">A</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AR</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">FnMut</span>(<span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">NR</span>,
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">fn </span>assign_region&lt;A, AR, N, NR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: N, <span class="kw-2">mut </span>assignment: A) -&gt; <span class="prelude-ty">Result</span>&lt;AR, Error&gt;
+    <span class="kw">where
+        </span>A: FnMut(Region&lt;<span class="lifetime">&#39;_</span>, F&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;AR, Error&gt;,
+        N: Fn() -&gt; NR,
+        NR: Into&lt;String&gt;,
     {
-        <span class="comment">// Get the next region we are assigning.</span>
-        <span class="kw">let</span> <span class="ident">region_index</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">region_index</span>;
-        <span class="self">self</span>.<span class="ident">region_index</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+        <span class="comment">// Get the next region we are assigning.
+        </span><span class="kw">let </span>region_index = <span class="self">self</span>.region_index;
+        <span class="self">self</span>.region_index += <span class="number">1</span>;
 
-        <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">enter_region</span>(<span class="ident">name</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">region</span> <span class="op">=</span> <span class="ident">V1Region::new</span>(<span class="self">self</span>.<span class="ident">plan</span>, <span class="ident">region_index</span>.<span class="ident">into</span>());
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="kw">dyn</span> <span class="ident">RegionLayouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">region</span>;
-            <span class="ident">assignment</span>(<span class="ident">region</span>.<span class="ident">into</span>())
+        <span class="self">self</span>.plan.cs.enter_region(name);
+        <span class="kw">let </span><span class="kw-2">mut </span>region = V1Region::new(<span class="self">self</span>.plan, region_index.into());
+        <span class="kw">let </span>result = {
+            <span class="kw">let </span>region: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>RegionLayouter&lt;F&gt; = <span class="kw-2">&amp;mut </span>region;
+            assignment(region.into())
         }<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">exit_region</span>();
+        <span class="self">self</span>.plan.cs.exit_region();
 
-        <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
+        <span class="prelude-val">Ok</span>(result)
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_table</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span>, <span class="ident">N</span>, <span class="ident">NR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="ident">N</span>, <span class="kw-2">mut</span> <span class="ident">assignment</span>: <span class="ident">A</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AR</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">FnMut</span>(<span class="ident">Table</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AR</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">NR</span>,
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">fn </span>assign_table&lt;A, AR, N, NR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: N, <span class="kw-2">mut </span>assignment: A) -&gt; <span class="prelude-ty">Result</span>&lt;AR, Error&gt;
+    <span class="kw">where
+        </span>A: FnMut(Table&lt;<span class="lifetime">&#39;_</span>, F&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;AR, Error&gt;,
+        N: Fn() -&gt; NR,
+        NR: Into&lt;String&gt;,
     {
-        <span class="comment">// Maintenance hazard: there is near-duplicate code in `SingleChipLayouter::assign_table`.</span>
+        <span class="comment">// Maintenance hazard: there is near-duplicate code in `SingleChipLayouter::assign_table`.
 
-        <span class="comment">// Assign table cells.</span>
-        <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">enter_region</span>(<span class="ident">name</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">table</span> <span class="op">=</span> <span class="ident">SimpleTableLayouter::new</span>(<span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">table_columns</span>);
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">table</span>: <span class="kw-2">&amp;mut</span> <span class="kw">dyn</span> <span class="ident">TableLayouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">table</span>;
-            <span class="ident">assignment</span>(<span class="ident">table</span>.<span class="ident">into</span>())
+        // Assign table cells.
+        </span><span class="self">self</span>.plan.cs.enter_region(name);
+        <span class="kw">let </span><span class="kw-2">mut </span>table = SimpleTableLayouter::new(<span class="self">self</span>.plan.cs, <span class="kw-2">&amp;</span><span class="self">self</span>.plan.table_columns);
+        <span class="kw">let </span>result = {
+            <span class="kw">let </span>table: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>TableLayouter&lt;F&gt; = <span class="kw-2">&amp;mut </span>table;
+            assignment(table.into())
         }<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">default_and_assigned</span> <span class="op">=</span> <span class="ident">table</span>.<span class="ident">default_and_assigned</span>;
-        <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">exit_region</span>();
+        <span class="kw">let </span>default_and_assigned = table.default_and_assigned;
+        <span class="self">self</span>.plan.cs.exit_region();
 
-        <span class="comment">// Check that all table columns have the same length `first_unused`,</span>
-        <span class="comment">// and all cells up to that length are assigned.</span>
-        <span class="kw">let</span> <span class="ident">first_unused</span> <span class="op">=</span> {
-            <span class="kw">match</span> <span class="ident">default_and_assigned</span>
-                .<span class="ident">values</span>()
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">assigned</span>)<span class="op">|</span> {
-                    <span class="kw">if</span> <span class="ident">assigned</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="op">|</span><span class="ident">b</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">b</span>) {
-                        <span class="prelude-val">Some</span>(<span class="ident">assigned</span>.<span class="ident">len</span>())
-                    } <span class="kw">else</span> {
-                        <span class="prelude-val">None</span>
-                    }
+        <span class="comment">// Check that all table columns have the same length `first_unused`,
+        // and all cells up to that length are assigned.
+        </span><span class="kw">let </span>first_unused = {
+            <span class="kw">match </span>default_and_assigned
+                .values()
+                .map(|(<span class="kw">_</span>, assigned)| {
+                    <span class="kw">if </span>assigned.iter().all(|b| <span class="kw-2">*</span>b) {
+                        <span class="prelude-val">Some</span>(assigned.len())
+                    } <span class="kw">else </span>{
+                        <span class="prelude-val">None
+                    </span>}
                 })
-                .<span class="ident">reduce</span>(<span class="op">|</span><span class="ident">acc</span>, <span class="ident">item</span><span class="op">|</span> <span class="kw">match</span> (<span class="ident">acc</span>, <span class="ident">item</span>) {
-                    (<span class="prelude-val">Some</span>(<span class="ident">a</span>), <span class="prelude-val">Some</span>(<span class="ident">b</span>)) <span class="kw">if</span> <span class="ident">a</span> <span class="op">==</span> <span class="ident">b</span> =&gt; <span class="prelude-val">Some</span>(<span class="ident">a</span>),
-                    <span class="kw">_</span> =&gt; <span class="prelude-val">None</span>,
+                .reduce(|acc, item| <span class="kw">match </span>(acc, item) {
+                    (<span class="prelude-val">Some</span>(a), <span class="prelude-val">Some</span>(b)) <span class="kw">if </span>a == b =&gt; <span class="prelude-val">Some</span>(a),
+                    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
                 }) {
-                <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="ident">len</span>)) =&gt; <span class="ident">len</span>,
-                <span class="kw">_</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::Synthesis</span>), <span class="comment">// TODO better error</span>
-            }
+                <span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(len)) =&gt; len,
+                <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Error::Synthesis), <span class="comment">// TODO better error
+            </span>}
         };
 
-        <span class="comment">// Record these columns so that we can prevent them from being used again.</span>
-        <span class="kw">for</span> <span class="ident">column</span> <span class="kw">in</span> <span class="ident">default_and_assigned</span>.<span class="ident">keys</span>() {
-            <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">table_columns</span>.<span class="ident">push</span>(<span class="kw-2">*</span><span class="ident">column</span>);
+        <span class="comment">// Record these columns so that we can prevent them from being used again.
+        </span><span class="kw">for </span>column <span class="kw">in </span>default_and_assigned.keys() {
+            <span class="self">self</span>.plan.table_columns.push(<span class="kw-2">*</span>column);
         }
 
-        <span class="kw">for</span> (<span class="ident">col</span>, (<span class="ident">default_val</span>, <span class="kw">_</span>)) <span class="kw">in</span> <span class="ident">default_and_assigned</span> {
-            <span class="comment">// default_val must be Some because we must have assigned</span>
-            <span class="comment">// at least one cell in each column, and in that case we checked</span>
-            <span class="comment">// that all cells up to first_unused were assigned.</span>
-            <span class="self">self</span>.<span class="ident">plan</span>
-                .<span class="ident">cs</span>
-                .<span class="ident">fill_from_row</span>(<span class="ident">col</span>.<span class="ident">inner</span>(), <span class="ident">first_unused</span>, <span class="ident">default_val</span>.<span class="ident">unwrap</span>())<span class="question-mark">?</span>;
+        <span class="kw">for </span>(col, (default_val, <span class="kw">_</span>)) <span class="kw">in </span>default_and_assigned {
+            <span class="comment">// default_val must be Some because we must have assigned
+            // at least one cell in each column, and in that case we checked
+            // that all cells up to first_unused were assigned.
+            </span><span class="self">self</span>.plan
+                .cs
+                .fill_from_row(col.inner(), first_unused, default_val.unwrap())<span class="question-mark">?</span>;
         }
 
-        <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
+        <span class="prelude-val">Ok</span>(result)
     }
 
-    <span class="kw">fn</span> <span class="ident">constrain_instance</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">cell</span>: <span class="ident">Cell</span>,
-        <span class="ident">instance</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">copy</span>(
-            <span class="ident">cell</span>.<span class="ident">column</span>,
-            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">regions</span>[<span class="kw-2">*</span><span class="ident">cell</span>.<span class="ident">region_index</span>] <span class="op">+</span> <span class="ident">cell</span>.<span class="ident">row_offset</span>,
-            <span class="ident">instance</span>.<span class="ident">into</span>(),
-            <span class="ident">row</span>,
+    <span class="kw">fn </span>constrain_instance(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        cell: Cell,
+        instance: Column&lt;Instance&gt;,
+        row: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="self">self</span>.plan.cs.copy(
+            cell.column,
+            <span class="kw-2">*</span><span class="self">self</span>.plan.regions[<span class="kw-2">*</span>cell.region_index] + cell.row_offset,
+            instance.into(),
+            row,
         )
     }
 }
 
-<span class="kw">struct</span> <span class="ident">V1Region</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="ident">plan</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="kw-2">mut</span> <span class="ident">V1Plan</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span>,
-    <span class="ident">region_index</span>: <span class="ident">RegionIndex</span>,
+<span class="kw">struct </span>V1Region&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; {
+    plan: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span><span class="kw-2">mut </span>V1Plan&lt;<span class="lifetime">&#39;a</span>, F, CS&gt;,
+    region_index: RegionIndex,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">fmt::Debug</span> <span class="kw">for</span> <span class="ident">V1Region</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
-        <span class="ident">f</span>.<span class="ident">debug_struct</span>(<span class="string">&quot;V1Region&quot;</span>)
-            .<span class="ident">field</span>(<span class="string">&quot;plan&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">plan</span>)
-            .<span class="ident">field</span>(<span class="string">&quot;region_index&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">region_index</span>)
-            .<span class="ident">finish</span>()
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; fmt::Debug <span class="kw">for </span>V1Region&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, F, CS&gt; {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+        f.debug_struct(<span class="string">&quot;V1Region&quot;</span>)
+            .field(<span class="string">&quot;plan&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.plan)
+            .field(<span class="string">&quot;region_index&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.region_index)
+            .finish()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">V1Region</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">plan</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="kw-2">mut</span> <span class="ident">V1Plan</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span>, <span class="ident">region_index</span>: <span class="ident">RegionIndex</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">V1Region</span> { <span class="ident">plan</span>, <span class="ident">region_index</span> }
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; V1Region&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, F, CS&gt; {
+    <span class="kw">fn </span>new(plan: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span><span class="kw-2">mut </span>V1Plan&lt;<span class="lifetime">&#39;a</span>, F, CS&gt;, region_index: RegionIndex) -&gt; <span class="self">Self </span>{
+        V1Region { plan, region_index }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">CS</span>: <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">RegionLayouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">V1Region</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, <span class="ident">F</span>, <span class="ident">CS</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">enable_selector</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">annotation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() -&gt; <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
-        <span class="ident">selector</span>: <span class="kw-2">&amp;</span><span class="ident">Selector</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">enable_selector</span>(
-            <span class="ident">annotation</span>,
-            <span class="ident">selector</span>,
-            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">regions</span>[<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">region_index</span>] <span class="op">+</span> <span class="ident">offset</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, F: Field, CS: Assignment&lt;F&gt; + <span class="lifetime">&#39;a</span>&gt; RegionLayouter&lt;F&gt; <span class="kw">for </span>V1Region&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;a</span>, F, CS&gt; {
+    <span class="kw">fn </span>enable_selector&lt;<span class="lifetime">&#39;v</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span><span class="kw-2">mut </span><span class="self">self</span>,
+        annotation: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>(<span class="kw">dyn </span>Fn() -&gt; String + <span class="lifetime">&#39;v</span>),
+        selector: <span class="kw-2">&amp;</span>Selector,
+        offset: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="self">self</span>.plan.cs.enable_selector(
+            annotation,
+            selector,
+            <span class="kw-2">*</span><span class="self">self</span>.plan.regions[<span class="kw-2">*</span><span class="self">self</span>.region_index] + offset,
         )
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_advice</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">annotation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() -&gt; <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
-        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">to</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> (<span class="kw">dyn</span> <span class="ident">FnMut</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Cell</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">assign_advice</span>(
-            <span class="ident">annotation</span>,
-            <span class="ident">column</span>,
-            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">regions</span>[<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">region_index</span>] <span class="op">+</span> <span class="ident">offset</span>,
-            <span class="ident">to</span>,
+    <span class="kw">fn </span>assign_advice&lt;<span class="lifetime">&#39;v</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span><span class="kw-2">mut </span><span class="self">self</span>,
+        annotation: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>(<span class="kw">dyn </span>Fn() -&gt; String + <span class="lifetime">&#39;v</span>),
+        column: Column&lt;Advice&gt;,
+        offset: usize,
+        to: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span><span class="kw-2">mut </span>(<span class="kw">dyn </span>FnMut() -&gt; Value&lt;Assigned&lt;F&gt;&gt; + <span class="lifetime">&#39;v</span>),
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Cell, Error&gt; {
+        <span class="self">self</span>.plan.cs.assign_advice(
+            annotation,
+            column,
+            <span class="kw-2">*</span><span class="self">self</span>.plan.regions[<span class="kw-2">*</span><span class="self">self</span>.region_index] + offset,
+            to,
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Cell</span> {
-            <span class="ident">region_index</span>: <span class="self">self</span>.<span class="ident">region_index</span>,
-            <span class="ident">row_offset</span>: <span class="ident">offset</span>,
-            <span class="ident">column</span>: <span class="ident">column</span>.<span class="ident">into</span>(),
+        <span class="prelude-val">Ok</span>(Cell {
+            region_index: <span class="self">self</span>.region_index,
+            row_offset: offset,
+            column: column.into(),
         })
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_advice_from_constant</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">annotation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() -&gt; <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
-        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">constant</span>: <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Cell</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">advice</span> <span class="op">=</span>
-            <span class="self">self</span>.<span class="ident">assign_advice</span>(<span class="ident">annotation</span>, <span class="ident">column</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;mut</span> <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">constant</span>))<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">constrain_constant</span>(<span class="ident">advice</span>, <span class="ident">constant</span>)<span class="question-mark">?</span>;
+    <span class="kw">fn </span>assign_advice_from_constant&lt;<span class="lifetime">&#39;v</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span><span class="kw-2">mut </span><span class="self">self</span>,
+        annotation: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>(<span class="kw">dyn </span>Fn() -&gt; String + <span class="lifetime">&#39;v</span>),
+        column: Column&lt;Advice&gt;,
+        offset: usize,
+        constant: Assigned&lt;F&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Cell, Error&gt; {
+        <span class="kw">let </span>advice =
+            <span class="self">self</span>.assign_advice(annotation, column, offset, <span class="kw-2">&amp;mut </span>|| Value::known(constant))<span class="question-mark">?</span>;
+        <span class="self">self</span>.constrain_constant(advice, constant)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">advice</span>)
+        <span class="prelude-val">Ok</span>(advice)
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_advice_from_instance</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">annotation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() -&gt; <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
-        <span class="ident">instance</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-        <span class="ident">advice</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Cell</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">query_instance</span>(<span class="ident">instance</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+    <span class="kw">fn </span>assign_advice_from_instance&lt;<span class="lifetime">&#39;v</span>&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        annotation: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>(<span class="kw">dyn </span>Fn() -&gt; String + <span class="lifetime">&#39;v</span>),
+        instance: Column&lt;Instance&gt;,
+        row: usize,
+        advice: Column&lt;Advice&gt;,
+        offset: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(Cell, Value&lt;F&gt;), Error&gt; {
+        <span class="kw">let </span>value = <span class="self">self</span>.plan.cs.query_instance(instance, row)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">cell</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_advice</span>(<span class="ident">annotation</span>, <span class="ident">advice</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;mut</span> <span class="op">|</span><span class="op">|</span> <span class="ident">value</span>.<span class="ident">to_field</span>())<span class="question-mark">?</span>;
+        <span class="kw">let </span>cell = <span class="self">self</span>.assign_advice(annotation, advice, offset, <span class="kw-2">&amp;mut </span>|| value.to_field())<span class="question-mark">?</span>;
 
-        <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">copy</span>(
-            <span class="ident">cell</span>.<span class="ident">column</span>,
-            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">regions</span>[<span class="kw-2">*</span><span class="ident">cell</span>.<span class="ident">region_index</span>] <span class="op">+</span> <span class="ident">cell</span>.<span class="ident">row_offset</span>,
-            <span class="ident">instance</span>.<span class="ident">into</span>(),
-            <span class="ident">row</span>,
+        <span class="self">self</span>.plan.cs.copy(
+            cell.column,
+            <span class="kw-2">*</span><span class="self">self</span>.plan.regions[<span class="kw-2">*</span>cell.region_index] + cell.row_offset,
+            instance.into(),
+            row,
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>((<span class="ident">cell</span>, <span class="ident">value</span>))
+        <span class="prelude-val">Ok</span>((cell, value))
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_fixed</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">annotation</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> (<span class="kw">dyn</span> <span class="ident">Fn</span>() -&gt; <span class="ident">String</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
-        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">to</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="kw-2">mut</span> (<span class="kw">dyn</span> <span class="ident">FnMut</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;v</span>),
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Cell</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">assign_fixed</span>(
-            <span class="ident">annotation</span>,
-            <span class="ident">column</span>,
-            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">regions</span>[<span class="kw-2">*</span><span class="self">self</span>.<span class="ident">region_index</span>] <span class="op">+</span> <span class="ident">offset</span>,
-            <span class="ident">to</span>,
+    <span class="kw">fn </span>assign_fixed&lt;<span class="lifetime">&#39;v</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span><span class="kw-2">mut </span><span class="self">self</span>,
+        annotation: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>(<span class="kw">dyn </span>Fn() -&gt; String + <span class="lifetime">&#39;v</span>),
+        column: Column&lt;Fixed&gt;,
+        offset: usize,
+        to: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span><span class="kw-2">mut </span>(<span class="kw">dyn </span>FnMut() -&gt; Value&lt;Assigned&lt;F&gt;&gt; + <span class="lifetime">&#39;v</span>),
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Cell, Error&gt; {
+        <span class="self">self</span>.plan.cs.assign_fixed(
+            annotation,
+            column,
+            <span class="kw-2">*</span><span class="self">self</span>.plan.regions[<span class="kw-2">*</span><span class="self">self</span>.region_index] + offset,
+            to,
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Cell</span> {
-            <span class="ident">region_index</span>: <span class="self">self</span>.<span class="ident">region_index</span>,
-            <span class="ident">row_offset</span>: <span class="ident">offset</span>,
-            <span class="ident">column</span>: <span class="ident">column</span>.<span class="ident">into</span>(),
+        <span class="prelude-val">Ok</span>(Cell {
+            region_index: <span class="self">self</span>.region_index,
+            row_offset: offset,
+            column: column.into(),
         })
     }
 
-    <span class="kw">fn</span> <span class="ident">constrain_constant</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">cell</span>: <span class="ident">Cell</span>, <span class="ident">constant</span>: <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">constants</span>.<span class="ident">push</span>((<span class="ident">constant</span>, <span class="ident">cell</span>));
+    <span class="kw">fn </span>constrain_constant(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cell: Cell, constant: Assigned&lt;F&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="self">self</span>.plan.constants.push((constant, cell));
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">constrain_equal</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">left</span>: <span class="ident">Cell</span>, <span class="ident">right</span>: <span class="ident">Cell</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">cs</span>.<span class="ident">copy</span>(
-            <span class="ident">left</span>.<span class="ident">column</span>,
-            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">regions</span>[<span class="kw-2">*</span><span class="ident">left</span>.<span class="ident">region_index</span>] <span class="op">+</span> <span class="ident">left</span>.<span class="ident">row_offset</span>,
-            <span class="ident">right</span>.<span class="ident">column</span>,
-            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">plan</span>.<span class="ident">regions</span>[<span class="kw-2">*</span><span class="ident">right</span>.<span class="ident">region_index</span>] <span class="op">+</span> <span class="ident">right</span>.<span class="ident">row_offset</span>,
+    <span class="kw">fn </span>constrain_equal(<span class="kw-2">&amp;mut </span><span class="self">self</span>, left: Cell, right: Cell) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="self">self</span>.plan.cs.copy(
+            left.column,
+            <span class="kw-2">*</span><span class="self">self</span>.plan.regions[<span class="kw-2">*</span>left.region_index] + left.row_offset,
+            right.column,
+            <span class="kw-2">*</span><span class="self">self</span>.plan.regions[<span class="kw-2">*</span>right.region_index] + right.row_offset,
         )<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">pasta_curves::vesta</span>;
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">mod </span>tests {
+    <span class="kw">use </span>pasta_curves::vesta;
 
-    <span class="kw">use</span> <span class="kw">crate</span>::{
-        <span class="ident">dev::MockProver</span>,
-        <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Circuit</span>, <span class="ident">Column</span>, <span class="ident">Error</span>},
+    <span class="kw">use crate</span>::{
+        dev::MockProver,
+        plonk::{Advice, Circuit, Column, Error},
     };
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">not_enough_columns_for_constants</span>() {
-        <span class="kw">struct</span> <span class="ident">MyCircuit</span> {}
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>not_enough_columns_for_constants() {
+        <span class="kw">struct </span>MyCircuit {}
 
-        <span class="kw">impl</span> <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">vesta::Scalar</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyCircuit</span> {
-            <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>;
-            <span class="kw">type</span> <span class="ident">FloorPlanner</span> <span class="op">=</span> <span class="ident"><span class="kw">super</span>::V1</span>;
+        <span class="kw">impl </span>Circuit&lt;vesta::Scalar&gt; <span class="kw">for </span>MyCircuit {
+            <span class="kw">type </span>Config = Column&lt;Advice&gt;;
+            <span class="kw">type </span>FloorPlanner = <span class="kw">super</span>::V1;
 
-            <span class="kw">fn</span> <span class="ident">without_witnesses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-                <span class="ident">MyCircuit</span> {}
+            <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+                MyCircuit {}
             }
 
-            <span class="kw">fn</span> <span class="ident">configure</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident"><span class="kw">crate</span>::plonk::ConstraintSystem</span><span class="op">&lt;</span><span class="ident">vesta::Scalar</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Config</span> {
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>()
+            <span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span><span class="kw">crate</span>::plonk::ConstraintSystem&lt;vesta::Scalar&gt;) -&gt; <span class="self">Self</span>::Config {
+                meta.advice_column()
             }
 
-            <span class="kw">fn</span> <span class="ident">synthesize</span>(
+            <span class="kw">fn </span>synthesize(
                 <span class="kw-2">&amp;</span><span class="self">self</span>,
-                <span class="ident">config</span>: <span class="ident"><span class="self">Self</span>::Config</span>,
-                <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident"><span class="kw">crate</span>::circuit::Layouter</span><span class="op">&lt;</span><span class="ident">vesta::Scalar</span><span class="op">&gt;</span>,
-            ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident"><span class="kw">crate</span>::plonk::Error</span><span class="op">&gt;</span> {
-                <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="string">&quot;assign constant&quot;</span>,
-                    <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                        <span class="ident">region</span>.<span class="ident">assign_advice_from_constant</span>(
-                            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;one&quot;</span>,
-                            <span class="ident">config</span>,
+                config: <span class="self">Self</span>::Config,
+                <span class="kw-2">mut </span>layouter: <span class="kw">impl </span><span class="kw">crate</span>::circuit::Layouter&lt;vesta::Scalar&gt;,
+            ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw">crate</span>::plonk::Error&gt; {
+                layouter.assign_region(
+                    || <span class="string">&quot;assign constant&quot;</span>,
+                    |<span class="kw-2">mut </span>region| {
+                        region.assign_advice_from_constant(
+                            || <span class="string">&quot;one&quot;</span>,
+                            config,
                             <span class="number">0</span>,
-                            <span class="ident">vesta::Scalar::one</span>(),
+                            vesta::Scalar::one(),
                         )
                     },
                 )<span class="question-mark">?</span>;
@@ -1094,13 +1088,12 @@
             }
         }
 
-        <span class="kw">let</span> <span class="ident">circuit</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {};
+        <span class="kw">let </span>circuit = MyCircuit {};
         <span class="macro">assert!</span>(<span class="macro">matches!</span>(
-            <span class="ident">MockProver::run</span>(<span class="number">3</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap_err</span>(),
-            <span class="ident">Error::NotEnoughColumnsForConstants</span>,
+            MockProver::run(<span class="number">3</span>, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap_err(),
+            Error::NotEnoughColumnsForConstants,
         ));
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

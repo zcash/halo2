@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -548,535 +542,534 @@
 <span id="527">527</span>
 <span id="528">528</span>
 <span id="529">529</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Chip implementing a Merkle hash using Sinsemilla as the hash function.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Chip implementing a Merkle hash using Sinsemilla as the hash function.
 
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Chip</span>, <span class="ident">Layouter</span>, <span class="ident">Value</span>},
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
-    <span class="ident">poly::Rotation</span>,
+</span><span class="kw">use </span>halo2_proofs::{
+    circuit::{AssignedCell, Chip, Layouter, Value},
+    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
+    poly::Rotation,
 };
-<span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">pallas</span>};
+<span class="kw">use </span>pasta_curves::{arithmetic::FieldExt, pallas};
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::MerkleInstructions</span>;
+<span class="kw">use </span><span class="kw">super</span>::MerkleInstructions;
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">sinsemilla</span>::{<span class="ident">primitives</span> <span class="kw">as</span> <span class="ident">sinsemilla</span>, <span class="ident">MessagePiece</span>},
-    <span class="ident">utilities::RangeConstrained</span>,
+<span class="kw">use crate</span>::{
+    sinsemilla::{primitives <span class="kw">as </span>sinsemilla, MessagePiece},
+    utilities::RangeConstrained,
     {
-        <span class="ident">ecc::FixedPoints</span>,
-        <span class="ident">sinsemilla</span>::{
-            <span class="ident">chip</span>::{<span class="ident">SinsemillaChip</span>, <span class="ident">SinsemillaConfig</span>},
-            <span class="ident">CommitDomains</span>, <span class="ident">HashDomains</span>, <span class="ident">SinsemillaInstructions</span>,
+        ecc::FixedPoints,
+        sinsemilla::{
+            chip::{SinsemillaChip, SinsemillaConfig},
+            CommitDomains, HashDomains, SinsemillaInstructions,
         },
-        <span class="ident">utilities</span>::{
-            <span class="ident">cond_swap</span>::{<span class="ident">CondSwapChip</span>, <span class="ident">CondSwapConfig</span>, <span class="ident">CondSwapInstructions</span>},
-            <span class="ident">UtilitiesInstructions</span>,
+        utilities::{
+            cond_swap::{CondSwapChip, CondSwapConfig, CondSwapInstructions},
+            UtilitiesInstructions,
         },
     },
 };
-<span class="kw">use</span> <span class="ident">group::ff::PrimeField</span>;
+<span class="kw">use </span>group::ff::PrimeField;
 
-<span class="doccomment">/// Configuration for the `MerkleChip` implementation.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MerkleConfig</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">Fixed</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Fixed</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">Fixed</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Configuration for the `MerkleChip` implementation.
+</span><span class="attribute">#[derive(Clone, Debug, PartialEq, Eq)]</span>
+<span class="kw">pub struct </span>MerkleConfig&lt;Hash, Commit, Fixed&gt;
+<span class="kw">where
+    </span>Hash: HashDomains&lt;pallas::Affine&gt;,
+    Fixed: FixedPoints&lt;pallas::Affine&gt;,
+    Commit: CommitDomains&lt;pallas::Affine, Fixed, Hash&gt;,
 {
-    <span class="ident">advices</span>: [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>; <span class="number">5</span>],
-    <span class="ident">q_decompose</span>: <span class="ident">Selector</span>,
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">cond_swap_config</span>: <span class="ident">CondSwapConfig</span>,
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">sinsemilla_config</span>: <span class="ident">SinsemillaConfig</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">Fixed</span><span class="op">&gt;</span>,
+    advices: [Column&lt;Advice&gt;; <span class="number">5</span>],
+    q_decompose: Selector,
+    <span class="kw">pub</span>(<span class="kw">super</span>) cond_swap_config: CondSwapConfig,
+    <span class="kw">pub</span>(<span class="kw">super</span>) sinsemilla_config: SinsemillaConfig&lt;Hash, Commit, Fixed&gt;,
 }
 
-<span class="doccomment">/// Chip implementing `MerkleInstructions`.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This chip specifically implements `MerkleInstructions::hash_layer` as the `MerkleCRH`</span>
-<span class="doccomment">/// function `hash = SinsemillaHash(Q, 𝑙⋆ || left⋆ || right⋆)`, where:</span>
-<span class="doccomment">/// - `𝑙⋆ = I2LEBSP_10(l)`</span>
-<span class="doccomment">/// - `left⋆ = I2LEBSP_255(left)`</span>
-<span class="doccomment">/// - `right⋆ = I2LEBSP_255(right)`</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This chip does **NOT** constrain `left⋆` and `right⋆` to be canonical encodings of</span>
-<span class="doccomment">/// `left` and `right`.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MerkleChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">Fixed</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Fixed</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">Fixed</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Chip implementing `MerkleInstructions`.
+///
+/// This chip specifically implements `MerkleInstructions::hash_layer` as the `MerkleCRH`
+/// function `hash = SinsemillaHash(Q, 𝑙⋆ || left⋆ || right⋆)`, where:
+/// - `𝑙⋆ = I2LEBSP_10(l)`
+/// - `left⋆ = I2LEBSP_255(left)`
+/// - `right⋆ = I2LEBSP_255(right)`
+///
+/// This chip does **NOT** constrain `left⋆` and `right⋆` to be canonical encodings of
+/// `left` and `right`.
+</span><span class="attribute">#[derive(Clone, Debug, PartialEq, Eq)]</span>
+<span class="kw">pub struct </span>MerkleChip&lt;Hash, Commit, Fixed&gt;
+<span class="kw">where
+    </span>Hash: HashDomains&lt;pallas::Affine&gt;,
+    Fixed: FixedPoints&lt;pallas::Affine&gt;,
+    Commit: CommitDomains&lt;pallas::Affine, Fixed, Hash&gt;,
 {
-    <span class="ident">config</span>: <span class="ident">MerkleConfig</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">Fixed</span><span class="op">&gt;</span>,
+    config: MerkleConfig&lt;Hash, Commit, Fixed&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">Fixed</span><span class="op">&gt;</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MerkleChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">Fixed</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Fixed</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">Fixed</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;Hash, Commit, Fixed&gt; Chip&lt;pallas::Base&gt; <span class="kw">for </span>MerkleChip&lt;Hash, Commit, Fixed&gt;
+<span class="kw">where
+    </span>Hash: HashDomains&lt;pallas::Affine&gt;,
+    Fixed: FixedPoints&lt;pallas::Affine&gt;,
+    Commit: CommitDomains&lt;pallas::Affine, Fixed, Hash&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">MerkleConfig</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">Fixed</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">Loaded</span> <span class="op">=</span> ();
+    <span class="kw">type </span>Config = MerkleConfig&lt;Hash, Commit, Fixed&gt;;
+    <span class="kw">type </span>Loaded = ();
 
-    <span class="kw">fn</span> <span class="ident">config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Config</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span>
+    <span class="kw">fn </span>config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Config {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.config
     }
 
-    <span class="kw">fn</span> <span class="ident">loaded</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Loaded</span> {
+    <span class="kw">fn </span>loaded(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Loaded {
         <span class="kw-2">&amp;</span>()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="ident">MerkleChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">F</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">F</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;Hash, Commit, F&gt; MerkleChip&lt;Hash, Commit, F&gt;
+<span class="kw">where
+    </span>Hash: HashDomains&lt;pallas::Affine&gt;,
+    F: FixedPoints&lt;pallas::Affine&gt;,
+    Commit: CommitDomains&lt;pallas::Affine, F, Hash&gt;,
 {
-    <span class="doccomment">/// Configures the [`MerkleChip`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure</span>(
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">sinsemilla_config</span>: <span class="ident">SinsemillaConfig</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="ident">MerkleConfig</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="comment">// All five advice columns are equality-enabled by SinsemillaConfig.</span>
-        <span class="kw">let</span> <span class="ident">advices</span> <span class="op">=</span> <span class="ident">sinsemilla_config</span>.<span class="ident">advices</span>();
-        <span class="kw">let</span> <span class="ident">cond_swap_config</span> <span class="op">=</span> <span class="ident">CondSwapChip::configure</span>(<span class="ident">meta</span>, <span class="ident">advices</span>);
+    <span class="doccomment">/// Configures the [`MerkleChip`].
+    </span><span class="kw">pub fn </span>configure(
+        meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;,
+        sinsemilla_config: SinsemillaConfig&lt;Hash, Commit, F&gt;,
+    ) -&gt; MerkleConfig&lt;Hash, Commit, F&gt; {
+        <span class="comment">// All five advice columns are equality-enabled by SinsemillaConfig.
+        </span><span class="kw">let </span>advices = sinsemilla_config.advices();
+        <span class="kw">let </span>cond_swap_config = CondSwapChip::configure(meta, advices);
 
-        <span class="comment">// This selector enables the decomposition gate.</span>
-        <span class="kw">let</span> <span class="ident">q_decompose</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
+        <span class="comment">// This selector enables the decomposition gate.
+        </span><span class="kw">let </span>q_decompose = meta.selector();
 
-        <span class="comment">// Check that pieces have been decomposed correctly for Sinsemilla hash.</span>
-        <span class="comment">// &lt;https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh&gt;</span>
-        <span class="comment">//</span>
-        <span class="comment">// a = a_0||a_1 = l || (bits 0..=239 of left)</span>
-        <span class="comment">// b = b_0||b_1||b_2</span>
-        <span class="comment">//   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)</span>
-        <span class="comment">// c = bits 5..=254 of right</span>
-        <span class="comment">//</span>
-        <span class="comment">// The message pieces `a`, `b`, `c` are constrained by Sinsemilla to be</span>
-        <span class="comment">// 250 bits, 20 bits, and 250 bits respectively.</span>
-        <span class="comment">//</span>
-        <span class="comment">// The pieces and subpieces are arranged in the following configuration:</span>
-        <span class="comment">// |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |</span>
-        <span class="comment">// -------------------------------------------------------</span>
-        <span class="comment">// |   a   |   b   |   c   |  left | right |      1      |</span>
-        <span class="comment">// |  z1_a |  z1_b |  b_1  |  b_2  |   l   |      0      |</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;Decomposition check&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q_decompose</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">q_decompose</span>);
-            <span class="kw">let</span> <span class="ident">l_whole</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">advices</span>[<span class="number">4</span>], <span class="ident">Rotation::next</span>());
+        <span class="comment">// Check that pieces have been decomposed correctly for Sinsemilla hash.
+        // &lt;https://zips.z.cash/protocol/protocol.pdf#orchardmerklecrh&gt;
+        //
+        // a = a_0||a_1 = l || (bits 0..=239 of left)
+        // b = b_0||b_1||b_2
+        //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
+        // c = bits 5..=254 of right
+        //
+        // The message pieces `a`, `b`, `c` are constrained by Sinsemilla to be
+        // 250 bits, 20 bits, and 250 bits respectively.
+        //
+        // The pieces and subpieces are arranged in the following configuration:
+        // |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |
+        // -------------------------------------------------------
+        // |   a   |   b   |   c   |  left | right |      1      |
+        // |  z1_a |  z1_b |  b_1  |  b_2  |   l   |      0      |
+        </span>meta.create_gate(<span class="string">&quot;Decomposition check&quot;</span>, |meta| {
+            <span class="kw">let </span>q_decompose = meta.query_selector(q_decompose);
+            <span class="kw">let </span>l_whole = meta.query_advice(advices[<span class="number">4</span>], Rotation::next());
 
-            <span class="kw">let</span> <span class="ident">two_pow_5</span> <span class="op">=</span> <span class="ident">pallas::Base::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">5</span>);
-            <span class="kw">let</span> <span class="ident">two_pow_10</span> <span class="op">=</span> <span class="ident">two_pow_5</span>.<span class="ident">square</span>();
+            <span class="kw">let </span>two_pow_5 = pallas::Base::from(<span class="number">1 </span>&lt;&lt; <span class="number">5</span>);
+            <span class="kw">let </span>two_pow_10 = two_pow_5.square();
 
-            <span class="comment">// a_whole is constrained by Sinsemilla to be 250 bits.</span>
-            <span class="kw">let</span> <span class="ident">a_whole</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">advices</span>[<span class="number">0</span>], <span class="ident">Rotation::cur</span>());
-            <span class="comment">// b_whole is constrained by Sinsemilla to be 20 bits.</span>
-            <span class="kw">let</span> <span class="ident">b_whole</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">advices</span>[<span class="number">1</span>], <span class="ident">Rotation::cur</span>());
-            <span class="comment">// c_whole is constrained by Sinsemilla to be 250 bits.</span>
-            <span class="kw">let</span> <span class="ident">c_whole</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">advices</span>[<span class="number">2</span>], <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">left_node</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">advices</span>[<span class="number">3</span>], <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">right_node</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">advices</span>[<span class="number">4</span>], <span class="ident">Rotation::cur</span>());
+            <span class="comment">// a_whole is constrained by Sinsemilla to be 250 bits.
+            </span><span class="kw">let </span>a_whole = meta.query_advice(advices[<span class="number">0</span>], Rotation::cur());
+            <span class="comment">// b_whole is constrained by Sinsemilla to be 20 bits.
+            </span><span class="kw">let </span>b_whole = meta.query_advice(advices[<span class="number">1</span>], Rotation::cur());
+            <span class="comment">// c_whole is constrained by Sinsemilla to be 250 bits.
+            </span><span class="kw">let </span>c_whole = meta.query_advice(advices[<span class="number">2</span>], Rotation::cur());
+            <span class="kw">let </span>left_node = meta.query_advice(advices[<span class="number">3</span>], Rotation::cur());
+            <span class="kw">let </span>right_node = meta.query_advice(advices[<span class="number">4</span>], Rotation::cur());
 
-            <span class="comment">// a = a_0||a_1 = l || (bits 0..=239 of left)</span>
-            <span class="comment">//</span>
-            <span class="comment">// z_1 of SinsemillaHash(a) = a_1</span>
-            <span class="comment">// =&gt; a_0 = a - (a_1 * 2^10)</span>
-            <span class="kw">let</span> <span class="ident">z1_a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">advices</span>[<span class="number">0</span>], <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">a_1</span> <span class="op">=</span> <span class="ident">z1_a</span>;
-            <span class="comment">// Derive a_0 (constrained by SinsemillaHash to be 10 bits)</span>
-            <span class="kw">let</span> <span class="ident">a_0</span> <span class="op">=</span> <span class="ident">a_whole</span> <span class="op">-</span> <span class="ident">a_1</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">two_pow_10</span>;
+            <span class="comment">// a = a_0||a_1 = l || (bits 0..=239 of left)
+            //
+            // z_1 of SinsemillaHash(a) = a_1
+            // =&gt; a_0 = a - (a_1 * 2^10)
+            </span><span class="kw">let </span>z1_a = meta.query_advice(advices[<span class="number">0</span>], Rotation::next());
+            <span class="kw">let </span>a_1 = z1_a;
+            <span class="comment">// Derive a_0 (constrained by SinsemillaHash to be 10 bits)
+            </span><span class="kw">let </span>a_0 = a_whole - a_1.clone() * two_pow_10;
 
-            <span class="comment">// b = b_0||b_1||b_2</span>
-            <span class="comment">//   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)</span>
-            <span class="comment">// The Orchard specification allows this representation to be non-canonical.</span>
-            <span class="comment">// &lt;https://zips.z.cash/protocol/protocol.pdf#merklepath&gt;</span>
-            <span class="comment">//</span>
-            <span class="comment">//    z_1 of SinsemillaHash(b) = b_1 + 2^5 b_2</span>
-            <span class="comment">// =&gt; b_0 = b - (z1_b * 2^10)</span>
-            <span class="kw">let</span> <span class="ident">z1_b</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">advices</span>[<span class="number">1</span>], <span class="ident">Rotation::next</span>());
-            <span class="comment">// b_1 has been constrained to be 5 bits outside this gate.</span>
-            <span class="kw">let</span> <span class="ident">b_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">advices</span>[<span class="number">2</span>], <span class="ident">Rotation::next</span>());
-            <span class="comment">// b_2 has been constrained to be 5 bits outside this gate.</span>
-            <span class="kw">let</span> <span class="ident">b_2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">advices</span>[<span class="number">3</span>], <span class="ident">Rotation::next</span>());
-            <span class="comment">// Constrain b_1 + 2^5 b_2 = z1_b</span>
-            <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-bit-lengths?partial</span>
-            <span class="kw">let</span> <span class="ident">b1_b2_check</span> <span class="op">=</span> <span class="ident">z1_b</span>.<span class="ident">clone</span>() <span class="op">-</span> (<span class="ident">b_1</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="ident">b_2</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">two_pow_5</span>);
-            <span class="comment">// Derive b_0 (constrained by SinsemillaHash to be 10 bits)</span>
-            <span class="kw">let</span> <span class="ident">b_0</span> <span class="op">=</span> <span class="ident">b_whole</span> <span class="op">-</span> (<span class="ident">z1_b</span> <span class="op">*</span> <span class="ident">two_pow_10</span>);
+            <span class="comment">// b = b_0||b_1||b_2
+            //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
+            // The Orchard specification allows this representation to be non-canonical.
+            // &lt;https://zips.z.cash/protocol/protocol.pdf#merklepath&gt;
+            //
+            //    z_1 of SinsemillaHash(b) = b_1 + 2^5 b_2
+            // =&gt; b_0 = b - (z1_b * 2^10)
+            </span><span class="kw">let </span>z1_b = meta.query_advice(advices[<span class="number">1</span>], Rotation::next());
+            <span class="comment">// b_1 has been constrained to be 5 bits outside this gate.
+            </span><span class="kw">let </span>b_1 = meta.query_advice(advices[<span class="number">2</span>], Rotation::next());
+            <span class="comment">// b_2 has been constrained to be 5 bits outside this gate.
+            </span><span class="kw">let </span>b_2 = meta.query_advice(advices[<span class="number">3</span>], Rotation::next());
+            <span class="comment">// Constrain b_1 + 2^5 b_2 = z1_b
+            // https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-bit-lengths?partial
+            </span><span class="kw">let </span>b1_b2_check = z1_b.clone() - (b_1.clone() + b_2.clone() * two_pow_5);
+            <span class="comment">// Derive b_0 (constrained by SinsemillaHash to be 10 bits)
+            </span><span class="kw">let </span>b_0 = b_whole - (z1_b * two_pow_10);
 
-            <span class="comment">// Check that left = a_1 (240 bits) || b_0 (10 bits) || b_1 (5 bits)</span>
-            <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-decomposition?partial</span>
-            <span class="kw">let</span> <span class="ident">left_check</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">reconstructed</span> <span class="op">=</span> {
-                    <span class="kw">let</span> <span class="ident">two_pow_240</span> <span class="op">=</span> <span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">120</span>).<span class="ident">square</span>();
-                    <span class="ident">a_1</span> <span class="op">+</span> (<span class="ident">b_0</span> <span class="op">+</span> <span class="ident">b_1</span> <span class="op">*</span> <span class="ident">two_pow_10</span>) <span class="op">*</span> <span class="ident">two_pow_240</span>
+            <span class="comment">// Check that left = a_1 (240 bits) || b_0 (10 bits) || b_1 (5 bits)
+            // https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-decomposition?partial
+            </span><span class="kw">let </span>left_check = {
+                <span class="kw">let </span>reconstructed = {
+                    <span class="kw">let </span>two_pow_240 = pallas::Base::from_u128(<span class="number">1 </span>&lt;&lt; <span class="number">120</span>).square();
+                    a_1 + (b_0 + b_1 * two_pow_10) * two_pow_240
                 };
-                <span class="ident">reconstructed</span> <span class="op">-</span> <span class="ident">left_node</span>
+                reconstructed - left_node
             };
 
-            <span class="comment">// Check that right = b_2 (5 bits) || c (250 bits)</span>
-            <span class="comment">// The Orchard specification allows this representation to be non-canonical.</span>
-            <span class="comment">// &lt;https://zips.z.cash/protocol/protocol.pdf#merklepath&gt;</span>
-            <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-decomposition?partial</span>
-            <span class="kw">let</span> <span class="ident">right_check</span> <span class="op">=</span> <span class="ident">b_2</span> <span class="op">+</span> <span class="ident">c_whole</span> <span class="op">*</span> <span class="ident">two_pow_5</span> <span class="op">-</span> <span class="ident">right_node</span>;
+            <span class="comment">// Check that right = b_2 (5 bits) || c (250 bits)
+            // The Orchard specification allows this representation to be non-canonical.
+            // &lt;https://zips.z.cash/protocol/protocol.pdf#merklepath&gt;
+            // https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-decomposition?partial
+            </span><span class="kw">let </span>right_check = b_2 + c_whole * two_pow_5 - right_node;
 
-            <span class="ident">Constraints::with_selector</span>(
-                <span class="ident">q_decompose</span>,
+            Constraints::with_selector(
+                q_decompose,
                 [
-                    (<span class="string">&quot;l_check&quot;</span>, <span class="ident">a_0</span> <span class="op">-</span> <span class="ident">l_whole</span>),
-                    (<span class="string">&quot;left_check&quot;</span>, <span class="ident">left_check</span>),
-                    (<span class="string">&quot;right_check&quot;</span>, <span class="ident">right_check</span>),
-                    (<span class="string">&quot;b1_b2_check&quot;</span>, <span class="ident">b1_b2_check</span>),
+                    (<span class="string">&quot;l_check&quot;</span>, a_0 - l_whole),
+                    (<span class="string">&quot;left_check&quot;</span>, left_check),
+                    (<span class="string">&quot;right_check&quot;</span>, right_check),
+                    (<span class="string">&quot;b1_b2_check&quot;</span>, b1_b2_check),
                 ],
             )
         });
 
-        <span class="ident">MerkleConfig</span> {
-            <span class="ident">advices</span>,
-            <span class="ident">q_decompose</span>,
-            <span class="ident">cond_swap_config</span>,
-            <span class="ident">sinsemilla_config</span>,
+        MerkleConfig {
+            advices,
+            q_decompose,
+            cond_swap_config,
+            sinsemilla_config,
         }
     }
 
-    <span class="doccomment">/// Constructs a [`MerkleChip`] given a [`MerkleConfig`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">construct</span>(<span class="ident">config</span>: <span class="ident">MerkleConfig</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">MerkleChip</span> { <span class="ident">config</span> }
+    <span class="doccomment">/// Constructs a [`MerkleChip`] given a [`MerkleConfig`].
+    </span><span class="kw">pub fn </span>construct(config: MerkleConfig&lt;Hash, Commit, F&gt;) -&gt; <span class="self">Self </span>{
+        MerkleChip { config }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span>, <span class="kw">const</span> <span class="ident">MERKLE_DEPTH</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-    <span class="ident">MerkleInstructions</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">MERKLE_DEPTH</span>, { <span class="ident">sinsemilla::K</span> }, { <span class="ident">sinsemilla::C</span> }<span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">MerkleChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Eq</span>,
-    <span class="ident">F</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">F</span>, <span class="ident">Hash</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Eq</span>,
+<span class="kw">impl</span>&lt;Hash, Commit, F, <span class="kw">const </span>MERKLE_DEPTH: usize&gt;
+    MerkleInstructions&lt;pallas::Affine, MERKLE_DEPTH, { sinsemilla::K }, { sinsemilla::C }&gt;
+    <span class="kw">for </span>MerkleChip&lt;Hash, Commit, F&gt;
+<span class="kw">where
+    </span>Hash: HashDomains&lt;pallas::Affine&gt; + Eq,
+    F: FixedPoints&lt;pallas::Affine&gt;,
+    Commit: CommitDomains&lt;pallas::Affine, F, Hash&gt; + Eq,
 {
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="kw">fn</span> <span class="ident">hash_layer</span>(
+    <span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="kw">fn </span>hash_layer(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">Q</span>: <span class="ident">pallas::Affine</span>,
-        <span class="comment">// l = MERKLE_DEPTH - layer - 1</span>
-        <span class="ident">l</span>: <span class="ident">usize</span>,
-        <span class="ident">left</span>: <span class="ident"><span class="self">Self</span>::Var</span>,
-        <span class="ident">right</span>: <span class="ident"><span class="self">Self</span>::Var</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Var</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">clone</span>();
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        Q: pallas::Affine,
+        <span class="comment">// l = MERKLE_DEPTH - layer - 1
+        </span>l: usize,
+        left: <span class="self">Self</span>::Var,
+        right: <span class="self">Self</span>::Var,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Var, Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().clone();
 
-        <span class="comment">// We need to hash `l || left || right`, where `l` is a 10-bit value.</span>
-        <span class="comment">// We allow `left` and `right` to be non-canonical 255-bit encodings.</span>
-        <span class="comment">//</span>
-        <span class="comment">// a = a_0||a_1 = l || (bits 0..=239 of left)</span>
-        <span class="comment">// b = b_0||b_1||b_2</span>
-        <span class="comment">//   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)</span>
-        <span class="comment">// c = bits 5..=254 of right</span>
-        <span class="comment">//</span>
-        <span class="comment">// We start by witnessing all of the individual pieces, and range-constraining the</span>
-        <span class="comment">// short pieces b_1 and b_2.</span>
-        <span class="comment">//</span>
-        <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-bit-lengths?partial</span>
+        <span class="comment">// We need to hash `l || left || right`, where `l` is a 10-bit value.
+        // We allow `left` and `right` to be non-canonical 255-bit encodings.
+        //
+        // a = a_0||a_1 = l || (bits 0..=239 of left)
+        // b = b_0||b_1||b_2
+        //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
+        // c = bits 5..=254 of right
+        //
+        // We start by witnessing all of the individual pieces, and range-constraining the
+        // short pieces b_1 and b_2.
+        //
+        // https://p.z.cash/halo2-0.1:sinsemilla-merkle-crh-bit-lengths?partial
 
-        <span class="comment">// `a = a_0||a_1` = `l` || (bits 0..=239 of `left`)</span>
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">MessagePiece::from_subpieces</span>(
-            <span class="self">self</span>.<span class="ident">clone</span>(),
-            <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;Witness a = a_0 || a_1&quot;</span>),
+        // `a = a_0||a_1` = `l` || (bits 0..=239 of `left`)
+        </span><span class="kw">let </span>a = MessagePiece::from_subpieces(
+            <span class="self">self</span>.clone(),
+            layouter.namespace(|| <span class="string">&quot;Witness a = a_0 || a_1&quot;</span>),
             [
-                <span class="ident">RangeConstrained::bitrange_of</span>(<span class="ident">Value::known</span>(<span class="kw-2">&amp;</span><span class="ident">pallas::Base::from</span>(<span class="ident">l</span> <span class="kw">as</span> <span class="ident">u64</span>)), <span class="number">0</span>..<span class="number">10</span>),
-                <span class="ident">RangeConstrained::bitrange_of</span>(<span class="ident">left</span>.<span class="ident">value</span>(), <span class="number">0</span>..<span class="number">240</span>),
+                RangeConstrained::bitrange_of(Value::known(<span class="kw-2">&amp;</span>pallas::Base::from(l <span class="kw">as </span>u64)), <span class="number">0</span>..<span class="number">10</span>),
+                RangeConstrained::bitrange_of(left.value(), <span class="number">0</span>..<span class="number">240</span>),
             ],
         )<span class="question-mark">?</span>;
 
-        <span class="comment">// b = b_0 || b_1 || b_2</span>
-        <span class="comment">//   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)</span>
-        <span class="kw">let</span> (<span class="ident">b_1</span>, <span class="ident">b_2</span>, <span class="ident">b</span>) <span class="op">=</span> {
-            <span class="comment">// b_0 = (bits 240..=249 of `left`)</span>
-            <span class="kw">let</span> <span class="ident">b_0</span> <span class="op">=</span> <span class="ident">RangeConstrained::bitrange_of</span>(<span class="ident">left</span>.<span class="ident">value</span>(), <span class="number">240</span>..<span class="number">250</span>);
+        <span class="comment">// b = b_0 || b_1 || b_2
+        //   = (bits 240..=249 of left) || (bits 250..=254 of left) || (bits 0..=4 of right)
+        </span><span class="kw">let </span>(b_1, b_2, b) = {
+            <span class="comment">// b_0 = (bits 240..=249 of `left`)
+            </span><span class="kw">let </span>b_0 = RangeConstrained::bitrange_of(left.value(), <span class="number">240</span>..<span class="number">250</span>);
 
-            <span class="comment">// b_1 = (bits 250..=254 of `left`)</span>
-            <span class="comment">// Constrain b_1 to 5 bits.</span>
-            <span class="kw">let</span> <span class="ident">b_1</span> <span class="op">=</span> <span class="ident">RangeConstrained::witness_short</span>(
-                <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">sinsemilla_config</span>.<span class="ident">lookup_config</span>(),
-                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;b_1&quot;</span>),
-                <span class="ident">left</span>.<span class="ident">value</span>(),
-                <span class="number">250</span>..(<span class="ident">pallas::Base::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span>),
+            <span class="comment">// b_1 = (bits 250..=254 of `left`)
+            // Constrain b_1 to 5 bits.
+            </span><span class="kw">let </span>b_1 = RangeConstrained::witness_short(
+                <span class="kw-2">&amp;</span>config.sinsemilla_config.lookup_config(),
+                layouter.namespace(|| <span class="string">&quot;b_1&quot;</span>),
+                left.value(),
+                <span class="number">250</span>..(pallas::Base::NUM_BITS <span class="kw">as </span>usize),
             )<span class="question-mark">?</span>;
 
-            <span class="comment">// b_2 = (bits 0..=4 of `right`)</span>
-            <span class="comment">// Constrain b_2 to 5 bits.</span>
-            <span class="kw">let</span> <span class="ident">b_2</span> <span class="op">=</span> <span class="ident">RangeConstrained::witness_short</span>(
-                <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">sinsemilla_config</span>.<span class="ident">lookup_config</span>(),
-                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;b_2&quot;</span>),
-                <span class="ident">right</span>.<span class="ident">value</span>(),
+            <span class="comment">// b_2 = (bits 0..=4 of `right`)
+            // Constrain b_2 to 5 bits.
+            </span><span class="kw">let </span>b_2 = RangeConstrained::witness_short(
+                <span class="kw-2">&amp;</span>config.sinsemilla_config.lookup_config(),
+                layouter.namespace(|| <span class="string">&quot;b_2&quot;</span>),
+                right.value(),
                 <span class="number">0</span>..<span class="number">5</span>,
             )<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">MessagePiece::from_subpieces</span>(
-                <span class="self">self</span>.<span class="ident">clone</span>(),
-                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;Witness b = b_0 || b_1 || b_2&quot;</span>),
-                [<span class="ident">b_0</span>, <span class="ident">b_1</span>.<span class="ident">value</span>(), <span class="ident">b_2</span>.<span class="ident">value</span>()],
+            <span class="kw">let </span>b = MessagePiece::from_subpieces(
+                <span class="self">self</span>.clone(),
+                layouter.namespace(|| <span class="string">&quot;Witness b = b_0 || b_1 || b_2&quot;</span>),
+                [b_0, b_1.value(), b_2.value()],
             )<span class="question-mark">?</span>;
 
-            (<span class="ident">b_1</span>, <span class="ident">b_2</span>, <span class="ident">b</span>)
+            (b_1, b_2, b)
         };
 
-        <span class="comment">// c = bits 5..=254 of `right`</span>
-        <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="ident">MessagePiece::from_subpieces</span>(
-            <span class="self">self</span>.<span class="ident">clone</span>(),
-            <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;Witness c&quot;</span>),
-            [<span class="ident">RangeConstrained::bitrange_of</span>(
-                <span class="ident">right</span>.<span class="ident">value</span>(),
-                <span class="number">5</span>..(<span class="ident">pallas::Base::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span>),
+        <span class="comment">// c = bits 5..=254 of `right`
+        </span><span class="kw">let </span>c = MessagePiece::from_subpieces(
+            <span class="self">self</span>.clone(),
+            layouter.namespace(|| <span class="string">&quot;Witness c&quot;</span>),
+            [RangeConstrained::bitrange_of(
+                right.value(),
+                <span class="number">5</span>..(pallas::Base::NUM_BITS <span class="kw">as </span>usize),
             )],
         )<span class="question-mark">?</span>;
 
-        <span class="comment">// hash = SinsemillaHash(Q, 𝑙⋆ || left⋆ || right⋆)</span>
-        <span class="comment">//</span>
-        <span class="comment">// `hash = ⊥` is handled internally to `SinsemillaChip::hash_to_point`: incomplete</span>
-        <span class="comment">// addition constraints allows ⊥ to occur, and then during synthesis it detects</span>
-        <span class="comment">// these edge cases and raises an error (aborting proof creation).</span>
-        <span class="comment">//</span>
-        <span class="comment">// Note that MerkleCRH as-defined maps ⊥ to 0. This is for completeness outside</span>
-        <span class="comment">// the circuit (so that the ⊥ does not propagate into the type system). The chip</span>
-        <span class="comment">// explicitly doesn&#39;t map ⊥ to 0; in fact it cannot, as doing so would require</span>
-        <span class="comment">// constraints that amount to using complete addition. The rationale for excluding</span>
-        <span class="comment">// this map is the same as why Sinsemilla uses incomplete addition: this situation</span>
-        <span class="comment">// yields a nontrivial discrete log relation, and by assumption it is hard to find</span>
-        <span class="comment">// these.</span>
-        <span class="comment">//</span>
-        <span class="comment">// https://p.z.cash/proto:merkle-crh-orchard</span>
-        <span class="kw">let</span> (<span class="ident">point</span>, <span class="ident">zs</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">hash_to_point</span>(
-            <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;hash at l = {}&quot;</span>, <span class="ident">l</span>)),
-            <span class="ident">Q</span>,
-            <span class="macro">vec!</span>[<span class="ident">a</span>.<span class="ident">inner</span>(), <span class="ident">b</span>.<span class="ident">inner</span>(), <span class="ident">c</span>.<span class="ident">inner</span>()].<span class="ident">into</span>(),
+        <span class="comment">// hash = SinsemillaHash(Q, 𝑙⋆ || left⋆ || right⋆)
+        //
+        // `hash = ⊥` is handled internally to `SinsemillaChip::hash_to_point`: incomplete
+        // addition constraints allows ⊥ to occur, and then during synthesis it detects
+        // these edge cases and raises an error (aborting proof creation).
+        //
+        // Note that MerkleCRH as-defined maps ⊥ to 0. This is for completeness outside
+        // the circuit (so that the ⊥ does not propagate into the type system). The chip
+        // explicitly doesn&#39;t map ⊥ to 0; in fact it cannot, as doing so would require
+        // constraints that amount to using complete addition. The rationale for excluding
+        // this map is the same as why Sinsemilla uses incomplete addition: this situation
+        // yields a nontrivial discrete log relation, and by assumption it is hard to find
+        // these.
+        //
+        // https://p.z.cash/proto:merkle-crh-orchard
+        </span><span class="kw">let </span>(point, zs) = <span class="self">self</span>.hash_to_point(
+            layouter.namespace(|| <span class="macro">format!</span>(<span class="string">&quot;hash at l = {}&quot;</span>, l)),
+            Q,
+            <span class="macro">vec!</span>[a.inner(), b.inner(), c.inner()].into(),
         )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">hash</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::extract</span>(<span class="kw-2">&amp;</span><span class="ident">point</span>);
+        <span class="kw">let </span>hash = <span class="self">Self</span>::extract(<span class="kw-2">&amp;</span>point);
 
-        <span class="comment">// `SinsemillaChip::hash_to_point` returns the running sum for each `MessagePiece`.</span>
-        <span class="comment">// Grab the outputs we need for the decomposition constraints.</span>
-        <span class="kw">let</span> <span class="ident">z1_a</span> <span class="op">=</span> <span class="ident">zs</span>[<span class="number">0</span>][<span class="number">1</span>].<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">z1_b</span> <span class="op">=</span> <span class="ident">zs</span>[<span class="number">1</span>][<span class="number">1</span>].<span class="ident">clone</span>();
+        <span class="comment">// `SinsemillaChip::hash_to_point` returns the running sum for each `MessagePiece`.
+        // Grab the outputs we need for the decomposition constraints.
+        </span><span class="kw">let </span>z1_a = zs[<span class="number">0</span>][<span class="number">1</span>].clone();
+        <span class="kw">let </span>z1_b = zs[<span class="number">1</span>][<span class="number">1</span>].clone();
 
-        <span class="comment">// Check that the pieces have been decomposed properly.</span>
-        <span class="comment">//</span>
-        <span class="comment">// The pieces and subpieces are arranged in the following configuration:</span>
-        <span class="comment">// |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |</span>
-        <span class="comment">// -------------------------------------------------------</span>
-        <span class="comment">// |   a   |   b   |   c   |  left | right |      1      |</span>
-        <span class="comment">// |  z1_a |  z1_b |  b_1  |  b_2  |   l   |      0      |</span>
-        {
-            <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;Check piece decomposition&quot;</span>,
-                <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                    <span class="comment">// Set the fixed column `l` to the current l.</span>
-                    <span class="comment">// Recall that l = MERKLE_DEPTH - layer - 1.</span>
-                    <span class="comment">// The layer with 2^n nodes is called &quot;layer n&quot;.</span>
-                    <span class="ident">config</span>.<span class="ident">q_decompose</span>.<span class="ident">enable</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="number">0</span>)<span class="question-mark">?</span>;
-                    <span class="ident">region</span>.<span class="ident">assign_advice_from_constant</span>(
-                        <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;l {}&quot;</span>, <span class="ident">l</span>),
-                        <span class="ident">config</span>.<span class="ident">advices</span>[<span class="number">4</span>],
+        <span class="comment">// Check that the pieces have been decomposed properly.
+        //
+        // The pieces and subpieces are arranged in the following configuration:
+        // |  A_0  |  A_1  |  A_2  |  A_3  |  A_4  | q_decompose |
+        // -------------------------------------------------------
+        // |   a   |   b   |   c   |  left | right |      1      |
+        // |  z1_a |  z1_b |  b_1  |  b_2  |   l   |      0      |
+        </span>{
+            layouter.assign_region(
+                || <span class="string">&quot;Check piece decomposition&quot;</span>,
+                |<span class="kw-2">mut </span>region| {
+                    <span class="comment">// Set the fixed column `l` to the current l.
+                    // Recall that l = MERKLE_DEPTH - layer - 1.
+                    // The layer with 2^n nodes is called &quot;layer n&quot;.
+                    </span>config.q_decompose.enable(<span class="kw-2">&amp;mut </span>region, <span class="number">0</span>)<span class="question-mark">?</span>;
+                    region.assign_advice_from_constant(
+                        || <span class="macro">format!</span>(<span class="string">&quot;l {}&quot;</span>, l),
+                        config.advices[<span class="number">4</span>],
                         <span class="number">1</span>,
-                        <span class="ident">pallas::Base::from</span>(<span class="ident">l</span> <span class="kw">as</span> <span class="ident">u64</span>),
+                        pallas::Base::from(l <span class="kw">as </span>u64),
                     )<span class="question-mark">?</span>;
 
-                    <span class="comment">// Offset 0</span>
-                    <span class="comment">// Copy and assign `a` at the correct position.</span>
-                    <span class="ident">a</span>.<span class="ident">inner</span>().<span class="ident">cell_value</span>().<span class="ident">copy_advice</span>(
-                        <span class="op">|</span><span class="op">|</span> <span class="string">&quot;copy a&quot;</span>,
-                        <span class="kw-2">&amp;mut</span> <span class="ident">region</span>,
-                        <span class="ident">config</span>.<span class="ident">advices</span>[<span class="number">0</span>],
+                    <span class="comment">// Offset 0
+                    // Copy and assign `a` at the correct position.
+                    </span>a.inner().cell_value().copy_advice(
+                        || <span class="string">&quot;copy a&quot;</span>,
+                        <span class="kw-2">&amp;mut </span>region,
+                        config.advices[<span class="number">0</span>],
                         <span class="number">0</span>,
                     )<span class="question-mark">?</span>;
-                    <span class="comment">// Copy and assign `b` at the correct position.</span>
-                    <span class="ident">b</span>.<span class="ident">inner</span>().<span class="ident">cell_value</span>().<span class="ident">copy_advice</span>(
-                        <span class="op">|</span><span class="op">|</span> <span class="string">&quot;copy b&quot;</span>,
-                        <span class="kw-2">&amp;mut</span> <span class="ident">region</span>,
-                        <span class="ident">config</span>.<span class="ident">advices</span>[<span class="number">1</span>],
+                    <span class="comment">// Copy and assign `b` at the correct position.
+                    </span>b.inner().cell_value().copy_advice(
+                        || <span class="string">&quot;copy b&quot;</span>,
+                        <span class="kw-2">&amp;mut </span>region,
+                        config.advices[<span class="number">1</span>],
                         <span class="number">0</span>,
                     )<span class="question-mark">?</span>;
-                    <span class="comment">// Copy and assign `c` at the correct position.</span>
-                    <span class="ident">c</span>.<span class="ident">inner</span>().<span class="ident">cell_value</span>().<span class="ident">copy_advice</span>(
-                        <span class="op">|</span><span class="op">|</span> <span class="string">&quot;copy c&quot;</span>,
-                        <span class="kw-2">&amp;mut</span> <span class="ident">region</span>,
-                        <span class="ident">config</span>.<span class="ident">advices</span>[<span class="number">2</span>],
+                    <span class="comment">// Copy and assign `c` at the correct position.
+                    </span>c.inner().cell_value().copy_advice(
+                        || <span class="string">&quot;copy c&quot;</span>,
+                        <span class="kw-2">&amp;mut </span>region,
+                        config.advices[<span class="number">2</span>],
                         <span class="number">0</span>,
                     )<span class="question-mark">?</span>;
-                    <span class="comment">// Copy and assign the left node at the correct position.</span>
-                    <span class="ident">left</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;left&quot;</span>, <span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">config</span>.<span class="ident">advices</span>[<span class="number">3</span>], <span class="number">0</span>)<span class="question-mark">?</span>;
-                    <span class="comment">// Copy and assign the right node at the correct position.</span>
-                    <span class="ident">right</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;right&quot;</span>, <span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">config</span>.<span class="ident">advices</span>[<span class="number">4</span>], <span class="number">0</span>)<span class="question-mark">?</span>;
+                    <span class="comment">// Copy and assign the left node at the correct position.
+                    </span>left.copy_advice(|| <span class="string">&quot;left&quot;</span>, <span class="kw-2">&amp;mut </span>region, config.advices[<span class="number">3</span>], <span class="number">0</span>)<span class="question-mark">?</span>;
+                    <span class="comment">// Copy and assign the right node at the correct position.
+                    </span>right.copy_advice(|| <span class="string">&quot;right&quot;</span>, <span class="kw-2">&amp;mut </span>region, config.advices[<span class="number">4</span>], <span class="number">0</span>)<span class="question-mark">?</span>;
 
-                    <span class="comment">// Offset 1</span>
-                    <span class="comment">// Copy and assign z_1 of SinsemillaHash(a) = a_1</span>
-                    <span class="ident">z1_a</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;z1_a&quot;</span>, <span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">config</span>.<span class="ident">advices</span>[<span class="number">0</span>], <span class="number">1</span>)<span class="question-mark">?</span>;
-                    <span class="comment">// Copy and assign z_1 of SinsemillaHash(b) = b_1</span>
-                    <span class="ident">z1_b</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;z1_b&quot;</span>, <span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">config</span>.<span class="ident">advices</span>[<span class="number">1</span>], <span class="number">1</span>)<span class="question-mark">?</span>;
-                    <span class="comment">// Copy `b_1`, which has been constrained to be a 5-bit value</span>
-                    <span class="ident">b_1</span>.<span class="ident">inner</span>()
-                        .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;b_1&quot;</span>, <span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">config</span>.<span class="ident">advices</span>[<span class="number">2</span>], <span class="number">1</span>)<span class="question-mark">?</span>;
-                    <span class="comment">// Copy `b_2`, which has been constrained to be a 5-bit value</span>
-                    <span class="ident">b_2</span>.<span class="ident">inner</span>()
-                        .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;b_2&quot;</span>, <span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">config</span>.<span class="ident">advices</span>[<span class="number">3</span>], <span class="number">1</span>)<span class="question-mark">?</span>;
+                    <span class="comment">// Offset 1
+                    // Copy and assign z_1 of SinsemillaHash(a) = a_1
+                    </span>z1_a.copy_advice(|| <span class="string">&quot;z1_a&quot;</span>, <span class="kw-2">&amp;mut </span>region, config.advices[<span class="number">0</span>], <span class="number">1</span>)<span class="question-mark">?</span>;
+                    <span class="comment">// Copy and assign z_1 of SinsemillaHash(b) = b_1
+                    </span>z1_b.copy_advice(|| <span class="string">&quot;z1_b&quot;</span>, <span class="kw-2">&amp;mut </span>region, config.advices[<span class="number">1</span>], <span class="number">1</span>)<span class="question-mark">?</span>;
+                    <span class="comment">// Copy `b_1`, which has been constrained to be a 5-bit value
+                    </span>b_1.inner()
+                        .copy_advice(|| <span class="string">&quot;b_1&quot;</span>, <span class="kw-2">&amp;mut </span>region, config.advices[<span class="number">2</span>], <span class="number">1</span>)<span class="question-mark">?</span>;
+                    <span class="comment">// Copy `b_2`, which has been constrained to be a 5-bit value
+                    </span>b_2.inner()
+                        .copy_advice(|| <span class="string">&quot;b_2&quot;</span>, <span class="kw-2">&amp;mut </span>region, config.advices[<span class="number">3</span>], <span class="number">1</span>)<span class="question-mark">?</span>;
 
                     <span class="prelude-val">Ok</span>(())
                 },
             )<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// Check layer hash output against Sinsemilla primitives hash</span>
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+        <span class="comment">// Check layer hash output against Sinsemilla primitives hash
+        </span><span class="attribute">#[cfg(test)]</span>
         {
-            <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">sinsemilla::primitives::HashDomain</span>, <span class="ident">utilities::i2lebsp</span>};
+            <span class="kw">use crate</span>::{sinsemilla::primitives::HashDomain, utilities::i2lebsp};
 
-            <span class="kw">use</span> <span class="ident">group::ff::PrimeFieldBits</span>;
+            <span class="kw">use </span>group::ff::PrimeFieldBits;
 
-            <span class="ident">left</span>.<span class="ident">value</span>()
-                .<span class="ident">zip</span>(<span class="ident">right</span>.<span class="ident">value</span>())
-                .<span class="ident">zip</span>(<span class="ident">hash</span>.<span class="ident">value</span>())
-                .<span class="ident">assert_if_known</span>(<span class="op">|</span>((<span class="ident">left</span>, <span class="ident">right</span>), <span class="ident">hash</span>)<span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">i2lebsp</span>::<span class="op">&lt;</span><span class="number">10</span><span class="op">&gt;</span>(<span class="ident">l</span> <span class="kw">as</span> <span class="ident">u64</span>);
-                    <span class="kw">let</span> <span class="ident">left</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">left</span>
-                        .<span class="ident">to_le_bits</span>()
-                        .<span class="ident">iter</span>()
-                        .<span class="ident">by_vals</span>()
-                        .<span class="ident">take</span>(<span class="ident">pallas::Base::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span>)
-                        .<span class="ident">collect</span>();
-                    <span class="kw">let</span> <span class="ident">right</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">right</span>
-                        .<span class="ident">to_le_bits</span>()
-                        .<span class="ident">iter</span>()
-                        .<span class="ident">by_vals</span>()
-                        .<span class="ident">take</span>(<span class="ident">pallas::Base::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span>)
-                        .<span class="ident">collect</span>();
-                    <span class="kw">let</span> <span class="ident">merkle_crh</span> <span class="op">=</span> <span class="ident">HashDomain::from_Q</span>(<span class="ident">Q</span>.<span class="ident">into</span>());
+            left.value()
+                .zip(right.value())
+                .zip(hash.value())
+                .assert_if_known(|((left, right), hash)| {
+                    <span class="kw">let </span>l = i2lebsp::&lt;<span class="number">10</span>&gt;(l <span class="kw">as </span>u64);
+                    <span class="kw">let </span>left: Vec&lt;<span class="kw">_</span>&gt; = left
+                        .to_le_bits()
+                        .iter()
+                        .by_vals()
+                        .take(pallas::Base::NUM_BITS <span class="kw">as </span>usize)
+                        .collect();
+                    <span class="kw">let </span>right: Vec&lt;<span class="kw">_</span>&gt; = right
+                        .to_le_bits()
+                        .iter()
+                        .by_vals()
+                        .take(pallas::Base::NUM_BITS <span class="kw">as </span>usize)
+                        .collect();
+                    <span class="kw">let </span>merkle_crh = HashDomain::from_Q(Q.into());
 
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">message</span> <span class="op">=</span> <span class="ident">l</span>.<span class="ident">to_vec</span>();
-                    <span class="ident">message</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">left</span>);
-                    <span class="ident">message</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">right</span>);
+                    <span class="kw">let </span><span class="kw-2">mut </span>message = l.to_vec();
+                    message.extend_from_slice(<span class="kw-2">&amp;</span>left);
+                    message.extend_from_slice(<span class="kw-2">&amp;</span>right);
 
-                    <span class="kw">let</span> <span class="ident">expected</span> <span class="op">=</span> <span class="ident">merkle_crh</span>.<span class="ident">hash</span>(<span class="ident">message</span>.<span class="ident">into_iter</span>()).<span class="ident">unwrap</span>();
+                    <span class="kw">let </span>expected = merkle_crh.hash(message.into_iter()).unwrap();
 
-                    <span class="ident">expected</span>.<span class="ident">to_repr</span>() <span class="op">==</span> <span class="ident">hash</span>.<span class="ident">to_repr</span>()
+                    expected.to_repr() == hash.to_repr()
                 });
         }
 
-        <span class="prelude-val">Ok</span>(<span class="ident">hash</span>)
+        <span class="prelude-val">Ok</span>(hash)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="ident">UtilitiesInstructions</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MerkleChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">F</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">F</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;Hash, Commit, F&gt; UtilitiesInstructions&lt;pallas::Base&gt; <span class="kw">for </span>MerkleChip&lt;Hash, Commit, F&gt;
+<span class="kw">where
+    </span>Hash: HashDomains&lt;pallas::Affine&gt;,
+    F: FixedPoints&lt;pallas::Affine&gt;,
+    Commit: CommitDomains&lt;pallas::Affine, F, Hash&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Var</span> <span class="op">=</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Var = AssignedCell&lt;pallas::Base, pallas::Base&gt;;
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="ident">CondSwapInstructions</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MerkleChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">F</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">F</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;Hash, Commit, F&gt; CondSwapInstructions&lt;pallas::Base&gt; <span class="kw">for </span>MerkleChip&lt;Hash, Commit, F&gt;
+<span class="kw">where
+    </span>Hash: HashDomains&lt;pallas::Affine&gt;,
+    F: FixedPoints&lt;pallas::Affine&gt;,
+    Commit: CommitDomains&lt;pallas::Affine, F, Hash&gt;,
 {
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">fn</span> <span class="ident">swap</span>(
+    <span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="kw">fn </span>swap(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">pair</span>: (<span class="ident"><span class="self">Self</span>::Var</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>),
-        <span class="ident">swap</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::Var</span>, <span class="ident"><span class="self">Self</span>::Var</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">cond_swap_config</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">chip</span> <span class="op">=</span> <span class="ident">CondSwapChip</span>::<span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="ident">::construct</span>(<span class="ident">config</span>);
-        <span class="ident">chip</span>.<span class="ident">swap</span>(<span class="ident">layouter</span>, <span class="ident">pair</span>, <span class="ident">swap</span>)
+        layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        pair: (<span class="self">Self</span>::Var, Value&lt;pallas::Base&gt;),
+        swap: Value&lt;bool&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::Var, <span class="self">Self</span>::Var), Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().cond_swap_config.clone();
+        <span class="kw">let </span>chip = CondSwapChip::&lt;pallas::Base&gt;::construct(config);
+        chip.swap(layouter, pair, swap)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, { <span class="ident">sinsemilla::K</span> }, { <span class="ident">sinsemilla::C</span> }<span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">MerkleChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">F</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">F</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;Hash, Commit, F&gt; SinsemillaInstructions&lt;pallas::Affine, { sinsemilla::K }, { sinsemilla::C }&gt;
+    <span class="kw">for </span>MerkleChip&lt;Hash, Commit, F&gt;
+<span class="kw">where
+    </span>Hash: HashDomains&lt;pallas::Affine&gt;,
+    F: FixedPoints&lt;pallas::Affine&gt;,
+    Commit: CommitDomains&lt;pallas::Affine, F, Hash&gt;,
 {
-    <span class="kw">type</span> <span class="ident">CellValue</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span>
-        <span class="ident">pallas::Affine</span>,
-        { <span class="ident">sinsemilla::K</span> },
-        { <span class="ident">sinsemilla::C</span> },
-    <span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::CellValue</span>;
+    <span class="kw">type </span>CellValue = &lt;SinsemillaChip&lt;Hash, Commit, F&gt; <span class="kw">as </span>SinsemillaInstructions&lt;
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    &gt;&gt;::CellValue;
 
-    <span class="kw">type</span> <span class="ident">Message</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span>
-        <span class="ident">pallas::Affine</span>,
-        { <span class="ident">sinsemilla::K</span> },
-        { <span class="ident">sinsemilla::C</span> },
-    <span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Message</span>;
-    <span class="kw">type</span> <span class="ident">MessagePiece</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span>
-        <span class="ident">pallas::Affine</span>,
-        { <span class="ident">sinsemilla::K</span> },
-        { <span class="ident">sinsemilla::C</span> },
-    <span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::MessagePiece</span>;
-    <span class="kw">type</span> <span class="ident">RunningSum</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span>
-        <span class="ident">pallas::Affine</span>,
-        { <span class="ident">sinsemilla::K</span> },
-        { <span class="ident">sinsemilla::C</span> },
-    <span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::RunningSum</span>;
+    <span class="kw">type </span>Message = &lt;SinsemillaChip&lt;Hash, Commit, F&gt; <span class="kw">as </span>SinsemillaInstructions&lt;
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    &gt;&gt;::Message;
+    <span class="kw">type </span>MessagePiece = &lt;SinsemillaChip&lt;Hash, Commit, F&gt; <span class="kw">as </span>SinsemillaInstructions&lt;
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    &gt;&gt;::MessagePiece;
+    <span class="kw">type </span>RunningSum = &lt;SinsemillaChip&lt;Hash, Commit, F&gt; <span class="kw">as </span>SinsemillaInstructions&lt;
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    &gt;&gt;::RunningSum;
 
-    <span class="kw">type</span> <span class="ident">X</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span>
-        <span class="ident">pallas::Affine</span>,
-        { <span class="ident">sinsemilla::K</span> },
-        { <span class="ident">sinsemilla::C</span> },
-    <span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::X</span>;
-    <span class="kw">type</span> <span class="ident">NonIdentityPoint</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span>
-        <span class="ident">pallas::Affine</span>,
-        { <span class="ident">sinsemilla::K</span> },
-        { <span class="ident">sinsemilla::C</span> },
-    <span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::NonIdentityPoint</span>;
-    <span class="kw">type</span> <span class="ident">FixedPoints</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span>
-        <span class="ident">pallas::Affine</span>,
-        { <span class="ident">sinsemilla::K</span> },
-        { <span class="ident">sinsemilla::C</span> },
-    <span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::FixedPoints</span>;
+    <span class="kw">type </span>X = &lt;SinsemillaChip&lt;Hash, Commit, F&gt; <span class="kw">as </span>SinsemillaInstructions&lt;
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    &gt;&gt;::X;
+    <span class="kw">type </span>NonIdentityPoint = &lt;SinsemillaChip&lt;Hash, Commit, F&gt; <span class="kw">as </span>SinsemillaInstructions&lt;
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    &gt;&gt;::NonIdentityPoint;
+    <span class="kw">type </span>FixedPoints = &lt;SinsemillaChip&lt;Hash, Commit, F&gt; <span class="kw">as </span>SinsemillaInstructions&lt;
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    &gt;&gt;::FixedPoints;
 
-    <span class="kw">type</span> <span class="ident">HashDomains</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span>
-        <span class="ident">pallas::Affine</span>,
-        { <span class="ident">sinsemilla::K</span> },
-        { <span class="ident">sinsemilla::C</span> },
-    <span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::HashDomains</span>;
-    <span class="kw">type</span> <span class="ident">CommitDomains</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span>
-        <span class="ident">pallas::Affine</span>,
-        { <span class="ident">sinsemilla::K</span> },
-        { <span class="ident">sinsemilla::C</span> },
-    <span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::CommitDomains</span>;
+    <span class="kw">type </span>HashDomains = &lt;SinsemillaChip&lt;Hash, Commit, F&gt; <span class="kw">as </span>SinsemillaInstructions&lt;
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    &gt;&gt;::HashDomains;
+    <span class="kw">type </span>CommitDomains = &lt;SinsemillaChip&lt;Hash, Commit, F&gt; <span class="kw">as </span>SinsemillaInstructions&lt;
+        pallas::Affine,
+        { sinsemilla::K },
+        { sinsemilla::C },
+    &gt;&gt;::CommitDomains;
 
-    <span class="kw">fn</span> <span class="ident">witness_message_piece</span>(
+    <span class="kw">fn </span>witness_message_piece(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">num_words</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::MessagePiece</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">sinsemilla_config</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">chip</span> <span class="op">=</span> <span class="ident">SinsemillaChip</span>::<span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span><span class="ident">::construct</span>(<span class="ident">config</span>);
-        <span class="ident">chip</span>.<span class="ident">witness_message_piece</span>(<span class="ident">layouter</span>, <span class="ident">value</span>, <span class="ident">num_words</span>)
+        layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        value: Value&lt;pallas::Base&gt;,
+        num_words: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::MessagePiece, Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().sinsemilla_config.clone();
+        <span class="kw">let </span>chip = SinsemillaChip::&lt;Hash, Commit, F&gt;::construct(config);
+        chip.witness_message_piece(layouter, value, num_words)
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">fn</span> <span class="ident">hash_to_point</span>(
+    <span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="kw">fn </span>hash_to_point(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">Q</span>: <span class="ident">pallas::Affine</span>,
-        <span class="ident">message</span>: <span class="ident"><span class="self">Self</span>::Message</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::CellValue</span><span class="op">&gt;</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">sinsemilla_config</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">chip</span> <span class="op">=</span> <span class="ident">SinsemillaChip</span>::<span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span><span class="ident">::construct</span>(<span class="ident">config</span>);
-        <span class="ident">chip</span>.<span class="ident">hash_to_point</span>(<span class="ident">layouter</span>, <span class="ident">Q</span>, <span class="ident">message</span>)
+        layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        Q: pallas::Affine,
+        message: <span class="self">Self</span>::Message,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::NonIdentityPoint, Vec&lt;Vec&lt;<span class="self">Self</span>::CellValue&gt;&gt;), Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().sinsemilla_config.clone();
+        <span class="kw">let </span>chip = SinsemillaChip::&lt;Hash, Commit, F&gt;::construct(config);
+        chip.hash_to_point(layouter, Q, message)
     }
 
-    <span class="kw">fn</span> <span class="ident">extract</span>(<span class="ident">point</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>) -&gt; <span class="ident"><span class="self">Self</span>::X</span> {
-        <span class="ident">SinsemillaChip</span>::<span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span><span class="ident">::extract</span>(<span class="ident">point</span>)
+    <span class="kw">fn </span>extract(point: <span class="kw-2">&amp;</span><span class="self">Self</span>::NonIdentityPoint) -&gt; <span class="self">Self</span>::X {
+        SinsemillaChip::&lt;Hash, Commit, F&gt;::extract(point)
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

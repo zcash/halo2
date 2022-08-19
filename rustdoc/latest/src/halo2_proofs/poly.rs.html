@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_proofs/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_proofs/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -268,255 +262,254 @@
 <span id="247">247</span>
 <span id="248">248</span>
 <span id="249">249</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Contains utilities for performing arithmetic over univariate polynomials in</span>
-<span class="doccomment">//! various forms, including computing commitments to them and provably opening</span>
-<span class="doccomment">//! the committed polynomials at arbitrary points.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Contains utilities for performing arithmetic over univariate polynomials in
+//! various forms, including computing commitments to them and provably opening
+//! the committed polynomials at arbitrary points.
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic::parallelize</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::plonk::Assigned</span>;
+</span><span class="kw">use </span><span class="kw">crate</span>::arithmetic::parallelize;
+<span class="kw">use </span><span class="kw">crate</span>::plonk::Assigned;
 
-<span class="kw">use</span> <span class="ident">group::ff</span>::{<span class="ident">BatchInvert</span>, <span class="ident">Field</span>};
-<span class="kw">use</span> <span class="ident">pasta_curves::arithmetic::FieldExt</span>;
-<span class="kw">use</span> <span class="ident">std::fmt::Debug</span>;
-<span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
-<span class="kw">use</span> <span class="ident">std::ops</span>::{<span class="ident">Add</span>, <span class="ident">Deref</span>, <span class="ident">DerefMut</span>, <span class="ident">Index</span>, <span class="ident">IndexMut</span>, <span class="ident">Mul</span>, <span class="ident">RangeFrom</span>, <span class="ident">RangeFull</span>};
+<span class="kw">use </span>group::ff::{BatchInvert, Field};
+<span class="kw">use </span>pasta_curves::arithmetic::FieldExt;
+<span class="kw">use </span>std::fmt::Debug;
+<span class="kw">use </span>std::marker::PhantomData;
+<span class="kw">use </span>std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, RangeFrom, RangeFull};
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">commitment</span>;
-<span class="kw">mod</span> <span class="ident">domain</span>;
-<span class="kw">mod</span> <span class="ident">evaluator</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">multiopen</span>;
+<span class="kw">pub mod </span>commitment;
+<span class="kw">mod </span>domain;
+<span class="kw">mod </span>evaluator;
+<span class="kw">pub mod </span>multiopen;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">domain</span>::<span class="kw-2">*</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">evaluator</span>::<span class="kw-2">*</span>;
+<span class="kw">pub use </span>domain::<span class="kw-2">*</span>;
+<span class="kw">pub use </span>evaluator::<span class="kw-2">*</span>;
 
-<span class="doccomment">/// This is an error that could occur during proving or circuit synthesis.</span>
-<span class="comment">// TODO: these errors need to be cleaned up</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Error</span> {
-    <span class="doccomment">/// OpeningProof is not well-formed</span>
-    <span class="ident">OpeningError</span>,
-    <span class="doccomment">/// Caller needs to re-sample a point</span>
-    <span class="ident">SamplingError</span>,
+<span class="doccomment">/// This is an error that could occur during proving or circuit synthesis.
+</span><span class="comment">// TODO: these errors need to be cleaned up
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub enum </span>Error {
+    <span class="doccomment">/// OpeningProof is not well-formed
+    </span>OpeningError,
+    <span class="doccomment">/// Caller needs to re-sample a point
+    </span>SamplingError,
 }
 
-<span class="doccomment">/// The basis over which a polynomial is described.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Basis</span>: <span class="ident">Copy</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {}
+<span class="doccomment">/// The basis over which a polynomial is described.
+</span><span class="kw">pub trait </span>Basis: Copy + Debug + Send + Sync {}
 
-<span class="doccomment">/// The polynomial is defined as coefficients</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Coeff</span>;
-<span class="kw">impl</span> <span class="ident">Basis</span> <span class="kw">for</span> <span class="ident">Coeff</span> {}
+<span class="doccomment">/// The polynomial is defined as coefficients
+</span><span class="attribute">#[derive(Clone, Copy, Debug)]</span>
+<span class="kw">pub struct </span>Coeff;
+<span class="kw">impl </span>Basis <span class="kw">for </span>Coeff {}
 
-<span class="doccomment">/// The polynomial is defined as coefficients of Lagrange basis polynomials</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LagrangeCoeff</span>;
-<span class="kw">impl</span> <span class="ident">Basis</span> <span class="kw">for</span> <span class="ident">LagrangeCoeff</span> {}
+<span class="doccomment">/// The polynomial is defined as coefficients of Lagrange basis polynomials
+</span><span class="attribute">#[derive(Clone, Copy, Debug)]</span>
+<span class="kw">pub struct </span>LagrangeCoeff;
+<span class="kw">impl </span>Basis <span class="kw">for </span>LagrangeCoeff {}
 
-<span class="doccomment">/// The polynomial is defined as coefficients of Lagrange basis polynomials in</span>
-<span class="doccomment">/// an extended size domain which supports multiplication</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ExtendedLagrangeCoeff</span>;
-<span class="kw">impl</span> <span class="ident">Basis</span> <span class="kw">for</span> <span class="ident">ExtendedLagrangeCoeff</span> {}
+<span class="doccomment">/// The polynomial is defined as coefficients of Lagrange basis polynomials in
+/// an extended size domain which supports multiplication
+</span><span class="attribute">#[derive(Clone, Copy, Debug)]</span>
+<span class="kw">pub struct </span>ExtendedLagrangeCoeff;
+<span class="kw">impl </span>Basis <span class="kw">for </span>ExtendedLagrangeCoeff {}
 
-<span class="doccomment">/// Represents a univariate polynomial defined over a field and a particular</span>
-<span class="doccomment">/// basis.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="ident">values</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">B</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Represents a univariate polynomial defined over a field and a particular
+/// basis.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>Polynomial&lt;F, B&gt; {
+    values: Vec&lt;F&gt;,
+    _marker: PhantomData&lt;B&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">Index</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">F</span>;
+<span class="kw">impl</span>&lt;F, B&gt; Index&lt;usize&gt; <span class="kw">for </span>Polynomial&lt;F, B&gt; {
+    <span class="kw">type </span>Output = F;
 
-    <span class="kw">fn</span> <span class="ident">index</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">index</span>: <span class="ident">usize</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">F</span> {
-        <span class="self">self</span>.<span class="ident">values</span>.<span class="ident">index</span>(<span class="ident">index</span>)
+    <span class="kw">fn </span>index(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; <span class="kw-2">&amp;</span>F {
+        <span class="self">self</span>.values.index(index)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">IndexMut</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">index_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">index</span>: <span class="ident">usize</span>) -&gt; <span class="kw-2">&amp;mut</span> <span class="ident">F</span> {
-        <span class="self">self</span>.<span class="ident">values</span>.<span class="ident">index_mut</span>(<span class="ident">index</span>)
+<span class="kw">impl</span>&lt;F, B&gt; IndexMut&lt;usize&gt; <span class="kw">for </span>Polynomial&lt;F, B&gt; {
+    <span class="kw">fn </span>index_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: usize) -&gt; <span class="kw-2">&amp;mut </span>F {
+        <span class="self">self</span>.values.index_mut(index)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">Index</span><span class="op">&lt;</span><span class="ident">RangeFrom</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> [<span class="ident">F</span>];
+<span class="kw">impl</span>&lt;F, B&gt; Index&lt;RangeFrom&lt;usize&gt;&gt; <span class="kw">for </span>Polynomial&lt;F, B&gt; {
+    <span class="kw">type </span>Output = [F];
 
-    <span class="kw">fn</span> <span class="ident">index</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">index</span>: <span class="ident">RangeFrom</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">F</span>] {
-        <span class="self">self</span>.<span class="ident">values</span>.<span class="ident">index</span>(<span class="ident">index</span>)
+    <span class="kw">fn </span>index(<span class="kw-2">&amp;</span><span class="self">self</span>, index: RangeFrom&lt;usize&gt;) -&gt; <span class="kw-2">&amp;</span>[F] {
+        <span class="self">self</span>.values.index(index)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">IndexMut</span><span class="op">&lt;</span><span class="ident">RangeFrom</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">index_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">index</span>: <span class="ident">RangeFrom</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">F</span>] {
-        <span class="self">self</span>.<span class="ident">values</span>.<span class="ident">index_mut</span>(<span class="ident">index</span>)
+<span class="kw">impl</span>&lt;F, B&gt; IndexMut&lt;RangeFrom&lt;usize&gt;&gt; <span class="kw">for </span>Polynomial&lt;F, B&gt; {
+    <span class="kw">fn </span>index_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: RangeFrom&lt;usize&gt;) -&gt; <span class="kw-2">&amp;mut </span>[F] {
+        <span class="self">self</span>.values.index_mut(index)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">Index</span><span class="op">&lt;</span><span class="ident">RangeFull</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> [<span class="ident">F</span>];
+<span class="kw">impl</span>&lt;F, B&gt; Index&lt;RangeFull&gt; <span class="kw">for </span>Polynomial&lt;F, B&gt; {
+    <span class="kw">type </span>Output = [F];
 
-    <span class="kw">fn</span> <span class="ident">index</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">index</span>: <span class="ident">RangeFull</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">F</span>] {
-        <span class="self">self</span>.<span class="ident">values</span>.<span class="ident">index</span>(<span class="ident">index</span>)
+    <span class="kw">fn </span>index(<span class="kw-2">&amp;</span><span class="self">self</span>, index: RangeFull) -&gt; <span class="kw-2">&amp;</span>[F] {
+        <span class="self">self</span>.values.index(index)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">IndexMut</span><span class="op">&lt;</span><span class="ident">RangeFull</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">index_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">index</span>: <span class="ident">RangeFull</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">F</span>] {
-        <span class="self">self</span>.<span class="ident">values</span>.<span class="ident">index_mut</span>(<span class="ident">index</span>)
+<span class="kw">impl</span>&lt;F, B&gt; IndexMut&lt;RangeFull&gt; <span class="kw">for </span>Polynomial&lt;F, B&gt; {
+    <span class="kw">fn </span>index_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: RangeFull) -&gt; <span class="kw-2">&amp;mut </span>[F] {
+        <span class="self">self</span>.values.index_mut(index)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> [<span class="ident">F</span>];
+<span class="kw">impl</span>&lt;F, B&gt; Deref <span class="kw">for </span>Polynomial&lt;F, B&gt; {
+    <span class="kw">type </span>Target = [F];
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[<span class="ident">F</span>] {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">values</span>[..]
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[F] {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.values[..]
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">DerefMut</span> <span class="kw">for</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">deref_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut</span> [<span class="ident">F</span>] {
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">values</span>[..]
+<span class="kw">impl</span>&lt;F, B&gt; DerefMut <span class="kw">for </span>Polynomial&lt;F, B&gt; {
+    <span class="kw">fn </span>deref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>[F] {
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.values[..]
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Iterate over the values, which are either in coefficient or evaluation</span>
-    <span class="doccomment">/// form depending on the basis `B`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">values</span>.<span class="ident">iter</span>()
+<span class="kw">impl</span>&lt;F, B&gt; Polynomial&lt;F, B&gt; {
+    <span class="doccomment">/// Iterate over the values, which are either in coefficient or evaluation
+    /// form depending on the basis `B`.
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span>F&gt; {
+        <span class="self">self</span>.values.iter()
     }
 
-    <span class="doccomment">/// Iterate over the values mutably, which are either in coefficient or</span>
-    <span class="doccomment">/// evaluation form depending on the basis `B`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">iter_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">values</span>.<span class="ident">iter_mut</span>()
+    <span class="doccomment">/// Iterate over the values mutably, which are either in coefficient or
+    /// evaluation form depending on the basis `B`.
+    </span><span class="kw">pub fn </span>iter_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;mut </span>F&gt; {
+        <span class="self">self</span>.values.iter_mut()
     }
 
-    <span class="doccomment">/// Gets the size of this polynomial in terms of the number of</span>
-    <span class="doccomment">/// coefficients used to describe it.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">num_coeffs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="self">self</span>.<span class="ident">values</span>.<span class="ident">len</span>()
+    <span class="doccomment">/// Gets the size of this polynomial in terms of the number of
+    /// coefficients used to describe it.
+    </span><span class="kw">pub fn </span>num_coeffs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.values.len()
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">batch_invert_assigned</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(
-    <span class="ident">assigned</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">assigned_denominators</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">assigned</span>
-        .<span class="ident">iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> {
-            <span class="ident">f</span>.<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">value</span><span class="op">|</span> <span class="ident">value</span>.<span class="ident">denominator</span>())
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>batch_invert_assigned&lt;F: FieldExt&gt;(
+    assigned: Vec&lt;Polynomial&lt;Assigned&lt;F&gt;, LagrangeCoeff&gt;&gt;,
+) -&gt; Vec&lt;Polynomial&lt;F, LagrangeCoeff&gt;&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>assigned_denominators: Vec&lt;<span class="kw">_</span>&gt; = assigned
+        .iter()
+        .map(|f| {
+            f.iter()
+                .map(|value| value.denominator())
+                .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
         })
-        .<span class="ident">collect</span>();
+        .collect();
 
-    <span class="ident">assigned_denominators</span>
-        .<span class="ident">iter_mut</span>()
-        .<span class="ident">flat_map</span>(<span class="op">|</span><span class="ident">f</span><span class="op">|</span> {
-            <span class="ident">f</span>.<span class="ident">iter_mut</span>()
-                <span class="comment">// If the denominator is trivial, we can skip it, reducing the</span>
-                <span class="comment">// size of the batch inversion.</span>
-                .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">d</span><span class="op">|</span> <span class="ident">d</span>.<span class="ident">as_mut</span>())
+    assigned_denominators
+        .iter_mut()
+        .flat_map(|f| {
+            f.iter_mut()
+                <span class="comment">// If the denominator is trivial, we can skip it, reducing the
+                // size of the batch inversion.
+                </span>.filter_map(|d| d.as_mut())
         })
-        .<span class="ident">batch_invert</span>();
+        .batch_invert();
 
-    <span class="ident">assigned</span>
-        .<span class="ident">iter</span>()
-        .<span class="ident">zip</span>(<span class="ident">assigned_denominators</span>.<span class="ident">into_iter</span>())
-        .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">poly</span>, <span class="ident">inv_denoms</span>)<span class="op">|</span> {
-            <span class="ident">poly</span>.<span class="ident">invert</span>(<span class="ident">inv_denoms</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">d</span><span class="op">|</span> <span class="ident">d</span>.<span class="ident">unwrap_or_else</span>(<span class="ident">F::one</span>)))
+    assigned
+        .iter()
+        .zip(assigned_denominators.into_iter())
+        .map(|(poly, inv_denoms)| {
+            poly.invert(inv_denoms.into_iter().map(|d| d.unwrap_or_else(F::one)))
         })
-        .<span class="ident">collect</span>()
+        .collect()
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">invert</span>(
+<span class="kw">impl</span>&lt;F: Field&gt; Polynomial&lt;Assigned&lt;F&gt;, LagrangeCoeff&gt; {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>invert(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">inv_denoms</span>: <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">ExactSizeIterator</span>,
-    ) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="ident">inv_denoms</span>.<span class="ident">len</span>(), <span class="self">self</span>.<span class="ident">values</span>.<span class="ident">len</span>());
-        <span class="ident">Polynomial</span> {
-            <span class="ident">values</span>: <span class="self">self</span>
-                .<span class="ident">values</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">zip</span>(<span class="ident">inv_denoms</span>.<span class="ident">into_iter</span>())
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">inv_den</span>)<span class="op">|</span> <span class="ident">a</span>.<span class="ident">numerator</span>() <span class="op">*</span> <span class="ident">inv_den</span>)
-                .<span class="ident">collect</span>(),
-            <span class="ident">_marker</span>: <span class="self">self</span>.<span class="ident">_marker</span>,
+        inv_denoms: <span class="kw">impl </span>Iterator&lt;Item = F&gt; + ExactSizeIterator,
+    ) -&gt; Polynomial&lt;F, LagrangeCoeff&gt; {
+        <span class="macro">assert_eq!</span>(inv_denoms.len(), <span class="self">self</span>.values.len());
+        Polynomial {
+            values: <span class="self">self
+                </span>.values
+                .iter()
+                .zip(inv_denoms.into_iter())
+                .map(|(a, inv_den)| a.numerator() * inv_den)
+                .collect(),
+            _marker: <span class="self">self</span>._marker,
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">B</span>: <span class="ident">Basis</span><span class="op">&gt;</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, F: Field, B: Basis&gt; Add&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Polynomial&lt;F, B&gt;&gt; <span class="kw">for </span>Polynomial&lt;F, B&gt; {
+    <span class="kw">type </span>Output = Polynomial&lt;F, B&gt;;
 
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-        <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">lhs</span>, <span class="ident">start</span><span class="op">|</span> {
-            <span class="kw">for</span> (<span class="ident">lhs</span>, <span class="ident">rhs</span>) <span class="kw">in</span> <span class="ident">lhs</span>.<span class="ident">iter_mut</span>().<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">values</span>[<span class="ident">start</span>..].<span class="ident">iter</span>()) {
-                <span class="kw-2">*</span><span class="ident">lhs</span> <span class="op">+</span><span class="op">=</span> <span class="kw-2">*</span><span class="ident">rhs</span>;
+    <span class="kw">fn </span>add(<span class="kw-2">mut </span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Polynomial&lt;F, B&gt;) -&gt; Polynomial&lt;F, B&gt; {
+        parallelize(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values, |lhs, start| {
+            <span class="kw">for </span>(lhs, rhs) <span class="kw">in </span>lhs.iter_mut().zip(rhs.values[start..].iter()) {
+                <span class="kw-2">*</span>lhs += <span class="kw-2">*</span>rhs;
             }
         });
 
-        <span class="self">self</span>
+        <span class="self">self
+    </span>}
+}
+
+<span class="kw">impl</span>&lt;F: Field&gt; Polynomial&lt;F, LagrangeCoeff&gt; {
+    <span class="doccomment">/// Rotates the values in a Lagrange basis polynomial by `Rotation`
+    </span><span class="kw">pub fn </span>rotate(<span class="kw-2">&amp;</span><span class="self">self</span>, rotation: Rotation) -&gt; Polynomial&lt;F, LagrangeCoeff&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>values = <span class="self">self</span>.values.clone();
+        <span class="kw">if </span>rotation.<span class="number">0 </span>&lt; <span class="number">0 </span>{
+            values.rotate_right((-rotation.<span class="number">0</span>) <span class="kw">as </span>usize);
+        } <span class="kw">else </span>{
+            values.rotate_left(rotation.<span class="number">0 </span><span class="kw">as </span>usize);
+        }
+        Polynomial {
+            values,
+            _marker: PhantomData,
+        }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Rotates the values in a Lagrange basis polynomial by `Rotation`</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">rotate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">rotation</span>: <span class="ident">Rotation</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">values</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">values</span>.<span class="ident">clone</span>();
-        <span class="kw">if</span> <span class="ident">rotation</span>.<span class="number">0</span> <span class="op">&lt;</span> <span class="number">0</span> {
-            <span class="ident">values</span>.<span class="ident">rotate_right</span>((<span class="op">-</span><span class="ident">rotation</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">usize</span>);
-        } <span class="kw">else</span> {
-            <span class="ident">values</span>.<span class="ident">rotate_left</span>(<span class="ident">rotation</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span>);
-        }
-        <span class="ident">Polynomial</span> {
-            <span class="ident">values</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
-        }
-    }
-}
+<span class="kw">impl</span>&lt;F: Field, B: Basis&gt; Mul&lt;F&gt; <span class="kw">for </span>Polynomial&lt;F, B&gt; {
+    <span class="kw">type </span>Output = Polynomial&lt;F, B&gt;;
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">B</span>: <span class="ident">Basis</span><span class="op">&gt;</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span>;
-
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">B</span><span class="op">&gt;</span> {
-        <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">lhs</span>, <span class="kw">_</span><span class="op">|</span> {
-            <span class="kw">for</span> <span class="ident">lhs</span> <span class="kw">in</span> <span class="ident">lhs</span>.<span class="ident">iter_mut</span>() {
-                <span class="kw-2">*</span><span class="ident">lhs</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">rhs</span>;
+    <span class="kw">fn </span>mul(<span class="kw-2">mut </span><span class="self">self</span>, rhs: F) -&gt; Polynomial&lt;F, B&gt; {
+        parallelize(<span class="kw-2">&amp;mut </span><span class="self">self</span>.values, |lhs, <span class="kw">_</span>| {
+            <span class="kw">for </span>lhs <span class="kw">in </span>lhs.iter_mut() {
+                <span class="kw-2">*</span>lhs <span class="kw-2">*</span>= rhs;
             }
         });
 
-        <span class="self">self</span>
-    }
+        <span class="self">self
+    </span>}
 }
 
-<span class="doccomment">/// Describes the relative rotation of a vector. Negative numbers represent</span>
-<span class="doccomment">/// reverse (leftmost) rotations and positive numbers represent forward (rightmost)</span>
-<span class="doccomment">/// rotations. Zero represents no rotation.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Rotation</span>(<span class="kw">pub</span> <span class="ident">i32</span>);
+<span class="doccomment">/// Describes the relative rotation of a vector. Negative numbers represent
+/// reverse (leftmost) rotations and positive numbers represent forward (rightmost)
+/// rotations. Zero represents no rotation.
+</span><span class="attribute">#[derive(Copy, Clone, Debug, PartialEq)]</span>
+<span class="kw">pub struct </span>Rotation(<span class="kw">pub </span>i32);
 
-<span class="kw">impl</span> <span class="ident">Rotation</span> {
-    <span class="doccomment">/// The current location in the evaluation domain</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cur</span>() -&gt; <span class="ident">Rotation</span> {
-        <span class="ident">Rotation</span>(<span class="number">0</span>)
+<span class="kw">impl </span>Rotation {
+    <span class="doccomment">/// The current location in the evaluation domain
+    </span><span class="kw">pub fn </span>cur() -&gt; Rotation {
+        Rotation(<span class="number">0</span>)
     }
 
-    <span class="doccomment">/// The previous location in the evaluation domain</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">prev</span>() -&gt; <span class="ident">Rotation</span> {
-        <span class="ident">Rotation</span>(<span class="op">-</span><span class="number">1</span>)
+    <span class="doccomment">/// The previous location in the evaluation domain
+    </span><span class="kw">pub fn </span>prev() -&gt; Rotation {
+        Rotation(-<span class="number">1</span>)
     }
 
-    <span class="doccomment">/// The next location in the evaluation domain</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">next</span>() -&gt; <span class="ident">Rotation</span> {
-        <span class="ident">Rotation</span>(<span class="number">1</span>)
+    <span class="doccomment">/// The next location in the evaluation domain
+    </span><span class="kw">pub fn </span>next() -&gt; Rotation {
+        Rotation(<span class="number">1</span>)
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

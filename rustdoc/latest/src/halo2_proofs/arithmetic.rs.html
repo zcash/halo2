@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_proofs/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_proofs/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -456,443 +450,442 @@
 <span id="435">435</span>
 <span id="436">436</span>
 <span id="437">437</span>
-</pre><pre class="rust"><code><span class="doccomment">//! This module provides common utilities, traits and structures for group,</span>
-<span class="doccomment">//! field and polynomial arithmetic.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! This module provides common utilities, traits and structures for group,
+//! field and polynomial arithmetic.
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::multicore</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">ff::Field</span>;
-<span class="kw">use</span> <span class="ident">group</span>::{
-    <span class="ident">ff</span>::{<span class="ident">BatchInvert</span>, <span class="ident">PrimeField</span>},
-    <span class="ident">Group</span> <span class="kw">as</span> <span class="kw">_</span>,
+</span><span class="kw">use </span><span class="kw">super</span>::multicore;
+<span class="kw">pub use </span>ff::Field;
+<span class="kw">use </span>group::{
+    ff::{BatchInvert, PrimeField},
+    Group <span class="kw">as _</span>,
 };
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">pasta_curves::arithmetic</span>::<span class="kw-2">*</span>;
+<span class="kw">pub use </span>pasta_curves::arithmetic::<span class="kw-2">*</span>;
 
-<span class="kw">fn</span> <span class="ident">multiexp_serial</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>(<span class="ident">coeffs</span>: <span class="kw-2">&amp;</span>[<span class="ident">C::Scalar</span>], <span class="ident">bases</span>: <span class="kw-2">&amp;</span>[<span class="ident">C</span>], <span class="ident">acc</span>: <span class="kw-2">&amp;mut</span> <span class="ident">C::Curve</span>) {
-    <span class="kw">let</span> <span class="ident">coeffs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">coeffs</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>.<span class="ident">to_repr</span>()).<span class="ident">collect</span>();
+<span class="kw">fn </span>multiexp_serial&lt;C: CurveAffine&gt;(coeffs: <span class="kw-2">&amp;</span>[C::Scalar], bases: <span class="kw-2">&amp;</span>[C], acc: <span class="kw-2">&amp;mut </span>C::Curve) {
+    <span class="kw">let </span>coeffs: Vec&lt;<span class="kw">_</span>&gt; = coeffs.iter().map(|a| a.to_repr()).collect();
 
-    <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">bases</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="number">4</span> {
-        <span class="number">1</span>
-    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">bases</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="number">32</span> {
-        <span class="number">3</span>
-    } <span class="kw">else</span> {
-        (<span class="ident">f64::from</span>(<span class="ident">bases</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u32</span>)).<span class="ident">ln</span>().<span class="ident">ceil</span>() <span class="kw">as</span> <span class="ident">usize</span>
+    <span class="kw">let </span>c = <span class="kw">if </span>bases.len() &lt; <span class="number">4 </span>{
+        <span class="number">1
+    </span>} <span class="kw">else if </span>bases.len() &lt; <span class="number">32 </span>{
+        <span class="number">3
+    </span>} <span class="kw">else </span>{
+        (f64::from(bases.len() <span class="kw">as </span>u32)).ln().ceil() <span class="kw">as </span>usize
     };
 
-    <span class="kw">fn</span> <span class="ident">get_at</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">PrimeField</span><span class="op">&gt;</span>(<span class="ident">segment</span>: <span class="ident">usize</span>, <span class="ident">c</span>: <span class="ident">usize</span>, <span class="ident">bytes</span>: <span class="kw-2">&amp;</span><span class="ident">F::Repr</span>) -&gt; <span class="ident">usize</span> {
-        <span class="kw">let</span> <span class="ident">skip_bits</span> <span class="op">=</span> <span class="ident">segment</span> <span class="op">*</span> <span class="ident">c</span>;
-        <span class="kw">let</span> <span class="ident">skip_bytes</span> <span class="op">=</span> <span class="ident">skip_bits</span> <span class="op">/</span> <span class="number">8</span>;
+    <span class="kw">fn </span>get_at&lt;F: PrimeField&gt;(segment: usize, c: usize, bytes: <span class="kw-2">&amp;</span>F::Repr) -&gt; usize {
+        <span class="kw">let </span>skip_bits = segment * c;
+        <span class="kw">let </span>skip_bytes = skip_bits / <span class="number">8</span>;
 
-        <span class="kw">if</span> <span class="ident">skip_bytes</span> <span class="op">&gt;</span><span class="op">=</span> <span class="number">32</span> {
-            <span class="kw">return</span> <span class="number">0</span>;
+        <span class="kw">if </span>skip_bytes &gt;= <span class="number">32 </span>{
+            <span class="kw">return </span><span class="number">0</span>;
         }
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span> <span class="op">=</span> [<span class="number">0</span>; <span class="number">8</span>];
-        <span class="kw">for</span> (<span class="ident">v</span>, <span class="ident">o</span>) <span class="kw">in</span> <span class="ident">v</span>.<span class="ident">iter_mut</span>().<span class="ident">zip</span>(<span class="ident">bytes</span>.<span class="ident">as_ref</span>()[<span class="ident">skip_bytes</span>..].<span class="ident">iter</span>()) {
-            <span class="kw-2">*</span><span class="ident">v</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">o</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>v = [<span class="number">0</span>; <span class="number">8</span>];
+        <span class="kw">for </span>(v, o) <span class="kw">in </span>v.iter_mut().zip(bytes.as_ref()[skip_bytes..].iter()) {
+            <span class="kw-2">*</span>v = <span class="kw-2">*</span>o;
         }
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">u64::from_le_bytes</span>(<span class="ident">v</span>);
-        <span class="ident">tmp</span> <span class="op">&gt;</span><span class="op">&gt;</span><span class="op">=</span> <span class="ident">skip_bits</span> <span class="op">-</span> (<span class="ident">skip_bytes</span> <span class="op">*</span> <span class="number">8</span>);
-        <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">tmp</span> <span class="op">%</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">c</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>tmp = u64::from_le_bytes(v);
+        tmp &gt;&gt;= skip_bits - (skip_bytes * <span class="number">8</span>);
+        tmp = tmp % (<span class="number">1 </span>&lt;&lt; c);
 
-        <span class="ident">tmp</span> <span class="kw">as</span> <span class="ident">usize</span>
+        tmp <span class="kw">as </span>usize
     }
 
-    <span class="kw">let</span> <span class="ident">segments</span> <span class="op">=</span> (<span class="number">256</span> <span class="op">/</span> <span class="ident">c</span>) <span class="op">+</span> <span class="number">1</span>;
+    <span class="kw">let </span>segments = (<span class="number">256 </span>/ c) + <span class="number">1</span>;
 
-    <span class="kw">for</span> <span class="ident">current_segment</span> <span class="kw">in</span> (<span class="number">0</span>..<span class="ident">segments</span>).<span class="ident">rev</span>() {
-        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">c</span> {
-            <span class="kw-2">*</span><span class="ident">acc</span> <span class="op">=</span> <span class="ident">acc</span>.<span class="ident">double</span>();
+    <span class="kw">for </span>current_segment <span class="kw">in </span>(<span class="number">0</span>..segments).rev() {
+        <span class="kw">for _ in </span><span class="number">0</span>..c {
+            <span class="kw-2">*</span>acc = acc.double();
         }
 
-        <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>)]</span>
-        <span class="kw">enum</span> <span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
+        <span class="attribute">#[derive(Clone, Copy)]</span>
+        <span class="kw">enum </span>Bucket&lt;C: CurveAffine&gt; {
             <span class="prelude-val">None</span>,
-            <span class="ident">Affine</span>(<span class="ident">C</span>),
-            <span class="ident">Projective</span>(<span class="ident">C::Curve</span>),
+            Affine(C),
+            Projective(C::Curve),
         }
 
-        <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-            <span class="kw">fn</span> <span class="ident">add_assign</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">C</span>) {
-                <span class="kw-2">*</span><span class="self">self</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">*</span><span class="self">self</span> {
-                    <span class="ident">Bucket::None</span> =&gt; <span class="ident">Bucket::Affine</span>(<span class="kw-2">*</span><span class="ident">other</span>),
-                    <span class="ident">Bucket::Affine</span>(<span class="ident">a</span>) =&gt; <span class="ident">Bucket::Projective</span>(<span class="ident">a</span> <span class="op">+</span> <span class="kw-2">*</span><span class="ident">other</span>),
-                    <span class="ident">Bucket::Projective</span>(<span class="kw-2">mut</span> <span class="ident">a</span>) =&gt; {
-                        <span class="ident">a</span> <span class="op">+</span><span class="op">=</span> <span class="kw-2">*</span><span class="ident">other</span>;
-                        <span class="ident">Bucket::Projective</span>(<span class="ident">a</span>)
+        <span class="kw">impl</span>&lt;C: CurveAffine&gt; Bucket&lt;C&gt; {
+            <span class="kw">fn </span>add_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, other: <span class="kw-2">&amp;</span>C) {
+                <span class="kw-2">*</span><span class="self">self </span>= <span class="kw">match </span><span class="kw-2">*</span><span class="self">self </span>{
+                    Bucket::None =&gt; Bucket::Affine(<span class="kw-2">*</span>other),
+                    Bucket::Affine(a) =&gt; Bucket::Projective(a + <span class="kw-2">*</span>other),
+                    Bucket::Projective(<span class="kw-2">mut </span>a) =&gt; {
+                        a += <span class="kw-2">*</span>other;
+                        Bucket::Projective(a)
                     }
                 }
             }
 
-            <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">other</span>: <span class="ident">C::Curve</span>) -&gt; <span class="ident">C::Curve</span> {
-                <span class="kw">match</span> <span class="self">self</span> {
-                    <span class="ident">Bucket::None</span> =&gt; <span class="ident">other</span>,
-                    <span class="ident">Bucket::Affine</span>(<span class="ident">a</span>) =&gt; {
-                        <span class="ident">other</span> <span class="op">+</span><span class="op">=</span> <span class="ident">a</span>;
-                        <span class="ident">other</span>
+            <span class="kw">fn </span>add(<span class="self">self</span>, <span class="kw-2">mut </span>other: C::Curve) -&gt; C::Curve {
+                <span class="kw">match </span><span class="self">self </span>{
+                    Bucket::None =&gt; other,
+                    Bucket::Affine(a) =&gt; {
+                        other += a;
+                        other
                     }
-                    <span class="ident">Bucket::Projective</span>(<span class="ident">a</span>) =&gt; <span class="ident">other</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">a</span>,
+                    Bucket::Projective(a) =&gt; other + <span class="kw-2">&amp;</span>a,
                 }
             }
         }
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buckets</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Bucket</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Bucket::None</span>; (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">c</span>) <span class="op">-</span> <span class="number">1</span>];
+        <span class="kw">let </span><span class="kw-2">mut </span>buckets: Vec&lt;Bucket&lt;C&gt;&gt; = <span class="macro">vec!</span>[Bucket::None; (<span class="number">1 </span>&lt;&lt; c) - <span class="number">1</span>];
 
-        <span class="kw">for</span> (<span class="ident">coeff</span>, <span class="ident">base</span>) <span class="kw">in</span> <span class="ident">coeffs</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">bases</span>.<span class="ident">iter</span>()) {
-            <span class="kw">let</span> <span class="ident">coeff</span> <span class="op">=</span> <span class="ident">get_at</span>::<span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>(<span class="ident">current_segment</span>, <span class="ident">c</span>, <span class="ident">coeff</span>);
-            <span class="kw">if</span> <span class="ident">coeff</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-                <span class="ident">buckets</span>[<span class="ident">coeff</span> <span class="op">-</span> <span class="number">1</span>].<span class="ident">add_assign</span>(<span class="ident">base</span>);
+        <span class="kw">for </span>(coeff, base) <span class="kw">in </span>coeffs.iter().zip(bases.iter()) {
+            <span class="kw">let </span>coeff = get_at::&lt;C::Scalar&gt;(current_segment, c, coeff);
+            <span class="kw">if </span>coeff != <span class="number">0 </span>{
+                buckets[coeff - <span class="number">1</span>].add_assign(base);
             }
         }
 
-        <span class="comment">// Summation by parts</span>
-        <span class="comment">// e.g. 3a + 2b + 1c = a +</span>
-        <span class="comment">//                    (a) + b +</span>
-        <span class="comment">//                    ((a) + b) + c</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">running_sum</span> <span class="op">=</span> <span class="ident">C::Curve::identity</span>();
-        <span class="kw">for</span> <span class="ident">exp</span> <span class="kw">in</span> <span class="ident">buckets</span>.<span class="ident">into_iter</span>().<span class="ident">rev</span>() {
-            <span class="ident">running_sum</span> <span class="op">=</span> <span class="ident">exp</span>.<span class="ident">add</span>(<span class="ident">running_sum</span>);
-            <span class="kw-2">*</span><span class="ident">acc</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">acc</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">running_sum</span>;
+        <span class="comment">// Summation by parts
+        // e.g. 3a + 2b + 1c = a +
+        //                    (a) + b +
+        //                    ((a) + b) + c
+        </span><span class="kw">let </span><span class="kw-2">mut </span>running_sum = C::Curve::identity();
+        <span class="kw">for </span>exp <span class="kw">in </span>buckets.into_iter().rev() {
+            running_sum = exp.add(running_sum);
+            <span class="kw-2">*</span>acc = <span class="kw-2">*</span>acc + <span class="kw-2">&amp;</span>running_sum;
         }
     }
 }
 
-<span class="doccomment">/// Performs a small multi-exponentiation operation.</span>
-<span class="doccomment">/// Uses the double-and-add algorithm with doublings shared across points.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">small_multiexp</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>(<span class="ident">coeffs</span>: <span class="kw-2">&amp;</span>[<span class="ident">C::Scalar</span>], <span class="ident">bases</span>: <span class="kw-2">&amp;</span>[<span class="ident">C</span>]) -&gt; <span class="ident">C::Curve</span> {
-    <span class="kw">let</span> <span class="ident">coeffs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">coeffs</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>.<span class="ident">to_repr</span>()).<span class="ident">collect</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">acc</span> <span class="op">=</span> <span class="ident">C::Curve::identity</span>();
+<span class="doccomment">/// Performs a small multi-exponentiation operation.
+/// Uses the double-and-add algorithm with doublings shared across points.
+</span><span class="kw">pub fn </span>small_multiexp&lt;C: CurveAffine&gt;(coeffs: <span class="kw-2">&amp;</span>[C::Scalar], bases: <span class="kw-2">&amp;</span>[C]) -&gt; C::Curve {
+    <span class="kw">let </span>coeffs: Vec&lt;<span class="kw">_</span>&gt; = coeffs.iter().map(|a| a.to_repr()).collect();
+    <span class="kw">let </span><span class="kw-2">mut </span>acc = C::Curve::identity();
 
-    <span class="comment">// for byte idx</span>
-    <span class="kw">for</span> <span class="ident">byte_idx</span> <span class="kw">in</span> (<span class="number">0</span>..<span class="number">32</span>).<span class="ident">rev</span>() {
-        <span class="comment">// for bit idx</span>
-        <span class="kw">for</span> <span class="ident">bit_idx</span> <span class="kw">in</span> (<span class="number">0</span>..<span class="number">8</span>).<span class="ident">rev</span>() {
-            <span class="ident">acc</span> <span class="op">=</span> <span class="ident">acc</span>.<span class="ident">double</span>();
-            <span class="comment">// for each coeff</span>
-            <span class="kw">for</span> <span class="ident">coeff_idx</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">coeffs</span>.<span class="ident">len</span>() {
-                <span class="kw">let</span> <span class="ident">byte</span> <span class="op">=</span> <span class="ident">coeffs</span>[<span class="ident">coeff_idx</span>].<span class="ident">as_ref</span>()[<span class="ident">byte_idx</span>];
-                <span class="kw">if</span> ((<span class="ident">byte</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">bit_idx</span>) <span class="op">&amp;</span> <span class="number">1</span>) <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-                    <span class="ident">acc</span> <span class="op">+</span><span class="op">=</span> <span class="ident">bases</span>[<span class="ident">coeff_idx</span>];
+    <span class="comment">// for byte idx
+    </span><span class="kw">for </span>byte_idx <span class="kw">in </span>(<span class="number">0</span>..<span class="number">32</span>).rev() {
+        <span class="comment">// for bit idx
+        </span><span class="kw">for </span>bit_idx <span class="kw">in </span>(<span class="number">0</span>..<span class="number">8</span>).rev() {
+            acc = acc.double();
+            <span class="comment">// for each coeff
+            </span><span class="kw">for </span>coeff_idx <span class="kw">in </span><span class="number">0</span>..coeffs.len() {
+                <span class="kw">let </span>byte = coeffs[coeff_idx].as_ref()[byte_idx];
+                <span class="kw">if </span>((byte &gt;&gt; bit_idx) &amp; <span class="number">1</span>) != <span class="number">0 </span>{
+                    acc += bases[coeff_idx];
                 }
             }
         }
     }
 
-    <span class="ident">acc</span>
+    acc
 }
 
-<span class="doccomment">/// Performs a multi-exponentiation operation.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This function will panic if coeffs and bases have a different length.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This will use multithreading if beneficial.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">best_multiexp</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>(<span class="ident">coeffs</span>: <span class="kw-2">&amp;</span>[<span class="ident">C::Scalar</span>], <span class="ident">bases</span>: <span class="kw-2">&amp;</span>[<span class="ident">C</span>]) -&gt; <span class="ident">C::Curve</span> {
-    <span class="macro">assert_eq!</span>(<span class="ident">coeffs</span>.<span class="ident">len</span>(), <span class="ident">bases</span>.<span class="ident">len</span>());
+<span class="doccomment">/// Performs a multi-exponentiation operation.
+///
+/// This function will panic if coeffs and bases have a different length.
+///
+/// This will use multithreading if beneficial.
+</span><span class="kw">pub fn </span>best_multiexp&lt;C: CurveAffine&gt;(coeffs: <span class="kw-2">&amp;</span>[C::Scalar], bases: <span class="kw-2">&amp;</span>[C]) -&gt; C::Curve {
+    <span class="macro">assert_eq!</span>(coeffs.len(), bases.len());
 
-    <span class="kw">let</span> <span class="ident">num_threads</span> <span class="op">=</span> <span class="ident">multicore::current_num_threads</span>();
-    <span class="kw">if</span> <span class="ident">coeffs</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">num_threads</span> {
-        <span class="kw">let</span> <span class="ident">chunk</span> <span class="op">=</span> <span class="ident">coeffs</span>.<span class="ident">len</span>() <span class="op">/</span> <span class="ident">num_threads</span>;
-        <span class="kw">let</span> <span class="ident">num_chunks</span> <span class="op">=</span> <span class="ident">coeffs</span>.<span class="ident">chunks</span>(<span class="ident">chunk</span>).<span class="ident">len</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">results</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">C::Curve::identity</span>(); <span class="ident">num_chunks</span>];
-        <span class="ident">multicore::scope</span>(<span class="op">|</span><span class="ident">scope</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">chunk</span> <span class="op">=</span> <span class="ident">coeffs</span>.<span class="ident">len</span>() <span class="op">/</span> <span class="ident">num_threads</span>;
+    <span class="kw">let </span>num_threads = multicore::current_num_threads();
+    <span class="kw">if </span>coeffs.len() &gt; num_threads {
+        <span class="kw">let </span>chunk = coeffs.len() / num_threads;
+        <span class="kw">let </span>num_chunks = coeffs.chunks(chunk).len();
+        <span class="kw">let </span><span class="kw-2">mut </span>results = <span class="macro">vec!</span>[C::Curve::identity(); num_chunks];
+        multicore::scope(|scope| {
+            <span class="kw">let </span>chunk = coeffs.len() / num_threads;
 
-            <span class="kw">for</span> ((<span class="ident">coeffs</span>, <span class="ident">bases</span>), <span class="ident">acc</span>) <span class="kw">in</span> <span class="ident">coeffs</span>
-                .<span class="ident">chunks</span>(<span class="ident">chunk</span>)
-                .<span class="ident">zip</span>(<span class="ident">bases</span>.<span class="ident">chunks</span>(<span class="ident">chunk</span>))
-                .<span class="ident">zip</span>(<span class="ident">results</span>.<span class="ident">iter_mut</span>())
+            <span class="kw">for </span>((coeffs, bases), acc) <span class="kw">in </span>coeffs
+                .chunks(chunk)
+                .zip(bases.chunks(chunk))
+                .zip(results.iter_mut())
             {
-                <span class="ident">scope</span>.<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                    <span class="ident">multiexp_serial</span>(<span class="ident">coeffs</span>, <span class="ident">bases</span>, <span class="ident">acc</span>);
+                scope.spawn(<span class="kw">move </span>|<span class="kw">_</span>| {
+                    multiexp_serial(coeffs, bases, acc);
                 });
             }
         });
-        <span class="ident">results</span>.<span class="ident">iter</span>().<span class="ident">fold</span>(<span class="ident">C::Curve::identity</span>(), <span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>)
-    } <span class="kw">else</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">acc</span> <span class="op">=</span> <span class="ident">C::Curve::identity</span>();
-        <span class="ident">multiexp_serial</span>(<span class="ident">coeffs</span>, <span class="ident">bases</span>, <span class="kw-2">&amp;mut</span> <span class="ident">acc</span>);
-        <span class="ident">acc</span>
+        results.iter().fold(C::Curve::identity(), |a, b| a + b)
+    } <span class="kw">else </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>acc = C::Curve::identity();
+        multiexp_serial(coeffs, bases, <span class="kw-2">&amp;mut </span>acc);
+        acc
     }
 }
 
-<span class="doccomment">/// Performs a radix-$2$ Fast-Fourier Transformation (FFT) on a vector of size</span>
-<span class="doccomment">/// $n = 2^k$, when provided `log_n` = $k$ and an element of multiplicative</span>
-<span class="doccomment">/// order $n$ called `omega` ($\omega$). The result is that the vector `a`, when</span>
-<span class="doccomment">/// interpreted as the coefficients of a polynomial of degree $n - 1$, is</span>
-<span class="doccomment">/// transformed into the evaluations of this polynomial at each of the $n$</span>
-<span class="doccomment">/// distinct powers of $\omega$. This transformation is invertible by providing</span>
-<span class="doccomment">/// $\omega^{-1}$ in place of $\omega$ and dividing each resulting field element</span>
-<span class="doccomment">/// by $n$.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This will use multithreading if beneficial.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">best_fft</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">Group</span><span class="op">&gt;</span>(<span class="ident">a</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">G</span>], <span class="ident">omega</span>: <span class="ident">G::Scalar</span>, <span class="ident">log_n</span>: <span class="ident">u32</span>) {
-    <span class="kw">fn</span> <span class="ident">bitreverse</span>(<span class="kw-2">mut</span> <span class="ident">n</span>: <span class="ident">usize</span>, <span class="ident">l</span>: <span class="ident">usize</span>) -&gt; <span class="ident">usize</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">r</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">l</span> {
-            <span class="ident">r</span> <span class="op">=</span> (<span class="ident">r</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>) <span class="op">|</span> (<span class="ident">n</span> <span class="op">&amp;</span> <span class="number">1</span>);
-            <span class="ident">n</span> <span class="op">&gt;</span><span class="op">&gt;</span><span class="op">=</span> <span class="number">1</span>;
+<span class="doccomment">/// Performs a radix-$2$ Fast-Fourier Transformation (FFT) on a vector of size
+/// $n = 2^k$, when provided `log_n` = $k$ and an element of multiplicative
+/// order $n$ called `omega` ($\omega$). The result is that the vector `a`, when
+/// interpreted as the coefficients of a polynomial of degree $n - 1$, is
+/// transformed into the evaluations of this polynomial at each of the $n$
+/// distinct powers of $\omega$. This transformation is invertible by providing
+/// $\omega^{-1}$ in place of $\omega$ and dividing each resulting field element
+/// by $n$.
+///
+/// This will use multithreading if beneficial.
+</span><span class="kw">pub fn </span>best_fft&lt;G: Group&gt;(a: <span class="kw-2">&amp;mut </span>[G], omega: G::Scalar, log_n: u32) {
+    <span class="kw">fn </span>bitreverse(<span class="kw-2">mut </span>n: usize, l: usize) -&gt; usize {
+        <span class="kw">let </span><span class="kw-2">mut </span>r = <span class="number">0</span>;
+        <span class="kw">for _ in </span><span class="number">0</span>..l {
+            r = (r &lt;&lt; <span class="number">1</span>) | (n &amp; <span class="number">1</span>);
+            n &gt;&gt;= <span class="number">1</span>;
         }
-        <span class="ident">r</span>
+        r
     }
 
-    <span class="kw">let</span> <span class="ident">threads</span> <span class="op">=</span> <span class="ident">multicore::current_num_threads</span>();
-    <span class="kw">let</span> <span class="ident">log_threads</span> <span class="op">=</span> <span class="ident">log2_floor</span>(<span class="ident">threads</span>);
-    <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">a</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">usize</span>;
-    <span class="macro">assert_eq!</span>(<span class="ident">n</span>, <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">log_n</span>);
+    <span class="kw">let </span>threads = multicore::current_num_threads();
+    <span class="kw">let </span>log_threads = log2_floor(threads);
+    <span class="kw">let </span>n = a.len() <span class="kw">as </span>usize;
+    <span class="macro">assert_eq!</span>(n, <span class="number">1 </span>&lt;&lt; log_n);
 
-    <span class="kw">for</span> <span class="ident">k</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">n</span> {
-        <span class="kw">let</span> <span class="ident">rk</span> <span class="op">=</span> <span class="ident">bitreverse</span>(<span class="ident">k</span>, <span class="ident">log_n</span> <span class="kw">as</span> <span class="ident">usize</span>);
-        <span class="kw">if</span> <span class="ident">k</span> <span class="op">&lt;</span> <span class="ident">rk</span> {
-            <span class="ident">a</span>.<span class="ident">swap</span>(<span class="ident">rk</span>, <span class="ident">k</span>);
+    <span class="kw">for </span>k <span class="kw">in </span><span class="number">0</span>..n {
+        <span class="kw">let </span>rk = bitreverse(k, log_n <span class="kw">as </span>usize);
+        <span class="kw">if </span>k &lt; rk {
+            a.swap(rk, k);
         }
     }
 
-    <span class="comment">// precompute twiddle factors</span>
-    <span class="kw">let</span> <span class="ident">twiddles</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..(<span class="ident">n</span> <span class="op">/</span> <span class="number">2</span>) <span class="kw">as</span> <span class="ident">usize</span>)
-        .<span class="ident">scan</span>(<span class="ident">G::Scalar::one</span>(), <span class="op">|</span><span class="ident">w</span>, <span class="kw">_</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">tw</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">w</span>;
-            <span class="ident">w</span>.<span class="ident">group_scale</span>(<span class="kw-2">&amp;</span><span class="ident">omega</span>);
-            <span class="prelude-val">Some</span>(<span class="ident">tw</span>)
+    <span class="comment">// precompute twiddle factors
+    </span><span class="kw">let </span>twiddles: Vec&lt;<span class="kw">_</span>&gt; = (<span class="number">0</span>..(n / <span class="number">2</span>) <span class="kw">as </span>usize)
+        .scan(G::Scalar::one(), |w, <span class="kw">_</span>| {
+            <span class="kw">let </span>tw = <span class="kw-2">*</span>w;
+            w.group_scale(<span class="kw-2">&amp;</span>omega);
+            <span class="prelude-val">Some</span>(tw)
         })
-        .<span class="ident">collect</span>();
+        .collect();
 
-    <span class="kw">if</span> <span class="ident">log_n</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">log_threads</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">chunk</span> <span class="op">=</span> <span class="number">2_usize</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">twiddle_chunk</span> <span class="op">=</span> (<span class="ident">n</span> <span class="op">/</span> <span class="number">2</span>) <span class="kw">as</span> <span class="ident">usize</span>;
-        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">log_n</span> {
-            <span class="ident">a</span>.<span class="ident">chunks_mut</span>(<span class="ident">chunk</span>).<span class="ident">for_each</span>(<span class="op">|</span><span class="ident">coeffs</span><span class="op">|</span> {
-                <span class="kw">let</span> (<span class="ident">left</span>, <span class="ident">right</span>) <span class="op">=</span> <span class="ident">coeffs</span>.<span class="ident">split_at_mut</span>(<span class="ident">chunk</span> <span class="op">/</span> <span class="number">2</span>);
+    <span class="kw">if </span>log_n &lt;= log_threads {
+        <span class="kw">let </span><span class="kw-2">mut </span>chunk = <span class="number">2_usize</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>twiddle_chunk = (n / <span class="number">2</span>) <span class="kw">as </span>usize;
+        <span class="kw">for _ in </span><span class="number">0</span>..log_n {
+            a.chunks_mut(chunk).for_each(|coeffs| {
+                <span class="kw">let </span>(left, right) = coeffs.split_at_mut(chunk / <span class="number">2</span>);
 
-                <span class="comment">// case when twiddle factor is one</span>
-                <span class="kw">let</span> (<span class="ident">a</span>, <span class="ident">left</span>) <span class="op">=</span> <span class="ident">left</span>.<span class="ident">split_at_mut</span>(<span class="number">1</span>);
-                <span class="kw">let</span> (<span class="ident">b</span>, <span class="ident">right</span>) <span class="op">=</span> <span class="ident">right</span>.<span class="ident">split_at_mut</span>(<span class="number">1</span>);
-                <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">b</span>[<span class="number">0</span>];
-                <span class="ident">b</span>[<span class="number">0</span>] <span class="op">=</span> <span class="ident">a</span>[<span class="number">0</span>];
-                <span class="ident">a</span>[<span class="number">0</span>].<span class="ident">group_add</span>(<span class="kw-2">&amp;</span><span class="ident">t</span>);
-                <span class="ident">b</span>[<span class="number">0</span>].<span class="ident">group_sub</span>(<span class="kw-2">&amp;</span><span class="ident">t</span>);
+                <span class="comment">// case when twiddle factor is one
+                </span><span class="kw">let </span>(a, left) = left.split_at_mut(<span class="number">1</span>);
+                <span class="kw">let </span>(b, right) = right.split_at_mut(<span class="number">1</span>);
+                <span class="kw">let </span>t = b[<span class="number">0</span>];
+                b[<span class="number">0</span>] = a[<span class="number">0</span>];
+                a[<span class="number">0</span>].group_add(<span class="kw-2">&amp;</span>t);
+                b[<span class="number">0</span>].group_sub(<span class="kw-2">&amp;</span>t);
 
-                <span class="ident">left</span>.<span class="ident">iter_mut</span>()
-                    .<span class="ident">zip</span>(<span class="ident">right</span>.<span class="ident">iter_mut</span>())
-                    .<span class="ident">enumerate</span>()
-                    .<span class="ident">for_each</span>(<span class="op">|</span>(<span class="ident">i</span>, (<span class="ident">a</span>, <span class="ident">b</span>))<span class="op">|</span> {
-                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">t</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">b</span>;
-                        <span class="ident">t</span>.<span class="ident">group_scale</span>(<span class="kw-2">&amp;</span><span class="ident">twiddles</span>[(<span class="ident">i</span> <span class="op">+</span> <span class="number">1</span>) <span class="op">*</span> <span class="ident">twiddle_chunk</span>]);
-                        <span class="kw-2">*</span><span class="ident">b</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">a</span>;
-                        <span class="ident">a</span>.<span class="ident">group_add</span>(<span class="kw-2">&amp;</span><span class="ident">t</span>);
-                        <span class="ident">b</span>.<span class="ident">group_sub</span>(<span class="kw-2">&amp;</span><span class="ident">t</span>);
+                left.iter_mut()
+                    .zip(right.iter_mut())
+                    .enumerate()
+                    .for_each(|(i, (a, b))| {
+                        <span class="kw">let </span><span class="kw-2">mut </span>t = <span class="kw-2">*</span>b;
+                        t.group_scale(<span class="kw-2">&amp;</span>twiddles[(i + <span class="number">1</span>) * twiddle_chunk]);
+                        <span class="kw-2">*</span>b = <span class="kw-2">*</span>a;
+                        a.group_add(<span class="kw-2">&amp;</span>t);
+                        b.group_sub(<span class="kw-2">&amp;</span>t);
                     });
             });
-            <span class="ident">chunk</span> <span class="kw-2">*</span><span class="op">=</span> <span class="number">2</span>;
-            <span class="ident">twiddle_chunk</span> <span class="op">/</span><span class="op">=</span> <span class="number">2</span>;
+            chunk <span class="kw-2">*</span>= <span class="number">2</span>;
+            twiddle_chunk /= <span class="number">2</span>;
         }
-    } <span class="kw">else</span> {
-        <span class="ident">recursive_butterfly_arithmetic</span>(<span class="ident">a</span>, <span class="ident">n</span>, <span class="number">1</span>, <span class="kw-2">&amp;</span><span class="ident">twiddles</span>)
+    } <span class="kw">else </span>{
+        recursive_butterfly_arithmetic(a, n, <span class="number">1</span>, <span class="kw-2">&amp;</span>twiddles)
     }
 }
 
-<span class="doccomment">/// This perform recursive butterfly arithmetic</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">recursive_butterfly_arithmetic</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">Group</span><span class="op">&gt;</span>(
-    <span class="ident">a</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">G</span>],
-    <span class="ident">n</span>: <span class="ident">usize</span>,
-    <span class="ident">twiddle_chunk</span>: <span class="ident">usize</span>,
-    <span class="ident">twiddles</span>: <span class="kw-2">&amp;</span>[<span class="ident">G::Scalar</span>],
+<span class="doccomment">/// This perform recursive butterfly arithmetic
+</span><span class="kw">pub fn </span>recursive_butterfly_arithmetic&lt;G: Group&gt;(
+    a: <span class="kw-2">&amp;mut </span>[G],
+    n: usize,
+    twiddle_chunk: usize,
+    twiddles: <span class="kw-2">&amp;</span>[G::Scalar],
 ) {
-    <span class="kw">if</span> <span class="ident">n</span> <span class="op">==</span> <span class="number">2</span> {
-        <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">a</span>[<span class="number">1</span>];
-        <span class="ident">a</span>[<span class="number">1</span>] <span class="op">=</span> <span class="ident">a</span>[<span class="number">0</span>];
-        <span class="ident">a</span>[<span class="number">0</span>].<span class="ident">group_add</span>(<span class="kw-2">&amp;</span><span class="ident">t</span>);
-        <span class="ident">a</span>[<span class="number">1</span>].<span class="ident">group_sub</span>(<span class="kw-2">&amp;</span><span class="ident">t</span>);
-    } <span class="kw">else</span> {
-        <span class="kw">let</span> (<span class="ident">left</span>, <span class="ident">right</span>) <span class="op">=</span> <span class="ident">a</span>.<span class="ident">split_at_mut</span>(<span class="ident">n</span> <span class="op">/</span> <span class="number">2</span>);
-        <span class="ident">rayon::join</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="ident">recursive_butterfly_arithmetic</span>(<span class="ident">left</span>, <span class="ident">n</span> <span class="op">/</span> <span class="number">2</span>, <span class="ident">twiddle_chunk</span> <span class="op">*</span> <span class="number">2</span>, <span class="ident">twiddles</span>),
-            <span class="op">|</span><span class="op">|</span> <span class="ident">recursive_butterfly_arithmetic</span>(<span class="ident">right</span>, <span class="ident">n</span> <span class="op">/</span> <span class="number">2</span>, <span class="ident">twiddle_chunk</span> <span class="op">*</span> <span class="number">2</span>, <span class="ident">twiddles</span>),
+    <span class="kw">if </span>n == <span class="number">2 </span>{
+        <span class="kw">let </span>t = a[<span class="number">1</span>];
+        a[<span class="number">1</span>] = a[<span class="number">0</span>];
+        a[<span class="number">0</span>].group_add(<span class="kw-2">&amp;</span>t);
+        a[<span class="number">1</span>].group_sub(<span class="kw-2">&amp;</span>t);
+    } <span class="kw">else </span>{
+        <span class="kw">let </span>(left, right) = a.split_at_mut(n / <span class="number">2</span>);
+        rayon::join(
+            || recursive_butterfly_arithmetic(left, n / <span class="number">2</span>, twiddle_chunk * <span class="number">2</span>, twiddles),
+            || recursive_butterfly_arithmetic(right, n / <span class="number">2</span>, twiddle_chunk * <span class="number">2</span>, twiddles),
         );
 
-        <span class="comment">// case when twiddle factor is one</span>
-        <span class="kw">let</span> (<span class="ident">a</span>, <span class="ident">left</span>) <span class="op">=</span> <span class="ident">left</span>.<span class="ident">split_at_mut</span>(<span class="number">1</span>);
-        <span class="kw">let</span> (<span class="ident">b</span>, <span class="ident">right</span>) <span class="op">=</span> <span class="ident">right</span>.<span class="ident">split_at_mut</span>(<span class="number">1</span>);
-        <span class="kw">let</span> <span class="ident">t</span> <span class="op">=</span> <span class="ident">b</span>[<span class="number">0</span>];
-        <span class="ident">b</span>[<span class="number">0</span>] <span class="op">=</span> <span class="ident">a</span>[<span class="number">0</span>];
-        <span class="ident">a</span>[<span class="number">0</span>].<span class="ident">group_add</span>(<span class="kw-2">&amp;</span><span class="ident">t</span>);
-        <span class="ident">b</span>[<span class="number">0</span>].<span class="ident">group_sub</span>(<span class="kw-2">&amp;</span><span class="ident">t</span>);
+        <span class="comment">// case when twiddle factor is one
+        </span><span class="kw">let </span>(a, left) = left.split_at_mut(<span class="number">1</span>);
+        <span class="kw">let </span>(b, right) = right.split_at_mut(<span class="number">1</span>);
+        <span class="kw">let </span>t = b[<span class="number">0</span>];
+        b[<span class="number">0</span>] = a[<span class="number">0</span>];
+        a[<span class="number">0</span>].group_add(<span class="kw-2">&amp;</span>t);
+        b[<span class="number">0</span>].group_sub(<span class="kw-2">&amp;</span>t);
 
-        <span class="ident">left</span>.<span class="ident">iter_mut</span>()
-            .<span class="ident">zip</span>(<span class="ident">right</span>.<span class="ident">iter_mut</span>())
-            .<span class="ident">enumerate</span>()
-            .<span class="ident">for_each</span>(<span class="op">|</span>(<span class="ident">i</span>, (<span class="ident">a</span>, <span class="ident">b</span>))<span class="op">|</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">t</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">b</span>;
-                <span class="ident">t</span>.<span class="ident">group_scale</span>(<span class="kw-2">&amp;</span><span class="ident">twiddles</span>[(<span class="ident">i</span> <span class="op">+</span> <span class="number">1</span>) <span class="op">*</span> <span class="ident">twiddle_chunk</span>]);
-                <span class="kw-2">*</span><span class="ident">b</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">a</span>;
-                <span class="ident">a</span>.<span class="ident">group_add</span>(<span class="kw-2">&amp;</span><span class="ident">t</span>);
-                <span class="ident">b</span>.<span class="ident">group_sub</span>(<span class="kw-2">&amp;</span><span class="ident">t</span>);
+        left.iter_mut()
+            .zip(right.iter_mut())
+            .enumerate()
+            .for_each(|(i, (a, b))| {
+                <span class="kw">let </span><span class="kw-2">mut </span>t = <span class="kw-2">*</span>b;
+                t.group_scale(<span class="kw-2">&amp;</span>twiddles[(i + <span class="number">1</span>) * twiddle_chunk]);
+                <span class="kw-2">*</span>b = <span class="kw-2">*</span>a;
+                a.group_add(<span class="kw-2">&amp;</span>t);
+                b.group_sub(<span class="kw-2">&amp;</span>t);
             });
     }
 }
 
-<span class="doccomment">/// This evaluates a provided polynomial (in coefficient form) at `point`.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">eval_polynomial</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="ident">poly</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>], <span class="ident">point</span>: <span class="ident">F</span>) -&gt; <span class="ident">F</span> {
-    <span class="comment">// TODO: parallelize?</span>
-    <span class="ident">poly</span>.<span class="ident">iter</span>()
-        .<span class="ident">rev</span>()
-        .<span class="ident">fold</span>(<span class="ident">F::zero</span>(), <span class="op">|</span><span class="ident">acc</span>, <span class="ident">coeff</span><span class="op">|</span> <span class="ident">acc</span> <span class="op">*</span> <span class="ident">point</span> <span class="op">+</span> <span class="ident">coeff</span>)
+<span class="doccomment">/// This evaluates a provided polynomial (in coefficient form) at `point`.
+</span><span class="kw">pub fn </span>eval_polynomial&lt;F: Field&gt;(poly: <span class="kw-2">&amp;</span>[F], point: F) -&gt; F {
+    <span class="comment">// TODO: parallelize?
+    </span>poly.iter()
+        .rev()
+        .fold(F::zero(), |acc, coeff| acc * point + coeff)
 }
 
-<span class="doccomment">/// This computes the inner product of two vectors `a` and `b`.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This function will panic if the two vectors are not the same size.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compute_inner_product</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="ident">a</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>], <span class="ident">b</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>]) -&gt; <span class="ident">F</span> {
-    <span class="comment">// TODO: parallelize?</span>
-    <span class="macro">assert_eq!</span>(<span class="ident">a</span>.<span class="ident">len</span>(), <span class="ident">b</span>.<span class="ident">len</span>());
+<span class="doccomment">/// This computes the inner product of two vectors `a` and `b`.
+///
+/// This function will panic if the two vectors are not the same size.
+</span><span class="kw">pub fn </span>compute_inner_product&lt;F: Field&gt;(a: <span class="kw-2">&amp;</span>[F], b: <span class="kw-2">&amp;</span>[F]) -&gt; F {
+    <span class="comment">// TODO: parallelize?
+    </span><span class="macro">assert_eq!</span>(a.len(), b.len());
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">acc</span> <span class="op">=</span> <span class="ident">F::zero</span>();
-    <span class="kw">for</span> (<span class="ident">a</span>, <span class="ident">b</span>) <span class="kw">in</span> <span class="ident">a</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">b</span>.<span class="ident">iter</span>()) {
-        <span class="ident">acc</span> <span class="op">+</span><span class="op">=</span> (<span class="kw-2">*</span><span class="ident">a</span>) <span class="op">*</span> (<span class="kw-2">*</span><span class="ident">b</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>acc = F::zero();
+    <span class="kw">for </span>(a, b) <span class="kw">in </span>a.iter().zip(b.iter()) {
+        acc += (<span class="kw-2">*</span>a) * (<span class="kw-2">*</span>b);
     }
 
-    <span class="ident">acc</span>
+    acc
 }
 
-<span class="doccomment">/// Divides polynomial `a` in `X` by `X - b` with</span>
-<span class="doccomment">/// no remainder.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">kate_division</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">a</span>: <span class="ident">I</span>, <span class="kw-2">mut</span> <span class="ident">b</span>: <span class="ident">F</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">I::IntoIter</span>: <span class="ident">DoubleEndedIterator</span> <span class="op">+</span> <span class="ident">ExactSizeIterator</span>,
+<span class="doccomment">/// Divides polynomial `a` in `X` by `X - b` with
+/// no remainder.
+</span><span class="kw">pub fn </span>kate_division&lt;<span class="lifetime">&#39;a</span>, F: Field, I: IntoIterator&lt;Item = <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>F&gt;&gt;(a: I, <span class="kw-2">mut </span>b: F) -&gt; Vec&lt;F&gt;
+<span class="kw">where
+    </span>I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
 {
-    <span class="ident">b</span> <span class="op">=</span> <span class="op">-</span><span class="ident">b</span>;
-    <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">a</span>.<span class="ident">into_iter</span>();
+    b = -b;
+    <span class="kw">let </span>a = a.into_iter();
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">q</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">F::zero</span>(); <span class="ident">a</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span>];
+    <span class="kw">let </span><span class="kw-2">mut </span>q = <span class="macro">vec!</span>[F::zero(); a.len() - <span class="number">1</span>];
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">F::zero</span>();
-    <span class="kw">for</span> (<span class="ident">q</span>, <span class="ident">r</span>) <span class="kw">in</span> <span class="ident">q</span>.<span class="ident">iter_mut</span>().<span class="ident">rev</span>().<span class="ident">zip</span>(<span class="ident">a</span>.<span class="ident">rev</span>()) {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">lead_coeff</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">r</span>;
-        <span class="ident">lead_coeff</span>.<span class="ident">sub_assign</span>(<span class="kw-2">&amp;</span><span class="ident">tmp</span>);
-        <span class="kw-2">*</span><span class="ident">q</span> <span class="op">=</span> <span class="ident">lead_coeff</span>;
-        <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">lead_coeff</span>;
-        <span class="ident">tmp</span>.<span class="ident">mul_assign</span>(<span class="kw-2">&amp;</span><span class="ident">b</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>tmp = F::zero();
+    <span class="kw">for </span>(q, r) <span class="kw">in </span>q.iter_mut().rev().zip(a.rev()) {
+        <span class="kw">let </span><span class="kw-2">mut </span>lead_coeff = <span class="kw-2">*</span>r;
+        lead_coeff.sub_assign(<span class="kw-2">&amp;</span>tmp);
+        <span class="kw-2">*</span>q = lead_coeff;
+        tmp = lead_coeff;
+        tmp.mul_assign(<span class="kw-2">&amp;</span>b);
     }
 
-    <span class="ident">q</span>
+    q
 }
 
-<span class="doccomment">/// This simple utility function will parallelize an operation that is to be</span>
-<span class="doccomment">/// performed over a mutable slice.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parallelize</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Send</span>, <span class="ident">F</span>: <span class="ident">Fn</span>(<span class="kw-2">&amp;mut</span> [<span class="ident">T</span>], <span class="ident">usize</span>) <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(<span class="ident">v</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">T</span>], <span class="ident">f</span>: <span class="ident">F</span>) {
-    <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">len</span>();
-    <span class="kw">let</span> <span class="ident">num_threads</span> <span class="op">=</span> <span class="ident">multicore::current_num_threads</span>();
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">chunk</span> <span class="op">=</span> (<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>) <span class="op">/</span> <span class="ident">num_threads</span>;
-    <span class="kw">if</span> <span class="ident">chunk</span> <span class="op">&lt;</span> <span class="ident">num_threads</span> {
-        <span class="ident">chunk</span> <span class="op">=</span> <span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>;
+<span class="doccomment">/// This simple utility function will parallelize an operation that is to be
+/// performed over a mutable slice.
+</span><span class="kw">pub fn </span>parallelize&lt;T: Send, F: Fn(<span class="kw-2">&amp;mut </span>[T], usize) + Send + Sync + Clone&gt;(v: <span class="kw-2">&amp;mut </span>[T], f: F) {
+    <span class="kw">let </span>n = v.len();
+    <span class="kw">let </span>num_threads = multicore::current_num_threads();
+    <span class="kw">let </span><span class="kw-2">mut </span>chunk = (n <span class="kw">as </span>usize) / num_threads;
+    <span class="kw">if </span>chunk &lt; num_threads {
+        chunk = n <span class="kw">as </span>usize;
     }
 
-    <span class="ident">multicore::scope</span>(<span class="op">|</span><span class="ident">scope</span><span class="op">|</span> {
-        <span class="kw">for</span> (<span class="ident">chunk_num</span>, <span class="ident">v</span>) <span class="kw">in</span> <span class="ident">v</span>.<span class="ident">chunks_mut</span>(<span class="ident">chunk</span>).<span class="ident">enumerate</span>() {
-            <span class="kw">let</span> <span class="ident">f</span> <span class="op">=</span> <span class="ident">f</span>.<span class="ident">clone</span>();
-            <span class="ident">scope</span>.<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">chunk_num</span> <span class="op">*</span> <span class="ident">chunk</span>;
-                <span class="ident">f</span>(<span class="ident">v</span>, <span class="ident">start</span>);
+    multicore::scope(|scope| {
+        <span class="kw">for </span>(chunk_num, v) <span class="kw">in </span>v.chunks_mut(chunk).enumerate() {
+            <span class="kw">let </span>f = f.clone();
+            scope.spawn(<span class="kw">move </span>|<span class="kw">_</span>| {
+                <span class="kw">let </span>start = chunk_num * chunk;
+                f(v, start);
             });
         }
     });
 }
 
-<span class="kw">fn</span> <span class="ident">log2_floor</span>(<span class="ident">num</span>: <span class="ident">usize</span>) -&gt; <span class="ident">u32</span> {
-    <span class="macro">assert!</span>(<span class="ident">num</span> <span class="op">&gt;</span> <span class="number">0</span>);
+<span class="kw">fn </span>log2_floor(num: usize) -&gt; u32 {
+    <span class="macro">assert!</span>(num &gt; <span class="number">0</span>);
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pow</span> <span class="op">=</span> <span class="number">0</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>pow = <span class="number">0</span>;
 
-    <span class="kw">while</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">pow</span> <span class="op">+</span> <span class="number">1</span>)) <span class="op">&lt;</span><span class="op">=</span> <span class="ident">num</span> {
-        <span class="ident">pow</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+    <span class="kw">while </span>(<span class="number">1 </span>&lt;&lt; (pow + <span class="number">1</span>)) &lt;= num {
+        pow += <span class="number">1</span>;
     }
 
-    <span class="ident">pow</span>
+    pow
 }
 
-<span class="doccomment">/// Returns coefficients of an n - 1 degree polynomial given a set of n points</span>
-<span class="doccomment">/// and their evaluations. This function will panic if two values in `points`</span>
-<span class="doccomment">/// are the same.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lagrange_interpolate</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(<span class="ident">points</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>], <span class="ident">evals</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>]) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="macro">assert_eq!</span>(<span class="ident">points</span>.<span class="ident">len</span>(), <span class="ident">evals</span>.<span class="ident">len</span>());
-    <span class="kw">if</span> <span class="ident">points</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="number">1</span> {
-        <span class="comment">// Constant polynomial</span>
-        <span class="kw">return</span> <span class="macro">vec!</span>[<span class="ident">evals</span>[<span class="number">0</span>]];
-    } <span class="kw">else</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">denoms</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">points</span>.<span class="ident">len</span>());
-        <span class="kw">for</span> (<span class="ident">j</span>, <span class="ident">x_j</span>) <span class="kw">in</span> <span class="ident">points</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">denom</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">points</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span>);
-            <span class="kw">for</span> <span class="ident">x_k</span> <span class="kw">in</span> <span class="ident">points</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">enumerate</span>()
-                .<span class="ident">filter</span>(<span class="op">|</span><span class="kw-2">&amp;</span>(<span class="ident">k</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">k</span> <span class="op">!</span><span class="op">=</span> <span class="ident">j</span>)
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>.<span class="number">1</span>)
+<span class="doccomment">/// Returns coefficients of an n - 1 degree polynomial given a set of n points
+/// and their evaluations. This function will panic if two values in `points`
+/// are the same.
+</span><span class="kw">pub fn </span>lagrange_interpolate&lt;F: FieldExt&gt;(points: <span class="kw-2">&amp;</span>[F], evals: <span class="kw-2">&amp;</span>[F]) -&gt; Vec&lt;F&gt; {
+    <span class="macro">assert_eq!</span>(points.len(), evals.len());
+    <span class="kw">if </span>points.len() == <span class="number">1 </span>{
+        <span class="comment">// Constant polynomial
+        </span><span class="kw">return </span><span class="macro">vec!</span>[evals[<span class="number">0</span>]];
+    } <span class="kw">else </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>denoms = Vec::with_capacity(points.len());
+        <span class="kw">for </span>(j, x_j) <span class="kw">in </span>points.iter().enumerate() {
+            <span class="kw">let </span><span class="kw-2">mut </span>denom = Vec::with_capacity(points.len() - <span class="number">1</span>);
+            <span class="kw">for </span>x_k <span class="kw">in </span>points
+                .iter()
+                .enumerate()
+                .filter(|<span class="kw-2">&amp;</span>(k, <span class="kw">_</span>)| k != j)
+                .map(|a| a.<span class="number">1</span>)
             {
-                <span class="ident">denom</span>.<span class="ident">push</span>(<span class="kw-2">*</span><span class="ident">x_j</span> <span class="op">-</span> <span class="ident">x_k</span>);
+                denom.push(<span class="kw-2">*</span>x_j - x_k);
             }
-            <span class="ident">denoms</span>.<span class="ident">push</span>(<span class="ident">denom</span>);
+            denoms.push(denom);
         }
-        <span class="comment">// Compute (x_j - x_k)^(-1) for each j != i</span>
-        <span class="ident">denoms</span>.<span class="ident">iter_mut</span>().<span class="ident">flat_map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">iter_mut</span>()).<span class="ident">batch_invert</span>();
+        <span class="comment">// Compute (x_j - x_k)^(-1) for each j != i
+        </span>denoms.iter_mut().flat_map(|v| v.iter_mut()).batch_invert();
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">final_poly</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">F::zero</span>(); <span class="ident">points</span>.<span class="ident">len</span>()];
-        <span class="kw">for</span> (<span class="ident">j</span>, (<span class="ident">denoms</span>, <span class="ident">eval</span>)) <span class="kw">in</span> <span class="ident">denoms</span>.<span class="ident">into_iter</span>().<span class="ident">zip</span>(<span class="ident">evals</span>.<span class="ident">iter</span>()).<span class="ident">enumerate</span>() {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tmp</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">points</span>.<span class="ident">len</span>());
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">product</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">points</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span>);
-            <span class="ident">tmp</span>.<span class="ident">push</span>(<span class="ident">F::one</span>());
-            <span class="kw">for</span> (<span class="ident">x_k</span>, <span class="ident">denom</span>) <span class="kw">in</span> <span class="ident">points</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">enumerate</span>()
-                .<span class="ident">filter</span>(<span class="op">|</span><span class="kw-2">&amp;</span>(<span class="ident">k</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">k</span> <span class="op">!</span><span class="op">=</span> <span class="ident">j</span>)
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>.<span class="number">1</span>)
-                .<span class="ident">zip</span>(<span class="ident">denoms</span>.<span class="ident">into_iter</span>())
+        <span class="kw">let </span><span class="kw-2">mut </span>final_poly = <span class="macro">vec!</span>[F::zero(); points.len()];
+        <span class="kw">for </span>(j, (denoms, eval)) <span class="kw">in </span>denoms.into_iter().zip(evals.iter()).enumerate() {
+            <span class="kw">let </span><span class="kw-2">mut </span>tmp: Vec&lt;F&gt; = Vec::with_capacity(points.len());
+            <span class="kw">let </span><span class="kw-2">mut </span>product = Vec::with_capacity(points.len() - <span class="number">1</span>);
+            tmp.push(F::one());
+            <span class="kw">for </span>(x_k, denom) <span class="kw">in </span>points
+                .iter()
+                .enumerate()
+                .filter(|<span class="kw-2">&amp;</span>(k, <span class="kw">_</span>)| k != j)
+                .map(|a| a.<span class="number">1</span>)
+                .zip(denoms.into_iter())
             {
-                <span class="ident">product</span>.<span class="ident">resize</span>(<span class="ident">tmp</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="number">1</span>, <span class="ident">F::zero</span>());
-                <span class="kw">for</span> ((<span class="ident">a</span>, <span class="ident">b</span>), <span class="ident">product</span>) <span class="kw">in</span> <span class="ident">tmp</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">chain</span>(<span class="ident">std::iter::once</span>(<span class="kw-2">&amp;</span><span class="ident">F::zero</span>()))
-                    .<span class="ident">zip</span>(<span class="ident">std::iter::once</span>(<span class="kw-2">&amp;</span><span class="ident">F::zero</span>()).<span class="ident">chain</span>(<span class="ident">tmp</span>.<span class="ident">iter</span>()))
-                    .<span class="ident">zip</span>(<span class="ident">product</span>.<span class="ident">iter_mut</span>())
+                product.resize(tmp.len() + <span class="number">1</span>, F::zero());
+                <span class="kw">for </span>((a, b), product) <span class="kw">in </span>tmp
+                    .iter()
+                    .chain(std::iter::once(<span class="kw-2">&amp;</span>F::zero()))
+                    .zip(std::iter::once(<span class="kw-2">&amp;</span>F::zero()).chain(tmp.iter()))
+                    .zip(product.iter_mut())
                 {
-                    <span class="kw-2">*</span><span class="ident">product</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">a</span> <span class="op">*</span> (<span class="op">-</span><span class="ident">denom</span> <span class="op">*</span> <span class="ident">x_k</span>) <span class="op">+</span> <span class="kw-2">*</span><span class="ident">b</span> <span class="op">*</span> <span class="ident">denom</span>;
+                    <span class="kw-2">*</span>product = <span class="kw-2">*</span>a * (-denom * x_k) + <span class="kw-2">*</span>b * denom;
                 }
-                <span class="ident">std::mem::swap</span>(<span class="kw-2">&amp;mut</span> <span class="ident">tmp</span>, <span class="kw-2">&amp;mut</span> <span class="ident">product</span>);
+                std::mem::swap(<span class="kw-2">&amp;mut </span>tmp, <span class="kw-2">&amp;mut </span>product);
             }
-            <span class="macro">assert_eq!</span>(<span class="ident">tmp</span>.<span class="ident">len</span>(), <span class="ident">points</span>.<span class="ident">len</span>());
-            <span class="macro">assert_eq!</span>(<span class="ident">product</span>.<span class="ident">len</span>(), <span class="ident">points</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span>);
-            <span class="kw">for</span> (<span class="ident">final_coeff</span>, <span class="ident">interpolation_coeff</span>) <span class="kw">in</span> <span class="ident">final_poly</span>.<span class="ident">iter_mut</span>().<span class="ident">zip</span>(<span class="ident">tmp</span>.<span class="ident">into_iter</span>()) {
-                <span class="kw-2">*</span><span class="ident">final_coeff</span> <span class="op">+</span><span class="op">=</span> <span class="ident">interpolation_coeff</span> <span class="op">*</span> <span class="ident">eval</span>;
+            <span class="macro">assert_eq!</span>(tmp.len(), points.len());
+            <span class="macro">assert_eq!</span>(product.len(), points.len() - <span class="number">1</span>);
+            <span class="kw">for </span>(final_coeff, interpolation_coeff) <span class="kw">in </span>final_poly.iter_mut().zip(tmp.into_iter()) {
+                <span class="kw-2">*</span>final_coeff += interpolation_coeff * eval;
             }
         }
-        <span class="ident">final_poly</span>
+        final_poly
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">use</span> <span class="ident">rand_core::OsRng</span>;
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">use </span>rand_core::OsRng;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::pasta::Fp</span>;
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">use </span><span class="kw">crate</span>::pasta::Fp;
 
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">fn</span> <span class="ident">test_lagrange_interpolate</span>() {
-    <span class="kw">let</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">OsRng</span>;
+<span class="attribute">#[test]</span>
+<span class="kw">fn </span>test_lagrange_interpolate() {
+    <span class="kw">let </span>rng = OsRng;
 
-    <span class="kw">let</span> <span class="ident">points</span> <span class="op">=</span> (<span class="number">0</span>..<span class="number">5</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Fp::random</span>(<span class="ident">rng</span>)).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-    <span class="kw">let</span> <span class="ident">evals</span> <span class="op">=</span> (<span class="number">0</span>..<span class="number">5</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Fp::random</span>(<span class="ident">rng</span>)).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+    <span class="kw">let </span>points = (<span class="number">0</span>..<span class="number">5</span>).map(|<span class="kw">_</span>| Fp::random(rng)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+    <span class="kw">let </span>evals = (<span class="number">0</span>..<span class="number">5</span>).map(|<span class="kw">_</span>| Fp::random(rng)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-    <span class="kw">for</span> <span class="ident">coeffs</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">5</span> {
-        <span class="kw">let</span> <span class="ident">points</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">points</span>[<span class="number">0</span>..<span class="ident">coeffs</span>];
-        <span class="kw">let</span> <span class="ident">evals</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">evals</span>[<span class="number">0</span>..<span class="ident">coeffs</span>];
+    <span class="kw">for </span>coeffs <span class="kw">in </span><span class="number">0</span>..<span class="number">5 </span>{
+        <span class="kw">let </span>points = <span class="kw-2">&amp;</span>points[<span class="number">0</span>..coeffs];
+        <span class="kw">let </span>evals = <span class="kw-2">&amp;</span>evals[<span class="number">0</span>..coeffs];
 
-        <span class="kw">let</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">lagrange_interpolate</span>(<span class="ident">points</span>, <span class="ident">evals</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">poly</span>.<span class="ident">len</span>(), <span class="ident">points</span>.<span class="ident">len</span>());
+        <span class="kw">let </span>poly = lagrange_interpolate(points, evals);
+        <span class="macro">assert_eq!</span>(poly.len(), points.len());
 
-        <span class="kw">for</span> (<span class="ident">point</span>, <span class="ident">eval</span>) <span class="kw">in</span> <span class="ident">points</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">evals</span>) {
-            <span class="macro">assert_eq!</span>(<span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>, <span class="kw-2">*</span><span class="ident">point</span>), <span class="kw-2">*</span><span class="ident">eval</span>);
+        <span class="kw">for </span>(point, eval) <span class="kw">in </span>points.iter().zip(evals) {
+            <span class="macro">assert_eq!</span>(eval_polynomial(<span class="kw-2">&amp;</span>poly, <span class="kw-2">*</span>point), <span class="kw-2">*</span>eval);
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

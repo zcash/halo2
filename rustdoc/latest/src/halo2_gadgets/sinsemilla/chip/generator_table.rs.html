@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -116,97 +110,97 @@
 <span id="95">95</span>
 <span id="96">96</span>
 <span id="97">97</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">Value</span>},
-    <span class="ident">plonk</span>::{<span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">TableColumn</span>},
-    <span class="ident">poly::Rotation</span>,
+</pre><pre class="rust"><code><span class="kw">use </span>halo2_proofs::{
+    circuit::{Layouter, Value},
+    plonk::{ConstraintSystem, Error, Expression, TableColumn},
+    poly::Rotation,
 };
 
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">CommitDomains</span>, <span class="ident">FixedPoints</span>, <span class="ident">HashDomains</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::sinsemilla::primitives</span>::{<span class="self">self</span> <span class="kw">as</span> <span class="ident">sinsemilla</span>, <span class="ident">SINSEMILLA_S</span>};
-<span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">pallas</span>};
+<span class="kw">use super</span>::{CommitDomains, FixedPoints, HashDomains};
+<span class="kw">use </span><span class="kw">crate</span>::sinsemilla::primitives::{<span class="self">self </span><span class="kw">as </span>sinsemilla, SINSEMILLA_S};
+<span class="kw">use </span>pasta_curves::{arithmetic::FieldExt, pallas};
 
-<span class="doccomment">/// Table containing independent generators S[0..2^k]</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GeneratorTableConfig</span> {
-    <span class="kw">pub</span> <span class="ident">table_idx</span>: <span class="ident">TableColumn</span>,
-    <span class="kw">pub</span> <span class="ident">table_x</span>: <span class="ident">TableColumn</span>,
-    <span class="kw">pub</span> <span class="ident">table_y</span>: <span class="ident">TableColumn</span>,
+<span class="doccomment">/// Table containing independent generators S[0..2^k]
+</span><span class="attribute">#[derive(Eq, PartialEq, Copy, Clone, Debug)]</span>
+<span class="kw">pub struct </span>GeneratorTableConfig {
+    <span class="kw">pub </span>table_idx: TableColumn,
+    <span class="kw">pub </span>table_x: TableColumn,
+    <span class="kw">pub </span>table_y: TableColumn,
 }
 
-<span class="kw">impl</span> <span class="ident">GeneratorTableConfig</span> {
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="doccomment">/// Even though the lookup table can be used in other parts of the circuit,</span>
-    <span class="doccomment">/// this specific configuration sets up Sinsemilla-specific constraints</span>
-    <span class="doccomment">/// controlled by `q_sinsemilla`, and would likely not apply to other chips.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span>(
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">config</span>: <span class="ident"><span class="kw">super</span>::SinsemillaConfig</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span>,
-    ) <span class="kw">where</span>
-        <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-        <span class="ident">F</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-        <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">F</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
+<span class="kw">impl </span>GeneratorTableConfig {
+    <span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="doccomment">/// Even though the lookup table can be used in other parts of the circuit,
+    /// this specific configuration sets up Sinsemilla-specific constraints
+    /// controlled by `q_sinsemilla`, and would likely not apply to other chips.
+    </span><span class="kw">pub fn </span>configure&lt;Hash, Commit, F&gt;(
+        meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;,
+        config: <span class="kw">super</span>::SinsemillaConfig&lt;Hash, Commit, F&gt;,
+    ) <span class="kw">where
+        </span>Hash: HashDomains&lt;pallas::Affine&gt;,
+        F: FixedPoints&lt;pallas::Affine&gt;,
+        Commit: CommitDomains&lt;pallas::Affine, F, Hash&gt;,
     {
-        <span class="kw">let</span> (<span class="ident">table_idx</span>, <span class="ident">table_x</span>, <span class="ident">table_y</span>) <span class="op">=</span> (
-            <span class="ident">config</span>.<span class="ident">generator_table</span>.<span class="ident">table_idx</span>,
-            <span class="ident">config</span>.<span class="ident">generator_table</span>.<span class="ident">table_x</span>,
-            <span class="ident">config</span>.<span class="ident">generator_table</span>.<span class="ident">table_y</span>,
+        <span class="kw">let </span>(table_idx, table_x, table_y) = (
+            config.generator_table.table_idx,
+            config.generator_table.table_x,
+            config.generator_table.table_y,
         );
 
-        <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial</span>
-        <span class="ident">meta</span>.<span class="ident">lookup</span>(<span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q_s1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">config</span>.<span class="ident">q_sinsemilla1</span>);
-            <span class="kw">let</span> <span class="ident">q_s2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_fixed</span>(<span class="ident">config</span>.<span class="ident">q_sinsemilla2</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">q_s3</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">q_s3</span>(<span class="ident">meta</span>);
-            <span class="kw">let</span> <span class="ident">q_run</span> <span class="op">=</span> <span class="ident">q_s2</span> <span class="op">-</span> <span class="ident">q_s3</span>;
+        <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial
+        </span>meta.lookup(|meta| {
+            <span class="kw">let </span>q_s1 = meta.query_selector(config.q_sinsemilla1);
+            <span class="kw">let </span>q_s2 = meta.query_fixed(config.q_sinsemilla2, Rotation::cur());
+            <span class="kw">let </span>q_s3 = config.q_s3(meta);
+            <span class="kw">let </span>q_run = q_s2 - q_s3;
 
-            <span class="comment">// m_{i+1} = z_{i} - 2^K * q_{run,i} * z_{i + 1}</span>
-            <span class="comment">// Note that the message words m_i&#39;s are 1-indexed while the</span>
-            <span class="comment">// running sum z_i&#39;s are 0-indexed.</span>
-            <span class="kw">let</span> <span class="ident">word</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">z_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">bits</span>, <span class="ident">Rotation::cur</span>());
-                <span class="kw">let</span> <span class="ident">z_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">bits</span>, <span class="ident">Rotation::next</span>());
-                <span class="ident">z_cur</span> <span class="op">-</span> (<span class="ident">q_run</span> <span class="op">*</span> <span class="ident">z_next</span> <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">sinsemilla::K</span>))
+            <span class="comment">// m_{i+1} = z_{i} - 2^K * q_{run,i} * z_{i + 1}
+            // Note that the message words m_i&#39;s are 1-indexed while the
+            // running sum z_i&#39;s are 0-indexed.
+            </span><span class="kw">let </span>word = {
+                <span class="kw">let </span>z_cur = meta.query_advice(config.bits, Rotation::cur());
+                <span class="kw">let </span>z_next = meta.query_advice(config.bits, Rotation::next());
+                z_cur - (q_run * z_next * pallas::Base::from(<span class="number">1 </span>&lt;&lt; sinsemilla::K))
             };
 
-            <span class="kw">let</span> <span class="ident">x_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>, <span class="ident">Rotation::cur</span>());
+            <span class="kw">let </span>x_p = meta.query_advice(config.double_and_add.x_p, Rotation::cur());
 
-            <span class="comment">// y_{p,i} = (Y_{A,i} / 2) - lambda1 * (x_{A,i} - x_{P,i})</span>
-            <span class="kw">let</span> <span class="ident">y_p</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">lambda1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>, <span class="ident">Rotation::cur</span>());
-                <span class="kw">let</span> <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>, <span class="ident">Rotation::cur</span>());
-                <span class="kw">let</span> <span class="ident">Y_A</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">Y_A</span>(<span class="ident">meta</span>, <span class="ident">Rotation::cur</span>());
+            <span class="comment">// y_{p,i} = (Y_{A,i} / 2) - lambda1 * (x_{A,i} - x_{P,i})
+            </span><span class="kw">let </span>y_p = {
+                <span class="kw">let </span>lambda1 = meta.query_advice(config.double_and_add.lambda_1, Rotation::cur());
+                <span class="kw">let </span>x_a = meta.query_advice(config.double_and_add.x_a, Rotation::cur());
+                <span class="kw">let </span>Y_A = config.double_and_add.Y_A(meta, Rotation::cur());
 
-                (<span class="ident">Y_A</span> <span class="op">*</span> <span class="ident">pallas::Base::TWO_INV</span>) <span class="op">-</span> (<span class="ident">lambda1</span> <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_p</span>.<span class="ident">clone</span>()))
+                (Y_A * pallas::Base::TWO_INV) - (lambda1 * (x_a - x_p.clone()))
             };
 
-            <span class="comment">// Lookup expressions default to the first entry when `q_s1`</span>
-            <span class="comment">// is not enabled.</span>
-            <span class="kw">let</span> (<span class="ident">init_x</span>, <span class="ident">init_y</span>) <span class="op">=</span> <span class="ident">SINSEMILLA_S</span>[<span class="number">0</span>];
-            <span class="kw">let</span> <span class="ident">not_q_s1</span> <span class="op">=</span> <span class="ident">Expression::Constant</span>(<span class="ident">pallas::Base::one</span>()) <span class="op">-</span> <span class="ident">q_s1</span>.<span class="ident">clone</span>();
+            <span class="comment">// Lookup expressions default to the first entry when `q_s1`
+            // is not enabled.
+            </span><span class="kw">let </span>(init_x, init_y) = SINSEMILLA_S[<span class="number">0</span>];
+            <span class="kw">let </span>not_q_s1 = Expression::Constant(pallas::Base::one()) - q_s1.clone();
 
-            <span class="kw">let</span> <span class="ident">m</span> <span class="op">=</span> <span class="ident">q_s1</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">word</span>; <span class="comment">// The first table index is 0.</span>
-            <span class="kw">let</span> <span class="ident">x_p</span> <span class="op">=</span> <span class="ident">q_s1</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x_p</span> <span class="op">+</span> <span class="ident">not_q_s1</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">init_x</span>;
-            <span class="kw">let</span> <span class="ident">y_p</span> <span class="op">=</span> <span class="ident">q_s1</span> <span class="op">*</span> <span class="ident">y_p</span> <span class="op">+</span> <span class="ident">not_q_s1</span> <span class="op">*</span> <span class="ident">init_y</span>;
+            <span class="kw">let </span>m = q_s1.clone() * word; <span class="comment">// The first table index is 0.
+            </span><span class="kw">let </span>x_p = q_s1.clone() * x_p + not_q_s1.clone() * init_x;
+            <span class="kw">let </span>y_p = q_s1 * y_p + not_q_s1 * init_y;
 
-            <span class="macro">vec!</span>[(<span class="ident">m</span>, <span class="ident">table_idx</span>), (<span class="ident">x_p</span>, <span class="ident">table_x</span>), (<span class="ident">y_p</span>, <span class="ident">table_y</span>)]
+            <span class="macro">vec!</span>[(m, table_idx), (x_p, table_x), (y_p, table_y)]
         });
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident">layouter</span>.<span class="ident">assign_table</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;generator_table&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">table</span><span class="op">|</span> {
-                <span class="kw">for</span> (<span class="ident">index</span>, (<span class="ident">x</span>, <span class="ident">y</span>)) <span class="kw">in</span> <span class="ident">SINSEMILLA_S</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-                    <span class="ident">table</span>.<span class="ident">assign_cell</span>(
-                        <span class="op">|</span><span class="op">|</span> <span class="string">&quot;table_idx&quot;</span>,
-                        <span class="self">self</span>.<span class="ident">table_idx</span>,
-                        <span class="ident">index</span>,
-                        <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from</span>(<span class="ident">index</span> <span class="kw">as</span> <span class="ident">u64</span>)),
+    <span class="kw">pub fn </span>load(<span class="kw-2">&amp;</span><span class="self">self</span>, layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        layouter.assign_table(
+            || <span class="string">&quot;generator_table&quot;</span>,
+            |<span class="kw-2">mut </span>table| {
+                <span class="kw">for </span>(index, (x, y)) <span class="kw">in </span>SINSEMILLA_S.iter().enumerate() {
+                    table.assign_cell(
+                        || <span class="string">&quot;table_idx&quot;</span>,
+                        <span class="self">self</span>.table_idx,
+                        index,
+                        || Value::known(pallas::Base::from(index <span class="kw">as </span>u64)),
                     )<span class="question-mark">?</span>;
-                    <span class="ident">table</span>.<span class="ident">assign_cell</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;table_x&quot;</span>, <span class="self">self</span>.<span class="ident">table_x</span>, <span class="ident">index</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="kw-2">*</span><span class="ident">x</span>))<span class="question-mark">?</span>;
-                    <span class="ident">table</span>.<span class="ident">assign_cell</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;table_y&quot;</span>, <span class="self">self</span>.<span class="ident">table_y</span>, <span class="ident">index</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="kw-2">*</span><span class="ident">y</span>))<span class="question-mark">?</span>;
+                    table.assign_cell(|| <span class="string">&quot;table_x&quot;</span>, <span class="self">self</span>.table_x, index, || Value::known(<span class="kw-2">*</span>x))<span class="question-mark">?</span>;
+                    table.assign_cell(|| <span class="string">&quot;table_y&quot;</span>, <span class="self">self</span>.table_y, index, || Value::known(<span class="kw-2">*</span>y))<span class="question-mark">?</span>;
                 }
                 <span class="prelude-val">Ok</span>(())
             },
@@ -214,5 +208,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

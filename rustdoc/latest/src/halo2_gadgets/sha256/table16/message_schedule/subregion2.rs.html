@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -506,493 +500,492 @@
 <span id="485">485</span>
 <span id="486">486</span>
 <span id="487">487</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">util</span>::<span class="kw-2">*</span>, <span class="ident">AssignedBits</span>, <span class="ident">Bits</span>, <span class="ident">SpreadVar</span>, <span class="ident">SpreadWord</span>, <span class="ident">Table16Assignment</span>};
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">schedule_util</span>::<span class="kw-2">*</span>, <span class="ident">MessageScheduleConfig</span>, <span class="ident">MessageWord</span>};
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">Region</span>, <span class="ident">Value</span>},
-    <span class="ident">pasta::pallas</span>,
-    <span class="ident">plonk::Error</span>,
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{util::<span class="kw-2">*</span>, AssignedBits, Bits, SpreadVar, SpreadWord, Table16Assignment};
+<span class="kw">use super</span>::{schedule_util::<span class="kw-2">*</span>, MessageScheduleConfig, MessageWord};
+<span class="kw">use </span>halo2_proofs::{
+    circuit::{Region, Value},
+    pasta::pallas,
+    plonk::Error,
 };
-<span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
+<span class="kw">use </span>std::convert::TryInto;
 
-<span class="doccomment">/// A word in subregion 2</span>
-<span class="doccomment">/// (3, 4, 3, 7, 1, 1, 13)-bit chunks</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Subregion2Word</span> {
-    <span class="ident">index</span>: <span class="ident">usize</span>,
-    <span class="ident">a</span>: <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">3</span><span class="op">&gt;</span>,
-    <span class="ident">b</span>: <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">4</span><span class="op">&gt;</span>,
-    <span class="ident">c</span>: <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">3</span><span class="op">&gt;</span>,
-    <span class="ident">d</span>: <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">7</span><span class="op">&gt;</span>,
-    <span class="ident">e</span>: <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">1</span><span class="op">&gt;</span>,
-    <span class="ident">f</span>: <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">1</span><span class="op">&gt;</span>,
-    <span class="ident">g</span>: <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">13</span><span class="op">&gt;</span>,
-    <span class="ident">spread_d</span>: <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">14</span><span class="op">&gt;</span>,
-    <span class="ident">spread_g</span>: <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">26</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A word in subregion 2
+/// (3, 4, 3, 7, 1, 1, 13)-bit chunks
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>Subregion2Word {
+    index: usize,
+    a: AssignedBits&lt;<span class="number">3</span>&gt;,
+    b: AssignedBits&lt;<span class="number">4</span>&gt;,
+    c: AssignedBits&lt;<span class="number">3</span>&gt;,
+    d: AssignedBits&lt;<span class="number">7</span>&gt;,
+    e: AssignedBits&lt;<span class="number">1</span>&gt;,
+    f: AssignedBits&lt;<span class="number">1</span>&gt;,
+    g: AssignedBits&lt;<span class="number">13</span>&gt;,
+    spread_d: AssignedBits&lt;<span class="number">14</span>&gt;,
+    spread_g: AssignedBits&lt;<span class="number">26</span>&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Subregion2Word</span> {
-    <span class="kw">fn</span> <span class="ident">spread_a</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">6</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">a</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">spread</span>())
+<span class="kw">impl </span>Subregion2Word {
+    <span class="kw">fn </span>spread_a(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">6</span>]&gt; {
+        <span class="self">self</span>.a.value().map(|v| v.spread())
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_b</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">8</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">b</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">spread</span>())
+    <span class="kw">fn </span>spread_b(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">8</span>]&gt; {
+        <span class="self">self</span>.b.value().map(|v| v.spread())
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_c</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">6</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">c</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">spread</span>())
+    <span class="kw">fn </span>spread_c(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">6</span>]&gt; {
+        <span class="self">self</span>.c.value().map(|v| v.spread())
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_d</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">14</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">spread_d</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="number">0</span>)
+    <span class="kw">fn </span>spread_d(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">14</span>]&gt; {
+        <span class="self">self</span>.spread_d.value().map(|v| v.<span class="number">0</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_e</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">2</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">e</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">spread</span>())
+    <span class="kw">fn </span>spread_e(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">2</span>]&gt; {
+        <span class="self">self</span>.e.value().map(|v| v.spread())
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_f</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">2</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">f</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">spread</span>())
+    <span class="kw">fn </span>spread_f(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">2</span>]&gt; {
+        <span class="self">self</span>.f.value().map(|v| v.spread())
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_g</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">26</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">spread_g</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="number">0</span>)
+    <span class="kw">fn </span>spread_g(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">26</span>]&gt; {
+        <span class="self">self</span>.spread_g.value().map(|v| v.<span class="number">0</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">xor_sigma_0</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">64</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">spread_a</span>()
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_b</span>())
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_c</span>())
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_d</span>())
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_e</span>())
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_f</span>())
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_g</span>())
-            .<span class="ident">map</span>(<span class="op">|</span>((((((<span class="ident">a</span>, <span class="ident">b</span>), <span class="ident">c</span>), <span class="ident">d</span>), <span class="ident">e</span>), <span class="ident">f</span>), <span class="ident">g</span>)<span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">xor_0</span> <span class="op">=</span> <span class="ident">b</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">chain</span>(<span class="ident">c</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">d</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">e</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">f</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">g</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">std::iter::repeat</span>(<span class="kw-2">&amp;</span><span class="bool-val">false</span>).<span class="ident">take</span>(<span class="number">6</span>))
-                    .<span class="ident">copied</span>()
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+    <span class="kw">fn </span>xor_sigma_0(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">64</span>]&gt; {
+        <span class="self">self</span>.spread_a()
+            .zip(<span class="self">self</span>.spread_b())
+            .zip(<span class="self">self</span>.spread_c())
+            .zip(<span class="self">self</span>.spread_d())
+            .zip(<span class="self">self</span>.spread_e())
+            .zip(<span class="self">self</span>.spread_f())
+            .zip(<span class="self">self</span>.spread_g())
+            .map(|((((((a, b), c), d), e), f), g)| {
+                <span class="kw">let </span>xor_0 = b
+                    .iter()
+                    .chain(c.iter())
+                    .chain(d.iter())
+                    .chain(e.iter())
+                    .chain(f.iter())
+                    .chain(g.iter())
+                    .chain(std::iter::repeat(<span class="kw-2">&amp;</span><span class="bool-val">false</span>).take(<span class="number">6</span>))
+                    .copied()
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-                <span class="kw">let</span> <span class="ident">xor_1</span> <span class="op">=</span> <span class="ident">c</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">chain</span>(<span class="ident">d</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">e</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">f</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">g</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">a</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">b</span>.<span class="ident">iter</span>())
-                    .<span class="ident">copied</span>()
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+                <span class="kw">let </span>xor_1 = c
+                    .iter()
+                    .chain(d.iter())
+                    .chain(e.iter())
+                    .chain(f.iter())
+                    .chain(g.iter())
+                    .chain(a.iter())
+                    .chain(b.iter())
+                    .copied()
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-                <span class="kw">let</span> <span class="ident">xor_2</span> <span class="op">=</span> <span class="ident">f</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">chain</span>(<span class="ident">g</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">a</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">b</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">c</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">d</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">e</span>.<span class="ident">iter</span>())
-                    .<span class="ident">copied</span>()
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+                <span class="kw">let </span>xor_2 = f
+                    .iter()
+                    .chain(g.iter())
+                    .chain(a.iter())
+                    .chain(b.iter())
+                    .chain(c.iter())
+                    .chain(d.iter())
+                    .chain(e.iter())
+                    .copied()
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-                <span class="kw">let</span> <span class="ident">xor_0</span> <span class="op">=</span> <span class="ident">lebs2ip</span>::<span class="op">&lt;</span><span class="number">64</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">xor_0</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-                <span class="kw">let</span> <span class="ident">xor_1</span> <span class="op">=</span> <span class="ident">lebs2ip</span>::<span class="op">&lt;</span><span class="number">64</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">xor_1</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-                <span class="kw">let</span> <span class="ident">xor_2</span> <span class="op">=</span> <span class="ident">lebs2ip</span>::<span class="op">&lt;</span><span class="number">64</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">xor_2</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
+                <span class="kw">let </span>xor_0 = lebs2ip::&lt;<span class="number">64</span>&gt;(<span class="kw-2">&amp;</span>xor_0.try_into().unwrap());
+                <span class="kw">let </span>xor_1 = lebs2ip::&lt;<span class="number">64</span>&gt;(<span class="kw-2">&amp;</span>xor_1.try_into().unwrap());
+                <span class="kw">let </span>xor_2 = lebs2ip::&lt;<span class="number">64</span>&gt;(<span class="kw-2">&amp;</span>xor_2.try_into().unwrap());
 
-                <span class="ident">i2lebsp</span>(<span class="ident">xor_0</span> <span class="op">+</span> <span class="ident">xor_1</span> <span class="op">+</span> <span class="ident">xor_2</span>)
+                i2lebsp(xor_0 + xor_1 + xor_2)
             })
     }
 
-    <span class="kw">fn</span> <span class="ident">xor_sigma_1</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">64</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">spread_a</span>()
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_b</span>())
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_c</span>())
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_d</span>())
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_e</span>())
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_f</span>())
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_g</span>())
-            .<span class="ident">map</span>(<span class="op">|</span>((((((<span class="ident">a</span>, <span class="ident">b</span>), <span class="ident">c</span>), <span class="ident">d</span>), <span class="ident">e</span>), <span class="ident">f</span>), <span class="ident">g</span>)<span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">xor_0</span> <span class="op">=</span> <span class="ident">d</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">chain</span>(<span class="ident">e</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">f</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">g</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">std::iter::repeat</span>(<span class="kw-2">&amp;</span><span class="bool-val">false</span>).<span class="ident">take</span>(<span class="number">20</span>))
-                    .<span class="ident">copied</span>()
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+    <span class="kw">fn </span>xor_sigma_1(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">64</span>]&gt; {
+        <span class="self">self</span>.spread_a()
+            .zip(<span class="self">self</span>.spread_b())
+            .zip(<span class="self">self</span>.spread_c())
+            .zip(<span class="self">self</span>.spread_d())
+            .zip(<span class="self">self</span>.spread_e())
+            .zip(<span class="self">self</span>.spread_f())
+            .zip(<span class="self">self</span>.spread_g())
+            .map(|((((((a, b), c), d), e), f), g)| {
+                <span class="kw">let </span>xor_0 = d
+                    .iter()
+                    .chain(e.iter())
+                    .chain(f.iter())
+                    .chain(g.iter())
+                    .chain(std::iter::repeat(<span class="kw-2">&amp;</span><span class="bool-val">false</span>).take(<span class="number">20</span>))
+                    .copied()
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-                <span class="kw">let</span> <span class="ident">xor_1</span> <span class="op">=</span> <span class="ident">e</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">chain</span>(<span class="ident">f</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">g</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">a</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">b</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">c</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">d</span>.<span class="ident">iter</span>())
-                    .<span class="ident">copied</span>()
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+                <span class="kw">let </span>xor_1 = e
+                    .iter()
+                    .chain(f.iter())
+                    .chain(g.iter())
+                    .chain(a.iter())
+                    .chain(b.iter())
+                    .chain(c.iter())
+                    .chain(d.iter())
+                    .copied()
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-                <span class="kw">let</span> <span class="ident">xor_2</span> <span class="op">=</span> <span class="ident">g</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">chain</span>(<span class="ident">a</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">b</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">c</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">d</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">e</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">f</span>.<span class="ident">iter</span>())
-                    .<span class="ident">copied</span>()
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+                <span class="kw">let </span>xor_2 = g
+                    .iter()
+                    .chain(a.iter())
+                    .chain(b.iter())
+                    .chain(c.iter())
+                    .chain(d.iter())
+                    .chain(e.iter())
+                    .chain(f.iter())
+                    .copied()
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-                <span class="kw">let</span> <span class="ident">xor_0</span> <span class="op">=</span> <span class="ident">lebs2ip</span>::<span class="op">&lt;</span><span class="number">64</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">xor_0</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-                <span class="kw">let</span> <span class="ident">xor_1</span> <span class="op">=</span> <span class="ident">lebs2ip</span>::<span class="op">&lt;</span><span class="number">64</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">xor_1</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-                <span class="kw">let</span> <span class="ident">xor_2</span> <span class="op">=</span> <span class="ident">lebs2ip</span>::<span class="op">&lt;</span><span class="number">64</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">xor_2</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
+                <span class="kw">let </span>xor_0 = lebs2ip::&lt;<span class="number">64</span>&gt;(<span class="kw-2">&amp;</span>xor_0.try_into().unwrap());
+                <span class="kw">let </span>xor_1 = lebs2ip::&lt;<span class="number">64</span>&gt;(<span class="kw-2">&amp;</span>xor_1.try_into().unwrap());
+                <span class="kw">let </span>xor_2 = lebs2ip::&lt;<span class="number">64</span>&gt;(<span class="kw-2">&amp;</span>xor_2.try_into().unwrap());
 
-                <span class="ident">i2lebsp</span>(<span class="ident">xor_0</span> <span class="op">+</span> <span class="ident">xor_1</span> <span class="op">+</span> <span class="ident">xor_2</span>)
+                i2lebsp(xor_0 + xor_1 + xor_2)
             })
     }
 }
 
-<span class="kw">impl</span> <span class="ident">MessageScheduleConfig</span> {
-    <span class="comment">// W_[14..49]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assign_subregion2</span>(
+<span class="kw">impl </span>MessageScheduleConfig {
+    <span class="comment">// W_[14..49]
+    </span><span class="kw">pub fn </span>assign_subregion2(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">lower_sigma_0_output</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>)<span class="op">&gt;</span>,
-        <span class="ident">w</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MessageWord</span><span class="op">&gt;</span>,
-        <span class="ident">w_halves</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>)<span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>)<span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">a_5</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">message_schedule</span>;
-        <span class="kw">let</span> <span class="ident">a_6</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">2</span>];
-        <span class="kw">let</span> <span class="ident">a_7</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">3</span>];
-        <span class="kw">let</span> <span class="ident">a_8</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">4</span>];
-        <span class="kw">let</span> <span class="ident">a_9</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">5</span>];
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        lower_sigma_0_output: Vec&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;)&gt;,
+        w: <span class="kw-2">&amp;mut </span>Vec&lt;MessageWord&gt;,
+        w_halves: <span class="kw-2">&amp;mut </span>Vec&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;)&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;)&gt;, Error&gt; {
+        <span class="kw">let </span>a_5 = <span class="self">self</span>.message_schedule;
+        <span class="kw">let </span>a_6 = <span class="self">self</span>.extras[<span class="number">2</span>];
+        <span class="kw">let </span>a_7 = <span class="self">self</span>.extras[<span class="number">3</span>];
+        <span class="kw">let </span>a_8 = <span class="self">self</span>.extras[<span class="number">4</span>];
+        <span class="kw">let </span>a_9 = <span class="self">self</span>.extras[<span class="number">5</span>];
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">lower_sigma_0_v2_results</span> <span class="op">=</span>
-            <span class="ident">Vec</span>::<span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>)<span class="op">&gt;</span><span class="ident">::with_capacity</span>(<span class="ident">SUBREGION_2_LEN</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">lower_sigma_1_v2_results</span> <span class="op">=</span>
-            <span class="ident">Vec</span>::<span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>)<span class="op">&gt;</span><span class="ident">::with_capacity</span>(<span class="ident">SUBREGION_2_LEN</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>lower_sigma_0_v2_results =
+            Vec::&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;)&gt;::with_capacity(SUBREGION_2_LEN);
+        <span class="kw">let </span><span class="kw-2">mut </span>lower_sigma_1_v2_results =
+            Vec::&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;)&gt;::with_capacity(SUBREGION_2_LEN);
 
-        <span class="comment">// Closure to compose new word</span>
-        <span class="comment">// W_i = sigma_1(W_{i - 2}) + W_{i - 7} + sigma_0(W_{i - 15}) + W_{i - 16}</span>
-        <span class="comment">// e.g. W_16 = sigma_1(W_14) + W_9 + sigma_0(W_1) + W_0</span>
+        <span class="comment">// Closure to compose new word
+        // W_i = sigma_1(W_{i - 2}) + W_{i - 7} + sigma_0(W_{i - 15}) + W_{i - 16}
+        // e.g. W_16 = sigma_1(W_14) + W_9 + sigma_0(W_1) + W_0
 
-        <span class="comment">// sigma_0(W_[1..14]) will be used to get the new W_[16..29]</span>
-        <span class="comment">// sigma_0_v2(W_[14..36]) will be used to get the new W_[29..51]</span>
-        <span class="comment">// sigma_1_v2(W_[14..49]) will be used to get the W_[16..51]</span>
-        <span class="comment">// The lowest-index words involved will be W_[0..13]</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">new_word</span> <span class="op">=</span> <span class="op">|</span><span class="ident">idx</span>: <span class="ident">usize</span>,
-                            <span class="ident">sigma_0_output</span>: <span class="kw-2">&amp;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>)<span class="op">|</span>
-         -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>)<span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-            <span class="comment">// Decompose word into (3, 4, 3, 7, 1, 1, 13)-bit chunks</span>
-            <span class="kw">let</span> <span class="ident">word</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_word</span>(<span class="ident">region</span>, <span class="ident">w</span>[<span class="ident">idx</span>].<span class="ident">value</span>(), <span class="ident">idx</span>)<span class="question-mark">?</span>;
+        // sigma_0(W_[1..14]) will be used to get the new W_[16..29]
+        // sigma_0_v2(W_[14..36]) will be used to get the new W_[29..51]
+        // sigma_1_v2(W_[14..49]) will be used to get the W_[16..51]
+        // The lowest-index words involved will be W_[0..13]
+        </span><span class="kw">let </span><span class="kw-2">mut </span>new_word = |idx: usize,
+                            sigma_0_output: <span class="kw-2">&amp;</span>(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;)|
+         -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;)&gt;, Error&gt; {
+            <span class="comment">// Decompose word into (3, 4, 3, 7, 1, 1, 13)-bit chunks
+            </span><span class="kw">let </span>word = <span class="self">self</span>.decompose_word(region, w[idx].value(), idx)<span class="question-mark">?</span>;
 
-            <span class="comment">// sigma_0 v2 and sigma_1 v2 on word</span>
-            <span class="ident">lower_sigma_0_v2_results</span>.<span class="ident">push</span>(<span class="self">self</span>.<span class="ident">lower_sigma_0_v2</span>(<span class="ident">region</span>, <span class="ident">word</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>);
-            <span class="ident">lower_sigma_1_v2_results</span>.<span class="ident">push</span>(<span class="self">self</span>.<span class="ident">lower_sigma_1_v2</span>(<span class="ident">region</span>, <span class="ident">word</span>)<span class="question-mark">?</span>);
+            <span class="comment">// sigma_0 v2 and sigma_1 v2 on word
+            </span>lower_sigma_0_v2_results.push(<span class="self">self</span>.lower_sigma_0_v2(region, word.clone())<span class="question-mark">?</span>);
+            lower_sigma_1_v2_results.push(<span class="self">self</span>.lower_sigma_1_v2(region, word)<span class="question-mark">?</span>);
 
-            <span class="kw">let</span> <span class="ident">new_word_idx</span> <span class="op">=</span> <span class="ident">idx</span> <span class="op">+</span> <span class="number">2</span>;
+            <span class="kw">let </span>new_word_idx = idx + <span class="number">2</span>;
 
-            <span class="comment">// Copy sigma_0(W_{i - 15}) output from Subregion 1</span>
-            <span class="ident">sigma_0_output</span>.<span class="number">0</span>.<span class="ident">copy_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;sigma_0(W_{})_lo&quot;</span>, <span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">15</span>),
-                <span class="ident">region</span>,
-                <span class="ident">a_6</span>,
-                <span class="ident">get_word_row</span>(<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">16</span>),
+            <span class="comment">// Copy sigma_0(W_{i - 15}) output from Subregion 1
+            </span>sigma_0_output.<span class="number">0</span>.copy_advice(
+                || <span class="macro">format!</span>(<span class="string">&quot;sigma_0(W_{})_lo&quot;</span>, new_word_idx - <span class="number">15</span>),
+                region,
+                a_6,
+                get_word_row(new_word_idx - <span class="number">16</span>),
             )<span class="question-mark">?</span>;
-            <span class="ident">sigma_0_output</span>.<span class="number">1</span>.<span class="ident">copy_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;sigma_0(W_{})_hi&quot;</span>, <span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">15</span>),
-                <span class="ident">region</span>,
-                <span class="ident">a_6</span>,
-                <span class="ident">get_word_row</span>(<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">16</span>) <span class="op">+</span> <span class="number">1</span>,
-            )<span class="question-mark">?</span>;
-
-            <span class="comment">// Copy sigma_1(W_{i - 2})</span>
-            <span class="ident">lower_sigma_1_v2_results</span>[<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">16</span>].<span class="number">0</span>.<span class="ident">copy_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;sigma_1(W_{})_lo&quot;</span>, <span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">2</span>),
-                <span class="ident">region</span>,
-                <span class="ident">a_7</span>,
-                <span class="ident">get_word_row</span>(<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">16</span>),
-            )<span class="question-mark">?</span>;
-            <span class="ident">lower_sigma_1_v2_results</span>[<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">16</span>].<span class="number">1</span>.<span class="ident">copy_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;sigma_1(W_{})_hi&quot;</span>, <span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">2</span>),
-                <span class="ident">region</span>,
-                <span class="ident">a_7</span>,
-                <span class="ident">get_word_row</span>(<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">16</span>) <span class="op">+</span> <span class="number">1</span>,
+            sigma_0_output.<span class="number">1</span>.copy_advice(
+                || <span class="macro">format!</span>(<span class="string">&quot;sigma_0(W_{})_hi&quot;</span>, new_word_idx - <span class="number">15</span>),
+                region,
+                a_6,
+                get_word_row(new_word_idx - <span class="number">16</span>) + <span class="number">1</span>,
             )<span class="question-mark">?</span>;
 
-            <span class="comment">// Copy W_{i - 7}</span>
-            <span class="ident">w_halves</span>[<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">7</span>].<span class="number">0</span>.<span class="ident">copy_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;W_{}_lo&quot;</span>, <span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">7</span>),
-                <span class="ident">region</span>,
-                <span class="ident">a_8</span>,
-                <span class="ident">get_word_row</span>(<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">16</span>),
+            <span class="comment">// Copy sigma_1(W_{i - 2})
+            </span>lower_sigma_1_v2_results[new_word_idx - <span class="number">16</span>].<span class="number">0</span>.copy_advice(
+                || <span class="macro">format!</span>(<span class="string">&quot;sigma_1(W_{})_lo&quot;</span>, new_word_idx - <span class="number">2</span>),
+                region,
+                a_7,
+                get_word_row(new_word_idx - <span class="number">16</span>),
             )<span class="question-mark">?</span>;
-            <span class="ident">w_halves</span>[<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">7</span>].<span class="number">1</span>.<span class="ident">copy_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;W_{}_hi&quot;</span>, <span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">7</span>),
-                <span class="ident">region</span>,
-                <span class="ident">a_8</span>,
-                <span class="ident">get_word_row</span>(<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">16</span>) <span class="op">+</span> <span class="number">1</span>,
+            lower_sigma_1_v2_results[new_word_idx - <span class="number">16</span>].<span class="number">1</span>.copy_advice(
+                || <span class="macro">format!</span>(<span class="string">&quot;sigma_1(W_{})_hi&quot;</span>, new_word_idx - <span class="number">2</span>),
+                region,
+                a_7,
+                get_word_row(new_word_idx - <span class="number">16</span>) + <span class="number">1</span>,
             )<span class="question-mark">?</span>;
 
-            <span class="comment">// Calculate W_i, carry_i</span>
-            <span class="kw">let</span> (<span class="ident">word</span>, <span class="ident">carry</span>) <span class="op">=</span> <span class="ident">sum_with_carry</span>(<span class="macro">vec!</span>[
+            <span class="comment">// Copy W_{i - 7}
+            </span>w_halves[new_word_idx - <span class="number">7</span>].<span class="number">0</span>.copy_advice(
+                || <span class="macro">format!</span>(<span class="string">&quot;W_{}_lo&quot;</span>, new_word_idx - <span class="number">7</span>),
+                region,
+                a_8,
+                get_word_row(new_word_idx - <span class="number">16</span>),
+            )<span class="question-mark">?</span>;
+            w_halves[new_word_idx - <span class="number">7</span>].<span class="number">1</span>.copy_advice(
+                || <span class="macro">format!</span>(<span class="string">&quot;W_{}_hi&quot;</span>, new_word_idx - <span class="number">7</span>),
+                region,
+                a_8,
+                get_word_row(new_word_idx - <span class="number">16</span>) + <span class="number">1</span>,
+            )<span class="question-mark">?</span>;
+
+            <span class="comment">// Calculate W_i, carry_i
+            </span><span class="kw">let </span>(word, carry) = sum_with_carry(<span class="macro">vec!</span>[
                 (
-                    <span class="ident">lower_sigma_1_v2_results</span>[<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">16</span>].<span class="number">0</span>.<span class="ident">value_u16</span>(),
-                    <span class="ident">lower_sigma_1_v2_results</span>[<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">16</span>].<span class="number">1</span>.<span class="ident">value_u16</span>(),
+                    lower_sigma_1_v2_results[new_word_idx - <span class="number">16</span>].<span class="number">0</span>.value_u16(),
+                    lower_sigma_1_v2_results[new_word_idx - <span class="number">16</span>].<span class="number">1</span>.value_u16(),
                 ),
                 (
-                    <span class="ident">w_halves</span>[<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">7</span>].<span class="number">0</span>.<span class="ident">value_u16</span>(),
-                    <span class="ident">w_halves</span>[<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">7</span>].<span class="number">1</span>.<span class="ident">value_u16</span>(),
+                    w_halves[new_word_idx - <span class="number">7</span>].<span class="number">0</span>.value_u16(),
+                    w_halves[new_word_idx - <span class="number">7</span>].<span class="number">1</span>.value_u16(),
                 ),
-                (<span class="ident">sigma_0_output</span>.<span class="number">0</span>.<span class="ident">value_u16</span>(), <span class="ident">sigma_0_output</span>.<span class="number">1</span>.<span class="ident">value_u16</span>()),
+                (sigma_0_output.<span class="number">0</span>.value_u16(), sigma_0_output.<span class="number">1</span>.value_u16()),
                 (
-                    <span class="ident">w_halves</span>[<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">16</span>].<span class="number">0</span>.<span class="ident">value_u16</span>(),
-                    <span class="ident">w_halves</span>[<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">16</span>].<span class="number">1</span>.<span class="ident">value_u16</span>(),
+                    w_halves[new_word_idx - <span class="number">16</span>].<span class="number">0</span>.value_u16(),
+                    w_halves[new_word_idx - <span class="number">16</span>].<span class="number">1</span>.value_u16(),
                 ),
             ]);
 
-            <span class="comment">// Assign W_i, carry_i</span>
-            <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;W_{}&quot;</span>, <span class="ident">new_word_idx</span>),
-                <span class="ident">a_5</span>,
-                <span class="ident">get_word_row</span>(<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">16</span>) <span class="op">+</span> <span class="number">1</span>,
-                <span class="op">|</span><span class="op">|</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">word</span> <span class="kw">as</span> <span class="ident">u64</span>)),
+            <span class="comment">// Assign W_i, carry_i
+            </span>region.assign_advice(
+                || <span class="macro">format!</span>(<span class="string">&quot;W_{}&quot;</span>, new_word_idx),
+                a_5,
+                get_word_row(new_word_idx - <span class="number">16</span>) + <span class="number">1</span>,
+                || word.map(|word| pallas::Base::from(word <span class="kw">as </span>u64)),
             )<span class="question-mark">?</span>;
-            <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;carry_{}&quot;</span>, <span class="ident">new_word_idx</span>),
-                <span class="ident">a_9</span>,
-                <span class="ident">get_word_row</span>(<span class="ident">new_word_idx</span> <span class="op">-</span> <span class="number">16</span>) <span class="op">+</span> <span class="number">1</span>,
-                <span class="op">|</span><span class="op">|</span> <span class="ident">carry</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">carry</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">carry</span> <span class="kw">as</span> <span class="ident">u64</span>)),
+            region.assign_advice(
+                || <span class="macro">format!</span>(<span class="string">&quot;carry_{}&quot;</span>, new_word_idx),
+                a_9,
+                get_word_row(new_word_idx - <span class="number">16</span>) + <span class="number">1</span>,
+                || carry.map(|carry| pallas::Base::from(carry <span class="kw">as </span>u64)),
             )<span class="question-mark">?</span>;
-            <span class="kw">let</span> (<span class="ident">word</span>, <span class="ident">halves</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_word_and_halves</span>(<span class="ident">region</span>, <span class="ident">word</span>, <span class="ident">new_word_idx</span>)<span class="question-mark">?</span>;
-            <span class="ident">w</span>.<span class="ident">push</span>(<span class="ident">MessageWord</span>(<span class="ident">word</span>));
-            <span class="ident">w_halves</span>.<span class="ident">push</span>(<span class="ident">halves</span>);
+            <span class="kw">let </span>(word, halves) = <span class="self">self</span>.assign_word_and_halves(region, word, new_word_idx)<span class="question-mark">?</span>;
+            w.push(MessageWord(word));
+            w_halves.push(halves);
 
-            <span class="prelude-val">Ok</span>(<span class="ident">lower_sigma_0_v2_results</span>.<span class="ident">clone</span>())
+            <span class="prelude-val">Ok</span>(lower_sigma_0_v2_results.clone())
         };
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tmp_lower_sigma_0_v2_results</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>)<span class="op">&gt;</span> <span class="op">=</span>
-            <span class="ident">Vec::with_capacity</span>(<span class="ident">SUBREGION_2_LEN</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>tmp_lower_sigma_0_v2_results: Vec&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;)&gt; =
+            Vec::with_capacity(SUBREGION_2_LEN);
 
-        <span class="comment">// Use up all the output from Subregion 1 lower_sigma_0</span>
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">14</span>..<span class="number">27</span> {
-            <span class="ident">tmp_lower_sigma_0_v2_results</span> <span class="op">=</span> <span class="ident">new_word</span>(<span class="ident">i</span>, <span class="kw-2">&amp;</span><span class="ident">lower_sigma_0_output</span>[<span class="ident">i</span> <span class="op">-</span> <span class="number">14</span>])<span class="question-mark">?</span>;
+        <span class="comment">// Use up all the output from Subregion 1 lower_sigma_0
+        </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">14</span>..<span class="number">27 </span>{
+            tmp_lower_sigma_0_v2_results = new_word(i, <span class="kw-2">&amp;</span>lower_sigma_0_output[i - <span class="number">14</span>])<span class="question-mark">?</span>;
         }
 
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">27</span>..<span class="number">49</span> {
-            <span class="ident">tmp_lower_sigma_0_v2_results</span> <span class="op">=</span>
-                <span class="ident">new_word</span>(<span class="ident">i</span>, <span class="kw-2">&amp;</span><span class="ident">tmp_lower_sigma_0_v2_results</span>[<span class="ident">i</span> <span class="op">+</span> <span class="number">2</span> <span class="op">-</span> <span class="number">15</span> <span class="op">-</span> <span class="number">14</span>])<span class="question-mark">?</span>;
+        <span class="kw">for </span>i <span class="kw">in </span><span class="number">27</span>..<span class="number">49 </span>{
+            tmp_lower_sigma_0_v2_results =
+                new_word(i, <span class="kw-2">&amp;</span>tmp_lower_sigma_0_v2_results[i + <span class="number">2 </span>- <span class="number">15 </span>- <span class="number">14</span>])<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// Return lower_sigma_0_v2 output for W_[36..49]</span>
-        <span class="prelude-val">Ok</span>(<span class="ident">lower_sigma_0_v2_results</span>.<span class="ident">split_off</span>(<span class="number">36</span> <span class="op">-</span> <span class="number">14</span>))
+        <span class="comment">// Return lower_sigma_0_v2 output for W_[36..49]
+        </span><span class="prelude-val">Ok</span>(lower_sigma_0_v2_results.split_off(<span class="number">36 </span>- <span class="number">14</span>))
     }
 
-    <span class="doccomment">/// Pieces of length [3, 4, 3, 7, 1, 1, 13]</span>
-    <span class="kw">fn</span> <span class="ident">decompose_word</span>(
+    <span class="doccomment">/// Pieces of length [3, 4, 3, 7, 1, 1, 13]
+    </span><span class="kw">fn </span>decompose_word(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">word</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Bits</span><span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">index</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Subregion2Word</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_word_row</span>(<span class="ident">index</span>);
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        word: Value&lt;<span class="kw-2">&amp;</span>Bits&lt;<span class="number">32</span>&gt;&gt;,
+        index: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Subregion2Word, Error&gt; {
+        <span class="kw">let </span>row = get_word_row(index);
 
-        <span class="kw">let</span> <span class="ident">pieces</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> {
+        <span class="kw">let </span>pieces = word.map(|word| {
             <span class="macro">vec!</span>[
-                <span class="ident">word</span>[<span class="number">0</span>..<span class="number">3</span>].<span class="ident">to_vec</span>(),
-                <span class="ident">word</span>[<span class="number">3</span>..<span class="number">7</span>].<span class="ident">to_vec</span>(),
-                <span class="ident">word</span>[<span class="number">7</span>..<span class="number">10</span>].<span class="ident">to_vec</span>(),
-                <span class="ident">word</span>[<span class="number">10</span>..<span class="number">17</span>].<span class="ident">to_vec</span>(),
-                <span class="macro">vec!</span>[<span class="ident">word</span>[<span class="number">17</span>]],
-                <span class="macro">vec!</span>[<span class="ident">word</span>[<span class="number">18</span>]],
-                <span class="ident">word</span>[<span class="number">19</span>..<span class="number">32</span>].<span class="ident">to_vec</span>(),
+                word[<span class="number">0</span>..<span class="number">3</span>].to_vec(),
+                word[<span class="number">3</span>..<span class="number">7</span>].to_vec(),
+                word[<span class="number">7</span>..<span class="number">10</span>].to_vec(),
+                word[<span class="number">10</span>..<span class="number">17</span>].to_vec(),
+                <span class="macro">vec!</span>[word[<span class="number">17</span>]],
+                <span class="macro">vec!</span>[word[<span class="number">18</span>]],
+                word[<span class="number">19</span>..<span class="number">32</span>].to_vec(),
             ]
         });
-        <span class="kw">let</span> <span class="ident">pieces</span> <span class="op">=</span> <span class="ident">pieces</span>.<span class="ident">transpose_vec</span>(<span class="number">7</span>);
+        <span class="kw">let </span>pieces = pieces.transpose_vec(<span class="number">7</span>);
 
-        <span class="comment">// Rename these here for ease of matching the gates to the specification.</span>
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">a_4</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">1</span>];
+        <span class="comment">// Rename these here for ease of matching the gates to the specification.
+        </span><span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
+        <span class="kw">let </span>a_4 = <span class="self">self</span>.extras[<span class="number">1</span>];
 
-        <span class="comment">// Assign `a` (3-bit piece)</span>
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">3</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;a&quot;</span>, <span class="ident">a_3</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>, <span class="ident">pieces</span>[<span class="number">0</span>].<span class="ident">clone</span>())<span class="question-mark">?</span>;
+        <span class="comment">// Assign `a` (3-bit piece)
+        </span><span class="kw">let </span>a = AssignedBits::&lt;<span class="number">3</span>&gt;::assign_bits(region, || <span class="string">&quot;a&quot;</span>, a_3, row - <span class="number">1</span>, pieces[<span class="number">0</span>].clone())<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign `b` (4-bit piece) lookup</span>
-        <span class="kw">let</span> <span class="ident">spread_b</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">SpreadWord</span><span class="op">&lt;</span><span class="number">4</span>, <span class="number">8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">pieces</span>[<span class="number">1</span>].<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">SpreadWord::try_new</span>);
-        <span class="kw">let</span> <span class="ident">spread_b</span> <span class="op">=</span> <span class="ident">SpreadVar::with_lookup</span>(<span class="ident">region</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lookup</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">spread_b</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `b` (4-bit piece) lookup
+        </span><span class="kw">let </span>spread_b: Value&lt;SpreadWord&lt;<span class="number">4</span>, <span class="number">8</span>&gt;&gt; = pieces[<span class="number">1</span>].clone().map(SpreadWord::try_new);
+        <span class="kw">let </span>spread_b = SpreadVar::with_lookup(region, <span class="kw-2">&amp;</span><span class="self">self</span>.lookup, row + <span class="number">1</span>, spread_b)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign `c` (3-bit piece)</span>
-        <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">3</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;c&quot;</span>, <span class="ident">a_4</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>, <span class="ident">pieces</span>[<span class="number">2</span>].<span class="ident">clone</span>())<span class="question-mark">?</span>;
+        <span class="comment">// Assign `c` (3-bit piece)
+        </span><span class="kw">let </span>c = AssignedBits::&lt;<span class="number">3</span>&gt;::assign_bits(region, || <span class="string">&quot;c&quot;</span>, a_4, row - <span class="number">1</span>, pieces[<span class="number">2</span>].clone())<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign `d` (7-bit piece) lookup</span>
-        <span class="kw">let</span> <span class="ident">spread_d</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">SpreadWord</span><span class="op">&lt;</span><span class="number">7</span>, <span class="number">14</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">pieces</span>[<span class="number">3</span>].<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">SpreadWord::try_new</span>);
-        <span class="kw">let</span> <span class="ident">spread_d</span> <span class="op">=</span> <span class="ident">SpreadVar::with_lookup</span>(<span class="ident">region</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lookup</span>, <span class="ident">row</span>, <span class="ident">spread_d</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `d` (7-bit piece) lookup
+        </span><span class="kw">let </span>spread_d: Value&lt;SpreadWord&lt;<span class="number">7</span>, <span class="number">14</span>&gt;&gt; = pieces[<span class="number">3</span>].clone().map(SpreadWord::try_new);
+        <span class="kw">let </span>spread_d = SpreadVar::with_lookup(region, <span class="kw-2">&amp;</span><span class="self">self</span>.lookup, row, spread_d)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign `e` (1-bit piece)</span>
-        <span class="kw">let</span> <span class="ident">e</span> <span class="op">=</span> <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">1</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;e&quot;</span>, <span class="ident">a_3</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">pieces</span>[<span class="number">4</span>].<span class="ident">clone</span>())<span class="question-mark">?</span>;
+        <span class="comment">// Assign `e` (1-bit piece)
+        </span><span class="kw">let </span>e = AssignedBits::&lt;<span class="number">1</span>&gt;::assign_bits(region, || <span class="string">&quot;e&quot;</span>, a_3, row + <span class="number">1</span>, pieces[<span class="number">4</span>].clone())<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign `f` (1-bit piece)</span>
-        <span class="kw">let</span> <span class="ident">f</span> <span class="op">=</span> <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">1</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;f&quot;</span>, <span class="ident">a_4</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">pieces</span>[<span class="number">5</span>].<span class="ident">clone</span>())<span class="question-mark">?</span>;
+        <span class="comment">// Assign `f` (1-bit piece)
+        </span><span class="kw">let </span>f = AssignedBits::&lt;<span class="number">1</span>&gt;::assign_bits(region, || <span class="string">&quot;f&quot;</span>, a_4, row + <span class="number">1</span>, pieces[<span class="number">5</span>].clone())<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign `g` (13-bit piece) lookup</span>
-        <span class="kw">let</span> <span class="ident">spread_g</span> <span class="op">=</span> <span class="ident">pieces</span>[<span class="number">6</span>].<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">SpreadWord::try_new</span>);
-        <span class="kw">let</span> <span class="ident">spread_g</span> <span class="op">=</span> <span class="ident">SpreadVar::with_lookup</span>(<span class="ident">region</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lookup</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>, <span class="ident">spread_g</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `g` (13-bit piece) lookup
+        </span><span class="kw">let </span>spread_g = pieces[<span class="number">6</span>].clone().map(SpreadWord::try_new);
+        <span class="kw">let </span>spread_g = SpreadVar::with_lookup(region, <span class="kw-2">&amp;</span><span class="self">self</span>.lookup, row - <span class="number">1</span>, spread_g)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Subregion2Word</span> {
-            <span class="ident">index</span>,
-            <span class="ident">a</span>,
-            <span class="ident">b</span>: <span class="ident">spread_b</span>.<span class="ident">dense</span>,
-            <span class="ident">c</span>,
-            <span class="ident">d</span>: <span class="ident">spread_d</span>.<span class="ident">dense</span>,
-            <span class="ident">e</span>,
-            <span class="ident">f</span>,
-            <span class="ident">g</span>: <span class="ident">spread_g</span>.<span class="ident">dense</span>,
-            <span class="ident">spread_d</span>: <span class="ident">spread_d</span>.<span class="ident">spread</span>,
-            <span class="ident">spread_g</span>: <span class="ident">spread_g</span>.<span class="ident">spread</span>,
+        <span class="prelude-val">Ok</span>(Subregion2Word {
+            index,
+            a,
+            b: spread_b.dense,
+            c,
+            d: spread_d.dense,
+            e,
+            f,
+            g: spread_g.dense,
+            spread_d: spread_d.spread,
+            spread_g: spread_g.spread,
         })
     }
 
-    <span class="doccomment">/// A word in subregion 2</span>
-    <span class="doccomment">/// (3, 4, 3, 7, 1, 1, 13)-bit chunks</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">fn</span> <span class="ident">assign_lower_sigma_v2_pieces</span>(
+    <span class="doccomment">/// A word in subregion 2
+    /// (3, 4, 3, 7, 1, 1, 13)-bit chunks
+    </span><span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="kw">fn </span>assign_lower_sigma_v2_pieces(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-        <span class="ident">word</span>: <span class="kw-2">&amp;</span><span class="ident">Subregion2Word</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">a_4</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">1</span>];
-        <span class="kw">let</span> <span class="ident">a_5</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">message_schedule</span>;
-        <span class="kw">let</span> <span class="ident">a_6</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">2</span>];
-        <span class="kw">let</span> <span class="ident">a_7</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">3</span>];
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        row: usize,
+        word: <span class="kw-2">&amp;</span>Subregion2Word,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
+        <span class="kw">let </span>a_4 = <span class="self">self</span>.extras[<span class="number">1</span>];
+        <span class="kw">let </span>a_5 = <span class="self">self</span>.message_schedule;
+        <span class="kw">let </span>a_6 = <span class="self">self</span>.extras[<span class="number">2</span>];
+        <span class="kw">let </span>a_7 = <span class="self">self</span>.extras[<span class="number">3</span>];
 
-        <span class="comment">// Assign `a` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">a</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;a&quot;</span>, <span class="ident">region</span>, <span class="ident">a_3</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `a` and copy constraint
+        </span>word.a.copy_advice(|| <span class="string">&quot;a&quot;</span>, region, a_3, row + <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Witness `spread_a`</span>
-        <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">6</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_a&quot;</span>, <span class="ident">a_4</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">word</span>.<span class="ident">spread_a</span>())<span class="question-mark">?</span>;
+        <span class="comment">// Witness `spread_a`
+        </span>AssignedBits::&lt;<span class="number">6</span>&gt;::assign_bits(region, || <span class="string">&quot;spread_a&quot;</span>, a_4, row + <span class="number">1</span>, word.spread_a())<span class="question-mark">?</span>;
 
-        <span class="comment">// Split `b` (4-bit chunk) into `b_hi` and `b_lo`</span>
-        <span class="comment">// Assign `b_lo`, `spread_b_lo`</span>
+        <span class="comment">// Split `b` (4-bit chunk) into `b_hi` and `b_lo`
+        // Assign `b_lo`, `spread_b_lo`
 
-        <span class="kw">let</span> <span class="ident">b_lo</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">2</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">b</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">b</span><span class="op">|</span> <span class="ident">b</span>.<span class="number">0</span>[..<span class="number">2</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">spread_b_lo</span> <span class="op">=</span> <span class="ident">b_lo</span>.<span class="ident">map</span>(<span class="ident">spread_bits</span>);
+        </span><span class="kw">let </span>b_lo: Value&lt;[bool; <span class="number">2</span>]&gt; = word.b.value().map(|b| b.<span class="number">0</span>[..<span class="number">2</span>].try_into().unwrap());
+        <span class="kw">let </span>spread_b_lo = b_lo.map(spread_bits);
         {
-            <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">2</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;b_lo&quot;</span>, <span class="ident">a_3</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>, <span class="ident">b_lo</span>)<span class="question-mark">?</span>;
+            AssignedBits::&lt;<span class="number">2</span>&gt;::assign_bits(region, || <span class="string">&quot;b_lo&quot;</span>, a_3, row - <span class="number">1</span>, b_lo)<span class="question-mark">?</span>;
 
-            <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">4</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_b_lo&quot;</span>, <span class="ident">a_4</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>, <span class="ident">spread_b_lo</span>)<span class="question-mark">?</span>;
+            AssignedBits::&lt;<span class="number">4</span>&gt;::assign_bits(region, || <span class="string">&quot;spread_b_lo&quot;</span>, a_4, row - <span class="number">1</span>, spread_b_lo)<span class="question-mark">?</span>;
         };
 
-        <span class="comment">// Split `b` (2-bit chunk) into `b_hi` and `b_lo`</span>
-        <span class="comment">// Assign `b_hi`, `spread_b_hi`</span>
-        <span class="kw">let</span> <span class="ident">b_hi</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">2</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">b</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">b</span><span class="op">|</span> <span class="ident">b</span>.<span class="number">0</span>[<span class="number">2</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">spread_b_hi</span> <span class="op">=</span> <span class="ident">b_hi</span>.<span class="ident">map</span>(<span class="ident">spread_bits</span>);
+        <span class="comment">// Split `b` (2-bit chunk) into `b_hi` and `b_lo`
+        // Assign `b_hi`, `spread_b_hi`
+        </span><span class="kw">let </span>b_hi: Value&lt;[bool; <span class="number">2</span>]&gt; = word.b.value().map(|b| b.<span class="number">0</span>[<span class="number">2</span>..].try_into().unwrap());
+        <span class="kw">let </span>spread_b_hi = b_hi.map(spread_bits);
         {
-            <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">2</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;b_hi&quot;</span>, <span class="ident">a_5</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>, <span class="ident">b_hi</span>)<span class="question-mark">?</span>;
+            AssignedBits::&lt;<span class="number">2</span>&gt;::assign_bits(region, || <span class="string">&quot;b_hi&quot;</span>, a_5, row - <span class="number">1</span>, b_hi)<span class="question-mark">?</span>;
 
-            <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">4</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_b_hi&quot;</span>, <span class="ident">a_6</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>, <span class="ident">spread_b_hi</span>)<span class="question-mark">?</span>;
+            AssignedBits::&lt;<span class="number">4</span>&gt;::assign_bits(region, || <span class="string">&quot;spread_b_hi&quot;</span>, a_6, row - <span class="number">1</span>, spread_b_hi)<span class="question-mark">?</span>;
         };
 
-        <span class="comment">// Assign `b` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">b</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;b&quot;</span>, <span class="ident">region</span>, <span class="ident">a_6</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `b` and copy constraint
+        </span>word.b.copy_advice(|| <span class="string">&quot;b&quot;</span>, region, a_6, row)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign `c` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">c</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;c&quot;</span>, <span class="ident">region</span>, <span class="ident">a_5</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `c` and copy constraint
+        </span>word.c.copy_advice(|| <span class="string">&quot;c&quot;</span>, region, a_5, row + <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Witness `spread_c`</span>
-        <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">6</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_c&quot;</span>, <span class="ident">a_6</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">word</span>.<span class="ident">spread_c</span>())<span class="question-mark">?</span>;
+        <span class="comment">// Witness `spread_c`
+        </span>AssignedBits::&lt;<span class="number">6</span>&gt;::assign_bits(region, || <span class="string">&quot;spread_c&quot;</span>, a_6, row + <span class="number">1</span>, word.spread_c())<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign `spread_d` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">spread_d</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_d&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `spread_d` and copy constraint
+        </span>word.spread_d.copy_advice(|| <span class="string">&quot;spread_d&quot;</span>, region, a_4, row)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign `e` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">e</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;e&quot;</span>, <span class="ident">region</span>, <span class="ident">a_7</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `e` and copy constraint
+        </span>word.e.copy_advice(|| <span class="string">&quot;e&quot;</span>, region, a_7, row)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign `f` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">f</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;f&quot;</span>, <span class="ident">region</span>, <span class="ident">a_7</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `f` and copy constraint
+        </span>word.f.copy_advice(|| <span class="string">&quot;f&quot;</span>, region, a_7, row + <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign `spread_g` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">spread_g</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_g&quot;</span>, <span class="ident">region</span>, <span class="ident">a_5</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `spread_g` and copy constraint
+        </span>word.spread_g.copy_advice(|| <span class="string">&quot;spread_g&quot;</span>, region, a_5, row)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">lower_sigma_0_v2</span>(
+    <span class="kw">fn </span>lower_sigma_0_v2(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">word</span>: <span class="ident">Subregion2Word</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_word_row</span>(<span class="ident">word</span>.<span class="ident">index</span>) <span class="op">+</span> <span class="number">3</span>;
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        word: Subregion2Word,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;), Error&gt; {
+        <span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
+        <span class="kw">let </span>row = get_word_row(word.index) + <span class="number">3</span>;
 
-        <span class="comment">// Assign lower sigma_v2 pieces</span>
-        <span class="self">self</span>.<span class="ident">assign_lower_sigma_v2_pieces</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="kw-2">&amp;</span><span class="ident">word</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign lower sigma_v2 pieces
+        </span><span class="self">self</span>.assign_lower_sigma_v2_pieces(region, row, <span class="kw-2">&amp;</span>word)<span class="question-mark">?</span>;
 
-        <span class="comment">// Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}</span>
-        <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">xor_sigma_0</span>();
-        <span class="kw">let</span> <span class="ident">r_0</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>[..<span class="number">32</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">r_0_even</span> <span class="op">=</span> <span class="ident">r_0</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
-        <span class="kw">let</span> <span class="ident">r_0_odd</span> <span class="op">=</span> <span class="ident">r_0</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
+        <span class="comment">// Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
+        </span><span class="kw">let </span>r = word.xor_sigma_0();
+        <span class="kw">let </span>r_0: Value&lt;[bool; <span class="number">32</span>]&gt; = r.map(|r| r[..<span class="number">32</span>].try_into().unwrap());
+        <span class="kw">let </span>r_0_even = r_0.map(even_bits);
+        <span class="kw">let </span>r_0_odd = r_0.map(odd_bits);
 
-        <span class="kw">let</span> <span class="ident">r_1</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>[<span class="number">32</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">r_1_even</span> <span class="op">=</span> <span class="ident">r_1</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
-        <span class="kw">let</span> <span class="ident">r_1_odd</span> <span class="op">=</span> <span class="ident">r_1</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
+        <span class="kw">let </span>r_1: Value&lt;[bool; <span class="number">32</span>]&gt; = r.map(|r| r[<span class="number">32</span>..].try_into().unwrap());
+        <span class="kw">let </span>r_1_even = r_1.map(even_bits);
+        <span class="kw">let </span>r_1_odd = r_1.map(odd_bits);
 
-        <span class="self">self</span>.<span class="ident">assign_sigma_outputs</span>(
-            <span class="ident">region</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lookup</span>,
-            <span class="ident">a_3</span>,
-            <span class="ident">row</span>,
-            <span class="ident">r_0_even</span>,
-            <span class="ident">r_0_odd</span>,
-            <span class="ident">r_1_even</span>,
-            <span class="ident">r_1_odd</span>,
+        <span class="self">self</span>.assign_sigma_outputs(
+            region,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.lookup,
+            a_3,
+            row,
+            r_0_even,
+            r_0_odd,
+            r_1_even,
+            r_1_odd,
         )
     }
 
-    <span class="kw">fn</span> <span class="ident">lower_sigma_1_v2</span>(
+    <span class="kw">fn </span>lower_sigma_1_v2(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">word</span>: <span class="ident">Subregion2Word</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_word_row</span>(<span class="ident">word</span>.<span class="ident">index</span>) <span class="op">+</span> <span class="ident">SIGMA_0_V2_ROWS</span> <span class="op">+</span> <span class="number">3</span>;
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        word: Subregion2Word,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;), Error&gt; {
+        <span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
+        <span class="kw">let </span>row = get_word_row(word.index) + SIGMA_0_V2_ROWS + <span class="number">3</span>;
 
-        <span class="comment">// Assign lower sigma_v2 pieces</span>
-        <span class="self">self</span>.<span class="ident">assign_lower_sigma_v2_pieces</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="kw-2">&amp;</span><span class="ident">word</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign lower sigma_v2 pieces
+        </span><span class="self">self</span>.assign_lower_sigma_v2_pieces(region, row, <span class="kw-2">&amp;</span>word)<span class="question-mark">?</span>;
 
-        <span class="comment">// (3, 4, 3, 7, 1, 1, 13)</span>
-        <span class="comment">// Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}</span>
-        <span class="comment">// Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}</span>
-        <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">xor_sigma_1</span>();
-        <span class="kw">let</span> <span class="ident">r_0</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>[..<span class="number">32</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">r_0_even</span> <span class="op">=</span> <span class="ident">r_0</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
-        <span class="kw">let</span> <span class="ident">r_0_odd</span> <span class="op">=</span> <span class="ident">r_0</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
+        <span class="comment">// (3, 4, 3, 7, 1, 1, 13)
+        // Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
+        // Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
+        </span><span class="kw">let </span>r = word.xor_sigma_1();
+        <span class="kw">let </span>r_0: Value&lt;[bool; <span class="number">32</span>]&gt; = r.map(|r| r[..<span class="number">32</span>].try_into().unwrap());
+        <span class="kw">let </span>r_0_even = r_0.map(even_bits);
+        <span class="kw">let </span>r_0_odd = r_0.map(odd_bits);
 
-        <span class="kw">let</span> <span class="ident">r_1</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>[<span class="number">32</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">r_1_even</span> <span class="op">=</span> <span class="ident">r_1</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
-        <span class="kw">let</span> <span class="ident">r_1_odd</span> <span class="op">=</span> <span class="ident">r_1</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
+        <span class="kw">let </span>r_1: Value&lt;[bool; <span class="number">32</span>]&gt; = r.map(|r| r[<span class="number">32</span>..].try_into().unwrap());
+        <span class="kw">let </span>r_1_even = r_1.map(even_bits);
+        <span class="kw">let </span>r_1_odd = r_1.map(odd_bits);
 
-        <span class="self">self</span>.<span class="ident">assign_sigma_outputs</span>(
-            <span class="ident">region</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lookup</span>,
-            <span class="ident">a_3</span>,
-            <span class="ident">row</span>,
-            <span class="ident">r_0_even</span>,
-            <span class="ident">r_0_odd</span>,
-            <span class="ident">r_1_even</span>,
-            <span class="ident">r_1_odd</span>,
+        <span class="self">self</span>.assign_sigma_outputs(
+            region,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.lookup,
+            a_3,
+            row,
+            r_0_even,
+            r_0_odd,
+            r_1_even,
+            r_1_odd,
         )
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

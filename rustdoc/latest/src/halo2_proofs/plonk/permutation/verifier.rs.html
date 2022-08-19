@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -271,258 +265,257 @@
 <span id="250">250</span>
 <span id="251">251</span>
 <span id="252">252</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ff::Field</span>;
-<span class="kw">use</span> <span class="ident">std::iter</span>;
+</pre><pre class="rust"><code><span class="kw">use </span>ff::Field;
+<span class="kw">use </span>std::iter;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">circuit::Any</span>, <span class="ident">ChallengeBeta</span>, <span class="ident">ChallengeGamma</span>, <span class="ident">ChallengeX</span>};
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Argument</span>, <span class="ident">VerifyingKey</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">arithmetic</span>::{<span class="ident">CurveAffine</span>, <span class="ident">FieldExt</span>},
-    <span class="ident">plonk</span>::{<span class="self">self</span>, <span class="ident">Error</span>},
-    <span class="ident">poly</span>::{<span class="ident">multiopen::VerifierQuery</span>, <span class="ident">Rotation</span>},
-    <span class="ident">transcript</span>::{<span class="ident">EncodedChallenge</span>, <span class="ident">TranscriptRead</span>},
+<span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};
+<span class="kw">use super</span>::{Argument, VerifyingKey};
+<span class="kw">use crate</span>::{
+    arithmetic::{CurveAffine, FieldExt},
+    plonk::{<span class="self">self</span>, Error},
+    poly::{multiopen::VerifierQuery, Rotation},
+    transcript::{EncodedChallenge, TranscriptRead},
 };
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">permutation_product_commitments</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
+<span class="kw">pub struct </span>Committed&lt;C: CurveAffine&gt; {
+    permutation_product_commitments: Vec&lt;C&gt;,
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EvaluatedSet</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">permutation_product_commitment</span>: <span class="ident">C</span>,
-    <span class="ident">permutation_product_eval</span>: <span class="ident">C::Scalar</span>,
-    <span class="ident">permutation_product_next_eval</span>: <span class="ident">C::Scalar</span>,
-    <span class="ident">permutation_product_last_eval</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
+<span class="kw">pub struct </span>EvaluatedSet&lt;C: CurveAffine&gt; {
+    permutation_product_commitment: C,
+    permutation_product_eval: C::Scalar,
+    permutation_product_next_eval: C::Scalar,
+    permutation_product_last_eval: <span class="prelude-ty">Option</span>&lt;C::Scalar&gt;,
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CommonEvaluated</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">permutation_evals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
+<span class="kw">pub struct </span>CommonEvaluated&lt;C: CurveAffine&gt; {
+    permutation_evals: Vec&lt;C::Scalar&gt;,
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Evaluated</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">sets</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">EvaluatedSet</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="kw">pub struct </span>Evaluated&lt;C: CurveAffine&gt; {
+    sets: Vec&lt;EvaluatedSet&lt;C&gt;&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Argument</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">read_product_commitments</span><span class="op">&lt;</span>
-        <span class="ident">C</span>: <span class="ident">CurveAffine</span>,
-        <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">T</span>: <span class="ident">TranscriptRead</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>,
-    <span class="op">&gt;</span>(
+<span class="kw">impl </span>Argument {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>read_product_commitments&lt;
+        C: CurveAffine,
+        E: EncodedChallenge&lt;C&gt;,
+        T: TranscriptRead&lt;C, E&gt;,
+    &gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">vk</span>: <span class="kw-2">&amp;</span><span class="ident">plonk::VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">chunk_len</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">cs_degree</span> <span class="op">-</span> <span class="number">2</span>;
+        vk: <span class="kw-2">&amp;</span>plonk::VerifyingKey&lt;C&gt;,
+        transcript: <span class="kw-2">&amp;mut </span>T,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Committed&lt;C&gt;, Error&gt; {
+        <span class="kw">let </span>chunk_len = vk.cs_degree - <span class="number">2</span>;
 
-        <span class="kw">let</span> <span class="ident">permutation_product_commitments</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">columns</span>
-            .<span class="ident">chunks</span>(<span class="ident">chunk_len</span>)
-            .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">transcript</span>.<span class="ident">read_point</span>())
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let </span>permutation_product_commitments = <span class="self">self
+            </span>.columns
+            .chunks(chunk_len)
+            .map(|<span class="kw">_</span>| transcript.read_point())
+            .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Committed</span> {
-            <span class="ident">permutation_product_commitments</span>,
+        <span class="prelude-val">Ok</span>(Committed {
+            permutation_product_commitments,
         })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">evaluate</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">T</span>: <span class="ident">TranscriptRead</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; VerifyingKey&lt;C&gt; {
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>evaluate&lt;E: EncodedChallenge&lt;C&gt;, T: TranscriptRead&lt;C, E&gt;&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CommonEvaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">permutation_evals</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">commitments</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">transcript</span>.<span class="ident">read_scalar</span>())
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        transcript: <span class="kw-2">&amp;mut </span>T,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;CommonEvaluated&lt;C&gt;, Error&gt; {
+        <span class="kw">let </span>permutation_evals = <span class="self">self
+            </span>.commitments
+            .iter()
+            .map(|<span class="kw">_</span>| transcript.read_scalar())
+            .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">CommonEvaluated</span> { <span class="ident">permutation_evals</span> })
+        <span class="prelude-val">Ok</span>(CommonEvaluated { permutation_evals })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">evaluate</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">T</span>: <span class="ident">TranscriptRead</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; Committed&lt;C&gt; {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>evaluate&lt;E: EncodedChallenge&lt;C&gt;, T: TranscriptRead&lt;C, E&gt;&gt;(
         <span class="self">self</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Evaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sets</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+        transcript: <span class="kw-2">&amp;mut </span>T,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Evaluated&lt;C&gt;, Error&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>sets = <span class="macro">vec!</span>[];
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">iter</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">permutation_product_commitments</span>.<span class="ident">into_iter</span>();
+        <span class="kw">let </span><span class="kw-2">mut </span>iter = <span class="self">self</span>.permutation_product_commitments.into_iter();
 
-        <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">permutation_product_commitment</span>) <span class="op">=</span> <span class="ident">iter</span>.<span class="ident">next</span>() {
-            <span class="kw">let</span> <span class="ident">permutation_product_eval</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">read_scalar</span>()<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">permutation_product_next_eval</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">read_scalar</span>()<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">permutation_product_last_eval</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">iter</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="number">0</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">transcript</span>.<span class="ident">read_scalar</span>()<span class="question-mark">?</span>)
-            } <span class="kw">else</span> {
-                <span class="prelude-val">None</span>
-            };
+        <span class="kw">while let </span><span class="prelude-val">Some</span>(permutation_product_commitment) = iter.next() {
+            <span class="kw">let </span>permutation_product_eval = transcript.read_scalar()<span class="question-mark">?</span>;
+            <span class="kw">let </span>permutation_product_next_eval = transcript.read_scalar()<span class="question-mark">?</span>;
+            <span class="kw">let </span>permutation_product_last_eval = <span class="kw">if </span>iter.len() &gt; <span class="number">0 </span>{
+                <span class="prelude-val">Some</span>(transcript.read_scalar()<span class="question-mark">?</span>)
+            } <span class="kw">else </span>{
+                <span class="prelude-val">None
+            </span>};
 
-            <span class="ident">sets</span>.<span class="ident">push</span>(<span class="ident">EvaluatedSet</span> {
-                <span class="ident">permutation_product_commitment</span>,
-                <span class="ident">permutation_product_eval</span>,
-                <span class="ident">permutation_product_next_eval</span>,
-                <span class="ident">permutation_product_last_eval</span>,
+            sets.push(EvaluatedSet {
+                permutation_product_commitment,
+                permutation_product_eval,
+                permutation_product_next_eval,
+                permutation_product_last_eval,
             });
         }
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Evaluated</span> { <span class="ident">sets</span> })
+        <span class="prelude-val">Ok</span>(Evaluated { sets })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Evaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">expressions</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>,
-        <span class="ident">vk</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">plonk::VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">p</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Argument</span>,
-        <span class="ident">common</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">CommonEvaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">advice_evals</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">C::Scalar</span>],
-        <span class="ident">fixed_evals</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">C::Scalar</span>],
-        <span class="ident">instance_evals</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">C::Scalar</span>],
-        <span class="ident">l_0</span>: <span class="ident">C::Scalar</span>,
-        <span class="ident">l_last</span>: <span class="ident">C::Scalar</span>,
-        <span class="ident">l_blind</span>: <span class="ident">C::Scalar</span>,
-        <span class="ident">beta</span>: <span class="ident">ChallengeBeta</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">gamma</span>: <span class="ident">ChallengeGamma</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">C::Scalar</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span> {
-        <span class="kw">let</span> <span class="ident">chunk_len</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">cs_degree</span> <span class="op">-</span> <span class="number">2</span>;
-        <span class="ident">iter::empty</span>()
-            <span class="comment">// Enforce only for the first set.</span>
-            <span class="comment">// l_0(X) * (1 - z_0(X)) = 0</span>
-            .<span class="ident">chain</span>(
-                <span class="self">self</span>.<span class="ident">sets</span>.<span class="ident">first</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">first_set</span><span class="op">|</span> {
-                    <span class="ident">l_0</span> <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="ident">C::Scalar::one</span>() <span class="op">-</span> <span class="kw-2">&amp;</span><span class="ident">first_set</span>.<span class="ident">permutation_product_eval</span>)
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; Evaluated&lt;C&gt; {
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>expressions&lt;<span class="lifetime">&#39;a</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>,
+        vk: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>plonk::VerifyingKey&lt;C&gt;,
+        p: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Argument,
+        common: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>CommonEvaluated&lt;C&gt;,
+        advice_evals: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[C::Scalar],
+        fixed_evals: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[C::Scalar],
+        instance_evals: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[C::Scalar],
+        l_0: C::Scalar,
+        l_last: C::Scalar,
+        l_blind: C::Scalar,
+        beta: ChallengeBeta&lt;C&gt;,
+        gamma: ChallengeGamma&lt;C&gt;,
+        x: ChallengeX&lt;C&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = C::Scalar&gt; + <span class="lifetime">&#39;a </span>{
+        <span class="kw">let </span>chunk_len = vk.cs_degree - <span class="number">2</span>;
+        iter::empty()
+            <span class="comment">// Enforce only for the first set.
+            // l_0(X) * (1 - z_0(X)) = 0
+            </span>.chain(
+                <span class="self">self</span>.sets.first().map(|first_set| {
+                    l_0 * <span class="kw-2">&amp;</span>(C::Scalar::one() - <span class="kw-2">&amp;</span>first_set.permutation_product_eval)
                 }),
             )
-            <span class="comment">// Enforce only for the last set.</span>
-            <span class="comment">// l_last(X) * (z_l(X)^2 - z_l(X)) = 0</span>
-            .<span class="ident">chain</span>(<span class="self">self</span>.<span class="ident">sets</span>.<span class="ident">last</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">last_set</span><span class="op">|</span> {
-                (<span class="ident">last_set</span>.<span class="ident">permutation_product_eval</span>.<span class="ident">square</span>() <span class="op">-</span> <span class="kw-2">&amp;</span><span class="ident">last_set</span>.<span class="ident">permutation_product_eval</span>)
-                    <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">l_last</span>
+            <span class="comment">// Enforce only for the last set.
+            // l_last(X) * (z_l(X)^2 - z_l(X)) = 0
+            </span>.chain(<span class="self">self</span>.sets.last().map(|last_set| {
+                (last_set.permutation_product_eval.square() - <span class="kw-2">&amp;</span>last_set.permutation_product_eval)
+                    * <span class="kw-2">&amp;</span>l_last
             }))
-            <span class="comment">// Except for the first set, enforce.</span>
-            <span class="comment">// l_0(X) * (z_i(X) - z_{i-1}(\omega^(last) X)) = 0</span>
-            .<span class="ident">chain</span>(
-                <span class="self">self</span>.<span class="ident">sets</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">skip</span>(<span class="number">1</span>)
-                    .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">sets</span>.<span class="ident">iter</span>())
-                    .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">set</span>, <span class="ident">last_set</span>)<span class="op">|</span> {
+            <span class="comment">// Except for the first set, enforce.
+            // l_0(X) * (z_i(X) - z_{i-1}(\omega^(last) X)) = 0
+            </span>.chain(
+                <span class="self">self</span>.sets
+                    .iter()
+                    .skip(<span class="number">1</span>)
+                    .zip(<span class="self">self</span>.sets.iter())
+                    .map(|(set, last_set)| {
                         (
-                            <span class="ident">set</span>.<span class="ident">permutation_product_eval</span>,
-                            <span class="ident">last_set</span>.<span class="ident">permutation_product_last_eval</span>.<span class="ident">unwrap</span>(),
+                            set.permutation_product_eval,
+                            last_set.permutation_product_last_eval.unwrap(),
                         )
                     })
-                    .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">set</span>, <span class="ident">prev_last</span>)<span class="op">|</span> (<span class="ident">set</span> <span class="op">-</span> <span class="kw-2">&amp;</span><span class="ident">prev_last</span>) <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">l_0</span>),
+                    .map(<span class="kw">move </span>|(set, prev_last)| (set - <span class="kw-2">&amp;</span>prev_last) * <span class="kw-2">&amp;</span>l_0),
             )
-            <span class="comment">// And for all the sets we enforce:</span>
-            <span class="comment">// (1 - (l_last(X) + l_blind(X))) * (</span>
-            <span class="comment">//   z_i(\omega X) \prod (p(X) + \beta s_i(X) + \gamma)</span>
-            <span class="comment">// - z_i(X) \prod (p(X) + \delta^i \beta X + \gamma)</span>
-            <span class="comment">// )</span>
-            .<span class="ident">chain</span>(
-                <span class="self">self</span>.<span class="ident">sets</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">zip</span>(<span class="ident">p</span>.<span class="ident">columns</span>.<span class="ident">chunks</span>(<span class="ident">chunk_len</span>))
-                    .<span class="ident">zip</span>(<span class="ident">common</span>.<span class="ident">permutation_evals</span>.<span class="ident">chunks</span>(<span class="ident">chunk_len</span>))
-                    .<span class="ident">enumerate</span>()
-                    .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">chunk_index</span>, ((<span class="ident">set</span>, <span class="ident">columns</span>), <span class="ident">permutation_evals</span>))<span class="op">|</span> {
-                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">left</span> <span class="op">=</span> <span class="ident">set</span>.<span class="ident">permutation_product_next_eval</span>;
-                        <span class="kw">for</span> (<span class="ident">eval</span>, <span class="ident">permutation_eval</span>) <span class="kw">in</span> <span class="ident">columns</span>
-                            .<span class="ident">iter</span>()
-                            .<span class="ident">map</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">column</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">column</span>.<span class="ident">column_type</span>() {
-                                <span class="ident">Any::Advice</span> =&gt; {
-                                    <span class="ident">advice_evals</span>[<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
+            <span class="comment">// And for all the sets we enforce:
+            // (1 - (l_last(X) + l_blind(X))) * (
+            //   z_i(\omega X) \prod (p(X) + \beta s_i(X) + \gamma)
+            // - z_i(X) \prod (p(X) + \delta^i \beta X + \gamma)
+            // )
+            </span>.chain(
+                <span class="self">self</span>.sets
+                    .iter()
+                    .zip(p.columns.chunks(chunk_len))
+                    .zip(common.permutation_evals.chunks(chunk_len))
+                    .enumerate()
+                    .map(<span class="kw">move </span>|(chunk_index, ((set, columns), permutation_evals))| {
+                        <span class="kw">let </span><span class="kw-2">mut </span>left = set.permutation_product_next_eval;
+                        <span class="kw">for </span>(eval, permutation_eval) <span class="kw">in </span>columns
+                            .iter()
+                            .map(|<span class="kw-2">&amp;</span>column| <span class="kw">match </span>column.column_type() {
+                                Any::Advice =&gt; {
+                                    advice_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
                                 }
-                                <span class="ident">Any::Fixed</span> =&gt; {
-                                    <span class="ident">fixed_evals</span>[<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
+                                Any::Fixed =&gt; {
+                                    fixed_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
                                 }
-                                <span class="ident">Any::Instance</span> =&gt; {
-                                    <span class="ident">instance_evals</span>
-                                        [<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
+                                Any::Instance =&gt; {
+                                    instance_evals
+                                        [vk.cs.get_any_query_index(column, Rotation::cur())]
                                 }
                             })
-                            .<span class="ident">zip</span>(<span class="ident">permutation_evals</span>.<span class="ident">iter</span>())
+                            .zip(permutation_evals.iter())
                         {
-                            <span class="ident">left</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span>(<span class="ident">eval</span> <span class="op">+</span> <span class="kw-2">&amp;</span>(<span class="kw-2">*</span><span class="ident">beta</span> <span class="op">*</span> <span class="ident">permutation_eval</span>) <span class="op">+</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">gamma</span>);
+                            left <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>(eval + <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>beta * permutation_eval) + <span class="kw-2">&amp;*</span>gamma);
                         }
 
-                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">right</span> <span class="op">=</span> <span class="ident">set</span>.<span class="ident">permutation_product_eval</span>;
-                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">current_delta</span> <span class="op">=</span> (<span class="kw-2">*</span><span class="ident">beta</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">x</span>)
-                            <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="ident">C::Scalar::DELTA</span>.<span class="ident">pow_vartime</span>(<span class="kw-2">&amp;</span>[(<span class="ident">chunk_index</span> <span class="op">*</span> <span class="ident">chunk_len</span>) <span class="kw">as</span> <span class="ident">u64</span>]));
-                        <span class="kw">for</span> <span class="ident">eval</span> <span class="kw">in</span> <span class="ident">columns</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">column</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">column</span>.<span class="ident">column_type</span>() {
-                            <span class="ident">Any::Advice</span> =&gt; {
-                                <span class="ident">advice_evals</span>[<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
+                        <span class="kw">let </span><span class="kw-2">mut </span>right = set.permutation_product_eval;
+                        <span class="kw">let </span><span class="kw-2">mut </span>current_delta = (<span class="kw-2">*</span>beta * <span class="kw-2">&amp;*</span>x)
+                            * <span class="kw-2">&amp;</span>(C::Scalar::DELTA.pow_vartime(<span class="kw-2">&amp;</span>[(chunk_index * chunk_len) <span class="kw">as </span>u64]));
+                        <span class="kw">for </span>eval <span class="kw">in </span>columns.iter().map(|<span class="kw-2">&amp;</span>column| <span class="kw">match </span>column.column_type() {
+                            Any::Advice =&gt; {
+                                advice_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
                             }
-                            <span class="ident">Any::Fixed</span> =&gt; {
-                                <span class="ident">fixed_evals</span>[<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
+                            Any::Fixed =&gt; {
+                                fixed_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
                             }
-                            <span class="ident">Any::Instance</span> =&gt; {
-                                <span class="ident">instance_evals</span>[<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">get_any_query_index</span>(<span class="ident">column</span>, <span class="ident">Rotation::cur</span>())]
+                            Any::Instance =&gt; {
+                                instance_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
                             }
                         }) {
-                            <span class="ident">right</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span>(<span class="ident">eval</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">current_delta</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">gamma</span>);
-                            <span class="ident">current_delta</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">C::Scalar::DELTA</span>;
+                            right <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>(eval + <span class="kw-2">&amp;</span>current_delta + <span class="kw-2">&amp;*</span>gamma);
+                            current_delta <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>C::Scalar::DELTA;
                         }
 
-                        (<span class="ident">left</span> <span class="op">-</span> <span class="kw-2">&amp;</span><span class="ident">right</span>) <span class="op">*</span> (<span class="ident">C::Scalar::one</span>() <span class="op">-</span> <span class="kw-2">&amp;</span>(<span class="ident">l_last</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">l_blind</span>))
+                        (left - <span class="kw-2">&amp;</span>right) * (C::Scalar::one() - <span class="kw-2">&amp;</span>(l_last + <span class="kw-2">&amp;</span>l_blind))
                     }),
             )
     }
 
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">queries</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="self">self</span>,
-        <span class="ident">vk</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="ident">plonk::VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">VerifierQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> {
-        <span class="kw">let</span> <span class="ident">blinding_factors</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">blinding_factors</span>();
-        <span class="kw">let</span> <span class="ident">x_next</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">rotate_omega</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">Rotation::next</span>());
-        <span class="kw">let</span> <span class="ident">x_last</span> <span class="op">=</span> <span class="ident">vk</span>
-            .<span class="ident">domain</span>
-            .<span class="ident">rotate_omega</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">Rotation</span>(<span class="op">-</span>((<span class="ident">blinding_factors</span> <span class="op">+</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">i32</span>)));
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>queries&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span><span class="self">self</span>,
+        vk: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span>plonk::VerifyingKey&lt;C&gt;,
+        x: ChallengeX&lt;C&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = VerifierQuery&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, C&gt;&gt; + Clone {
+        <span class="kw">let </span>blinding_factors = vk.cs.blinding_factors();
+        <span class="kw">let </span>x_next = vk.domain.rotate_omega(<span class="kw-2">*</span>x, Rotation::next());
+        <span class="kw">let </span>x_last = vk
+            .domain
+            .rotate_omega(<span class="kw-2">*</span>x, Rotation(-((blinding_factors + <span class="number">1</span>) <span class="kw">as </span>i32)));
 
-        <span class="ident">iter::empty</span>()
-            .<span class="ident">chain</span>(<span class="self">self</span>.<span class="ident">sets</span>.<span class="ident">iter</span>().<span class="ident">flat_map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">set</span><span class="op">|</span> {
-                <span class="ident">iter::empty</span>()
-                    <span class="comment">// Open permutation product commitments at x and \omega^{-1} x</span>
-                    <span class="comment">// Open permutation product commitments at x and \omega x</span>
-                    .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">VerifierQuery::new_commitment</span>(
-                        <span class="kw-2">&amp;</span><span class="ident">set</span>.<span class="ident">permutation_product_commitment</span>,
-                        <span class="kw-2">*</span><span class="ident">x</span>,
-                        <span class="ident">set</span>.<span class="ident">permutation_product_eval</span>,
+        iter::empty()
+            .chain(<span class="self">self</span>.sets.iter().flat_map(<span class="kw">move </span>|set| {
+                iter::empty()
+                    <span class="comment">// Open permutation product commitments at x and \omega^{-1} x
+                    // Open permutation product commitments at x and \omega x
+                    </span>.chain(<span class="prelude-val">Some</span>(VerifierQuery::new_commitment(
+                        <span class="kw-2">&amp;</span>set.permutation_product_commitment,
+                        <span class="kw-2">*</span>x,
+                        set.permutation_product_eval,
                     )))
-                    .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">VerifierQuery::new_commitment</span>(
-                        <span class="kw-2">&amp;</span><span class="ident">set</span>.<span class="ident">permutation_product_commitment</span>,
-                        <span class="ident">x_next</span>,
-                        <span class="ident">set</span>.<span class="ident">permutation_product_next_eval</span>,
+                    .chain(<span class="prelude-val">Some</span>(VerifierQuery::new_commitment(
+                        <span class="kw-2">&amp;</span>set.permutation_product_commitment,
+                        x_next,
+                        set.permutation_product_next_eval,
                     )))
             }))
-            <span class="comment">// Open it at \omega^{last} x for all but the last set</span>
-            .<span class="ident">chain</span>(<span class="self">self</span>.<span class="ident">sets</span>.<span class="ident">iter</span>().<span class="ident">rev</span>().<span class="ident">skip</span>(<span class="number">1</span>).<span class="ident">flat_map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">set</span><span class="op">|</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">VerifierQuery::new_commitment</span>(
-                    <span class="kw-2">&amp;</span><span class="ident">set</span>.<span class="ident">permutation_product_commitment</span>,
-                    <span class="ident">x_last</span>,
-                    <span class="ident">set</span>.<span class="ident">permutation_product_last_eval</span>.<span class="ident">unwrap</span>(),
+            <span class="comment">// Open it at \omega^{last} x for all but the last set
+            </span>.chain(<span class="self">self</span>.sets.iter().rev().skip(<span class="number">1</span>).flat_map(<span class="kw">move </span>|set| {
+                <span class="prelude-val">Some</span>(VerifierQuery::new_commitment(
+                    <span class="kw-2">&amp;</span>set.permutation_product_commitment,
+                    x_last,
+                    set.permutation_product_last_eval.unwrap(),
                 ))
             }))
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">CommonEvaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">queries</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="self">self</span>,
-        <span class="ident">vkey</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="ident">VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">VerifierQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> {
-        <span class="comment">// Open permutation commitments for each permutation argument at x</span>
-        <span class="ident">vkey</span>.<span class="ident">commitments</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">permutation_evals</span>.<span class="ident">iter</span>())
-            .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">commitment</span>, <span class="kw-2">&amp;</span><span class="ident">eval</span>)<span class="op">|</span> <span class="ident">VerifierQuery::new_commitment</span>(<span class="ident">commitment</span>, <span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">eval</span>))
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; CommonEvaluated&lt;C&gt; {
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>queries&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span><span class="self">self</span>,
+        vkey: <span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span>VerifyingKey&lt;C&gt;,
+        x: ChallengeX&lt;C&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = VerifierQuery&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, C&gt;&gt; + Clone {
+        <span class="comment">// Open permutation commitments for each permutation argument at x
+        </span>vkey.commitments
+            .iter()
+            .zip(<span class="self">self</span>.permutation_evals.iter())
+            .map(<span class="kw">move </span>|(commitment, <span class="kw-2">&amp;</span>eval)| VerifierQuery::new_commitment(commitment, <span class="kw-2">*</span>x, eval))
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_gadgets/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_gadgets/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -937,894 +931,894 @@
 <span id="916">916</span>
 <span id="917">917</span>
 <span id="918">918</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Elliptic curve operations.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Elliptic curve operations.
 
-<span class="kw">use</span> <span class="ident">std::fmt::Debug</span>;
+</span><span class="kw">use </span>std::fmt::Debug;
 
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">arithmetic::CurveAffine</span>,
-    <span class="ident">circuit</span>::{<span class="ident">Chip</span>, <span class="ident">Layouter</span>, <span class="ident">Value</span>},
-    <span class="ident">plonk::Error</span>,
+<span class="kw">use </span>halo2_proofs::{
+    arithmetic::CurveAffine,
+    circuit::{Chip, Layouter, Value},
+    plonk::Error,
 };
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities::UtilitiesInstructions</span>;
+<span class="kw">use </span><span class="kw">crate</span>::utilities::UtilitiesInstructions;
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">chip</span>;
+<span class="kw">pub mod </span>chip;
 
-<span class="doccomment">/// The set of circuit instructions required to use the ECC gadgets.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>:
-    <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">UtilitiesInstructions</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span>
+<span class="doccomment">/// The set of circuit instructions required to use the ECC gadgets.
+</span><span class="kw">pub trait </span>EccInstructions&lt;C: CurveAffine&gt;:
+    Chip&lt;C::Base&gt; + UtilitiesInstructions&lt;C::Base&gt; + Clone + Debug + Eq
 {
-    <span class="doccomment">/// Variable representing a scalar used in variable-base scalar mul.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This type is treated as a full-width scalar. However, if `Self` implements</span>
-    <span class="doccomment">/// [`BaseFitsInScalarInstructions`] then this may also be constructed from an element</span>
-    <span class="doccomment">/// of the base field.</span>
-    <span class="kw">type</span> <span class="ident">ScalarVar</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span>;
-    <span class="doccomment">/// Variable representing a full-width element of the elliptic curve&#39;s</span>
-    <span class="doccomment">/// scalar field, to be used for fixed-base scalar mul.</span>
-    <span class="kw">type</span> <span class="ident">ScalarFixed</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span>;
-    <span class="doccomment">/// Variable representing a signed short element of the elliptic curve&#39;s</span>
-    <span class="doccomment">/// scalar field, to be used for fixed-base scalar mul.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// A `ScalarFixedShort` must be in the range [-(2^64 - 1), 2^64 - 1].</span>
-    <span class="kw">type</span> <span class="ident">ScalarFixedShort</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span>;
-    <span class="doccomment">/// Variable representing an elliptic curve point.</span>
-    <span class="kw">type</span> <span class="ident">Point</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span>;
-    <span class="doccomment">/// Variable representing a non-identity elliptic curve point.</span>
-    <span class="kw">type</span> <span class="ident">NonIdentityPoint</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span>;
-    <span class="doccomment">/// Variable representing the affine short Weierstrass x-coordinate of an</span>
-    <span class="doccomment">/// elliptic curve point.</span>
-    <span class="kw">type</span> <span class="ident">X</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span>;
-    <span class="doccomment">/// Enumeration of the set of fixed bases to be used in scalar mul.</span>
-    <span class="doccomment">/// TODO: When associated consts can be used as const generics, introduce</span>
-    <span class="doccomment">/// `Self::NUM_WINDOWS`, `Self::NUM_WINDOWS_BASE_FIELD`, `Self::NUM_WINDOWS_SHORT`</span>
-    <span class="doccomment">/// and use them to differentiate `FixedPoints` types.</span>
-    <span class="kw">type</span> <span class="ident">FixedPoints</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// Variable representing a scalar used in variable-base scalar mul.
+    ///
+    /// This type is treated as a full-width scalar. However, if `Self` implements
+    /// [`BaseFitsInScalarInstructions`] then this may also be constructed from an element
+    /// of the base field.
+    </span><span class="kw">type </span>ScalarVar: Clone + Debug;
+    <span class="doccomment">/// Variable representing a full-width element of the elliptic curve&#39;s
+    /// scalar field, to be used for fixed-base scalar mul.
+    </span><span class="kw">type </span>ScalarFixed: Clone + Debug;
+    <span class="doccomment">/// Variable representing a signed short element of the elliptic curve&#39;s
+    /// scalar field, to be used for fixed-base scalar mul.
+    ///
+    /// A `ScalarFixedShort` must be in the range [-(2^64 - 1), 2^64 - 1].
+    </span><span class="kw">type </span>ScalarFixedShort: Clone + Debug;
+    <span class="doccomment">/// Variable representing an elliptic curve point.
+    </span><span class="kw">type </span>Point: From&lt;<span class="self">Self</span>::NonIdentityPoint&gt; + Clone + Debug;
+    <span class="doccomment">/// Variable representing a non-identity elliptic curve point.
+    </span><span class="kw">type </span>NonIdentityPoint: Clone + Debug;
+    <span class="doccomment">/// Variable representing the affine short Weierstrass x-coordinate of an
+    /// elliptic curve point.
+    </span><span class="kw">type </span>X: Clone + Debug;
+    <span class="doccomment">/// Enumeration of the set of fixed bases to be used in scalar mul.
+    /// TODO: When associated consts can be used as const generics, introduce
+    /// `Self::NUM_WINDOWS`, `Self::NUM_WINDOWS_BASE_FIELD`, `Self::NUM_WINDOWS_SHORT`
+    /// and use them to differentiate `FixedPoints` types.
+    </span><span class="kw">type </span>FixedPoints: FixedPoints&lt;C&gt;;
 
-    <span class="doccomment">/// Constrains point `a` to be equal in value to point `b`.</span>
-    <span class="kw">fn</span> <span class="ident">constrain_equal</span>(
+    <span class="doccomment">/// Constrains point `a` to be equal in value to point `b`.
+    </span><span class="kw">fn </span>constrain_equal(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">a</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Point</span>,
-        <span class="ident">b</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Point</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        a: <span class="kw-2">&amp;</span><span class="self">Self</span>::Point,
+        b: <span class="kw-2">&amp;</span><span class="self">Self</span>::Point,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
-    <span class="doccomment">/// Witnesses the given point as a private input to the circuit.</span>
-    <span class="doccomment">/// This allows the point to be the identity, mapped to (0, 0) in</span>
-    <span class="doccomment">/// affine coordinates.</span>
-    <span class="kw">fn</span> <span class="ident">witness_point</span>(
+    <span class="doccomment">/// Witnesses the given point as a private input to the circuit.
+    /// This allows the point to be the identity, mapped to (0, 0) in
+    /// affine coordinates.
+    </span><span class="kw">fn </span>witness_point(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        value: Value&lt;C&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Point, Error&gt;;
 
-    <span class="doccomment">/// Witnesses the given point as a private input to the circuit.</span>
-    <span class="doccomment">/// This returns an error if the point is the identity.</span>
-    <span class="kw">fn</span> <span class="ident">witness_point_non_id</span>(
+    <span class="doccomment">/// Witnesses the given point as a private input to the circuit.
+    /// This returns an error if the point is the identity.
+    </span><span class="kw">fn </span>witness_point_non_id(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        value: Value&lt;C&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::NonIdentityPoint, Error&gt;;
 
-    <span class="doccomment">/// Witnesses a full-width scalar to be used in variable-base multiplication.</span>
-    <span class="kw">fn</span> <span class="ident">witness_scalar_var</span>(
+    <span class="doccomment">/// Witnesses a full-width scalar to be used in variable-base multiplication.
+    </span><span class="kw">fn </span>witness_scalar_var(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ScalarVar</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        value: Value&lt;C::Scalar&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::ScalarVar, Error&gt;;
 
-    <span class="doccomment">/// Witnesses a full-width scalar to be used in fixed-base multiplication.</span>
-    <span class="kw">fn</span> <span class="ident">witness_scalar_fixed</span>(
+    <span class="doccomment">/// Witnesses a full-width scalar to be used in fixed-base multiplication.
+    </span><span class="kw">fn </span>witness_scalar_fixed(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ScalarFixed</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        value: Value&lt;C::Scalar&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::ScalarFixed, Error&gt;;
 
-    <span class="doccomment">/// Converts a magnitude and sign that exists as variables in the circuit into a</span>
-    <span class="doccomment">/// signed short scalar to be used in fixed-base scalar multiplication.</span>
-    <span class="kw">fn</span> <span class="ident">scalar_fixed_from_signed_short</span>(
+    <span class="doccomment">/// Converts a magnitude and sign that exists as variables in the circuit into a
+    /// signed short scalar to be used in fixed-base scalar multiplication.
+    </span><span class="kw">fn </span>scalar_fixed_from_signed_short(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">magnitude_sign</span>: (<span class="ident"><span class="self">Self</span>::Var</span>, <span class="ident"><span class="self">Self</span>::Var</span>),
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ScalarFixedShort</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        magnitude_sign: (<span class="self">Self</span>::Var, <span class="self">Self</span>::Var),
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::ScalarFixedShort, Error&gt;;
 
-    <span class="doccomment">/// Extracts the x-coordinate of a point.</span>
-    <span class="kw">fn</span> <span class="ident">extract_p</span><span class="op">&lt;</span><span class="ident">Point</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(<span class="ident">point</span>: <span class="kw-2">&amp;</span><span class="ident">Point</span>) -&gt; <span class="ident"><span class="self">Self</span>::X</span>;
+    <span class="doccomment">/// Extracts the x-coordinate of a point.
+    </span><span class="kw">fn </span>extract_p&lt;Point: Into&lt;<span class="self">Self</span>::Point&gt; + Clone&gt;(point: <span class="kw-2">&amp;</span>Point) -&gt; <span class="self">Self</span>::X;
 
-    <span class="doccomment">/// Performs incomplete point addition, returning `a + b`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This returns an error in exceptional cases.</span>
-    <span class="kw">fn</span> <span class="ident">add_incomplete</span>(
+    <span class="doccomment">/// Performs incomplete point addition, returning `a + b`.
+    ///
+    /// This returns an error in exceptional cases.
+    </span><span class="kw">fn </span>add_incomplete(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">a</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>,
-        <span class="ident">b</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        a: <span class="kw-2">&amp;</span><span class="self">Self</span>::NonIdentityPoint,
+        b: <span class="kw-2">&amp;</span><span class="self">Self</span>::NonIdentityPoint,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::NonIdentityPoint, Error&gt;;
 
-    <span class="doccomment">/// Performs complete point addition, returning `a + b`.</span>
-    <span class="kw">fn</span> <span class="ident">add</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>, <span class="ident">B</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(
+    <span class="doccomment">/// Performs complete point addition, returning `a + b`.
+    </span><span class="kw">fn </span>add&lt;A: Into&lt;<span class="self">Self</span>::Point&gt; + Clone, B: Into&lt;<span class="self">Self</span>::Point&gt; + Clone&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">a</span>: <span class="kw-2">&amp;</span><span class="ident">A</span>,
-        <span class="ident">b</span>: <span class="kw-2">&amp;</span><span class="ident">B</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        a: <span class="kw-2">&amp;</span>A,
+        b: <span class="kw-2">&amp;</span>B,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Point, Error&gt;;
 
-    <span class="doccomment">/// Performs variable-base scalar multiplication, returning `[scalar] base`.</span>
-    <span class="kw">fn</span> <span class="ident">mul</span>(
+    <span class="doccomment">/// Performs variable-base scalar multiplication, returning `[scalar] base`.
+    </span><span class="kw">fn </span>mul(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">scalar</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ScalarVar</span>,
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident"><span class="self">Self</span>::ScalarVar</span>), <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        scalar: <span class="kw-2">&amp;</span><span class="self">Self</span>::ScalarVar,
+        base: <span class="kw-2">&amp;</span><span class="self">Self</span>::NonIdentityPoint,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::Point, <span class="self">Self</span>::ScalarVar), Error&gt;;
 
-    <span class="doccomment">/// Performs fixed-base scalar multiplication using a full-width scalar, returning `[scalar] base`.</span>
-    <span class="kw">fn</span> <span class="ident">mul_fixed</span>(
+    <span class="doccomment">/// Performs fixed-base scalar multiplication using a full-width scalar, returning `[scalar] base`.
+    </span><span class="kw">fn </span>mul_fixed(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">scalar</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ScalarFixed</span>,
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::FullScalar</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident"><span class="self">Self</span>::ScalarFixed</span>), <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        scalar: <span class="kw-2">&amp;</span><span class="self">Self</span>::ScalarFixed,
+        base: <span class="kw-2">&amp;</span>&lt;<span class="self">Self</span>::FixedPoints <span class="kw">as </span>FixedPoints&lt;C&gt;&gt;::FullScalar,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::Point, <span class="self">Self</span>::ScalarFixed), Error&gt;;
 
-    <span class="doccomment">/// Performs fixed-base scalar multiplication using a short signed scalar, returning</span>
-    <span class="doccomment">/// `[scalar] base`.</span>
-    <span class="kw">fn</span> <span class="ident">mul_fixed_short</span>(
+    <span class="doccomment">/// Performs fixed-base scalar multiplication using a short signed scalar, returning
+    /// `[scalar] base`.
+    </span><span class="kw">fn </span>mul_fixed_short(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">scalar</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ScalarFixedShort</span>,
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::ShortScalar</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident"><span class="self">Self</span>::ScalarFixedShort</span>), <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        scalar: <span class="kw-2">&amp;</span><span class="self">Self</span>::ScalarFixedShort,
+        base: <span class="kw-2">&amp;</span>&lt;<span class="self">Self</span>::FixedPoints <span class="kw">as </span>FixedPoints&lt;C&gt;&gt;::ShortScalar,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::Point, <span class="self">Self</span>::ScalarFixedShort), Error&gt;;
 
-    <span class="doccomment">/// Performs fixed-base scalar multiplication using a base field element as the scalar.</span>
-    <span class="doccomment">/// In the current implementation, this base field element must be output from another</span>
-    <span class="doccomment">/// instruction.</span>
-    <span class="kw">fn</span> <span class="ident">mul_fixed_base_field_elem</span>(
+    <span class="doccomment">/// Performs fixed-base scalar multiplication using a base field element as the scalar.
+    /// In the current implementation, this base field element must be output from another
+    /// instruction.
+    </span><span class="kw">fn </span>mul_fixed_base_field_elem(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">base_field_elem</span>: <span class="ident"><span class="self">Self</span>::Var</span>,
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Base</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        base_field_elem: <span class="self">Self</span>::Var,
+        base: <span class="kw-2">&amp;</span>&lt;<span class="self">Self</span>::FixedPoints <span class="kw">as </span>FixedPoints&lt;C&gt;&gt;::Base,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Point, Error&gt;;
 }
 
-<span class="doccomment">/// Instructions that can be implemented for a curve whose base field fits into</span>
-<span class="doccomment">/// its scalar field.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">BaseFitsInScalarInstructions</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Converts a base field element that exists as a variable in the circuit</span>
-    <span class="doccomment">/// into a scalar to be used in variable-base scalar multiplication.</span>
-    <span class="kw">fn</span> <span class="ident">scalar_var_from_base</span>(
+<span class="doccomment">/// Instructions that can be implemented for a curve whose base field fits into
+/// its scalar field.
+</span><span class="kw">pub trait </span>BaseFitsInScalarInstructions&lt;C: CurveAffine&gt;: EccInstructions&lt;C&gt; {
+    <span class="doccomment">/// Converts a base field element that exists as a variable in the circuit
+    /// into a scalar to be used in variable-base scalar multiplication.
+    </span><span class="kw">fn </span>scalar_var_from_base(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Var</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ScalarVar</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        base: <span class="kw-2">&amp;</span><span class="self">Self</span>::Var,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::ScalarVar, Error&gt;;
 }
 
-<span class="doccomment">/// Defines the fixed points for a given instantiation of the ECC chip.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>: <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Clone</span> {
-    <span class="doccomment">/// Fixed points that can be used with full-width scalar multiplication.</span>
-    <span class="kw">type</span> <span class="ident">FullScalar</span>: <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Clone</span>;
-    <span class="doccomment">/// Fixed points that can be used with short scalar multiplication.</span>
-    <span class="kw">type</span> <span class="ident">ShortScalar</span>: <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Clone</span>;
-    <span class="doccomment">/// Fixed points that can be multiplied by base field elements.</span>
-    <span class="kw">type</span> <span class="ident">Base</span>: <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Clone</span>;
+<span class="doccomment">/// Defines the fixed points for a given instantiation of the ECC chip.
+</span><span class="kw">pub trait </span>FixedPoints&lt;C: CurveAffine&gt;: Debug + Eq + Clone {
+    <span class="doccomment">/// Fixed points that can be used with full-width scalar multiplication.
+    </span><span class="kw">type </span>FullScalar: Debug + Eq + Clone;
+    <span class="doccomment">/// Fixed points that can be used with short scalar multiplication.
+    </span><span class="kw">type </span>ShortScalar: Debug + Eq + Clone;
+    <span class="doccomment">/// Fixed points that can be multiplied by base field elements.
+    </span><span class="kw">type </span>Base: Debug + Eq + Clone;
 }
 
-<span class="doccomment">/// An integer representing an element of the scalar field for a specific elliptic curve.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ScalarVar</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-    <span class="ident">inner</span>: <span class="ident">EccChip::ScalarVar</span>,
+<span class="doccomment">/// An integer representing an element of the scalar field for a specific elliptic curve.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>ScalarVar&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+    chip: EccChip,
+    inner: EccChip::ScalarVar,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">ScalarVar</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Witnesses the given full-width scalar.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Depending on the `EccChip` implementation, this may either witness the scalar</span>
-    <span class="doccomment">/// immediately, or delay witnessing until its first use in [`NonIdentityPoint::mul`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">witness_scalar_var</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">value</span>);
-        <span class="ident">scalar</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">ScalarVar</span> { <span class="ident">chip</span>, <span class="ident">inner</span> })
+<span class="kw">impl</span>&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; ScalarVar&lt;C, EccChip&gt; {
+    <span class="doccomment">/// Witnesses the given full-width scalar.
+    ///
+    /// Depending on the `EccChip` implementation, this may either witness the scalar
+    /// immediately, or delay witnessing until its first use in [`NonIdentityPoint::mul`].
+    </span><span class="kw">pub fn </span>new(
+        chip: EccChip,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        value: Value&lt;C::Scalar&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>scalar = chip.witness_scalar_var(<span class="kw-2">&amp;mut </span>layouter, value);
+        scalar.map(|inner| ScalarVar { chip, inner })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">BaseFitsInScalarInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">ScalarVar</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Constructs a scalar from an existing base-field element.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_base</span>(
-        <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">EccChip::Var</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">scalar_var_from_base</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">base</span>);
-        <span class="ident">scalar</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">ScalarVar</span> { <span class="ident">chip</span>, <span class="ident">inner</span> })
+<span class="kw">impl</span>&lt;C: CurveAffine, EccChip: BaseFitsInScalarInstructions&lt;C&gt;&gt; ScalarVar&lt;C, EccChip&gt; {
+    <span class="doccomment">/// Constructs a scalar from an existing base-field element.
+    </span><span class="kw">pub fn </span>from_base(
+        chip: EccChip,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        base: <span class="kw-2">&amp;</span>EccChip::Var,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>scalar = chip.scalar_var_from_base(<span class="kw-2">&amp;mut </span>layouter, base);
+        scalar.map(|inner| ScalarVar { chip, inner })
     }
 }
 
-<span class="doccomment">/// An integer representing an element of the scalar field for a specific elliptic curve,</span>
-<span class="doccomment">/// for [`FixedPoint`] scalar multiplication.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ScalarFixed</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-    <span class="ident">inner</span>: <span class="ident">EccChip::ScalarFixed</span>,
+<span class="doccomment">/// An integer representing an element of the scalar field for a specific elliptic curve,
+/// for [`FixedPoint`] scalar multiplication.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>ScalarFixed&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+    chip: EccChip,
+    inner: EccChip::ScalarFixed,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">ScalarFixed</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Witnesses the given full-width scalar.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Depending on the `EccChip` implementation, this may either witness the scalar</span>
-    <span class="doccomment">/// immediately, or delay witnessing until its first use in [`FixedPoint::mul`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">witness_scalar_fixed</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">value</span>);
-        <span class="ident">scalar</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">ScalarFixed</span> { <span class="ident">chip</span>, <span class="ident">inner</span> })
+<span class="kw">impl</span>&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; ScalarFixed&lt;C, EccChip&gt; {
+    <span class="doccomment">/// Witnesses the given full-width scalar.
+    ///
+    /// Depending on the `EccChip` implementation, this may either witness the scalar
+    /// immediately, or delay witnessing until its first use in [`FixedPoint::mul`].
+    </span><span class="kw">pub fn </span>new(
+        chip: EccChip,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        value: Value&lt;C::Scalar&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>scalar = chip.witness_scalar_fixed(<span class="kw-2">&amp;mut </span>layouter, value);
+        scalar.map(|inner| ScalarFixed { chip, inner })
     }
 }
 
-<span class="doccomment">/// A signed short (64-bit) integer represented as an element of the scalar field for a</span>
-<span class="doccomment">/// specific elliptic curve, to be used for [`FixedPointShort`] scalar multiplication.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ScalarFixedShort</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-    <span class="ident">inner</span>: <span class="ident">EccChip::ScalarFixedShort</span>,
+<span class="doccomment">/// A signed short (64-bit) integer represented as an element of the scalar field for a
+/// specific elliptic curve, to be used for [`FixedPointShort`] scalar multiplication.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>ScalarFixedShort&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+    chip: EccChip,
+    inner: EccChip::ScalarFixedShort,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">ScalarFixedShort</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Converts the given signed short scalar.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// `magnitude_sign` must be a tuple of two circuit-assigned values:</span>
-    <span class="doccomment">/// - An unsigned integer of at most 64 bits.</span>
-    <span class="doccomment">/// - A sign value that is either 1 or -1.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Depending on the `EccChip` implementation, the scalar may either be constrained</span>
-    <span class="doccomment">/// immediately by this constructor, or lazily constrained when it is first used in</span>
-    <span class="doccomment">/// [`FixedPointShort::mul`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">magnitude_sign</span>: (<span class="ident">EccChip::Var</span>, <span class="ident">EccChip::Var</span>),
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">scalar_fixed_from_signed_short</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">magnitude_sign</span>);
-        <span class="ident">scalar</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">ScalarFixedShort</span> { <span class="ident">chip</span>, <span class="ident">inner</span> })
+<span class="kw">impl</span>&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; ScalarFixedShort&lt;C, EccChip&gt; {
+    <span class="doccomment">/// Converts the given signed short scalar.
+    ///
+    /// `magnitude_sign` must be a tuple of two circuit-assigned values:
+    /// - An unsigned integer of at most 64 bits.
+    /// - A sign value that is either 1 or -1.
+    ///
+    /// Depending on the `EccChip` implementation, the scalar may either be constrained
+    /// immediately by this constructor, or lazily constrained when it is first used in
+    /// [`FixedPointShort::mul`].
+    </span><span class="kw">pub fn </span>new(
+        chip: EccChip,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        magnitude_sign: (EccChip::Var, EccChip::Var),
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>scalar = chip.scalar_fixed_from_signed_short(<span class="kw-2">&amp;mut </span>layouter, magnitude_sign);
+        scalar.map(|inner| ScalarFixedShort { chip, inner })
     }
 }
 
-<span class="doccomment">/// A point on a specific elliptic curve that is guaranteed to not be the identity.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NonIdentityPoint</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-    <span class="ident">inner</span>: <span class="ident">EccChip::NonIdentityPoint</span>,
+<span class="doccomment">/// A point on a specific elliptic curve that is guaranteed to not be the identity.
+</span><span class="attribute">#[derive(Copy, Clone, Debug)]</span>
+<span class="kw">pub struct </span>NonIdentityPoint&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+    chip: EccChip,
+    inner: EccChip::NonIdentityPoint,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">NonIdentityPoint</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Constructs a new point with the given value.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">point</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">witness_point_non_id</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">value</span>);
-        <span class="ident">point</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">NonIdentityPoint</span> { <span class="ident">chip</span>, <span class="ident">inner</span> })
+<span class="kw">impl</span>&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; NonIdentityPoint&lt;C, EccChip&gt; {
+    <span class="doccomment">/// Constructs a new point with the given value.
+    </span><span class="kw">pub fn </span>new(
+        chip: EccChip,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        value: Value&lt;C&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>point = chip.witness_point_non_id(<span class="kw-2">&amp;mut </span>layouter, value);
+        point.map(|inner| NonIdentityPoint { chip, inner })
     }
 
-    <span class="doccomment">/// Constrains this point to be equal in value to another point.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">constrain_equal</span><span class="op">&lt;</span><span class="ident">Other</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(
+    <span class="doccomment">/// Constrains this point to be equal in value to another point.
+    </span><span class="kw">pub fn </span>constrain_equal&lt;Other: Into&lt;Point&lt;C, EccChip&gt;&gt; + Clone&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">Other</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">other</span>: <span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="ident">other</span>.<span class="ident">clone</span>()).<span class="ident">into</span>();
-        <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">constrain_equal</span>(
-            <span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>,
-            <span class="kw-2">&amp;</span><span class="ident">Point</span>::<span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span><span class="ident">::from</span>(<span class="self">self</span>.<span class="ident">clone</span>()).<span class="ident">inner</span>,
-            <span class="kw-2">&amp;</span><span class="ident">other</span>.<span class="ident">inner</span>,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        other: <span class="kw-2">&amp;</span>Other,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">let </span>other: Point&lt;C, EccChip&gt; = (other.clone()).into();
+        <span class="self">self</span>.chip.constrain_equal(
+            <span class="kw-2">&amp;mut </span>layouter,
+            <span class="kw-2">&amp;</span>Point::&lt;C, EccChip&gt;::from(<span class="self">self</span>.clone()).inner,
+            <span class="kw-2">&amp;</span>other.inner,
         )
     }
 
-    <span class="doccomment">/// Returns the inner point.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">inner</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">EccChip::NonIdentityPoint</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>
+    <span class="doccomment">/// Returns the inner point.
+    </span><span class="kw">pub fn </span>inner(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>EccChip::NonIdentityPoint {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.inner
     }
 
-    <span class="doccomment">/// Extracts the x-coordinate of a point.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extract_p</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">X</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
-        <span class="ident">X::from_inner</span>(<span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">clone</span>(), <span class="ident">EccChip::extract_p</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>))
+    <span class="doccomment">/// Extracts the x-coordinate of a point.
+    </span><span class="kw">pub fn </span>extract_p(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; X&lt;C, EccChip&gt; {
+        X::from_inner(<span class="self">self</span>.chip.clone(), EccChip::extract_p(<span class="kw-2">&amp;</span><span class="self">self</span>.inner))
     }
 
-    <span class="doccomment">/// Wraps the given point (obtained directly from an instruction) in a gadget.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_inner</span>(<span class="ident">chip</span>: <span class="ident">EccChip</span>, <span class="ident">inner</span>: <span class="ident">EccChip::NonIdentityPoint</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">NonIdentityPoint</span> { <span class="ident">chip</span>, <span class="ident">inner</span> }
+    <span class="doccomment">/// Wraps the given point (obtained directly from an instruction) in a gadget.
+    </span><span class="kw">pub fn </span>from_inner(chip: EccChip, inner: EccChip::NonIdentityPoint) -&gt; <span class="self">Self </span>{
+        NonIdentityPoint { chip, inner }
     }
 
-    <span class="doccomment">/// Returns `self + other` using complete addition.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add</span><span class="op">&lt;</span><span class="ident">Other</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(
+    <span class="doccomment">/// Returns `self + other` using complete addition.
+    </span><span class="kw">pub fn </span>add&lt;Other: Into&lt;Point&lt;C, EccChip&gt;&gt; + Clone&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">Other</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">other</span>: <span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="ident">other</span>.<span class="ident">clone</span>()).<span class="ident">into</span>();
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        other: <span class="kw-2">&amp;</span>Other,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Point&lt;C, EccChip&gt;, Error&gt; {
+        <span class="kw">let </span>other: Point&lt;C, EccChip&gt; = (other.clone()).into();
 
-        <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">chip</span>, <span class="ident">other</span>.<span class="ident">chip</span>);
-        <span class="self">self</span>.<span class="ident">chip</span>
-            .<span class="ident">add</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>, <span class="kw-2">&amp;</span><span class="ident">other</span>.<span class="ident">inner</span>)
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">Point</span> {
-                <span class="ident">chip</span>: <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">clone</span>(),
-                <span class="ident">inner</span>,
+        <span class="macro">assert_eq!</span>(<span class="self">self</span>.chip, other.chip);
+        <span class="self">self</span>.chip
+            .add(<span class="kw-2">&amp;mut </span>layouter, <span class="kw-2">&amp;</span><span class="self">self</span>.inner, <span class="kw-2">&amp;</span>other.inner)
+            .map(|inner| Point {
+                chip: <span class="self">self</span>.chip.clone(),
+                inner,
             })
     }
 
-    <span class="doccomment">/// Returns `self + other` using incomplete addition.</span>
-    <span class="doccomment">/// The arguments are type-constrained not to be the identity point,</span>
-    <span class="doccomment">/// and since exceptional cases return an Error, the result also cannot</span>
-    <span class="doccomment">/// be the identity point.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_incomplete</span>(
+    <span class="doccomment">/// Returns `self + other` using incomplete addition.
+    /// The arguments are type-constrained not to be the identity point,
+    /// and since exceptional cases return an Error, the result also cannot
+    /// be the identity point.
+    </span><span class="kw">pub fn </span>add_incomplete(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">chip</span>, <span class="ident">other</span>.<span class="ident">chip</span>);
-        <span class="self">self</span>.<span class="ident">chip</span>
-            .<span class="ident">add_incomplete</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>, <span class="kw-2">&amp;</span><span class="ident">other</span>.<span class="ident">inner</span>)
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">NonIdentityPoint</span> {
-                <span class="ident">chip</span>: <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">clone</span>(),
-                <span class="ident">inner</span>,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        other: <span class="kw-2">&amp;</span><span class="self">Self</span>,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="macro">assert_eq!</span>(<span class="self">self</span>.chip, other.chip);
+        <span class="self">self</span>.chip
+            .add_incomplete(<span class="kw-2">&amp;mut </span>layouter, <span class="kw-2">&amp;</span><span class="self">self</span>.inner, <span class="kw-2">&amp;</span>other.inner)
+            .map(|inner| NonIdentityPoint {
+                chip: <span class="self">self</span>.chip.clone(),
+                inner,
             })
     }
 
-    <span class="doccomment">/// Returns `[by] self`.</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mul</span>(
+    <span class="doccomment">/// Returns `[by] self`.
+    </span><span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="kw">pub fn </span>mul(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">by</span>: <span class="ident">ScalarVar</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>, <span class="ident">ScalarVar</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">chip</span>, <span class="ident">by</span>.<span class="ident">chip</span>);
-        <span class="self">self</span>.<span class="ident">chip</span>
-            .<span class="ident">mul</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="kw-2">&amp;</span><span class="ident">by</span>.<span class="ident">inner</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">clone</span>())
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)<span class="op">|</span> {
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        by: ScalarVar&lt;C, EccChip&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(Point&lt;C, EccChip&gt;, ScalarVar&lt;C, EccChip&gt;), Error&gt; {
+        <span class="macro">assert_eq!</span>(<span class="self">self</span>.chip, by.chip);
+        <span class="self">self</span>.chip
+            .mul(<span class="kw-2">&amp;mut </span>layouter, <span class="kw-2">&amp;</span>by.inner, <span class="kw-2">&amp;</span><span class="self">self</span>.inner.clone())
+            .map(|(point, scalar)| {
                 (
-                    <span class="ident">Point</span> {
-                        <span class="ident">chip</span>: <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">clone</span>(),
-                        <span class="ident">inner</span>: <span class="ident">point</span>,
+                    Point {
+                        chip: <span class="self">self</span>.chip.clone(),
+                        inner: point,
                     },
-                    <span class="ident">ScalarVar</span> {
-                        <span class="ident">chip</span>: <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">clone</span>(),
-                        <span class="ident">inner</span>: <span class="ident">scalar</span>,
+                    ScalarVar {
+                        chip: <span class="self">self</span>.chip.clone(),
+                        inner: scalar,
                     },
                 )
             })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span><span class="op">&gt;</span>
-    <span class="ident">From</span><span class="op">&lt;</span><span class="ident">NonIdentityPoint</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt; + Clone + Debug + Eq&gt;
+    From&lt;NonIdentityPoint&lt;C, EccChip&gt;&gt; <span class="kw">for </span>Point&lt;C, EccChip&gt;
 {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">non_id_point</span>: <span class="ident">NonIdentityPoint</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">chip</span>: <span class="ident">non_id_point</span>.<span class="ident">chip</span>,
-            <span class="ident">inner</span>: <span class="ident">non_id_point</span>.<span class="ident">inner</span>.<span class="ident">into</span>(),
+    <span class="kw">fn </span>from(non_id_point: NonIdentityPoint&lt;C, EccChip&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            chip: non_id_point.chip,
+            inner: non_id_point.inner.into(),
         }
     }
 }
 
-<span class="doccomment">/// A point on a specific elliptic curve.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span><span class="op">&gt;</span> {
-    <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-    <span class="ident">inner</span>: <span class="ident">EccChip::Point</span>,
+<span class="doccomment">/// A point on a specific elliptic curve.
+</span><span class="attribute">#[derive(Copy, Clone, Debug)]</span>
+<span class="kw">pub struct </span>Point&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt; + Clone + Debug + Eq&gt; {
+    chip: EccChip,
+    inner: EccChip::Point,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span><span class="op">&gt;</span> <span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Constructs a new point with the given value.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">point</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">witness_point</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">value</span>);
-        <span class="ident">point</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">Point</span> { <span class="ident">chip</span>, <span class="ident">inner</span> })
+<span class="kw">impl</span>&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt; + Clone + Debug + Eq&gt; Point&lt;C, EccChip&gt; {
+    <span class="doccomment">/// Constructs a new point with the given value.
+    </span><span class="kw">pub fn </span>new(
+        chip: EccChip,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        value: Value&lt;C&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>point = chip.witness_point(<span class="kw-2">&amp;mut </span>layouter, value);
+        point.map(|inner| Point { chip, inner })
     }
 
-    <span class="doccomment">/// Constrains this point to be equal in value to another point.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">constrain_equal</span><span class="op">&lt;</span><span class="ident">Other</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(
+    <span class="doccomment">/// Constrains this point to be equal in value to another point.
+    </span><span class="kw">pub fn </span>constrain_equal&lt;Other: Into&lt;Point&lt;C, EccChip&gt;&gt; + Clone&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">Other</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">other</span>: <span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="ident">other</span>.<span class="ident">clone</span>()).<span class="ident">into</span>();
-        <span class="self">self</span>.<span class="ident">chip</span>
-            .<span class="ident">constrain_equal</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>, <span class="kw-2">&amp;</span><span class="ident">other</span>.<span class="ident">inner</span>)
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        other: <span class="kw-2">&amp;</span>Other,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">let </span>other: Point&lt;C, EccChip&gt; = (other.clone()).into();
+        <span class="self">self</span>.chip
+            .constrain_equal(<span class="kw-2">&amp;mut </span>layouter, <span class="kw-2">&amp;</span><span class="self">self</span>.inner, <span class="kw-2">&amp;</span>other.inner)
     }
 
-    <span class="doccomment">/// Returns the inner point.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">inner</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">EccChip::Point</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>
+    <span class="doccomment">/// Returns the inner point.
+    </span><span class="kw">pub fn </span>inner(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>EccChip::Point {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.inner
     }
 
-    <span class="doccomment">/// Extracts the x-coordinate of a point.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extract_p</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">X</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
-        <span class="ident">X::from_inner</span>(<span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">clone</span>(), <span class="ident">EccChip::extract_p</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>))
+    <span class="doccomment">/// Extracts the x-coordinate of a point.
+    </span><span class="kw">pub fn </span>extract_p(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; X&lt;C, EccChip&gt; {
+        X::from_inner(<span class="self">self</span>.chip.clone(), EccChip::extract_p(<span class="kw-2">&amp;</span><span class="self">self</span>.inner))
     }
 
-    <span class="doccomment">/// Wraps the given point (obtained directly from an instruction) in a gadget.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_inner</span>(<span class="ident">chip</span>: <span class="ident">EccChip</span>, <span class="ident">inner</span>: <span class="ident">EccChip::Point</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Point</span> { <span class="ident">chip</span>, <span class="ident">inner</span> }
+    <span class="doccomment">/// Wraps the given point (obtained directly from an instruction) in a gadget.
+    </span><span class="kw">pub fn </span>from_inner(chip: EccChip, inner: EccChip::Point) -&gt; <span class="self">Self </span>{
+        Point { chip, inner }
     }
 
-    <span class="doccomment">/// Returns `self + other` using complete addition.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add</span><span class="op">&lt;</span><span class="ident">Other</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(
+    <span class="doccomment">/// Returns `self + other` using complete addition.
+    </span><span class="kw">pub fn </span>add&lt;Other: Into&lt;Point&lt;C, EccChip&gt;&gt; + Clone&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">Other</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">other</span>: <span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="ident">other</span>.<span class="ident">clone</span>()).<span class="ident">into</span>();
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        other: <span class="kw-2">&amp;</span>Other,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Point&lt;C, EccChip&gt;, Error&gt; {
+        <span class="kw">let </span>other: Point&lt;C, EccChip&gt; = (other.clone()).into();
 
-        <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">chip</span>, <span class="ident">other</span>.<span class="ident">chip</span>);
-        <span class="self">self</span>.<span class="ident">chip</span>
-            .<span class="ident">add</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>, <span class="kw-2">&amp;</span><span class="ident">other</span>.<span class="ident">inner</span>)
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">Point</span> {
-                <span class="ident">chip</span>: <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">clone</span>(),
-                <span class="ident">inner</span>,
+        <span class="macro">assert_eq!</span>(<span class="self">self</span>.chip, other.chip);
+        <span class="self">self</span>.chip
+            .add(<span class="kw-2">&amp;mut </span>layouter, <span class="kw-2">&amp;</span><span class="self">self</span>.inner, <span class="kw-2">&amp;</span>other.inner)
+            .map(|inner| Point {
+                chip: <span class="self">self</span>.chip.clone(),
+                inner,
             })
     }
 }
 
-<span class="doccomment">/// The affine short Weierstrass x-coordinate of a point on a specific elliptic curve.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">X</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-    <span class="ident">inner</span>: <span class="ident">EccChip::X</span>,
+<span class="doccomment">/// The affine short Weierstrass x-coordinate of a point on a specific elliptic curve.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>X&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+    chip: EccChip,
+    inner: EccChip::X,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">X</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Wraps the given x-coordinate (obtained directly from an instruction) in a gadget.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_inner</span>(<span class="ident">chip</span>: <span class="ident">EccChip</span>, <span class="ident">inner</span>: <span class="ident">EccChip::X</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">X</span> { <span class="ident">chip</span>, <span class="ident">inner</span> }
+<span class="kw">impl</span>&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; X&lt;C, EccChip&gt; {
+    <span class="doccomment">/// Wraps the given x-coordinate (obtained directly from an instruction) in a gadget.
+    </span><span class="kw">pub fn </span>from_inner(chip: EccChip, inner: EccChip::X) -&gt; <span class="self">Self </span>{
+        X { chip, inner }
     }
 
-    <span class="doccomment">/// Returns the inner x-coordinate.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">inner</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">EccChip::X</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>
+    <span class="doccomment">/// Returns the inner x-coordinate.
+    </span><span class="kw">pub fn </span>inner(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>EccChip::X {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.inner
     }
 }
 
-<span class="doccomment">/// Precomputed multiples of a fixed point, for full-width scalar multiplication.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Fixing the curve point enables window tables to be baked into the circuit, making</span>
-<span class="doccomment">/// scalar multiplication more efficient. These window tables are tuned to full-width</span>
-<span class="doccomment">/// scalar multiplication.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-    <span class="ident">inner</span>: <span class="op">&lt;</span><span class="ident">EccChip::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::FullScalar</span>,
+<span class="doccomment">/// Precomputed multiples of a fixed point, for full-width scalar multiplication.
+///
+/// Fixing the curve point enables window tables to be baked into the circuit, making
+/// scalar multiplication more efficient. These window tables are tuned to full-width
+/// scalar multiplication.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>FixedPoint&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+    chip: EccChip,
+    inner: &lt;EccChip::FixedPoints <span class="kw">as </span>FixedPoints&lt;C&gt;&gt;::FullScalar,
 }
 
-<span class="doccomment">/// Precomputed multiples of a fixed point, that can be multiplied by base-field elements.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Fixing the curve point enables window tables to be baked into the circuit, making</span>
-<span class="doccomment">/// scalar multiplication more efficient. These window tables are tuned to scalar</span>
-<span class="doccomment">/// multiplication by base-field elements.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FixedPointBaseField</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-    <span class="ident">inner</span>: <span class="op">&lt;</span><span class="ident">EccChip::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Base</span>,
+<span class="doccomment">/// Precomputed multiples of a fixed point, that can be multiplied by base-field elements.
+///
+/// Fixing the curve point enables window tables to be baked into the circuit, making
+/// scalar multiplication more efficient. These window tables are tuned to scalar
+/// multiplication by base-field elements.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>FixedPointBaseField&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+    chip: EccChip,
+    inner: &lt;EccChip::FixedPoints <span class="kw">as </span>FixedPoints&lt;C&gt;&gt;::Base,
 }
 
-<span class="doccomment">/// Precomputed multiples of a fixed point, for short signed scalar multiplication.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FixedPointShort</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-    <span class="ident">inner</span>: <span class="op">&lt;</span><span class="ident">EccChip::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::ShortScalar</span>,
+<span class="doccomment">/// Precomputed multiples of a fixed point, for short signed scalar multiplication.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>FixedPointShort&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+    chip: EccChip,
+    inner: &lt;EccChip::FixedPoints <span class="kw">as </span>FixedPoints&lt;C&gt;&gt;::ShortScalar,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="doccomment">/// Returns `[by] self`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mul</span>(
+<span class="kw">impl</span>&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; FixedPoint&lt;C, EccChip&gt; {
+    <span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="doccomment">/// Returns `[by] self`.
+    </span><span class="kw">pub fn </span>mul(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">by</span>: <span class="ident">ScalarFixed</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>, <span class="ident">ScalarFixed</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">chip</span>, <span class="ident">by</span>.<span class="ident">chip</span>);
-        <span class="self">self</span>.<span class="ident">chip</span>
-            .<span class="ident">mul_fixed</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="kw-2">&amp;</span><span class="ident">by</span>.<span class="ident">inner</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>)
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)<span class="op">|</span> {
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        by: ScalarFixed&lt;C, EccChip&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(Point&lt;C, EccChip&gt;, ScalarFixed&lt;C, EccChip&gt;), Error&gt; {
+        <span class="macro">assert_eq!</span>(<span class="self">self</span>.chip, by.chip);
+        <span class="self">self</span>.chip
+            .mul_fixed(<span class="kw-2">&amp;mut </span>layouter, <span class="kw-2">&amp;</span>by.inner, <span class="kw-2">&amp;</span><span class="self">self</span>.inner)
+            .map(|(point, scalar)| {
                 (
-                    <span class="ident">Point</span> {
-                        <span class="ident">chip</span>: <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">clone</span>(),
-                        <span class="ident">inner</span>: <span class="ident">point</span>,
+                    Point {
+                        chip: <span class="self">self</span>.chip.clone(),
+                        inner: point,
                     },
-                    <span class="ident">ScalarFixed</span> {
-                        <span class="ident">chip</span>: <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">clone</span>(),
-                        <span class="ident">inner</span>: <span class="ident">scalar</span>,
+                    ScalarFixed {
+                        chip: <span class="self">self</span>.chip.clone(),
+                        inner: scalar,
                     },
                 )
             })
     }
 
-    <span class="doccomment">/// Wraps the given fixed base (obtained directly from an instruction) in a gadget.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_inner</span>(
-        <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-        <span class="ident">inner</span>: <span class="op">&lt;</span><span class="ident">EccChip::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::FullScalar</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">chip</span>, <span class="ident">inner</span> }
+    <span class="doccomment">/// Wraps the given fixed base (obtained directly from an instruction) in a gadget.
+    </span><span class="kw">pub fn </span>from_inner(
+        chip: EccChip,
+        inner: &lt;EccChip::FixedPoints <span class="kw">as </span>FixedPoints&lt;C&gt;&gt;::FullScalar,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ chip, inner }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">FixedPointBaseField</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="doccomment">/// Returns `[by] self`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mul</span>(
+<span class="kw">impl</span>&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; FixedPointBaseField&lt;C, EccChip&gt; {
+    <span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="doccomment">/// Returns `[by] self`.
+    </span><span class="kw">pub fn </span>mul(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">by</span>: <span class="ident">EccChip::Var</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">chip</span>
-            .<span class="ident">mul_fixed_base_field_elem</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">by</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>)
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="ident">Point</span> {
-                <span class="ident">chip</span>: <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">clone</span>(),
-                <span class="ident">inner</span>,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        by: EccChip::Var,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Point&lt;C, EccChip&gt;, Error&gt; {
+        <span class="self">self</span>.chip
+            .mul_fixed_base_field_elem(<span class="kw-2">&amp;mut </span>layouter, by, <span class="kw-2">&amp;</span><span class="self">self</span>.inner)
+            .map(|inner| Point {
+                chip: <span class="self">self</span>.chip.clone(),
+                inner,
             })
     }
 
-    <span class="doccomment">/// Wraps the given fixed base (obtained directly from an instruction) in a gadget.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_inner</span>(
-        <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-        <span class="ident">inner</span>: <span class="op">&lt;</span><span class="ident">EccChip::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Base</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">chip</span>, <span class="ident">inner</span> }
+    <span class="doccomment">/// Wraps the given fixed base (obtained directly from an instruction) in a gadget.
+    </span><span class="kw">pub fn </span>from_inner(
+        chip: EccChip,
+        inner: &lt;EccChip::FixedPoints <span class="kw">as </span>FixedPoints&lt;C&gt;&gt;::Base,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ chip, inner }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">FixedPointShort</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span> {
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="doccomment">/// Returns `[by] self`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mul</span>(
+<span class="kw">impl</span>&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; FixedPointShort&lt;C, EccChip&gt; {
+    <span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="doccomment">/// Returns `[by] self`.
+    </span><span class="kw">pub fn </span>mul(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">by</span>: <span class="ident">ScalarFixedShort</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>, <span class="ident">ScalarFixedShort</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">chip</span>, <span class="ident">by</span>.<span class="ident">chip</span>);
-        <span class="self">self</span>.<span class="ident">chip</span>
-            .<span class="ident">mul_fixed_short</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="kw-2">&amp;</span><span class="ident">by</span>.<span class="ident">inner</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>)
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)<span class="op">|</span> {
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        by: ScalarFixedShort&lt;C, EccChip&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(Point&lt;C, EccChip&gt;, ScalarFixedShort&lt;C, EccChip&gt;), Error&gt; {
+        <span class="macro">assert_eq!</span>(<span class="self">self</span>.chip, by.chip);
+        <span class="self">self</span>.chip
+            .mul_fixed_short(<span class="kw-2">&amp;mut </span>layouter, <span class="kw-2">&amp;</span>by.inner, <span class="kw-2">&amp;</span><span class="self">self</span>.inner)
+            .map(|(point, scalar)| {
                 (
-                    <span class="ident">Point</span> {
-                        <span class="ident">chip</span>: <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">clone</span>(),
-                        <span class="ident">inner</span>: <span class="ident">point</span>,
+                    Point {
+                        chip: <span class="self">self</span>.chip.clone(),
+                        inner: point,
                     },
-                    <span class="ident">ScalarFixedShort</span> {
-                        <span class="ident">chip</span>: <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">clone</span>(),
-                        <span class="ident">inner</span>: <span class="ident">scalar</span>,
+                    ScalarFixedShort {
+                        chip: <span class="self">self</span>.chip.clone(),
+                        inner: scalar,
                     },
                 )
             })
     }
 
-    <span class="doccomment">/// Wraps the given fixed base (obtained directly from an instruction) in a gadget.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_inner</span>(
-        <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-        <span class="ident">inner</span>: <span class="op">&lt;</span><span class="ident">EccChip::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::ShortScalar</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">chip</span>, <span class="ident">inner</span> }
+    <span class="doccomment">/// Wraps the given fixed base (obtained directly from an instruction) in a gadget.
+    </span><span class="kw">pub fn </span>from_inner(
+        chip: EccChip,
+        inner: &lt;EccChip::FixedPoints <span class="kw">as </span>FixedPoints&lt;C&gt;&gt;::ShortScalar,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ chip, inner }
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">ff::PrimeField</span>;
-    <span class="kw">use</span> <span class="ident">group</span>::{<span class="ident">prime::PrimeCurveAffine</span>, <span class="ident">Curve</span>, <span class="ident">Group</span>};
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>tests {
+    <span class="kw">use </span>ff::PrimeField;
+    <span class="kw">use </span>group::{prime::PrimeCurveAffine, Curve, Group};
 
-    <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-        <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">SimpleFloorPlanner</span>, <span class="ident">Value</span>},
-        <span class="ident">dev::MockProver</span>,
-        <span class="ident">plonk</span>::{<span class="ident">Circuit</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>},
+    <span class="kw">use </span>halo2_proofs::{
+        circuit::{Layouter, SimpleFloorPlanner, Value},
+        dev::MockProver,
+        plonk::{Circuit, ConstraintSystem, Error},
     };
-    <span class="kw">use</span> <span class="ident">lazy_static::lazy_static</span>;
-    <span class="kw">use</span> <span class="ident">pasta_curves::pallas</span>;
+    <span class="kw">use </span>lazy_static::lazy_static;
+    <span class="kw">use </span>pasta_curves::pallas;
 
-    <span class="kw">use</span> <span class="kw">super</span>::{
-        <span class="ident">chip</span>::{
-            <span class="ident">find_zs_and_us</span>, <span class="ident">BaseFieldElem</span>, <span class="ident">EccChip</span>, <span class="ident">EccConfig</span>, <span class="ident">FixedPoint</span>, <span class="ident">FullScalar</span>, <span class="ident">ShortScalar</span>,
-            <span class="ident">H</span>, <span class="ident">NUM_WINDOWS</span>, <span class="ident">NUM_WINDOWS_SHORT</span>,
+    <span class="kw">use super</span>::{
+        chip::{
+            find_zs_and_us, BaseFieldElem, EccChip, EccConfig, FixedPoint, FullScalar, ShortScalar,
+            H, NUM_WINDOWS, NUM_WINDOWS_SHORT,
         },
-        <span class="ident">FixedPoints</span>,
+        FixedPoints,
     };
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities::lookup_range_check::LookupRangeCheckConfig</span>;
+    <span class="kw">use </span><span class="kw">crate</span>::utilities::lookup_range_check::LookupRangeCheckConfig;
 
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">TestFixedBases</span>;
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">FullWidth</span>(<span class="ident">pallas::Affine</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [(<span class="ident">u64</span>, [<span class="ident">pallas::Base</span>; <span class="ident">H</span>])]);
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">BaseField</span>;
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">Short</span>;
+    <span class="attribute">#[derive(Debug, Eq, PartialEq, Clone)]</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>TestFixedBases;
+    <span class="attribute">#[derive(Debug, Eq, PartialEq, Clone)]</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>FullWidth(pallas::Affine, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[(u64, [pallas::Base; H])]);
+    <span class="attribute">#[derive(Debug, Eq, PartialEq, Clone)]</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>BaseField;
+    <span class="attribute">#[derive(Debug, Eq, PartialEq, Clone)]</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Short;
 
     <span class="macro">lazy_static!</span> {
-        <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">BASE</span>: <span class="ident">pallas::Affine</span> <span class="op">=</span> <span class="ident">pallas::Point::generator</span>().<span class="ident">to_affine</span>();
-        <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">ZS_AND_US</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">u64</span>, [<span class="ident">pallas::Base</span>; <span class="ident">H</span>])<span class="op">&gt;</span> <span class="op">=</span>
-            <span class="ident">find_zs_and_us</span>(<span class="kw-2">*</span><span class="ident">BASE</span>, <span class="ident">NUM_WINDOWS</span>).<span class="ident">unwrap</span>();
-        <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">ZS_AND_US_SHORT</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">u64</span>, [<span class="ident">pallas::Base</span>; <span class="ident">H</span>])<span class="op">&gt;</span> <span class="op">=</span>
-            <span class="ident">find_zs_and_us</span>(<span class="kw-2">*</span><span class="ident">BASE</span>, <span class="ident">NUM_WINDOWS_SHORT</span>).<span class="ident">unwrap</span>();
+        <span class="kw">static </span><span class="kw-2">ref </span>BASE: pallas::Affine = pallas::Point::generator().to_affine();
+        <span class="kw">static </span><span class="kw-2">ref </span>ZS_AND_US: Vec&lt;(u64, [pallas::Base; H])&gt; =
+            find_zs_and_us(<span class="kw-2">*</span>BASE, NUM_WINDOWS).unwrap();
+        <span class="kw">static </span><span class="kw-2">ref </span>ZS_AND_US_SHORT: Vec&lt;(u64, [pallas::Base; H])&gt; =
+            find_zs_and_us(<span class="kw-2">*</span>BASE, NUM_WINDOWS_SHORT).unwrap();
     }
 
-    <span class="kw">impl</span> <span class="ident">FullWidth</span> {
-        <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">from_pallas_generator</span>() -&gt; <span class="self">Self</span> {
-            <span class="ident">FullWidth</span>(<span class="kw-2">*</span><span class="ident">BASE</span>, <span class="kw-2">&amp;</span><span class="ident">ZS_AND_US</span>)
+    <span class="kw">impl </span>FullWidth {
+        <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>from_pallas_generator() -&gt; <span class="self">Self </span>{
+            FullWidth(<span class="kw-2">*</span>BASE, <span class="kw-2">&amp;</span>ZS_AND_US)
         }
 
-        <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">from_parts</span>(
-            <span class="ident">base</span>: <span class="ident">pallas::Affine</span>,
-            <span class="ident">zs_and_us</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [(<span class="ident">u64</span>, [<span class="ident">pallas::Base</span>; <span class="ident">H</span>])],
-        ) -&gt; <span class="self">Self</span> {
-            <span class="ident">FullWidth</span>(<span class="ident">base</span>, <span class="ident">zs_and_us</span>)
+        <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>from_parts(
+            base: pallas::Affine,
+            zs_and_us: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[(u64, [pallas::Base; H])],
+        ) -&gt; <span class="self">Self </span>{
+            FullWidth(base, zs_and_us)
         }
     }
 
-    <span class="kw">impl</span> <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">FullWidth</span> {
-        <span class="kw">type</span> <span class="ident">FixedScalarKind</span> <span class="op">=</span> <span class="ident">FullScalar</span>;
+    <span class="kw">impl </span>FixedPoint&lt;pallas::Affine&gt; <span class="kw">for </span>FullWidth {
+        <span class="kw">type </span>FixedScalarKind = FullScalar;
 
-        <span class="kw">fn</span> <span class="ident">generator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">pallas::Affine</span> {
-            <span class="self">self</span>.<span class="number">0</span>
-        }
+        <span class="kw">fn </span>generator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; pallas::Affine {
+            <span class="self">self</span>.<span class="number">0
+        </span>}
 
-        <span class="kw">fn</span> <span class="ident">u</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span>[[<span class="ident">u8</span>; <span class="number">32</span>]; <span class="ident">H</span>]<span class="op">&gt;</span> {
-            <span class="self">self</span>.<span class="number">1</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">us</span>)<span class="op">|</span> {
+        <span class="kw">fn </span>u(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;[[u8; <span class="number">32</span>]; H]&gt; {
+            <span class="self">self</span>.<span class="number">1
+                </span>.iter()
+                .map(|(<span class="kw">_</span>, us)| {
                     [
-                        <span class="ident">us</span>[<span class="number">0</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">1</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">2</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">3</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">4</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">5</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">6</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">7</span>].<span class="ident">to_repr</span>(),
+                        us[<span class="number">0</span>].to_repr(),
+                        us[<span class="number">1</span>].to_repr(),
+                        us[<span class="number">2</span>].to_repr(),
+                        us[<span class="number">3</span>].to_repr(),
+                        us[<span class="number">4</span>].to_repr(),
+                        us[<span class="number">5</span>].to_repr(),
+                        us[<span class="number">6</span>].to_repr(),
+                        us[<span class="number">7</span>].to_repr(),
                     ]
                 })
-                .<span class="ident">collect</span>()
+                .collect()
         }
 
-        <span class="kw">fn</span> <span class="ident">z</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> {
-            <span class="self">self</span>.<span class="number">1</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">z</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="kw-2">*</span><span class="ident">z</span>).<span class="ident">collect</span>()
+        <span class="kw">fn </span>z(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u64&gt; {
+            <span class="self">self</span>.<span class="number">1</span>.iter().map(|(z, <span class="kw">_</span>)| <span class="kw-2">*</span>z).collect()
         }
     }
 
-    <span class="kw">impl</span> <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">BaseField</span> {
-        <span class="kw">type</span> <span class="ident">FixedScalarKind</span> <span class="op">=</span> <span class="ident">BaseFieldElem</span>;
+    <span class="kw">impl </span>FixedPoint&lt;pallas::Affine&gt; <span class="kw">for </span>BaseField {
+        <span class="kw">type </span>FixedScalarKind = BaseFieldElem;
 
-        <span class="kw">fn</span> <span class="ident">generator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">pallas::Affine</span> {
-            <span class="kw-2">*</span><span class="ident">BASE</span>
+        <span class="kw">fn </span>generator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; pallas::Affine {
+            <span class="kw-2">*</span>BASE
         }
 
-        <span class="kw">fn</span> <span class="ident">u</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span>[[<span class="ident">u8</span>; <span class="number">32</span>]; <span class="ident">H</span>]<span class="op">&gt;</span> {
-            <span class="ident">ZS_AND_US</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">us</span>)<span class="op">|</span> {
+        <span class="kw">fn </span>u(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;[[u8; <span class="number">32</span>]; H]&gt; {
+            ZS_AND_US
+                .iter()
+                .map(|(<span class="kw">_</span>, us)| {
                     [
-                        <span class="ident">us</span>[<span class="number">0</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">1</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">2</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">3</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">4</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">5</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">6</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">7</span>].<span class="ident">to_repr</span>(),
+                        us[<span class="number">0</span>].to_repr(),
+                        us[<span class="number">1</span>].to_repr(),
+                        us[<span class="number">2</span>].to_repr(),
+                        us[<span class="number">3</span>].to_repr(),
+                        us[<span class="number">4</span>].to_repr(),
+                        us[<span class="number">5</span>].to_repr(),
+                        us[<span class="number">6</span>].to_repr(),
+                        us[<span class="number">7</span>].to_repr(),
                     ]
                 })
-                .<span class="ident">collect</span>()
+                .collect()
         }
 
-        <span class="kw">fn</span> <span class="ident">z</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> {
-            <span class="ident">ZS_AND_US</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">z</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="kw-2">*</span><span class="ident">z</span>).<span class="ident">collect</span>()
+        <span class="kw">fn </span>z(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u64&gt; {
+            ZS_AND_US.iter().map(|(z, <span class="kw">_</span>)| <span class="kw-2">*</span>z).collect()
         }
     }
 
-    <span class="kw">impl</span> <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Short</span> {
-        <span class="kw">type</span> <span class="ident">FixedScalarKind</span> <span class="op">=</span> <span class="ident">ShortScalar</span>;
+    <span class="kw">impl </span>FixedPoint&lt;pallas::Affine&gt; <span class="kw">for </span>Short {
+        <span class="kw">type </span>FixedScalarKind = ShortScalar;
 
-        <span class="kw">fn</span> <span class="ident">generator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">pallas::Affine</span> {
-            <span class="kw-2">*</span><span class="ident">BASE</span>
+        <span class="kw">fn </span>generator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; pallas::Affine {
+            <span class="kw-2">*</span>BASE
         }
 
-        <span class="kw">fn</span> <span class="ident">u</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span>[[<span class="ident">u8</span>; <span class="number">32</span>]; <span class="ident">H</span>]<span class="op">&gt;</span> {
-            <span class="ident">ZS_AND_US_SHORT</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">us</span>)<span class="op">|</span> {
+        <span class="kw">fn </span>u(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;[[u8; <span class="number">32</span>]; H]&gt; {
+            ZS_AND_US_SHORT
+                .iter()
+                .map(|(<span class="kw">_</span>, us)| {
                     [
-                        <span class="ident">us</span>[<span class="number">0</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">1</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">2</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">3</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">4</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">5</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">6</span>].<span class="ident">to_repr</span>(),
-                        <span class="ident">us</span>[<span class="number">7</span>].<span class="ident">to_repr</span>(),
+                        us[<span class="number">0</span>].to_repr(),
+                        us[<span class="number">1</span>].to_repr(),
+                        us[<span class="number">2</span>].to_repr(),
+                        us[<span class="number">3</span>].to_repr(),
+                        us[<span class="number">4</span>].to_repr(),
+                        us[<span class="number">5</span>].to_repr(),
+                        us[<span class="number">6</span>].to_repr(),
+                        us[<span class="number">7</span>].to_repr(),
                     ]
                 })
-                .<span class="ident">collect</span>()
+                .collect()
         }
 
-        <span class="kw">fn</span> <span class="ident">z</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> {
-            <span class="ident">ZS_AND_US_SHORT</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">z</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="kw-2">*</span><span class="ident">z</span>).<span class="ident">collect</span>()
+        <span class="kw">fn </span>z(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u64&gt; {
+            ZS_AND_US_SHORT.iter().map(|(z, <span class="kw">_</span>)| <span class="kw-2">*</span>z).collect()
         }
     }
 
-    <span class="kw">impl</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TestFixedBases</span> {
-        <span class="kw">type</span> <span class="ident">FullScalar</span> <span class="op">=</span> <span class="ident">FullWidth</span>;
-        <span class="kw">type</span> <span class="ident">ShortScalar</span> <span class="op">=</span> <span class="ident">Short</span>;
-        <span class="kw">type</span> <span class="ident">Base</span> <span class="op">=</span> <span class="ident">BaseField</span>;
+    <span class="kw">impl </span>FixedPoints&lt;pallas::Affine&gt; <span class="kw">for </span>TestFixedBases {
+        <span class="kw">type </span>FullScalar = FullWidth;
+        <span class="kw">type </span>ShortScalar = Short;
+        <span class="kw">type </span>Base = BaseField;
     }
 
-    <span class="kw">struct</span> <span class="ident">MyCircuit</span> {
-        <span class="ident">test_errors</span>: <span class="ident">bool</span>,
+    <span class="kw">struct </span>MyCircuit {
+        test_errors: bool,
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="kw">impl</span> <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyCircuit</span> {
-        <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">EccConfig</span><span class="op">&lt;</span><span class="ident">TestFixedBases</span><span class="op">&gt;</span>;
-        <span class="kw">type</span> <span class="ident">FloorPlanner</span> <span class="op">=</span> <span class="ident">SimpleFloorPlanner</span>;
+    <span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="kw">impl </span>Circuit&lt;pallas::Base&gt; <span class="kw">for </span>MyCircuit {
+        <span class="kw">type </span>Config = EccConfig&lt;TestFixedBases&gt;;
+        <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
 
-        <span class="kw">fn</span> <span class="ident">without_witnesses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-            <span class="ident">MyCircuit</span> { <span class="ident">test_errors</span>: <span class="bool-val">false</span> }
+        <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+            MyCircuit { test_errors: <span class="bool-val">false </span>}
         }
 
-        <span class="kw">fn</span> <span class="ident">configure</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Config</span> {
-            <span class="kw">let</span> <span class="ident">advices</span> <span class="op">=</span> [
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
+        <span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) -&gt; <span class="self">Self</span>::Config {
+            <span class="kw">let </span>advices = [
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
             ];
-            <span class="kw">let</span> <span class="ident">lookup_table</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">lookup_table_column</span>();
-            <span class="kw">let</span> <span class="ident">lagrange_coeffs</span> <span class="op">=</span> [
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
+            <span class="kw">let </span>lookup_table = meta.lookup_table_column();
+            <span class="kw">let </span>lagrange_coeffs = [
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
             ];
-            <span class="comment">// Shared fixed column for loading constants</span>
-            <span class="kw">let</span> <span class="ident">constants</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">fixed_column</span>();
-            <span class="ident">meta</span>.<span class="ident">enable_constant</span>(<span class="ident">constants</span>);
+            <span class="comment">// Shared fixed column for loading constants
+            </span><span class="kw">let </span>constants = meta.fixed_column();
+            meta.enable_constant(constants);
 
-            <span class="kw">let</span> <span class="ident">range_check</span> <span class="op">=</span> <span class="ident">LookupRangeCheckConfig::configure</span>(<span class="ident">meta</span>, <span class="ident">advices</span>[<span class="number">9</span>], <span class="ident">lookup_table</span>);
-            <span class="ident">EccChip</span>::<span class="op">&lt;</span><span class="ident">TestFixedBases</span><span class="op">&gt;</span><span class="ident">::configure</span>(<span class="ident">meta</span>, <span class="ident">advices</span>, <span class="ident">lagrange_coeffs</span>, <span class="ident">range_check</span>)
+            <span class="kw">let </span>range_check = LookupRangeCheckConfig::configure(meta, advices[<span class="number">9</span>], lookup_table);
+            EccChip::&lt;TestFixedBases&gt;::configure(meta, advices, lagrange_coeffs, range_check)
         }
 
-        <span class="kw">fn</span> <span class="ident">synthesize</span>(
+        <span class="kw">fn </span>synthesize(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
-            <span class="ident">config</span>: <span class="ident"><span class="self">Self</span>::Config</span>,
-            <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">chip</span> <span class="op">=</span> <span class="ident">EccChip::construct</span>(<span class="ident">config</span>.<span class="ident">clone</span>());
+            config: <span class="self">Self</span>::Config,
+            <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+            <span class="kw">let </span>chip = EccChip::construct(config.clone());
 
-            <span class="comment">// Load 10-bit lookup table. In the Action circuit, this will be</span>
-            <span class="comment">// provided by the Sinsemilla chip.</span>
-            <span class="ident">config</span>.<span class="ident">lookup_config</span>.<span class="ident">load</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>)<span class="question-mark">?</span>;
+            <span class="comment">// Load 10-bit lookup table. In the Action circuit, this will be
+            // provided by the Sinsemilla chip.
+            </span>config.lookup_config.load(<span class="kw-2">&amp;mut </span>layouter)<span class="question-mark">?</span>;
 
-            <span class="comment">// Generate a random non-identity point P</span>
-            <span class="kw">let</span> <span class="ident">p_val</span> <span class="op">=</span> <span class="ident">pallas::Point::random</span>(<span class="ident">rand::rngs::OsRng</span>).<span class="ident">to_affine</span>(); <span class="comment">// P</span>
-            <span class="kw">let</span> <span class="ident">p</span> <span class="op">=</span> <span class="ident"><span class="kw">super</span>::NonIdentityPoint::new</span>(
-                <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;P&quot;</span>),
-                <span class="ident">Value::known</span>(<span class="ident">p_val</span>),
+            <span class="comment">// Generate a random non-identity point P
+            </span><span class="kw">let </span>p_val = pallas::Point::random(rand::rngs::OsRng).to_affine(); <span class="comment">// P
+            </span><span class="kw">let </span>p = <span class="kw">super</span>::NonIdentityPoint::new(
+                chip.clone(),
+                layouter.namespace(|| <span class="string">&quot;P&quot;</span>),
+                Value::known(p_val),
             )<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">p_neg</span> <span class="op">=</span> <span class="op">-</span><span class="ident">p_val</span>;
-            <span class="kw">let</span> <span class="ident">p_neg</span> <span class="op">=</span> <span class="ident"><span class="kw">super</span>::NonIdentityPoint::new</span>(
-                <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;-P&quot;</span>),
-                <span class="ident">Value::known</span>(<span class="ident">p_neg</span>),
-            )<span class="question-mark">?</span>;
-
-            <span class="comment">// Generate a random non-identity point Q</span>
-            <span class="kw">let</span> <span class="ident">q_val</span> <span class="op">=</span> <span class="ident">pallas::Point::random</span>(<span class="ident">rand::rngs::OsRng</span>).<span class="ident">to_affine</span>(); <span class="comment">// Q</span>
-            <span class="kw">let</span> <span class="ident">q</span> <span class="op">=</span> <span class="ident"><span class="kw">super</span>::NonIdentityPoint::new</span>(
-                <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;Q&quot;</span>),
-                <span class="ident">Value::known</span>(<span class="ident">q_val</span>),
+            <span class="kw">let </span>p_neg = -p_val;
+            <span class="kw">let </span>p_neg = <span class="kw">super</span>::NonIdentityPoint::new(
+                chip.clone(),
+                layouter.namespace(|| <span class="string">&quot;-P&quot;</span>),
+                Value::known(p_neg),
             )<span class="question-mark">?</span>;
 
-            <span class="comment">// Make sure P and Q are not the same point.</span>
-            <span class="macro">assert_ne!</span>(<span class="ident">p_val</span>, <span class="ident">q_val</span>);
+            <span class="comment">// Generate a random non-identity point Q
+            </span><span class="kw">let </span>q_val = pallas::Point::random(rand::rngs::OsRng).to_affine(); <span class="comment">// Q
+            </span><span class="kw">let </span>q = <span class="kw">super</span>::NonIdentityPoint::new(
+                chip.clone(),
+                layouter.namespace(|| <span class="string">&quot;Q&quot;</span>),
+                Value::known(q_val),
+            )<span class="question-mark">?</span>;
 
-            <span class="comment">// Test that we can witness the identity as a point, but not as a non-identity point.</span>
-            {
-                <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident"><span class="kw">super</span>::Point::new</span>(
-                    <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;identity&quot;</span>),
-                    <span class="ident">Value::known</span>(<span class="ident">pallas::Affine::identity</span>()),
+            <span class="comment">// Make sure P and Q are not the same point.
+            </span><span class="macro">assert_ne!</span>(p_val, q_val);
+
+            <span class="comment">// Test that we can witness the identity as a point, but not as a non-identity point.
+            </span>{
+                <span class="kw">let _ </span>= <span class="kw">super</span>::Point::new(
+                    chip.clone(),
+                    layouter.namespace(|| <span class="string">&quot;identity&quot;</span>),
+                    Value::known(pallas::Affine::identity()),
                 )<span class="question-mark">?</span>;
 
-                <span class="ident"><span class="kw">super</span>::NonIdentityPoint::new</span>(
-                    <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;identity&quot;</span>),
-                    <span class="ident">Value::known</span>(<span class="ident">pallas::Affine::identity</span>()),
+                <span class="kw">super</span>::NonIdentityPoint::new(
+                    chip.clone(),
+                    layouter.namespace(|| <span class="string">&quot;identity&quot;</span>),
+                    Value::known(pallas::Affine::identity()),
                 )
-                .<span class="ident">expect_err</span>(<span class="string">&quot;Trying to witness the identity should return an error&quot;</span>);
+                .expect_err(<span class="string">&quot;Trying to witness the identity should return an error&quot;</span>);
             }
 
-            <span class="comment">// Test witness non-identity point</span>
-            {
-                <span class="ident"><span class="kw">super</span>::chip::witness_point::tests::test_witness_non_id</span>(
-                    <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;witness non-identity point&quot;</span>),
+            <span class="comment">// Test witness non-identity point
+            </span>{
+                <span class="kw">super</span>::chip::witness_point::tests::test_witness_non_id(
+                    chip.clone(),
+                    layouter.namespace(|| <span class="string">&quot;witness non-identity point&quot;</span>),
                 )
             }
 
-            <span class="comment">// Test complete addition</span>
-            {
-                <span class="ident"><span class="kw">super</span>::chip::add::tests::test_add</span>(
-                    <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;complete addition&quot;</span>),
-                    <span class="ident">p_val</span>,
-                    <span class="kw-2">&amp;</span><span class="ident">p</span>,
-                    <span class="ident">q_val</span>,
-                    <span class="kw-2">&amp;</span><span class="ident">q</span>,
-                    <span class="kw-2">&amp;</span><span class="ident">p_neg</span>,
+            <span class="comment">// Test complete addition
+            </span>{
+                <span class="kw">super</span>::chip::add::tests::test_add(
+                    chip.clone(),
+                    layouter.namespace(|| <span class="string">&quot;complete addition&quot;</span>),
+                    p_val,
+                    <span class="kw-2">&amp;</span>p,
+                    q_val,
+                    <span class="kw-2">&amp;</span>q,
+                    <span class="kw-2">&amp;</span>p_neg,
                 )<span class="question-mark">?</span>;
             }
 
-            <span class="comment">// Test incomplete addition</span>
-            {
-                <span class="ident"><span class="kw">super</span>::chip::add_incomplete::tests::test_add_incomplete</span>(
-                    <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;incomplete addition&quot;</span>),
-                    <span class="ident">p_val</span>,
-                    <span class="kw-2">&amp;</span><span class="ident">p</span>,
-                    <span class="ident">q_val</span>,
-                    <span class="kw-2">&amp;</span><span class="ident">q</span>,
-                    <span class="kw-2">&amp;</span><span class="ident">p_neg</span>,
-                    <span class="self">self</span>.<span class="ident">test_errors</span>,
+            <span class="comment">// Test incomplete addition
+            </span>{
+                <span class="kw">super</span>::chip::add_incomplete::tests::test_add_incomplete(
+                    chip.clone(),
+                    layouter.namespace(|| <span class="string">&quot;incomplete addition&quot;</span>),
+                    p_val,
+                    <span class="kw-2">&amp;</span>p,
+                    q_val,
+                    <span class="kw-2">&amp;</span>q,
+                    <span class="kw-2">&amp;</span>p_neg,
+                    <span class="self">self</span>.test_errors,
                 )<span class="question-mark">?</span>;
             }
 
-            <span class="comment">// Test variable-base scalar multiplication</span>
-            {
-                <span class="ident"><span class="kw">super</span>::chip::mul::tests::test_mul</span>(
-                    <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;variable-base scalar mul&quot;</span>),
-                    <span class="kw-2">&amp;</span><span class="ident">p</span>,
-                    <span class="ident">p_val</span>,
+            <span class="comment">// Test variable-base scalar multiplication
+            </span>{
+                <span class="kw">super</span>::chip::mul::tests::test_mul(
+                    chip.clone(),
+                    layouter.namespace(|| <span class="string">&quot;variable-base scalar mul&quot;</span>),
+                    <span class="kw-2">&amp;</span>p,
+                    p_val,
                 )<span class="question-mark">?</span>;
             }
 
-            <span class="comment">// Test full-width fixed-base scalar multiplication</span>
-            {
-                <span class="ident"><span class="kw">super</span>::chip::mul_fixed::full_width::tests::test_mul_fixed</span>(
-                    <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;full-width fixed-base scalar mul&quot;</span>),
+            <span class="comment">// Test full-width fixed-base scalar multiplication
+            </span>{
+                <span class="kw">super</span>::chip::mul_fixed::full_width::tests::test_mul_fixed(
+                    chip.clone(),
+                    layouter.namespace(|| <span class="string">&quot;full-width fixed-base scalar mul&quot;</span>),
                 )<span class="question-mark">?</span>;
             }
 
-            <span class="comment">// Test signed short fixed-base scalar multiplication</span>
-            {
-                <span class="ident"><span class="kw">super</span>::chip::mul_fixed::short::tests::test_mul_fixed_short</span>(
-                    <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;signed short fixed-base scalar mul&quot;</span>),
+            <span class="comment">// Test signed short fixed-base scalar multiplication
+            </span>{
+                <span class="kw">super</span>::chip::mul_fixed::short::tests::test_mul_fixed_short(
+                    chip.clone(),
+                    layouter.namespace(|| <span class="string">&quot;signed short fixed-base scalar mul&quot;</span>),
                 )<span class="question-mark">?</span>;
             }
 
-            <span class="comment">// Test fixed-base scalar multiplication with a base field element</span>
-            {
-                <span class="ident"><span class="kw">super</span>::chip::mul_fixed::base_field_elem::tests::test_mul_fixed_base_field</span>(
-                    <span class="ident">chip</span>,
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;fixed-base scalar mul with base field element&quot;</span>),
+            <span class="comment">// Test fixed-base scalar multiplication with a base field element
+            </span>{
+                <span class="kw">super</span>::chip::mul_fixed::base_field_elem::tests::test_mul_fixed_base_field(
+                    chip,
+                    layouter.namespace(|| <span class="string">&quot;fixed-base scalar mul with base field element&quot;</span>),
                 )<span class="question-mark">?</span>;
             }
 
@@ -1832,29 +1826,28 @@
         }
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">ecc_chip</span>() {
-        <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="number">13</span>;
-        <span class="kw">let</span> <span class="ident">circuit</span> <span class="op">=</span> <span class="ident">MyCircuit</span> { <span class="ident">test_errors</span>: <span class="bool-val">true</span> };
-        <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver::run</span>(<span class="ident">k</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()))
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>ecc_chip() {
+        <span class="kw">let </span>k = <span class="number">13</span>;
+        <span class="kw">let </span>circuit = MyCircuit { test_errors: <span class="bool-val">true </span>};
+        <span class="kw">let </span>prover = MockProver::run(k, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+        <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()))
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;dev-graph&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">print_ecc_chip</span>() {
-        <span class="kw">use</span> <span class="ident">plotters::prelude</span>::<span class="kw-2">*</span>;
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]</span>
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>print_ecc_chip() {
+        <span class="kw">use </span>plotters::prelude::<span class="kw-2">*</span>;
 
-        <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span> <span class="ident">BitMapBackend::new</span>(<span class="string">&quot;ecc-chip-layout.png&quot;</span>, (<span class="number">1024</span>, <span class="number">7680</span>)).<span class="ident">into_drawing_area</span>();
-        <span class="ident">root</span>.<span class="ident">fill</span>(<span class="kw-2">&amp;</span><span class="ident">WHITE</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span> <span class="ident">root</span>.<span class="ident">titled</span>(<span class="string">&quot;Ecc Chip Layout&quot;</span>, (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">60</span>)).<span class="ident">unwrap</span>();
+        <span class="kw">let </span>root = BitMapBackend::new(<span class="string">&quot;ecc-chip-layout.png&quot;</span>, (<span class="number">1024</span>, <span class="number">7680</span>)).into_drawing_area();
+        root.fill(<span class="kw-2">&amp;</span>WHITE).unwrap();
+        <span class="kw">let </span>root = root.titled(<span class="string">&quot;Ecc Chip Layout&quot;</span>, (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">60</span>)).unwrap();
 
-        <span class="kw">let</span> <span class="ident">circuit</span> <span class="op">=</span> <span class="ident">MyCircuit</span> { <span class="ident">test_errors</span>: <span class="bool-val">false</span> };
-        <span class="ident">halo2_proofs::dev::CircuitLayout::default</span>()
-            .<span class="ident">render</span>(<span class="number">13</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="kw-2">&amp;</span><span class="ident">root</span>)
-            .<span class="ident">unwrap</span>();
+        <span class="kw">let </span>circuit = MyCircuit { test_errors: <span class="bool-val">false </span>};
+        halo2_proofs::dev::CircuitLayout::default()
+            .render(<span class="number">13</span>, <span class="kw-2">&amp;</span>circuit, <span class="kw-2">&amp;</span>root)
+            .unwrap();
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

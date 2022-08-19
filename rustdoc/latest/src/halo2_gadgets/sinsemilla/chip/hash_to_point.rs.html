@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -436,423 +430,422 @@
 <span id="415">415</span>
 <span id="416">416</span>
 <span id="417">417</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">CommitDomains</span>, <span class="ident">HashDomains</span>, <span class="ident">SinsemillaInstructions</span>};
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">NonIdentityEccPoint</span>, <span class="ident">SinsemillaChip</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">ecc::FixedPoints</span>,
-    <span class="ident">sinsemilla::primitives</span>::{<span class="self">self</span> <span class="kw">as</span> <span class="ident">sinsemilla</span>, <span class="ident">lebs2ip_k</span>, <span class="ident">INV_TWO_POW_K</span>, <span class="ident">SINSEMILLA_S</span>},
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{CommitDomains, HashDomains, SinsemillaInstructions};
+<span class="kw">use super</span>::{NonIdentityEccPoint, SinsemillaChip};
+<span class="kw">use crate</span>::{
+    ecc::FixedPoints,
+    sinsemilla::primitives::{<span class="self">self </span><span class="kw">as </span>sinsemilla, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S},
 };
 
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Chip</span>, <span class="ident">Region</span>, <span class="ident">Value</span>},
-    <span class="ident">plonk</span>::{<span class="ident">Assigned</span>, <span class="ident">Error</span>},
+<span class="kw">use </span>halo2_proofs::{
+    circuit::{AssignedCell, Chip, Region, Value},
+    plonk::{Assigned, Error},
 };
 
-<span class="kw">use</span> <span class="ident">group::ff</span>::{<span class="ident">PrimeField</span>, <span class="ident">PrimeFieldBits</span>};
-<span class="kw">use</span> <span class="ident">pasta_curves</span>::{
-    <span class="ident">arithmetic</span>::{<span class="ident">CurveAffine</span>, <span class="ident">FieldExt</span>},
-    <span class="ident">pallas</span>,
+<span class="kw">use </span>group::ff::{PrimeField, PrimeFieldBits};
+<span class="kw">use </span>pasta_curves::{
+    arithmetic::{CurveAffine, FieldExt},
+    pallas,
 };
 
-<span class="kw">use</span> <span class="ident">std::ops::Deref</span>;
+<span class="kw">use </span>std::ops::Deref;
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">Fixed</span><span class="op">&gt;</span> <span class="ident">SinsemillaChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">Fixed</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Fixed</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">Fixed</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;Hash, Commit, Fixed&gt; SinsemillaChip&lt;Hash, Commit, Fixed&gt;
+<span class="kw">where
+    </span>Hash: HashDomains&lt;pallas::Affine&gt;,
+    Fixed: FixedPoints&lt;pallas::Affine&gt;,
+    Commit: CommitDomains&lt;pallas::Affine, Fixed, Hash&gt;,
 {
-    <span class="doccomment">/// [Specification](https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial).</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">hash_message</span>(
+    <span class="doccomment">/// [Specification](https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial).
+    </span><span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>hash_message(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">Q</span>: <span class="ident">pallas::Affine</span>,
-        <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span>
-            <span class="ident">pallas::Affine</span>,
-            { <span class="ident">sinsemilla::K</span> },
-            { <span class="ident">sinsemilla::C</span> },
-        <span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Message</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        Q: pallas::Affine,
+        message: <span class="kw-2">&amp;</span>&lt;<span class="self">Self </span><span class="kw">as </span>SinsemillaInstructions&lt;
+            pallas::Affine,
+            { sinsemilla::K },
+            { sinsemilla::C },
+        &gt;&gt;::Message,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;
         (
-            <span class="ident">NonIdentityEccPoint</span>,
-            <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+            NonIdentityEccPoint,
+            Vec&lt;Vec&lt;AssignedCell&lt;pallas::Base, pallas::Base&gt;&gt;&gt;,
         ),
-        <span class="ident">Error</span>,
-    <span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">offset</span> <span class="op">=</span> <span class="number">0</span>;
+        Error,
+    &gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().clone();
+        <span class="kw">let </span><span class="kw-2">mut </span>offset = <span class="number">0</span>;
 
-        <span class="comment">// Get the `x`- and `y`-coordinates of the starting `Q` base.</span>
-        <span class="kw">let</span> <span class="ident">x_q</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">Q</span>.<span class="ident">coordinates</span>().<span class="ident">unwrap</span>().<span class="ident">x</span>();
-        <span class="kw">let</span> <span class="ident">y_q</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">Q</span>.<span class="ident">coordinates</span>().<span class="ident">unwrap</span>().<span class="ident">y</span>();
+        <span class="comment">// Get the `x`- and `y`-coordinates of the starting `Q` base.
+        </span><span class="kw">let </span>x_q = <span class="kw-2">*</span>Q.coordinates().unwrap().x();
+        <span class="kw">let </span>y_q = <span class="kw-2">*</span>Q.coordinates().unwrap().y();
 
-        <span class="comment">// Constrain the initial x_a, lambda_1, lambda_2, x_p using the q_sinsemilla4</span>
-        <span class="comment">// selector.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">y_a</span>: <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="op">=</span> {
-            <span class="comment">// Enable `q_sinsemilla4` on the first row.</span>
-            <span class="ident">config</span>.<span class="ident">q_sinsemilla4</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
-            <span class="ident">region</span>.<span class="ident">assign_fixed</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;fixed y_q&quot;</span>,
-                <span class="ident">config</span>.<span class="ident">fixed_y_q</span>,
-                <span class="ident">offset</span>,
-                <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">y_q</span>),
+        <span class="comment">// Constrain the initial x_a, lambda_1, lambda_2, x_p using the q_sinsemilla4
+        // selector.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>y_a: Y&lt;pallas::Base&gt; = {
+            <span class="comment">// Enable `q_sinsemilla4` on the first row.
+            </span>config.q_sinsemilla4.enable(region, offset)<span class="question-mark">?</span>;
+            region.assign_fixed(
+                || <span class="string">&quot;fixed y_q&quot;</span>,
+                config.fixed_y_q,
+                offset,
+                || Value::known(y_q),
             )<span class="question-mark">?</span>;
 
-            <span class="ident">Value::known</span>(<span class="ident">y_q</span>.<span class="ident">into</span>()).<span class="ident">into</span>()
+            Value::known(y_q.into()).into()
         };
 
-        <span class="comment">// Constrain the initial x_q to equal the x-coordinate of the domain&#39;s `Q`.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x_a</span>: <span class="ident">X</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice_from_constant</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;fixed x_q&quot;</span>,
-                <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>,
-                <span class="ident">offset</span>,
-                <span class="ident">x_q</span>.<span class="ident">into</span>(),
+        <span class="comment">// Constrain the initial x_q to equal the x-coordinate of the domain&#39;s `Q`.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>x_a: X&lt;pallas::Base&gt; = {
+            <span class="kw">let </span>x_a = region.assign_advice_from_constant(
+                || <span class="string">&quot;fixed x_q&quot;</span>,
+                config.double_and_add.x_a,
+                offset,
+                x_q.into(),
             )<span class="question-mark">?</span>;
 
-            <span class="ident">x_a</span>.<span class="ident">into</span>()
+            x_a.into()
         };
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">zs_sum</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec::new</span>();
+        <span class="kw">let </span><span class="kw-2">mut </span>zs_sum: Vec&lt;Vec&lt;AssignedCell&lt;pallas::Base, pallas::Base&gt;&gt;&gt; = Vec::new();
 
-        <span class="comment">// Hash each piece in the message.</span>
-        <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">piece</span>) <span class="kw">in</span> <span class="ident">message</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-            <span class="kw">let</span> <span class="ident">final_piece</span> <span class="op">=</span> <span class="ident">idx</span> <span class="op">==</span> <span class="ident">message</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span>;
+        <span class="comment">// Hash each piece in the message.
+        </span><span class="kw">for </span>(idx, piece) <span class="kw">in </span>message.iter().enumerate() {
+            <span class="kw">let </span>final_piece = idx == message.len() - <span class="number">1</span>;
 
-            <span class="comment">// The value of the accumulator after this piece is processed.</span>
-            <span class="kw">let</span> (<span class="ident">x</span>, <span class="ident">y</span>, <span class="ident">zs</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">hash_piece</span>(<span class="ident">region</span>, <span class="ident">offset</span>, <span class="ident">piece</span>, <span class="ident">x_a</span>, <span class="ident">y_a</span>, <span class="ident">final_piece</span>)<span class="question-mark">?</span>;
+            <span class="comment">// The value of the accumulator after this piece is processed.
+            </span><span class="kw">let </span>(x, y, zs) = <span class="self">self</span>.hash_piece(region, offset, piece, x_a, y_a, final_piece)<span class="question-mark">?</span>;
 
-            <span class="comment">// Since each message word takes one row to process, we increase</span>
-            <span class="comment">// the offset by `piece.num_words` on each iteration.</span>
-            <span class="ident">offset</span> <span class="op">+</span><span class="op">=</span> <span class="ident">piece</span>.<span class="ident">num_words</span>();
+            <span class="comment">// Since each message word takes one row to process, we increase
+            // the offset by `piece.num_words` on each iteration.
+            </span>offset += piece.num_words();
 
-            <span class="comment">// Update the accumulator to the latest value.</span>
-            <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">x</span>;
-            <span class="ident">y_a</span> <span class="op">=</span> <span class="ident">y</span>;
-            <span class="ident">zs_sum</span>.<span class="ident">push</span>(<span class="ident">zs</span>);
+            <span class="comment">// Update the accumulator to the latest value.
+            </span>x_a = x;
+            y_a = y;
+            zs_sum.push(zs);
         }
 
-        <span class="comment">// Assign the final y_a.</span>
-        <span class="kw">let</span> <span class="ident">y_a</span> <span class="op">=</span> {
-            <span class="comment">// Assign the final y_a.</span>
-            <span class="kw">let</span> <span class="ident">y_a_cell</span> <span class="op">=</span>
-                <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_a&quot;</span>, <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>, <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">y_a</span>.<span class="number">0</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign the final y_a.
+        </span><span class="kw">let </span>y_a = {
+            <span class="comment">// Assign the final y_a.
+            </span><span class="kw">let </span>y_a_cell =
+                region.assign_advice(|| <span class="string">&quot;y_a&quot;</span>, config.double_and_add.lambda_1, offset, || y_a.<span class="number">0</span>)<span class="question-mark">?</span>;
 
-            <span class="comment">// Assign lambda_2 and x_p zero values since they are queried</span>
-            <span class="comment">// in the gate. (The actual values do not matter since they are</span>
-            <span class="comment">// multiplied by zero.)</span>
-            {
-                <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="string">&quot;dummy lambda2&quot;</span>,
-                    <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_2</span>,
-                    <span class="ident">offset</span>,
-                    <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">pallas::Base::zero</span>()),
+            <span class="comment">// Assign lambda_2 and x_p zero values since they are queried
+            // in the gate. (The actual values do not matter since they are
+            // multiplied by zero.)
+            </span>{
+                region.assign_advice(
+                    || <span class="string">&quot;dummy lambda2&quot;</span>,
+                    config.double_and_add.lambda_2,
+                    offset,
+                    || Value::known(pallas::Base::zero()),
                 )<span class="question-mark">?</span>;
-                <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="string">&quot;dummy x_p&quot;</span>,
-                    <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>,
-                    <span class="ident">offset</span>,
-                    <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">pallas::Base::zero</span>()),
+                region.assign_advice(
+                    || <span class="string">&quot;dummy x_p&quot;</span>,
+                    config.double_and_add.x_p,
+                    offset,
+                    || Value::known(pallas::Base::zero()),
                 )<span class="question-mark">?</span>;
             }
 
-            <span class="ident">y_a_cell</span>
+            y_a_cell
         };
 
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-        <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-        <span class="comment">// Check equivalence to result from primitives::sinsemilla::hash_to_point</span>
-        {
-            <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::sinsemilla::primitives</span>::{<span class="ident">K</span>, <span class="ident">S_PERSONALIZATION</span>};
+        <span class="attribute">#[cfg(test)]</span>
+        <span class="attribute">#[allow(non_snake_case)]</span>
+        <span class="comment">// Check equivalence to result from primitives::sinsemilla::hash_to_point
+        </span>{
+            <span class="kw">use </span><span class="kw">crate</span>::sinsemilla::primitives::{K, S_PERSONALIZATION};
 
-            <span class="kw">use</span> <span class="ident">group</span>::{<span class="ident">prime::PrimeCurveAffine</span>, <span class="ident">Curve</span>};
-            <span class="kw">use</span> <span class="ident">pasta_curves::arithmetic::CurveExt</span>;
+            <span class="kw">use </span>group::{prime::PrimeCurveAffine, Curve};
+            <span class="kw">use </span>pasta_curves::arithmetic::CurveExt;
 
-            <span class="kw">let</span> <span class="ident">field_elems</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">message</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">piece</span><span class="op">|</span> <span class="ident">piece</span>.<span class="ident">field_elem</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">elem</span><span class="op">|</span> (<span class="ident">elem</span>, <span class="ident">piece</span>.<span class="ident">num_words</span>())))
-                .<span class="ident">collect</span>();
+            <span class="kw">let </span>field_elems: Value&lt;Vec&lt;<span class="kw">_</span>&gt;&gt; = message
+                .iter()
+                .map(|piece| piece.field_elem().map(|elem| (elem, piece.num_words())))
+                .collect();
 
-            <span class="ident">field_elems</span>
-                .<span class="ident">zip</span>(<span class="ident">x_a</span>.<span class="ident">value</span>().<span class="ident">zip</span>(<span class="ident">y_a</span>.<span class="ident">value</span>()))
-                .<span class="ident">assert_if_known</span>(<span class="op">|</span>(<span class="ident">field_elems</span>, (<span class="ident">x_a</span>, <span class="ident">y_a</span>))<span class="op">|</span> {
-                    <span class="comment">// Get message as a bitstring.</span>
-                    <span class="kw">let</span> <span class="ident">bitstring</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">field_elems</span>
-                        .<span class="ident">iter</span>()
-                        .<span class="ident">flat_map</span>(<span class="op">|</span>(<span class="ident">elem</span>, <span class="ident">num_words</span>)<span class="op">|</span> {
-                            <span class="ident">elem</span>.<span class="ident">to_le_bits</span>().<span class="ident">into_iter</span>().<span class="ident">take</span>(<span class="ident">K</span> <span class="op">*</span> <span class="ident">num_words</span>)
+            field_elems
+                .zip(x_a.value().zip(y_a.value()))
+                .assert_if_known(|(field_elems, (x_a, y_a))| {
+                    <span class="comment">// Get message as a bitstring.
+                    </span><span class="kw">let </span>bitstring: Vec&lt;bool&gt; = field_elems
+                        .iter()
+                        .flat_map(|(elem, num_words)| {
+                            elem.to_le_bits().into_iter().take(K * num_words)
                         })
-                        .<span class="ident">collect</span>();
+                        .collect();
 
-                    <span class="kw">let</span> <span class="ident">hasher_S</span> <span class="op">=</span> <span class="ident">pallas::Point::hash_to_curve</span>(<span class="ident">S_PERSONALIZATION</span>);
-                    <span class="kw">let</span> <span class="ident">S</span> <span class="op">=</span> <span class="op">|</span><span class="ident">chunk</span>: <span class="kw-2">&amp;</span>[<span class="ident">bool</span>]<span class="op">|</span> <span class="ident">hasher_S</span>(<span class="kw-2">&amp;</span><span class="ident">lebs2ip_k</span>(<span class="ident">chunk</span>).<span class="ident">to_le_bytes</span>());
+                    <span class="kw">let </span>hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
+                    <span class="kw">let </span>S = |chunk: <span class="kw-2">&amp;</span>[bool]| hasher_S(<span class="kw-2">&amp;</span>lebs2ip_k(chunk).to_le_bytes());
 
-                    <span class="comment">// We can use complete addition here because it differs from</span>
-                    <span class="comment">// incomplete addition with negligible probability.</span>
-                    <span class="kw">let</span> <span class="ident">expected_point</span> <span class="op">=</span> <span class="ident">bitstring</span>
-                        .<span class="ident">chunks</span>(<span class="ident">K</span>)
-                        .<span class="ident">fold</span>(<span class="ident">Q</span>.<span class="ident">to_curve</span>(), <span class="op">|</span><span class="ident">acc</span>, <span class="ident">chunk</span><span class="op">|</span> (<span class="ident">acc</span> <span class="op">+</span> <span class="ident">S</span>(<span class="ident">chunk</span>)) <span class="op">+</span> <span class="ident">acc</span>);
-                    <span class="kw">let</span> <span class="ident">actual_point</span> <span class="op">=</span>
-                        <span class="ident">pallas::Affine::from_xy</span>(<span class="ident">x_a</span>.<span class="ident">evaluate</span>(), <span class="ident">y_a</span>.<span class="ident">evaluate</span>()).<span class="ident">unwrap</span>();
-                    <span class="ident">expected_point</span>.<span class="ident">to_affine</span>() <span class="op">==</span> <span class="ident">actual_point</span>
+                    <span class="comment">// We can use complete addition here because it differs from
+                    // incomplete addition with negligible probability.
+                    </span><span class="kw">let </span>expected_point = bitstring
+                        .chunks(K)
+                        .fold(Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
+                    <span class="kw">let </span>actual_point =
+                        pallas::Affine::from_xy(x_a.evaluate(), y_a.evaluate()).unwrap();
+                    expected_point.to_affine() == actual_point
                 });
         }
 
-        <span class="ident">x_a</span>.<span class="ident">value</span>()
-            .<span class="ident">zip</span>(<span class="ident">y_a</span>.<span class="ident">value</span>())
-            .<span class="ident">error_if_known_and</span>(<span class="op">|</span>(<span class="ident">x_a</span>, <span class="ident">y_a</span>)<span class="op">|</span> <span class="ident">x_a</span>.<span class="ident">is_zero_vartime</span>() <span class="op">|</span><span class="op">|</span> <span class="ident">y_a</span>.<span class="ident">is_zero_vartime</span>())<span class="question-mark">?</span>;
+        x_a.value()
+            .zip(y_a.value())
+            .error_if_known_and(|(x_a, y_a)| x_a.is_zero_vartime() || y_a.is_zero_vartime())<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>((
-            <span class="ident">NonIdentityEccPoint::from_coordinates_unchecked</span>(<span class="ident">x_a</span>.<span class="number">0</span>, <span class="ident">y_a</span>),
-            <span class="ident">zs_sum</span>,
+            NonIdentityEccPoint::from_coordinates_unchecked(x_a.<span class="number">0</span>, y_a),
+            zs_sum,
         ))
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="doccomment">/// Hashes a message piece containing `piece.length` number of `K`-bit words.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// To avoid a duplicate assignment, the accumulator x-coordinate provided</span>
-    <span class="doccomment">/// by the caller is not copied. This only works because `hash_piece()` is</span>
-    <span class="doccomment">/// an internal API. Before this call to `hash_piece()`, x_a MUST have been</span>
-    <span class="doccomment">/// already assigned within this region at the correct offset.</span>
-    <span class="kw">fn</span> <span class="ident">hash_piece</span>(
+    <span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="doccomment">/// Hashes a message piece containing `piece.length` number of `K`-bit words.
+    ///
+    /// To avoid a duplicate assignment, the accumulator x-coordinate provided
+    /// by the caller is not copied. This only works because `hash_piece()` is
+    /// an internal API. Before this call to `hash_piece()`, x_a MUST have been
+    /// already assigned within this region at the correct offset.
+    </span><span class="kw">fn </span>hash_piece(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">piece</span>: <span class="kw-2">&amp;</span><span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span>
-            <span class="ident">pallas::Affine</span>,
-            { <span class="ident">sinsemilla::K</span> },
-            { <span class="ident">sinsemilla::C</span> },
-        <span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::MessagePiece</span>,
-        <span class="kw-2">mut</span> <span class="ident">x_a</span>: <span class="ident">X</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="kw-2">mut</span> <span class="ident">y_a</span>: <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">final_piece</span>: <span class="ident">bool</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        offset: usize,
+        piece: <span class="kw-2">&amp;</span>&lt;<span class="self">Self </span><span class="kw">as </span>SinsemillaInstructions&lt;
+            pallas::Affine,
+            { sinsemilla::K },
+            { sinsemilla::C },
+        &gt;&gt;::MessagePiece,
+        <span class="kw-2">mut </span>x_a: X&lt;pallas::Base&gt;,
+        <span class="kw-2">mut </span>y_a: Y&lt;pallas::Base&gt;,
+        final_piece: bool,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;
         (
-            <span class="ident">X</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-            <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-            <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+            X&lt;pallas::Base&gt;,
+            Y&lt;pallas::Base&gt;,
+            Vec&lt;AssignedCell&lt;pallas::Base, pallas::Base&gt;&gt;,
         ),
-        <span class="ident">Error</span>,
-    <span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">clone</span>();
+        Error,
+    &gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().clone();
 
-        <span class="comment">// Selector assignments</span>
-        {
-            <span class="comment">// Enable `q_sinsemilla1` selector on every row.</span>
-            <span class="kw">for</span> <span class="ident">row</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">piece</span>.<span class="ident">num_words</span>() {
-                <span class="ident">config</span>.<span class="ident">q_sinsemilla1</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Selector assignments
+        </span>{
+            <span class="comment">// Enable `q_sinsemilla1` selector on every row.
+            </span><span class="kw">for </span>row <span class="kw">in </span><span class="number">0</span>..piece.num_words() {
+                config.q_sinsemilla1.enable(region, offset + row)<span class="question-mark">?</span>;
             }
 
-            <span class="comment">// Set `q_sinsemilla2` fixed column to 1 on every row but the last.</span>
-            <span class="kw">for</span> <span class="ident">row</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="ident">piece</span>.<span class="ident">num_words</span>() <span class="op">-</span> <span class="number">1</span>) {
-                <span class="ident">region</span>.<span class="ident">assign_fixed</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="string">&quot;q_s2 = 1&quot;</span>,
-                    <span class="ident">config</span>.<span class="ident">q_sinsemilla2</span>,
-                    <span class="ident">offset</span> <span class="op">+</span> <span class="ident">row</span>,
-                    <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">pallas::Base::one</span>()),
+            <span class="comment">// Set `q_sinsemilla2` fixed column to 1 on every row but the last.
+            </span><span class="kw">for </span>row <span class="kw">in </span><span class="number">0</span>..(piece.num_words() - <span class="number">1</span>) {
+                region.assign_fixed(
+                    || <span class="string">&quot;q_s2 = 1&quot;</span>,
+                    config.q_sinsemilla2,
+                    offset + row,
+                    || Value::known(pallas::Base::one()),
                 )<span class="question-mark">?</span>;
             }
 
-            <span class="comment">// Set `q_sinsemilla2` fixed column to 0 on the last row if this is</span>
-            <span class="comment">// not the final piece, or to 2 on the last row of the final piece.</span>
-            <span class="ident">region</span>.<span class="ident">assign_fixed</span>(
-                <span class="op">|</span><span class="op">|</span> {
-                    <span class="kw">if</span> <span class="ident">final_piece</span> {
-                        <span class="string">&quot;q_s2 for final piece&quot;</span>
-                    } <span class="kw">else</span> {
-                        <span class="string">&quot;q_s2 between pieces&quot;</span>
-                    }
+            <span class="comment">// Set `q_sinsemilla2` fixed column to 0 on the last row if this is
+            // not the final piece, or to 2 on the last row of the final piece.
+            </span>region.assign_fixed(
+                || {
+                    <span class="kw">if </span>final_piece {
+                        <span class="string">&quot;q_s2 for final piece&quot;
+                    </span>} <span class="kw">else </span>{
+                        <span class="string">&quot;q_s2 between pieces&quot;
+                    </span>}
                 },
-                <span class="ident">config</span>.<span class="ident">q_sinsemilla2</span>,
-                <span class="ident">offset</span> <span class="op">+</span> <span class="ident">piece</span>.<span class="ident">num_words</span>() <span class="op">-</span> <span class="number">1</span>,
-                <span class="op">|</span><span class="op">|</span> {
-                    <span class="ident">Value::known</span>(<span class="kw">if</span> <span class="ident">final_piece</span> {
-                        <span class="ident">pallas::Base::from</span>(<span class="number">2</span>)
-                    } <span class="kw">else</span> {
-                        <span class="ident">pallas::Base::zero</span>()
+                config.q_sinsemilla2,
+                offset + piece.num_words() - <span class="number">1</span>,
+                || {
+                    Value::known(<span class="kw">if </span>final_piece {
+                        pallas::Base::from(<span class="number">2</span>)
+                    } <span class="kw">else </span>{
+                        pallas::Base::zero()
                     })
                 },
             )<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// Message piece as K * piece.length bitstring</span>
-        <span class="kw">let</span> <span class="ident">bitstring</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">piece</span>.<span class="ident">field_elem</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">value</span><span class="op">|</span> {
-            <span class="ident">value</span>
-                .<span class="ident">to_le_bits</span>()
-                .<span class="ident">into_iter</span>()
-                .<span class="ident">take</span>(<span class="ident">sinsemilla::K</span> <span class="op">*</span> <span class="ident">piece</span>.<span class="ident">num_words</span>())
-                .<span class="ident">collect</span>()
+        <span class="comment">// Message piece as K * piece.length bitstring
+        </span><span class="kw">let </span>bitstring: Value&lt;Vec&lt;bool&gt;&gt; = piece.field_elem().map(|value| {
+            value
+                .to_le_bits()
+                .into_iter()
+                .take(sinsemilla::K * piece.num_words())
+                .collect()
         });
 
-        <span class="kw">let</span> <span class="ident">words</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">bitstring</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">bitstring</span><span class="op">|</span> {
-            <span class="ident">bitstring</span>
-                .<span class="ident">chunks_exact</span>(<span class="ident">sinsemilla::K</span>)
-                .<span class="ident">map</span>(<span class="ident">lebs2ip_k</span>)
-                .<span class="ident">collect</span>()
+        <span class="kw">let </span>words: Value&lt;Vec&lt;u32&gt;&gt; = bitstring.map(|bitstring| {
+            bitstring
+                .chunks_exact(sinsemilla::K)
+                .map(lebs2ip_k)
+                .collect()
         });
 
-        <span class="comment">// Get (x_p, y_p) for each word.</span>
-        <span class="kw">let</span> <span class="ident">generators</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span>)<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">words</span>.<span class="ident">clone</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">words</span><span class="op">|</span> {
-            <span class="ident">words</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident">SINSEMILLA_S</span>[<span class="kw-2">*</span><span class="ident">word</span> <span class="kw">as</span> <span class="ident">usize</span>])
-                .<span class="ident">collect</span>()
+        <span class="comment">// Get (x_p, y_p) for each word.
+        </span><span class="kw">let </span>generators: Value&lt;Vec&lt;(pallas::Base, pallas::Base)&gt;&gt; = words.clone().map(|words| {
+            words
+                .iter()
+                .map(|word| SINSEMILLA_S[<span class="kw-2">*</span>word <span class="kw">as </span>usize])
+                .collect()
         });
 
-        <span class="comment">// Convert `words` from `Value&lt;Vec&lt;u32&gt;&gt;` to `Vec&lt;Value&lt;u32&gt;&gt;`</span>
-        <span class="kw">let</span> <span class="ident">words</span> <span class="op">=</span> <span class="ident">words</span>.<span class="ident">transpose_vec</span>(<span class="ident">piece</span>.<span class="ident">num_words</span>());
+        <span class="comment">// Convert `words` from `Value&lt;Vec&lt;u32&gt;&gt;` to `Vec&lt;Value&lt;u32&gt;&gt;`
+        </span><span class="kw">let </span>words = words.transpose_vec(piece.num_words());
 
-        <span class="comment">// Decompose message piece into `K`-bit pieces with a running sum `z`.</span>
-        <span class="kw">let</span> <span class="ident">zs</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">zs</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">piece</span>.<span class="ident">num_words</span>() <span class="op">+</span> <span class="number">1</span>);
+        <span class="comment">// Decompose message piece into `K`-bit pieces with a running sum `z`.
+        </span><span class="kw">let </span>zs = {
+            <span class="kw">let </span><span class="kw-2">mut </span>zs = Vec::with_capacity(piece.num_words() + <span class="number">1</span>);
 
-            <span class="comment">// Copy message and initialize running sum `z` to decompose message in-circuit</span>
-            <span class="kw">let</span> <span class="ident">initial_z</span> <span class="op">=</span> <span class="ident">piece</span>.<span class="ident">cell_value</span>().<span class="ident">copy_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;z_0 (copy of message piece)&quot;</span>,
-                <span class="ident">region</span>,
-                <span class="ident">config</span>.<span class="ident">bits</span>,
-                <span class="ident">offset</span>,
+            <span class="comment">// Copy message and initialize running sum `z` to decompose message in-circuit
+            </span><span class="kw">let </span>initial_z = piece.cell_value().copy_advice(
+                || <span class="string">&quot;z_0 (copy of message piece)&quot;</span>,
+                region,
+                config.bits,
+                offset,
             )<span class="question-mark">?</span>;
-            <span class="ident">zs</span>.<span class="ident">push</span>(<span class="ident">initial_z</span>);
+            zs.push(initial_z);
 
-            <span class="comment">// Assign cumulative sum such that for 0 &lt;= i &lt; n,</span>
-            <span class="comment">//          z_i = 2^K * z_{i + 1} + m_{i + 1}</span>
-            <span class="comment">// =&gt; z_{i + 1} = (z_i - m_{i + 1}) / 2^K</span>
-            <span class="comment">//</span>
-            <span class="comment">// For a message piece m = m_1 + 2^K m_2 + ... + 2^{K(n-1)} m_n}, initialize z_0 = m.</span>
-            <span class="comment">// We end up with z_n = 0. (z_n is not directly encoded as a cell value;</span>
-            <span class="comment">// it is implicitly taken as 0 by adjusting the definition of m_{i+1}.)</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">z</span> <span class="op">=</span> <span class="ident">piece</span>.<span class="ident">field_elem</span>();
-            <span class="kw">let</span> <span class="ident">inv_2_k</span> <span class="op">=</span> <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from_repr</span>(<span class="ident">INV_TWO_POW_K</span>).<span class="ident">unwrap</span>());
+            <span class="comment">// Assign cumulative sum such that for 0 &lt;= i &lt; n,
+            //          z_i = 2^K * z_{i + 1} + m_{i + 1}
+            // =&gt; z_{i + 1} = (z_i - m_{i + 1}) / 2^K
+            //
+            // For a message piece m = m_1 + 2^K m_2 + ... + 2^{K(n-1)} m_n}, initialize z_0 = m.
+            // We end up with z_n = 0. (z_n is not directly encoded as a cell value;
+            // it is implicitly taken as 0 by adjusting the definition of m_{i+1}.)
+            </span><span class="kw">let </span><span class="kw-2">mut </span>z = piece.field_elem();
+            <span class="kw">let </span>inv_2_k = Value::known(pallas::Base::from_repr(INV_TWO_POW_K).unwrap());
 
-            <span class="comment">// We do not assign the final z_n as it is constrained to be zero.</span>
-            <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">word</span>) <span class="kw">in</span> <span class="ident">words</span>[<span class="number">0</span>..(<span class="ident">words</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span>)].<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-                <span class="kw">let</span> <span class="ident">word</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">word</span> <span class="kw">as</span> <span class="ident">u64</span>));
-                <span class="comment">// z_{i + 1} = (z_i - m_{i + 1}) / 2^K</span>
-                <span class="ident">z</span> <span class="op">=</span> (<span class="ident">z</span> <span class="op">-</span> <span class="ident">word</span>) <span class="op">*</span> <span class="ident">inv_2_k</span>;
-                <span class="kw">let</span> <span class="ident">cell</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;z_{:?}&quot;</span>, <span class="ident">idx</span> <span class="op">+</span> <span class="number">1</span>),
-                    <span class="ident">config</span>.<span class="ident">bits</span>,
-                    <span class="ident">offset</span> <span class="op">+</span> <span class="ident">idx</span> <span class="op">+</span> <span class="number">1</span>,
-                    <span class="op">|</span><span class="op">|</span> <span class="ident">z</span>,
+            <span class="comment">// We do not assign the final z_n as it is constrained to be zero.
+            </span><span class="kw">for </span>(idx, word) <span class="kw">in </span>words[<span class="number">0</span>..(words.len() - <span class="number">1</span>)].iter().enumerate() {
+                <span class="kw">let </span>word = word.map(|word| pallas::Base::from(word <span class="kw">as </span>u64));
+                <span class="comment">// z_{i + 1} = (z_i - m_{i + 1}) / 2^K
+                </span>z = (z - word) * inv_2_k;
+                <span class="kw">let </span>cell = region.assign_advice(
+                    || <span class="macro">format!</span>(<span class="string">&quot;z_{:?}&quot;</span>, idx + <span class="number">1</span>),
+                    config.bits,
+                    offset + idx + <span class="number">1</span>,
+                    || z,
                 )<span class="question-mark">?</span>;
-                <span class="ident">zs</span>.<span class="ident">push</span>(<span class="ident">cell</span>)
+                zs.push(cell)
             }
 
-            <span class="ident">zs</span>
+            zs
         };
 
-        <span class="comment">// The accumulator x-coordinate provided by the caller MUST have been assigned</span>
-        <span class="comment">// within this region.</span>
+        <span class="comment">// The accumulator x-coordinate provided by the caller MUST have been assigned
+        // within this region.
 
-        <span class="kw">let</span> <span class="ident">generators</span> <span class="op">=</span> <span class="ident">generators</span>.<span class="ident">transpose_vec</span>(<span class="ident">piece</span>.<span class="ident">num_words</span>());
+        </span><span class="kw">let </span>generators = generators.transpose_vec(piece.num_words());
 
-        <span class="kw">for</span> (<span class="ident">row</span>, <span class="ident">gen</span>) <span class="kw">in</span> <span class="ident">generators</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-            <span class="kw">let</span> <span class="ident">x_p</span> <span class="op">=</span> <span class="ident">gen</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">gen</span><span class="op">|</span> <span class="ident">gen</span>.<span class="number">0</span>);
-            <span class="kw">let</span> <span class="ident">y_p</span> <span class="op">=</span> <span class="ident">gen</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">gen</span><span class="op">|</span> <span class="ident">gen</span>.<span class="number">1</span>);
+        <span class="kw">for </span>(row, gen) <span class="kw">in </span>generators.iter().enumerate() {
+            <span class="kw">let </span>x_p = gen.map(|gen| gen.<span class="number">0</span>);
+            <span class="kw">let </span>y_p = gen.map(|gen| gen.<span class="number">1</span>);
 
-            <span class="comment">// Assign `x_p`</span>
-            <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;x_p&quot;</span>, <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="ident">row</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">x_p</span>)<span class="question-mark">?</span>;
+            <span class="comment">// Assign `x_p`
+            </span>region.assign_advice(|| <span class="string">&quot;x_p&quot;</span>, config.double_and_add.x_p, offset + row, || x_p)<span class="question-mark">?</span>;
 
-            <span class="comment">// Compute and assign `lambda_1`</span>
-            <span class="kw">let</span> <span class="ident">lambda_1</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">lambda_1</span> <span class="op">=</span> (<span class="ident">y_a</span>.<span class="number">0</span> <span class="op">-</span> <span class="ident">y_p</span>) <span class="op">*</span> (<span class="ident">x_a</span>.<span class="ident">value</span>() <span class="op">-</span> <span class="ident">x_p</span>).<span class="ident">invert</span>();
+            <span class="comment">// Compute and assign `lambda_1`
+            </span><span class="kw">let </span>lambda_1 = {
+                <span class="kw">let </span>lambda_1 = (y_a.<span class="number">0 </span>- y_p) * (x_a.value() - x_p).invert();
 
-                <span class="comment">// Assign lambda_1</span>
-                <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="string">&quot;lambda_1&quot;</span>,
-                    <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>,
-                    <span class="ident">offset</span> <span class="op">+</span> <span class="ident">row</span>,
-                    <span class="op">|</span><span class="op">|</span> <span class="ident">lambda_1</span>,
+                <span class="comment">// Assign lambda_1
+                </span>region.assign_advice(
+                    || <span class="string">&quot;lambda_1&quot;</span>,
+                    config.double_and_add.lambda_1,
+                    offset + row,
+                    || lambda_1,
                 )<span class="question-mark">?</span>;
 
-                <span class="ident">lambda_1</span>
+                lambda_1
             };
 
-            <span class="comment">// Compute `x_r`</span>
-            <span class="kw">let</span> <span class="ident">x_r</span> <span class="op">=</span> <span class="ident">lambda_1</span>.<span class="ident">square</span>() <span class="op">-</span> <span class="ident">x_a</span>.<span class="ident">value</span>() <span class="op">-</span> <span class="ident">x_p</span>;
+            <span class="comment">// Compute `x_r`
+            </span><span class="kw">let </span>x_r = lambda_1.square() - x_a.value() - x_p;
 
-            <span class="comment">// Compute and assign `lambda_2`</span>
-            <span class="kw">let</span> <span class="ident">lambda_2</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">lambda_2</span> <span class="op">=</span>
-                    <span class="ident">y_a</span>.<span class="number">0</span> <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="number">2</span>) <span class="op">*</span> (<span class="ident">x_a</span>.<span class="ident">value</span>() <span class="op">-</span> <span class="ident">x_r</span>).<span class="ident">invert</span>() <span class="op">-</span> <span class="ident">lambda_1</span>;
+            <span class="comment">// Compute and assign `lambda_2`
+            </span><span class="kw">let </span>lambda_2 = {
+                <span class="kw">let </span>lambda_2 =
+                    y_a.<span class="number">0 </span>* pallas::Base::from(<span class="number">2</span>) * (x_a.value() - x_r).invert() - lambda_1;
 
-                <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="string">&quot;lambda_2&quot;</span>,
-                    <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_2</span>,
-                    <span class="ident">offset</span> <span class="op">+</span> <span class="ident">row</span>,
-                    <span class="op">|</span><span class="op">|</span> <span class="ident">lambda_2</span>,
+                region.assign_advice(
+                    || <span class="string">&quot;lambda_2&quot;</span>,
+                    config.double_and_add.lambda_2,
+                    offset + row,
+                    || lambda_2,
                 )<span class="question-mark">?</span>;
 
-                <span class="ident">lambda_2</span>
+                lambda_2
             };
 
-            <span class="comment">// Compute and assign `x_a` for the next row.</span>
-            <span class="kw">let</span> <span class="ident">x_a_new</span>: <span class="ident">X</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">x_a_new</span> <span class="op">=</span> <span class="ident">lambda_2</span>.<span class="ident">square</span>() <span class="op">-</span> <span class="ident">x_a</span>.<span class="ident">value</span>() <span class="op">-</span> <span class="ident">x_r</span>;
+            <span class="comment">// Compute and assign `x_a` for the next row.
+            </span><span class="kw">let </span>x_a_new: X&lt;pallas::Base&gt; = {
+                <span class="kw">let </span>x_a_new = lambda_2.square() - x_a.value() - x_r;
 
-                <span class="kw">let</span> <span class="ident">x_a_cell</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="string">&quot;x_a&quot;</span>,
-                    <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>,
-                    <span class="ident">offset</span> <span class="op">+</span> <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>,
-                    <span class="op">|</span><span class="op">|</span> <span class="ident">x_a_new</span>,
+                <span class="kw">let </span>x_a_cell = region.assign_advice(
+                    || <span class="string">&quot;x_a&quot;</span>,
+                    config.double_and_add.x_a,
+                    offset + row + <span class="number">1</span>,
+                    || x_a_new,
                 )<span class="question-mark">?</span>;
 
-                <span class="ident">x_a_cell</span>.<span class="ident">into</span>()
+                x_a_cell.into()
             };
 
-            <span class="comment">// Compute y_a for the next row.</span>
-            <span class="kw">let</span> <span class="ident">y_a_new</span>: <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="op">=</span>
-                (<span class="ident">lambda_2</span> <span class="op">*</span> (<span class="ident">x_a</span>.<span class="ident">value</span>() <span class="op">-</span> <span class="ident">x_a_new</span>.<span class="ident">value</span>()) <span class="op">-</span> <span class="ident">y_a</span>.<span class="number">0</span>).<span class="ident">into</span>();
+            <span class="comment">// Compute y_a for the next row.
+            </span><span class="kw">let </span>y_a_new: Y&lt;pallas::Base&gt; =
+                (lambda_2 * (x_a.value() - x_a_new.value()) - y_a.<span class="number">0</span>).into();
 
-            <span class="comment">// Update the mutable `x_a`, `y_a` variables.</span>
-            <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">x_a_new</span>;
-            <span class="ident">y_a</span> <span class="op">=</span> <span class="ident">y_a_new</span>;
+            <span class="comment">// Update the mutable `x_a`, `y_a` variables.
+            </span>x_a = x_a_new;
+            y_a = y_a_new;
         }
 
-        <span class="prelude-val">Ok</span>((<span class="ident">x_a</span>, <span class="ident">y_a</span>, <span class="ident">zs</span>))
+        <span class="prelude-val">Ok</span>((x_a, y_a, zs))
     }
 }
 
-<span class="doccomment">/// The x-coordinate of the accumulator in a Sinsemilla hash instance.</span>
-<span class="kw">struct</span> <span class="ident">X</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(<span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span><span class="op">&gt;</span>);
+<span class="doccomment">/// The x-coordinate of the accumulator in a Sinsemilla hash instance.
+</span><span class="kw">struct </span>X&lt;F: FieldExt&gt;(AssignedCell&lt;Assigned&lt;F&gt;, F&gt;);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">X</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">cell_value</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">X</span>(<span class="ident">cell_value</span>)
+<span class="kw">impl</span>&lt;F: FieldExt&gt; From&lt;AssignedCell&lt;Assigned&lt;F&gt;, F&gt;&gt; <span class="kw">for </span>X&lt;F&gt; {
+    <span class="kw">fn </span>from(cell_value: AssignedCell&lt;Assigned&lt;F&gt;, F&gt;) -&gt; <span class="self">Self </span>{
+        X(cell_value)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">X</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: FieldExt&gt; Deref <span class="kw">for </span>X&lt;F&gt; {
+    <span class="kw">type </span>Target = AssignedCell&lt;Assigned&lt;F&gt;, F&gt;;
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>AssignedCell&lt;Assigned&lt;F&gt;, F&gt; {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
+}
+
+<span class="doccomment">/// The y-coordinate of the accumulator in a Sinsemilla hash instance.
+///
+/// This is never actually witnessed until the last round, since it
+/// can be derived from other variables. Thus it only exists as a field
+/// element, not a `CellValue`.
+</span><span class="kw">struct </span>Y&lt;F: FieldExt&gt;(Value&lt;Assigned&lt;F&gt;&gt;);
+
+<span class="kw">impl</span>&lt;F: FieldExt&gt; From&lt;Value&lt;Assigned&lt;F&gt;&gt;&gt; <span class="kw">for </span>Y&lt;F&gt; {
+    <span class="kw">fn </span>from(value: Value&lt;Assigned&lt;F&gt;&gt;) -&gt; <span class="self">Self </span>{
+        Y(value)
     }
 }
 
-<span class="doccomment">/// The y-coordinate of the accumulator in a Sinsemilla hash instance.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This is never actually witnessed until the last round, since it</span>
-<span class="doccomment">/// can be derived from other variables. Thus it only exists as a field</span>
-<span class="doccomment">/// element, not a `CellValue`.</span>
-<span class="kw">struct</span> <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(<span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>);
+<span class="kw">impl</span>&lt;F: FieldExt&gt; Deref <span class="kw">for </span>Y&lt;F&gt; {
+    <span class="kw">type </span>Target = Value&lt;Assigned&lt;F&gt;&gt;;
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Y</span>(<span class="ident">value</span>)
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
-
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
-    }
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Value&lt;Assigned&lt;F&gt;&gt; {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

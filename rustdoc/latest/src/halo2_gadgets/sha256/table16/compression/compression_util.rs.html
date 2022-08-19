@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -1010,23 +1004,23 @@
 <span id="989">989</span>
 <span id="990">990</span>
 <span id="991">991</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">super</span>::{
-    <span class="ident">AbcdVar</span>, <span class="ident">CompressionConfig</span>, <span class="ident">EfghVar</span>, <span class="ident">RoundWord</span>, <span class="ident">RoundWordA</span>, <span class="ident">RoundWordDense</span>, <span class="ident">RoundWordE</span>,
-    <span class="ident">RoundWordSpread</span>, <span class="ident">State</span>, <span class="ident">UpperSigmaVar</span>,
+</pre><pre class="rust"><code><span class="kw">use super</span>::{
+    AbcdVar, CompressionConfig, EfghVar, RoundWord, RoundWordA, RoundWordDense, RoundWordE,
+    RoundWordSpread, State, UpperSigmaVar,
 };
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::sha256::table16</span>::{
-    <span class="ident">util</span>::<span class="kw-2">*</span>, <span class="ident">AssignedBits</span>, <span class="ident">SpreadVar</span>, <span class="ident">SpreadWord</span>, <span class="ident">StateWord</span>, <span class="ident">Table16Assignment</span>,
+<span class="kw">use </span><span class="kw">crate</span>::sha256::table16::{
+    util::<span class="kw-2">*</span>, AssignedBits, SpreadVar, SpreadWord, StateWord, Table16Assignment,
 };
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">Region</span>, <span class="ident">Value</span>},
-    <span class="ident">pasta::pallas</span>,
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">Error</span>},
+<span class="kw">use </span>halo2_proofs::{
+    circuit::{Region, Value},
+    pasta::pallas,
+    plonk::{Advice, Column, Error},
 };
-<span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
+<span class="kw">use </span>std::convert::TryInto;
 
-<span class="comment">// Test vector &#39;abc&#39;</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">COMPRESSION_OUTPUT</span>: [<span class="ident">u32</span>; <span class="number">8</span>] <span class="op">=</span> [
+<span class="comment">// Test vector &#39;abc&#39;
+</span><span class="attribute">#[cfg(test)]</span>
+<span class="kw">pub const </span>COMPRESSION_OUTPUT: [u32; <span class="number">8</span>] = [
     <span class="number">0b10111010011110000001011010111111</span>,
     <span class="number">0b10001111000000011100111111101010</span>,
     <span class="number">0b01000001010000010100000011011110</span>,
@@ -1037,970 +1031,969 @@
     <span class="number">0b11110010000000000001010110101101</span>,
 ];
 
-<span class="comment">// Rows needed for each gate</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SIGMA_0_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SIGMA_1_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">CH_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">8</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MAJ_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DECOMPOSE_ABCD</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">2</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DECOMPOSE_EFGH</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">2</span>;
+<span class="comment">// Rows needed for each gate
+</span><span class="kw">pub const </span>SIGMA_0_ROWS: usize = <span class="number">4</span>;
+<span class="kw">pub const </span>SIGMA_1_ROWS: usize = <span class="number">4</span>;
+<span class="kw">pub const </span>CH_ROWS: usize = <span class="number">8</span>;
+<span class="kw">pub const </span>MAJ_ROWS: usize = <span class="number">4</span>;
+<span class="kw">pub const </span>DECOMPOSE_ABCD: usize = <span class="number">2</span>;
+<span class="kw">pub const </span>DECOMPOSE_EFGH: usize = <span class="number">2</span>;
 
-<span class="comment">// Rows needed for main subregion</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SUBREGION_MAIN_LEN</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">64</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SUBREGION_MAIN_WORD</span>: <span class="ident">usize</span> <span class="op">=</span>
-    <span class="ident">DECOMPOSE_ABCD</span> <span class="op">+</span> <span class="ident">SIGMA_0_ROWS</span> <span class="op">+</span> <span class="ident">DECOMPOSE_EFGH</span> <span class="op">+</span> <span class="ident">SIGMA_1_ROWS</span> <span class="op">+</span> <span class="ident">CH_ROWS</span> <span class="op">+</span> <span class="ident">MAJ_ROWS</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SUBREGION_MAIN_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">SUBREGION_MAIN_LEN</span> <span class="op">*</span> <span class="ident">SUBREGION_MAIN_WORD</span>;
+<span class="comment">// Rows needed for main subregion
+</span><span class="kw">pub const </span>SUBREGION_MAIN_LEN: usize = <span class="number">64</span>;
+<span class="kw">pub const </span>SUBREGION_MAIN_WORD: usize =
+    DECOMPOSE_ABCD + SIGMA_0_ROWS + DECOMPOSE_EFGH + SIGMA_1_ROWS + CH_ROWS + MAJ_ROWS;
+<span class="kw">pub const </span>SUBREGION_MAIN_ROWS: usize = SUBREGION_MAIN_LEN * SUBREGION_MAIN_WORD;
 
-<span class="doccomment">/// The initial round.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">InitialRound</span>;
+<span class="doccomment">/// The initial round.
+</span><span class="kw">pub struct </span>InitialRound;
 
-<span class="doccomment">/// A main round index.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MainRoundIdx</span>(<span class="ident">usize</span>);
+<span class="doccomment">/// A main round index.
+</span><span class="attribute">#[derive(Debug, Copy, Clone)]</span>
+<span class="kw">pub struct </span>MainRoundIdx(usize);
 
-<span class="doccomment">/// Round index.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">RoundIdx</span> {
-    <span class="ident">Init</span>,
-    <span class="ident">Main</span>(<span class="ident">MainRoundIdx</span>),
+<span class="doccomment">/// Round index.
+</span><span class="attribute">#[derive(Debug, Copy, Clone)]</span>
+<span class="kw">pub enum </span>RoundIdx {
+    Init,
+    Main(MainRoundIdx),
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">InitialRound</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RoundIdx</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="kw">_</span>: <span class="ident">InitialRound</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">RoundIdx::Init</span>
+<span class="kw">impl </span>From&lt;InitialRound&gt; <span class="kw">for </span>RoundIdx {
+    <span class="kw">fn </span>from(<span class="kw">_</span>: InitialRound) -&gt; <span class="self">Self </span>{
+        RoundIdx::Init
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">MainRoundIdx</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RoundIdx</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">idx</span>: <span class="ident">MainRoundIdx</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">RoundIdx::Main</span>(<span class="ident">idx</span>)
+<span class="kw">impl </span>From&lt;MainRoundIdx&gt; <span class="kw">for </span>RoundIdx {
+    <span class="kw">fn </span>from(idx: MainRoundIdx) -&gt; <span class="self">Self </span>{
+        RoundIdx::Main(idx)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">MainRoundIdx</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">as_usize</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="self">self</span>.<span class="number">0</span>
+<span class="kw">impl </span>MainRoundIdx {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>as_usize(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.<span class="number">0
+    </span>}
+}
+
+<span class="kw">impl </span>From&lt;usize&gt; <span class="kw">for </span>MainRoundIdx {
+    <span class="kw">fn </span>from(idx: usize) -&gt; <span class="self">Self </span>{
+        MainRoundIdx(idx)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MainRoundIdx</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">idx</span>: <span class="ident">usize</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">MainRoundIdx</span>(<span class="ident">idx</span>)
+<span class="kw">impl </span>std::ops::Add&lt;usize&gt; <span class="kw">for </span>MainRoundIdx {
+    <span class="kw">type </span>Output = <span class="self">Self</span>;
+
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: usize) -&gt; <span class="self">Self</span>::Output {
+        MainRoundIdx(<span class="self">self</span>.<span class="number">0 </span>+ rhs)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">std::ops::Add</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MainRoundIdx</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span>;
-
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">usize</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">MainRoundIdx</span>(<span class="self">self</span>.<span class="number">0</span> <span class="op">+</span> <span class="ident">rhs</span>)
+<span class="kw">impl </span>Ord <span class="kw">for </span>MainRoundIdx {
+    <span class="kw">fn </span>cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; std::cmp::Ordering {
+        <span class="self">self</span>.<span class="number">0</span>.cmp(<span class="kw-2">&amp;</span>other.<span class="number">0</span>)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Ord</span> <span class="kw">for</span> <span class="ident">MainRoundIdx</span> {
-    <span class="kw">fn</span> <span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="ident">std::cmp::Ordering</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="ident">other</span>.<span class="number">0</span>)
+<span class="kw">impl </span>PartialOrd <span class="kw">for </span>MainRoundIdx {
+    <span class="kw">fn </span>partial_cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;std::cmp::Ordering&gt; {
+        <span class="prelude-val">Some</span>(<span class="self">self</span>.cmp(other))
     }
 }
 
-<span class="kw">impl</span> <span class="ident">PartialOrd</span> <span class="kw">for</span> <span class="ident">MainRoundIdx</span> {
-    <span class="kw">fn</span> <span class="ident">partial_cmp</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">std::cmp::Ordering</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">cmp</span>(<span class="ident">other</span>))
-    }
+<span class="kw">impl </span>PartialEq <span class="kw">for </span>MainRoundIdx {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="self">self</span>.<span class="number">0 </span>== other.<span class="number">0
+    </span>}
 }
 
-<span class="kw">impl</span> <span class="ident">PartialEq</span> <span class="kw">for</span> <span class="ident">MainRoundIdx</span> {
-    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="number">0</span> <span class="op">==</span> <span class="ident">other</span>.<span class="number">0</span>
-    }
-}
+<span class="kw">impl </span>Eq <span class="kw">for </span>MainRoundIdx {}
 
-<span class="kw">impl</span> <span class="ident">Eq</span> <span class="kw">for</span> <span class="ident">MainRoundIdx</span> {}
-
-<span class="doccomment">/// Returns starting row number of a compression round</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_round_row</span>(<span class="ident">round_idx</span>: <span class="ident">RoundIdx</span>) -&gt; <span class="ident">usize</span> {
-    <span class="kw">match</span> <span class="ident">round_idx</span> {
-        <span class="ident">RoundIdx::Init</span> =&gt; <span class="number">0</span>,
-        <span class="ident">RoundIdx::Main</span>(<span class="ident">MainRoundIdx</span>(<span class="ident">idx</span>)) =&gt; {
-            <span class="macro">assert!</span>(<span class="ident">idx</span> <span class="op">&lt;</span> <span class="number">64</span>);
-            (<span class="ident">idx</span> <span class="kw">as</span> <span class="ident">usize</span>) <span class="op">*</span> <span class="ident">SUBREGION_MAIN_WORD</span>
+<span class="doccomment">/// Returns starting row number of a compression round
+</span><span class="kw">pub fn </span>get_round_row(round_idx: RoundIdx) -&gt; usize {
+    <span class="kw">match </span>round_idx {
+        RoundIdx::Init =&gt; <span class="number">0</span>,
+        RoundIdx::Main(MainRoundIdx(idx)) =&gt; {
+            <span class="macro">assert!</span>(idx &lt; <span class="number">64</span>);
+            (idx <span class="kw">as </span>usize) * SUBREGION_MAIN_WORD
         }
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_decompose_e_row</span>(<span class="ident">round_idx</span>: <span class="ident">RoundIdx</span>) -&gt; <span class="ident">usize</span> {
-    <span class="ident">get_round_row</span>(<span class="ident">round_idx</span>)
+<span class="kw">pub fn </span>get_decompose_e_row(round_idx: RoundIdx) -&gt; usize {
+    get_round_row(round_idx)
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_decompose_f_row</span>(<span class="ident">round_idx</span>: <span class="ident">InitialRound</span>) -&gt; <span class="ident">usize</span> {
-    <span class="ident">get_decompose_e_row</span>(<span class="ident">round_idx</span>.<span class="ident">into</span>()) <span class="op">+</span> <span class="ident">DECOMPOSE_EFGH</span>
+<span class="kw">pub fn </span>get_decompose_f_row(round_idx: InitialRound) -&gt; usize {
+    get_decompose_e_row(round_idx.into()) + DECOMPOSE_EFGH
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_decompose_g_row</span>(<span class="ident">round_idx</span>: <span class="ident">InitialRound</span>) -&gt; <span class="ident">usize</span> {
-    <span class="ident">get_decompose_f_row</span>(<span class="ident">round_idx</span>) <span class="op">+</span> <span class="ident">DECOMPOSE_EFGH</span>
+<span class="kw">pub fn </span>get_decompose_g_row(round_idx: InitialRound) -&gt; usize {
+    get_decompose_f_row(round_idx) + DECOMPOSE_EFGH
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_upper_sigma_1_row</span>(<span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>) -&gt; <span class="ident">usize</span> {
-    <span class="ident">get_decompose_e_row</span>(<span class="ident">round_idx</span>.<span class="ident">into</span>()) <span class="op">+</span> <span class="ident">DECOMPOSE_EFGH</span> <span class="op">+</span> <span class="number">1</span>
-}
+<span class="kw">pub fn </span>get_upper_sigma_1_row(round_idx: MainRoundIdx) -&gt; usize {
+    get_decompose_e_row(round_idx.into()) + DECOMPOSE_EFGH + <span class="number">1
+</span>}
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_ch_row</span>(<span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>) -&gt; <span class="ident">usize</span> {
-    <span class="ident">get_decompose_e_row</span>(<span class="ident">round_idx</span>.<span class="ident">into</span>()) <span class="op">+</span> <span class="ident">DECOMPOSE_EFGH</span> <span class="op">+</span> <span class="ident">SIGMA_1_ROWS</span> <span class="op">+</span> <span class="number">1</span>
-}
+<span class="kw">pub fn </span>get_ch_row(round_idx: MainRoundIdx) -&gt; usize {
+    get_decompose_e_row(round_idx.into()) + DECOMPOSE_EFGH + SIGMA_1_ROWS + <span class="number">1
+</span>}
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_ch_neg_row</span>(<span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>) -&gt; <span class="ident">usize</span> {
-    <span class="ident">get_ch_row</span>(<span class="ident">round_idx</span>) <span class="op">+</span> <span class="ident">CH_ROWS</span> <span class="op">/</span> <span class="number">2</span>
-}
+<span class="kw">pub fn </span>get_ch_neg_row(round_idx: MainRoundIdx) -&gt; usize {
+    get_ch_row(round_idx) + CH_ROWS / <span class="number">2
+</span>}
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_decompose_a_row</span>(<span class="ident">round_idx</span>: <span class="ident">RoundIdx</span>) -&gt; <span class="ident">usize</span> {
-    <span class="kw">match</span> <span class="ident">round_idx</span> {
-        <span class="ident">RoundIdx::Init</span> =&gt; <span class="ident">get_h_row</span>(<span class="ident">round_idx</span>) <span class="op">+</span> <span class="ident">DECOMPOSE_EFGH</span>,
-        <span class="ident">RoundIdx::Main</span>(<span class="ident">mri</span>) =&gt; <span class="ident">get_ch_neg_row</span>(<span class="ident">mri</span>) <span class="op">-</span> <span class="number">1</span> <span class="op">+</span> <span class="ident">CH_ROWS</span> <span class="op">/</span> <span class="number">2</span>,
+<span class="kw">pub fn </span>get_decompose_a_row(round_idx: RoundIdx) -&gt; usize {
+    <span class="kw">match </span>round_idx {
+        RoundIdx::Init =&gt; get_h_row(round_idx) + DECOMPOSE_EFGH,
+        RoundIdx::Main(mri) =&gt; get_ch_neg_row(mri) - <span class="number">1 </span>+ CH_ROWS / <span class="number">2</span>,
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_upper_sigma_0_row</span>(<span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>) -&gt; <span class="ident">usize</span> {
-    <span class="ident">get_decompose_a_row</span>(<span class="ident">round_idx</span>.<span class="ident">into</span>()) <span class="op">+</span> <span class="ident">DECOMPOSE_ABCD</span> <span class="op">+</span> <span class="number">1</span>
+<span class="kw">pub fn </span>get_upper_sigma_0_row(round_idx: MainRoundIdx) -&gt; usize {
+    get_decompose_a_row(round_idx.into()) + DECOMPOSE_ABCD + <span class="number">1
+</span>}
+
+<span class="kw">pub fn </span>get_decompose_b_row(round_idx: InitialRound) -&gt; usize {
+    get_decompose_a_row(round_idx.into()) + DECOMPOSE_ABCD
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_decompose_b_row</span>(<span class="ident">round_idx</span>: <span class="ident">InitialRound</span>) -&gt; <span class="ident">usize</span> {
-    <span class="ident">get_decompose_a_row</span>(<span class="ident">round_idx</span>.<span class="ident">into</span>()) <span class="op">+</span> <span class="ident">DECOMPOSE_ABCD</span>
+<span class="kw">pub fn </span>get_decompose_c_row(round_idx: InitialRound) -&gt; usize {
+    get_decompose_b_row(round_idx) + DECOMPOSE_ABCD
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_decompose_c_row</span>(<span class="ident">round_idx</span>: <span class="ident">InitialRound</span>) -&gt; <span class="ident">usize</span> {
-    <span class="ident">get_decompose_b_row</span>(<span class="ident">round_idx</span>) <span class="op">+</span> <span class="ident">DECOMPOSE_ABCD</span>
+<span class="kw">pub fn </span>get_maj_row(round_idx: MainRoundIdx) -&gt; usize {
+    get_upper_sigma_0_row(round_idx) + SIGMA_0_ROWS
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_maj_row</span>(<span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>) -&gt; <span class="ident">usize</span> {
-    <span class="ident">get_upper_sigma_0_row</span>(<span class="ident">round_idx</span>) <span class="op">+</span> <span class="ident">SIGMA_0_ROWS</span>
-}
-
-<span class="comment">// Get state word rows</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_h_row</span>(<span class="ident">round_idx</span>: <span class="ident">RoundIdx</span>) -&gt; <span class="ident">usize</span> {
-    <span class="kw">match</span> <span class="ident">round_idx</span> {
-        <span class="ident">RoundIdx::Init</span> =&gt; <span class="ident">get_decompose_g_row</span>(<span class="ident">InitialRound</span>) <span class="op">+</span> <span class="ident">DECOMPOSE_EFGH</span>,
-        <span class="ident">RoundIdx::Main</span>(<span class="ident">mri</span>) =&gt; <span class="ident">get_ch_row</span>(<span class="ident">mri</span>) <span class="op">-</span> <span class="number">1</span>,
+<span class="comment">// Get state word rows
+</span><span class="kw">pub fn </span>get_h_row(round_idx: RoundIdx) -&gt; usize {
+    <span class="kw">match </span>round_idx {
+        RoundIdx::Init =&gt; get_decompose_g_row(InitialRound) + DECOMPOSE_EFGH,
+        RoundIdx::Main(mri) =&gt; get_ch_row(mri) - <span class="number">1</span>,
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_h_prime_row</span>(<span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>) -&gt; <span class="ident">usize</span> {
-    <span class="ident">get_ch_row</span>(<span class="ident">round_idx</span>)
+<span class="kw">pub fn </span>get_h_prime_row(round_idx: MainRoundIdx) -&gt; usize {
+    get_ch_row(round_idx)
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_d_row</span>(<span class="ident">round_idx</span>: <span class="ident">RoundIdx</span>) -&gt; <span class="ident">usize</span> {
-    <span class="kw">match</span> <span class="ident">round_idx</span> {
-        <span class="ident">RoundIdx::Init</span> =&gt; <span class="ident">get_decompose_c_row</span>(<span class="ident">InitialRound</span>) <span class="op">+</span> <span class="ident">DECOMPOSE_ABCD</span>,
-        <span class="ident">RoundIdx::Main</span>(<span class="ident">mri</span>) =&gt; <span class="ident">get_ch_row</span>(<span class="ident">mri</span>) <span class="op">+</span> <span class="number">2</span>,
+<span class="kw">pub fn </span>get_d_row(round_idx: RoundIdx) -&gt; usize {
+    <span class="kw">match </span>round_idx {
+        RoundIdx::Init =&gt; get_decompose_c_row(InitialRound) + DECOMPOSE_ABCD,
+        RoundIdx::Main(mri) =&gt; get_ch_row(mri) + <span class="number">2</span>,
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_e_new_row</span>(<span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>) -&gt; <span class="ident">usize</span> {
-    <span class="ident">get_d_row</span>(<span class="ident">round_idx</span>.<span class="ident">into</span>())
+<span class="kw">pub fn </span>get_e_new_row(round_idx: MainRoundIdx) -&gt; usize {
+    get_d_row(round_idx.into())
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_a_new_row</span>(<span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>) -&gt; <span class="ident">usize</span> {
-    <span class="ident">get_maj_row</span>(<span class="ident">round_idx</span>)
+<span class="kw">pub fn </span>get_a_new_row(round_idx: MainRoundIdx) -&gt; usize {
+    get_maj_row(round_idx)
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_digest_abcd_row</span>() -&gt; <span class="ident">usize</span> {
-    <span class="ident">SUBREGION_MAIN_ROWS</span>
+<span class="kw">pub fn </span>get_digest_abcd_row() -&gt; usize {
+    SUBREGION_MAIN_ROWS
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_digest_efgh_row</span>() -&gt; <span class="ident">usize</span> {
-    <span class="ident">get_digest_abcd_row</span>() <span class="op">+</span> <span class="number">2</span>
-}
+<span class="kw">pub fn </span>get_digest_efgh_row() -&gt; usize {
+    get_digest_abcd_row() + <span class="number">2
+</span>}
 
-<span class="kw">impl</span> <span class="ident">CompressionConfig</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">decompose_abcd</span>(
+<span class="kw">impl </span>CompressionConfig {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>decompose_abcd(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-        <span class="ident">val</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AbcdVar</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">s_decompose_abcd</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        row: usize,
+        val: Value&lt;u32&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;AbcdVar, Error&gt; {
+        <span class="self">self</span>.s_decompose_abcd.enable(region, row)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">a_4</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">1</span>];
-        <span class="kw">let</span> <span class="ident">a_5</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">message_schedule</span>;
-        <span class="kw">let</span> <span class="ident">a_6</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">2</span>];
+        <span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
+        <span class="kw">let </span>a_4 = <span class="self">self</span>.extras[<span class="number">1</span>];
+        <span class="kw">let </span>a_5 = <span class="self">self</span>.message_schedule;
+        <span class="kw">let </span>a_6 = <span class="self">self</span>.extras[<span class="number">2</span>];
 
-        <span class="kw">let</span> <span class="ident">spread_pieces</span> <span class="op">=</span> <span class="ident">val</span>.<span class="ident">map</span>(<span class="ident">AbcdVar::pieces</span>);
-        <span class="kw">let</span> <span class="ident">spread_pieces</span> <span class="op">=</span> <span class="ident">spread_pieces</span>.<span class="ident">transpose_vec</span>(<span class="number">6</span>);
+        <span class="kw">let </span>spread_pieces = val.map(AbcdVar::pieces);
+        <span class="kw">let </span>spread_pieces = spread_pieces.transpose_vec(<span class="number">6</span>);
 
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">SpreadVar::without_lookup</span>(
-            <span class="ident">region</span>,
-            <span class="ident">a_3</span>,
-            <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>,
-            <span class="ident">a_4</span>,
-            <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>,
-            <span class="ident">spread_pieces</span>[<span class="number">0</span>].<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">SpreadWord</span>::<span class="op">&lt;</span><span class="number">2</span>, <span class="number">4</span><span class="op">&gt;</span><span class="ident">::try_new</span>),
+        <span class="kw">let </span>a = SpreadVar::without_lookup(
+            region,
+            a_3,
+            row + <span class="number">1</span>,
+            a_4,
+            row + <span class="number">1</span>,
+            spread_pieces[<span class="number">0</span>].clone().map(SpreadWord::&lt;<span class="number">2</span>, <span class="number">4</span>&gt;::try_new),
         )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">SpreadVar::with_lookup</span>(
-            <span class="ident">region</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lookup</span>,
-            <span class="ident">row</span>,
-            <span class="ident">spread_pieces</span>[<span class="number">1</span>].<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">SpreadWord</span>::<span class="op">&lt;</span><span class="number">11</span>, <span class="number">22</span><span class="op">&gt;</span><span class="ident">::try_new</span>),
+        <span class="kw">let </span>b = SpreadVar::with_lookup(
+            region,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.lookup,
+            row,
+            spread_pieces[<span class="number">1</span>].clone().map(SpreadWord::&lt;<span class="number">11</span>, <span class="number">22</span>&gt;::try_new),
         )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">c_lo</span> <span class="op">=</span> <span class="ident">SpreadVar::without_lookup</span>(
-            <span class="ident">region</span>,
-            <span class="ident">a_3</span>,
-            <span class="ident">row</span>,
-            <span class="ident">a_4</span>,
-            <span class="ident">row</span>,
-            <span class="ident">spread_pieces</span>[<span class="number">2</span>].<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">SpreadWord</span>::<span class="op">&lt;</span><span class="number">3</span>, <span class="number">6</span><span class="op">&gt;</span><span class="ident">::try_new</span>),
+        <span class="kw">let </span>c_lo = SpreadVar::without_lookup(
+            region,
+            a_3,
+            row,
+            a_4,
+            row,
+            spread_pieces[<span class="number">2</span>].clone().map(SpreadWord::&lt;<span class="number">3</span>, <span class="number">6</span>&gt;::try_new),
         )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">c_mid</span> <span class="op">=</span> <span class="ident">SpreadVar::without_lookup</span>(
-            <span class="ident">region</span>,
-            <span class="ident">a_5</span>,
-            <span class="ident">row</span>,
-            <span class="ident">a_6</span>,
-            <span class="ident">row</span>,
-            <span class="ident">spread_pieces</span>[<span class="number">3</span>].<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">SpreadWord</span>::<span class="op">&lt;</span><span class="number">3</span>, <span class="number">6</span><span class="op">&gt;</span><span class="ident">::try_new</span>),
+        <span class="kw">let </span>c_mid = SpreadVar::without_lookup(
+            region,
+            a_5,
+            row,
+            a_6,
+            row,
+            spread_pieces[<span class="number">3</span>].clone().map(SpreadWord::&lt;<span class="number">3</span>, <span class="number">6</span>&gt;::try_new),
         )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">c_hi</span> <span class="op">=</span> <span class="ident">SpreadVar::without_lookup</span>(
-            <span class="ident">region</span>,
-            <span class="ident">a_5</span>,
-            <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>,
-            <span class="ident">a_6</span>,
-            <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>,
-            <span class="ident">spread_pieces</span>[<span class="number">4</span>].<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">SpreadWord</span>::<span class="op">&lt;</span><span class="number">3</span>, <span class="number">6</span><span class="op">&gt;</span><span class="ident">::try_new</span>),
+        <span class="kw">let </span>c_hi = SpreadVar::without_lookup(
+            region,
+            a_5,
+            row + <span class="number">1</span>,
+            a_6,
+            row + <span class="number">1</span>,
+            spread_pieces[<span class="number">4</span>].clone().map(SpreadWord::&lt;<span class="number">3</span>, <span class="number">6</span>&gt;::try_new),
         )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">d</span> <span class="op">=</span> <span class="ident">SpreadVar::with_lookup</span>(
-            <span class="ident">region</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lookup</span>,
-            <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>,
-            <span class="ident">spread_pieces</span>[<span class="number">5</span>].<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">SpreadWord</span>::<span class="op">&lt;</span><span class="number">10</span>, <span class="number">20</span><span class="op">&gt;</span><span class="ident">::try_new</span>),
+        <span class="kw">let </span>d = SpreadVar::with_lookup(
+            region,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.lookup,
+            row + <span class="number">1</span>,
+            spread_pieces[<span class="number">5</span>].clone().map(SpreadWord::&lt;<span class="number">10</span>, <span class="number">20</span>&gt;::try_new),
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">AbcdVar</span> {
-            <span class="ident">a</span>,
-            <span class="ident">b</span>,
-            <span class="ident">c_lo</span>,
-            <span class="ident">c_mid</span>,
-            <span class="ident">c_hi</span>,
-            <span class="ident">d</span>,
+        <span class="prelude-val">Ok</span>(AbcdVar {
+            a,
+            b,
+            c_lo,
+            c_mid,
+            c_hi,
+            d,
         })
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">decompose_efgh</span>(
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>decompose_efgh(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-        <span class="ident">val</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">EfghVar</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">s_decompose_efgh</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        row: usize,
+        val: Value&lt;u32&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;EfghVar, Error&gt; {
+        <span class="self">self</span>.s_decompose_efgh.enable(region, row)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">a_4</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">1</span>];
-        <span class="kw">let</span> <span class="ident">a_5</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">message_schedule</span>;
-        <span class="kw">let</span> <span class="ident">a_6</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">2</span>];
+        <span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
+        <span class="kw">let </span>a_4 = <span class="self">self</span>.extras[<span class="number">1</span>];
+        <span class="kw">let </span>a_5 = <span class="self">self</span>.message_schedule;
+        <span class="kw">let </span>a_6 = <span class="self">self</span>.extras[<span class="number">2</span>];
 
-        <span class="kw">let</span> <span class="ident">spread_pieces</span> <span class="op">=</span> <span class="ident">val</span>.<span class="ident">map</span>(<span class="ident">EfghVar::pieces</span>);
-        <span class="kw">let</span> <span class="ident">spread_pieces</span> <span class="op">=</span> <span class="ident">spread_pieces</span>.<span class="ident">transpose_vec</span>(<span class="number">6</span>);
+        <span class="kw">let </span>spread_pieces = val.map(EfghVar::pieces);
+        <span class="kw">let </span>spread_pieces = spread_pieces.transpose_vec(<span class="number">6</span>);
 
-        <span class="kw">let</span> <span class="ident">a_lo</span> <span class="op">=</span> <span class="ident">SpreadVar::without_lookup</span>(
-            <span class="ident">region</span>,
-            <span class="ident">a_3</span>,
-            <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>,
-            <span class="ident">a_4</span>,
-            <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>,
-            <span class="ident">spread_pieces</span>[<span class="number">0</span>].<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">SpreadWord::try_new</span>),
+        <span class="kw">let </span>a_lo = SpreadVar::without_lookup(
+            region,
+            a_3,
+            row + <span class="number">1</span>,
+            a_4,
+            row + <span class="number">1</span>,
+            spread_pieces[<span class="number">0</span>].clone().map(SpreadWord::try_new),
         )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">a_hi</span> <span class="op">=</span> <span class="ident">SpreadVar::without_lookup</span>(
-            <span class="ident">region</span>,
-            <span class="ident">a_5</span>,
-            <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>,
-            <span class="ident">a_6</span>,
-            <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>,
-            <span class="ident">spread_pieces</span>[<span class="number">1</span>].<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">SpreadWord::try_new</span>),
+        <span class="kw">let </span>a_hi = SpreadVar::without_lookup(
+            region,
+            a_5,
+            row + <span class="number">1</span>,
+            a_6,
+            row + <span class="number">1</span>,
+            spread_pieces[<span class="number">1</span>].clone().map(SpreadWord::try_new),
         )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">b_lo</span> <span class="op">=</span> <span class="ident">SpreadVar::without_lookup</span>(
-            <span class="ident">region</span>,
-            <span class="ident">a_3</span>,
-            <span class="ident">row</span>,
-            <span class="ident">a_4</span>,
-            <span class="ident">row</span>,
-            <span class="ident">spread_pieces</span>[<span class="number">2</span>].<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">SpreadWord::try_new</span>),
+        <span class="kw">let </span>b_lo = SpreadVar::without_lookup(
+            region,
+            a_3,
+            row,
+            a_4,
+            row,
+            spread_pieces[<span class="number">2</span>].clone().map(SpreadWord::try_new),
         )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">b_hi</span> <span class="op">=</span> <span class="ident">SpreadVar::without_lookup</span>(
-            <span class="ident">region</span>,
-            <span class="ident">a_5</span>,
-            <span class="ident">row</span>,
-            <span class="ident">a_6</span>,
-            <span class="ident">row</span>,
-            <span class="ident">spread_pieces</span>[<span class="number">3</span>].<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">SpreadWord::try_new</span>),
+        <span class="kw">let </span>b_hi = SpreadVar::without_lookup(
+            region,
+            a_5,
+            row,
+            a_6,
+            row,
+            spread_pieces[<span class="number">3</span>].clone().map(SpreadWord::try_new),
         )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="ident">SpreadVar::with_lookup</span>(
-            <span class="ident">region</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lookup</span>,
-            <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>,
-            <span class="ident">spread_pieces</span>[<span class="number">4</span>].<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">SpreadWord::try_new</span>),
+        <span class="kw">let </span>c = SpreadVar::with_lookup(
+            region,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.lookup,
+            row + <span class="number">1</span>,
+            spread_pieces[<span class="number">4</span>].clone().map(SpreadWord::try_new),
         )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">d</span> <span class="op">=</span> <span class="ident">SpreadVar::with_lookup</span>(
-            <span class="ident">region</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lookup</span>,
-            <span class="ident">row</span>,
-            <span class="ident">spread_pieces</span>[<span class="number">5</span>].<span class="ident">clone</span>().<span class="ident">map</span>(<span class="ident">SpreadWord::try_new</span>),
+        <span class="kw">let </span>d = SpreadVar::with_lookup(
+            region,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.lookup,
+            row,
+            spread_pieces[<span class="number">5</span>].clone().map(SpreadWord::try_new),
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">EfghVar</span> {
-            <span class="ident">a_lo</span>,
-            <span class="ident">a_hi</span>,
-            <span class="ident">b_lo</span>,
-            <span class="ident">b_hi</span>,
-            <span class="ident">c</span>,
-            <span class="ident">d</span>,
+        <span class="prelude-val">Ok</span>(EfghVar {
+            a_lo,
+            a_hi,
+            b_lo,
+            b_hi,
+            c,
+            d,
         })
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">decompose_a</span>(
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>decompose_a(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">round_idx</span>: <span class="ident">RoundIdx</span>,
-        <span class="ident">a_val</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RoundWordA</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_decompose_a_row</span>(<span class="ident">round_idx</span>);
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        round_idx: RoundIdx,
+        a_val: Value&lt;u32&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RoundWordA, Error&gt; {
+        <span class="kw">let </span>row = get_decompose_a_row(round_idx);
 
-        <span class="kw">let</span> (<span class="ident">dense_halves</span>, <span class="ident">spread_halves</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_word_halves</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">a_val</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">a_pieces</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_abcd</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">a_val</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">RoundWordA::new</span>(<span class="ident">a_pieces</span>, <span class="ident">dense_halves</span>, <span class="ident">spread_halves</span>))
+        <span class="kw">let </span>(dense_halves, spread_halves) = <span class="self">self</span>.assign_word_halves(region, row, a_val)<span class="question-mark">?</span>;
+        <span class="kw">let </span>a_pieces = <span class="self">self</span>.decompose_abcd(region, row, a_val)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(RoundWordA::new(a_pieces, dense_halves, spread_halves))
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">decompose_e</span>(
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>decompose_e(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">round_idx</span>: <span class="ident">RoundIdx</span>,
-        <span class="ident">e_val</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RoundWordE</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_decompose_e_row</span>(<span class="ident">round_idx</span>);
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        round_idx: RoundIdx,
+        e_val: Value&lt;u32&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RoundWordE, Error&gt; {
+        <span class="kw">let </span>row = get_decompose_e_row(round_idx);
 
-        <span class="kw">let</span> (<span class="ident">dense_halves</span>, <span class="ident">spread_halves</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_word_halves</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">e_val</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">e_pieces</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_efgh</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">e_val</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">RoundWordE::new</span>(<span class="ident">e_pieces</span>, <span class="ident">dense_halves</span>, <span class="ident">spread_halves</span>))
+        <span class="kw">let </span>(dense_halves, spread_halves) = <span class="self">self</span>.assign_word_halves(region, row, e_val)<span class="question-mark">?</span>;
+        <span class="kw">let </span>e_pieces = <span class="self">self</span>.decompose_efgh(region, row, e_val)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(RoundWordE::new(e_pieces, dense_halves, spread_halves))
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">assign_upper_sigma_0</span>(
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>assign_upper_sigma_0(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>,
-        <span class="ident">word</span>: <span class="ident">AbcdVar</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Rename these here for ease of matching the gates to the specification.</span>
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">a_4</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">1</span>];
-        <span class="kw">let</span> <span class="ident">a_5</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">message_schedule</span>;
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        round_idx: MainRoundIdx,
+        word: AbcdVar,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;), Error&gt; {
+        <span class="comment">// Rename these here for ease of matching the gates to the specification.
+        </span><span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
+        <span class="kw">let </span>a_4 = <span class="self">self</span>.extras[<span class="number">1</span>];
+        <span class="kw">let </span>a_5 = <span class="self">self</span>.message_schedule;
 
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_upper_sigma_0_row</span>(<span class="ident">round_idx</span>);
+        <span class="kw">let </span>row = get_upper_sigma_0_row(round_idx);
 
-        <span class="self">self</span>.<span class="ident">s_upper_sigma_0</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.s_upper_sigma_0.enable(region, row)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign `spread_a` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">a</span>
-            .<span class="ident">spread</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_a&quot;</span>, <span class="ident">region</span>, <span class="ident">a_3</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="comment">// Assign `spread_b` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">b</span>.<span class="ident">spread</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_b&quot;</span>, <span class="ident">region</span>, <span class="ident">a_5</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
-        <span class="comment">// Assign `spread_c_lo` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">c_lo</span>
-            .<span class="ident">spread</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_c_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_3</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="comment">// Assign `spread_c_mid` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">c_mid</span>
-            .<span class="ident">spread</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_c_mid&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="comment">// Assign `spread_c_hi` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">c_hi</span>
-            .<span class="ident">spread</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_c_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="comment">// Assign `spread_d` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">d</span>.<span class="ident">spread</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_d&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `spread_a` and copy constraint
+        </span>word.a
+            .spread
+            .copy_advice(|| <span class="string">&quot;spread_a&quot;</span>, region, a_3, row + <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `spread_b` and copy constraint
+        </span>word.b.spread.copy_advice(|| <span class="string">&quot;spread_b&quot;</span>, region, a_5, row)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `spread_c_lo` and copy constraint
+        </span>word.c_lo
+            .spread
+            .copy_advice(|| <span class="string">&quot;spread_c_lo&quot;</span>, region, a_3, row - <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `spread_c_mid` and copy constraint
+        </span>word.c_mid
+            .spread
+            .copy_advice(|| <span class="string">&quot;spread_c_mid&quot;</span>, region, a_4, row - <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `spread_c_hi` and copy constraint
+        </span>word.c_hi
+            .spread
+            .copy_advice(|| <span class="string">&quot;spread_c_hi&quot;</span>, region, a_4, row + <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `spread_d` and copy constraint
+        </span>word.d.spread.copy_advice(|| <span class="string">&quot;spread_d&quot;</span>, region, a_4, row)<span class="question-mark">?</span>;
 
-        <span class="comment">// Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}</span>
-        <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">xor_upper_sigma</span>();
-        <span class="kw">let</span> <span class="ident">r_0</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>[..<span class="number">32</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">r_0_even</span> <span class="op">=</span> <span class="ident">r_0</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
-        <span class="kw">let</span> <span class="ident">r_0_odd</span> <span class="op">=</span> <span class="ident">r_0</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
+        <span class="comment">// Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
+        </span><span class="kw">let </span>r = word.xor_upper_sigma();
+        <span class="kw">let </span>r_0: Value&lt;[bool; <span class="number">32</span>]&gt; = r.map(|r| r[..<span class="number">32</span>].try_into().unwrap());
+        <span class="kw">let </span>r_0_even = r_0.map(even_bits);
+        <span class="kw">let </span>r_0_odd = r_0.map(odd_bits);
 
-        <span class="kw">let</span> <span class="ident">r_1</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>[<span class="number">32</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">r_1_even</span> <span class="op">=</span> <span class="ident">r_1</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
-        <span class="kw">let</span> <span class="ident">r_1_odd</span> <span class="op">=</span> <span class="ident">r_1</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
+        <span class="kw">let </span>r_1: Value&lt;[bool; <span class="number">32</span>]&gt; = r.map(|r| r[<span class="number">32</span>..].try_into().unwrap());
+        <span class="kw">let </span>r_1_even = r_1.map(even_bits);
+        <span class="kw">let </span>r_1_odd = r_1.map(odd_bits);
 
-        <span class="self">self</span>.<span class="ident">assign_sigma_outputs</span>(
-            <span class="ident">region</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lookup</span>,
-            <span class="ident">a_3</span>,
-            <span class="ident">row</span>,
-            <span class="ident">r_0_even</span>,
-            <span class="ident">r_0_odd</span>,
-            <span class="ident">r_1_even</span>,
-            <span class="ident">r_1_odd</span>,
+        <span class="self">self</span>.assign_sigma_outputs(
+            region,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.lookup,
+            a_3,
+            row,
+            r_0_even,
+            r_0_odd,
+            r_1_even,
+            r_1_odd,
         )
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">assign_upper_sigma_1</span>(
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>assign_upper_sigma_1(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>,
-        <span class="ident">word</span>: <span class="ident">EfghVar</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Rename these here for ease of matching the gates to the specification.</span>
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">a_4</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">1</span>];
-        <span class="kw">let</span> <span class="ident">a_5</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">message_schedule</span>;
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        round_idx: MainRoundIdx,
+        word: EfghVar,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;), Error&gt; {
+        <span class="comment">// Rename these here for ease of matching the gates to the specification.
+        </span><span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
+        <span class="kw">let </span>a_4 = <span class="self">self</span>.extras[<span class="number">1</span>];
+        <span class="kw">let </span>a_5 = <span class="self">self</span>.message_schedule;
 
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_upper_sigma_1_row</span>(<span class="ident">round_idx</span>);
+        <span class="kw">let </span>row = get_upper_sigma_1_row(round_idx);
 
-        <span class="self">self</span>.<span class="ident">s_upper_sigma_1</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.s_upper_sigma_1.enable(region, row)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign `spread_a_lo` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">a_lo</span>
-            .<span class="ident">spread</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_a_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_3</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="comment">// Assign `spread_a_hi` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">a_hi</span>
-            .<span class="ident">spread</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_a_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="comment">// Assign `spread_b_lo` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">b_lo</span>
-            .<span class="ident">spread</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_b_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_3</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="comment">// Assign `spread_b_hi` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">b_hi</span>
-            .<span class="ident">spread</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_b_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="comment">// Assign `spread_c` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">c</span>.<span class="ident">spread</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_c&quot;</span>, <span class="ident">region</span>, <span class="ident">a_5</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
-        <span class="comment">// Assign `spread_d` and copy constraint</span>
-        <span class="ident">word</span>.<span class="ident">d</span>.<span class="ident">spread</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_d&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `spread_a_lo` and copy constraint
+        </span>word.a_lo
+            .spread
+            .copy_advice(|| <span class="string">&quot;spread_a_lo&quot;</span>, region, a_3, row + <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `spread_a_hi` and copy constraint
+        </span>word.a_hi
+            .spread
+            .copy_advice(|| <span class="string">&quot;spread_a_hi&quot;</span>, region, a_4, row + <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `spread_b_lo` and copy constraint
+        </span>word.b_lo
+            .spread
+            .copy_advice(|| <span class="string">&quot;spread_b_lo&quot;</span>, region, a_3, row - <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `spread_b_hi` and copy constraint
+        </span>word.b_hi
+            .spread
+            .copy_advice(|| <span class="string">&quot;spread_b_hi&quot;</span>, region, a_4, row - <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `spread_c` and copy constraint
+        </span>word.c.spread.copy_advice(|| <span class="string">&quot;spread_c&quot;</span>, region, a_5, row)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `spread_d` and copy constraint
+        </span>word.d.spread.copy_advice(|| <span class="string">&quot;spread_d&quot;</span>, region, a_4, row)<span class="question-mark">?</span>;
 
-        <span class="comment">// Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}</span>
-        <span class="comment">// Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}</span>
-        <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">xor_upper_sigma</span>();
-        <span class="kw">let</span> <span class="ident">r_0</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>[..<span class="number">32</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">r_0_even</span> <span class="op">=</span> <span class="ident">r_0</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
-        <span class="kw">let</span> <span class="ident">r_0_odd</span> <span class="op">=</span> <span class="ident">r_0</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
+        <span class="comment">// Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
+        // Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
+        </span><span class="kw">let </span>r = word.xor_upper_sigma();
+        <span class="kw">let </span>r_0: Value&lt;[bool; <span class="number">32</span>]&gt; = r.map(|r| r[..<span class="number">32</span>].try_into().unwrap());
+        <span class="kw">let </span>r_0_even = r_0.map(even_bits);
+        <span class="kw">let </span>r_0_odd = r_0.map(odd_bits);
 
-        <span class="kw">let</span> <span class="ident">r_1</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>[<span class="number">32</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">r_1_even</span> <span class="op">=</span> <span class="ident">r_1</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
-        <span class="kw">let</span> <span class="ident">r_1_odd</span> <span class="op">=</span> <span class="ident">r_1</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
+        <span class="kw">let </span>r_1: Value&lt;[bool; <span class="number">32</span>]&gt; = r.map(|r| r[<span class="number">32</span>..].try_into().unwrap());
+        <span class="kw">let </span>r_1_even = r_1.map(even_bits);
+        <span class="kw">let </span>r_1_odd = r_1.map(odd_bits);
 
-        <span class="self">self</span>.<span class="ident">assign_sigma_outputs</span>(
-            <span class="ident">region</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lookup</span>,
-            <span class="ident">a_3</span>,
-            <span class="ident">row</span>,
-            <span class="ident">r_0_even</span>,
-            <span class="ident">r_0_odd</span>,
-            <span class="ident">r_1_even</span>,
-            <span class="ident">r_1_odd</span>,
+        <span class="self">self</span>.assign_sigma_outputs(
+            region,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.lookup,
+            a_3,
+            row,
+            r_0_even,
+            r_0_odd,
+            r_1_even,
+            r_1_odd,
         )
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_ch_outputs</span>(
+    <span class="kw">fn </span>assign_ch_outputs(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-        <span class="ident">r_0_even</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-        <span class="ident">r_0_odd</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-        <span class="ident">r_1_even</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-        <span class="ident">r_1_odd</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        row: usize,
+        r_0_even: Value&lt;[bool; <span class="number">16</span>]&gt;,
+        r_0_odd: Value&lt;[bool; <span class="number">16</span>]&gt;,
+        r_1_even: Value&lt;[bool; <span class="number">16</span>]&gt;,
+        r_1_odd: Value&lt;[bool; <span class="number">16</span>]&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;), Error&gt; {
+        <span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
 
-        <span class="kw">let</span> (<span class="ident">_even</span>, <span class="ident">odd</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_spread_outputs</span>(
-            <span class="ident">region</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lookup</span>,
-            <span class="ident">a_3</span>,
-            <span class="ident">row</span>,
-            <span class="ident">r_0_even</span>,
-            <span class="ident">r_0_odd</span>,
-            <span class="ident">r_1_even</span>,
-            <span class="ident">r_1_odd</span>,
+        <span class="kw">let </span>(_even, odd) = <span class="self">self</span>.assign_spread_outputs(
+            region,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.lookup,
+            a_3,
+            row,
+            r_0_even,
+            r_0_odd,
+            r_1_even,
+            r_1_odd,
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">odd</span>)
+        <span class="prelude-val">Ok</span>(odd)
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">assign_ch</span>(
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>assign_ch(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>,
-        <span class="ident">spread_halves_e</span>: <span class="ident">RoundWordSpread</span>,
-        <span class="ident">spread_halves_f</span>: <span class="ident">RoundWordSpread</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">a_4</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">1</span>];
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        round_idx: MainRoundIdx,
+        spread_halves_e: RoundWordSpread,
+        spread_halves_f: RoundWordSpread,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;), Error&gt; {
+        <span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
+        <span class="kw">let </span>a_4 = <span class="self">self</span>.extras[<span class="number">1</span>];
 
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_ch_row</span>(<span class="ident">round_idx</span>);
+        <span class="kw">let </span>row = get_ch_row(round_idx);
 
-        <span class="self">self</span>.<span class="ident">s_ch</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.s_ch.enable(region, row)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign and copy spread_e_lo, spread_e_hi</span>
-        <span class="ident">spread_halves_e</span>
-            .<span class="number">0</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_e_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_3</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="ident">spread_halves_e</span>
-            .<span class="number">1</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_e_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy spread_e_lo, spread_e_hi
+        </span>spread_halves_e
+            .<span class="number">0
+            </span>.copy_advice(|| <span class="string">&quot;spread_e_lo&quot;</span>, region, a_3, row - <span class="number">1</span>)<span class="question-mark">?</span>;
+        spread_halves_e
+            .<span class="number">1
+            </span>.copy_advice(|| <span class="string">&quot;spread_e_hi&quot;</span>, region, a_4, row - <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign and copy spread_f_lo, spread_f_hi</span>
-        <span class="ident">spread_halves_f</span>
-            .<span class="number">0</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_f_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_3</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="ident">spread_halves_f</span>
-            .<span class="number">1</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_f_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy spread_f_lo, spread_f_hi
+        </span>spread_halves_f
+            .<span class="number">0
+            </span>.copy_advice(|| <span class="string">&quot;spread_f_lo&quot;</span>, region, a_3, row + <span class="number">1</span>)<span class="question-mark">?</span>;
+        spread_halves_f
+            .<span class="number">1
+            </span>.copy_advice(|| <span class="string">&quot;spread_f_hi&quot;</span>, region, a_4, row + <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">p</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">64</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">spread_halves_e</span>
-            .<span class="ident">value</span>()
-            .<span class="ident">zip</span>(<span class="ident">spread_halves_f</span>.<span class="ident">value</span>())
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">e</span>, <span class="ident">f</span>)<span class="op">|</span> <span class="ident">i2lebsp</span>(<span class="ident">e</span> <span class="op">+</span> <span class="ident">f</span>));
+        <span class="kw">let </span>p: Value&lt;[bool; <span class="number">64</span>]&gt; = spread_halves_e
+            .value()
+            .zip(spread_halves_f.value())
+            .map(|(e, f)| i2lebsp(e + f));
 
-        <span class="kw">let</span> <span class="ident">p_0</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">p</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>[..<span class="number">32</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">p_0_even</span> <span class="op">=</span> <span class="ident">p_0</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
-        <span class="kw">let</span> <span class="ident">p_0_odd</span> <span class="op">=</span> <span class="ident">p_0</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
+        <span class="kw">let </span>p_0: Value&lt;[bool; <span class="number">32</span>]&gt; = p.map(|p| p[..<span class="number">32</span>].try_into().unwrap());
+        <span class="kw">let </span>p_0_even = p_0.map(even_bits);
+        <span class="kw">let </span>p_0_odd = p_0.map(odd_bits);
 
-        <span class="kw">let</span> <span class="ident">p_1</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">p</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>[<span class="number">32</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">p_1_even</span> <span class="op">=</span> <span class="ident">p_1</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
-        <span class="kw">let</span> <span class="ident">p_1_odd</span> <span class="op">=</span> <span class="ident">p_1</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
+        <span class="kw">let </span>p_1: Value&lt;[bool; <span class="number">32</span>]&gt; = p.map(|p| p[<span class="number">32</span>..].try_into().unwrap());
+        <span class="kw">let </span>p_1_even = p_1.map(even_bits);
+        <span class="kw">let </span>p_1_odd = p_1.map(odd_bits);
 
-        <span class="self">self</span>.<span class="ident">assign_ch_outputs</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">p_0_even</span>, <span class="ident">p_0_odd</span>, <span class="ident">p_1_even</span>, <span class="ident">p_1_odd</span>)
+        <span class="self">self</span>.assign_ch_outputs(region, row, p_0_even, p_0_odd, p_1_even, p_1_odd)
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">assign_ch_neg</span>(
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>assign_ch_neg(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>,
-        <span class="ident">spread_halves_e</span>: <span class="ident">RoundWordSpread</span>,
-        <span class="ident">spread_halves_g</span>: <span class="ident">RoundWordSpread</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_ch_neg_row</span>(<span class="ident">round_idx</span>);
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        round_idx: MainRoundIdx,
+        spread_halves_e: RoundWordSpread,
+        spread_halves_g: RoundWordSpread,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;), Error&gt; {
+        <span class="kw">let </span>row = get_ch_neg_row(round_idx);
 
-        <span class="self">self</span>.<span class="ident">s_ch_neg</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.s_ch_neg.enable(region, row)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">a_4</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">1</span>];
-        <span class="kw">let</span> <span class="ident">a_5</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">message_schedule</span>;
+        <span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
+        <span class="kw">let </span>a_4 = <span class="self">self</span>.extras[<span class="number">1</span>];
+        <span class="kw">let </span>a_5 = <span class="self">self</span>.message_schedule;
 
-        <span class="comment">// Assign and copy spread_e_lo, spread_e_hi</span>
-        <span class="ident">spread_halves_e</span>
-            .<span class="number">0</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_e_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_5</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="ident">spread_halves_e</span>
-            .<span class="number">1</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_e_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_5</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy spread_e_lo, spread_e_hi
+        </span>spread_halves_e
+            .<span class="number">0
+            </span>.copy_advice(|| <span class="string">&quot;spread_e_lo&quot;</span>, region, a_5, row - <span class="number">1</span>)<span class="question-mark">?</span>;
+        spread_halves_e
+            .<span class="number">1
+            </span>.copy_advice(|| <span class="string">&quot;spread_e_hi&quot;</span>, region, a_5, row)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign and copy spread_g_lo, spread_g_hi</span>
-        <span class="ident">spread_halves_g</span>
-            .<span class="number">0</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_g_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_3</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="ident">spread_halves_g</span>
-            .<span class="number">1</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_g_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy spread_g_lo, spread_g_hi
+        </span>spread_halves_g
+            .<span class="number">0
+            </span>.copy_advice(|| <span class="string">&quot;spread_g_lo&quot;</span>, region, a_3, row + <span class="number">1</span>)<span class="question-mark">?</span>;
+        spread_halves_g
+            .<span class="number">1
+            </span>.copy_advice(|| <span class="string">&quot;spread_g_hi&quot;</span>, region, a_4, row + <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Calculate neg_e_lo</span>
-        <span class="kw">let</span> <span class="ident">spread_neg_e_lo</span> <span class="op">=</span> <span class="ident">spread_halves_e</span>
-            .<span class="number">0</span>
-            .<span class="ident">value</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">spread_e_lo</span><span class="op">|</span> <span class="ident">negate_spread</span>(<span class="ident">spread_e_lo</span>.<span class="number">0</span>));
-        <span class="comment">// Assign spread_neg_e_lo</span>
-        <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(
-            <span class="ident">region</span>,
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_neg_e_lo&quot;</span>,
-            <span class="ident">a_3</span>,
-            <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>,
-            <span class="ident">spread_neg_e_lo</span>,
+        <span class="comment">// Calculate neg_e_lo
+        </span><span class="kw">let </span>spread_neg_e_lo = spread_halves_e
+            .<span class="number">0
+            </span>.value()
+            .map(|spread_e_lo| negate_spread(spread_e_lo.<span class="number">0</span>));
+        <span class="comment">// Assign spread_neg_e_lo
+        </span>AssignedBits::&lt;<span class="number">32</span>&gt;::assign_bits(
+            region,
+            || <span class="string">&quot;spread_neg_e_lo&quot;</span>,
+            a_3,
+            row - <span class="number">1</span>,
+            spread_neg_e_lo,
         )<span class="question-mark">?</span>;
 
-        <span class="comment">// Calculate neg_e_hi</span>
-        <span class="kw">let</span> <span class="ident">spread_neg_e_hi</span> <span class="op">=</span> <span class="ident">spread_halves_e</span>
-            .<span class="number">1</span>
-            .<span class="ident">value</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">spread_e_hi</span><span class="op">|</span> <span class="ident">negate_spread</span>(<span class="ident">spread_e_hi</span>.<span class="number">0</span>));
-        <span class="comment">// Assign spread_neg_e_hi</span>
-        <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(
-            <span class="ident">region</span>,
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_neg_e_hi&quot;</span>,
-            <span class="ident">a_4</span>,
-            <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>,
-            <span class="ident">spread_neg_e_hi</span>,
+        <span class="comment">// Calculate neg_e_hi
+        </span><span class="kw">let </span>spread_neg_e_hi = spread_halves_e
+            .<span class="number">1
+            </span>.value()
+            .map(|spread_e_hi| negate_spread(spread_e_hi.<span class="number">0</span>));
+        <span class="comment">// Assign spread_neg_e_hi
+        </span>AssignedBits::&lt;<span class="number">32</span>&gt;::assign_bits(
+            region,
+            || <span class="string">&quot;spread_neg_e_hi&quot;</span>,
+            a_4,
+            row - <span class="number">1</span>,
+            spread_neg_e_hi,
         )<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">p</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">64</span>]<span class="op">&gt;</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">spread_neg_e</span> <span class="op">=</span> <span class="ident">spread_neg_e_lo</span>
-                .<span class="ident">zip</span>(<span class="ident">spread_neg_e_hi</span>)
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">lo</span>, <span class="ident">hi</span>)<span class="op">|</span> <span class="ident">lebs2ip</span>(<span class="kw-2">&amp;</span><span class="ident">lo</span>) <span class="op">+</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span>) <span class="op">*</span> <span class="ident">lebs2ip</span>(<span class="kw-2">&amp;</span><span class="ident">hi</span>));
-            <span class="ident">spread_neg_e</span>
-                .<span class="ident">zip</span>(<span class="ident">spread_halves_g</span>.<span class="ident">value</span>())
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">neg_e</span>, <span class="ident">g</span>)<span class="op">|</span> <span class="ident">i2lebsp</span>(<span class="ident">neg_e</span> <span class="op">+</span> <span class="ident">g</span>))
+        <span class="kw">let </span>p: Value&lt;[bool; <span class="number">64</span>]&gt; = {
+            <span class="kw">let </span>spread_neg_e = spread_neg_e_lo
+                .zip(spread_neg_e_hi)
+                .map(|(lo, hi)| lebs2ip(<span class="kw-2">&amp;</span>lo) + (<span class="number">1 </span>&lt;&lt; <span class="number">32</span>) * lebs2ip(<span class="kw-2">&amp;</span>hi));
+            spread_neg_e
+                .zip(spread_halves_g.value())
+                .map(|(neg_e, g)| i2lebsp(neg_e + g))
         };
 
-        <span class="kw">let</span> <span class="ident">p_0</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">p</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>[..<span class="number">32</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">p_0_even</span> <span class="op">=</span> <span class="ident">p_0</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
-        <span class="kw">let</span> <span class="ident">p_0_odd</span> <span class="op">=</span> <span class="ident">p_0</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
+        <span class="kw">let </span>p_0: Value&lt;[bool; <span class="number">32</span>]&gt; = p.map(|p| p[..<span class="number">32</span>].try_into().unwrap());
+        <span class="kw">let </span>p_0_even = p_0.map(even_bits);
+        <span class="kw">let </span>p_0_odd = p_0.map(odd_bits);
 
-        <span class="kw">let</span> <span class="ident">p_1</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">p</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>[<span class="number">32</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">p_1_even</span> <span class="op">=</span> <span class="ident">p_1</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
-        <span class="kw">let</span> <span class="ident">p_1_odd</span> <span class="op">=</span> <span class="ident">p_1</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
+        <span class="kw">let </span>p_1: Value&lt;[bool; <span class="number">32</span>]&gt; = p.map(|p| p[<span class="number">32</span>..].try_into().unwrap());
+        <span class="kw">let </span>p_1_even = p_1.map(even_bits);
+        <span class="kw">let </span>p_1_odd = p_1.map(odd_bits);
 
-        <span class="self">self</span>.<span class="ident">assign_ch_outputs</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">p_0_even</span>, <span class="ident">p_0_odd</span>, <span class="ident">p_1_even</span>, <span class="ident">p_1_odd</span>)
+        <span class="self">self</span>.assign_ch_outputs(region, row, p_0_even, p_0_odd, p_1_even, p_1_odd)
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_maj_outputs</span>(
+    <span class="kw">fn </span>assign_maj_outputs(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-        <span class="ident">r_0_even</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-        <span class="ident">r_0_odd</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-        <span class="ident">r_1_even</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-        <span class="ident">r_1_odd</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> (<span class="ident">_even</span>, <span class="ident">odd</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_spread_outputs</span>(
-            <span class="ident">region</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">lookup</span>,
-            <span class="ident">a_3</span>,
-            <span class="ident">row</span>,
-            <span class="ident">r_0_even</span>,
-            <span class="ident">r_0_odd</span>,
-            <span class="ident">r_1_even</span>,
-            <span class="ident">r_1_odd</span>,
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        row: usize,
+        r_0_even: Value&lt;[bool; <span class="number">16</span>]&gt;,
+        r_0_odd: Value&lt;[bool; <span class="number">16</span>]&gt;,
+        r_1_even: Value&lt;[bool; <span class="number">16</span>]&gt;,
+        r_1_odd: Value&lt;[bool; <span class="number">16</span>]&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;), Error&gt; {
+        <span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
+        <span class="kw">let </span>(_even, odd) = <span class="self">self</span>.assign_spread_outputs(
+            region,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.lookup,
+            a_3,
+            row,
+            r_0_even,
+            r_0_odd,
+            r_1_even,
+            r_1_odd,
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">odd</span>)
+        <span class="prelude-val">Ok</span>(odd)
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">assign_maj</span>(
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>assign_maj(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>,
-        <span class="ident">spread_halves_a</span>: <span class="ident">RoundWordSpread</span>,
-        <span class="ident">spread_halves_b</span>: <span class="ident">RoundWordSpread</span>,
-        <span class="ident">spread_halves_c</span>: <span class="ident">RoundWordSpread</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">a_4</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">1</span>];
-        <span class="kw">let</span> <span class="ident">a_5</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">message_schedule</span>;
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        round_idx: MainRoundIdx,
+        spread_halves_a: RoundWordSpread,
+        spread_halves_b: RoundWordSpread,
+        spread_halves_c: RoundWordSpread,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;), Error&gt; {
+        <span class="kw">let </span>a_4 = <span class="self">self</span>.extras[<span class="number">1</span>];
+        <span class="kw">let </span>a_5 = <span class="self">self</span>.message_schedule;
 
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_maj_row</span>(<span class="ident">round_idx</span>);
+        <span class="kw">let </span>row = get_maj_row(round_idx);
 
-        <span class="self">self</span>.<span class="ident">s_maj</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.s_maj.enable(region, row)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign and copy spread_a_lo, spread_a_hi</span>
-        <span class="ident">spread_halves_a</span>
-            .<span class="number">0</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_a_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="ident">spread_halves_a</span>
-            .<span class="number">1</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_a_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_5</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy spread_a_lo, spread_a_hi
+        </span>spread_halves_a
+            .<span class="number">0
+            </span>.copy_advice(|| <span class="string">&quot;spread_a_lo&quot;</span>, region, a_4, row - <span class="number">1</span>)<span class="question-mark">?</span>;
+        spread_halves_a
+            .<span class="number">1
+            </span>.copy_advice(|| <span class="string">&quot;spread_a_hi&quot;</span>, region, a_5, row - <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign and copy spread_b_lo, spread_b_hi</span>
-        <span class="ident">spread_halves_b</span>
-            .<span class="number">0</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_b_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
-        <span class="ident">spread_halves_b</span>
-            .<span class="number">1</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_b_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_5</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy spread_b_lo, spread_b_hi
+        </span>spread_halves_b
+            .<span class="number">0
+            </span>.copy_advice(|| <span class="string">&quot;spread_b_lo&quot;</span>, region, a_4, row)<span class="question-mark">?</span>;
+        spread_halves_b
+            .<span class="number">1
+            </span>.copy_advice(|| <span class="string">&quot;spread_b_hi&quot;</span>, region, a_5, row)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign and copy spread_c_lo, spread_c_hi</span>
-        <span class="ident">spread_halves_c</span>
-            .<span class="number">0</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_c_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="ident">spread_halves_c</span>
-            .<span class="number">1</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_c_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_5</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy spread_c_lo, spread_c_hi
+        </span>spread_halves_c
+            .<span class="number">0
+            </span>.copy_advice(|| <span class="string">&quot;spread_c_lo&quot;</span>, region, a_4, row + <span class="number">1</span>)<span class="question-mark">?</span>;
+        spread_halves_c
+            .<span class="number">1
+            </span>.copy_advice(|| <span class="string">&quot;spread_c_hi&quot;</span>, region, a_5, row + <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">m</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">64</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">spread_halves_a</span>
-            .<span class="ident">value</span>()
-            .<span class="ident">zip</span>(<span class="ident">spread_halves_b</span>.<span class="ident">value</span>())
-            .<span class="ident">zip</span>(<span class="ident">spread_halves_c</span>.<span class="ident">value</span>())
-            .<span class="ident">map</span>(<span class="op">|</span>((<span class="ident">a</span>, <span class="ident">b</span>), <span class="ident">c</span>)<span class="op">|</span> <span class="ident">i2lebsp</span>(<span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span> <span class="op">+</span> <span class="ident">c</span>));
+        <span class="kw">let </span>m: Value&lt;[bool; <span class="number">64</span>]&gt; = spread_halves_a
+            .value()
+            .zip(spread_halves_b.value())
+            .zip(spread_halves_c.value())
+            .map(|((a, b), c)| i2lebsp(a + b + c));
 
-        <span class="kw">let</span> <span class="ident">m_0</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">m</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">m</span><span class="op">|</span> <span class="ident">m</span>[..<span class="number">32</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">m_0_even</span> <span class="op">=</span> <span class="ident">m_0</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
-        <span class="kw">let</span> <span class="ident">m_0_odd</span> <span class="op">=</span> <span class="ident">m_0</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
+        <span class="kw">let </span>m_0: Value&lt;[bool; <span class="number">32</span>]&gt; = m.map(|m| m[..<span class="number">32</span>].try_into().unwrap());
+        <span class="kw">let </span>m_0_even = m_0.map(even_bits);
+        <span class="kw">let </span>m_0_odd = m_0.map(odd_bits);
 
-        <span class="kw">let</span> <span class="ident">m_1</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">m</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">m</span><span class="op">|</span> <span class="ident">m</span>[<span class="number">32</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">m_1_even</span> <span class="op">=</span> <span class="ident">m_1</span>.<span class="ident">map</span>(<span class="ident">even_bits</span>);
-        <span class="kw">let</span> <span class="ident">m_1_odd</span> <span class="op">=</span> <span class="ident">m_1</span>.<span class="ident">map</span>(<span class="ident">odd_bits</span>);
+        <span class="kw">let </span>m_1: Value&lt;[bool; <span class="number">32</span>]&gt; = m.map(|m| m[<span class="number">32</span>..].try_into().unwrap());
+        <span class="kw">let </span>m_1_even = m_1.map(even_bits);
+        <span class="kw">let </span>m_1_odd = m_1.map(odd_bits);
 
-        <span class="self">self</span>.<span class="ident">assign_maj_outputs</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">m_0_even</span>, <span class="ident">m_0_odd</span>, <span class="ident">m_1_even</span>, <span class="ident">m_1_odd</span>)
+        <span class="self">self</span>.assign_maj_outputs(region, row, m_0_even, m_0_odd, m_1_even, m_1_odd)
     }
 
-    <span class="comment">// s_h_prime to get H&#39; = H + Ch(E, F, G) + s_upper_sigma_1(E) + K + W</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">assign_h_prime</span>(
+    <span class="comment">// s_h_prime to get H&#39; = H + Ch(E, F, G) + s_upper_sigma_1(E) + K + W
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>assign_h_prime(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>,
-        <span class="ident">h</span>: <span class="ident">RoundWordDense</span>,
-        <span class="ident">ch</span>: (<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>),
-        <span class="ident">ch_neg</span>: (<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>),
-        <span class="ident">sigma_1</span>: (<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>),
-        <span class="ident">k</span>: <span class="ident">u32</span>,
-        <span class="ident">w</span>: <span class="kw-2">&amp;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>),
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RoundWordDense</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_h_prime_row</span>(<span class="ident">round_idx</span>);
-        <span class="self">self</span>.<span class="ident">s_h_prime</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        round_idx: MainRoundIdx,
+        h: RoundWordDense,
+        ch: (AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;),
+        ch_neg: (AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;),
+        sigma_1: (AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;),
+        k: u32,
+        w: <span class="kw-2">&amp;</span>(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;),
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RoundWordDense, Error&gt; {
+        <span class="kw">let </span>row = get_h_prime_row(round_idx);
+        <span class="self">self</span>.s_h_prime.enable(region, row)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">a_4</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">1</span>];
-        <span class="kw">let</span> <span class="ident">a_5</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">message_schedule</span>;
-        <span class="kw">let</span> <span class="ident">a_6</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">2</span>];
-        <span class="kw">let</span> <span class="ident">a_7</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">3</span>];
-        <span class="kw">let</span> <span class="ident">a_8</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">4</span>];
-        <span class="kw">let</span> <span class="ident">a_9</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">5</span>];
+        <span class="kw">let </span>a_4 = <span class="self">self</span>.extras[<span class="number">1</span>];
+        <span class="kw">let </span>a_5 = <span class="self">self</span>.message_schedule;
+        <span class="kw">let </span>a_6 = <span class="self">self</span>.extras[<span class="number">2</span>];
+        <span class="kw">let </span>a_7 = <span class="self">self</span>.extras[<span class="number">3</span>];
+        <span class="kw">let </span>a_8 = <span class="self">self</span>.extras[<span class="number">4</span>];
+        <span class="kw">let </span>a_9 = <span class="self">self</span>.extras[<span class="number">5</span>];
 
-        <span class="comment">// Assign and copy h</span>
-        <span class="ident">h</span>.<span class="number">0</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;h_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_7</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="ident">h</span>.<span class="number">1</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;h_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_7</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy h
+        </span>h.<span class="number">0</span>.copy_advice(|| <span class="string">&quot;h_lo&quot;</span>, region, a_7, row - <span class="number">1</span>)<span class="question-mark">?</span>;
+        h.<span class="number">1</span>.copy_advice(|| <span class="string">&quot;h_hi&quot;</span>, region, a_7, row)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign and copy sigma_1</span>
-        <span class="ident">sigma_1</span>.<span class="number">0</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sigma_1_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
-        <span class="ident">sigma_1</span>.<span class="number">1</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sigma_1_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_5</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy sigma_1
+        </span>sigma_1.<span class="number">0</span>.copy_advice(|| <span class="string">&quot;sigma_1_lo&quot;</span>, region, a_4, row)<span class="question-mark">?</span>;
+        sigma_1.<span class="number">1</span>.copy_advice(|| <span class="string">&quot;sigma_1_hi&quot;</span>, region, a_5, row)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign k</span>
-        <span class="kw">let</span> <span class="ident">k</span>: [<span class="ident">bool</span>; <span class="number">32</span>] <span class="op">=</span> <span class="ident">i2lebsp</span>(<span class="ident">k</span>.<span class="ident">into</span>());
-        <span class="kw">let</span> <span class="ident">k_lo</span>: [<span class="ident">bool</span>; <span class="number">16</span>] <span class="op">=</span> <span class="ident">k</span>[..<span class="number">16</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">k_hi</span>: [<span class="ident">bool</span>; <span class="number">16</span>] <span class="op">=</span> <span class="ident">k</span>[<span class="number">16</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
+        <span class="comment">// Assign k
+        </span><span class="kw">let </span>k: [bool; <span class="number">32</span>] = i2lebsp(k.into());
+        <span class="kw">let </span>k_lo: [bool; <span class="number">16</span>] = k[..<span class="number">16</span>].try_into().unwrap();
+        <span class="kw">let </span>k_hi: [bool; <span class="number">16</span>] = k[<span class="number">16</span>..].try_into().unwrap();
         {
-            <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;k_lo&quot;</span>, <span class="ident">a_6</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>, <span class="ident">Value::known</span>(<span class="ident">k_lo</span>))<span class="question-mark">?</span>;
-            <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;k_hi&quot;</span>, <span class="ident">a_6</span>, <span class="ident">row</span>, <span class="ident">Value::known</span>(<span class="ident">k_hi</span>))<span class="question-mark">?</span>;
+            AssignedBits::&lt;<span class="number">16</span>&gt;::assign_bits(region, || <span class="string">&quot;k_lo&quot;</span>, a_6, row - <span class="number">1</span>, Value::known(k_lo))<span class="question-mark">?</span>;
+            AssignedBits::&lt;<span class="number">16</span>&gt;::assign_bits(region, || <span class="string">&quot;k_hi&quot;</span>, a_6, row, Value::known(k_hi))<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// Assign and copy w</span>
-        <span class="ident">w</span>.<span class="number">0</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;w_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_8</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="ident">w</span>.<span class="number">1</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;w_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_8</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy w
+        </span>w.<span class="number">0</span>.copy_advice(|| <span class="string">&quot;w_lo&quot;</span>, region, a_8, row - <span class="number">1</span>)<span class="question-mark">?</span>;
+        w.<span class="number">1</span>.copy_advice(|| <span class="string">&quot;w_hi&quot;</span>, region, a_8, row)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign and copy ch</span>
-        <span class="ident">ch</span>.<span class="number">1</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;ch_neg_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_6</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy ch
+        </span>ch.<span class="number">1</span>.copy_advice(|| <span class="string">&quot;ch_neg_hi&quot;</span>, region, a_6, row + <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign and copy ch_neg</span>
-        <span class="ident">ch_neg</span>.<span class="number">0</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;ch_neg_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_5</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="ident">ch_neg</span>.<span class="number">1</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;ch_neg_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_5</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy ch_neg
+        </span>ch_neg.<span class="number">0</span>.copy_advice(|| <span class="string">&quot;ch_neg_lo&quot;</span>, region, a_5, row - <span class="number">1</span>)<span class="question-mark">?</span>;
+        ch_neg.<span class="number">1</span>.copy_advice(|| <span class="string">&quot;ch_neg_hi&quot;</span>, region, a_5, row + <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign h_prime_lo, h_prime_hi, h_prime_carry</span>
-        {
-            <span class="kw">let</span> (<span class="ident">h_prime</span>, <span class="ident">h_prime_carry</span>) <span class="op">=</span> <span class="ident">sum_with_carry</span>(<span class="macro">vec!</span>[
-                (<span class="ident">h</span>.<span class="number">0</span>.<span class="ident">value_u16</span>(), <span class="ident">h</span>.<span class="number">1</span>.<span class="ident">value_u16</span>()),
-                (<span class="ident">ch</span>.<span class="number">0</span>.<span class="ident">value_u16</span>(), <span class="ident">ch</span>.<span class="number">1</span>.<span class="ident">value_u16</span>()),
-                (<span class="ident">ch_neg</span>.<span class="number">0</span>.<span class="ident">value_u16</span>(), <span class="ident">ch_neg</span>.<span class="number">1</span>.<span class="ident">value_u16</span>()),
-                (<span class="ident">sigma_1</span>.<span class="number">0</span>.<span class="ident">value_u16</span>(), <span class="ident">sigma_1</span>.<span class="number">1</span>.<span class="ident">value_u16</span>()),
+        <span class="comment">// Assign h_prime_lo, h_prime_hi, h_prime_carry
+        </span>{
+            <span class="kw">let </span>(h_prime, h_prime_carry) = sum_with_carry(<span class="macro">vec!</span>[
+                (h.<span class="number">0</span>.value_u16(), h.<span class="number">1</span>.value_u16()),
+                (ch.<span class="number">0</span>.value_u16(), ch.<span class="number">1</span>.value_u16()),
+                (ch_neg.<span class="number">0</span>.value_u16(), ch_neg.<span class="number">1</span>.value_u16()),
+                (sigma_1.<span class="number">0</span>.value_u16(), sigma_1.<span class="number">1</span>.value_u16()),
                 (
-                    <span class="ident">Value::known</span>(<span class="ident">lebs2ip</span>(<span class="kw-2">&amp;</span><span class="ident">k_lo</span>) <span class="kw">as</span> <span class="ident">u16</span>),
-                    <span class="ident">Value::known</span>(<span class="ident">lebs2ip</span>(<span class="kw-2">&amp;</span><span class="ident">k_hi</span>) <span class="kw">as</span> <span class="ident">u16</span>),
+                    Value::known(lebs2ip(<span class="kw-2">&amp;</span>k_lo) <span class="kw">as </span>u16),
+                    Value::known(lebs2ip(<span class="kw-2">&amp;</span>k_hi) <span class="kw">as </span>u16),
                 ),
-                (<span class="ident">w</span>.<span class="number">0</span>.<span class="ident">value_u16</span>(), <span class="ident">w</span>.<span class="number">1</span>.<span class="ident">value_u16</span>()),
+                (w.<span class="number">0</span>.value_u16(), w.<span class="number">1</span>.value_u16()),
             ]);
 
-            <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;h_prime_carry&quot;</span>,
-                <span class="ident">a_9</span>,
-                <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>,
-                <span class="op">|</span><span class="op">|</span> <span class="ident">h_prime_carry</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">value</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">value</span> <span class="kw">as</span> <span class="ident">u64</span>)),
+            region.assign_advice(
+                || <span class="string">&quot;h_prime_carry&quot;</span>,
+                a_9,
+                row + <span class="number">1</span>,
+                || h_prime_carry.map(|value| pallas::Base::from(value <span class="kw">as </span>u64)),
             )<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">h_prime</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">h_prime</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">i2lebsp</span>(<span class="ident">w</span>.<span class="ident">into</span>()));
-            <span class="kw">let</span> <span class="ident">h_prime_lo</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">h_prime</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">w</span>[..<span class="number">16</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-            <span class="kw">let</span> <span class="ident">h_prime_hi</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">h_prime</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">w</span>[<span class="number">16</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
+            <span class="kw">let </span>h_prime: Value&lt;[bool; <span class="number">32</span>]&gt; = h_prime.map(|w| i2lebsp(w.into()));
+            <span class="kw">let </span>h_prime_lo: Value&lt;[bool; <span class="number">16</span>]&gt; = h_prime.map(|w| w[..<span class="number">16</span>].try_into().unwrap());
+            <span class="kw">let </span>h_prime_hi: Value&lt;[bool; <span class="number">16</span>]&gt; = h_prime.map(|w| w[<span class="number">16</span>..].try_into().unwrap());
 
-            <span class="kw">let</span> <span class="ident">h_prime_lo</span> <span class="op">=</span>
-                <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;h_prime_lo&quot;</span>, <span class="ident">a_7</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">h_prime_lo</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">h_prime_hi</span> <span class="op">=</span>
-                <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;h_prime_hi&quot;</span>, <span class="ident">a_8</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">h_prime_hi</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>h_prime_lo =
+                AssignedBits::&lt;<span class="number">16</span>&gt;::assign_bits(region, || <span class="string">&quot;h_prime_lo&quot;</span>, a_7, row + <span class="number">1</span>, h_prime_lo)<span class="question-mark">?</span>;
+            <span class="kw">let </span>h_prime_hi =
+                AssignedBits::&lt;<span class="number">16</span>&gt;::assign_bits(region, || <span class="string">&quot;h_prime_hi&quot;</span>, a_8, row + <span class="number">1</span>, h_prime_hi)<span class="question-mark">?</span>;
 
-            <span class="prelude-val">Ok</span>((<span class="ident">h_prime_lo</span>, <span class="ident">h_prime_hi</span>).<span class="ident">into</span>())
+            <span class="prelude-val">Ok</span>((h_prime_lo, h_prime_hi).into())
         }
     }
 
-    <span class="comment">// s_e_new to get E_new = H&#39; + D</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">assign_e_new</span>(
+    <span class="comment">// s_e_new to get E_new = H&#39; + D
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>assign_e_new(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>,
-        <span class="ident">d</span>: <span class="kw-2">&amp;</span><span class="ident">RoundWordDense</span>,
-        <span class="ident">h_prime</span>: <span class="kw-2">&amp;</span><span class="ident">RoundWordDense</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RoundWordDense</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_e_new_row</span>(<span class="ident">round_idx</span>);
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        round_idx: MainRoundIdx,
+        d: <span class="kw-2">&amp;</span>RoundWordDense,
+        h_prime: <span class="kw-2">&amp;</span>RoundWordDense,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RoundWordDense, Error&gt; {
+        <span class="kw">let </span>row = get_e_new_row(round_idx);
 
-        <span class="self">self</span>.<span class="ident">s_e_new</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.s_e_new.enable(region, row)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">a_7</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">3</span>];
-        <span class="kw">let</span> <span class="ident">a_8</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">4</span>];
-        <span class="kw">let</span> <span class="ident">a_9</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">5</span>];
+        <span class="kw">let </span>a_7 = <span class="self">self</span>.extras[<span class="number">3</span>];
+        <span class="kw">let </span>a_8 = <span class="self">self</span>.extras[<span class="number">4</span>];
+        <span class="kw">let </span>a_9 = <span class="self">self</span>.extras[<span class="number">5</span>];
 
-        <span class="comment">// Assign and copy d_lo, d_hi</span>
-        <span class="ident">d</span>.<span class="number">0</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;d_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_7</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
-        <span class="ident">d</span>.<span class="number">1</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;d_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_7</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy d_lo, d_hi
+        </span>d.<span class="number">0</span>.copy_advice(|| <span class="string">&quot;d_lo&quot;</span>, region, a_7, row)<span class="question-mark">?</span>;
+        d.<span class="number">1</span>.copy_advice(|| <span class="string">&quot;d_hi&quot;</span>, region, a_7, row + <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign e_new, e_new_carry</span>
-        <span class="kw">let</span> (<span class="ident">e_new</span>, <span class="ident">e_new_carry</span>) <span class="op">=</span> <span class="ident">sum_with_carry</span>(<span class="macro">vec!</span>[
-            (<span class="ident">h_prime</span>.<span class="number">0</span>.<span class="ident">value_u16</span>(), <span class="ident">h_prime</span>.<span class="number">1</span>.<span class="ident">value_u16</span>()),
-            (<span class="ident">d</span>.<span class="number">0</span>.<span class="ident">value_u16</span>(), <span class="ident">d</span>.<span class="number">1</span>.<span class="ident">value_u16</span>()),
+        <span class="comment">// Assign e_new, e_new_carry
+        </span><span class="kw">let </span>(e_new, e_new_carry) = sum_with_carry(<span class="macro">vec!</span>[
+            (h_prime.<span class="number">0</span>.value_u16(), h_prime.<span class="number">1</span>.value_u16()),
+            (d.<span class="number">0</span>.value_u16(), d.<span class="number">1</span>.value_u16()),
         ]);
 
-        <span class="kw">let</span> <span class="ident">e_new_dense</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_word_halves_dense</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">a_8</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">a_8</span>, <span class="ident">e_new</span>)<span class="question-mark">?</span>;
-        <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;e_new_carry&quot;</span>,
-            <span class="ident">a_9</span>,
-            <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>,
-            <span class="op">|</span><span class="op">|</span> <span class="ident">e_new_carry</span>.<span class="ident">map</span>(<span class="ident">pallas::Base::from</span>),
+        <span class="kw">let </span>e_new_dense = <span class="self">self</span>.assign_word_halves_dense(region, row, a_8, row + <span class="number">1</span>, a_8, e_new)<span class="question-mark">?</span>;
+        region.assign_advice(
+            || <span class="string">&quot;e_new_carry&quot;</span>,
+            a_9,
+            row + <span class="number">1</span>,
+            || e_new_carry.map(pallas::Base::from),
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">e_new_dense</span>)
+        <span class="prelude-val">Ok</span>(e_new_dense)
     }
 
-    <span class="comment">// s_a_new to get A_new = H&#39; + Maj(A, B, C) + s_upper_sigma_0(A)</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">assign_a_new</span>(
+    <span class="comment">// s_a_new to get A_new = H&#39; + Maj(A, B, C) + s_upper_sigma_0(A)
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>assign_a_new(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>,
-        <span class="ident">maj</span>: (<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>),
-        <span class="ident">sigma_0</span>: (<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>),
-        <span class="ident">h_prime</span>: <span class="ident">RoundWordDense</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RoundWordDense</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_a_new_row</span>(<span class="ident">round_idx</span>);
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        round_idx: MainRoundIdx,
+        maj: (AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;),
+        sigma_0: (AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;),
+        h_prime: RoundWordDense,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RoundWordDense, Error&gt; {
+        <span class="kw">let </span>row = get_a_new_row(round_idx);
 
-        <span class="self">self</span>.<span class="ident">s_a_new</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.s_a_new.enable(region, row)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">a_6</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">2</span>];
-        <span class="kw">let</span> <span class="ident">a_7</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">3</span>];
-        <span class="kw">let</span> <span class="ident">a_8</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">4</span>];
-        <span class="kw">let</span> <span class="ident">a_9</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">5</span>];
+        <span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
+        <span class="kw">let </span>a_6 = <span class="self">self</span>.extras[<span class="number">2</span>];
+        <span class="kw">let </span>a_7 = <span class="self">self</span>.extras[<span class="number">3</span>];
+        <span class="kw">let </span>a_8 = <span class="self">self</span>.extras[<span class="number">4</span>];
+        <span class="kw">let </span>a_9 = <span class="self">self</span>.extras[<span class="number">5</span>];
 
-        <span class="comment">// Assign and copy maj_1</span>
-        <span class="ident">maj</span>.<span class="number">1</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;maj_1_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_3</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy maj_1
+        </span>maj.<span class="number">1</span>.copy_advice(|| <span class="string">&quot;maj_1_hi&quot;</span>, region, a_3, row - <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign and copy sigma_0</span>
-        <span class="ident">sigma_0</span>.<span class="number">0</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sigma_0_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_6</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
-        <span class="ident">sigma_0</span>
-            .<span class="number">1</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;sigma_0_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_6</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy sigma_0
+        </span>sigma_0.<span class="number">0</span>.copy_advice(|| <span class="string">&quot;sigma_0_lo&quot;</span>, region, a_6, row)<span class="question-mark">?</span>;
+        sigma_0
+            .<span class="number">1
+            </span>.copy_advice(|| <span class="string">&quot;sigma_0_hi&quot;</span>, region, a_6, row + <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign and copy h_prime</span>
-        <span class="ident">h_prime</span>
-            .<span class="number">0</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;h_prime_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_7</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="ident">h_prime</span>
-            .<span class="number">1</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;h_prime_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_8</span>, <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy h_prime
+        </span>h_prime
+            .<span class="number">0
+            </span>.copy_advice(|| <span class="string">&quot;h_prime_lo&quot;</span>, region, a_7, row - <span class="number">1</span>)<span class="question-mark">?</span>;
+        h_prime
+            .<span class="number">1
+            </span>.copy_advice(|| <span class="string">&quot;h_prime_hi&quot;</span>, region, a_8, row - <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign a_new, a_new_carry</span>
-        <span class="kw">let</span> (<span class="ident">a_new</span>, <span class="ident">a_new_carry</span>) <span class="op">=</span> <span class="ident">sum_with_carry</span>(<span class="macro">vec!</span>[
-            (<span class="ident">h_prime</span>.<span class="number">0</span>.<span class="ident">value_u16</span>(), <span class="ident">h_prime</span>.<span class="number">1</span>.<span class="ident">value_u16</span>()),
-            (<span class="ident">sigma_0</span>.<span class="number">0</span>.<span class="ident">value_u16</span>(), <span class="ident">sigma_0</span>.<span class="number">1</span>.<span class="ident">value_u16</span>()),
-            (<span class="ident">maj</span>.<span class="number">0</span>.<span class="ident">value_u16</span>(), <span class="ident">maj</span>.<span class="number">1</span>.<span class="ident">value_u16</span>()),
+        <span class="comment">// Assign a_new, a_new_carry
+        </span><span class="kw">let </span>(a_new, a_new_carry) = sum_with_carry(<span class="macro">vec!</span>[
+            (h_prime.<span class="number">0</span>.value_u16(), h_prime.<span class="number">1</span>.value_u16()),
+            (sigma_0.<span class="number">0</span>.value_u16(), sigma_0.<span class="number">1</span>.value_u16()),
+            (maj.<span class="number">0</span>.value_u16(), maj.<span class="number">1</span>.value_u16()),
         ]);
 
-        <span class="kw">let</span> <span class="ident">a_new_dense</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_word_halves_dense</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">a_8</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">a_8</span>, <span class="ident">a_new</span>)<span class="question-mark">?</span>;
-        <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;a_new_carry&quot;</span>,
-            <span class="ident">a_9</span>,
-            <span class="ident">row</span>,
-            <span class="op">|</span><span class="op">|</span> <span class="ident">a_new_carry</span>.<span class="ident">map</span>(<span class="ident">pallas::Base::from</span>),
+        <span class="kw">let </span>a_new_dense = <span class="self">self</span>.assign_word_halves_dense(region, row, a_8, row + <span class="number">1</span>, a_8, a_new)<span class="question-mark">?</span>;
+        region.assign_advice(
+            || <span class="string">&quot;a_new_carry&quot;</span>,
+            a_9,
+            row,
+            || a_new_carry.map(pallas::Base::from),
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">a_new_dense</span>)
+        <span class="prelude-val">Ok</span>(a_new_dense)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assign_word_halves_dense</span>(
+    <span class="kw">pub fn </span>assign_word_halves_dense(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">lo_row</span>: <span class="ident">usize</span>,
-        <span class="ident">lo_col</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">hi_row</span>: <span class="ident">usize</span>,
-        <span class="ident">hi_col</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">word</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RoundWordDense</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">word</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">i2lebsp</span>(<span class="ident">w</span>.<span class="ident">into</span>()));
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        lo_row: usize,
+        lo_col: Column&lt;Advice&gt;,
+        hi_row: usize,
+        hi_col: Column&lt;Advice&gt;,
+        word: Value&lt;u32&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RoundWordDense, Error&gt; {
+        <span class="kw">let </span>word: Value&lt;[bool; <span class="number">32</span>]&gt; = word.map(|w| i2lebsp(w.into()));
 
-        <span class="kw">let</span> <span class="ident">lo</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">lo</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">w</span>[..<span class="number">16</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-            <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;lo&quot;</span>, <span class="ident">lo_col</span>, <span class="ident">lo_row</span>, <span class="ident">lo</span>)<span class="question-mark">?</span>
-        };
+        <span class="kw">let </span>lo = {
+            <span class="kw">let </span>lo: Value&lt;[bool; <span class="number">16</span>]&gt; = word.map(|w| w[..<span class="number">16</span>].try_into().unwrap());
+            AssignedBits::&lt;<span class="number">16</span>&gt;::assign_bits(region, || <span class="string">&quot;lo&quot;</span>, lo_col, lo_row, lo)<span class="question-mark">?
+        </span>};
 
-        <span class="kw">let</span> <span class="ident">hi</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">hi</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">w</span>[<span class="number">16</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-            <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;hi&quot;</span>, <span class="ident">hi_col</span>, <span class="ident">hi_row</span>, <span class="ident">hi</span>)<span class="question-mark">?</span>
-        };
+        <span class="kw">let </span>hi = {
+            <span class="kw">let </span>hi: Value&lt;[bool; <span class="number">16</span>]&gt; = word.map(|w| w[<span class="number">16</span>..].try_into().unwrap());
+            AssignedBits::&lt;<span class="number">16</span>&gt;::assign_bits(region, || <span class="string">&quot;hi&quot;</span>, hi_col, hi_row, hi)<span class="question-mark">?
+        </span>};
 
-        <span class="prelude-val">Ok</span>((<span class="ident">lo</span>, <span class="ident">hi</span>).<span class="ident">into</span>())
+        <span class="prelude-val">Ok</span>((lo, hi).into())
     }
 
-    <span class="comment">// Assign hi and lo halves for both dense and spread versions of a word</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assign_word_halves</span>(
+    <span class="comment">// Assign hi and lo halves for both dense and spread versions of a word
+    </span><span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="kw">pub fn </span>assign_word_halves(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-        <span class="ident">word</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">RoundWordDense</span>, <span class="ident">RoundWordSpread</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Rename these here for ease of matching the gates to the specification.</span>
-        <span class="kw">let</span> <span class="ident">a_7</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">3</span>];
-        <span class="kw">let</span> <span class="ident">a_8</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">4</span>];
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        row: usize,
+        word: Value&lt;u32&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(RoundWordDense, RoundWordSpread), Error&gt; {
+        <span class="comment">// Rename these here for ease of matching the gates to the specification.
+        </span><span class="kw">let </span>a_7 = <span class="self">self</span>.extras[<span class="number">3</span>];
+        <span class="kw">let </span>a_8 = <span class="self">self</span>.extras[<span class="number">4</span>];
 
-        <span class="kw">let</span> <span class="ident">word</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">32</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">i2lebsp</span>(<span class="ident">w</span>.<span class="ident">into</span>()));
-        <span class="kw">let</span> <span class="ident">lo</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">w</span>[..<span class="number">16</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">hi</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">w</span>[<span class="number">16</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
+        <span class="kw">let </span>word: Value&lt;[bool; <span class="number">32</span>]&gt; = word.map(|w| i2lebsp(w.into()));
+        <span class="kw">let </span>lo: Value&lt;[bool; <span class="number">16</span>]&gt; = word.map(|w| w[..<span class="number">16</span>].try_into().unwrap());
+        <span class="kw">let </span>hi: Value&lt;[bool; <span class="number">16</span>]&gt; = word.map(|w| w[<span class="number">16</span>..].try_into().unwrap());
 
-        <span class="kw">let</span> <span class="ident">w_lo</span> <span class="op">=</span> <span class="ident">SpreadVar::without_lookup</span>(<span class="ident">region</span>, <span class="ident">a_7</span>, <span class="ident">row</span>, <span class="ident">a_8</span>, <span class="ident">row</span>, <span class="ident">lo</span>.<span class="ident">map</span>(<span class="ident">SpreadWord::new</span>))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">w_hi</span> <span class="op">=</span>
-            <span class="ident">SpreadVar::without_lookup</span>(<span class="ident">region</span>, <span class="ident">a_7</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">a_8</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">hi</span>.<span class="ident">map</span>(<span class="ident">SpreadWord::new</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>w_lo = SpreadVar::without_lookup(region, a_7, row, a_8, row, lo.map(SpreadWord::new))<span class="question-mark">?</span>;
+        <span class="kw">let </span>w_hi =
+            SpreadVar::without_lookup(region, a_7, row + <span class="number">1</span>, a_8, row + <span class="number">1</span>, hi.map(SpreadWord::new))<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>((
-            (<span class="ident">w_lo</span>.<span class="ident">dense</span>, <span class="ident">w_hi</span>.<span class="ident">dense</span>).<span class="ident">into</span>(),
-            (<span class="ident">w_lo</span>.<span class="ident">spread</span>, <span class="ident">w_hi</span>.<span class="ident">spread</span>).<span class="ident">into</span>(),
+            (w_lo.dense, w_hi.dense).into(),
+            (w_lo.spread, w_hi.spread).into(),
         ))
     }
 }
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::many_single_char_names</span>)]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">match_state</span>(
-    <span class="ident">state</span>: <span class="ident">State</span>,
+<span class="attribute">#[allow(clippy::many_single_char_names)]</span>
+<span class="kw">pub fn </span>match_state(
+    state: State,
 ) -&gt; (
-    <span class="ident">RoundWordA</span>,
-    <span class="ident">RoundWord</span>,
-    <span class="ident">RoundWord</span>,
-    <span class="ident">RoundWordDense</span>,
-    <span class="ident">RoundWordE</span>,
-    <span class="ident">RoundWord</span>,
-    <span class="ident">RoundWord</span>,
-    <span class="ident">RoundWordDense</span>,
+    RoundWordA,
+    RoundWord,
+    RoundWord,
+    RoundWordDense,
+    RoundWordE,
+    RoundWord,
+    RoundWord,
+    RoundWordDense,
 ) {
-    <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">state</span>.<span class="ident">a</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">StateWord::A</span>(<span class="ident">a</span>)) =&gt; <span class="ident">a</span>,
-        <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(),
+    <span class="kw">let </span>a = <span class="kw">match </span>state.a {
+        <span class="prelude-val">Some</span>(StateWord::A(a)) =&gt; a,
+        <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
     };
-    <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">state</span>.<span class="ident">b</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">StateWord::B</span>(<span class="ident">b</span>)) =&gt; <span class="ident">b</span>,
-        <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(),
+    <span class="kw">let </span>b = <span class="kw">match </span>state.b {
+        <span class="prelude-val">Some</span>(StateWord::B(b)) =&gt; b,
+        <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
     };
-    <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">state</span>.<span class="ident">c</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">StateWord::C</span>(<span class="ident">c</span>)) =&gt; <span class="ident">c</span>,
-        <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(),
+    <span class="kw">let </span>c = <span class="kw">match </span>state.c {
+        <span class="prelude-val">Some</span>(StateWord::C(c)) =&gt; c,
+        <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
     };
-    <span class="kw">let</span> <span class="ident">d</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">state</span>.<span class="ident">d</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">StateWord::D</span>(<span class="ident">d</span>)) =&gt; <span class="ident">d</span>,
-        <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(),
+    <span class="kw">let </span>d = <span class="kw">match </span>state.d {
+        <span class="prelude-val">Some</span>(StateWord::D(d)) =&gt; d,
+        <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
     };
-    <span class="kw">let</span> <span class="ident">e</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">state</span>.<span class="ident">e</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">StateWord::E</span>(<span class="ident">e</span>)) =&gt; <span class="ident">e</span>,
-        <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(),
+    <span class="kw">let </span>e = <span class="kw">match </span>state.e {
+        <span class="prelude-val">Some</span>(StateWord::E(e)) =&gt; e,
+        <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
     };
-    <span class="kw">let</span> <span class="ident">f</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">state</span>.<span class="ident">f</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">StateWord::F</span>(<span class="ident">f</span>)) =&gt; <span class="ident">f</span>,
-        <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(),
+    <span class="kw">let </span>f = <span class="kw">match </span>state.f {
+        <span class="prelude-val">Some</span>(StateWord::F(f)) =&gt; f,
+        <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
     };
-    <span class="kw">let</span> <span class="ident">g</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">state</span>.<span class="ident">g</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">StateWord::G</span>(<span class="ident">g</span>)) =&gt; <span class="ident">g</span>,
-        <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(),
+    <span class="kw">let </span>g = <span class="kw">match </span>state.g {
+        <span class="prelude-val">Some</span>(StateWord::G(g)) =&gt; g,
+        <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
     };
-    <span class="kw">let</span> <span class="ident">h</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">state</span>.<span class="ident">h</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">StateWord::H</span>(<span class="ident">h</span>)) =&gt; <span class="ident">h</span>,
-        <span class="kw">_</span> =&gt; <span class="macro">unreachable!</span>(),
+    <span class="kw">let </span>h = <span class="kw">match </span>state.h {
+        <span class="prelude-val">Some</span>(StateWord::H(h)) =&gt; h,
+        <span class="kw">_ </span>=&gt; <span class="macro">unreachable!</span>(),
     };
 
-    (<span class="ident">a</span>, <span class="ident">b</span>, <span class="ident">c</span>, <span class="ident">d</span>, <span class="ident">e</span>, <span class="ident">f</span>, <span class="ident">g</span>, <span class="ident">h</span>)
+    (a, b, c, d, e, f, g, h)
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

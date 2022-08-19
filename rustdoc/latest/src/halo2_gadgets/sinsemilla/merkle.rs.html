@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -417,404 +411,403 @@
 <span id="396">396</span>
 <span id="397">397</span>
 <span id="398">398</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Gadgets for implementing a Merkle tree with Sinsemilla.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Gadgets for implementing a Merkle tree with Sinsemilla.
 
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">Chip</span>, <span class="ident">Layouter</span>, <span class="ident">Value</span>},
-    <span class="ident">plonk::Error</span>,
+</span><span class="kw">use </span>halo2_proofs::{
+    circuit::{Chip, Layouter, Value},
+    plonk::Error,
 };
-<span class="kw">use</span> <span class="ident">pasta_curves::arithmetic::CurveAffine</span>;
+<span class="kw">use </span>pasta_curves::arithmetic::CurveAffine;
 
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">HashDomains</span>, <span class="ident">SinsemillaInstructions</span>};
+<span class="kw">use super</span>::{HashDomains, SinsemillaInstructions};
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities</span>::{<span class="ident">cond_swap::CondSwapInstructions</span>, <span class="ident">i2lebsp</span>, <span class="ident">UtilitiesInstructions</span>};
+<span class="kw">use </span><span class="kw">crate</span>::utilities::{cond_swap::CondSwapInstructions, i2lebsp, UtilitiesInstructions};
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">chip</span>;
+<span class="kw">pub mod </span>chip;
 
-<span class="doccomment">/// SWU hash-to-curve personalization for the Merkle CRH generator</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MERKLE_CRH_PERSONALIZATION</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;z.cash:Orchard-MerkleCRH&quot;</span>;
+<span class="doccomment">/// SWU hash-to-curve personalization for the Merkle CRH generator
+</span><span class="kw">pub const </span>MERKLE_CRH_PERSONALIZATION: <span class="kw-2">&amp;</span>str = <span class="string">&quot;z.cash:Orchard-MerkleCRH&quot;</span>;
 
-<span class="doccomment">/// Instructions to check the validity of a Merkle path of a given `PATH_LENGTH`.</span>
-<span class="doccomment">/// The hash function used is a Sinsemilla instance with `K`-bit words.</span>
-<span class="doccomment">/// The hash function can process `MAX_WORDS` words.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">MerkleInstructions</span><span class="op">&lt;</span>
-    <span class="ident">C</span>: <span class="ident">CurveAffine</span>,
-    <span class="kw">const</span> <span class="ident">PATH_LENGTH</span>: <span class="ident">usize</span>,
-    <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>,
-    <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span>,
-<span class="op">&gt;</span>:
-    <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>
-    <span class="op">+</span> <span class="ident">CondSwapInstructions</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>
-    <span class="op">+</span> <span class="ident">UtilitiesInstructions</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>
-    <span class="op">+</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>
+<span class="doccomment">/// Instructions to check the validity of a Merkle path of a given `PATH_LENGTH`.
+/// The hash function used is a Sinsemilla instance with `K`-bit words.
+/// The hash function can process `MAX_WORDS` words.
+</span><span class="kw">pub trait </span>MerkleInstructions&lt;
+    C: CurveAffine,
+    <span class="kw">const </span>PATH_LENGTH: usize,
+    <span class="kw">const </span>K: usize,
+    <span class="kw">const </span>MAX_WORDS: usize,
+&gt;:
+    SinsemillaInstructions&lt;C, K, MAX_WORDS&gt;
+    + CondSwapInstructions&lt;C::Base&gt;
+    + UtilitiesInstructions&lt;C::Base&gt;
+    + Chip&lt;C::Base&gt;
 {
-    <span class="doccomment">/// Compute MerkleCRH for a given `layer`. The hash that computes the root</span>
-    <span class="doccomment">/// is at layer 0, and the hashes that are applied to two leaves are at</span>
-    <span class="doccomment">/// layer `MERKLE_DEPTH - 1` = layer 31.</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="kw">fn</span> <span class="ident">hash_layer</span>(
+    <span class="doccomment">/// Compute MerkleCRH for a given `layer`. The hash that computes the root
+    /// is at layer 0, and the hashes that are applied to two leaves are at
+    /// layer `MERKLE_DEPTH - 1` = layer 31.
+    </span><span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="kw">fn </span>hash_layer(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">Q</span>: <span class="ident">C</span>,
-        <span class="ident">l</span>: <span class="ident">usize</span>,
-        <span class="ident">left</span>: <span class="ident"><span class="self">Self</span>::Var</span>,
-        <span class="ident">right</span>: <span class="ident"><span class="self">Self</span>::Var</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Var</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        Q: C,
+        l: usize,
+        left: <span class="self">Self</span>::Var,
+        right: <span class="self">Self</span>::Var,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Var, Error&gt;;
 }
 
-<span class="doccomment">/// Gadget representing a Merkle path that proves a leaf exists in a Merkle tree at a</span>
-<span class="doccomment">/// specific position.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MerklePath</span><span class="op">&lt;</span>
-    <span class="ident">C</span>: <span class="ident">CurveAffine</span>,
-    <span class="ident">MerkleChip</span>,
-    <span class="kw">const</span> <span class="ident">PATH_LENGTH</span>: <span class="ident">usize</span>,
-    <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>,
-    <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span>,
-    <span class="kw">const</span> <span class="ident">PAR</span>: <span class="ident">usize</span>,
-<span class="op">&gt;</span> <span class="kw">where</span>
-    <span class="ident">MerkleChip</span>: <span class="ident">MerkleInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">PATH_LENGTH</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>,
+<span class="doccomment">/// Gadget representing a Merkle path that proves a leaf exists in a Merkle tree at a
+/// specific position.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>MerklePath&lt;
+    C: CurveAffine,
+    MerkleChip,
+    <span class="kw">const </span>PATH_LENGTH: usize,
+    <span class="kw">const </span>K: usize,
+    <span class="kw">const </span>MAX_WORDS: usize,
+    <span class="kw">const </span>PAR: usize,
+&gt; <span class="kw">where
+    </span>MerkleChip: MerkleInstructions&lt;C, PATH_LENGTH, K, MAX_WORDS&gt; + Clone,
 {
-    <span class="ident">chips</span>: [<span class="ident">MerkleChip</span>; <span class="ident">PAR</span>],
-    <span class="ident">domain</span>: <span class="ident">MerkleChip::HashDomains</span>,
-    <span class="ident">leaf_pos</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    <span class="comment">// The Merkle path is ordered from leaves to root.</span>
-    <span class="ident">path</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">C::Base</span>; <span class="ident">PATH_LENGTH</span>]<span class="op">&gt;</span>,
+    chips: [MerkleChip; PAR],
+    domain: MerkleChip::HashDomains,
+    leaf_pos: Value&lt;u32&gt;,
+    <span class="comment">// The Merkle path is ordered from leaves to root.
+    </span>path: Value&lt;[C::Base; PATH_LENGTH]&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span>
-        <span class="ident">C</span>: <span class="ident">CurveAffine</span>,
-        <span class="ident">MerkleChip</span>,
-        <span class="kw">const</span> <span class="ident">PATH_LENGTH</span>: <span class="ident">usize</span>,
-        <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>,
-        <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span>,
-        <span class="kw">const</span> <span class="ident">PAR</span>: <span class="ident">usize</span>,
-    <span class="op">&gt;</span> <span class="ident">MerklePath</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">MerkleChip</span>, <span class="ident">PATH_LENGTH</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span>, <span class="ident">PAR</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">MerkleChip</span>: <span class="ident">MerkleInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">PATH_LENGTH</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>,
+<span class="kw">impl</span>&lt;
+        C: CurveAffine,
+        MerkleChip,
+        <span class="kw">const </span>PATH_LENGTH: usize,
+        <span class="kw">const </span>K: usize,
+        <span class="kw">const </span>MAX_WORDS: usize,
+        <span class="kw">const </span>PAR: usize,
+    &gt; MerklePath&lt;C, MerkleChip, PATH_LENGTH, K, MAX_WORDS, PAR&gt;
+<span class="kw">where
+    </span>MerkleChip: MerkleInstructions&lt;C, PATH_LENGTH, K, MAX_WORDS&gt; + Clone,
 {
-    <span class="doccomment">/// Constructs a [`MerklePath`].</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// A circuit may have many more columns available than are required by a single</span>
-    <span class="doccomment">/// `MerkleChip`. To make better use of the available circuit area, the `MerklePath`</span>
-    <span class="doccomment">/// gadget will distribute its path hashing across each `MerkleChip` in `chips`, such</span>
-    <span class="doccomment">/// that each chip processes `ceil(PATH_LENGTH / PAR)` layers (with the last chip</span>
-    <span class="doccomment">/// processing fewer layers if the division is inexact).</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">construct</span>(
-        <span class="ident">chips</span>: [<span class="ident">MerkleChip</span>; <span class="ident">PAR</span>],
-        <span class="ident">domain</span>: <span class="ident">MerkleChip::HashDomains</span>,
-        <span class="ident">leaf_pos</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-        <span class="ident">path</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">C::Base</span>; <span class="ident">PATH_LENGTH</span>]<span class="op">&gt;</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="macro">assert_ne!</span>(<span class="ident">PAR</span>, <span class="number">0</span>);
-        <span class="self">Self</span> {
-            <span class="ident">chips</span>,
-            <span class="ident">domain</span>,
-            <span class="ident">leaf_pos</span>,
-            <span class="ident">path</span>,
+    <span class="doccomment">/// Constructs a [`MerklePath`].
+    ///
+    /// A circuit may have many more columns available than are required by a single
+    /// `MerkleChip`. To make better use of the available circuit area, the `MerklePath`
+    /// gadget will distribute its path hashing across each `MerkleChip` in `chips`, such
+    /// that each chip processes `ceil(PATH_LENGTH / PAR)` layers (with the last chip
+    /// processing fewer layers if the division is inexact).
+    </span><span class="kw">pub fn </span>construct(
+        chips: [MerkleChip; PAR],
+        domain: MerkleChip::HashDomains,
+        leaf_pos: Value&lt;u32&gt;,
+        path: Value&lt;[C::Base; PATH_LENGTH]&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="macro">assert_ne!</span>(PAR, <span class="number">0</span>);
+        <span class="self">Self </span>{
+            chips,
+            domain,
+            leaf_pos,
+            path,
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-<span class="kw">impl</span><span class="op">&lt;</span>
-        <span class="ident">C</span>: <span class="ident">CurveAffine</span>,
-        <span class="ident">MerkleChip</span>,
-        <span class="kw">const</span> <span class="ident">PATH_LENGTH</span>: <span class="ident">usize</span>,
-        <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>,
-        <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span>,
-        <span class="kw">const</span> <span class="ident">PAR</span>: <span class="ident">usize</span>,
-    <span class="op">&gt;</span> <span class="ident">MerklePath</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">MerkleChip</span>, <span class="ident">PATH_LENGTH</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span>, <span class="ident">PAR</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">MerkleChip</span>: <span class="ident">MerkleInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">PATH_LENGTH</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>,
+<span class="attribute">#[allow(non_snake_case)]</span>
+<span class="kw">impl</span>&lt;
+        C: CurveAffine,
+        MerkleChip,
+        <span class="kw">const </span>PATH_LENGTH: usize,
+        <span class="kw">const </span>K: usize,
+        <span class="kw">const </span>MAX_WORDS: usize,
+        <span class="kw">const </span>PAR: usize,
+    &gt; MerklePath&lt;C, MerkleChip, PATH_LENGTH, K, MAX_WORDS, PAR&gt;
+<span class="kw">where
+    </span>MerkleChip: MerkleInstructions&lt;C, PATH_LENGTH, K, MAX_WORDS&gt; + Clone,
 {
-    <span class="doccomment">/// Calculates the root of the tree containing the given leaf at this Merkle path.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Implements [Zcash Protocol Specification Section 4.9: Merkle Path Validity][merklepath].</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [merklepath]: https://zips.z.cash/protocol/protocol.pdf#merklepath</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">calculate_root</span>(
+    <span class="doccomment">/// Calculates the root of the tree containing the given leaf at this Merkle path.
+    ///
+    /// Implements [Zcash Protocol Specification Section 4.9: Merkle Path Validity][merklepath].
+    ///
+    /// [merklepath]: https://zips.z.cash/protocol/protocol.pdf#merklepath
+    </span><span class="kw">pub fn </span>calculate_root(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">leaf</span>: <span class="ident">MerkleChip::Var</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">MerkleChip::Var</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Each chip processes `ceil(PATH_LENGTH / PAR)` layers.</span>
-        <span class="kw">let</span> <span class="ident">layers_per_chip</span> <span class="op">=</span> (<span class="ident">PATH_LENGTH</span> <span class="op">+</span> <span class="ident">PAR</span> <span class="op">-</span> <span class="number">1</span>) <span class="op">/</span> <span class="ident">PAR</span>;
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        leaf: MerkleChip::Var,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;MerkleChip::Var, Error&gt; {
+        <span class="comment">// Each chip processes `ceil(PATH_LENGTH / PAR)` layers.
+        </span><span class="kw">let </span>layers_per_chip = (PATH_LENGTH + PAR - <span class="number">1</span>) / PAR;
 
-        <span class="comment">// Assign each layer to a chip.</span>
-        <span class="kw">let</span> <span class="ident">chips</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">PATH_LENGTH</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">chips</span>[<span class="ident">i</span> <span class="op">/</span> <span class="ident">layers_per_chip</span>].<span class="ident">clone</span>());
+        <span class="comment">// Assign each layer to a chip.
+        </span><span class="kw">let </span>chips = (<span class="number">0</span>..PATH_LENGTH).map(|i| <span class="self">self</span>.chips[i / layers_per_chip].clone());
 
-        <span class="comment">// The Merkle path is ordered from leaves to root, which is consistent with the</span>
-        <span class="comment">// little-endian representation of `pos` below.</span>
-        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">path</span>.<span class="ident">transpose_array</span>();
+        <span class="comment">// The Merkle path is ordered from leaves to root, which is consistent with the
+        // little-endian representation of `pos` below.
+        </span><span class="kw">let </span>path = <span class="self">self</span>.path.transpose_array();
 
-        <span class="comment">// Get position as a PATH_LENGTH-bit bitstring (little-endian bit order).</span>
-        <span class="kw">let</span> <span class="ident">pos</span>: [<span class="ident">Value</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>; <span class="ident">PATH_LENGTH</span>] <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">pos</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">PATH_LENGTH</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">leaf_pos</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">pos</span><span class="op">|</span> <span class="ident">i2lebsp</span>(<span class="ident">pos</span> <span class="kw">as</span> <span class="ident">u64</span>));
-            <span class="ident">pos</span>.<span class="ident">transpose_array</span>()
+        <span class="comment">// Get position as a PATH_LENGTH-bit bitstring (little-endian bit order).
+        </span><span class="kw">let </span>pos: [Value&lt;bool&gt;; PATH_LENGTH] = {
+            <span class="kw">let </span>pos: Value&lt;[bool; PATH_LENGTH]&gt; = <span class="self">self</span>.leaf_pos.map(|pos| i2lebsp(pos <span class="kw">as </span>u64));
+            pos.transpose_array()
         };
 
-        <span class="kw">let</span> <span class="ident">Q</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">domain</span>.<span class="ident">Q</span>();
+        <span class="kw">let </span>Q = <span class="self">self</span>.domain.Q();
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node</span> <span class="op">=</span> <span class="ident">leaf</span>;
-        <span class="kw">for</span> (<span class="ident">l</span>, ((<span class="ident">sibling</span>, <span class="ident">pos</span>), <span class="ident">chip</span>)) <span class="kw">in</span> <span class="ident">path</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">pos</span>.<span class="ident">iter</span>()).<span class="ident">zip</span>(<span class="ident">chips</span>).<span class="ident">enumerate</span>() {
-            <span class="comment">// `l` = MERKLE_DEPTH - layer - 1, which is the index obtained from</span>
-            <span class="comment">// enumerating this Merkle path (going from leaf to root).</span>
-            <span class="comment">// For example, when `layer = 31` (the first sibling on the Merkle path),</span>
-            <span class="comment">// we have `l` = 32 - 31 - 1 = 0.</span>
-            <span class="comment">// On the other hand, when `layer = 0` (the final sibling on the Merkle path),</span>
-            <span class="comment">// we have `l` = 32 - 0 - 1 = 31.</span>
+        <span class="kw">let </span><span class="kw-2">mut </span>node = leaf;
+        <span class="kw">for </span>(l, ((sibling, pos), chip)) <span class="kw">in </span>path.iter().zip(pos.iter()).zip(chips).enumerate() {
+            <span class="comment">// `l` = MERKLE_DEPTH - layer - 1, which is the index obtained from
+            // enumerating this Merkle path (going from leaf to root).
+            // For example, when `layer = 31` (the first sibling on the Merkle path),
+            // we have `l` = 32 - 31 - 1 = 0.
+            // On the other hand, when `layer = 0` (the final sibling on the Merkle path),
+            // we have `l` = 32 - 0 - 1 = 31.
 
-            <span class="comment">// Constrain which of (node, sibling) is (left, right) with a conditional swap</span>
-            <span class="comment">// tied to the current bit of the position.</span>
-            <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">pair</span> <span class="op">=</span> (<span class="ident">node</span>, <span class="kw-2">*</span><span class="ident">sibling</span>);
+            // Constrain which of (node, sibling) is (left, right) with a conditional swap
+            // tied to the current bit of the position.
+            </span><span class="kw">let </span>pair = {
+                <span class="kw">let </span>pair = (node, <span class="kw-2">*</span>sibling);
 
-                <span class="comment">// Swap node and sibling if needed</span>
-                <span class="ident">chip</span>.<span class="ident">swap</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;node position&quot;</span>), <span class="ident">pair</span>, <span class="kw-2">*</span><span class="ident">pos</span>)<span class="question-mark">?</span>
-            };
+                <span class="comment">// Swap node and sibling if needed
+                </span>chip.swap(layouter.namespace(|| <span class="string">&quot;node position&quot;</span>), pair, <span class="kw-2">*</span>pos)<span class="question-mark">?
+            </span>};
 
-            <span class="comment">// Compute the node in layer l from its children:</span>
-            <span class="comment">//     M^l_i = MerkleCRH(l, M^{l+1}_{2i}, M^{l+1}_{2i+1})</span>
-            <span class="ident">node</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">hash_layer</span>(
-                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;MerkleCRH({}, left, right)&quot;</span>, <span class="ident">l</span>)),
-                <span class="ident">Q</span>,
-                <span class="ident">l</span>,
-                <span class="ident">pair</span>.<span class="number">0</span>,
-                <span class="ident">pair</span>.<span class="number">1</span>,
+            <span class="comment">// Compute the node in layer l from its children:
+            //     M^l_i = MerkleCRH(l, M^{l+1}_{2i}, M^{l+1}_{2i+1})
+            </span>node = chip.hash_layer(
+                layouter.namespace(|| <span class="macro">format!</span>(<span class="string">&quot;MerkleCRH({}, left, right)&quot;</span>, l)),
+                Q,
+                l,
+                pair.<span class="number">0</span>,
+                pair.<span class="number">1</span>,
             )<span class="question-mark">?</span>;
         }
 
-        <span class="prelude-val">Ok</span>(<span class="ident">node</span>)
+        <span class="prelude-val">Ok</span>(node)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::{
-        <span class="ident">chip</span>::{<span class="ident">MerkleChip</span>, <span class="ident">MerkleConfig</span>},
-        <span class="ident">MerklePath</span>,
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">pub mod </span>tests {
+    <span class="kw">use super</span>::{
+        chip::{MerkleChip, MerkleConfig},
+        MerklePath,
     };
 
-    <span class="kw">use</span> <span class="kw">crate</span>::{
-        <span class="ident">ecc::tests::TestFixedBases</span>,
-        <span class="ident">sinsemilla</span>::{
-            <span class="ident">chip::SinsemillaChip</span>,
-            <span class="ident">tests</span>::{<span class="ident">TestCommitDomain</span>, <span class="ident">TestHashDomain</span>},
-            <span class="ident">HashDomains</span>,
+    <span class="kw">use crate</span>::{
+        ecc::tests::TestFixedBases,
+        sinsemilla::{
+            chip::SinsemillaChip,
+            tests::{TestCommitDomain, TestHashDomain},
+            HashDomains,
         },
-        <span class="ident">utilities</span>::{<span class="ident">i2lebsp</span>, <span class="ident">lookup_range_check::LookupRangeCheckConfig</span>, <span class="ident">UtilitiesInstructions</span>},
+        utilities::{i2lebsp, lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
     };
 
-    <span class="kw">use</span> <span class="ident">group::ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeField</span>, <span class="ident">PrimeFieldBits</span>};
-    <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-        <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">SimpleFloorPlanner</span>, <span class="ident">Value</span>},
-        <span class="ident">dev::MockProver</span>,
-        <span class="ident">pasta::pallas</span>,
-        <span class="ident">plonk</span>::{<span class="ident">Circuit</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>},
+    <span class="kw">use </span>group::ff::{Field, PrimeField, PrimeFieldBits};
+    <span class="kw">use </span>halo2_proofs::{
+        circuit::{Layouter, SimpleFloorPlanner, Value},
+        dev::MockProver,
+        pasta::pallas,
+        plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">rngs::OsRng</span>, <span class="ident">RngCore</span>};
-    <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert::TryInto</span>, <span class="ident">iter</span>};
+    <span class="kw">use </span>rand::{rngs::OsRng, RngCore};
+    <span class="kw">use </span>std::{convert::TryInto, iter};
 
-    <span class="kw">const</span> <span class="ident">MERKLE_DEPTH</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">32</span>;
+    <span class="kw">const </span>MERKLE_DEPTH: usize = <span class="number">32</span>;
 
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
-    <span class="kw">struct</span> <span class="ident">MyCircuit</span> {
-        <span class="ident">leaf</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">leaf_pos</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-        <span class="ident">merkle_path</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">pallas::Base</span>; <span class="ident">MERKLE_DEPTH</span>]<span class="op">&gt;</span>,
+    <span class="attribute">#[derive(Default)]</span>
+    <span class="kw">struct </span>MyCircuit {
+        leaf: Value&lt;pallas::Base&gt;,
+        leaf_pos: Value&lt;u32&gt;,
+        merkle_path: Value&lt;[pallas::Base; MERKLE_DEPTH]&gt;,
     }
 
-    <span class="kw">impl</span> <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyCircuit</span> {
-        <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> (
-            <span class="ident">MerkleConfig</span><span class="op">&lt;</span><span class="ident">TestHashDomain</span>, <span class="ident">TestCommitDomain</span>, <span class="ident">TestFixedBases</span><span class="op">&gt;</span>,
-            <span class="ident">MerkleConfig</span><span class="op">&lt;</span><span class="ident">TestHashDomain</span>, <span class="ident">TestCommitDomain</span>, <span class="ident">TestFixedBases</span><span class="op">&gt;</span>,
+    <span class="kw">impl </span>Circuit&lt;pallas::Base&gt; <span class="kw">for </span>MyCircuit {
+        <span class="kw">type </span>Config = (
+            MerkleConfig&lt;TestHashDomain, TestCommitDomain, TestFixedBases&gt;,
+            MerkleConfig&lt;TestHashDomain, TestCommitDomain, TestFixedBases&gt;,
         );
-        <span class="kw">type</span> <span class="ident">FloorPlanner</span> <span class="op">=</span> <span class="ident">SimpleFloorPlanner</span>;
+        <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
 
-        <span class="kw">fn</span> <span class="ident">without_witnesses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-            <span class="ident"><span class="self">Self</span>::default</span>()
+        <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+            <span class="self">Self</span>::default()
         }
 
-        <span class="kw">fn</span> <span class="ident">configure</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Config</span> {
-            <span class="kw">let</span> <span class="ident">advices</span> <span class="op">=</span> [
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
+        <span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) -&gt; <span class="self">Self</span>::Config {
+            <span class="kw">let </span>advices = [
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
             ];
 
-            <span class="comment">// Shared fixed column for loading constants</span>
-            <span class="kw">let</span> <span class="ident">constants</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">fixed_column</span>();
-            <span class="ident">meta</span>.<span class="ident">enable_constant</span>(<span class="ident">constants</span>);
+            <span class="comment">// Shared fixed column for loading constants
+            </span><span class="kw">let </span>constants = meta.fixed_column();
+            meta.enable_constant(constants);
 
-            <span class="comment">// NB: In the actual Action circuit, these fixed columns will be reused</span>
-            <span class="comment">// by other chips. For this test, we are creating new fixed columns.</span>
-            <span class="kw">let</span> <span class="ident">fixed_y_q_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">fixed_column</span>();
-            <span class="kw">let</span> <span class="ident">fixed_y_q_2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">fixed_column</span>();
+            <span class="comment">// NB: In the actual Action circuit, these fixed columns will be reused
+            // by other chips. For this test, we are creating new fixed columns.
+            </span><span class="kw">let </span>fixed_y_q_1 = meta.fixed_column();
+            <span class="kw">let </span>fixed_y_q_2 = meta.fixed_column();
 
-            <span class="comment">// Fixed columns for the Sinsemilla generator lookup table</span>
-            <span class="kw">let</span> <span class="ident">lookup</span> <span class="op">=</span> (
-                <span class="ident">meta</span>.<span class="ident">lookup_table_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">lookup_table_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">lookup_table_column</span>(),
+            <span class="comment">// Fixed columns for the Sinsemilla generator lookup table
+            </span><span class="kw">let </span>lookup = (
+                meta.lookup_table_column(),
+                meta.lookup_table_column(),
+                meta.lookup_table_column(),
             );
 
-            <span class="kw">let</span> <span class="ident">range_check</span> <span class="op">=</span> <span class="ident">LookupRangeCheckConfig::configure</span>(<span class="ident">meta</span>, <span class="ident">advices</span>[<span class="number">9</span>], <span class="ident">lookup</span>.<span class="number">0</span>);
+            <span class="kw">let </span>range_check = LookupRangeCheckConfig::configure(meta, advices[<span class="number">9</span>], lookup.<span class="number">0</span>);
 
-            <span class="kw">let</span> <span class="ident">sinsemilla_config_1</span> <span class="op">=</span> <span class="ident">SinsemillaChip::configure</span>(
-                <span class="ident">meta</span>,
-                <span class="ident">advices</span>[<span class="number">5</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">advices</span>[<span class="number">7</span>],
-                <span class="ident">fixed_y_q_1</span>,
-                <span class="ident">lookup</span>,
-                <span class="ident">range_check</span>,
+            <span class="kw">let </span>sinsemilla_config_1 = SinsemillaChip::configure(
+                meta,
+                advices[<span class="number">5</span>..].try_into().unwrap(),
+                advices[<span class="number">7</span>],
+                fixed_y_q_1,
+                lookup,
+                range_check,
             );
-            <span class="kw">let</span> <span class="ident">config1</span> <span class="op">=</span> <span class="ident">MerkleChip::configure</span>(<span class="ident">meta</span>, <span class="ident">sinsemilla_config_1</span>);
+            <span class="kw">let </span>config1 = MerkleChip::configure(meta, sinsemilla_config_1);
 
-            <span class="kw">let</span> <span class="ident">sinsemilla_config_2</span> <span class="op">=</span> <span class="ident">SinsemillaChip::configure</span>(
-                <span class="ident">meta</span>,
-                <span class="ident">advices</span>[..<span class="number">5</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">advices</span>[<span class="number">2</span>],
-                <span class="ident">fixed_y_q_2</span>,
-                <span class="ident">lookup</span>,
-                <span class="ident">range_check</span>,
+            <span class="kw">let </span>sinsemilla_config_2 = SinsemillaChip::configure(
+                meta,
+                advices[..<span class="number">5</span>].try_into().unwrap(),
+                advices[<span class="number">2</span>],
+                fixed_y_q_2,
+                lookup,
+                range_check,
             );
-            <span class="kw">let</span> <span class="ident">config2</span> <span class="op">=</span> <span class="ident">MerkleChip::configure</span>(<span class="ident">meta</span>, <span class="ident">sinsemilla_config_2</span>);
+            <span class="kw">let </span>config2 = MerkleChip::configure(meta, sinsemilla_config_2);
 
-            (<span class="ident">config1</span>, <span class="ident">config2</span>)
+            (config1, config2)
         }
 
-        <span class="kw">fn</span> <span class="ident">synthesize</span>(
+        <span class="kw">fn </span>synthesize(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
-            <span class="ident">config</span>: <span class="ident"><span class="self">Self</span>::Config</span>,
-            <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-            <span class="comment">// Load generator table (shared across both configs)</span>
-            <span class="ident">SinsemillaChip</span>::<span class="op">&lt;</span><span class="ident">TestHashDomain</span>, <span class="ident">TestCommitDomain</span>, <span class="ident">TestFixedBases</span><span class="op">&gt;</span><span class="ident">::load</span>(
-                <span class="ident">config</span>.<span class="number">0</span>.<span class="ident">sinsemilla_config</span>.<span class="ident">clone</span>(),
-                <span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>,
+            config: <span class="self">Self</span>::Config,
+            <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+            <span class="comment">// Load generator table (shared across both configs)
+            </span>SinsemillaChip::&lt;TestHashDomain, TestCommitDomain, TestFixedBases&gt;::load(
+                config.<span class="number">0</span>.sinsemilla_config.clone(),
+                <span class="kw-2">&amp;mut </span>layouter,
             )<span class="question-mark">?</span>;
 
-            <span class="comment">// Construct Merkle chips which will be placed side-by-side in the circuit.</span>
-            <span class="kw">let</span> <span class="ident">chip_1</span> <span class="op">=</span> <span class="ident">MerkleChip::construct</span>(<span class="ident">config</span>.<span class="number">0</span>.<span class="ident">clone</span>());
-            <span class="kw">let</span> <span class="ident">chip_2</span> <span class="op">=</span> <span class="ident">MerkleChip::construct</span>(<span class="ident">config</span>.<span class="number">1</span>.<span class="ident">clone</span>());
+            <span class="comment">// Construct Merkle chips which will be placed side-by-side in the circuit.
+            </span><span class="kw">let </span>chip_1 = MerkleChip::construct(config.<span class="number">0</span>.clone());
+            <span class="kw">let </span>chip_2 = MerkleChip::construct(config.<span class="number">1</span>.clone());
 
-            <span class="kw">let</span> <span class="ident">leaf</span> <span class="op">=</span> <span class="ident">chip_1</span>.<span class="ident">load_private</span>(
-                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;&quot;</span>),
-                <span class="ident">config</span>.<span class="number">0</span>.<span class="ident">cond_swap_config</span>.<span class="ident">a</span>(),
-                <span class="self">self</span>.<span class="ident">leaf</span>,
+            <span class="kw">let </span>leaf = chip_1.load_private(
+                layouter.namespace(|| <span class="string">&quot;&quot;</span>),
+                config.<span class="number">0</span>.cond_swap_config.a(),
+                <span class="self">self</span>.leaf,
             )<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">MerklePath</span> {
-                <span class="ident">chips</span>: [<span class="ident">chip_1</span>, <span class="ident">chip_2</span>],
-                <span class="ident">domain</span>: <span class="ident">TestHashDomain</span>,
-                <span class="ident">leaf_pos</span>: <span class="self">self</span>.<span class="ident">leaf_pos</span>,
-                <span class="ident">path</span>: <span class="self">self</span>.<span class="ident">merkle_path</span>,
+            <span class="kw">let </span>path = MerklePath {
+                chips: [chip_1, chip_2],
+                domain: TestHashDomain,
+                leaf_pos: <span class="self">self</span>.leaf_pos,
+                path: <span class="self">self</span>.merkle_path,
             };
 
-            <span class="kw">let</span> <span class="ident">computed_final_root</span> <span class="op">=</span>
-                <span class="ident">path</span>.<span class="ident">calculate_root</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;calculate root&quot;</span>), <span class="ident">leaf</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>computed_final_root =
+                path.calculate_root(layouter.namespace(|| <span class="string">&quot;calculate root&quot;</span>), leaf)<span class="question-mark">?</span>;
 
-            <span class="self">self</span>.<span class="ident">leaf</span>
-                .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">leaf_pos</span>)
-                .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">merkle_path</span>)
-                .<span class="ident">zip</span>(<span class="ident">computed_final_root</span>.<span class="ident">value</span>())
-                .<span class="ident">assert_if_known</span>(<span class="op">|</span>(((<span class="ident">leaf</span>, <span class="ident">leaf_pos</span>), <span class="ident">merkle_path</span>), <span class="ident">computed_final_root</span>)<span class="op">|</span> {
-                    <span class="comment">// The expected final root</span>
-                    <span class="kw">let</span> <span class="ident">final_root</span> <span class="op">=</span>
-                        <span class="ident">merkle_path</span>
-                            .<span class="ident">iter</span>()
-                            .<span class="ident">enumerate</span>()
-                            .<span class="ident">fold</span>(<span class="kw-2">*</span><span class="ident">leaf</span>, <span class="op">|</span><span class="ident">node</span>, (<span class="ident">l</span>, <span class="ident">sibling</span>)<span class="op">|</span> {
-                                <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">l</span> <span class="kw">as</span> <span class="ident">u8</span>;
-                                <span class="kw">let</span> (<span class="ident">left</span>, <span class="ident">right</span>) <span class="op">=</span> <span class="kw">if</span> <span class="ident">leaf_pos</span> <span class="op">&amp;</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">l</span>) <span class="op">==</span> <span class="number">0</span> {
-                                    (<span class="kw-2">&amp;</span><span class="ident">node</span>, <span class="ident">sibling</span>)
-                                } <span class="kw">else</span> {
-                                    (<span class="ident">sibling</span>, <span class="kw-2">&amp;</span><span class="ident">node</span>)
+            <span class="self">self</span>.leaf
+                .zip(<span class="self">self</span>.leaf_pos)
+                .zip(<span class="self">self</span>.merkle_path)
+                .zip(computed_final_root.value())
+                .assert_if_known(|(((leaf, leaf_pos), merkle_path), computed_final_root)| {
+                    <span class="comment">// The expected final root
+                    </span><span class="kw">let </span>final_root =
+                        merkle_path
+                            .iter()
+                            .enumerate()
+                            .fold(<span class="kw-2">*</span>leaf, |node, (l, sibling)| {
+                                <span class="kw">let </span>l = l <span class="kw">as </span>u8;
+                                <span class="kw">let </span>(left, right) = <span class="kw">if </span>leaf_pos &amp; (<span class="number">1 </span>&lt;&lt; l) == <span class="number">0 </span>{
+                                    (<span class="kw-2">&amp;</span>node, sibling)
+                                } <span class="kw">else </span>{
+                                    (sibling, <span class="kw-2">&amp;</span>node)
                                 };
 
-                                <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::sinsemilla::primitives</span> <span class="kw">as</span> <span class="ident">sinsemilla</span>;
-                                <span class="kw">let</span> <span class="ident">merkle_crh</span> <span class="op">=</span>
-                                    <span class="ident">sinsemilla::HashDomain::from_Q</span>(<span class="ident">TestHashDomain</span>.<span class="ident">Q</span>().<span class="ident">into</span>());
+                                <span class="kw">use </span><span class="kw">crate</span>::sinsemilla::primitives <span class="kw">as </span>sinsemilla;
+                                <span class="kw">let </span>merkle_crh =
+                                    sinsemilla::HashDomain::from_Q(TestHashDomain.Q().into());
 
-                                <span class="ident">merkle_crh</span>
-                                    .<span class="ident">hash</span>(
-                                        <span class="ident">iter::empty</span>()
-                                            .<span class="ident">chain</span>(<span class="ident">i2lebsp</span>::<span class="op">&lt;</span><span class="number">10</span><span class="op">&gt;</span>(<span class="ident">l</span> <span class="kw">as</span> <span class="ident">u64</span>).<span class="ident">iter</span>().<span class="ident">copied</span>())
-                                            .<span class="ident">chain</span>(
-                                                <span class="ident">left</span>.<span class="ident">to_le_bits</span>()
-                                                    .<span class="ident">iter</span>()
-                                                    .<span class="ident">by_vals</span>()
-                                                    .<span class="ident">take</span>(<span class="ident">pallas::Base::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span>),
+                                merkle_crh
+                                    .hash(
+                                        iter::empty()
+                                            .chain(i2lebsp::&lt;<span class="number">10</span>&gt;(l <span class="kw">as </span>u64).iter().copied())
+                                            .chain(
+                                                left.to_le_bits()
+                                                    .iter()
+                                                    .by_vals()
+                                                    .take(pallas::Base::NUM_BITS <span class="kw">as </span>usize),
                                             )
-                                            .<span class="ident">chain</span>(
-                                                <span class="ident">right</span>
-                                                    .<span class="ident">to_le_bits</span>()
-                                                    .<span class="ident">iter</span>()
-                                                    .<span class="ident">by_vals</span>()
-                                                    .<span class="ident">take</span>(<span class="ident">pallas::Base::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span>),
+                                            .chain(
+                                                right
+                                                    .to_le_bits()
+                                                    .iter()
+                                                    .by_vals()
+                                                    .take(pallas::Base::NUM_BITS <span class="kw">as </span>usize),
                                             ),
                                     )
-                                    .<span class="ident">unwrap_or</span>(<span class="ident">pallas::Base::zero</span>())
+                                    .unwrap_or(pallas::Base::zero())
                             });
 
-                    <span class="comment">// Check the computed final root against the expected final root.</span>
-                    <span class="ident">computed_final_root</span> <span class="op">==</span> <span class="op">&amp;&amp;</span><span class="ident">final_root</span>
+                    <span class="comment">// Check the computed final root against the expected final root.
+                    </span>computed_final_root == &amp;&amp;final_root
                 });
 
             <span class="prelude-val">Ok</span>(())
         }
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">merkle_chip</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">OsRng</span>;
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>merkle_chip() {
+        <span class="kw">let </span><span class="kw-2">mut </span>rng = OsRng;
 
-        <span class="comment">// Choose a random leaf and position</span>
-        <span class="kw">let</span> <span class="ident">leaf</span> <span class="op">=</span> <span class="ident">pallas::Base::random</span>(<span class="ident">rng</span>);
-        <span class="kw">let</span> <span class="ident">pos</span> <span class="op">=</span> <span class="ident">rng</span>.<span class="ident">next_u32</span>();
+        <span class="comment">// Choose a random leaf and position
+        </span><span class="kw">let </span>leaf = pallas::Base::random(rng);
+        <span class="kw">let </span>pos = rng.next_u32();
 
-        <span class="comment">// Choose a path of random inner nodes</span>
-        <span class="kw">let</span> <span class="ident">path</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..(<span class="ident">MERKLE_DEPTH</span>))
-            .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">pallas::Base::random</span>(<span class="ident">rng</span>))
-            .<span class="ident">collect</span>();
+        <span class="comment">// Choose a path of random inner nodes
+        </span><span class="kw">let </span>path: Vec&lt;<span class="kw">_</span>&gt; = (<span class="number">0</span>..(MERKLE_DEPTH))
+            .map(|<span class="kw">_</span>| pallas::Base::random(rng))
+            .collect();
 
-        <span class="comment">// The root is provided as a public input in the Orchard circuit.</span>
+        <span class="comment">// The root is provided as a public input in the Orchard circuit.
 
-        <span class="kw">let</span> <span class="ident">circuit</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {
-            <span class="ident">leaf</span>: <span class="ident">Value::known</span>(<span class="ident">leaf</span>),
-            <span class="ident">leaf_pos</span>: <span class="ident">Value::known</span>(<span class="ident">pos</span>),
-            <span class="ident">merkle_path</span>: <span class="ident">Value::known</span>(<span class="ident">path</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>()),
+        </span><span class="kw">let </span>circuit = MyCircuit {
+            leaf: Value::known(leaf),
+            leaf_pos: Value::known(pos),
+            merkle_path: Value::known(path.try_into().unwrap()),
         };
 
-        <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver::run</span>(<span class="number">11</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()))
+        <span class="kw">let </span>prover = MockProver::run(<span class="number">11</span>, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+        <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()))
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;dev-graph&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">print_merkle_chip</span>() {
-        <span class="kw">use</span> <span class="ident">plotters::prelude</span>::<span class="kw-2">*</span>;
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]</span>
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>print_merkle_chip() {
+        <span class="kw">use </span>plotters::prelude::<span class="kw-2">*</span>;
 
-        <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span> <span class="ident">BitMapBackend::new</span>(<span class="string">&quot;merkle-path-layout.png&quot;</span>, (<span class="number">1024</span>, <span class="number">7680</span>)).<span class="ident">into_drawing_area</span>();
-        <span class="ident">root</span>.<span class="ident">fill</span>(<span class="kw-2">&amp;</span><span class="ident">WHITE</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span> <span class="ident">root</span>.<span class="ident">titled</span>(<span class="string">&quot;MerkleCRH Path&quot;</span>, (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">60</span>)).<span class="ident">unwrap</span>();
+        <span class="kw">let </span>root = BitMapBackend::new(<span class="string">&quot;merkle-path-layout.png&quot;</span>, (<span class="number">1024</span>, <span class="number">7680</span>)).into_drawing_area();
+        root.fill(<span class="kw-2">&amp;</span>WHITE).unwrap();
+        <span class="kw">let </span>root = root.titled(<span class="string">&quot;MerkleCRH Path&quot;</span>, (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">60</span>)).unwrap();
 
-        <span class="kw">let</span> <span class="ident">circuit</span> <span class="op">=</span> <span class="ident">MyCircuit::default</span>();
-        <span class="ident">halo2_proofs::dev::CircuitLayout::default</span>()
-            .<span class="ident">show_labels</span>(<span class="bool-val">false</span>)
-            .<span class="ident">render</span>(<span class="number">11</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="kw-2">&amp;</span><span class="ident">root</span>)
-            .<span class="ident">unwrap</span>();
+        <span class="kw">let </span>circuit = MyCircuit::default();
+        halo2_proofs::dev::CircuitLayout::default()
+            .show_labels(<span class="bool-val">false</span>)
+            .render(<span class="number">11</span>, <span class="kw-2">&amp;</span>circuit, <span class="kw-2">&amp;</span>root)
+            .unwrap();
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

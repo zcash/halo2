@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -142,129 +136,128 @@
 <span id="121">121</span>
 <span id="122">122</span>
 <span id="123">123</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">halo2_proofs::arithmetic::FieldExt</span>;
+</pre><pre class="rust"><code><span class="kw">use </span>halo2_proofs::arithmetic::FieldExt;
 
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">grain::Grain</span>, <span class="ident">Mds</span>};
+<span class="kw">use super</span>::{grain::Grain, Mds};
 
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">generate_mds</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="kw">const</span> <span class="ident">T</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
-    <span class="ident">grain</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Grain</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="kw-2">mut</span> <span class="ident">select</span>: <span class="ident">usize</span>,
-) -&gt; (<span class="ident">Mds</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">Mds</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>) {
-    <span class="kw">let</span> (<span class="ident">xs</span>, <span class="ident">ys</span>, <span class="ident">mds</span>) <span class="op">=</span> <span class="kw">loop</span> {
-        <span class="comment">// Generate two [F; T] arrays of unique field elements.</span>
-        <span class="kw">let</span> (<span class="ident">xs</span>, <span class="ident">ys</span>) <span class="op">=</span> <span class="kw">loop</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">vals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="number">2</span> <span class="op">*</span> <span class="ident">T</span>)
-                .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">grain</span>.<span class="ident">next_field_element_without_rejection</span>())
-                .<span class="ident">collect</span>();
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>generate_mds&lt;F: FieldExt, <span class="kw">const </span>T: usize&gt;(
+    grain: <span class="kw-2">&amp;mut </span>Grain&lt;F&gt;,
+    <span class="kw-2">mut </span>select: usize,
+) -&gt; (Mds&lt;F, T&gt;, Mds&lt;F, T&gt;) {
+    <span class="kw">let </span>(xs, ys, mds) = <span class="kw">loop </span>{
+        <span class="comment">// Generate two [F; T] arrays of unique field elements.
+        </span><span class="kw">let </span>(xs, ys) = <span class="kw">loop </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>vals: Vec&lt;<span class="kw">_</span>&gt; = (<span class="number">0</span>..<span class="number">2 </span>* T)
+                .map(|<span class="kw">_</span>| grain.next_field_element_without_rejection())
+                .collect();
 
-            <span class="comment">// Check that we have unique field elements.</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">unique</span> <span class="op">=</span> <span class="ident">vals</span>.<span class="ident">clone</span>();
-            <span class="ident">unique</span>.<span class="ident">sort_unstable</span>();
-            <span class="ident">unique</span>.<span class="ident">dedup</span>();
-            <span class="kw">if</span> <span class="ident">vals</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="ident">unique</span>.<span class="ident">len</span>() {
-                <span class="kw">let</span> <span class="ident">rhs</span> <span class="op">=</span> <span class="ident">vals</span>.<span class="ident">split_off</span>(<span class="ident">T</span>);
-                <span class="kw">break</span> (<span class="ident">vals</span>, <span class="ident">rhs</span>);
+            <span class="comment">// Check that we have unique field elements.
+            </span><span class="kw">let </span><span class="kw-2">mut </span>unique = vals.clone();
+            unique.sort_unstable();
+            unique.dedup();
+            <span class="kw">if </span>vals.len() == unique.len() {
+                <span class="kw">let </span>rhs = vals.split_off(T);
+                <span class="kw">break </span>(vals, rhs);
             }
         };
 
-        <span class="comment">// We need to ensure that the MDS is secure. Instead of checking the MDS against</span>
-        <span class="comment">// the relevant algorithms directly, we witness a fixed number of MDS matrices</span>
-        <span class="comment">// that we need to sample from the given Grain state before obtaining a secure</span>
-        <span class="comment">// matrix. This can be determined out-of-band via the reference implementation in</span>
-        <span class="comment">// Sage.</span>
-        <span class="kw">if</span> <span class="ident">select</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-            <span class="ident">select</span> <span class="op">-</span><span class="op">=</span> <span class="number">1</span>;
+        <span class="comment">// We need to ensure that the MDS is secure. Instead of checking the MDS against
+        // the relevant algorithms directly, we witness a fixed number of MDS matrices
+        // that we need to sample from the given Grain state before obtaining a secure
+        // matrix. This can be determined out-of-band via the reference implementation in
+        // Sage.
+        </span><span class="kw">if </span>select != <span class="number">0 </span>{
+            select -= <span class="number">1</span>;
             <span class="kw">continue</span>;
         }
 
-        <span class="comment">// Generate a Cauchy matrix, with elements a_ij in the form:</span>
-        <span class="comment">//     a_ij = 1/(x_i + y_j); x_i + y_j != 0</span>
-        <span class="comment">//</span>
-        <span class="comment">// It would be much easier to use the alternate definition:</span>
-        <span class="comment">//     a_ij = 1/(x_i - y_j); x_i - y_j != 0</span>
-        <span class="comment">//</span>
-        <span class="comment">// These are clearly equivalent on `y &lt;- -y`, but it is easier to work with the</span>
-        <span class="comment">// negative formulation, because ensuring that xs ∪ ys is unique implies that</span>
-        <span class="comment">// x_i - y_j != 0 by construction (whereas the positive case does not hold). It</span>
-        <span class="comment">// also makes computation of the matrix inverse simpler below (the theorem used</span>
-        <span class="comment">// was formulated for the negative definition).</span>
-        <span class="comment">//</span>
-        <span class="comment">// However, the Poseidon paper and reference impl use the positive formulation,</span>
-        <span class="comment">// and we want to rely on the reference impl for MDS security, so we use the same</span>
-        <span class="comment">// formulation.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mds</span> <span class="op">=</span> [[<span class="ident">F::zero</span>(); <span class="ident">T</span>]; <span class="ident">T</span>];
-        <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::needless_range_loop</span>)]</span>
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">T</span> {
-            <span class="kw">for</span> <span class="ident">j</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">T</span> {
-                <span class="kw">let</span> <span class="ident">sum</span> <span class="op">=</span> <span class="ident">xs</span>[<span class="ident">i</span>] <span class="op">+</span> <span class="ident">ys</span>[<span class="ident">j</span>];
-                <span class="comment">// We leverage the secure MDS selection counter to also check this.</span>
-                <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">sum</span>.<span class="ident">is_zero_vartime</span>());
-                <span class="ident">mds</span>[<span class="ident">i</span>][<span class="ident">j</span>] <span class="op">=</span> <span class="ident">sum</span>.<span class="ident">invert</span>().<span class="ident">unwrap</span>();
+        <span class="comment">// Generate a Cauchy matrix, with elements a_ij in the form:
+        //     a_ij = 1/(x_i + y_j); x_i + y_j != 0
+        //
+        // It would be much easier to use the alternate definition:
+        //     a_ij = 1/(x_i - y_j); x_i - y_j != 0
+        //
+        // These are clearly equivalent on `y &lt;- -y`, but it is easier to work with the
+        // negative formulation, because ensuring that xs ∪ ys is unique implies that
+        // x_i - y_j != 0 by construction (whereas the positive case does not hold). It
+        // also makes computation of the matrix inverse simpler below (the theorem used
+        // was formulated for the negative definition).
+        //
+        // However, the Poseidon paper and reference impl use the positive formulation,
+        // and we want to rely on the reference impl for MDS security, so we use the same
+        // formulation.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>mds = [[F::zero(); T]; T];
+        <span class="attribute">#[allow(clippy::needless_range_loop)]</span>
+        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..T {
+            <span class="kw">for </span>j <span class="kw">in </span><span class="number">0</span>..T {
+                <span class="kw">let </span>sum = xs[i] + ys[j];
+                <span class="comment">// We leverage the secure MDS selection counter to also check this.
+                </span><span class="macro">assert!</span>(!sum.is_zero_vartime());
+                mds[i][j] = sum.invert().unwrap();
             }
         }
 
-        <span class="kw">break</span> (<span class="ident">xs</span>, <span class="ident">ys</span>, <span class="ident">mds</span>);
+        <span class="kw">break </span>(xs, ys, mds);
     };
 
-    <span class="comment">// Compute the inverse. All square Cauchy matrices have a non-zero determinant and</span>
-    <span class="comment">// thus are invertible. The inverse for a Cauchy matrix of the form:</span>
-    <span class="comment">//</span>
-    <span class="comment">//     a_ij = 1/(x_i - y_j); x_i - y_j != 0</span>
-    <span class="comment">//</span>
-    <span class="comment">// has elements b_ij given by:</span>
-    <span class="comment">//</span>
-    <span class="comment">//     b_ij = (x_j - y_i) A_j(y_i) B_i(x_j)    (Schechter 1959, Theorem 1)</span>
-    <span class="comment">//</span>
-    <span class="comment">// where A_i(x) and B_i(x) are the Lagrange polynomials for xs and ys respectively.</span>
-    <span class="comment">//</span>
-    <span class="comment">// We adapt this to the positive Cauchy formulation by negating ys.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mds_inv</span> <span class="op">=</span> [[<span class="ident">F::zero</span>(); <span class="ident">T</span>]; <span class="ident">T</span>];
-    <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="op">|</span><span class="ident">xs</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>], <span class="ident">j</span>, <span class="ident">x</span>: <span class="ident">F</span><span class="op">|</span> {
-        <span class="kw">let</span> <span class="ident">x_j</span> <span class="op">=</span> <span class="ident">xs</span>[<span class="ident">j</span>];
-        <span class="ident">xs</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>().<span class="ident">fold</span>(<span class="ident">F::one</span>(), <span class="op">|</span><span class="ident">acc</span>, (<span class="ident">m</span>, <span class="ident">x_m</span>)<span class="op">|</span> {
-            <span class="kw">if</span> <span class="ident">m</span> <span class="op">==</span> <span class="ident">j</span> {
-                <span class="ident">acc</span>
-            } <span class="kw">else</span> {
-                <span class="comment">// We can invert freely; by construction, the elements of xs are distinct.</span>
-                <span class="ident">acc</span> <span class="op">*</span> (<span class="ident">x</span> <span class="op">-</span> <span class="ident">x_m</span>) <span class="op">*</span> (<span class="ident">x_j</span> <span class="op">-</span> <span class="ident">x_m</span>).<span class="ident">invert</span>().<span class="ident">unwrap</span>()
+    <span class="comment">// Compute the inverse. All square Cauchy matrices have a non-zero determinant and
+    // thus are invertible. The inverse for a Cauchy matrix of the form:
+    //
+    //     a_ij = 1/(x_i - y_j); x_i - y_j != 0
+    //
+    // has elements b_ij given by:
+    //
+    //     b_ij = (x_j - y_i) A_j(y_i) B_i(x_j)    (Schechter 1959, Theorem 1)
+    //
+    // where A_i(x) and B_i(x) are the Lagrange polynomials for xs and ys respectively.
+    //
+    // We adapt this to the positive Cauchy formulation by negating ys.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>mds_inv = [[F::zero(); T]; T];
+    <span class="kw">let </span>l = |xs: <span class="kw-2">&amp;</span>[F], j, x: F| {
+        <span class="kw">let </span>x_j = xs[j];
+        xs.iter().enumerate().fold(F::one(), |acc, (m, x_m)| {
+            <span class="kw">if </span>m == j {
+                acc
+            } <span class="kw">else </span>{
+                <span class="comment">// We can invert freely; by construction, the elements of xs are distinct.
+                </span>acc * (x - x_m) * (x_j - x_m).invert().unwrap()
             }
         })
     };
-    <span class="kw">let</span> <span class="ident">neg_ys</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">ys</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">y</span><span class="op">|</span> <span class="op">-</span><span class="kw-2">*</span><span class="ident">y</span>).<span class="ident">collect</span>();
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">T</span> {
-        <span class="kw">for</span> <span class="ident">j</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">T</span> {
-            <span class="ident">mds_inv</span>[<span class="ident">i</span>][<span class="ident">j</span>] <span class="op">=</span> (<span class="ident">xs</span>[<span class="ident">j</span>] <span class="op">-</span> <span class="ident">neg_ys</span>[<span class="ident">i</span>]) <span class="op">*</span> <span class="ident">l</span>(<span class="kw-2">&amp;</span><span class="ident">xs</span>, <span class="ident">j</span>, <span class="ident">neg_ys</span>[<span class="ident">i</span>]) <span class="op">*</span> <span class="ident">l</span>(<span class="kw-2">&amp;</span><span class="ident">neg_ys</span>, <span class="ident">i</span>, <span class="ident">xs</span>[<span class="ident">j</span>]);
+    <span class="kw">let </span>neg_ys: Vec&lt;<span class="kw">_</span>&gt; = ys.iter().map(|y| -<span class="kw-2">*</span>y).collect();
+    <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..T {
+        <span class="kw">for </span>j <span class="kw">in </span><span class="number">0</span>..T {
+            mds_inv[i][j] = (xs[j] - neg_ys[i]) * l(<span class="kw-2">&amp;</span>xs, j, neg_ys[i]) * l(<span class="kw-2">&amp;</span>neg_ys, i, xs[j]);
         }
     }
 
-    (<span class="ident">mds</span>, <span class="ident">mds_inv</span>)
+    (mds, mds_inv)
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">pasta_curves::Fp</span>;
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">mod </span>tests {
+    <span class="kw">use </span>pasta_curves::Fp;
 
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">generate_mds</span>, <span class="ident">Grain</span>};
+    <span class="kw">use super</span>::{generate_mds, Grain};
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">poseidon_mds</span>() {
-        <span class="kw">const</span> <span class="ident">T</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">3</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grain</span> <span class="op">=</span> <span class="ident">Grain::new</span>(<span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::grain::SboxType::Pow</span>, <span class="ident">T</span> <span class="kw">as</span> <span class="ident">u16</span>, <span class="number">8</span>, <span class="number">56</span>);
-        <span class="kw">let</span> (<span class="ident">mds</span>, <span class="ident">mds_inv</span>) <span class="op">=</span> <span class="ident">generate_mds</span>::<span class="op">&lt;</span><span class="ident">Fp</span>, <span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="ident">grain</span>, <span class="number">0</span>);
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>poseidon_mds() {
+        <span class="kw">const </span>T: usize = <span class="number">3</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>grain = Grain::new(<span class="kw">super</span>::<span class="kw">super</span>::grain::SboxType::Pow, T <span class="kw">as </span>u16, <span class="number">8</span>, <span class="number">56</span>);
+        <span class="kw">let </span>(mds, mds_inv) = generate_mds::&lt;Fp, T&gt;(<span class="kw-2">&amp;mut </span>grain, <span class="number">0</span>);
 
-        <span class="comment">// Verify that MDS * MDS^-1 = I.</span>
-        <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::needless_range_loop</span>)]</span>
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">T</span> {
-            <span class="kw">for</span> <span class="ident">j</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">T</span> {
-                <span class="kw">let</span> <span class="ident">expected</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">i</span> <span class="op">==</span> <span class="ident">j</span> { <span class="ident">Fp::one</span>() } <span class="kw">else</span> { <span class="ident">Fp::zero</span>() };
+        <span class="comment">// Verify that MDS * MDS^-1 = I.
+        </span><span class="attribute">#[allow(clippy::needless_range_loop)]</span>
+        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..T {
+            <span class="kw">for </span>j <span class="kw">in </span><span class="number">0</span>..T {
+                <span class="kw">let </span>expected = <span class="kw">if </span>i == j { Fp::one() } <span class="kw">else </span>{ Fp::zero() };
                 <span class="macro">assert_eq!</span>(
-                    (<span class="number">0</span>..<span class="ident">T</span>).<span class="ident">fold</span>(<span class="ident">Fp::zero</span>(), <span class="op">|</span><span class="ident">acc</span>, <span class="ident">k</span><span class="op">|</span> <span class="ident">acc</span> <span class="op">+</span> (<span class="ident">mds</span>[<span class="ident">i</span>][<span class="ident">k</span>] <span class="op">*</span> <span class="ident">mds_inv</span>[<span class="ident">k</span>][<span class="ident">j</span>])),
-                    <span class="ident">expected</span>
+                    (<span class="number">0</span>..T).fold(Fp::zero(), |acc, k| acc + (mds[i][k] * mds_inv[k][j])),
+                    expected
                 );
             }
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -395,382 +389,381 @@
 <span id="374">374</span>
 <span id="375">375</span>
 <span id="376">376</span>
-</pre><pre class="rust"><code><span class="doccomment">//! This module contains an implementation of the polynomial commitment scheme</span>
-<span class="doccomment">//! described in the [Halo][halo] paper.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! [halo]: https://eprint.iacr.org/2019/1021</span>
+</pre><pre class="rust"><code><span class="doccomment">//! This module contains an implementation of the polynomial commitment scheme
+//! described in the [Halo][halo] paper.
+//!
+//! [halo]: https://eprint.iacr.org/2019/1021
 
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Coeff</span>, <span class="ident">LagrangeCoeff</span>, <span class="ident">Polynomial</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic</span>::{
-    <span class="ident">best_fft</span>, <span class="ident">best_multiexp</span>, <span class="ident">parallelize</span>, <span class="ident">CurveAffine</span>, <span class="ident">CurveExt</span>, <span class="ident">FieldExt</span>, <span class="ident">Group</span>,
+</span><span class="kw">use super</span>::{Coeff, LagrangeCoeff, Polynomial};
+<span class="kw">use </span><span class="kw">crate</span>::arithmetic::{
+    best_fft, best_multiexp, parallelize, CurveAffine, CurveExt, FieldExt, Group,
 };
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::helpers::CurveRead</span>;
+<span class="kw">use </span><span class="kw">crate</span>::helpers::CurveRead;
 
-<span class="kw">use</span> <span class="ident">ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeField</span>};
-<span class="kw">use</span> <span class="ident">group</span>::{<span class="ident">prime::PrimeCurveAffine</span>, <span class="ident">Curve</span>, <span class="ident">Group</span> <span class="kw">as</span> <span class="kw">_</span>};
-<span class="kw">use</span> <span class="ident">std::ops</span>::{<span class="ident">Add</span>, <span class="ident">AddAssign</span>, <span class="ident">Mul</span>, <span class="ident">MulAssign</span>};
+<span class="kw">use </span>ff::{Field, PrimeField};
+<span class="kw">use </span>group::{prime::PrimeCurveAffine, Curve, Group <span class="kw">as _</span>};
+<span class="kw">use </span>std::ops::{Add, AddAssign, Mul, MulAssign};
 
-<span class="kw">mod</span> <span class="ident">msm</span>;
-<span class="kw">mod</span> <span class="ident">prover</span>;
-<span class="kw">mod</span> <span class="ident">verifier</span>;
+<span class="kw">mod </span>msm;
+<span class="kw">mod </span>prover;
+<span class="kw">mod </span>verifier;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">msm::MSM</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">prover::create_proof</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">verifier</span>::{<span class="ident">verify_proof</span>, <span class="ident">Accumulator</span>, <span class="ident">Guard</span>};
+<span class="kw">pub use </span>msm::MSM;
+<span class="kw">pub use </span>prover::create_proof;
+<span class="kw">pub use </span>verifier::{verify_proof, Accumulator, Guard};
 
-<span class="kw">use</span> <span class="ident">std::io</span>;
+<span class="kw">use </span>std::io;
 
-<span class="doccomment">/// These are the public parameters for the polynomial commitment scheme.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">k</span>: <span class="ident">u32</span>,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">n</span>: <span class="ident">u64</span>,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">g</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">g_lagrange</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">w</span>: <span class="ident">C</span>,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">u</span>: <span class="ident">C</span>,
+<span class="doccomment">/// These are the public parameters for the polynomial commitment scheme.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>Params&lt;C: CurveAffine&gt; {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) k: u32,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) n: u64,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) g: Vec&lt;C&gt;,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) g_lagrange: Vec&lt;C&gt;,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) w: C,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) u: C,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Initializes parameters for the curve, given a random oracle to draw</span>
-    <span class="doccomment">/// points from.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">k</span>: <span class="ident">u32</span>) -&gt; <span class="self">Self</span> {
-        <span class="comment">// This is usually a limitation on the curve, but we also want 32-bit</span>
-        <span class="comment">// architectures to be supported.</span>
-        <span class="macro">assert!</span>(<span class="ident">k</span> <span class="op">&lt;</span> <span class="number">32</span>);
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; Params&lt;C&gt; {
+    <span class="doccomment">/// Initializes parameters for the curve, given a random oracle to draw
+    /// points from.
+    </span><span class="kw">pub fn </span>new(k: u32) -&gt; <span class="self">Self </span>{
+        <span class="comment">// This is usually a limitation on the curve, but we also want 32-bit
+        // architectures to be supported.
+        </span><span class="macro">assert!</span>(k &lt; <span class="number">32</span>);
 
-        <span class="comment">// In src/arithmetic/fields.rs we ensure that usize is at least 32 bits.</span>
+        <span class="comment">// In src/arithmetic/fields.rs we ensure that usize is at least 32 bits.
 
-        <span class="kw">let</span> <span class="ident">n</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">k</span>;
+        </span><span class="kw">let </span>n: u64 = <span class="number">1 </span>&lt;&lt; k;
 
-        <span class="kw">let</span> <span class="ident">g_projective</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">g</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>);
-            <span class="ident">g</span>.<span class="ident">resize</span>(<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>, <span class="ident">C::Curve::identity</span>());
+        <span class="kw">let </span>g_projective = {
+            <span class="kw">let </span><span class="kw-2">mut </span>g = Vec::with_capacity(n <span class="kw">as </span>usize);
+            g.resize(n <span class="kw">as </span>usize, C::Curve::identity());
 
-            <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="ident">g</span>, <span class="kw">move</span> <span class="op">|</span><span class="ident">g</span>, <span class="ident">start</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">C::CurveExt::hash_to_curve</span>(<span class="string">&quot;Halo2-Parameters&quot;</span>);
+            parallelize(<span class="kw-2">&amp;mut </span>g, <span class="kw">move </span>|g, start| {
+                <span class="kw">let </span>hasher = C::CurveExt::hash_to_curve(<span class="string">&quot;Halo2-Parameters&quot;</span>);
 
-                <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">g</span>) <span class="kw">in</span> <span class="ident">g</span>.<span class="ident">iter_mut</span>().<span class="ident">enumerate</span>() {
-                    <span class="kw">let</span> <span class="ident">i</span> <span class="op">=</span> (<span class="ident">i</span> <span class="op">+</span> <span class="ident">start</span>) <span class="kw">as</span> <span class="ident">u32</span>;
+                <span class="kw">for </span>(i, g) <span class="kw">in </span>g.iter_mut().enumerate() {
+                    <span class="kw">let </span>i = (i + start) <span class="kw">as </span>u32;
 
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">message</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">5</span>];
-                    <span class="ident">message</span>[<span class="number">1</span>..<span class="number">5</span>].<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">i</span>.<span class="ident">to_le_bytes</span>());
+                    <span class="kw">let </span><span class="kw-2">mut </span>message = [<span class="number">0u8</span>; <span class="number">5</span>];
+                    message[<span class="number">1</span>..<span class="number">5</span>].copy_from_slice(<span class="kw-2">&amp;</span>i.to_le_bytes());
 
-                    <span class="kw-2">*</span><span class="ident">g</span> <span class="op">=</span> <span class="ident">hasher</span>(<span class="kw-2">&amp;</span><span class="ident">message</span>);
+                    <span class="kw-2">*</span>g = hasher(<span class="kw-2">&amp;</span>message);
                 }
             });
 
-            <span class="ident">g</span>
+            g
         };
 
-        <span class="kw">let</span> <span class="ident">g</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">g</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">C::identity</span>(); <span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>];
-            <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="ident">g</span>, <span class="op">|</span><span class="ident">g</span>, <span class="ident">starts</span><span class="op">|</span> {
-                <span class="ident">C::Curve::batch_normalize</span>(<span class="kw-2">&amp;</span><span class="ident">g_projective</span>[<span class="ident">starts</span>..(<span class="ident">starts</span> <span class="op">+</span> <span class="ident">g</span>.<span class="ident">len</span>())], <span class="ident">g</span>);
+        <span class="kw">let </span>g = {
+            <span class="kw">let </span><span class="kw-2">mut </span>g = <span class="macro">vec!</span>[C::identity(); n <span class="kw">as </span>usize];
+            parallelize(<span class="kw-2">&amp;mut </span>g, |g, starts| {
+                C::Curve::batch_normalize(<span class="kw-2">&amp;</span>g_projective[starts..(starts + g.len())], g);
             });
-            <span class="ident">g</span>
+            g
         };
 
-        <span class="comment">// Let&#39;s evaluate all of the Lagrange basis polynomials</span>
-        <span class="comment">// using an inverse FFT.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">alpha_inv</span> <span class="op">=</span> <span class="op">&lt;</span><span class="op">&lt;</span><span class="ident">C</span> <span class="kw">as</span> <span class="ident">PrimeCurveAffine</span><span class="op">&gt;</span><span class="ident">::Curve</span> <span class="kw">as</span> <span class="ident">Group</span><span class="op">&gt;</span><span class="ident">::Scalar::ROOT_OF_UNITY_INV</span>;
-        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="ident">k</span>..<span class="ident">C::Scalar::S</span> {
-            <span class="ident">alpha_inv</span> <span class="op">=</span> <span class="ident">alpha_inv</span>.<span class="ident">square</span>();
+        <span class="comment">// Let&#39;s evaluate all of the Lagrange basis polynomials
+        // using an inverse FFT.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>alpha_inv = &lt;&lt;C <span class="kw">as </span>PrimeCurveAffine&gt;::Curve <span class="kw">as </span>Group&gt;::Scalar::ROOT_OF_UNITY_INV;
+        <span class="kw">for _ in </span>k..C::Scalar::S {
+            alpha_inv = alpha_inv.square();
         }
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">g_lagrange_projective</span> <span class="op">=</span> <span class="ident">g_projective</span>;
-        <span class="ident">best_fft</span>(<span class="kw-2">&amp;mut</span> <span class="ident">g_lagrange_projective</span>, <span class="ident">alpha_inv</span>, <span class="ident">k</span>);
-        <span class="kw">let</span> <span class="ident">minv</span> <span class="op">=</span> <span class="ident">C::Scalar::TWO_INV</span>.<span class="ident">pow_vartime</span>(<span class="kw-2">&amp;</span>[<span class="ident">k</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
-        <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="ident">g_lagrange_projective</span>, <span class="op">|</span><span class="ident">g</span>, <span class="kw">_</span><span class="op">|</span> {
-            <span class="kw">for</span> <span class="ident">g</span> <span class="kw">in</span> <span class="ident">g</span>.<span class="ident">iter_mut</span>() {
-                <span class="kw-2">*</span><span class="ident">g</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">minv</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>g_lagrange_projective = g_projective;
+        best_fft(<span class="kw-2">&amp;mut </span>g_lagrange_projective, alpha_inv, k);
+        <span class="kw">let </span>minv = C::Scalar::TWO_INV.pow_vartime(<span class="kw-2">&amp;</span>[k <span class="kw">as </span>u64, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
+        parallelize(<span class="kw-2">&amp;mut </span>g_lagrange_projective, |g, <span class="kw">_</span>| {
+            <span class="kw">for </span>g <span class="kw">in </span>g.iter_mut() {
+                <span class="kw-2">*</span>g <span class="kw-2">*</span>= minv;
             }
         });
 
-        <span class="kw">let</span> <span class="ident">g_lagrange</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">g_lagrange</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">C::identity</span>(); <span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>];
-            <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="ident">g_lagrange</span>, <span class="op">|</span><span class="ident">g_lagrange</span>, <span class="ident">starts</span><span class="op">|</span> {
-                <span class="ident">C::Curve::batch_normalize</span>(
-                    <span class="kw-2">&amp;</span><span class="ident">g_lagrange_projective</span>[<span class="ident">starts</span>..(<span class="ident">starts</span> <span class="op">+</span> <span class="ident">g_lagrange</span>.<span class="ident">len</span>())],
-                    <span class="ident">g_lagrange</span>,
+        <span class="kw">let </span>g_lagrange = {
+            <span class="kw">let </span><span class="kw-2">mut </span>g_lagrange = <span class="macro">vec!</span>[C::identity(); n <span class="kw">as </span>usize];
+            parallelize(<span class="kw-2">&amp;mut </span>g_lagrange, |g_lagrange, starts| {
+                C::Curve::batch_normalize(
+                    <span class="kw-2">&amp;</span>g_lagrange_projective[starts..(starts + g_lagrange.len())],
+                    g_lagrange,
                 );
             });
-            <span class="ident">drop</span>(<span class="ident">g_lagrange_projective</span>);
-            <span class="ident">g_lagrange</span>
+            drop(g_lagrange_projective);
+            g_lagrange
         };
 
-        <span class="kw">let</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">C::CurveExt::hash_to_curve</span>(<span class="string">&quot;Halo2-Parameters&quot;</span>);
-        <span class="kw">let</span> <span class="ident">w</span> <span class="op">=</span> <span class="ident">hasher</span>(<span class="kw-2">&amp;</span>[<span class="number">1</span>]).<span class="ident">to_affine</span>();
-        <span class="kw">let</span> <span class="ident">u</span> <span class="op">=</span> <span class="ident">hasher</span>(<span class="kw-2">&amp;</span>[<span class="number">2</span>]).<span class="ident">to_affine</span>();
+        <span class="kw">let </span>hasher = C::CurveExt::hash_to_curve(<span class="string">&quot;Halo2-Parameters&quot;</span>);
+        <span class="kw">let </span>w = hasher(<span class="kw-2">&amp;</span>[<span class="number">1</span>]).to_affine();
+        <span class="kw">let </span>u = hasher(<span class="kw-2">&amp;</span>[<span class="number">2</span>]).to_affine();
 
-        <span class="ident">Params</span> {
-            <span class="ident">k</span>,
-            <span class="ident">n</span>,
-            <span class="ident">g</span>,
-            <span class="ident">g_lagrange</span>,
-            <span class="ident">w</span>,
-            <span class="ident">u</span>,
+        Params {
+            k,
+            n,
+            g,
+            g_lagrange,
+            w,
+            u,
         }
     }
 
-    <span class="doccomment">/// This computes a commitment to a polynomial described by the provided</span>
-    <span class="doccomment">/// slice of coefficients. The commitment will be blinded by the blinding</span>
-    <span class="doccomment">/// factor `r`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">commit</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">Coeff</span><span class="op">&gt;</span>, <span class="ident">r</span>: <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>) -&gt; <span class="ident">C::Curve</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tmp_scalars</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">poly</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="number">1</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tmp_bases</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">poly</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="number">1</span>);
+    <span class="doccomment">/// This computes a commitment to a polynomial described by the provided
+    /// slice of coefficients. The commitment will be blinded by the blinding
+    /// factor `r`.
+    </span><span class="kw">pub fn </span>commit(<span class="kw-2">&amp;</span><span class="self">self</span>, poly: <span class="kw-2">&amp;</span>Polynomial&lt;C::Scalar, Coeff&gt;, r: Blind&lt;C::Scalar&gt;) -&gt; C::Curve {
+        <span class="kw">let </span><span class="kw-2">mut </span>tmp_scalars = Vec::with_capacity(poly.len() + <span class="number">1</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>tmp_bases = Vec::with_capacity(poly.len() + <span class="number">1</span>);
 
-        <span class="ident">tmp_scalars</span>.<span class="ident">extend</span>(<span class="ident">poly</span>.<span class="ident">iter</span>());
-        <span class="ident">tmp_scalars</span>.<span class="ident">push</span>(<span class="ident">r</span>.<span class="number">0</span>);
+        tmp_scalars.extend(poly.iter());
+        tmp_scalars.push(r.<span class="number">0</span>);
 
-        <span class="ident">tmp_bases</span>.<span class="ident">extend</span>(<span class="self">self</span>.<span class="ident">g</span>.<span class="ident">iter</span>());
-        <span class="ident">tmp_bases</span>.<span class="ident">push</span>(<span class="self">self</span>.<span class="ident">w</span>);
+        tmp_bases.extend(<span class="self">self</span>.g.iter());
+        tmp_bases.push(<span class="self">self</span>.w);
 
-        <span class="ident">best_multiexp</span>::<span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_scalars</span>, <span class="kw-2">&amp;</span><span class="ident">tmp_bases</span>)
+        best_multiexp::&lt;C&gt;(<span class="kw-2">&amp;</span>tmp_scalars, <span class="kw-2">&amp;</span>tmp_bases)
     }
 
-    <span class="doccomment">/// This commits to a polynomial using its evaluations over the $2^k$ size</span>
-    <span class="doccomment">/// evaluation domain. The commitment will be blinded by the blinding factor</span>
-    <span class="doccomment">/// `r`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">commit_lagrange</span>(
+    <span class="doccomment">/// This commits to a polynomial using its evaluations over the $2^k$ size
+    /// evaluation domain. The commitment will be blinded by the blinding factor
+    /// `r`.
+    </span><span class="kw">pub fn </span>commit_lagrange(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>,
-        <span class="ident">r</span>: <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="ident">C::Curve</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tmp_scalars</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">poly</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="number">1</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tmp_bases</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">poly</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="number">1</span>);
+        poly: <span class="kw-2">&amp;</span>Polynomial&lt;C::Scalar, LagrangeCoeff&gt;,
+        r: Blind&lt;C::Scalar&gt;,
+    ) -&gt; C::Curve {
+        <span class="kw">let </span><span class="kw-2">mut </span>tmp_scalars = Vec::with_capacity(poly.len() + <span class="number">1</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>tmp_bases = Vec::with_capacity(poly.len() + <span class="number">1</span>);
 
-        <span class="ident">tmp_scalars</span>.<span class="ident">extend</span>(<span class="ident">poly</span>.<span class="ident">iter</span>());
-        <span class="ident">tmp_scalars</span>.<span class="ident">push</span>(<span class="ident">r</span>.<span class="number">0</span>);
+        tmp_scalars.extend(poly.iter());
+        tmp_scalars.push(r.<span class="number">0</span>);
 
-        <span class="ident">tmp_bases</span>.<span class="ident">extend</span>(<span class="self">self</span>.<span class="ident">g_lagrange</span>.<span class="ident">iter</span>());
-        <span class="ident">tmp_bases</span>.<span class="ident">push</span>(<span class="self">self</span>.<span class="ident">w</span>);
+        tmp_bases.extend(<span class="self">self</span>.g_lagrange.iter());
+        tmp_bases.push(<span class="self">self</span>.w);
 
-        <span class="ident">best_multiexp</span>::<span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_scalars</span>, <span class="kw-2">&amp;</span><span class="ident">tmp_bases</span>)
+        best_multiexp::&lt;C&gt;(<span class="kw-2">&amp;</span>tmp_scalars, <span class="kw-2">&amp;</span>tmp_bases)
     }
 
-    <span class="doccomment">/// Generates an empty multiscalar multiplication struct using the</span>
-    <span class="doccomment">/// appropriate params.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_msm</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">MSM</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-        <span class="ident">MSM::new</span>(<span class="self">self</span>)
+    <span class="doccomment">/// Generates an empty multiscalar multiplication struct using the
+    /// appropriate params.
+    </span><span class="kw">pub fn </span>empty_msm(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MSM&lt;C&gt; {
+        MSM::new(<span class="self">self</span>)
     }
 
-    <span class="doccomment">/// Getter for g generators</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_g</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">g</span>.<span class="ident">clone</span>()
+    <span class="doccomment">/// Getter for g generators
+    </span><span class="kw">pub fn </span>get_g(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;C&gt; {
+        <span class="self">self</span>.g.clone()
     }
 
-    <span class="doccomment">/// Writes params to a buffer.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">write</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">io::Write</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">writer</span>: <span class="kw-2">&amp;mut</span> <span class="ident">W</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="ident">writer</span>.<span class="ident">write_all</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">k</span>.<span class="ident">to_le_bytes</span>())<span class="question-mark">?</span>;
-        <span class="kw">for</span> <span class="ident">g_element</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">g</span> {
-            <span class="ident">writer</span>.<span class="ident">write_all</span>(<span class="ident">g_element</span>.<span class="ident">to_bytes</span>().<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
+    <span class="doccomment">/// Writes params to a buffer.
+    </span><span class="kw">pub fn </span>write&lt;W: io::Write&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, writer: <span class="kw-2">&amp;mut </span>W) -&gt; io::Result&lt;()&gt; {
+        writer.write_all(<span class="kw-2">&amp;</span><span class="self">self</span>.k.to_le_bytes())<span class="question-mark">?</span>;
+        <span class="kw">for </span>g_element <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.g {
+            writer.write_all(g_element.to_bytes().as_ref())<span class="question-mark">?</span>;
         }
-        <span class="kw">for</span> <span class="ident">g_lagrange_element</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">g_lagrange</span> {
-            <span class="ident">writer</span>.<span class="ident">write_all</span>(<span class="ident">g_lagrange_element</span>.<span class="ident">to_bytes</span>().<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
+        <span class="kw">for </span>g_lagrange_element <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.g_lagrange {
+            writer.write_all(g_lagrange_element.to_bytes().as_ref())<span class="question-mark">?</span>;
         }
-        <span class="ident">writer</span>.<span class="ident">write_all</span>(<span class="self">self</span>.<span class="ident">w</span>.<span class="ident">to_bytes</span>().<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
-        <span class="ident">writer</span>.<span class="ident">write_all</span>(<span class="self">self</span>.<span class="ident">u</span>.<span class="ident">to_bytes</span>().<span class="ident">as_ref</span>())<span class="question-mark">?</span>;
+        writer.write_all(<span class="self">self</span>.w.to_bytes().as_ref())<span class="question-mark">?</span>;
+        writer.write_all(<span class="self">self</span>.u.to_bytes().as_ref())<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Reads params from a buffer.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">io::Read</span><span class="op">&gt;</span>(<span class="ident">reader</span>: <span class="kw-2">&amp;mut</span> <span class="ident">R</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">k</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">4</span>];
-        <span class="ident">reader</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;mut</span> <span class="ident">k</span>[..])<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="ident">u32::from_le_bytes</span>(<span class="ident">k</span>);
+    <span class="doccomment">/// Reads params from a buffer.
+    </span><span class="kw">pub fn </span>read&lt;R: io::Read&gt;(reader: <span class="kw-2">&amp;mut </span>R) -&gt; io::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>k = [<span class="number">0u8</span>; <span class="number">4</span>];
+        reader.read_exact(<span class="kw-2">&amp;mut </span>k[..])<span class="question-mark">?</span>;
+        <span class="kw">let </span>k = u32::from_le_bytes(k);
 
-        <span class="kw">let</span> <span class="ident">n</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">k</span>;
+        <span class="kw">let </span>n: u64 = <span class="number">1 </span>&lt;&lt; k;
 
-        <span class="kw">let</span> <span class="ident">g</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">n</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">C::read</span>(<span class="ident">reader</span>)).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">g_lagrange</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">n</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">C::read</span>(<span class="ident">reader</span>)).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        <span class="kw">let </span>g: Vec&lt;<span class="kw">_</span>&gt; = (<span class="number">0</span>..n).map(|<span class="kw">_</span>| C::read(reader)).collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
+        <span class="kw">let </span>g_lagrange: Vec&lt;<span class="kw">_</span>&gt; = (<span class="number">0</span>..n).map(|<span class="kw">_</span>| C::read(reader)).collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">w</span> <span class="op">=</span> <span class="ident">C::read</span>(<span class="ident">reader</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">u</span> <span class="op">=</span> <span class="ident">C::read</span>(<span class="ident">reader</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>w = C::read(reader)<span class="question-mark">?</span>;
+        <span class="kw">let </span>u = C::read(reader)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Params</span> {
-            <span class="ident">k</span>,
-            <span class="ident">n</span>,
-            <span class="ident">g</span>,
-            <span class="ident">g_lagrange</span>,
-            <span class="ident">w</span>,
-            <span class="ident">u</span>,
+        <span class="prelude-val">Ok</span>(Params {
+            k,
+            n,
+            g,
+            g_lagrange,
+            w,
+            u,
         })
     }
 }
 
-<span class="doccomment">/// Wrapper type around a blinding factor.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="kw">pub</span> <span class="ident">F</span>);
+<span class="doccomment">/// Wrapper type around a blinding factor.
+</span><span class="attribute">#[derive(Copy, Clone, Eq, PartialEq, Debug)]</span>
+<span class="kw">pub struct </span>Blind&lt;F&gt;(<span class="kw">pub </span>F);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident">Blind</span>(<span class="ident">F::one</span>())
+<span class="kw">impl</span>&lt;F: FieldExt&gt; Default <span class="kw">for </span>Blind&lt;F&gt; {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        Blind(F::one())
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Add</span> <span class="kw">for</span> <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span>;
+<span class="kw">impl</span>&lt;F: FieldExt&gt; Add <span class="kw">for </span>Blind&lt;F&gt; {
+    <span class="kw">type </span>Output = <span class="self">Self</span>;
 
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Blind</span>(<span class="self">self</span>.<span class="number">0</span> <span class="op">+</span> <span class="ident">rhs</span>.<span class="number">0</span>)
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: Blind&lt;F&gt;) -&gt; <span class="self">Self </span>{
+        Blind(<span class="self">self</span>.<span class="number">0 </span>+ rhs.<span class="number">0</span>)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Mul</span> <span class="kw">for</span> <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span>;
+<span class="kw">impl</span>&lt;F: FieldExt&gt; Mul <span class="kw">for </span>Blind&lt;F&gt; {
+    <span class="kw">type </span>Output = <span class="self">Self</span>;
 
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Blind</span>(<span class="self">self</span>.<span class="number">0</span> <span class="op">*</span> <span class="ident">rhs</span>.<span class="number">0</span>)
+    <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: Blind&lt;F&gt;) -&gt; <span class="self">Self </span>{
+        Blind(<span class="self">self</span>.<span class="number">0 </span>* rhs.<span class="number">0</span>)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">AddAssign</span> <span class="kw">for</span> <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">add_assign</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) {
-        <span class="self">self</span>.<span class="number">0</span> <span class="op">+</span><span class="op">=</span> <span class="ident">rhs</span>.<span class="number">0</span>;
+<span class="kw">impl</span>&lt;F: FieldExt&gt; AddAssign <span class="kw">for </span>Blind&lt;F&gt; {
+    <span class="kw">fn </span>add_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: Blind&lt;F&gt;) {
+        <span class="self">self</span>.<span class="number">0 </span>+= rhs.<span class="number">0</span>;
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">MulAssign</span> <span class="kw">for</span> <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">mul_assign</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) {
-        <span class="self">self</span>.<span class="number">0</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">rhs</span>.<span class="number">0</span>;
+<span class="kw">impl</span>&lt;F: FieldExt&gt; MulAssign <span class="kw">for </span>Blind&lt;F&gt; {
+    <span class="kw">fn </span>mul_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: Blind&lt;F&gt;) {
+        <span class="self">self</span>.<span class="number">0 </span><span class="kw-2">*</span>= rhs.<span class="number">0</span>;
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">AddAssign</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">add_assign</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) {
-        <span class="self">self</span>.<span class="number">0</span> <span class="op">+</span><span class="op">=</span> <span class="ident">rhs</span>;
+<span class="kw">impl</span>&lt;F: FieldExt&gt; AddAssign&lt;F&gt; <span class="kw">for </span>Blind&lt;F&gt; {
+    <span class="kw">fn </span>add_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: F) {
+        <span class="self">self</span>.<span class="number">0 </span>+= rhs;
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">MulAssign</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">mul_assign</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) {
-        <span class="self">self</span>.<span class="number">0</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">rhs</span>;
+<span class="kw">impl</span>&lt;F: FieldExt&gt; MulAssign&lt;F&gt; <span class="kw">for </span>Blind&lt;F&gt; {
+    <span class="kw">fn </span>mul_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: F) {
+        <span class="self">self</span>.<span class="number">0 </span><span class="kw-2">*</span>= rhs;
     }
 }
 
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">fn</span> <span class="ident">test_commit_lagrange_epaffine</span>() {
-    <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">6</span>;
+<span class="attribute">#[test]</span>
+<span class="kw">fn </span>test_commit_lagrange_epaffine() {
+    <span class="kw">const </span>K: u32 = <span class="number">6</span>;
 
-    <span class="kw">use</span> <span class="ident">rand_core::OsRng</span>;
+    <span class="kw">use </span>rand_core::OsRng;
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::pasta</span>::{<span class="ident">EpAffine</span>, <span class="ident">Fq</span>};
-    <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="ident">Params</span>::<span class="op">&lt;</span><span class="ident">EpAffine</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">K</span>);
-    <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="ident"><span class="kw">super</span>::EvaluationDomain::new</span>(<span class="number">1</span>, <span class="ident">K</span>);
+    <span class="kw">use </span><span class="kw">crate</span>::pasta::{EpAffine, Fq};
+    <span class="kw">let </span>params = Params::&lt;EpAffine&gt;::new(K);
+    <span class="kw">let </span>domain = <span class="kw">super</span>::EvaluationDomain::new(<span class="number">1</span>, K);
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">empty_lagrange</span>();
+    <span class="kw">let </span><span class="kw-2">mut </span>a = domain.empty_lagrange();
 
-    <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">a</span>) <span class="kw">in</span> <span class="ident">a</span>.<span class="ident">iter_mut</span>().<span class="ident">enumerate</span>() {
-        <span class="kw-2">*</span><span class="ident">a</span> <span class="op">=</span> <span class="ident">Fq::from</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>);
+    <span class="kw">for </span>(i, a) <span class="kw">in </span>a.iter_mut().enumerate() {
+        <span class="kw-2">*</span>a = Fq::from(i <span class="kw">as </span>u64);
     }
 
-    <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">lagrange_to_coeff</span>(<span class="ident">a</span>.<span class="ident">clone</span>());
+    <span class="kw">let </span>b = domain.lagrange_to_coeff(a.clone());
 
-    <span class="kw">let</span> <span class="ident">alpha</span> <span class="op">=</span> <span class="ident">Blind</span>(<span class="ident">Fq::random</span>(<span class="ident">OsRng</span>));
+    <span class="kw">let </span>alpha = Blind(Fq::random(OsRng));
 
-    <span class="macro">assert_eq!</span>(<span class="ident">params</span>.<span class="ident">commit</span>(<span class="kw-2">&amp;</span><span class="ident">b</span>, <span class="ident">alpha</span>), <span class="ident">params</span>.<span class="ident">commit_lagrange</span>(<span class="kw-2">&amp;</span><span class="ident">a</span>, <span class="ident">alpha</span>));
+    <span class="macro">assert_eq!</span>(params.commit(<span class="kw-2">&amp;</span>b, alpha), params.commit_lagrange(<span class="kw-2">&amp;</span>a, alpha));
 }
 
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">fn</span> <span class="ident">test_commit_lagrange_eqaffine</span>() {
-    <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">6</span>;
+<span class="attribute">#[test]</span>
+<span class="kw">fn </span>test_commit_lagrange_eqaffine() {
+    <span class="kw">const </span>K: u32 = <span class="number">6</span>;
 
-    <span class="kw">use</span> <span class="ident">rand_core::OsRng</span>;
+    <span class="kw">use </span>rand_core::OsRng;
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::pasta</span>::{<span class="ident">EqAffine</span>, <span class="ident">Fp</span>};
-    <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="ident">Params</span>::<span class="op">&lt;</span><span class="ident">EqAffine</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">K</span>);
-    <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="ident"><span class="kw">super</span>::EvaluationDomain::new</span>(<span class="number">1</span>, <span class="ident">K</span>);
+    <span class="kw">use </span><span class="kw">crate</span>::pasta::{EqAffine, Fp};
+    <span class="kw">let </span>params = Params::&lt;EqAffine&gt;::new(K);
+    <span class="kw">let </span>domain = <span class="kw">super</span>::EvaluationDomain::new(<span class="number">1</span>, K);
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">empty_lagrange</span>();
+    <span class="kw">let </span><span class="kw-2">mut </span>a = domain.empty_lagrange();
 
-    <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">a</span>) <span class="kw">in</span> <span class="ident">a</span>.<span class="ident">iter_mut</span>().<span class="ident">enumerate</span>() {
-        <span class="kw-2">*</span><span class="ident">a</span> <span class="op">=</span> <span class="ident">Fp::from</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>);
+    <span class="kw">for </span>(i, a) <span class="kw">in </span>a.iter_mut().enumerate() {
+        <span class="kw-2">*</span>a = Fp::from(i <span class="kw">as </span>u64);
     }
 
-    <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">lagrange_to_coeff</span>(<span class="ident">a</span>.<span class="ident">clone</span>());
+    <span class="kw">let </span>b = domain.lagrange_to_coeff(a.clone());
 
-    <span class="kw">let</span> <span class="ident">alpha</span> <span class="op">=</span> <span class="ident">Blind</span>(<span class="ident">Fp::random</span>(<span class="ident">OsRng</span>));
+    <span class="kw">let </span>alpha = Blind(Fp::random(OsRng));
 
-    <span class="macro">assert_eq!</span>(<span class="ident">params</span>.<span class="ident">commit</span>(<span class="kw-2">&amp;</span><span class="ident">b</span>, <span class="ident">alpha</span>), <span class="ident">params</span>.<span class="ident">commit_lagrange</span>(<span class="kw-2">&amp;</span><span class="ident">a</span>, <span class="ident">alpha</span>));
+    <span class="macro">assert_eq!</span>(params.commit(<span class="kw-2">&amp;</span>b, alpha), params.commit_lagrange(<span class="kw-2">&amp;</span>a, alpha));
 }
 
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">fn</span> <span class="ident">test_opening_proof</span>() {
-    <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">6</span>;
+<span class="attribute">#[test]</span>
+<span class="kw">fn </span>test_opening_proof() {
+    <span class="kw">const </span>K: u32 = <span class="number">6</span>;
 
-    <span class="kw">use</span> <span class="ident">ff::Field</span>;
-    <span class="kw">use</span> <span class="ident">rand_core::OsRng</span>;
+    <span class="kw">use </span>ff::Field;
+    <span class="kw">use </span>rand_core::OsRng;
 
-    <span class="kw">use</span> <span class="kw">super</span>::{
-        <span class="ident">commitment</span>::{<span class="ident">Blind</span>, <span class="ident">Params</span>},
-        <span class="ident">EvaluationDomain</span>,
+    <span class="kw">use super</span>::{
+        commitment::{Blind, Params},
+        EvaluationDomain,
     };
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic</span>::{<span class="ident">eval_polynomial</span>, <span class="ident">FieldExt</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::pasta</span>::{<span class="ident">EpAffine</span>, <span class="ident">Fq</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::transcript</span>::{
-        <span class="ident">Blake2bRead</span>, <span class="ident">Blake2bWrite</span>, <span class="ident">Challenge255</span>, <span class="ident">Transcript</span>, <span class="ident">TranscriptRead</span>, <span class="ident">TranscriptWrite</span>,
-    };
-
-    <span class="kw">let</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">OsRng</span>;
-
-    <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="ident">Params</span>::<span class="op">&lt;</span><span class="ident">EpAffine</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">K</span>);
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">params_buffer</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="ident">params</span>.<span class="ident">write</span>(<span class="kw-2">&amp;mut</span> <span class="ident">params_buffer</span>).<span class="ident">unwrap</span>();
-    <span class="kw">let</span> <span class="ident">params</span>: <span class="ident">Params</span><span class="op">&lt;</span><span class="ident">EpAffine</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Params::read</span>::<span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="kw-2">&amp;</span><span class="ident">params_buffer</span>[..]).<span class="ident">unwrap</span>();
-
-    <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="ident">EvaluationDomain::new</span>(<span class="number">1</span>, <span class="ident">K</span>);
-
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">px</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">empty_coeff</span>();
-
-    <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">a</span>) <span class="kw">in</span> <span class="ident">px</span>.<span class="ident">iter_mut</span>().<span class="ident">enumerate</span>() {
-        <span class="kw-2">*</span><span class="ident">a</span> <span class="op">=</span> <span class="ident">Fq::from</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>);
-    }
-
-    <span class="kw">let</span> <span class="ident">blind</span> <span class="op">=</span> <span class="ident">Blind</span>(<span class="ident">Fq::random</span>(<span class="ident">rng</span>));
-
-    <span class="kw">let</span> <span class="ident">p</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">commit</span>(<span class="kw-2">&amp;</span><span class="ident">px</span>, <span class="ident">blind</span>).<span class="ident">to_affine</span>();
-
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="ident">Blake2bWrite</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">EpAffine</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="ident">EpAffine</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init</span>(<span class="macro">vec!</span>[]);
-    <span class="ident">transcript</span>.<span class="ident">write_point</span>(<span class="ident">p</span>).<span class="ident">unwrap</span>();
-    <span class="kw">let</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge_scalar</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>();
-    <span class="comment">// Evaluate the polynomial</span>
-    <span class="kw">let</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="ident">px</span>, <span class="kw-2">*</span><span class="ident">x</span>);
-    <span class="ident">transcript</span>.<span class="ident">write_scalar</span>(<span class="ident">v</span>).<span class="ident">unwrap</span>();
-
-    <span class="kw">let</span> (<span class="ident">proof</span>, <span class="ident">ch_prover</span>) <span class="op">=</span> {
-        <span class="ident">create_proof</span>(<span class="kw-2">&amp;</span><span class="ident">params</span>, <span class="ident">rng</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>, <span class="kw-2">&amp;</span><span class="ident">px</span>, <span class="ident">blind</span>, <span class="kw-2">*</span><span class="ident">x</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">ch_prover</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge</span>();
-        (<span class="ident">transcript</span>.<span class="ident">finalize</span>(), <span class="ident">ch_prover</span>)
+    <span class="kw">use </span><span class="kw">crate</span>::arithmetic::{eval_polynomial, FieldExt};
+    <span class="kw">use </span><span class="kw">crate</span>::pasta::{EpAffine, Fq};
+    <span class="kw">use </span><span class="kw">crate</span>::transcript::{
+        Blake2bRead, Blake2bWrite, Challenge255, Transcript, TranscriptRead, TranscriptWrite,
     };
 
-    <span class="comment">// Verify the opening proof</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transcript</span> <span class="op">=</span> <span class="ident">Blake2bRead</span>::<span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>], <span class="ident">EpAffine</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="ident">EpAffine</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::init</span>(<span class="kw-2">&amp;</span><span class="ident">proof</span>[..]);
-    <span class="kw">let</span> <span class="ident">p_prime</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">read_point</span>().<span class="ident">unwrap</span>();
-    <span class="macro">assert_eq!</span>(<span class="ident">p</span>, <span class="ident">p_prime</span>);
-    <span class="kw">let</span> <span class="ident">x_prime</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge_scalar</span>::<span class="op">&lt;</span>()<span class="op">&gt;</span>();
-    <span class="macro">assert_eq!</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="kw-2">*</span><span class="ident">x_prime</span>);
-    <span class="kw">let</span> <span class="ident">v_prime</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">read_scalar</span>().<span class="ident">unwrap</span>();
-    <span class="macro">assert_eq!</span>(<span class="ident">v</span>, <span class="ident">v_prime</span>);
+    <span class="kw">let </span>rng = OsRng;
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">commitment_msm</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">empty_msm</span>();
-    <span class="ident">commitment_msm</span>.<span class="ident">append_term</span>(<span class="ident">Field::one</span>(), <span class="ident">p</span>);
-    <span class="kw">let</span> <span class="ident">guard</span> <span class="op">=</span> <span class="ident">verify_proof</span>(<span class="kw-2">&amp;</span><span class="ident">params</span>, <span class="ident">commitment_msm</span>, <span class="kw-2">&amp;mut</span> <span class="ident">transcript</span>, <span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">v</span>).<span class="ident">unwrap</span>();
-    <span class="kw">let</span> <span class="ident">ch_verifier</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge</span>();
-    <span class="macro">assert_eq!</span>(<span class="kw-2">*</span><span class="ident">ch_prover</span>, <span class="kw-2">*</span><span class="ident">ch_verifier</span>);
+    <span class="kw">let </span>params = Params::&lt;EpAffine&gt;::new(K);
+    <span class="kw">let </span><span class="kw-2">mut </span>params_buffer = <span class="macro">vec!</span>[];
+    params.write(<span class="kw-2">&amp;mut </span>params_buffer).unwrap();
+    <span class="kw">let </span>params: Params&lt;EpAffine&gt; = Params::read::&lt;<span class="kw">_</span>&gt;(<span class="kw-2">&amp;mut &amp;</span>params_buffer[..]).unwrap();
 
-    <span class="comment">// Test guard behavior prior to checking another proof</span>
-    {
-        <span class="comment">// Test use_challenges()</span>
-        <span class="kw">let</span> <span class="ident">msm_challenges</span> <span class="op">=</span> <span class="ident">guard</span>.<span class="ident">clone</span>().<span class="ident">use_challenges</span>();
-        <span class="macro">assert!</span>(<span class="ident">msm_challenges</span>.<span class="ident">eval</span>());
+    <span class="kw">let </span>domain = EvaluationDomain::new(<span class="number">1</span>, K);
 
-        <span class="comment">// Test use_g()</span>
-        <span class="kw">let</span> <span class="ident">g</span> <span class="op">=</span> <span class="ident">guard</span>.<span class="ident">compute_g</span>();
-        <span class="kw">let</span> (<span class="ident">msm_g</span>, <span class="ident">_accumulator</span>) <span class="op">=</span> <span class="ident">guard</span>.<span class="ident">clone</span>().<span class="ident">use_g</span>(<span class="ident">g</span>);
-        <span class="macro">assert!</span>(<span class="ident">msm_g</span>.<span class="ident">eval</span>());
+    <span class="kw">let </span><span class="kw-2">mut </span>px = domain.empty_coeff();
+
+    <span class="kw">for </span>(i, a) <span class="kw">in </span>px.iter_mut().enumerate() {
+        <span class="kw-2">*</span>a = Fq::from(i <span class="kw">as </span>u64);
+    }
+
+    <span class="kw">let </span>blind = Blind(Fq::random(rng));
+
+    <span class="kw">let </span>p = params.commit(<span class="kw-2">&amp;</span>px, blind).to_affine();
+
+    <span class="kw">let </span><span class="kw-2">mut </span>transcript = Blake2bWrite::&lt;Vec&lt;u8&gt;, EpAffine, Challenge255&lt;EpAffine&gt;&gt;::init(<span class="macro">vec!</span>[]);
+    transcript.write_point(p).unwrap();
+    <span class="kw">let </span>x = transcript.squeeze_challenge_scalar::&lt;()&gt;();
+    <span class="comment">// Evaluate the polynomial
+    </span><span class="kw">let </span>v = eval_polynomial(<span class="kw-2">&amp;</span>px, <span class="kw-2">*</span>x);
+    transcript.write_scalar(v).unwrap();
+
+    <span class="kw">let </span>(proof, ch_prover) = {
+        create_proof(<span class="kw-2">&amp;</span>params, rng, <span class="kw-2">&amp;mut </span>transcript, <span class="kw-2">&amp;</span>px, blind, <span class="kw-2">*</span>x).unwrap();
+        <span class="kw">let </span>ch_prover = transcript.squeeze_challenge();
+        (transcript.finalize(), ch_prover)
+    };
+
+    <span class="comment">// Verify the opening proof
+    </span><span class="kw">let </span><span class="kw-2">mut </span>transcript = Blake2bRead::&lt;<span class="kw-2">&amp;</span>[u8], EpAffine, Challenge255&lt;EpAffine&gt;&gt;::init(<span class="kw-2">&amp;</span>proof[..]);
+    <span class="kw">let </span>p_prime = transcript.read_point().unwrap();
+    <span class="macro">assert_eq!</span>(p, p_prime);
+    <span class="kw">let </span>x_prime = transcript.squeeze_challenge_scalar::&lt;()&gt;();
+    <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>x, <span class="kw-2">*</span>x_prime);
+    <span class="kw">let </span>v_prime = transcript.read_scalar().unwrap();
+    <span class="macro">assert_eq!</span>(v, v_prime);
+
+    <span class="kw">let </span><span class="kw-2">mut </span>commitment_msm = params.empty_msm();
+    commitment_msm.append_term(Field::one(), p);
+    <span class="kw">let </span>guard = verify_proof(<span class="kw-2">&amp;</span>params, commitment_msm, <span class="kw-2">&amp;mut </span>transcript, <span class="kw-2">*</span>x, v).unwrap();
+    <span class="kw">let </span>ch_verifier = transcript.squeeze_challenge();
+    <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>ch_prover, <span class="kw-2">*</span>ch_verifier);
+
+    <span class="comment">// Test guard behavior prior to checking another proof
+    </span>{
+        <span class="comment">// Test use_challenges()
+        </span><span class="kw">let </span>msm_challenges = guard.clone().use_challenges();
+        <span class="macro">assert!</span>(msm_challenges.eval());
+
+        <span class="comment">// Test use_g()
+        </span><span class="kw">let </span>g = guard.compute_g();
+        <span class="kw">let </span>(msm_g, _accumulator) = guard.clone().use_g(g);
+        <span class="macro">assert!</span>(msm_g.eval());
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_gadgets/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_gadgets/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -185,172 +179,171 @@
 <span id="164">164</span>
 <span id="165">165</span>
 <span id="166">166</span>
-</pre><pre class="rust"><code><span class="doccomment">//! The [SHA-256] hash function.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! [SHA-256]: https://tools.ietf.org/html/rfc6234</span>
+</pre><pre class="rust"><code><span class="doccomment">//! The [SHA-256] hash function.
+//!
+//! [SHA-256]: https://tools.ietf.org/html/rfc6234
 
-<span class="kw">use</span> <span class="ident">std::cmp::min</span>;
-<span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
-<span class="kw">use</span> <span class="ident">std::fmt</span>;
+</span><span class="kw">use </span>std::cmp::min;
+<span class="kw">use </span>std::convert::TryInto;
+<span class="kw">use </span>std::fmt;
 
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">arithmetic::FieldExt</span>,
-    <span class="ident">circuit</span>::{<span class="ident">Chip</span>, <span class="ident">Layouter</span>},
-    <span class="ident">plonk::Error</span>,
+<span class="kw">use </span>halo2_proofs::{
+    arithmetic::FieldExt,
+    circuit::{Chip, Layouter},
+    plonk::Error,
 };
 
-<span class="kw">mod</span> <span class="ident">table16</span>;
+<span class="kw">mod </span>table16;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">table16</span>::{<span class="ident">BlockWord</span>, <span class="ident">Table16Chip</span>, <span class="ident">Table16Config</span>};
+<span class="kw">pub use </span>table16::{BlockWord, Table16Chip, Table16Config};
 
-<span class="doccomment">/// The size of a SHA-256 block, in 32-bit words.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">BLOCK_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">16</span>;
-<span class="doccomment">/// The size of a SHA-256 digest, in 32-bit words.</span>
-<span class="kw">const</span> <span class="ident">DIGEST_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">8</span>;
+<span class="doccomment">/// The size of a SHA-256 block, in 32-bit words.
+</span><span class="kw">pub const </span>BLOCK_SIZE: usize = <span class="number">16</span>;
+<span class="doccomment">/// The size of a SHA-256 digest, in 32-bit words.
+</span><span class="kw">const </span>DIGEST_SIZE: usize = <span class="number">8</span>;
 
-<span class="doccomment">/// The set of circuit instructions required to use the [`Sha256`] gadget.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Sha256Instructions</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>: <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Variable representing the SHA-256 internal state.</span>
-    <span class="kw">type</span> <span class="ident">State</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">fmt::Debug</span>;
-    <span class="doccomment">/// Variable representing a 32-bit word of the input block to the SHA-256 compression</span>
-    <span class="doccomment">/// function.</span>
-    <span class="kw">type</span> <span class="ident">BlockWord</span>: <span class="ident">Copy</span> <span class="op">+</span> <span class="ident">fmt::Debug</span> <span class="op">+</span> <span class="ident">Default</span>;
+<span class="doccomment">/// The set of circuit instructions required to use the [`Sha256`] gadget.
+</span><span class="kw">pub trait </span>Sha256Instructions&lt;F: FieldExt&gt;: Chip&lt;F&gt; {
+    <span class="doccomment">/// Variable representing the SHA-256 internal state.
+    </span><span class="kw">type </span>State: Clone + fmt::Debug;
+    <span class="doccomment">/// Variable representing a 32-bit word of the input block to the SHA-256 compression
+    /// function.
+    </span><span class="kw">type </span>BlockWord: Copy + fmt::Debug + Default;
 
-    <span class="doccomment">/// Places the SHA-256 IV in the circuit, returning the initial state variable.</span>
-    <span class="kw">fn</span> <span class="ident">initialization_vector</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::State</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// Places the SHA-256 IV in the circuit, returning the initial state variable.
+    </span><span class="kw">fn </span>initialization_vector(<span class="kw-2">&amp;</span><span class="self">self</span>, layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;F&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::State, Error&gt;;
 
-    <span class="doccomment">/// Creates an initial state from the output state of a previous block</span>
-    <span class="kw">fn</span> <span class="ident">initialization</span>(
+    <span class="doccomment">/// Creates an initial state from the output state of a previous block
+    </span><span class="kw">fn </span>initialization(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">init_state</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::State</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::State</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;F&gt;,
+        init_state: <span class="kw-2">&amp;</span><span class="self">Self</span>::State,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::State, Error&gt;;
 
-    <span class="doccomment">/// Starting from the given initialized state, processes a block of input and returns the</span>
-    <span class="doccomment">/// final state.</span>
-    <span class="kw">fn</span> <span class="ident">compress</span>(
+    <span class="doccomment">/// Starting from the given initialized state, processes a block of input and returns the
+    /// final state.
+    </span><span class="kw">fn </span>compress(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">initialized_state</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::State</span>,
-        <span class="ident">input</span>: [<span class="ident"><span class="self">Self</span>::BlockWord</span>; <span class="ident">BLOCK_SIZE</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::State</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;F&gt;,
+        initialized_state: <span class="kw-2">&amp;</span><span class="self">Self</span>::State,
+        input: [<span class="self">Self</span>::BlockWord; BLOCK_SIZE],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::State, Error&gt;;
 
-    <span class="doccomment">/// Converts the given state into a message digest.</span>
-    <span class="kw">fn</span> <span class="ident">digest</span>(
+    <span class="doccomment">/// Converts the given state into a message digest.
+    </span><span class="kw">fn </span>digest(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">state</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::State</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>[<span class="ident"><span class="self">Self</span>::BlockWord</span>; <span class="ident">DIGEST_SIZE</span>], <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;F&gt;,
+        state: <span class="kw-2">&amp;</span><span class="self">Self</span>::State,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;[<span class="self">Self</span>::BlockWord; DIGEST_SIZE], Error&gt;;
 }
 
-<span class="doccomment">/// The output of a SHA-256 circuit invocation.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Sha256Digest</span><span class="op">&lt;</span><span class="ident">BlockWord</span><span class="op">&gt;</span>([<span class="ident">BlockWord</span>; <span class="ident">DIGEST_SIZE</span>]);
+<span class="doccomment">/// The output of a SHA-256 circuit invocation.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>Sha256Digest&lt;BlockWord&gt;([BlockWord; DIGEST_SIZE]);
 
-<span class="doccomment">/// A gadget that constrains a SHA-256 invocation. It supports input at a granularity of</span>
-<span class="doccomment">/// 32 bits.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Sha256</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="ident">CS</span>: <span class="ident">Sha256Instructions</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">chip</span>: <span class="ident">CS</span>,
-    <span class="ident">state</span>: <span class="ident">CS::State</span>,
-    <span class="ident">cur_block</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">CS::BlockWord</span><span class="op">&gt;</span>,
-    <span class="ident">length</span>: <span class="ident">usize</span>,
+<span class="doccomment">/// A gadget that constrains a SHA-256 invocation. It supports input at a granularity of
+/// 32 bits.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>Sha256&lt;F: FieldExt, CS: Sha256Instructions&lt;F&gt;&gt; {
+    chip: CS,
+    state: CS::State,
+    cur_block: Vec&lt;CS::BlockWord&gt;,
+    length: usize,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="ident">Sha256Chip</span>: <span class="ident">Sha256Instructions</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">Sha256</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">Sha256Chip</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Create a new hasher instance.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">chip</span>: <span class="ident">Sha256Chip</span>, <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">initialization_vector</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">Sha256</span> {
-            <span class="ident">chip</span>,
-            <span class="ident">state</span>,
-            <span class="ident">cur_block</span>: <span class="ident">Vec::with_capacity</span>(<span class="ident">BLOCK_SIZE</span>),
-            <span class="ident">length</span>: <span class="number">0</span>,
+<span class="kw">impl</span>&lt;F: FieldExt, Sha256Chip: Sha256Instructions&lt;F&gt;&gt; Sha256&lt;F, Sha256Chip&gt; {
+    <span class="doccomment">/// Create a new hasher instance.
+    </span><span class="kw">pub fn </span>new(chip: Sha256Chip, <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;F&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>state = chip.initialization_vector(<span class="kw-2">&amp;mut </span>layouter)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(Sha256 {
+            chip,
+            state,
+            cur_block: Vec::with_capacity(BLOCK_SIZE),
+            length: <span class="number">0</span>,
         })
     }
 
-    <span class="doccomment">/// Digest data, updating the internal state.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">update</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="kw-2">mut</span> <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">Sha256Chip::BlockWord</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">length</span> <span class="op">+</span><span class="op">=</span> <span class="ident">data</span>.<span class="ident">len</span>() <span class="op">*</span> <span class="number">32</span>;
+    <span class="doccomment">/// Digest data, updating the internal state.
+    </span><span class="kw">pub fn </span>update(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;F&gt;,
+        <span class="kw-2">mut </span>data: <span class="kw-2">&amp;</span>[Sha256Chip::BlockWord],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="self">self</span>.length += data.len() * <span class="number">32</span>;
 
-        <span class="comment">// Fill the current block, if possible.</span>
-        <span class="kw">let</span> <span class="ident">remaining</span> <span class="op">=</span> <span class="ident">BLOCK_SIZE</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">cur_block</span>.<span class="ident">len</span>();
-        <span class="kw">let</span> (<span class="ident">l</span>, <span class="ident">r</span>) <span class="op">=</span> <span class="ident">data</span>.<span class="ident">split_at</span>(<span class="ident">min</span>(<span class="ident">remaining</span>, <span class="ident">data</span>.<span class="ident">len</span>()));
-        <span class="self">self</span>.<span class="ident">cur_block</span>.<span class="ident">extend_from_slice</span>(<span class="ident">l</span>);
-        <span class="ident">data</span> <span class="op">=</span> <span class="ident">r</span>;
+        <span class="comment">// Fill the current block, if possible.
+        </span><span class="kw">let </span>remaining = BLOCK_SIZE - <span class="self">self</span>.cur_block.len();
+        <span class="kw">let </span>(l, r) = data.split_at(min(remaining, data.len()));
+        <span class="self">self</span>.cur_block.extend_from_slice(l);
+        data = r;
 
-        <span class="comment">// If we still don&#39;t have a full block, we are done.</span>
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">cur_block</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">BLOCK_SIZE</span> {
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
+        <span class="comment">// If we still don&#39;t have a full block, we are done.
+        </span><span class="kw">if </span><span class="self">self</span>.cur_block.len() &lt; BLOCK_SIZE {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
-        <span class="comment">// Process the now-full current block.</span>
-        <span class="self">self</span>.<span class="ident">state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">compress</span>(
-            <span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">state</span>,
-            <span class="self">self</span>.<span class="ident">cur_block</span>[..]
-                .<span class="ident">try_into</span>()
-                .<span class="ident">expect</span>(<span class="string">&quot;cur_block.len() == BLOCK_SIZE&quot;</span>),
+        <span class="comment">// Process the now-full current block.
+        </span><span class="self">self</span>.state = <span class="self">self</span>.chip.compress(
+            <span class="kw-2">&amp;mut </span>layouter,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.state,
+            <span class="self">self</span>.cur_block[..]
+                .try_into()
+                .expect(<span class="string">&quot;cur_block.len() == BLOCK_SIZE&quot;</span>),
         )<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">cur_block</span>.<span class="ident">clear</span>();
+        <span class="self">self</span>.cur_block.clear();
 
-        <span class="comment">// Process any additional full blocks.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">chunks_iter</span> <span class="op">=</span> <span class="ident">data</span>.<span class="ident">chunks_exact</span>(<span class="ident">BLOCK_SIZE</span>);
-        <span class="kw">for</span> <span class="ident">chunk</span> <span class="kw">in</span> <span class="kw-2">&amp;mut</span> <span class="ident">chunks_iter</span> {
-            <span class="self">self</span>.<span class="ident">state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">initialization</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">state</span>)<span class="question-mark">?</span>;
-            <span class="self">self</span>.<span class="ident">state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">compress</span>(
-                <span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>,
-                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">state</span>,
-                <span class="ident">chunk</span>.<span class="ident">try_into</span>().<span class="ident">expect</span>(<span class="string">&quot;chunk.len() == BLOCK_SIZE&quot;</span>),
+        <span class="comment">// Process any additional full blocks.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>chunks_iter = data.chunks_exact(BLOCK_SIZE);
+        <span class="kw">for </span>chunk <span class="kw">in </span><span class="kw-2">&amp;mut </span>chunks_iter {
+            <span class="self">self</span>.state = <span class="self">self</span>.chip.initialization(<span class="kw-2">&amp;mut </span>layouter, <span class="kw-2">&amp;</span><span class="self">self</span>.state)<span class="question-mark">?</span>;
+            <span class="self">self</span>.state = <span class="self">self</span>.chip.compress(
+                <span class="kw-2">&amp;mut </span>layouter,
+                <span class="kw-2">&amp;</span><span class="self">self</span>.state,
+                chunk.try_into().expect(<span class="string">&quot;chunk.len() == BLOCK_SIZE&quot;</span>),
             )<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// Cache the remaining partial block, if any.</span>
-        <span class="kw">let</span> <span class="ident">rem</span> <span class="op">=</span> <span class="ident">chunks_iter</span>.<span class="ident">remainder</span>();
-        <span class="self">self</span>.<span class="ident">cur_block</span>.<span class="ident">extend_from_slice</span>(<span class="ident">rem</span>);
+        <span class="comment">// Cache the remaining partial block, if any.
+        </span><span class="kw">let </span>rem = chunks_iter.remainder();
+        <span class="self">self</span>.cur_block.extend_from_slice(rem);
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Retrieve result and consume hasher instance.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">finalize</span>(
-        <span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Sha256Digest</span><span class="op">&lt;</span><span class="ident">Sha256Chip::BlockWord</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Pad the remaining block</span>
-        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">cur_block</span>.<span class="ident">is_empty</span>() {
-            <span class="kw">let</span> <span class="ident">padding</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Sha256Chip::BlockWord::default</span>(); <span class="ident">BLOCK_SIZE</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">cur_block</span>.<span class="ident">len</span>()];
-            <span class="self">self</span>.<span class="ident">cur_block</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">padding</span>);
-            <span class="self">self</span>.<span class="ident">state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">initialization</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">state</span>)<span class="question-mark">?</span>;
-            <span class="self">self</span>.<span class="ident">state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">chip</span>.<span class="ident">compress</span>(
-                <span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>,
-                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">state</span>,
-                <span class="self">self</span>.<span class="ident">cur_block</span>[..]
-                    .<span class="ident">try_into</span>()
-                    .<span class="ident">expect</span>(<span class="string">&quot;cur_block.len() == BLOCK_SIZE&quot;</span>),
+    <span class="doccomment">/// Retrieve result and consume hasher instance.
+    </span><span class="kw">pub fn </span>finalize(
+        <span class="kw-2">mut </span><span class="self">self</span>,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;F&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Sha256Digest&lt;Sha256Chip::BlockWord&gt;, Error&gt; {
+        <span class="comment">// Pad the remaining block
+        </span><span class="kw">if </span>!<span class="self">self</span>.cur_block.is_empty() {
+            <span class="kw">let </span>padding = <span class="macro">vec!</span>[Sha256Chip::BlockWord::default(); BLOCK_SIZE - <span class="self">self</span>.cur_block.len()];
+            <span class="self">self</span>.cur_block.extend_from_slice(<span class="kw-2">&amp;</span>padding);
+            <span class="self">self</span>.state = <span class="self">self</span>.chip.initialization(<span class="kw-2">&amp;mut </span>layouter, <span class="kw-2">&amp;</span><span class="self">self</span>.state)<span class="question-mark">?</span>;
+            <span class="self">self</span>.state = <span class="self">self</span>.chip.compress(
+                <span class="kw-2">&amp;mut </span>layouter,
+                <span class="kw-2">&amp;</span><span class="self">self</span>.state,
+                <span class="self">self</span>.cur_block[..]
+                    .try_into()
+                    .expect(<span class="string">&quot;cur_block.len() == BLOCK_SIZE&quot;</span>),
             )<span class="question-mark">?</span>;
         }
-        <span class="self">self</span>.<span class="ident">chip</span>
-            .<span class="ident">digest</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">state</span>)
-            .<span class="ident">map</span>(<span class="ident">Sha256Digest</span>)
+        <span class="self">self</span>.chip
+            .digest(<span class="kw-2">&amp;mut </span>layouter, <span class="kw-2">&amp;</span><span class="self">self</span>.state)
+            .map(Sha256Digest)
     }
 
-    <span class="doccomment">/// Convenience function to compute hash of the data. It will handle hasher creation,</span>
-    <span class="doccomment">/// data feeding and finalization.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">digest</span>(
-        <span class="ident">chip</span>: <span class="ident">Sha256Chip</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">Sha256Chip::BlockWord</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Sha256Digest</span><span class="op">&lt;</span><span class="ident">Sha256Chip::BlockWord</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::new</span>(<span class="ident">chip</span>, <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;init&quot;</span>))<span class="question-mark">?</span>;
-        <span class="ident">hasher</span>.<span class="ident">update</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;update&quot;</span>), <span class="ident">data</span>)<span class="question-mark">?</span>;
-        <span class="ident">hasher</span>.<span class="ident">finalize</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;finalize&quot;</span>))
+    <span class="doccomment">/// Convenience function to compute hash of the data. It will handle hasher creation,
+    /// data feeding and finalization.
+    </span><span class="kw">pub fn </span>digest(
+        chip: Sha256Chip,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;F&gt;,
+        data: <span class="kw-2">&amp;</span>[Sha256Chip::BlockWord],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Sha256Digest&lt;Sha256Chip::BlockWord&gt;, Error&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>hasher = <span class="self">Self</span>::new(chip, layouter.namespace(|| <span class="string">&quot;init&quot;</span>))<span class="question-mark">?</span>;
+        hasher.update(layouter.namespace(|| <span class="string">&quot;update&quot;</span>), data)<span class="question-mark">?</span>;
+        hasher.finalize(layouter.namespace(|| <span class="string">&quot;finalize&quot;</span>))
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

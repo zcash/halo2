@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -212,199 +206,198 @@
 <span id="191">191</span>
 <span id="192">192</span>
 <span id="193">193</span>
-</pre><pre class="rust"><code><span class="doccomment">//! The Grain LFSR in self-shrinking mode, as used by Poseidon.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! The Grain LFSR in self-shrinking mode, as used by Poseidon.
 
-<span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
+</span><span class="kw">use </span>std::marker::PhantomData;
 
-<span class="kw">use</span> <span class="ident">bitvec::prelude</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">halo2_proofs::arithmetic::FieldExt</span>;
+<span class="kw">use </span>bitvec::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>halo2_proofs::arithmetic::FieldExt;
 
-<span class="kw">const</span> <span class="ident">STATE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">80</span>;
+<span class="kw">const </span>STATE: usize = <span class="number">80</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">enum</span> <span class="ident">FieldType</span> {
-    <span class="doccomment">/// GF(2^n)</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="ident">Binary</span>,
-    <span class="doccomment">/// GF(p)</span>
-    <span class="ident">PrimeOrder</span>,
+<span class="attribute">#[derive(Debug, Clone, Copy)]</span>
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">enum </span>FieldType {
+    <span class="doccomment">/// GF(2^n)
+    </span><span class="attribute">#[allow(dead_code)]</span>
+    Binary,
+    <span class="doccomment">/// GF(p)
+    </span>PrimeOrder,
 }
 
-<span class="kw">impl</span> <span class="ident">FieldType</span> {
-    <span class="kw">fn</span> <span class="ident">tag</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u8</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">FieldType::Binary</span> =&gt; <span class="number">0</span>,
-            <span class="ident">FieldType::PrimeOrder</span> =&gt; <span class="number">1</span>,
+<span class="kw">impl </span>FieldType {
+    <span class="kw">fn </span>tag(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u8 {
+        <span class="kw">match </span><span class="self">self </span>{
+            FieldType::Binary =&gt; <span class="number">0</span>,
+            FieldType::PrimeOrder =&gt; <span class="number">1</span>,
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">enum</span> <span class="ident">SboxType</span> {
-    <span class="doccomment">/// x^alpha</span>
-    <span class="ident">Pow</span>,
-    <span class="doccomment">/// x^(-1)</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-    <span class="ident">Inv</span>,
+<span class="attribute">#[derive(Debug, Clone, Copy)]</span>
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">enum </span>SboxType {
+    <span class="doccomment">/// x^alpha
+    </span>Pow,
+    <span class="doccomment">/// x^(-1)
+    </span><span class="attribute">#[allow(dead_code)]</span>
+    Inv,
 }
 
-<span class="kw">impl</span> <span class="ident">SboxType</span> {
-    <span class="kw">fn</span> <span class="ident">tag</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">u8</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">SboxType::Pow</span> =&gt; <span class="number">0</span>,
-            <span class="ident">SboxType::Inv</span> =&gt; <span class="number">1</span>,
+<span class="kw">impl </span>SboxType {
+    <span class="kw">fn </span>tag(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u8 {
+        <span class="kw">match </span><span class="self">self </span>{
+            SboxType::Pow =&gt; <span class="number">0</span>,
+            SboxType::Inv =&gt; <span class="number">1</span>,
         }
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">Grain</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> {
-    <span class="ident">state</span>: <span class="macro">BitArr!</span>(<span class="kw">for</span> <span class="number">80</span>, <span class="kw">in</span> <span class="ident">u8</span>, <span class="ident">Msb0</span>),
-    <span class="ident">next_bit</span>: <span class="ident">usize</span>,
-    <span class="ident">_field</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>Grain&lt;F: FieldExt&gt; {
+    state: <span class="macro">BitArr!</span>(<span class="kw">for </span><span class="number">80</span>, <span class="kw">in </span>u8, Msb0),
+    next_bit: usize,
+    _field: PhantomData&lt;F&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Grain</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">sbox</span>: <span class="ident">SboxType</span>, <span class="ident">t</span>: <span class="ident">u16</span>, <span class="ident">r_f</span>: <span class="ident">u16</span>, <span class="ident">r_p</span>: <span class="ident">u16</span>) -&gt; <span class="self">Self</span> {
-        <span class="comment">// Initialize the LFSR state.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="macro">bitarr!</span>[<span class="ident">u8</span>, <span class="ident">Msb0</span>; <span class="number">1</span>; <span class="ident">STATE</span>];
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">set_bits</span> <span class="op">=</span> <span class="op">|</span><span class="ident">offset</span>: <span class="ident">usize</span>, <span class="ident">len</span>, <span class="ident">value</span><span class="op">|</span> {
-            <span class="comment">// Poseidon reference impl sets initial state bits in MSB order.</span>
-            <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">len</span> {
-                <span class="kw-2">*</span><span class="ident">state</span>.<span class="ident">get_mut</span>(<span class="ident">offset</span> <span class="op">+</span> <span class="ident">len</span> <span class="op">-</span> <span class="number">1</span> <span class="op">-</span> <span class="ident">i</span>).<span class="ident">unwrap</span>() <span class="op">=</span> (<span class="ident">value</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">i</span>) <span class="op">&amp;</span> <span class="number">1</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span>;
+<span class="kw">impl</span>&lt;F: FieldExt&gt; Grain&lt;F&gt; {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>new(sbox: SboxType, t: u16, r_f: u16, r_p: u16) -&gt; <span class="self">Self </span>{
+        <span class="comment">// Initialize the LFSR state.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>state = <span class="macro">bitarr!</span>[u8, Msb0; <span class="number">1</span>; STATE];
+        <span class="kw">let </span><span class="kw-2">mut </span>set_bits = |offset: usize, len, value| {
+            <span class="comment">// Poseidon reference impl sets initial state bits in MSB order.
+            </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..len {
+                <span class="kw-2">*</span>state.get_mut(offset + len - <span class="number">1 </span>- i).unwrap() = (value &gt;&gt; i) &amp; <span class="number">1 </span>!= <span class="number">0</span>;
             }
         };
-        <span class="ident">set_bits</span>(<span class="number">0</span>, <span class="number">2</span>, <span class="ident">FieldType::PrimeOrder</span>.<span class="ident">tag</span>() <span class="kw">as</span> <span class="ident">u16</span>);
-        <span class="ident">set_bits</span>(<span class="number">2</span>, <span class="number">4</span>, <span class="ident">sbox</span>.<span class="ident">tag</span>() <span class="kw">as</span> <span class="ident">u16</span>);
-        <span class="ident">set_bits</span>(<span class="number">6</span>, <span class="number">12</span>, <span class="ident">F::NUM_BITS</span> <span class="kw">as</span> <span class="ident">u16</span>);
-        <span class="ident">set_bits</span>(<span class="number">18</span>, <span class="number">12</span>, <span class="ident">t</span>);
-        <span class="ident">set_bits</span>(<span class="number">30</span>, <span class="number">10</span>, <span class="ident">r_f</span>);
-        <span class="ident">set_bits</span>(<span class="number">40</span>, <span class="number">10</span>, <span class="ident">r_p</span>);
+        set_bits(<span class="number">0</span>, <span class="number">2</span>, FieldType::PrimeOrder.tag() <span class="kw">as </span>u16);
+        set_bits(<span class="number">2</span>, <span class="number">4</span>, sbox.tag() <span class="kw">as </span>u16);
+        set_bits(<span class="number">6</span>, <span class="number">12</span>, F::NUM_BITS <span class="kw">as </span>u16);
+        set_bits(<span class="number">18</span>, <span class="number">12</span>, t);
+        set_bits(<span class="number">30</span>, <span class="number">10</span>, r_f);
+        set_bits(<span class="number">40</span>, <span class="number">10</span>, r_p);
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grain</span> <span class="op">=</span> <span class="ident">Grain</span> {
-            <span class="ident">state</span>,
-            <span class="ident">next_bit</span>: <span class="ident">STATE</span>,
-            <span class="ident">_field</span>: <span class="ident">PhantomData::default</span>(),
+        <span class="kw">let </span><span class="kw-2">mut </span>grain = Grain {
+            state,
+            next_bit: STATE,
+            _field: PhantomData::default(),
         };
 
-        <span class="comment">// Discard the first 160 bits.</span>
-        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">20</span> {
-            <span class="ident">grain</span>.<span class="ident">load_next_8_bits</span>();
-            <span class="ident">grain</span>.<span class="ident">next_bit</span> <span class="op">=</span> <span class="ident">STATE</span>;
+        <span class="comment">// Discard the first 160 bits.
+        </span><span class="kw">for _ in </span><span class="number">0</span>..<span class="number">20 </span>{
+            grain.load_next_8_bits();
+            grain.next_bit = STATE;
         }
 
-        <span class="ident">grain</span>
+        grain
     }
 
-    <span class="kw">fn</span> <span class="ident">load_next_8_bits</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">new_bits</span> <span class="op">=</span> <span class="number">0u8</span>;
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">8</span> {
-            <span class="ident">new_bits</span> <span class="op">|</span><span class="op">=</span> ((<span class="self">self</span>.<span class="ident">state</span>[<span class="ident">i</span> <span class="op">+</span> <span class="number">62</span>]
-                <span class="op">^</span> <span class="self">self</span>.<span class="ident">state</span>[<span class="ident">i</span> <span class="op">+</span> <span class="number">51</span>]
-                <span class="op">^</span> <span class="self">self</span>.<span class="ident">state</span>[<span class="ident">i</span> <span class="op">+</span> <span class="number">38</span>]
-                <span class="op">^</span> <span class="self">self</span>.<span class="ident">state</span>[<span class="ident">i</span> <span class="op">+</span> <span class="number">23</span>]
-                <span class="op">^</span> <span class="self">self</span>.<span class="ident">state</span>[<span class="ident">i</span> <span class="op">+</span> <span class="number">13</span>]
-                <span class="op">^</span> <span class="self">self</span>.<span class="ident">state</span>[<span class="ident">i</span>]) <span class="kw">as</span> <span class="ident">u8</span>)
-                <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">i</span>;
+    <span class="kw">fn </span>load_next_8_bits(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="kw">let </span><span class="kw-2">mut </span>new_bits = <span class="number">0u8</span>;
+        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">8 </span>{
+            new_bits |= ((<span class="self">self</span>.state[i + <span class="number">62</span>]
+                ^ <span class="self">self</span>.state[i + <span class="number">51</span>]
+                ^ <span class="self">self</span>.state[i + <span class="number">38</span>]
+                ^ <span class="self">self</span>.state[i + <span class="number">23</span>]
+                ^ <span class="self">self</span>.state[i + <span class="number">13</span>]
+                ^ <span class="self">self</span>.state[i]) <span class="kw">as </span>u8)
+                &lt;&lt; i;
         }
-        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">rotate_left</span>(<span class="number">8</span>);
-        <span class="self">self</span>.<span class="ident">next_bit</span> <span class="op">-</span><span class="op">=</span> <span class="number">8</span>;
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">8</span> {
-            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">state</span>.<span class="ident">get_mut</span>(<span class="self">self</span>.<span class="ident">next_bit</span> <span class="op">+</span> <span class="ident">i</span>).<span class="ident">unwrap</span>() <span class="op">=</span> (<span class="ident">new_bits</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">i</span>) <span class="op">&amp;</span> <span class="number">1</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span>;
+        <span class="self">self</span>.state.rotate_left(<span class="number">8</span>);
+        <span class="self">self</span>.next_bit -= <span class="number">8</span>;
+        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">8 </span>{
+            <span class="kw-2">*</span><span class="self">self</span>.state.get_mut(<span class="self">self</span>.next_bit + i).unwrap() = (new_bits &gt;&gt; i) &amp; <span class="number">1 </span>!= <span class="number">0</span>;
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">get_next_bit</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">next_bit</span> <span class="op">==</span> <span class="ident">STATE</span> {
-            <span class="self">self</span>.<span class="ident">load_next_8_bits</span>();
+    <span class="kw">fn </span>get_next_bit(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; bool {
+        <span class="kw">if </span><span class="self">self</span>.next_bit == STATE {
+            <span class="self">self</span>.load_next_8_bits();
         }
-        <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">state</span>[<span class="self">self</span>.<span class="ident">next_bit</span>];
-        <span class="self">self</span>.<span class="ident">next_bit</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
-        <span class="ident">ret</span>
+        <span class="kw">let </span>ret = <span class="self">self</span>.state[<span class="self">self</span>.next_bit];
+        <span class="self">self</span>.next_bit += <span class="number">1</span>;
+        ret
     }
 
-    <span class="doccomment">/// Returns the next field element from this Grain instantiation.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">next_field_element</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">F</span> {
-        <span class="comment">// Loop until we get an element in the field.</span>
-        <span class="kw">loop</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="ident">F::Repr::default</span>();
+    <span class="doccomment">/// Returns the next field element from this Grain instantiation.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>next_field_element(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; F {
+        <span class="comment">// Loop until we get an element in the field.
+        </span><span class="kw">loop </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>bytes = F::Repr::default();
 
-            <span class="comment">// Poseidon reference impl interprets the bits as a repr in MSB order, because</span>
-            <span class="comment">// it&#39;s easy to do that in Python. Meanwhile, our field elements all use LSB</span>
-            <span class="comment">// order. There&#39;s little motivation to diverge from the reference impl; these</span>
-            <span class="comment">// are all constants, so we aren&#39;t introducing big-endianness into the rest of</span>
-            <span class="comment">// the circuit (assuming unkeyed Poseidon, but we probably wouldn&#39;t want to</span>
-            <span class="comment">// implement Grain inside a circuit, so we&#39;d use a different round constant</span>
-            <span class="comment">// derivation function there).</span>
-            <span class="kw">let</span> <span class="ident">view</span> <span class="op">=</span> <span class="ident">bytes</span>.<span class="ident">as_mut</span>();
-            <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">bit</span>) <span class="kw">in</span> <span class="self">self</span>.<span class="ident">take</span>(<span class="ident">F::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span>).<span class="ident">enumerate</span>() {
-                <span class="comment">// If we diverged from the reference impl and interpreted the bits in LSB</span>
-                <span class="comment">// order, we would remove this line.</span>
-                <span class="kw">let</span> <span class="ident">i</span> <span class="op">=</span> <span class="ident">F::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">-</span> <span class="number">1</span> <span class="op">-</span> <span class="ident">i</span>;
+            <span class="comment">// Poseidon reference impl interprets the bits as a repr in MSB order, because
+            // it&#39;s easy to do that in Python. Meanwhile, our field elements all use LSB
+            // order. There&#39;s little motivation to diverge from the reference impl; these
+            // are all constants, so we aren&#39;t introducing big-endianness into the rest of
+            // the circuit (assuming unkeyed Poseidon, but we probably wouldn&#39;t want to
+            // implement Grain inside a circuit, so we&#39;d use a different round constant
+            // derivation function there).
+            </span><span class="kw">let </span>view = bytes.as_mut();
+            <span class="kw">for </span>(i, bit) <span class="kw">in </span><span class="self">self</span>.take(F::NUM_BITS <span class="kw">as </span>usize).enumerate() {
+                <span class="comment">// If we diverged from the reference impl and interpreted the bits in LSB
+                // order, we would remove this line.
+                </span><span class="kw">let </span>i = F::NUM_BITS <span class="kw">as </span>usize - <span class="number">1 </span>- i;
 
-                <span class="ident">view</span>[<span class="ident">i</span> <span class="op">/</span> <span class="number">8</span>] <span class="op">|</span><span class="op">=</span> <span class="kw">if</span> <span class="ident">bit</span> { <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">i</span> <span class="op">%</span> <span class="number">8</span>) } <span class="kw">else</span> { <span class="number">0</span> };
+                view[i / <span class="number">8</span>] |= <span class="kw">if </span>bit { <span class="number">1 </span>&lt;&lt; (i % <span class="number">8</span>) } <span class="kw">else </span>{ <span class="number">0 </span>};
             }
 
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">f</span>) <span class="op">=</span> <span class="ident">F::from_repr_vartime</span>(<span class="ident">bytes</span>) {
-                <span class="kw">break</span> <span class="ident">f</span>;
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(f) = F::from_repr_vartime(bytes) {
+                <span class="kw">break </span>f;
             }
         }
     }
 
-    <span class="doccomment">/// Returns the next field element from this Grain instantiation, without using</span>
-    <span class="doccomment">/// rejection sampling.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">next_field_element_without_rejection</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">F</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bytes</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">64</span>];
+    <span class="doccomment">/// Returns the next field element from this Grain instantiation, without using
+    /// rejection sampling.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>next_field_element_without_rejection(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; F {
+        <span class="kw">let </span><span class="kw-2">mut </span>bytes = [<span class="number">0u8</span>; <span class="number">64</span>];
 
-        <span class="comment">// Poseidon reference impl interprets the bits as a repr in MSB order, because</span>
-        <span class="comment">// it&#39;s easy to do that in Python. Additionally, it does not use rejection</span>
-        <span class="comment">// sampling in cases where the constants don&#39;t specifically need to be uniformly</span>
-        <span class="comment">// random for security. We do not provide APIs that take a field-element-sized</span>
-        <span class="comment">// array and reduce it modulo the field order, because those are unsafe APIs to</span>
-        <span class="comment">// offer generally (accidentally using them can lead to divergence in consensus</span>
-        <span class="comment">// systems due to not rejecting canonical forms).</span>
-        <span class="comment">//</span>
-        <span class="comment">// Given that we don&#39;t want to diverge from the reference implementation, we hack</span>
-        <span class="comment">// around this restriction by serializing the bits into a 64-byte array and then</span>
-        <span class="comment">// calling F::from_bytes_wide. PLEASE DO NOT COPY THIS INTO YOUR OWN CODE!</span>
-        <span class="kw">let</span> <span class="ident">view</span> <span class="op">=</span> <span class="ident">bytes</span>.<span class="ident">as_mut</span>();
-        <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">bit</span>) <span class="kw">in</span> <span class="self">self</span>.<span class="ident">take</span>(<span class="ident">F::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span>).<span class="ident">enumerate</span>() {
-            <span class="comment">// If we diverged from the reference impl and interpreted the bits in LSB</span>
-            <span class="comment">// order, we would remove this line.</span>
-            <span class="kw">let</span> <span class="ident">i</span> <span class="op">=</span> <span class="ident">F::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">-</span> <span class="number">1</span> <span class="op">-</span> <span class="ident">i</span>;
+        <span class="comment">// Poseidon reference impl interprets the bits as a repr in MSB order, because
+        // it&#39;s easy to do that in Python. Additionally, it does not use rejection
+        // sampling in cases where the constants don&#39;t specifically need to be uniformly
+        // random for security. We do not provide APIs that take a field-element-sized
+        // array and reduce it modulo the field order, because those are unsafe APIs to
+        // offer generally (accidentally using them can lead to divergence in consensus
+        // systems due to not rejecting canonical forms).
+        //
+        // Given that we don&#39;t want to diverge from the reference implementation, we hack
+        // around this restriction by serializing the bits into a 64-byte array and then
+        // calling F::from_bytes_wide. PLEASE DO NOT COPY THIS INTO YOUR OWN CODE!
+        </span><span class="kw">let </span>view = bytes.as_mut();
+        <span class="kw">for </span>(i, bit) <span class="kw">in </span><span class="self">self</span>.take(F::NUM_BITS <span class="kw">as </span>usize).enumerate() {
+            <span class="comment">// If we diverged from the reference impl and interpreted the bits in LSB
+            // order, we would remove this line.
+            </span><span class="kw">let </span>i = F::NUM_BITS <span class="kw">as </span>usize - <span class="number">1 </span>- i;
 
-            <span class="ident">view</span>[<span class="ident">i</span> <span class="op">/</span> <span class="number">8</span>] <span class="op">|</span><span class="op">=</span> <span class="kw">if</span> <span class="ident">bit</span> { <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">i</span> <span class="op">%</span> <span class="number">8</span>) } <span class="kw">else</span> { <span class="number">0</span> };
+            view[i / <span class="number">8</span>] |= <span class="kw">if </span>bit { <span class="number">1 </span>&lt;&lt; (i % <span class="number">8</span>) } <span class="kw">else </span>{ <span class="number">0 </span>};
         }
 
-        <span class="ident">F::from_bytes_wide</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>)
+        F::from_bytes_wide(<span class="kw-2">&amp;</span>bytes)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">Grain</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">bool</span>;
+<span class="kw">impl</span>&lt;F: FieldExt&gt; Iterator <span class="kw">for </span>Grain&lt;F&gt; {
+    <span class="kw">type </span>Item = bool;
 
-    <span class="kw">fn</span> <span class="ident">next</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Item</span><span class="op">&gt;</span> {
-        <span class="comment">// Evaluate bits in pairs:</span>
-        <span class="comment">// - If the first bit is a 1, output the second bit.</span>
-        <span class="comment">// - If the first bit is a 0, discard the second bit.</span>
-        <span class="kw">while</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">get_next_bit</span>() {
-            <span class="self">self</span>.<span class="ident">get_next_bit</span>();
+    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
+        <span class="comment">// Evaluate bits in pairs:
+        // - If the first bit is a 1, output the second bit.
+        // - If the first bit is a 0, discard the second bit.
+        </span><span class="kw">while </span>!<span class="self">self</span>.get_next_bit() {
+            <span class="self">self</span>.get_next_bit();
         }
-        <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">get_next_bit</span>())
+        <span class="prelude-val">Some</span>(<span class="self">self</span>.get_next_bit())
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">pasta_curves::Fp</span>;
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">mod </span>tests {
+    <span class="kw">use </span>pasta_curves::Fp;
 
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Grain</span>, <span class="ident">SboxType</span>};
+    <span class="kw">use super</span>::{Grain, SboxType};
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">grain</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grain</span> <span class="op">=</span> <span class="ident">Grain</span>::<span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="ident">SboxType::Pow</span>, <span class="number">3</span>, <span class="number">8</span>, <span class="number">56</span>);
-        <span class="kw">let</span> <span class="ident">_f</span> <span class="op">=</span> <span class="ident">grain</span>.<span class="ident">next_field_element</span>();
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>grain() {
+        <span class="kw">let </span><span class="kw-2">mut </span>grain = Grain::&lt;Fp&gt;::new(SboxType::Pow, <span class="number">3</span>, <span class="number">8</span>, <span class="number">56</span>);
+        <span class="kw">let </span>_f = grain.next_field_element();
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

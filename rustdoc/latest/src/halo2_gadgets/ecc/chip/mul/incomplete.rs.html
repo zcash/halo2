@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -392,379 +386,378 @@
 <span id="371">371</span>
 <span id="372">372</span>
 <span id="373">373</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::NonIdentityEccPoint</span>;
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">X</span>, <span class="ident">Y</span>, <span class="ident">Z</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities::bool_check</span>;
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">Region</span>, <span class="ident">Value</span>},
-    <span class="ident">plonk</span>::{
-        <span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>, <span class="ident">VirtualCells</span>,
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::NonIdentityEccPoint;
+<span class="kw">use super</span>::{X, Y, Z};
+<span class="kw">use </span><span class="kw">crate</span>::utilities::bool_check;
+<span class="kw">use </span>halo2_proofs::{
+    circuit::{Region, Value},
+    plonk::{
+        Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector, VirtualCells,
     },
-    <span class="ident">poly::Rotation</span>,
+    poly::Rotation,
 };
 
-<span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">pallas</span>};
+<span class="kw">use </span>pasta_curves::{arithmetic::FieldExt, pallas};
 
-<span class="doccomment">/// A helper struct for implementing single-row double-and-add using incomplete addition.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">DoubleAndAdd</span> {
-    <span class="comment">// x-coordinate of the accumulator in each double-and-add iteration.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">x_a</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="comment">// x-coordinate of the point being added in each double-and-add iteration.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">x_p</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="comment">// lambda1 in each double-and-add iteration.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">lambda_1</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="comment">// lambda2 in each double-and-add iteration.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">lambda_2</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A helper struct for implementing single-row double-and-add using incomplete addition.
+</span><span class="attribute">#[derive(Copy, Clone, Debug, Eq, PartialEq)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>DoubleAndAdd {
+    <span class="comment">// x-coordinate of the accumulator in each double-and-add iteration.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) x_a: Column&lt;Advice&gt;,
+    <span class="comment">// x-coordinate of the point being added in each double-and-add iteration.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) x_p: Column&lt;Advice&gt;,
+    <span class="comment">// lambda1 in each double-and-add iteration.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) lambda_1: Column&lt;Advice&gt;,
+    <span class="comment">// lambda2 in each double-and-add iteration.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) lambda_2: Column&lt;Advice&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">DoubleAndAdd</span> {
-    <span class="doccomment">/// Derives the expression `x_r = lambda_1^2 - x_a - x_p`.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">x_r</span>(
+<span class="kw">impl </span>DoubleAndAdd {
+    <span class="doccomment">/// Derives the expression `x_r = lambda_1^2 - x_a - x_p`.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>x_r(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">rotation</span>: <span class="ident">Rotation</span>,
-    ) -&gt; <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_a</span>, <span class="ident">rotation</span>);
-        <span class="kw">let</span> <span class="ident">x_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_p</span>, <span class="ident">rotation</span>);
-        <span class="kw">let</span> <span class="ident">lambda_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">lambda_1</span>, <span class="ident">rotation</span>);
-        <span class="ident">lambda_1</span>.<span class="ident">square</span>() <span class="op">-</span> <span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_p</span>
+        meta: <span class="kw-2">&amp;mut </span>VirtualCells&lt;pallas::Base&gt;,
+        rotation: Rotation,
+    ) -&gt; Expression&lt;pallas::Base&gt; {
+        <span class="kw">let </span>x_a = meta.query_advice(<span class="self">self</span>.x_a, rotation);
+        <span class="kw">let </span>x_p = meta.query_advice(<span class="self">self</span>.x_p, rotation);
+        <span class="kw">let </span>lambda_1 = meta.query_advice(<span class="self">self</span>.lambda_1, rotation);
+        lambda_1.square() - x_a - x_p
     }
 
-    <span class="doccomment">/// Derives the expression `Y_A = (lambda_1 + lambda_2) * (x_a - x_r)`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Note that this is missing the factor of `1/2`; the Sinsemilla constraints factor</span>
-    <span class="doccomment">/// it out, so we leave it up to the caller to handle it.</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">Y_A</span>(
+    <span class="doccomment">/// Derives the expression `Y_A = (lambda_1 + lambda_2) * (x_a - x_r)`.
+    ///
+    /// Note that this is missing the factor of `1/2`; the Sinsemilla constraints factor
+    /// it out, so we leave it up to the caller to handle it.
+    </span><span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>Y_A(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">rotation</span>: <span class="ident">Rotation</span>,
-    ) -&gt; <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_a</span>, <span class="ident">rotation</span>);
-        <span class="kw">let</span> <span class="ident">lambda_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">lambda_1</span>, <span class="ident">rotation</span>);
-        <span class="kw">let</span> <span class="ident">lambda_2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">lambda_2</span>, <span class="ident">rotation</span>);
-        (<span class="ident">lambda_1</span> <span class="op">+</span> <span class="ident">lambda_2</span>) <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">x_r</span>(<span class="ident">meta</span>, <span class="ident">rotation</span>))
+        meta: <span class="kw-2">&amp;mut </span>VirtualCells&lt;pallas::Base&gt;,
+        rotation: Rotation,
+    ) -&gt; Expression&lt;pallas::Base&gt; {
+        <span class="kw">let </span>x_a = meta.query_advice(<span class="self">self</span>.x_a, rotation);
+        <span class="kw">let </span>lambda_1 = meta.query_advice(<span class="self">self</span>.lambda_1, rotation);
+        <span class="kw">let </span>lambda_2 = meta.query_advice(<span class="self">self</span>.lambda_2, rotation);
+        (lambda_1 + lambda_2) * (x_a - <span class="self">self</span>.x_r(meta, rotation))
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">Config</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">NUM_BITS</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="comment">// Selector constraining the first row of incomplete addition.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">q_mul_1</span>: <span class="ident">Selector</span>,
-    <span class="comment">// Selector constraining the main loop of incomplete addition.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">q_mul_2</span>: <span class="ident">Selector</span>,
-    <span class="comment">// Selector constraining the last row of incomplete addition.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">q_mul_3</span>: <span class="ident">Selector</span>,
-    <span class="comment">// Cumulative sum used to decompose the scalar.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">z</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="comment">// Logic specific to merged double-and-add.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">double_and_add</span>: <span class="ident">DoubleAndAdd</span>,
-    <span class="comment">// y-coordinate of the point being added in each double-and-add iteration.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">y_p</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Copy, Clone, Debug, Eq, PartialEq)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Config&lt;<span class="kw">const </span>NUM_BITS: usize&gt; {
+    <span class="comment">// Selector constraining the first row of incomplete addition.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) q_mul_1: Selector,
+    <span class="comment">// Selector constraining the main loop of incomplete addition.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) q_mul_2: Selector,
+    <span class="comment">// Selector constraining the last row of incomplete addition.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) q_mul_3: Selector,
+    <span class="comment">// Cumulative sum used to decompose the scalar.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) z: Column&lt;Advice&gt;,
+    <span class="comment">// Logic specific to merged double-and-add.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) double_and_add: DoubleAndAdd,
+    <span class="comment">// y-coordinate of the point being added in each double-and-add iteration.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) y_p: Column&lt;Advice&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">NUM_BITS</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Config</span><span class="op">&lt;</span><span class="ident">NUM_BITS</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">configure</span>(
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">z</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">x_a</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">x_p</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">y_p</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">lambda_1</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">lambda_2</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="ident">meta</span>.<span class="ident">enable_equality</span>(<span class="ident">z</span>);
-        <span class="ident">meta</span>.<span class="ident">enable_equality</span>(<span class="ident">lambda_1</span>);
+<span class="kw">impl</span>&lt;<span class="kw">const </span>NUM_BITS: usize&gt; Config&lt;NUM_BITS&gt; {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>configure(
+        meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;,
+        z: Column&lt;Advice&gt;,
+        x_a: Column&lt;Advice&gt;,
+        x_p: Column&lt;Advice&gt;,
+        y_p: Column&lt;Advice&gt;,
+        lambda_1: Column&lt;Advice&gt;,
+        lambda_2: Column&lt;Advice&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        meta.enable_equality(z);
+        meta.enable_equality(lambda_1);
 
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">Self</span> {
-            <span class="ident">q_mul_1</span>: <span class="ident">meta</span>.<span class="ident">selector</span>(),
-            <span class="ident">q_mul_2</span>: <span class="ident">meta</span>.<span class="ident">selector</span>(),
-            <span class="ident">q_mul_3</span>: <span class="ident">meta</span>.<span class="ident">selector</span>(),
-            <span class="ident">z</span>,
-            <span class="ident">double_and_add</span>: <span class="ident">DoubleAndAdd</span> {
-                <span class="ident">x_a</span>,
-                <span class="ident">x_p</span>,
-                <span class="ident">lambda_1</span>,
-                <span class="ident">lambda_2</span>,
+        <span class="kw">let </span>config = <span class="self">Self </span>{
+            q_mul_1: meta.selector(),
+            q_mul_2: meta.selector(),
+            q_mul_3: meta.selector(),
+            z,
+            double_and_add: DoubleAndAdd {
+                x_a,
+                x_p,
+                lambda_1,
+                lambda_2,
             },
-            <span class="ident">y_p</span>,
+            y_p,
         };
 
-        <span class="ident">config</span>.<span class="ident">create_gate</span>(<span class="ident">meta</span>);
+        config.create_gate(meta);
 
-        <span class="ident">config</span>
+        config
     }
 
-    <span class="comment">// Gate for incomplete addition part of variable-base scalar multiplication.</span>
-    <span class="kw">fn</span> <span class="ident">create_gate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) {
-        <span class="comment">// Closure to compute x_{R,i} = λ_{1,i}^2 - x_{A,i} - x_{P,i}</span>
-        <span class="kw">let</span> <span class="ident">x_r</span> <span class="op">=</span> <span class="op">|</span><span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">rotation</span>: <span class="ident">Rotation</span><span class="op">|</span> {
-            <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_r</span>(<span class="ident">meta</span>, <span class="ident">rotation</span>)
+    <span class="comment">// Gate for incomplete addition part of variable-base scalar multiplication.
+    </span><span class="kw">fn </span>create_gate(<span class="kw-2">&amp;</span><span class="self">self</span>, meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) {
+        <span class="comment">// Closure to compute x_{R,i} = λ_{1,i}^2 - x_{A,i} - x_{P,i}
+        </span><span class="kw">let </span>x_r = |meta: <span class="kw-2">&amp;mut </span>VirtualCells&lt;pallas::Base&gt;, rotation: Rotation| {
+            <span class="self">self</span>.double_and_add.x_r(meta, rotation)
         };
 
-        <span class="comment">// Closure to compute y_{A,i} = (λ_{1,i} + λ_{2,i}) * (x_{A,i} - x_{R,i}) / 2</span>
-        <span class="kw">let</span> <span class="ident">y_a</span> <span class="op">=</span> <span class="op">|</span><span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">rotation</span>: <span class="ident">Rotation</span><span class="op">|</span> {
-            <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">Y_A</span>(<span class="ident">meta</span>, <span class="ident">rotation</span>) <span class="op">*</span> <span class="ident">pallas::Base::TWO_INV</span>
+        <span class="comment">// Closure to compute y_{A,i} = (λ_{1,i} + λ_{2,i}) * (x_{A,i} - x_{R,i}) / 2
+        </span><span class="kw">let </span>y_a = |meta: <span class="kw-2">&amp;mut </span>VirtualCells&lt;pallas::Base&gt;, rotation: Rotation| {
+            <span class="self">self</span>.double_and_add.Y_A(meta, rotation) * pallas::Base::TWO_INV
         };
 
-        <span class="comment">// Constraints used for q_mul_{2, 3} == 1</span>
-        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-main-loop?partial</span>
-        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-last-row?partial</span>
-        <span class="kw">let</span> <span class="ident">for_loop</span> <span class="op">=</span> <span class="op">|</span><span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-                        <span class="ident">y_a_next</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">one</span> <span class="op">=</span> <span class="ident">Expression::Constant</span>(<span class="ident">pallas::Base::one</span>());
+        <span class="comment">// Constraints used for q_mul_{2, 3} == 1
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-main-loop?partial
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-last-row?partial
+        </span><span class="kw">let </span>for_loop = |meta: <span class="kw-2">&amp;mut </span>VirtualCells&lt;pallas::Base&gt;,
+                        y_a_next: Expression&lt;pallas::Base&gt;| {
+            <span class="kw">let </span>one = Expression::Constant(pallas::Base::one());
 
-            <span class="comment">// z_i</span>
-            <span class="kw">let</span> <span class="ident">z_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">z</span>, <span class="ident">Rotation::cur</span>());
-            <span class="comment">// z_{i+1}</span>
-            <span class="kw">let</span> <span class="ident">z_prev</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">z</span>, <span class="ident">Rotation::prev</span>());
-            <span class="comment">// x_{A,i}</span>
-            <span class="kw">let</span> <span class="ident">x_a_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>, <span class="ident">Rotation::cur</span>());
-            <span class="comment">// x_{A,i-1}</span>
-            <span class="kw">let</span> <span class="ident">x_a_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>, <span class="ident">Rotation::next</span>());
-            <span class="comment">// x_{P,i}</span>
-            <span class="kw">let</span> <span class="ident">x_p_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>, <span class="ident">Rotation::cur</span>());
-            <span class="comment">// y_{P,i}</span>
-            <span class="kw">let</span> <span class="ident">y_p_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">y_p</span>, <span class="ident">Rotation::cur</span>());
-            <span class="comment">// λ_{1,i}</span>
-            <span class="kw">let</span> <span class="ident">lambda1_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>, <span class="ident">Rotation::cur</span>());
-            <span class="comment">// λ_{2,i}</span>
-            <span class="kw">let</span> <span class="ident">lambda2_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_2</span>, <span class="ident">Rotation::cur</span>());
+            <span class="comment">// z_i
+            </span><span class="kw">let </span>z_cur = meta.query_advice(<span class="self">self</span>.z, Rotation::cur());
+            <span class="comment">// z_{i+1}
+            </span><span class="kw">let </span>z_prev = meta.query_advice(<span class="self">self</span>.z, Rotation::prev());
+            <span class="comment">// x_{A,i}
+            </span><span class="kw">let </span>x_a_cur = meta.query_advice(<span class="self">self</span>.double_and_add.x_a, Rotation::cur());
+            <span class="comment">// x_{A,i-1}
+            </span><span class="kw">let </span>x_a_next = meta.query_advice(<span class="self">self</span>.double_and_add.x_a, Rotation::next());
+            <span class="comment">// x_{P,i}
+            </span><span class="kw">let </span>x_p_cur = meta.query_advice(<span class="self">self</span>.double_and_add.x_p, Rotation::cur());
+            <span class="comment">// y_{P,i}
+            </span><span class="kw">let </span>y_p_cur = meta.query_advice(<span class="self">self</span>.y_p, Rotation::cur());
+            <span class="comment">// λ_{1,i}
+            </span><span class="kw">let </span>lambda1_cur = meta.query_advice(<span class="self">self</span>.double_and_add.lambda_1, Rotation::cur());
+            <span class="comment">// λ_{2,i}
+            </span><span class="kw">let </span>lambda2_cur = meta.query_advice(<span class="self">self</span>.double_and_add.lambda_2, Rotation::cur());
 
-            <span class="kw">let</span> <span class="ident">y_a_cur</span> <span class="op">=</span> <span class="ident">y_a</span>(<span class="ident">meta</span>, <span class="ident">Rotation::cur</span>());
+            <span class="kw">let </span>y_a_cur = y_a(meta, Rotation::cur());
 
-            <span class="comment">// The current bit in the scalar decomposition, k_i = z_i - 2⋅z_{i+1}.</span>
-            <span class="comment">// Recall that we assigned the cumulative variable `z_i` in descending order,</span>
-            <span class="comment">// i from n down to 0. So z_{i+1} corresponds to the `z_prev` query.</span>
-            <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="ident">z_cur</span> <span class="op">-</span> <span class="ident">z_prev</span> <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="number">2</span>);
-            <span class="comment">// Check booleanity of decomposition.</span>
-            <span class="kw">let</span> <span class="ident">bool_check</span> <span class="op">=</span> <span class="ident">bool_check</span>(<span class="ident">k</span>.<span class="ident">clone</span>());
+            <span class="comment">// The current bit in the scalar decomposition, k_i = z_i - 2⋅z_{i+1}.
+            // Recall that we assigned the cumulative variable `z_i` in descending order,
+            // i from n down to 0. So z_{i+1} corresponds to the `z_prev` query.
+            </span><span class="kw">let </span>k = z_cur - z_prev * pallas::Base::from(<span class="number">2</span>);
+            <span class="comment">// Check booleanity of decomposition.
+            </span><span class="kw">let </span>bool_check = bool_check(k.clone());
 
-            <span class="comment">// λ_{1,i}⋅(x_{A,i} − x_{P,i}) − y_{A,i} + (2k_i - 1) y_{P,i} = 0</span>
-            <span class="kw">let</span> <span class="ident">gradient_1</span> <span class="op">=</span> <span class="ident">lambda1_cur</span> <span class="op">*</span> (<span class="ident">x_a_cur</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_p_cur</span>) <span class="op">-</span> <span class="ident">y_a_cur</span>.<span class="ident">clone</span>()
-                <span class="op">+</span> (<span class="ident">k</span> <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="number">2</span>) <span class="op">-</span> <span class="ident">one</span>) <span class="op">*</span> <span class="ident">y_p_cur</span>;
+            <span class="comment">// λ_{1,i}⋅(x_{A,i} − x_{P,i}) − y_{A,i} + (2k_i - 1) y_{P,i} = 0
+            </span><span class="kw">let </span>gradient_1 = lambda1_cur * (x_a_cur.clone() - x_p_cur) - y_a_cur.clone()
+                + (k * pallas::Base::from(<span class="number">2</span>) - one) * y_p_cur;
 
-            <span class="comment">// λ_{2,i}^2 − x_{A,i-1} − x_{R,i} − x_{A,i} = 0</span>
-            <span class="kw">let</span> <span class="ident">secant_line</span> <span class="op">=</span> <span class="ident">lambda2_cur</span>.<span class="ident">clone</span>().<span class="ident">square</span>()
-                <span class="op">-</span> <span class="ident">x_a_next</span>.<span class="ident">clone</span>()
-                <span class="op">-</span> <span class="ident">x_r</span>(<span class="ident">meta</span>, <span class="ident">Rotation::cur</span>())
-                <span class="op">-</span> <span class="ident">x_a_cur</span>.<span class="ident">clone</span>();
+            <span class="comment">// λ_{2,i}^2 − x_{A,i-1} − x_{R,i} − x_{A,i} = 0
+            </span><span class="kw">let </span>secant_line = lambda2_cur.clone().square()
+                - x_a_next.clone()
+                - x_r(meta, Rotation::cur())
+                - x_a_cur.clone();
 
-            <span class="comment">// λ_{2,i}⋅(x_{A,i} − x_{A,i-1}) − y_{A,i} − y_{A,i-1} = 0</span>
-            <span class="kw">let</span> <span class="ident">gradient_2</span> <span class="op">=</span> <span class="ident">lambda2_cur</span> <span class="op">*</span> (<span class="ident">x_a_cur</span> <span class="op">-</span> <span class="ident">x_a_next</span>) <span class="op">-</span> <span class="ident">y_a_cur</span> <span class="op">-</span> <span class="ident">y_a_next</span>;
+            <span class="comment">// λ_{2,i}⋅(x_{A,i} − x_{A,i-1}) − y_{A,i} − y_{A,i-1} = 0
+            </span><span class="kw">let </span>gradient_2 = lambda2_cur * (x_a_cur - x_a_next) - y_a_cur - y_a_next;
 
-            <span class="ident">std::iter::empty</span>()
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;bool_check&quot;</span>, <span class="ident">bool_check</span>)))
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;gradient_1&quot;</span>, <span class="ident">gradient_1</span>)))
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;secant_line&quot;</span>, <span class="ident">secant_line</span>)))
-                .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;gradient_2&quot;</span>, <span class="ident">gradient_2</span>)))
+            std::iter::empty()
+                .chain(<span class="prelude-val">Some</span>((<span class="string">&quot;bool_check&quot;</span>, bool_check)))
+                .chain(<span class="prelude-val">Some</span>((<span class="string">&quot;gradient_1&quot;</span>, gradient_1)))
+                .chain(<span class="prelude-val">Some</span>((<span class="string">&quot;secant_line&quot;</span>, secant_line)))
+                .chain(<span class="prelude-val">Some</span>((<span class="string">&quot;gradient_2&quot;</span>, gradient_2)))
         };
 
-        <span class="comment">// q_mul_1 == 1 checks</span>
-        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-first-row</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;q_mul_1 == 1 checks&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q_mul_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul_1</span>);
+        <span class="comment">// q_mul_1 == 1 checks
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-first-row
+        </span>meta.create_gate(<span class="string">&quot;q_mul_1 == 1 checks&quot;</span>, |meta| {
+            <span class="kw">let </span>q_mul_1 = meta.query_selector(<span class="self">self</span>.q_mul_1);
 
-            <span class="kw">let</span> <span class="ident">y_a_next</span> <span class="op">=</span> <span class="ident">y_a</span>(<span class="ident">meta</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">y_a_witnessed</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>, <span class="ident">Rotation::cur</span>());
-            <span class="ident">Constraints::with_selector</span>(<span class="ident">q_mul_1</span>, <span class="prelude-val">Some</span>((<span class="string">&quot;init y_a&quot;</span>, <span class="ident">y_a_witnessed</span> <span class="op">-</span> <span class="ident">y_a_next</span>)))
+            <span class="kw">let </span>y_a_next = y_a(meta, Rotation::next());
+            <span class="kw">let </span>y_a_witnessed = meta.query_advice(<span class="self">self</span>.double_and_add.lambda_1, Rotation::cur());
+            Constraints::with_selector(q_mul_1, <span class="prelude-val">Some</span>((<span class="string">&quot;init y_a&quot;</span>, y_a_witnessed - y_a_next)))
         });
 
-        <span class="comment">// q_mul_2 == 1 checks</span>
-        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-main-loop?partial</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;q_mul_2 == 1 checks&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q_mul_2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul_2</span>);
+        <span class="comment">// q_mul_2 == 1 checks
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-main-loop?partial
+        </span>meta.create_gate(<span class="string">&quot;q_mul_2 == 1 checks&quot;</span>, |meta| {
+            <span class="kw">let </span>q_mul_2 = meta.query_selector(<span class="self">self</span>.q_mul_2);
 
-            <span class="kw">let</span> <span class="ident">y_a_next</span> <span class="op">=</span> <span class="ident">y_a</span>(<span class="ident">meta</span>, <span class="ident">Rotation::next</span>());
+            <span class="kw">let </span>y_a_next = y_a(meta, Rotation::next());
 
-            <span class="comment">// x_{P,i}</span>
-            <span class="kw">let</span> <span class="ident">x_p_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>, <span class="ident">Rotation::cur</span>());
-            <span class="comment">// x_{P,i-1}</span>
-            <span class="kw">let</span> <span class="ident">x_p_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>, <span class="ident">Rotation::next</span>());
-            <span class="comment">// y_{P,i}</span>
-            <span class="kw">let</span> <span class="ident">y_p_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">y_p</span>, <span class="ident">Rotation::cur</span>());
-            <span class="comment">// y_{P,i-1}</span>
-            <span class="kw">let</span> <span class="ident">y_p_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">y_p</span>, <span class="ident">Rotation::next</span>());
+            <span class="comment">// x_{P,i}
+            </span><span class="kw">let </span>x_p_cur = meta.query_advice(<span class="self">self</span>.double_and_add.x_p, Rotation::cur());
+            <span class="comment">// x_{P,i-1}
+            </span><span class="kw">let </span>x_p_next = meta.query_advice(<span class="self">self</span>.double_and_add.x_p, Rotation::next());
+            <span class="comment">// y_{P,i}
+            </span><span class="kw">let </span>y_p_cur = meta.query_advice(<span class="self">self</span>.y_p, Rotation::cur());
+            <span class="comment">// y_{P,i-1}
+            </span><span class="kw">let </span>y_p_next = meta.query_advice(<span class="self">self</span>.y_p, Rotation::next());
 
-            <span class="comment">// The base used in double-and-add remains constant. We check that its</span>
-            <span class="comment">// x- and y- coordinates are the same throughout.</span>
-            <span class="kw">let</span> <span class="ident">x_p_check</span> <span class="op">=</span> <span class="ident">x_p_cur</span> <span class="op">-</span> <span class="ident">x_p_next</span>;
-            <span class="kw">let</span> <span class="ident">y_p_check</span> <span class="op">=</span> <span class="ident">y_p_cur</span> <span class="op">-</span> <span class="ident">y_p_next</span>;
+            <span class="comment">// The base used in double-and-add remains constant. We check that its
+            // x- and y- coordinates are the same throughout.
+            </span><span class="kw">let </span>x_p_check = x_p_cur - x_p_next;
+            <span class="kw">let </span>y_p_check = y_p_cur - y_p_next;
 
-            <span class="ident">Constraints::with_selector</span>(
-                <span class="ident">q_mul_2</span>,
-                <span class="ident">std::iter::empty</span>()
-                    .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;x_p_check&quot;</span>, <span class="ident">x_p_check</span>)))
-                    .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;y_p_check&quot;</span>, <span class="ident">y_p_check</span>)))
-                    .<span class="ident">chain</span>(<span class="ident">for_loop</span>(<span class="ident">meta</span>, <span class="ident">y_a_next</span>)),
+            Constraints::with_selector(
+                q_mul_2,
+                std::iter::empty()
+                    .chain(<span class="prelude-val">Some</span>((<span class="string">&quot;x_p_check&quot;</span>, x_p_check)))
+                    .chain(<span class="prelude-val">Some</span>((<span class="string">&quot;y_p_check&quot;</span>, y_p_check)))
+                    .chain(for_loop(meta, y_a_next)),
             )
         });
 
-        <span class="comment">// q_mul_3 == 1 checks</span>
-        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-last-row?partial</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;q_mul_3 == 1 checks&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q_mul_3</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul_3</span>);
-            <span class="kw">let</span> <span class="ident">y_a_final</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>, <span class="ident">Rotation::next</span>());
-            <span class="ident">Constraints::with_selector</span>(<span class="ident">q_mul_3</span>, <span class="ident">for_loop</span>(<span class="ident">meta</span>, <span class="ident">y_a_final</span>))
+        <span class="comment">// q_mul_3 == 1 checks
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-incomplete-last-row?partial
+        </span>meta.create_gate(<span class="string">&quot;q_mul_3 == 1 checks&quot;</span>, |meta| {
+            <span class="kw">let </span>q_mul_3 = meta.query_selector(<span class="self">self</span>.q_mul_3);
+            <span class="kw">let </span>y_a_final = meta.query_advice(<span class="self">self</span>.double_and_add.lambda_1, Rotation::next());
+            Constraints::with_selector(q_mul_3, for_loop(meta, y_a_final))
         });
     }
 
-    <span class="doccomment">/// We perform incomplete addition on all but the last three bits of the</span>
-    <span class="doccomment">/// decomposed scalar.</span>
-    <span class="doccomment">/// We split the bits in the incomplete addition range into &quot;hi&quot; and &quot;lo&quot;</span>
-    <span class="doccomment">/// halves and process them side by side, using the same rows but with</span>
-    <span class="doccomment">/// non-overlapping columns. The base is never the identity point even at</span>
-    <span class="doccomment">/// the boundary between halves.</span>
-    <span class="doccomment">/// Returns (x, y, z).</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">double_and_add</span>(
+    <span class="doccomment">/// We perform incomplete addition on all but the last three bits of the
+    /// decomposed scalar.
+    /// We split the bits in the incomplete addition range into &quot;hi&quot; and &quot;lo&quot;
+    /// halves and process them side by side, using the same rows but with
+    /// non-overlapping columns. The base is never the identity point even at
+    /// the boundary between halves.
+    /// Returns (x, y, z).
+    </span><span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>double_and_add(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">NonIdentityEccPoint</span>,
-        <span class="ident">bits</span>: <span class="kw-2">&amp;</span>[<span class="ident">Value</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>],
-        <span class="ident">acc</span>: (<span class="ident">X</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">Z</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>),
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">X</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Z</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Check that we have the correct number of bits for this double-and-add.</span>
-        <span class="macro">assert_eq!</span>(<span class="ident">bits</span>.<span class="ident">len</span>(), <span class="ident">NUM_BITS</span>);
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        offset: usize,
+        base: <span class="kw-2">&amp;</span>NonIdentityEccPoint,
+        bits: <span class="kw-2">&amp;</span>[Value&lt;bool&gt;],
+        acc: (X&lt;pallas::Base&gt;, Y&lt;pallas::Base&gt;, Z&lt;pallas::Base&gt;),
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(X&lt;pallas::Base&gt;, Y&lt;pallas::Base&gt;, Vec&lt;Z&lt;pallas::Base&gt;&gt;), Error&gt; {
+        <span class="comment">// Check that we have the correct number of bits for this double-and-add.
+        </span><span class="macro">assert_eq!</span>(bits.len(), NUM_BITS);
 
-        <span class="comment">// Handle exceptional cases</span>
-        <span class="kw">let</span> (<span class="ident">x_p</span>, <span class="ident">y_p</span>) <span class="op">=</span> (<span class="ident">base</span>.<span class="ident">x</span>.<span class="ident">value</span>().<span class="ident">cloned</span>(), <span class="ident">base</span>.<span class="ident">y</span>.<span class="ident">value</span>().<span class="ident">cloned</span>());
-        <span class="kw">let</span> (<span class="ident">x_a</span>, <span class="ident">y_a</span>) <span class="op">=</span> (<span class="ident">acc</span>.<span class="number">0</span>.<span class="ident">value</span>().<span class="ident">cloned</span>(), <span class="ident">acc</span>.<span class="number">1</span>.<span class="ident">value</span>().<span class="ident">cloned</span>());
+        <span class="comment">// Handle exceptional cases
+        </span><span class="kw">let </span>(x_p, y_p) = (base.x.value().cloned(), base.y.value().cloned());
+        <span class="kw">let </span>(x_a, y_a) = (acc.<span class="number">0</span>.value().cloned(), acc.<span class="number">1</span>.value().cloned());
 
-        <span class="ident">x_a</span>.<span class="ident">zip</span>(<span class="ident">y_a</span>)
-            .<span class="ident">zip</span>(<span class="ident">x_p</span>.<span class="ident">zip</span>(<span class="ident">y_p</span>))
-            .<span class="ident">error_if_known_and</span>(<span class="op">|</span>((<span class="ident">x_a</span>, <span class="ident">y_a</span>), (<span class="ident">x_p</span>, <span class="ident">y_p</span>))<span class="op">|</span> {
-                <span class="comment">// A is point at infinity</span>
-                (<span class="ident">x_p</span>.<span class="ident">is_zero_vartime</span>() <span class="op">&amp;&amp;</span> <span class="ident">y_p</span>.<span class="ident">is_zero_vartime</span>())
-                <span class="comment">// Q is point at infinity</span>
-                <span class="op">|</span><span class="op">|</span> (<span class="ident">x_a</span>.<span class="ident">is_zero_vartime</span>() <span class="op">&amp;&amp;</span> <span class="ident">y_a</span>.<span class="ident">is_zero_vartime</span>())
-                <span class="comment">// x_p = x_a</span>
-                <span class="op">|</span><span class="op">|</span> (<span class="ident">x_p</span> <span class="op">==</span> <span class="ident">x_a</span>)
+        x_a.zip(y_a)
+            .zip(x_p.zip(y_p))
+            .error_if_known_and(|((x_a, y_a), (x_p, y_p))| {
+                <span class="comment">// A is point at infinity
+                </span>(x_p.is_zero_vartime() &amp;&amp; y_p.is_zero_vartime())
+                <span class="comment">// Q is point at infinity
+                </span>|| (x_a.is_zero_vartime() &amp;&amp; y_a.is_zero_vartime())
+                <span class="comment">// x_p = x_a
+                </span>|| (x_p == x_a)
             })<span class="question-mark">?</span>;
 
-        <span class="comment">// Set q_mul values</span>
-        {
-            <span class="comment">// q_mul_1 = 1 on offset 0</span>
-            <span class="self">self</span>.<span class="ident">q_mul_1</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Set q_mul values
+        </span>{
+            <span class="comment">// q_mul_1 = 1 on offset 0
+            </span><span class="self">self</span>.q_mul_1.enable(region, offset)<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>;
-            <span class="comment">// q_mul_2 = 1 on all rows after offset 0, excluding the last row.</span>
-            <span class="kw">for</span> <span class="ident">idx</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="ident">NUM_BITS</span> <span class="op">-</span> <span class="number">1</span>) {
-                <span class="self">self</span>.<span class="ident">q_mul_2</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="ident">idx</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>offset = offset + <span class="number">1</span>;
+            <span class="comment">// q_mul_2 = 1 on all rows after offset 0, excluding the last row.
+            </span><span class="kw">for </span>idx <span class="kw">in </span><span class="number">0</span>..(NUM_BITS - <span class="number">1</span>) {
+                <span class="self">self</span>.q_mul_2.enable(region, offset + idx)<span class="question-mark">?</span>;
             }
 
-            <span class="comment">// q_mul_3 = 1 on the last row.</span>
-            <span class="self">self</span>.<span class="ident">q_mul_3</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="ident">NUM_BITS</span> <span class="op">-</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+            <span class="comment">// q_mul_3 = 1 on the last row.
+            </span><span class="self">self</span>.q_mul_3.enable(region, offset + NUM_BITS - <span class="number">1</span>)<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// Initialise double-and-add</span>
-        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">x_a</span>, <span class="kw-2">mut</span> <span class="ident">y_a</span>, <span class="kw-2">mut</span> <span class="ident">z</span>) <span class="op">=</span> {
-            <span class="comment">// Initialise the running `z` sum for the scalar bits.</span>
-            <span class="kw">let</span> <span class="ident">z</span> <span class="op">=</span> <span class="ident">acc</span>.<span class="number">2</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;starting z&quot;</span>, <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">z</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Initialise double-and-add
+        </span><span class="kw">let </span>(<span class="kw-2">mut </span>x_a, <span class="kw-2">mut </span>y_a, <span class="kw-2">mut </span>z) = {
+            <span class="comment">// Initialise the running `z` sum for the scalar bits.
+            </span><span class="kw">let </span>z = acc.<span class="number">2</span>.copy_advice(|| <span class="string">&quot;starting z&quot;</span>, region, <span class="self">self</span>.z, offset)<span class="question-mark">?</span>;
 
-            <span class="comment">// Initialise acc</span>
-            <span class="kw">let</span> <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">acc</span>.<span class="number">0</span>.<span class="ident">copy_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;starting x_a&quot;</span>,
-                <span class="ident">region</span>,
-                <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>,
-                <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>,
+            <span class="comment">// Initialise acc
+            </span><span class="kw">let </span>x_a = acc.<span class="number">0</span>.copy_advice(
+                || <span class="string">&quot;starting x_a&quot;</span>,
+                region,
+                <span class="self">self</span>.double_and_add.x_a,
+                offset + <span class="number">1</span>,
             )<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">y_a</span> <span class="op">=</span> <span class="ident">acc</span>.<span class="number">1</span>.<span class="ident">copy_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;starting y_a&quot;</span>,
-                <span class="ident">region</span>,
-                <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>,
-                <span class="ident">offset</span>,
+            <span class="kw">let </span>y_a = acc.<span class="number">1</span>.copy_advice(
+                || <span class="string">&quot;starting y_a&quot;</span>,
+                region,
+                <span class="self">self</span>.double_and_add.lambda_1,
+                offset,
             )<span class="question-mark">?</span>;
 
-            (<span class="ident">x_a</span>, <span class="ident">y_a</span>.<span class="ident">value</span>().<span class="ident">cloned</span>(), <span class="ident">z</span>)
+            (x_a, y_a.value().cloned(), z)
         };
 
-        <span class="comment">// Increase offset by 1; we used row 0 for initializing `z`.</span>
-        <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>;
+        <span class="comment">// Increase offset by 1; we used row 0 for initializing `z`.
+        </span><span class="kw">let </span>offset = offset + <span class="number">1</span>;
 
-        <span class="comment">// Initialise vector to store all interstitial `z` running sum values.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">zs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Z</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">bits</span>.<span class="ident">len</span>());
+        <span class="comment">// Initialise vector to store all interstitial `z` running sum values.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>zs: Vec&lt;Z&lt;pallas::Base&gt;&gt; = Vec::with_capacity(bits.len());
 
-        <span class="comment">// Incomplete addition</span>
-        <span class="kw">for</span> (<span class="ident">row</span>, <span class="ident">k</span>) <span class="kw">in</span> <span class="ident">bits</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-            <span class="comment">// z_{i} = 2 * z_{i+1} + k_i</span>
-            <span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-witness-scalar?partial</span>
-            <span class="kw">let</span> <span class="ident">z_val</span> <span class="op">=</span> <span class="ident">z</span>
-                .<span class="ident">value</span>()
-                .<span class="ident">zip</span>(<span class="ident">k</span>.<span class="ident">as_ref</span>())
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">z_val</span>, <span class="ident">k</span>)<span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="number">2</span>) <span class="op">*</span> <span class="ident">z_val</span> <span class="op">+</span> <span class="ident">pallas::Base::from</span>(<span class="kw-2">*</span><span class="ident">k</span> <span class="kw">as</span> <span class="ident">u64</span>));
-            <span class="ident">z</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;z&quot;</span>, <span class="self">self</span>.<span class="ident">z</span>, <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">z_val</span>)<span class="question-mark">?</span>;
-            <span class="ident">zs</span>.<span class="ident">push</span>(<span class="ident">Z</span>(<span class="ident">z</span>.<span class="ident">clone</span>()));
+        <span class="comment">// Incomplete addition
+        </span><span class="kw">for </span>(row, k) <span class="kw">in </span>bits.iter().enumerate() {
+            <span class="comment">// z_{i} = 2 * z_{i+1} + k_i
+            // https://p.z.cash/halo2-0.1:ecc-var-mul-witness-scalar?partial
+            </span><span class="kw">let </span>z_val = z
+                .value()
+                .zip(k.as_ref())
+                .map(|(z_val, k)| pallas::Base::from(<span class="number">2</span>) * z_val + pallas::Base::from(<span class="kw-2">*</span>k <span class="kw">as </span>u64));
+            z = region.assign_advice(|| <span class="string">&quot;z&quot;</span>, <span class="self">self</span>.z, row + offset, || z_val)<span class="question-mark">?</span>;
+            zs.push(Z(z.clone()));
 
-            <span class="comment">// Assign `x_p`, `y_p`</span>
-            <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;x_p&quot;</span>, <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>, <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">x_p</span>)<span class="question-mark">?</span>;
-            <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_p&quot;</span>, <span class="self">self</span>.<span class="ident">y_p</span>, <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">y_p</span>)<span class="question-mark">?</span>;
+            <span class="comment">// Assign `x_p`, `y_p`
+            </span>region.assign_advice(|| <span class="string">&quot;x_p&quot;</span>, <span class="self">self</span>.double_and_add.x_p, row + offset, || x_p)<span class="question-mark">?</span>;
+            region.assign_advice(|| <span class="string">&quot;y_p&quot;</span>, <span class="self">self</span>.y_p, row + offset, || y_p)<span class="question-mark">?</span>;
 
-            <span class="comment">// If the bit is set, use `y`; if the bit is not set, use `-y`</span>
-            <span class="kw">let</span> <span class="ident">y_p</span> <span class="op">=</span> <span class="ident">y_p</span>
-                .<span class="ident">zip</span>(<span class="ident">k</span>.<span class="ident">as_ref</span>())
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">y_p</span>, <span class="ident">k</span>)<span class="op">|</span> <span class="kw">if</span> <span class="op">!</span><span class="ident">k</span> { <span class="op">-</span><span class="ident">y_p</span> } <span class="kw">else</span> { <span class="ident">y_p</span> });
+            <span class="comment">// If the bit is set, use `y`; if the bit is not set, use `-y`
+            </span><span class="kw">let </span>y_p = y_p
+                .zip(k.as_ref())
+                .map(|(y_p, k)| <span class="kw">if </span>!k { -y_p } <span class="kw">else </span>{ y_p });
 
-            <span class="comment">// Compute and assign λ1⋅(x_A − x_P) = y_A − y_P</span>
-            <span class="kw">let</span> <span class="ident">lambda1</span> <span class="op">=</span> <span class="ident">y_a</span>
-                .<span class="ident">zip</span>(<span class="ident">y_p</span>)
-                .<span class="ident">zip</span>(<span class="ident">x_a</span>.<span class="ident">value</span>())
-                .<span class="ident">zip</span>(<span class="ident">x_p</span>)
-                .<span class="ident">map</span>(<span class="op">|</span>(((<span class="ident">y_a</span>, <span class="ident">y_p</span>), <span class="ident">x_a</span>), <span class="ident">x_p</span>)<span class="op">|</span> (<span class="ident">y_a</span> <span class="op">-</span> <span class="ident">y_p</span>) <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_p</span>).<span class="ident">invert</span>());
-            <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;lambda1&quot;</span>,
-                <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>,
-                <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span>,
-                <span class="op">|</span><span class="op">|</span> <span class="ident">lambda1</span>,
+            <span class="comment">// Compute and assign λ1⋅(x_A − x_P) = y_A − y_P
+            </span><span class="kw">let </span>lambda1 = y_a
+                .zip(y_p)
+                .zip(x_a.value())
+                .zip(x_p)
+                .map(|(((y_a, y_p), x_a), x_p)| (y_a - y_p) * (x_a - x_p).invert());
+            region.assign_advice(
+                || <span class="string">&quot;lambda1&quot;</span>,
+                <span class="self">self</span>.double_and_add.lambda_1,
+                row + offset,
+                || lambda1,
             )<span class="question-mark">?</span>;
 
-            <span class="comment">// x_R = λ1^2 - x_A - x_P</span>
-            <span class="kw">let</span> <span class="ident">x_r</span> <span class="op">=</span> <span class="ident">lambda1</span>
-                .<span class="ident">zip</span>(<span class="ident">x_a</span>.<span class="ident">value</span>())
-                .<span class="ident">zip</span>(<span class="ident">x_p</span>)
-                .<span class="ident">map</span>(<span class="op">|</span>((<span class="ident">lambda1</span>, <span class="ident">x_a</span>), <span class="ident">x_p</span>)<span class="op">|</span> <span class="ident">lambda1</span>.<span class="ident">square</span>() <span class="op">-</span> <span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_p</span>);
+            <span class="comment">// x_R = λ1^2 - x_A - x_P
+            </span><span class="kw">let </span>x_r = lambda1
+                .zip(x_a.value())
+                .zip(x_p)
+                .map(|((lambda1, x_a), x_p)| lambda1.square() - x_a - x_p);
 
-            <span class="comment">// λ2 = (2(y_A) / (x_A - x_R)) - λ1</span>
-            <span class="kw">let</span> <span class="ident">lambda2</span> <span class="op">=</span>
-                <span class="ident">lambda1</span>
-                    .<span class="ident">zip</span>(<span class="ident">y_a</span>)
-                    .<span class="ident">zip</span>(<span class="ident">x_a</span>.<span class="ident">value</span>())
-                    .<span class="ident">zip</span>(<span class="ident">x_r</span>)
-                    .<span class="ident">map</span>(<span class="op">|</span>(((<span class="ident">lambda1</span>, <span class="ident">y_a</span>), <span class="ident">x_a</span>), <span class="ident">x_r</span>)<span class="op">|</span> {
-                        <span class="ident">y_a</span> <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="number">2</span>) <span class="op">*</span> (<span class="ident">x_a</span> <span class="op">-</span> <span class="ident">x_r</span>).<span class="ident">invert</span>() <span class="op">-</span> <span class="ident">lambda1</span>
+            <span class="comment">// λ2 = (2(y_A) / (x_A - x_R)) - λ1
+            </span><span class="kw">let </span>lambda2 =
+                lambda1
+                    .zip(y_a)
+                    .zip(x_a.value())
+                    .zip(x_r)
+                    .map(|(((lambda1, y_a), x_a), x_r)| {
+                        y_a * pallas::Base::from(<span class="number">2</span>) * (x_a - x_r).invert() - lambda1
                     });
-            <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;lambda2&quot;</span>,
-                <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_2</span>,
-                <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span>,
-                <span class="op">|</span><span class="op">|</span> <span class="ident">lambda2</span>,
+            region.assign_advice(
+                || <span class="string">&quot;lambda2&quot;</span>,
+                <span class="self">self</span>.double_and_add.lambda_2,
+                row + offset,
+                || lambda2,
             )<span class="question-mark">?</span>;
 
-            <span class="comment">// Compute and assign `x_a` for the next row</span>
-            <span class="kw">let</span> <span class="ident">x_a_new</span> <span class="op">=</span> <span class="ident">lambda2</span>.<span class="ident">square</span>() <span class="op">-</span> <span class="ident">x_a</span>.<span class="ident">value</span>() <span class="op">-</span> <span class="ident">x_r</span>;
-            <span class="ident">y_a</span> <span class="op">=</span> <span class="ident">lambda2</span> <span class="op">*</span> (<span class="ident">x_a</span>.<span class="ident">value</span>() <span class="op">-</span> <span class="ident">x_a_new</span>) <span class="op">-</span> <span class="ident">y_a</span>;
-            <span class="kw">let</span> <span class="ident">x_a_val</span> <span class="op">=</span> <span class="ident">x_a_new</span>;
-            <span class="ident">x_a</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;x_a&quot;</span>,
-                <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>,
-                <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>,
-                <span class="op">|</span><span class="op">|</span> <span class="ident">x_a_val</span>,
+            <span class="comment">// Compute and assign `x_a` for the next row
+            </span><span class="kw">let </span>x_a_new = lambda2.square() - x_a.value() - x_r;
+            y_a = lambda2 * (x_a.value() - x_a_new) - y_a;
+            <span class="kw">let </span>x_a_val = x_a_new;
+            x_a = region.assign_advice(
+                || <span class="string">&quot;x_a&quot;</span>,
+                <span class="self">self</span>.double_and_add.x_a,
+                row + offset + <span class="number">1</span>,
+                || x_a_val,
             )<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// Witness final y_a</span>
-        <span class="kw">let</span> <span class="ident">y_a</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_a&quot;</span>,
-            <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>,
-            <span class="ident">offset</span> <span class="op">+</span> <span class="ident">NUM_BITS</span>,
-            <span class="op">|</span><span class="op">|</span> <span class="ident">y_a</span>,
+        <span class="comment">// Witness final y_a
+        </span><span class="kw">let </span>y_a = region.assign_advice(
+            || <span class="string">&quot;y_a&quot;</span>,
+            <span class="self">self</span>.double_and_add.lambda_1,
+            offset + NUM_BITS,
+            || y_a,
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>((<span class="ident">X</span>(<span class="ident">x_a</span>), <span class="ident">Y</span>(<span class="ident">y_a</span>), <span class="ident">zs</span>))
+        <span class="prelude-val">Ok</span>((X(x_a), Y(y_a), zs))
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

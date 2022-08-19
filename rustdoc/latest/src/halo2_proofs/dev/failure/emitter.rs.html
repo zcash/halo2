@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -183,170 +177,169 @@
 <span id="162">162</span>
 <span id="163">163</span>
 <span id="164">164</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::collections::BTreeMap</span>;
-<span class="kw">use</span> <span class="ident">std::iter</span>;
+</pre><pre class="rust"><code><span class="kw">use </span>std::collections::BTreeMap;
+<span class="kw">use </span>std::iter;
 
-<span class="kw">use</span> <span class="ident">group::ff::Field</span>;
+<span class="kw">use </span>group::ff::Field;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::FailureLocation</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">dev</span>::{<span class="ident">metadata</span>, <span class="ident">util</span>},
-    <span class="ident">plonk</span>::{<span class="ident">Any</span>, <span class="ident">Expression</span>},
+<span class="kw">use </span><span class="kw">super</span>::FailureLocation;
+<span class="kw">use crate</span>::{
+    dev::{metadata, util},
+    plonk::{Any, Expression},
 };
 
-<span class="kw">fn</span> <span class="ident">padded</span>(<span class="ident">p</span>: <span class="ident">char</span>, <span class="ident">width</span>: <span class="ident">usize</span>, <span class="ident">text</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="ident">String</span> {
-    <span class="kw">let</span> <span class="ident">pad</span> <span class="op">=</span> <span class="ident">width</span> <span class="op">-</span> <span class="ident">text</span>.<span class="ident">len</span>();
+<span class="kw">fn </span>padded(p: char, width: usize, text: <span class="kw-2">&amp;</span>str) -&gt; String {
+    <span class="kw">let </span>pad = width - text.len();
     <span class="macro">format!</span>(
         <span class="string">&quot;{}{}{}&quot;</span>,
-        <span class="ident">iter::repeat</span>(<span class="ident">p</span>).<span class="ident">take</span>(<span class="ident">pad</span> <span class="op">-</span> <span class="ident">pad</span> <span class="op">/</span> <span class="number">2</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>(),
-        <span class="ident">text</span>,
-        <span class="ident">iter::repeat</span>(<span class="ident">p</span>).<span class="ident">take</span>(<span class="ident">pad</span> <span class="op">/</span> <span class="number">2</span>).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>(),
+        iter::repeat(p).take(pad - pad / <span class="number">2</span>).collect::&lt;String&gt;(),
+        text,
+        iter::repeat(p).take(pad / <span class="number">2</span>).collect::&lt;String&gt;(),
     )
 }
 
-<span class="doccomment">/// Renders a cell layout around a given failure location.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// `highlight_row` is called at the end of each row, with the offset of the active row</span>
-<span class="doccomment">/// (if `location` is in a region), and the rotation of the current row relative to the</span>
-<span class="doccomment">/// active row.</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">render_cell_layout</span>(
-    <span class="ident">prefix</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-    <span class="ident">location</span>: <span class="kw-2">&amp;</span><span class="ident">FailureLocation</span>,
-    <span class="ident">columns</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">metadata::Column</span>, <span class="ident">usize</span><span class="op">&gt;</span>,
-    <span class="ident">layout</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">i32</span>, <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">metadata::Column</span>, <span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">highlight_row</span>: <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span>, <span class="ident">i32</span>),
+<span class="doccomment">/// Renders a cell layout around a given failure location.
+///
+/// `highlight_row` is called at the end of each row, with the offset of the active row
+/// (if `location` is in a region), and the rotation of the current row relative to the
+/// active row.
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>render_cell_layout(
+    prefix: <span class="kw-2">&amp;</span>str,
+    location: <span class="kw-2">&amp;</span>FailureLocation,
+    columns: <span class="kw-2">&amp;</span>BTreeMap&lt;metadata::Column, usize&gt;,
+    layout: <span class="kw-2">&amp;</span>BTreeMap&lt;i32, BTreeMap&lt;metadata::Column, String&gt;&gt;,
+    highlight_row: <span class="kw">impl </span>Fn(<span class="prelude-ty">Option</span>&lt;i32&gt;, i32),
 ) {
-    <span class="kw">let</span> <span class="ident">col_width</span> <span class="op">=</span> <span class="op">|</span><span class="ident">cells</span>: <span class="ident">usize</span><span class="op">|</span> <span class="ident">cells</span>.<span class="ident">to_string</span>().<span class="ident">len</span>() <span class="op">+</span> <span class="number">3</span>;
+    <span class="kw">let </span>col_width = |cells: usize| cells.to_string().len() + <span class="number">3</span>;
 
-    <span class="comment">// If we are in a region, show rows at offsets relative to it. Otherwise, just show</span>
-    <span class="comment">// the rotations directly.</span>
-    <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">location</span> {
-        <span class="ident">FailureLocation::InRegion</span> { <span class="ident">region</span>, <span class="ident">offset</span> } =&gt; {
-            <span class="macro">eprintln!</span>(<span class="string">&quot;{}Cell layout in region &#39;{}&#39;:&quot;</span>, <span class="ident">prefix</span>, <span class="ident">region</span>.<span class="ident">name</span>);
-            <span class="macro">eprint!</span>(<span class="string">&quot;{}  | Offset |&quot;</span>, <span class="ident">prefix</span>);
-            <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">offset</span> <span class="kw">as</span> <span class="ident">i32</span>)
+    <span class="comment">// If we are in a region, show rows at offsets relative to it. Otherwise, just show
+    // the rotations directly.
+    </span><span class="kw">let </span>offset = <span class="kw">match </span>location {
+        FailureLocation::InRegion { region, offset } =&gt; {
+            <span class="macro">eprintln!</span>(<span class="string">&quot;{}Cell layout in region &#39;{}&#39;:&quot;</span>, prefix, region.name);
+            <span class="macro">eprint!</span>(<span class="string">&quot;{}  | Offset |&quot;</span>, prefix);
+            <span class="prelude-val">Some</span>(<span class="kw-2">*</span>offset <span class="kw">as </span>i32)
         }
-        <span class="ident">FailureLocation::OutsideRegion</span> { <span class="ident">row</span> } =&gt; {
-            <span class="macro">eprintln!</span>(<span class="string">&quot;{}Cell layout at row {}:&quot;</span>, <span class="ident">prefix</span>, <span class="ident">row</span>);
-            <span class="macro">eprint!</span>(<span class="string">&quot;{}  |Rotation|&quot;</span>, <span class="ident">prefix</span>);
-            <span class="prelude-val">None</span>
-        }
+        FailureLocation::OutsideRegion { row } =&gt; {
+            <span class="macro">eprintln!</span>(<span class="string">&quot;{}Cell layout at row {}:&quot;</span>, prefix, row);
+            <span class="macro">eprint!</span>(<span class="string">&quot;{}  |Rotation|&quot;</span>, prefix);
+            <span class="prelude-val">None
+        </span>}
     };
 
-    <span class="comment">// Print the assigned cells, and their region offset or rotation.</span>
-    <span class="kw">for</span> (<span class="ident">column</span>, <span class="ident">cells</span>) <span class="kw">in</span> <span class="ident">columns</span> {
-        <span class="kw">let</span> <span class="ident">width</span> <span class="op">=</span> <span class="ident">col_width</span>(<span class="kw-2">*</span><span class="ident">cells</span>);
+    <span class="comment">// Print the assigned cells, and their region offset or rotation.
+    </span><span class="kw">for </span>(column, cells) <span class="kw">in </span>columns {
+        <span class="kw">let </span>width = col_width(<span class="kw-2">*</span>cells);
         <span class="macro">eprint!</span>(
             <span class="string">&quot;{}|&quot;</span>,
-            <span class="ident">padded</span>(
+            padded(
                 <span class="string">&#39; &#39;</span>,
-                <span class="ident">width</span>,
+                width,
                 <span class="kw-2">&amp;</span><span class="macro">format!</span>(
                     <span class="string">&quot;{}{}&quot;</span>,
-                    <span class="kw">match</span> <span class="ident">column</span>.<span class="ident">column_type</span> {
-                        <span class="ident">Any::Advice</span> =&gt; <span class="string">&quot;A&quot;</span>,
-                        <span class="ident">Any::Fixed</span> =&gt; <span class="string">&quot;F&quot;</span>,
-                        <span class="ident">Any::Instance</span> =&gt; <span class="string">&quot;I&quot;</span>,
+                    <span class="kw">match </span>column.column_type {
+                        Any::Advice =&gt; <span class="string">&quot;A&quot;</span>,
+                        Any::Fixed =&gt; <span class="string">&quot;F&quot;</span>,
+                        Any::Instance =&gt; <span class="string">&quot;I&quot;</span>,
                     },
-                    <span class="ident">column</span>.<span class="ident">index</span>,
+                    column.index,
                 )
             )
         );
     }
     <span class="macro">eprintln!</span>();
-    <span class="macro">eprint!</span>(<span class="string">&quot;{}  +--------+&quot;</span>, <span class="ident">prefix</span>);
-    <span class="kw">for</span> <span class="ident">cells</span> <span class="kw">in</span> <span class="ident">columns</span>.<span class="ident">values</span>() {
-        <span class="macro">eprint!</span>(<span class="string">&quot;{}+&quot;</span>, <span class="ident">padded</span>(<span class="string">&#39;-&#39;</span>, <span class="ident">col_width</span>(<span class="kw-2">*</span><span class="ident">cells</span>), <span class="string">&quot;&quot;</span>));
+    <span class="macro">eprint!</span>(<span class="string">&quot;{}  +--------+&quot;</span>, prefix);
+    <span class="kw">for </span>cells <span class="kw">in </span>columns.values() {
+        <span class="macro">eprint!</span>(<span class="string">&quot;{}+&quot;</span>, padded(<span class="string">&#39;-&#39;</span>, col_width(<span class="kw-2">*</span>cells), <span class="string">&quot;&quot;</span>));
     }
     <span class="macro">eprintln!</span>();
-    <span class="kw">for</span> (<span class="ident">rotation</span>, <span class="ident">row</span>) <span class="kw">in</span> <span class="ident">layout</span> {
+    <span class="kw">for </span>(rotation, row) <span class="kw">in </span>layout {
         <span class="macro">eprint!</span>(
             <span class="string">&quot;{}  |{}|&quot;</span>,
-            <span class="ident">prefix</span>,
-            <span class="ident">padded</span>(<span class="string">&#39; &#39;</span>, <span class="number">8</span>, <span class="kw-2">&amp;</span>(<span class="ident">offset</span>.<span class="ident">unwrap_or</span>(<span class="number">0</span>) <span class="op">+</span> <span class="ident">rotation</span>).<span class="ident">to_string</span>())
+            prefix,
+            padded(<span class="string">&#39; &#39;</span>, <span class="number">8</span>, <span class="kw-2">&amp;</span>(offset.unwrap_or(<span class="number">0</span>) + rotation).to_string())
         );
-        <span class="kw">for</span> (<span class="ident">col</span>, <span class="ident">cells</span>) <span class="kw">in</span> <span class="ident">columns</span> {
-            <span class="kw">let</span> <span class="ident">width</span> <span class="op">=</span> <span class="ident">col_width</span>(<span class="kw-2">*</span><span class="ident">cells</span>);
+        <span class="kw">for </span>(col, cells) <span class="kw">in </span>columns {
+            <span class="kw">let </span>width = col_width(<span class="kw-2">*</span>cells);
             <span class="macro">eprint!</span>(
                 <span class="string">&quot;{}|&quot;</span>,
-                <span class="ident">padded</span>(
+                padded(
                     <span class="string">&#39; &#39;</span>,
-                    <span class="ident">width</span>,
-                    <span class="ident">row</span>.<span class="ident">get</span>(<span class="ident">col</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span>.<span class="ident">as_str</span>()).<span class="ident">unwrap_or_default</span>()
+                    width,
+                    row.get(col).map(|s| s.as_str()).unwrap_or_default()
                 )
             );
         }
-        <span class="ident">highlight_row</span>(<span class="ident">offset</span>, <span class="kw-2">*</span><span class="ident">rotation</span>);
+        highlight_row(offset, <span class="kw-2">*</span>rotation);
         <span class="macro">eprintln!</span>();
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">expression_to_string</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(
-    <span class="ident">expr</span>: <span class="kw-2">&amp;</span><span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">layout</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">i32</span>, <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">metadata::Column</span>, <span class="ident">String</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-) -&gt; <span class="ident">String</span> {
-    <span class="ident">expr</span>.<span class="ident">evaluate</span>(
-        <span class="kw-2">&amp;</span><span class="ident">util::format_value</span>,
-        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
-        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">label</span>) <span class="op">=</span> <span class="ident">layout</span>
-                .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">query</span>.<span class="ident">rotation</span>.<span class="number">0</span>)
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">row</span><span class="op">|</span> <span class="ident">row</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span>(<span class="ident">Any::Fixed</span>, <span class="ident">query</span>.<span class="ident">column_index</span>).<span class="ident">into</span>()))
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>expression_to_string&lt;F: Field&gt;(
+    expr: <span class="kw-2">&amp;</span>Expression&lt;F&gt;,
+    layout: <span class="kw-2">&amp;</span>BTreeMap&lt;i32, BTreeMap&lt;metadata::Column, String&gt;&gt;,
+) -&gt; String {
+    expr.evaluate(
+        <span class="kw-2">&amp;</span>util::format_value,
+        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
+        <span class="kw-2">&amp;</span>|query| {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(label) = layout
+                .get(<span class="kw-2">&amp;</span>query.rotation.<span class="number">0</span>)
+                .and_then(|row| row.get(<span class="kw-2">&amp;</span>(Any::Fixed, query.column_index).into()))
             {
-                <span class="ident">label</span>.<span class="ident">clone</span>()
-            } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">query</span>.<span class="ident">rotation</span>.<span class="number">0</span> <span class="op">==</span> <span class="number">0</span> {
-                <span class="comment">// This is most likely a merged selector</span>
-                <span class="macro">format!</span>(<span class="string">&quot;S{}&quot;</span>, <span class="ident">query</span>.<span class="ident">index</span>)
-            } <span class="kw">else</span> {
-                <span class="comment">// No idea how we&#39;d get here...</span>
-                <span class="macro">format!</span>(<span class="string">&quot;F{}@{}&quot;</span>, <span class="ident">query</span>.<span class="ident">column_index</span>, <span class="ident">query</span>.<span class="ident">rotation</span>.<span class="number">0</span>)
+                label.clone()
+            } <span class="kw">else if </span>query.rotation.<span class="number">0 </span>== <span class="number">0 </span>{
+                <span class="comment">// This is most likely a merged selector
+                </span><span class="macro">format!</span>(<span class="string">&quot;S{}&quot;</span>, query.index)
+            } <span class="kw">else </span>{
+                <span class="comment">// No idea how we&#39;d get here...
+                </span><span class="macro">format!</span>(<span class="string">&quot;F{}@{}&quot;</span>, query.column_index, query.rotation.<span class="number">0</span>)
             }
         },
-        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
-            <span class="ident">layout</span>
-                .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">query</span>.<span class="ident">rotation</span>.<span class="number">0</span>)
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">get</span>(<span class="kw-2">&amp;</span>(<span class="ident">Any::Advice</span>, <span class="ident">query</span>.<span class="ident">column_index</span>).<span class="ident">into</span>())
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">clone</span>()
+        <span class="kw-2">&amp;</span>|query| {
+            layout
+                .get(<span class="kw-2">&amp;</span>query.rotation.<span class="number">0</span>)
+                .unwrap()
+                .get(<span class="kw-2">&amp;</span>(Any::Advice, query.column_index).into())
+                .unwrap()
+                .clone()
         },
-        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
-            <span class="ident">layout</span>
-                .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">query</span>.<span class="ident">rotation</span>.<span class="number">0</span>)
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">get</span>(<span class="kw-2">&amp;</span>(<span class="ident">Any::Instance</span>, <span class="ident">query</span>.<span class="ident">column_index</span>).<span class="ident">into</span>())
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">clone</span>()
+        <span class="kw-2">&amp;</span>|query| {
+            layout
+                .get(<span class="kw-2">&amp;</span>query.rotation.<span class="number">0</span>)
+                .unwrap()
+                .get(<span class="kw-2">&amp;</span>(Any::Instance, query.column_index).into())
+                .unwrap()
+                .clone()
         },
-        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span><span class="op">|</span> {
-            <span class="kw">if</span> <span class="ident">a</span>.<span class="ident">contains</span>(<span class="string">&#39; &#39;</span>) {
-                <span class="macro">format!</span>(<span class="string">&quot;-({})&quot;</span>, <span class="ident">a</span>)
-            } <span class="kw">else</span> {
-                <span class="macro">format!</span>(<span class="string">&quot;-{}&quot;</span>, <span class="ident">a</span>)
+        <span class="kw-2">&amp;</span>|a| {
+            <span class="kw">if </span>a.contains(<span class="string">&#39; &#39;</span>) {
+                <span class="macro">format!</span>(<span class="string">&quot;-({})&quot;</span>, a)
+            } <span class="kw">else </span>{
+                <span class="macro">format!</span>(<span class="string">&quot;-{}&quot;</span>, a)
             }
         },
-        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">b</span>) <span class="op">=</span> <span class="ident">b</span>.<span class="ident">strip_prefix</span>(<span class="string">&#39;-&#39;</span>) {
-                <span class="macro">format!</span>(<span class="string">&quot;{} - {}&quot;</span>, <span class="ident">a</span>, <span class="ident">b</span>)
-            } <span class="kw">else</span> {
-                <span class="macro">format!</span>(<span class="string">&quot;{} + {}&quot;</span>, <span class="ident">a</span>, <span class="ident">b</span>)
+        <span class="kw-2">&amp;</span>|a, b| {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(b) = b.strip_prefix(<span class="string">&#39;-&#39;</span>) {
+                <span class="macro">format!</span>(<span class="string">&quot;{} - {}&quot;</span>, a, b)
+            } <span class="kw">else </span>{
+                <span class="macro">format!</span>(<span class="string">&quot;{} + {}&quot;</span>, a, b)
             }
         },
-        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="kw">match</span> (<span class="ident">a</span>.<span class="ident">contains</span>(<span class="string">&#39; &#39;</span>), <span class="ident">b</span>.<span class="ident">contains</span>(<span class="string">&#39; &#39;</span>)) {
-            (<span class="bool-val">false</span>, <span class="bool-val">false</span>) =&gt; <span class="macro">format!</span>(<span class="string">&quot;{} * {}&quot;</span>, <span class="ident">a</span>, <span class="ident">b</span>),
-            (<span class="bool-val">false</span>, <span class="bool-val">true</span>) =&gt; <span class="macro">format!</span>(<span class="string">&quot;{} * ({})&quot;</span>, <span class="ident">a</span>, <span class="ident">b</span>),
-            (<span class="bool-val">true</span>, <span class="bool-val">false</span>) =&gt; <span class="macro">format!</span>(<span class="string">&quot;({}) * {}&quot;</span>, <span class="ident">a</span>, <span class="ident">b</span>),
-            (<span class="bool-val">true</span>, <span class="bool-val">true</span>) =&gt; <span class="macro">format!</span>(<span class="string">&quot;({}) * ({})&quot;</span>, <span class="ident">a</span>, <span class="ident">b</span>),
+        <span class="kw-2">&amp;</span>|a, b| <span class="kw">match </span>(a.contains(<span class="string">&#39; &#39;</span>), b.contains(<span class="string">&#39; &#39;</span>)) {
+            (<span class="bool-val">false</span>, <span class="bool-val">false</span>) =&gt; <span class="macro">format!</span>(<span class="string">&quot;{} * {}&quot;</span>, a, b),
+            (<span class="bool-val">false</span>, <span class="bool-val">true</span>) =&gt; <span class="macro">format!</span>(<span class="string">&quot;{} * ({})&quot;</span>, a, b),
+            (<span class="bool-val">true</span>, <span class="bool-val">false</span>) =&gt; <span class="macro">format!</span>(<span class="string">&quot;({}) * {}&quot;</span>, a, b),
+            (<span class="bool-val">true</span>, <span class="bool-val">true</span>) =&gt; <span class="macro">format!</span>(<span class="string">&quot;({}) * ({})&quot;</span>, a, b),
         },
-        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">s</span><span class="op">|</span> {
-            <span class="kw">if</span> <span class="ident">a</span>.<span class="ident">contains</span>(<span class="string">&#39; &#39;</span>) {
-                <span class="macro">format!</span>(<span class="string">&quot;({}) * {}&quot;</span>, <span class="ident">a</span>, <span class="ident">util::format_value</span>(<span class="ident">s</span>))
-            } <span class="kw">else</span> {
-                <span class="macro">format!</span>(<span class="string">&quot;{} * {}&quot;</span>, <span class="ident">a</span>, <span class="ident">util::format_value</span>(<span class="ident">s</span>))
+        <span class="kw-2">&amp;</span>|a, s| {
+            <span class="kw">if </span>a.contains(<span class="string">&#39; &#39;</span>) {
+                <span class="macro">format!</span>(<span class="string">&quot;({}) * {}&quot;</span>, a, util::format_value(s))
+            } <span class="kw">else </span>{
+                <span class="macro">format!</span>(<span class="string">&quot;{} * {}&quot;</span>, a, util::format_value(s))
             }
         },
     )
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

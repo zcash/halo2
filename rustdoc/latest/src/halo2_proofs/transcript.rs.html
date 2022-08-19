@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_proofs/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_proofs/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -327,314 +321,313 @@
 <span id="306">306</span>
 <span id="307">307</span>
 <span id="308">308</span>
-</pre><pre class="rust"><code><span class="doccomment">//! This module contains utilities and traits for dealing with Fiat-Shamir</span>
-<span class="doccomment">//! transcripts.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! This module contains utilities and traits for dealing with Fiat-Shamir
+//! transcripts.
 
-<span class="kw">use</span> <span class="ident">blake2b_simd</span>::{<span class="ident">Params</span> <span class="kw">as</span> <span class="ident">Blake2bParams</span>, <span class="ident">State</span> <span class="kw">as</span> <span class="ident">Blake2bState</span>};
-<span class="kw">use</span> <span class="ident">group::ff::PrimeField</span>;
-<span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
+</span><span class="kw">use </span>blake2b_simd::{Params <span class="kw">as </span>Blake2bParams, State <span class="kw">as </span>Blake2bState};
+<span class="kw">use </span>group::ff::PrimeField;
+<span class="kw">use </span>std::convert::TryInto;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic</span>::{<span class="ident">Coordinates</span>, <span class="ident">CurveAffine</span>, <span class="ident">FieldExt</span>};
+<span class="kw">use </span><span class="kw">crate</span>::arithmetic::{Coordinates, CurveAffine, FieldExt};
 
-<span class="kw">use</span> <span class="ident">std::io</span>::{<span class="self">self</span>, <span class="ident">Read</span>, <span class="ident">Write</span>};
-<span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
+<span class="kw">use </span>std::io::{<span class="self">self</span>, Read, Write};
+<span class="kw">use </span>std::marker::PhantomData;
 
-<span class="doccomment">/// Prefix to a prover&#39;s message soliciting a challenge</span>
-<span class="kw">const</span> <span class="ident">BLAKE2B_PREFIX_CHALLENGE</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">0</span>;
+<span class="doccomment">/// Prefix to a prover&#39;s message soliciting a challenge
+</span><span class="kw">const </span>BLAKE2B_PREFIX_CHALLENGE: u8 = <span class="number">0</span>;
 
-<span class="doccomment">/// Prefix to a prover&#39;s message containing a curve point</span>
-<span class="kw">const</span> <span class="ident">BLAKE2B_PREFIX_POINT</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">1</span>;
+<span class="doccomment">/// Prefix to a prover&#39;s message containing a curve point
+</span><span class="kw">const </span>BLAKE2B_PREFIX_POINT: u8 = <span class="number">1</span>;
 
-<span class="doccomment">/// Prefix to a prover&#39;s message containing a scalar</span>
-<span class="kw">const</span> <span class="ident">BLAKE2B_PREFIX_SCALAR</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">2</span>;
+<span class="doccomment">/// Prefix to a prover&#39;s message containing a scalar
+</span><span class="kw">const </span>BLAKE2B_PREFIX_SCALAR: u8 = <span class="number">2</span>;
 
-<span class="doccomment">/// Generic transcript view (from either the prover or verifier&#39;s perspective)</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Transcript</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Squeeze an encoded verifier challenge from the transcript.</span>
-    <span class="kw">fn</span> <span class="ident">squeeze_challenge</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">E</span>;
+<span class="doccomment">/// Generic transcript view (from either the prover or verifier&#39;s perspective)
+</span><span class="kw">pub trait </span>Transcript&lt;C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt; {
+    <span class="doccomment">/// Squeeze an encoded verifier challenge from the transcript.
+    </span><span class="kw">fn </span>squeeze_challenge(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; E;
 
-    <span class="doccomment">/// Squeeze a typed challenge (in the scalar field) from the transcript.</span>
-    <span class="kw">fn</span> <span class="ident">squeeze_challenge_scalar</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">ChallengeScalar</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">T</span><span class="op">&gt;</span> {
-        <span class="ident">ChallengeScalar</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">squeeze_challenge</span>().<span class="ident">get_scalar</span>(),
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+    <span class="doccomment">/// Squeeze a typed challenge (in the scalar field) from the transcript.
+    </span><span class="kw">fn </span>squeeze_challenge_scalar&lt;T&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; ChallengeScalar&lt;C, T&gt; {
+        ChallengeScalar {
+            inner: <span class="self">self</span>.squeeze_challenge().get_scalar(),
+            _marker: PhantomData,
         }
     }
 
-    <span class="doccomment">/// Writing the point to the transcript without writing it to the proof,</span>
-    <span class="doccomment">/// treating it as a common input.</span>
-    <span class="kw">fn</span> <span class="ident">common_point</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">point</span>: <span class="ident">C</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
+    <span class="doccomment">/// Writing the point to the transcript without writing it to the proof,
+    /// treating it as a common input.
+    </span><span class="kw">fn </span>common_point(<span class="kw-2">&amp;mut </span><span class="self">self</span>, point: C) -&gt; io::Result&lt;()&gt;;
 
-    <span class="doccomment">/// Writing the scalar to the transcript without writing it to the proof,</span>
-    <span class="doccomment">/// treating it as a common input.</span>
-    <span class="kw">fn</span> <span class="ident">common_scalar</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">scalar</span>: <span class="ident">C::Scalar</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
+    <span class="doccomment">/// Writing the scalar to the transcript without writing it to the proof,
+    /// treating it as a common input.
+    </span><span class="kw">fn </span>common_scalar(<span class="kw-2">&amp;mut </span><span class="self">self</span>, scalar: C::Scalar) -&gt; io::Result&lt;()&gt;;
 }
 
-<span class="doccomment">/// Transcript view from the perspective of a verifier that has access to an</span>
-<span class="doccomment">/// input stream of data from the prover to the verifier.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">TranscriptRead</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>: <span class="ident">Transcript</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Read a curve point from the prover.</span>
-    <span class="kw">fn</span> <span class="ident">read_point</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>;
+<span class="doccomment">/// Transcript view from the perspective of a verifier that has access to an
+/// input stream of data from the prover to the verifier.
+</span><span class="kw">pub trait </span>TranscriptRead&lt;C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt;: Transcript&lt;C, E&gt; {
+    <span class="doccomment">/// Read a curve point from the prover.
+    </span><span class="kw">fn </span>read_point(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; io::Result&lt;C&gt;;
 
-    <span class="doccomment">/// Read a curve scalar from the prover.</span>
-    <span class="kw">fn</span> <span class="ident">read_scalar</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// Read a curve scalar from the prover.
+    </span><span class="kw">fn </span>read_scalar(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; io::Result&lt;C::Scalar&gt;;
 }
 
-<span class="doccomment">/// Transcript view from the perspective of a prover that has access to an</span>
-<span class="doccomment">/// output stream of messages from the prover to the verifier.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">TranscriptWrite</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>: <span class="ident">Transcript</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Write a curve point to the proof and the transcript.</span>
-    <span class="kw">fn</span> <span class="ident">write_point</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">point</span>: <span class="ident">C</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
+<span class="doccomment">/// Transcript view from the perspective of a prover that has access to an
+/// output stream of messages from the prover to the verifier.
+</span><span class="kw">pub trait </span>TranscriptWrite&lt;C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt;: Transcript&lt;C, E&gt; {
+    <span class="doccomment">/// Write a curve point to the proof and the transcript.
+    </span><span class="kw">fn </span>write_point(<span class="kw-2">&amp;mut </span><span class="self">self</span>, point: C) -&gt; io::Result&lt;()&gt;;
 
-    <span class="doccomment">/// Write a scalar to the proof and the transcript.</span>
-    <span class="kw">fn</span> <span class="ident">write_scalar</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">scalar</span>: <span class="ident">C::Scalar</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
+    <span class="doccomment">/// Write a scalar to the proof and the transcript.
+    </span><span class="kw">fn </span>write_scalar(<span class="kw-2">&amp;mut </span><span class="self">self</span>, scalar: C::Scalar) -&gt; io::Result&lt;()&gt;;
 }
 
-<span class="doccomment">/// We will replace BLAKE2b with an algebraic hash function in a later version.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Blake2bRead</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Read</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">state</span>: <span class="ident">Blake2bState</span>,
-    <span class="ident">reader</span>: <span class="ident">R</span>,
-    <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span>(<span class="ident">C</span>, <span class="ident">E</span>)<span class="op">&gt;</span>,
+<span class="doccomment">/// We will replace BLAKE2b with an algebraic hash function in a later version.
+</span><span class="attribute">#[derive(Debug, Clone)]</span>
+<span class="kw">pub struct </span>Blake2bRead&lt;R: Read, C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt; {
+    state: Blake2bState,
+    reader: R,
+    _marker: PhantomData&lt;(C, E)&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Read</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">Blake2bRead</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Initialize a transcript given an input buffer.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">init</span>(<span class="ident">reader</span>: <span class="ident">R</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Blake2bRead</span> {
-            <span class="ident">state</span>: <span class="ident">Blake2bParams::new</span>()
-                .<span class="ident">hash_length</span>(<span class="number">64</span>)
-                .<span class="ident">personal</span>(<span class="string">b&quot;Halo2-Transcript&quot;</span>)
-                .<span class="ident">to_state</span>(),
-            <span class="ident">reader</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+<span class="kw">impl</span>&lt;R: Read, C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt; Blake2bRead&lt;R, C, E&gt; {
+    <span class="doccomment">/// Initialize a transcript given an input buffer.
+    </span><span class="kw">pub fn </span>init(reader: R) -&gt; <span class="self">Self </span>{
+        Blake2bRead {
+            state: Blake2bParams::new()
+                .hash_length(<span class="number">64</span>)
+                .personal(<span class="string">b&quot;Halo2-Transcript&quot;</span>)
+                .to_state(),
+            reader,
+            _marker: PhantomData,
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Read</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">TranscriptRead</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">Blake2bRead</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">C</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;R: Read, C: CurveAffine&gt; TranscriptRead&lt;C, Challenge255&lt;C&gt;&gt;
+    <span class="kw">for </span>Blake2bRead&lt;R, C, Challenge255&lt;C&gt;&gt;
 {
-    <span class="kw">fn</span> <span class="ident">read_point</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">compressed</span> <span class="op">=</span> <span class="ident">C::Repr::default</span>();
-        <span class="self">self</span>.<span class="ident">reader</span>.<span class="ident">read_exact</span>(<span class="ident">compressed</span>.<span class="ident">as_mut</span>())<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">point</span>: <span class="ident">C</span> <span class="op">=</span> <span class="ident">Option::from</span>(<span class="ident">C::from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">compressed</span>)).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-            <span class="ident">io::Error::new</span>(<span class="ident">io::ErrorKind::Other</span>, <span class="string">&quot;invalid point encoding in proof&quot;</span>)
+    <span class="kw">fn </span>read_point(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; io::Result&lt;C&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>compressed = C::Repr::default();
+        <span class="self">self</span>.reader.read_exact(compressed.as_mut())<span class="question-mark">?</span>;
+        <span class="kw">let </span>point: C = Option::from(C::from_bytes(<span class="kw-2">&amp;</span>compressed)).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::Other, <span class="string">&quot;invalid point encoding in proof&quot;</span>)
         })<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">common_point</span>(<span class="ident">point</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.common_point(point)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">point</span>)
+        <span class="prelude-val">Ok</span>(point)
     }
 
-    <span class="kw">fn</span> <span class="ident">read_scalar</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">C::Scalar</span> <span class="kw">as</span> <span class="ident">PrimeField</span><span class="op">&gt;</span><span class="ident">::Repr::default</span>();
-        <span class="self">self</span>.<span class="ident">reader</span>.<span class="ident">read_exact</span>(<span class="ident">data</span>.<span class="ident">as_mut</span>())<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">scalar</span>: <span class="ident">C::Scalar</span> <span class="op">=</span> <span class="ident">Option::from</span>(<span class="ident">C::Scalar::from_repr</span>(<span class="ident">data</span>)).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-            <span class="ident">io::Error::new</span>(
-                <span class="ident">io::ErrorKind::Other</span>,
+    <span class="kw">fn </span>read_scalar(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; io::Result&lt;C::Scalar&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>data = &lt;C::Scalar <span class="kw">as </span>PrimeField&gt;::Repr::default();
+        <span class="self">self</span>.reader.read_exact(data.as_mut())<span class="question-mark">?</span>;
+        <span class="kw">let </span>scalar: C::Scalar = Option::from(C::Scalar::from_repr(data)).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::Other,
                 <span class="string">&quot;invalid field element encoding in proof&quot;</span>,
             )
         })<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">common_scalar</span>(<span class="ident">scalar</span>)<span class="question-mark">?</span>;
+        <span class="self">self</span>.common_scalar(scalar)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">scalar</span>)
+        <span class="prelude-val">Ok</span>(scalar)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">R</span>: <span class="ident">Read</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Transcript</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">Blake2bRead</span><span class="op">&lt;</span><span class="ident">R</span>, <span class="ident">C</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;R: Read, C: CurveAffine&gt; Transcript&lt;C, Challenge255&lt;C&gt;&gt;
+    <span class="kw">for </span>Blake2bRead&lt;R, C, Challenge255&lt;C&gt;&gt;
 {
-    <span class="kw">fn</span> <span class="ident">squeeze_challenge</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">update</span>(<span class="kw-2">&amp;</span>[<span class="ident">BLAKE2B_PREFIX_CHALLENGE</span>]);
-        <span class="kw">let</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">result</span>: [<span class="ident">u8</span>; <span class="number">64</span>] <span class="op">=</span> <span class="ident">hasher</span>.<span class="ident">finalize</span>().<span class="ident">as_bytes</span>().<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
-        <span class="ident">Challenge255</span>::<span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="kw-2">&amp;</span><span class="ident">result</span>)
+    <span class="kw">fn </span>squeeze_challenge(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Challenge255&lt;C&gt; {
+        <span class="self">self</span>.state.update(<span class="kw-2">&amp;</span>[BLAKE2B_PREFIX_CHALLENGE]);
+        <span class="kw">let </span>hasher = <span class="self">self</span>.state.clone();
+        <span class="kw">let </span>result: [u8; <span class="number">64</span>] = hasher.finalize().as_bytes().try_into().unwrap();
+        Challenge255::&lt;C&gt;::new(<span class="kw-2">&amp;</span>result)
     }
 
-    <span class="kw">fn</span> <span class="ident">common_point</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">point</span>: <span class="ident">C</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">update</span>(<span class="kw-2">&amp;</span>[<span class="ident">BLAKE2B_PREFIX_POINT</span>]);
-        <span class="kw">let</span> <span class="ident">coords</span>: <span class="ident">Coordinates</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Option::from</span>(<span class="ident">point</span>.<span class="ident">coordinates</span>()).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-            <span class="ident">io::Error::new</span>(
-                <span class="ident">io::ErrorKind::Other</span>,
+    <span class="kw">fn </span>common_point(<span class="kw-2">&amp;mut </span><span class="self">self</span>, point: C) -&gt; io::Result&lt;()&gt; {
+        <span class="self">self</span>.state.update(<span class="kw-2">&amp;</span>[BLAKE2B_PREFIX_POINT]);
+        <span class="kw">let </span>coords: Coordinates&lt;C&gt; = Option::from(point.coordinates()).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::Other,
                 <span class="string">&quot;cannot write points at infinity to the transcript&quot;</span>,
             )
         })<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">update</span>(<span class="ident">coords</span>.<span class="ident">x</span>().<span class="ident">to_repr</span>().<span class="ident">as_ref</span>());
-        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">update</span>(<span class="ident">coords</span>.<span class="ident">y</span>().<span class="ident">to_repr</span>().<span class="ident">as_ref</span>());
+        <span class="self">self</span>.state.update(coords.x().to_repr().as_ref());
+        <span class="self">self</span>.state.update(coords.y().to_repr().as_ref());
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">common_scalar</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">scalar</span>: <span class="ident">C::Scalar</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">update</span>(<span class="kw-2">&amp;</span>[<span class="ident">BLAKE2B_PREFIX_SCALAR</span>]);
-        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">update</span>(<span class="ident">scalar</span>.<span class="ident">to_repr</span>().<span class="ident">as_ref</span>());
+    <span class="kw">fn </span>common_scalar(<span class="kw-2">&amp;mut </span><span class="self">self</span>, scalar: C::Scalar) -&gt; io::Result&lt;()&gt; {
+        <span class="self">self</span>.state.update(<span class="kw-2">&amp;</span>[BLAKE2B_PREFIX_SCALAR]);
+        <span class="self">self</span>.state.update(scalar.to_repr().as_ref());
 
         <span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="doccomment">/// We will replace BLAKE2b with an algebraic hash function in a later version.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Blake2bWrite</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">Write</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">state</span>: <span class="ident">Blake2bState</span>,
-    <span class="ident">writer</span>: <span class="ident">W</span>,
-    <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span>(<span class="ident">C</span>, <span class="ident">E</span>)<span class="op">&gt;</span>,
+<span class="doccomment">/// We will replace BLAKE2b with an algebraic hash function in a later version.
+</span><span class="attribute">#[derive(Debug, Clone)]</span>
+<span class="kw">pub struct </span>Blake2bWrite&lt;W: Write, C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt; {
+    state: Blake2bState,
+    writer: W,
+    _marker: PhantomData&lt;(C, E)&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">Write</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">Blake2bWrite</span><span class="op">&lt;</span><span class="ident">W</span>, <span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Initialize a transcript given an output buffer.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">init</span>(<span class="ident">writer</span>: <span class="ident">W</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Blake2bWrite</span> {
-            <span class="ident">state</span>: <span class="ident">Blake2bParams::new</span>()
-                .<span class="ident">hash_length</span>(<span class="number">64</span>)
-                .<span class="ident">personal</span>(<span class="string">b&quot;Halo2-Transcript&quot;</span>)
-                .<span class="ident">to_state</span>(),
-            <span class="ident">writer</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+<span class="kw">impl</span>&lt;W: Write, C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt; Blake2bWrite&lt;W, C, E&gt; {
+    <span class="doccomment">/// Initialize a transcript given an output buffer.
+    </span><span class="kw">pub fn </span>init(writer: W) -&gt; <span class="self">Self </span>{
+        Blake2bWrite {
+            state: Blake2bParams::new()
+                .hash_length(<span class="number">64</span>)
+                .personal(<span class="string">b&quot;Halo2-Transcript&quot;</span>)
+                .to_state(),
+            writer,
+            _marker: PhantomData,
         }
     }
 
-    <span class="doccomment">/// Conclude the interaction and return the output buffer (writer).</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">finalize</span>(<span class="self">self</span>) -&gt; <span class="ident">W</span> {
-        <span class="comment">// TODO: handle outstanding scalars? see issue #138</span>
-        <span class="self">self</span>.<span class="ident">writer</span>
+    <span class="doccomment">/// Conclude the interaction and return the output buffer (writer).
+    </span><span class="kw">pub fn </span>finalize(<span class="self">self</span>) -&gt; W {
+        <span class="comment">// TODO: handle outstanding scalars? see issue #138
+        </span><span class="self">self</span>.writer
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">Write</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">TranscriptWrite</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">Blake2bWrite</span><span class="op">&lt;</span><span class="ident">W</span>, <span class="ident">C</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;W: Write, C: CurveAffine&gt; TranscriptWrite&lt;C, Challenge255&lt;C&gt;&gt;
+    <span class="kw">for </span>Blake2bWrite&lt;W, C, Challenge255&lt;C&gt;&gt;
 {
-    <span class="kw">fn</span> <span class="ident">write_point</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">point</span>: <span class="ident">C</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">common_point</span>(<span class="ident">point</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">compressed</span> <span class="op">=</span> <span class="ident">point</span>.<span class="ident">to_bytes</span>();
-        <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">write_all</span>(<span class="ident">compressed</span>.<span class="ident">as_ref</span>())
+    <span class="kw">fn </span>write_point(<span class="kw-2">&amp;mut </span><span class="self">self</span>, point: C) -&gt; io::Result&lt;()&gt; {
+        <span class="self">self</span>.common_point(point)<span class="question-mark">?</span>;
+        <span class="kw">let </span>compressed = point.to_bytes();
+        <span class="self">self</span>.writer.write_all(compressed.as_ref())
     }
-    <span class="kw">fn</span> <span class="ident">write_scalar</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">scalar</span>: <span class="ident">C::Scalar</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">common_scalar</span>(<span class="ident">scalar</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">data</span> <span class="op">=</span> <span class="ident">scalar</span>.<span class="ident">to_repr</span>();
-        <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">write_all</span>(<span class="ident">data</span>.<span class="ident">as_ref</span>())
+    <span class="kw">fn </span>write_scalar(<span class="kw-2">&amp;mut </span><span class="self">self</span>, scalar: C::Scalar) -&gt; io::Result&lt;()&gt; {
+        <span class="self">self</span>.common_scalar(scalar)<span class="question-mark">?</span>;
+        <span class="kw">let </span>data = scalar.to_repr();
+        <span class="self">self</span>.writer.write_all(data.as_ref())
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">W</span>: <span class="ident">Write</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Transcript</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">Blake2bWrite</span><span class="op">&lt;</span><span class="ident">W</span>, <span class="ident">C</span>, <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;W: Write, C: CurveAffine&gt; Transcript&lt;C, Challenge255&lt;C&gt;&gt;
+    <span class="kw">for </span>Blake2bWrite&lt;W, C, Challenge255&lt;C&gt;&gt;
 {
-    <span class="kw">fn</span> <span class="ident">squeeze_challenge</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">update</span>(<span class="kw-2">&amp;</span>[<span class="ident">BLAKE2B_PREFIX_CHALLENGE</span>]);
-        <span class="kw">let</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">result</span>: [<span class="ident">u8</span>; <span class="number">64</span>] <span class="op">=</span> <span class="ident">hasher</span>.<span class="ident">finalize</span>().<span class="ident">as_bytes</span>().<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
-        <span class="ident">Challenge255</span>::<span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="kw-2">&amp;</span><span class="ident">result</span>)
+    <span class="kw">fn </span>squeeze_challenge(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Challenge255&lt;C&gt; {
+        <span class="self">self</span>.state.update(<span class="kw-2">&amp;</span>[BLAKE2B_PREFIX_CHALLENGE]);
+        <span class="kw">let </span>hasher = <span class="self">self</span>.state.clone();
+        <span class="kw">let </span>result: [u8; <span class="number">64</span>] = hasher.finalize().as_bytes().try_into().unwrap();
+        Challenge255::&lt;C&gt;::new(<span class="kw-2">&amp;</span>result)
     }
 
-    <span class="kw">fn</span> <span class="ident">common_point</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">point</span>: <span class="ident">C</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">update</span>(<span class="kw-2">&amp;</span>[<span class="ident">BLAKE2B_PREFIX_POINT</span>]);
-        <span class="kw">let</span> <span class="ident">coords</span>: <span class="ident">Coordinates</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Option::from</span>(<span class="ident">point</span>.<span class="ident">coordinates</span>()).<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> {
-            <span class="ident">io::Error::new</span>(
-                <span class="ident">io::ErrorKind::Other</span>,
+    <span class="kw">fn </span>common_point(<span class="kw-2">&amp;mut </span><span class="self">self</span>, point: C) -&gt; io::Result&lt;()&gt; {
+        <span class="self">self</span>.state.update(<span class="kw-2">&amp;</span>[BLAKE2B_PREFIX_POINT]);
+        <span class="kw">let </span>coords: Coordinates&lt;C&gt; = Option::from(point.coordinates()).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::Other,
                 <span class="string">&quot;cannot write points at infinity to the transcript&quot;</span>,
             )
         })<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">update</span>(<span class="ident">coords</span>.<span class="ident">x</span>().<span class="ident">to_repr</span>().<span class="ident">as_ref</span>());
-        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">update</span>(<span class="ident">coords</span>.<span class="ident">y</span>().<span class="ident">to_repr</span>().<span class="ident">as_ref</span>());
+        <span class="self">self</span>.state.update(coords.x().to_repr().as_ref());
+        <span class="self">self</span>.state.update(coords.y().to_repr().as_ref());
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">common_scalar</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">scalar</span>: <span class="ident">C::Scalar</span>) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">update</span>(<span class="kw-2">&amp;</span>[<span class="ident">BLAKE2B_PREFIX_SCALAR</span>]);
-        <span class="self">self</span>.<span class="ident">state</span>.<span class="ident">update</span>(<span class="ident">scalar</span>.<span class="ident">to_repr</span>().<span class="ident">as_ref</span>());
+    <span class="kw">fn </span>common_scalar(<span class="kw-2">&amp;mut </span><span class="self">self</span>, scalar: C::Scalar) -&gt; io::Result&lt;()&gt; {
+        <span class="self">self</span>.state.update(<span class="kw-2">&amp;</span>[BLAKE2B_PREFIX_SCALAR]);
+        <span class="self">self</span>.state.update(scalar.to_repr().as_ref());
 
         <span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="doccomment">/// The scalar representation of a verifier challenge.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The `Type` type can be used to scope the challenge to a specific context, or</span>
-<span class="doccomment">/// set to `()` if no context is required.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ChallengeScalar</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="ident">inner</span>: <span class="ident">C::Scalar</span>,
-    <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+<span class="doccomment">/// The scalar representation of a verifier challenge.
+///
+/// The `Type` type can be used to scope the challenge to a specific context, or
+/// set to `()` if no context is required.
+</span><span class="attribute">#[derive(Copy, Clone, Debug)]</span>
+<span class="kw">pub struct </span>ChallengeScalar&lt;C: CurveAffine, T&gt; {
+    inner: C::Scalar,
+    _marker: PhantomData&lt;T&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">std::ops::Deref</span> <span class="kw">for</span> <span class="ident">ChallengeScalar</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">C::Scalar</span>;
+<span class="kw">impl</span>&lt;C: CurveAffine, T&gt; std::ops::Deref <span class="kw">for </span>ChallengeScalar&lt;C, T&gt; {
+    <span class="kw">type </span>Target = C::Scalar;
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">inner</span>
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.inner
     }
 }
 
-<span class="doccomment">/// `EncodedChallenge&lt;C&gt;` defines a challenge encoding with a [`Self::Input`]</span>
-<span class="doccomment">/// that is used to derive the challenge encoding and `get_challenge` obtains</span>
-<span class="doccomment">/// the _real_ `C::Scalar` that the challenge encoding represents.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The Input type used to derive the challenge encoding. For example,</span>
-    <span class="doccomment">/// an input from the Poseidon hash would be a base field element;</span>
-    <span class="doccomment">/// an input from the Blake2b hash would be a [u8; 64].</span>
-    <span class="kw">type</span> <span class="ident">Input</span>;
+<span class="doccomment">/// `EncodedChallenge&lt;C&gt;` defines a challenge encoding with a [`Self::Input`]
+/// that is used to derive the challenge encoding and `get_challenge` obtains
+/// the _real_ `C::Scalar` that the challenge encoding represents.
+</span><span class="kw">pub trait </span>EncodedChallenge&lt;C: CurveAffine&gt; {
+    <span class="doccomment">/// The Input type used to derive the challenge encoding. For example,
+    /// an input from the Poseidon hash would be a base field element;
+    /// an input from the Blake2b hash would be a [u8; 64].
+    </span><span class="kw">type </span>Input;
 
-    <span class="doccomment">/// Get an encoded challenge from a given input challenge.</span>
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">challenge_input</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Input</span>) -&gt; <span class="self">Self</span>;
+    <span class="doccomment">/// Get an encoded challenge from a given input challenge.
+    </span><span class="kw">fn </span>new(challenge_input: <span class="kw-2">&amp;</span><span class="self">Self</span>::Input) -&gt; <span class="self">Self</span>;
 
-    <span class="doccomment">/// Get a scalar field element from an encoded challenge.</span>
-    <span class="kw">fn</span> <span class="ident">get_scalar</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">C::Scalar</span>;
+    <span class="doccomment">/// Get a scalar field element from an encoded challenge.
+    </span><span class="kw">fn </span>get_scalar(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; C::Scalar;
 
-    <span class="doccomment">/// Cast an encoded challenge as a typed `ChallengeScalar`.</span>
-    <span class="kw">fn</span> <span class="ident">as_challenge_scalar</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">ChallengeScalar</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">T</span><span class="op">&gt;</span> {
-        <span class="ident">ChallengeScalar</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">get_scalar</span>(),
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+    <span class="doccomment">/// Cast an encoded challenge as a typed `ChallengeScalar`.
+    </span><span class="kw">fn </span>as_challenge_scalar&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ChallengeScalar&lt;C, T&gt; {
+        ChallengeScalar {
+            inner: <span class="self">self</span>.get_scalar(),
+            _marker: PhantomData,
         }
     }
 }
 
-<span class="doccomment">/// A 255-bit challenge.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>([<span class="ident">u8</span>; <span class="number">32</span>], <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>);
+<span class="doccomment">/// A 255-bit challenge.
+</span><span class="attribute">#[derive(Copy, Clone, Debug)]</span>
+<span class="kw">pub struct </span>Challenge255&lt;C: CurveAffine&gt;([u8; <span class="number">32</span>], PhantomData&lt;C&gt;);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">std::ops::Deref</span> <span class="kw">for</span> <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> [<span class="ident">u8</span>; <span class="number">32</span>];
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; std::ops::Deref <span class="kw">for </span>Challenge255&lt;C&gt; {
+    <span class="kw">type </span>Target = [u8; <span class="number">32</span>];
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
-    }
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Challenge255</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Input</span> <span class="op">=</span> [<span class="ident">u8</span>; <span class="number">64</span>];
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; EncodedChallenge&lt;C&gt; <span class="kw">for </span>Challenge255&lt;C&gt; {
+    <span class="kw">type </span>Input = [u8; <span class="number">64</span>];
 
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">challenge_input</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>; <span class="number">64</span>]) -&gt; <span class="self">Self</span> {
-        <span class="ident">Challenge255</span>(
-            <span class="ident">C::Scalar::from_bytes_wide</span>(<span class="ident">challenge_input</span>)
-                .<span class="ident">to_repr</span>()
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">try_into</span>()
-                .<span class="ident">expect</span>(<span class="string">&quot;Scalar fits into 256 bits&quot;</span>),
-            <span class="ident">PhantomData</span>,
+    <span class="kw">fn </span>new(challenge_input: <span class="kw-2">&amp;</span>[u8; <span class="number">64</span>]) -&gt; <span class="self">Self </span>{
+        Challenge255(
+            C::Scalar::from_bytes_wide(challenge_input)
+                .to_repr()
+                .as_ref()
+                .try_into()
+                .expect(<span class="string">&quot;Scalar fits into 256 bits&quot;</span>),
+            PhantomData,
         )
     }
-    <span class="kw">fn</span> <span class="ident">get_scalar</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">C::Scalar</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">repr</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">C::Scalar</span> <span class="kw">as</span> <span class="ident">PrimeField</span><span class="op">&gt;</span><span class="ident">::Repr::default</span>();
-        <span class="ident">repr</span>.<span class="ident">as_mut</span>().<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>);
-        <span class="ident">C::Scalar::from_repr</span>(<span class="ident">repr</span>).<span class="ident">unwrap</span>()
+    <span class="kw">fn </span>get_scalar(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; C::Scalar {
+        <span class="kw">let </span><span class="kw-2">mut </span>repr = &lt;C::Scalar <span class="kw">as </span>PrimeField&gt;::Repr::default();
+        repr.as_mut().copy_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>);
+        C::Scalar::from_repr(repr).unwrap()
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">read_n_points</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">T</span>: <span class="ident">TranscriptRead</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>(
-    <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
-    <span class="ident">n</span>: <span class="ident">usize</span>,
-) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    (<span class="number">0</span>..<span class="ident">n</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">transcript</span>.<span class="ident">read_point</span>()).<span class="ident">collect</span>()
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>read_n_points&lt;C: CurveAffine, E: EncodedChallenge&lt;C&gt;, T: TranscriptRead&lt;C, E&gt;&gt;(
+    transcript: <span class="kw-2">&amp;mut </span>T,
+    n: usize,
+) -&gt; io::Result&lt;Vec&lt;C&gt;&gt; {
+    (<span class="number">0</span>..n).map(|<span class="kw">_</span>| transcript.read_point()).collect()
 }
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">read_n_scalars</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">T</span>: <span class="ident">TranscriptRead</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>(
-    <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
-    <span class="ident">n</span>: <span class="ident">usize</span>,
-) -&gt; <span class="ident">io::Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    (<span class="number">0</span>..<span class="ident">n</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">transcript</span>.<span class="ident">read_scalar</span>()).<span class="ident">collect</span>()
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>read_n_scalars&lt;C: CurveAffine, E: EncodedChallenge&lt;C&gt;, T: TranscriptRead&lt;C, E&gt;&gt;(
+    transcript: <span class="kw-2">&amp;mut </span>T,
+    n: usize,
+) -&gt; io::Result&lt;Vec&lt;C::Scalar&gt;&gt; {
+    (<span class="number">0</span>..n).map(|<span class="kw">_</span>| transcript.read_scalar()).collect()
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

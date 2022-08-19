@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -416,403 +410,402 @@
 <span id="395">395</span>
 <span id="396">396</span>
 <span id="397">397</span>
-</pre><pre class="rust"><code><span class="doccomment">//! The Poseidon algebraic hash function.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! The Poseidon algebraic hash function.
 
-<span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
-<span class="kw">use</span> <span class="ident">std::fmt</span>;
-<span class="kw">use</span> <span class="ident">std::iter</span>;
-<span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
+</span><span class="kw">use </span>std::convert::TryInto;
+<span class="kw">use </span>std::fmt;
+<span class="kw">use </span>std::iter;
+<span class="kw">use </span>std::marker::PhantomData;
 
-<span class="kw">use</span> <span class="ident">halo2_proofs::arithmetic::FieldExt</span>;
+<span class="kw">use </span>halo2_proofs::arithmetic::FieldExt;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">fp</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">fq</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">grain</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">mds</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>fp;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>fq;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>grain;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>mds;
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">test_vectors</span>;
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>test_vectors;
 
-<span class="kw">mod</span> <span class="ident">p128pow5t3</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">p128pow5t3::P128Pow5T3</span>;
+<span class="kw">mod </span>p128pow5t3;
+<span class="kw">pub use </span>p128pow5t3::P128Pow5T3;
 
-<span class="kw">use</span> <span class="ident">grain::SboxType</span>;
+<span class="kw">use </span>grain::SboxType;
 
-<span class="doccomment">/// The type used to hold permutation state.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type</span> <span class="ident">State</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="kw">const</span> <span class="ident">T</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="op">=</span> [<span class="ident">F</span>; <span class="ident">T</span>];
+<span class="doccomment">/// The type used to hold permutation state.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>State&lt;F, <span class="kw">const </span>T: usize&gt; = [F; T];
 
-<span class="doccomment">/// The type used to hold sponge rate.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type</span> <span class="ident">SpongeRate</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="op">=</span> [<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>; <span class="ident">RATE</span>];
+<span class="doccomment">/// The type used to hold sponge rate.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>SpongeRate&lt;F, <span class="kw">const </span>RATE: usize&gt; = [<span class="prelude-ty">Option</span>&lt;F&gt;; RATE];
 
-<span class="doccomment">/// The type used to hold the MDS matrix and its inverse.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type</span> <span class="ident">Mds</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="kw">const</span> <span class="ident">T</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="op">=</span> [[<span class="ident">F</span>; <span class="ident">T</span>]; <span class="ident">T</span>];
+<span class="doccomment">/// The type used to hold the MDS matrix and its inverse.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>Mds&lt;F, <span class="kw">const </span>T: usize&gt; = [[F; T]; T];
 
-<span class="doccomment">/// A specification for a Poseidon permutation.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="kw">const</span> <span class="ident">T</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span>: <span class="ident">fmt::Debug</span> {
-    <span class="doccomment">/// The number of full rounds for this specification.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This must be an even number.</span>
-    <span class="kw">fn</span> <span class="ident">full_rounds</span>() -&gt; <span class="ident">usize</span>;
+<span class="doccomment">/// A specification for a Poseidon permutation.
+</span><span class="kw">pub trait </span>Spec&lt;F: FieldExt, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;: fmt::Debug {
+    <span class="doccomment">/// The number of full rounds for this specification.
+    ///
+    /// This must be an even number.
+    </span><span class="kw">fn </span>full_rounds() -&gt; usize;
 
-    <span class="doccomment">/// The number of partial rounds for this specification.</span>
-    <span class="kw">fn</span> <span class="ident">partial_rounds</span>() -&gt; <span class="ident">usize</span>;
+    <span class="doccomment">/// The number of partial rounds for this specification.
+    </span><span class="kw">fn </span>partial_rounds() -&gt; usize;
 
-    <span class="doccomment">/// The S-box for this specification.</span>
-    <span class="kw">fn</span> <span class="ident">sbox</span>(<span class="ident">val</span>: <span class="ident">F</span>) -&gt; <span class="ident">F</span>;
+    <span class="doccomment">/// The S-box for this specification.
+    </span><span class="kw">fn </span>sbox(val: F) -&gt; F;
 
-    <span class="doccomment">/// Side-loaded index of the first correct and secure MDS that will be generated by</span>
-    <span class="doccomment">/// the reference implementation.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This is used by the default implementation of [`Spec::constants`]. If you are</span>
-    <span class="doccomment">/// hard-coding the constants, you may leave this unimplemented.</span>
-    <span class="kw">fn</span> <span class="ident">secure_mds</span>() -&gt; <span class="ident">usize</span>;
+    <span class="doccomment">/// Side-loaded index of the first correct and secure MDS that will be generated by
+    /// the reference implementation.
+    ///
+    /// This is used by the default implementation of [`Spec::constants`]. If you are
+    /// hard-coding the constants, you may leave this unimplemented.
+    </span><span class="kw">fn </span>secure_mds() -&gt; usize;
 
-    <span class="doccomment">/// Generates `(round_constants, mds, mds^-1)` corresponding to this specification.</span>
-    <span class="kw">fn</span> <span class="ident">constants</span>() -&gt; (<span class="ident">Vec</span><span class="op">&lt;</span>[<span class="ident">F</span>; <span class="ident">T</span>]<span class="op">&gt;</span>, <span class="ident">Mds</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">Mds</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>) {
-        <span class="kw">let</span> <span class="ident">r_f</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::full_rounds</span>();
-        <span class="kw">let</span> <span class="ident">r_p</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::partial_rounds</span>();
+    <span class="doccomment">/// Generates `(round_constants, mds, mds^-1)` corresponding to this specification.
+    </span><span class="kw">fn </span>constants() -&gt; (Vec&lt;[F; T]&gt;, Mds&lt;F, T&gt;, Mds&lt;F, T&gt;) {
+        <span class="kw">let </span>r_f = <span class="self">Self</span>::full_rounds();
+        <span class="kw">let </span>r_p = <span class="self">Self</span>::partial_rounds();
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">grain</span> <span class="op">=</span> <span class="ident">grain::Grain::new</span>(<span class="ident">SboxType::Pow</span>, <span class="ident">T</span> <span class="kw">as</span> <span class="ident">u16</span>, <span class="ident">r_f</span> <span class="kw">as</span> <span class="ident">u16</span>, <span class="ident">r_p</span> <span class="kw">as</span> <span class="ident">u16</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>grain = grain::Grain::new(SboxType::Pow, T <span class="kw">as </span>u16, r_f <span class="kw">as </span>u16, r_p <span class="kw">as </span>u16);
 
-        <span class="kw">let</span> <span class="ident">round_constants</span> <span class="op">=</span> (<span class="number">0</span>..(<span class="ident">r_f</span> <span class="op">+</span> <span class="ident">r_p</span>))
-            .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rc_row</span> <span class="op">=</span> [<span class="ident">F::zero</span>(); <span class="ident">T</span>];
-                <span class="kw">for</span> (<span class="ident">rc</span>, <span class="ident">value</span>) <span class="kw">in</span> <span class="ident">rc_row</span>
-                    .<span class="ident">iter_mut</span>()
-                    .<span class="ident">zip</span>((<span class="number">0</span>..<span class="ident">T</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">grain</span>.<span class="ident">next_field_element</span>()))
+        <span class="kw">let </span>round_constants = (<span class="number">0</span>..(r_f + r_p))
+            .map(|<span class="kw">_</span>| {
+                <span class="kw">let </span><span class="kw-2">mut </span>rc_row = [F::zero(); T];
+                <span class="kw">for </span>(rc, value) <span class="kw">in </span>rc_row
+                    .iter_mut()
+                    .zip((<span class="number">0</span>..T).map(|<span class="kw">_</span>| grain.next_field_element()))
                 {
-                    <span class="kw-2">*</span><span class="ident">rc</span> <span class="op">=</span> <span class="ident">value</span>;
+                    <span class="kw-2">*</span>rc = value;
                 }
-                <span class="ident">rc_row</span>
+                rc_row
             })
-            .<span class="ident">collect</span>();
+            .collect();
 
-        <span class="kw">let</span> (<span class="ident">mds</span>, <span class="ident">mds_inv</span>) <span class="op">=</span> <span class="ident">mds::generate_mds</span>::<span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="ident">grain</span>, <span class="ident"><span class="self">Self</span>::secure_mds</span>());
+        <span class="kw">let </span>(mds, mds_inv) = mds::generate_mds::&lt;F, T&gt;(<span class="kw-2">&amp;mut </span>grain, <span class="self">Self</span>::secure_mds());
 
-        (<span class="ident">round_constants</span>, <span class="ident">mds</span>, <span class="ident">mds_inv</span>)
+        (round_constants, mds, mds_inv)
     }
 }
 
-<span class="doccomment">/// Runs the Poseidon permutation on the given state.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">permute</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">T</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
-    <span class="ident">state</span>: <span class="kw-2">&amp;mut</span> <span class="ident">State</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">mds</span>: <span class="kw-2">&amp;</span><span class="ident">Mds</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">round_constants</span>: <span class="kw-2">&amp;</span>[[<span class="ident">F</span>; <span class="ident">T</span>]],
+<span class="doccomment">/// Runs the Poseidon permutation on the given state.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>permute&lt;F: FieldExt, S: Spec&lt;F, T, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;(
+    state: <span class="kw-2">&amp;mut </span>State&lt;F, T&gt;,
+    mds: <span class="kw-2">&amp;</span>Mds&lt;F, T&gt;,
+    round_constants: <span class="kw-2">&amp;</span>[[F; T]],
 ) {
-    <span class="kw">let</span> <span class="ident">r_f</span> <span class="op">=</span> <span class="ident">S::full_rounds</span>() <span class="op">/</span> <span class="number">2</span>;
-    <span class="kw">let</span> <span class="ident">r_p</span> <span class="op">=</span> <span class="ident">S::partial_rounds</span>();
+    <span class="kw">let </span>r_f = S::full_rounds() / <span class="number">2</span>;
+    <span class="kw">let </span>r_p = S::partial_rounds();
 
-    <span class="kw">let</span> <span class="ident">apply_mds</span> <span class="op">=</span> <span class="op">|</span><span class="ident">state</span>: <span class="kw-2">&amp;mut</span> <span class="ident">State</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span><span class="op">|</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">new_state</span> <span class="op">=</span> [<span class="ident">F::zero</span>(); <span class="ident">T</span>];
-        <span class="comment">// Matrix multiplication</span>
-        <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::needless_range_loop</span>)]</span>
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">T</span> {
-            <span class="kw">for</span> <span class="ident">j</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">T</span> {
-                <span class="ident">new_state</span>[<span class="ident">i</span>] <span class="op">+</span><span class="op">=</span> <span class="ident">mds</span>[<span class="ident">i</span>][<span class="ident">j</span>] <span class="op">*</span> <span class="ident">state</span>[<span class="ident">j</span>];
+    <span class="kw">let </span>apply_mds = |state: <span class="kw-2">&amp;mut </span>State&lt;F, T&gt;| {
+        <span class="kw">let </span><span class="kw-2">mut </span>new_state = [F::zero(); T];
+        <span class="comment">// Matrix multiplication
+        </span><span class="attribute">#[allow(clippy::needless_range_loop)]</span>
+        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..T {
+            <span class="kw">for </span>j <span class="kw">in </span><span class="number">0</span>..T {
+                new_state[i] += mds[i][j] * state[j];
             }
         }
-        <span class="kw-2">*</span><span class="ident">state</span> <span class="op">=</span> <span class="ident">new_state</span>;
+        <span class="kw-2">*</span>state = new_state;
     };
 
-    <span class="kw">let</span> <span class="ident">full_round</span> <span class="op">=</span> <span class="op">|</span><span class="ident">state</span>: <span class="kw-2">&amp;mut</span> <span class="ident">State</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">rcs</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>; <span class="ident">T</span>]<span class="op">|</span> {
-        <span class="kw">for</span> (<span class="ident">word</span>, <span class="ident">rc</span>) <span class="kw">in</span> <span class="ident">state</span>.<span class="ident">iter_mut</span>().<span class="ident">zip</span>(<span class="ident">rcs</span>.<span class="ident">iter</span>()) {
-            <span class="kw-2">*</span><span class="ident">word</span> <span class="op">=</span> <span class="ident">S::sbox</span>(<span class="kw-2">*</span><span class="ident">word</span> <span class="op">+</span> <span class="ident">rc</span>);
+    <span class="kw">let </span>full_round = |state: <span class="kw-2">&amp;mut </span>State&lt;F, T&gt;, rcs: <span class="kw-2">&amp;</span>[F; T]| {
+        <span class="kw">for </span>(word, rc) <span class="kw">in </span>state.iter_mut().zip(rcs.iter()) {
+            <span class="kw-2">*</span>word = S::sbox(<span class="kw-2">*</span>word + rc);
         }
-        <span class="ident">apply_mds</span>(<span class="ident">state</span>);
+        apply_mds(state);
     };
 
-    <span class="kw">let</span> <span class="ident">part_round</span> <span class="op">=</span> <span class="op">|</span><span class="ident">state</span>: <span class="kw-2">&amp;mut</span> <span class="ident">State</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">rcs</span>: <span class="kw-2">&amp;</span>[<span class="ident">F</span>; <span class="ident">T</span>]<span class="op">|</span> {
-        <span class="kw">for</span> (<span class="ident">word</span>, <span class="ident">rc</span>) <span class="kw">in</span> <span class="ident">state</span>.<span class="ident">iter_mut</span>().<span class="ident">zip</span>(<span class="ident">rcs</span>.<span class="ident">iter</span>()) {
-            <span class="kw-2">*</span><span class="ident">word</span> <span class="op">+</span><span class="op">=</span> <span class="ident">rc</span>;
+    <span class="kw">let </span>part_round = |state: <span class="kw-2">&amp;mut </span>State&lt;F, T&gt;, rcs: <span class="kw-2">&amp;</span>[F; T]| {
+        <span class="kw">for </span>(word, rc) <span class="kw">in </span>state.iter_mut().zip(rcs.iter()) {
+            <span class="kw-2">*</span>word += rc;
         }
-        <span class="comment">// In a partial round, the S-box is only applied to the first state word.</span>
-        <span class="ident">state</span>[<span class="number">0</span>] <span class="op">=</span> <span class="ident">S::sbox</span>(<span class="ident">state</span>[<span class="number">0</span>]);
-        <span class="ident">apply_mds</span>(<span class="ident">state</span>);
+        <span class="comment">// In a partial round, the S-box is only applied to the first state word.
+        </span>state[<span class="number">0</span>] = S::sbox(state[<span class="number">0</span>]);
+        apply_mds(state);
     };
 
-    <span class="ident">iter::empty</span>()
-        .<span class="ident">chain</span>(<span class="ident">iter::repeat</span>(<span class="kw-2">&amp;</span><span class="ident">full_round</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;mut</span> <span class="ident">State</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>, <span class="kw-2">&amp;</span>[<span class="ident">F</span>; <span class="ident">T</span>])).<span class="ident">take</span>(<span class="ident">r_f</span>))
-        .<span class="ident">chain</span>(<span class="ident">iter::repeat</span>(<span class="kw-2">&amp;</span><span class="ident">part_round</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;mut</span> <span class="ident">State</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>, <span class="kw-2">&amp;</span>[<span class="ident">F</span>; <span class="ident">T</span>])).<span class="ident">take</span>(<span class="ident">r_p</span>))
-        .<span class="ident">chain</span>(<span class="ident">iter::repeat</span>(<span class="kw-2">&amp;</span><span class="ident">full_round</span> <span class="kw">as</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">Fn</span>(<span class="kw-2">&amp;mut</span> <span class="ident">State</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>, <span class="kw-2">&amp;</span>[<span class="ident">F</span>; <span class="ident">T</span>])).<span class="ident">take</span>(<span class="ident">r_f</span>))
-        .<span class="ident">zip</span>(<span class="ident">round_constants</span>.<span class="ident">iter</span>())
-        .<span class="ident">fold</span>(<span class="ident">state</span>, <span class="op">|</span><span class="ident">state</span>, (<span class="ident">round</span>, <span class="ident">rcs</span>)<span class="op">|</span> {
-            <span class="ident">round</span>(<span class="ident">state</span>, <span class="ident">rcs</span>);
-            <span class="ident">state</span>
+    iter::empty()
+        .chain(iter::repeat(<span class="kw-2">&amp;</span>full_round <span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>State&lt;F, T&gt;, <span class="kw-2">&amp;</span>[F; T])).take(r_f))
+        .chain(iter::repeat(<span class="kw-2">&amp;</span>part_round <span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>State&lt;F, T&gt;, <span class="kw-2">&amp;</span>[F; T])).take(r_p))
+        .chain(iter::repeat(<span class="kw-2">&amp;</span>full_round <span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>Fn(<span class="kw-2">&amp;mut </span>State&lt;F, T&gt;, <span class="kw-2">&amp;</span>[F; T])).take(r_f))
+        .zip(round_constants.iter())
+        .fold(state, |state, (round, rcs)| {
+            round(state, rcs);
+            state
         });
 }
 
-<span class="kw">fn</span> <span class="ident">poseidon_sponge</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">T</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
-    <span class="ident">state</span>: <span class="kw-2">&amp;mut</span> <span class="ident">State</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">input</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Absorbing</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">mds_matrix</span>: <span class="kw-2">&amp;</span><span class="ident">Mds</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">round_constants</span>: <span class="kw-2">&amp;</span>[[<span class="ident">F</span>; <span class="ident">T</span>]],
-) -&gt; <span class="ident">Squeezing</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">Absorbing</span>(<span class="ident">input</span>)) <span class="op">=</span> <span class="ident">input</span> {
-        <span class="comment">// `Iterator::zip` short-circuits when one iterator completes, so this will only</span>
-        <span class="comment">// mutate the rate portion of the state.</span>
-        <span class="kw">for</span> (<span class="ident">word</span>, <span class="ident">value</span>) <span class="kw">in</span> <span class="ident">state</span>.<span class="ident">iter_mut</span>().<span class="ident">zip</span>(<span class="ident">input</span>.<span class="ident">iter</span>()) {
-            <span class="kw-2">*</span><span class="ident">word</span> <span class="op">+</span><span class="op">=</span> <span class="ident">value</span>.<span class="ident">expect</span>(<span class="string">&quot;poseidon_sponge is called with a padded input&quot;</span>);
+<span class="kw">fn </span>poseidon_sponge&lt;F: FieldExt, S: Spec&lt;F, T, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;(
+    state: <span class="kw-2">&amp;mut </span>State&lt;F, T&gt;,
+    input: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Absorbing&lt;F, RATE&gt;&gt;,
+    mds_matrix: <span class="kw-2">&amp;</span>Mds&lt;F, T&gt;,
+    round_constants: <span class="kw-2">&amp;</span>[[F; T]],
+) -&gt; Squeezing&lt;F, RATE&gt; {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(Absorbing(input)) = input {
+        <span class="comment">// `Iterator::zip` short-circuits when one iterator completes, so this will only
+        // mutate the rate portion of the state.
+        </span><span class="kw">for </span>(word, value) <span class="kw">in </span>state.iter_mut().zip(input.iter()) {
+            <span class="kw-2">*</span>word += value.expect(<span class="string">&quot;poseidon_sponge is called with a padded input&quot;</span>);
         }
     }
 
-    <span class="ident">permute</span>::<span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>(<span class="ident">state</span>, <span class="ident">mds_matrix</span>, <span class="ident">round_constants</span>);
+    permute::&lt;F, S, T, RATE&gt;(state, mds_matrix, round_constants);
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">output</span> <span class="op">=</span> [<span class="prelude-val">None</span>; <span class="ident">RATE</span>];
-    <span class="kw">for</span> (<span class="ident">word</span>, <span class="ident">value</span>) <span class="kw">in</span> <span class="ident">output</span>.<span class="ident">iter_mut</span>().<span class="ident">zip</span>(<span class="ident">state</span>.<span class="ident">iter</span>()) {
-        <span class="kw-2">*</span><span class="ident">word</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">value</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>output = [<span class="prelude-val">None</span>; RATE];
+    <span class="kw">for </span>(word, value) <span class="kw">in </span>output.iter_mut().zip(state.iter()) {
+        <span class="kw-2">*</span>word = <span class="prelude-val">Some</span>(<span class="kw-2">*</span>value);
     }
-    <span class="ident">Squeezing</span>(<span class="ident">output</span>)
+    Squeezing(output)
 }
 
-<span class="kw">mod</span> <span class="ident">private</span> {
-    <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">SealedSpongeMode</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">SealedSpongeMode</span> <span class="kw">for</span> <span class="ident"><span class="kw">super</span>::Absorbing</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">SealedSpongeMode</span> <span class="kw">for</span> <span class="ident"><span class="kw">super</span>::Squeezing</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span> {}
+<span class="kw">mod </span>private {
+    <span class="kw">pub trait </span>SealedSpongeMode {}
+    <span class="kw">impl</span>&lt;F, <span class="kw">const </span>RATE: usize&gt; SealedSpongeMode <span class="kw">for </span><span class="kw">super</span>::Absorbing&lt;F, RATE&gt; {}
+    <span class="kw">impl</span>&lt;F, <span class="kw">const </span>RATE: usize&gt; SealedSpongeMode <span class="kw">for </span><span class="kw">super</span>::Squeezing&lt;F, RATE&gt; {}
 }
 
-<span class="doccomment">/// The state of the `Sponge`.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">SpongeMode</span>: <span class="ident">private::SealedSpongeMode</span> {}
+<span class="doccomment">/// The state of the `Sponge`.
+</span><span class="kw">pub trait </span>SpongeMode: private::SealedSpongeMode {}
 
-<span class="doccomment">/// The absorbing state of the `Sponge`.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Absorbing</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span>(<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">SpongeRate</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span>);
+<span class="doccomment">/// The absorbing state of the `Sponge`.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>Absorbing&lt;F, <span class="kw">const </span>RATE: usize&gt;(<span class="kw">pub</span>(<span class="kw">crate</span>) SpongeRate&lt;F, RATE&gt;);
 
-<span class="doccomment">/// The squeezing state of the `Sponge`.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Squeezing</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span>(<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">SpongeRate</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span>);
+<span class="doccomment">/// The squeezing state of the `Sponge`.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>Squeezing&lt;F, <span class="kw">const </span>RATE: usize&gt;(<span class="kw">pub</span>(<span class="kw">crate</span>) SpongeRate&lt;F, RATE&gt;);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">SpongeMode</span> <span class="kw">for</span> <span class="ident">Absorbing</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span> {}
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">SpongeMode</span> <span class="kw">for</span> <span class="ident">Squeezing</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span> {}
+<span class="kw">impl</span>&lt;F, <span class="kw">const </span>RATE: usize&gt; SpongeMode <span class="kw">for </span>Absorbing&lt;F, RATE&gt; {}
+<span class="kw">impl</span>&lt;F, <span class="kw">const </span>RATE: usize&gt; SpongeMode <span class="kw">for </span>Squeezing&lt;F, RATE&gt; {}
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">fmt::Debug</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Absorbing</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">init_with</span>(<span class="ident">val</span>: <span class="ident">F</span>) -&gt; <span class="self">Self</span> {
+<span class="kw">impl</span>&lt;F: fmt::Debug, <span class="kw">const </span>RATE: usize&gt; Absorbing&lt;F, RATE&gt; {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>init_with(val: F) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>(
-            <span class="ident">iter::once</span>(<span class="prelude-val">Some</span>(<span class="ident">val</span>))
-                .<span class="ident">chain</span>((<span class="number">1</span>..<span class="ident">RATE</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="prelude-val">None</span>))
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-                .<span class="ident">try_into</span>()
-                .<span class="ident">unwrap</span>(),
+            iter::once(<span class="prelude-val">Some</span>(val))
+                .chain((<span class="number">1</span>..RATE).map(|<span class="kw">_</span>| <span class="prelude-val">None</span>))
+                .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+                .try_into()
+                .unwrap(),
         )
     }
 }
 
-<span class="doccomment">/// A Poseidon sponge.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">Sponge</span><span class="op">&lt;</span>
-    <span class="ident">F</span>: <span class="ident">FieldExt</span>,
-    <span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>,
-    <span class="ident">M</span>: <span class="ident">SpongeMode</span>,
-    <span class="kw">const</span> <span class="ident">T</span>: <span class="ident">usize</span>,
-    <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span>,
-<span class="op">&gt;</span> {
-    <span class="ident">mode</span>: <span class="ident">M</span>,
-    <span class="ident">state</span>: <span class="ident">State</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">mds_matrix</span>: <span class="ident">Mds</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">round_constants</span>: <span class="ident">Vec</span><span class="op">&lt;</span>[<span class="ident">F</span>; <span class="ident">T</span>]<span class="op">&gt;</span>,
-    <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A Poseidon sponge.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Sponge&lt;
+    F: FieldExt,
+    S: Spec&lt;F, T, RATE&gt;,
+    M: SpongeMode,
+    <span class="kw">const </span>T: usize,
+    <span class="kw">const </span>RATE: usize,
+&gt; {
+    mode: M,
+    state: State&lt;F, T&gt;,
+    mds_matrix: Mds&lt;F, T&gt;,
+    round_constants: Vec&lt;[F; T]&gt;,
+    _marker: PhantomData&lt;S&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">T</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-    <span class="ident">Sponge</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span>, <span class="ident">Absorbing</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;F: FieldExt, S: Spec&lt;F, T, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;
+    Sponge&lt;F, S, Absorbing&lt;F, RATE&gt;, T, RATE&gt;
 {
-    <span class="doccomment">/// Constructs a new sponge for the given Poseidon specification.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">initial_capacity_element</span>: <span class="ident">F</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> (<span class="ident">round_constants</span>, <span class="ident">mds_matrix</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">S::constants</span>();
+    <span class="doccomment">/// Constructs a new sponge for the given Poseidon specification.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(initial_capacity_element: F) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>(round_constants, mds_matrix, <span class="kw">_</span>) = S::constants();
 
-        <span class="kw">let</span> <span class="ident">mode</span> <span class="op">=</span> <span class="ident">Absorbing</span>([<span class="prelude-val">None</span>; <span class="ident">RATE</span>]);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> [<span class="ident">F::zero</span>(); <span class="ident">T</span>];
-        <span class="ident">state</span>[<span class="ident">RATE</span>] <span class="op">=</span> <span class="ident">initial_capacity_element</span>;
+        <span class="kw">let </span>mode = Absorbing([<span class="prelude-val">None</span>; RATE]);
+        <span class="kw">let </span><span class="kw-2">mut </span>state = [F::zero(); T];
+        state[RATE] = initial_capacity_element;
 
-        <span class="ident">Sponge</span> {
-            <span class="ident">mode</span>,
-            <span class="ident">state</span>,
-            <span class="ident">mds_matrix</span>,
-            <span class="ident">round_constants</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData::default</span>(),
+        Sponge {
+            mode,
+            state,
+            mds_matrix,
+            round_constants,
+            _marker: PhantomData::default(),
         }
     }
 
-    <span class="doccomment">/// Absorbs an element into the sponge.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">absorb</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">value</span>: <span class="ident">F</span>) {
-        <span class="kw">for</span> <span class="ident">entry</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">mode</span>.<span class="number">0</span>.<span class="ident">iter_mut</span>() {
-            <span class="kw">if</span> <span class="ident">entry</span>.<span class="ident">is_none</span>() {
-                <span class="kw-2">*</span><span class="ident">entry</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>);
+    <span class="doccomment">/// Absorbs an element into the sponge.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>absorb(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: F) {
+        <span class="kw">for </span>entry <span class="kw">in </span><span class="self">self</span>.mode.<span class="number">0</span>.iter_mut() {
+            <span class="kw">if </span>entry.is_none() {
+                <span class="kw-2">*</span>entry = <span class="prelude-val">Some</span>(value);
                 <span class="kw">return</span>;
             }
         }
 
-        <span class="comment">// We&#39;ve already absorbed as many elements as we can</span>
-        <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">poseidon_sponge</span>::<span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>(
-            <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">state</span>,
-            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">mode</span>),
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">mds_matrix</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">round_constants</span>,
+        <span class="comment">// We&#39;ve already absorbed as many elements as we can
+        </span><span class="kw">let _ </span>= poseidon_sponge::&lt;F, S, T, RATE&gt;(
+            <span class="kw-2">&amp;mut </span><span class="self">self</span>.state,
+            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.mode),
+            <span class="kw-2">&amp;</span><span class="self">self</span>.mds_matrix,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.round_constants,
         );
-        <span class="self">self</span>.<span class="ident">mode</span> <span class="op">=</span> <span class="ident">Absorbing::init_with</span>(<span class="ident">value</span>);
+        <span class="self">self</span>.mode = Absorbing::init_with(value);
     }
 
-    <span class="doccomment">/// Transitions the sponge into its squeezing state.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">finish_absorbing</span>(<span class="kw-2">mut</span> <span class="self">self</span>) -&gt; <span class="ident">Sponge</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span>, <span class="ident">Squeezing</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">mode</span> <span class="op">=</span> <span class="ident">poseidon_sponge</span>::<span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>(
-            <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">state</span>,
-            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">mode</span>),
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">mds_matrix</span>,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">round_constants</span>,
+    <span class="doccomment">/// Transitions the sponge into its squeezing state.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>finish_absorbing(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; Sponge&lt;F, S, Squeezing&lt;F, RATE&gt;, T, RATE&gt; {
+        <span class="kw">let </span>mode = poseidon_sponge::&lt;F, S, T, RATE&gt;(
+            <span class="kw-2">&amp;mut </span><span class="self">self</span>.state,
+            <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.mode),
+            <span class="kw-2">&amp;</span><span class="self">self</span>.mds_matrix,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.round_constants,
         );
 
-        <span class="ident">Sponge</span> {
-            <span class="ident">mode</span>,
-            <span class="ident">state</span>: <span class="self">self</span>.<span class="ident">state</span>,
-            <span class="ident">mds_matrix</span>: <span class="self">self</span>.<span class="ident">mds_matrix</span>,
-            <span class="ident">round_constants</span>: <span class="self">self</span>.<span class="ident">round_constants</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData::default</span>(),
+        Sponge {
+            mode,
+            state: <span class="self">self</span>.state,
+            mds_matrix: <span class="self">self</span>.mds_matrix,
+            round_constants: <span class="self">self</span>.round_constants,
+            _marker: PhantomData::default(),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">T</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-    <span class="ident">Sponge</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span>, <span class="ident">Squeezing</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;F: FieldExt, S: Spec&lt;F, T, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;
+    Sponge&lt;F, S, Squeezing&lt;F, RATE&gt;, T, RATE&gt;
 {
-    <span class="doccomment">/// Squeezes an element from the sponge.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">squeeze</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">F</span> {
-        <span class="kw">loop</span> {
-            <span class="kw">for</span> <span class="ident">entry</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">mode</span>.<span class="number">0</span>.<span class="ident">iter_mut</span>() {
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">entry</span>.<span class="ident">take</span>() {
-                    <span class="kw">return</span> <span class="ident">e</span>;
+    <span class="doccomment">/// Squeezes an element from the sponge.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>squeeze(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; F {
+        <span class="kw">loop </span>{
+            <span class="kw">for </span>entry <span class="kw">in </span><span class="self">self</span>.mode.<span class="number">0</span>.iter_mut() {
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(e) = entry.take() {
+                    <span class="kw">return </span>e;
                 }
             }
 
-            <span class="comment">// We&#39;ve already squeezed out all available elements</span>
-            <span class="self">self</span>.<span class="ident">mode</span> <span class="op">=</span> <span class="ident">poseidon_sponge</span>::<span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>(
-                <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">state</span>,
+            <span class="comment">// We&#39;ve already squeezed out all available elements
+            </span><span class="self">self</span>.mode = poseidon_sponge::&lt;F, S, T, RATE&gt;(
+                <span class="kw-2">&amp;mut </span><span class="self">self</span>.state,
                 <span class="prelude-val">None</span>,
-                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">mds_matrix</span>,
-                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">round_constants</span>,
+                <span class="kw-2">&amp;</span><span class="self">self</span>.mds_matrix,
+                <span class="kw-2">&amp;</span><span class="self">self</span>.round_constants,
             );
         }
     }
 }
 
-<span class="doccomment">/// A domain in which a Poseidon hash function is being used.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Domain</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Iterator that outputs padding field elements.</span>
-    <span class="kw">type</span> <span class="ident">Padding</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">F</span><span class="op">&gt;</span>;
+<span class="doccomment">/// A domain in which a Poseidon hash function is being used.
+</span><span class="kw">pub trait </span>Domain&lt;F: FieldExt, <span class="kw">const </span>RATE: usize&gt; {
+    <span class="doccomment">/// Iterator that outputs padding field elements.
+    </span><span class="kw">type </span>Padding: IntoIterator&lt;Item = F&gt;;
 
-    <span class="doccomment">/// The name of this domain, for debug formatting purposes.</span>
-    <span class="kw">fn</span> <span class="ident">name</span>() -&gt; <span class="ident">String</span>;
+    <span class="doccomment">/// The name of this domain, for debug formatting purposes.
+    </span><span class="kw">fn </span>name() -&gt; String;
 
-    <span class="doccomment">/// The initial capacity element, encoding this domain.</span>
-    <span class="kw">fn</span> <span class="ident">initial_capacity_element</span>() -&gt; <span class="ident">F</span>;
+    <span class="doccomment">/// The initial capacity element, encoding this domain.
+    </span><span class="kw">fn </span>initial_capacity_element() -&gt; F;
 
-    <span class="doccomment">/// Returns the padding to be appended to the input.</span>
-    <span class="kw">fn</span> <span class="ident">padding</span>(<span class="ident">input_len</span>: <span class="ident">usize</span>) -&gt; <span class="ident"><span class="self">Self</span>::Padding</span>;
+    <span class="doccomment">/// Returns the padding to be appended to the input.
+    </span><span class="kw">fn </span>padding(input_len: usize) -&gt; <span class="self">Self</span>::Padding;
 }
 
-<span class="doccomment">/// A Poseidon hash function used with constant input length.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Domain specified in [ePrint 2019/458 section 4.2](https://eprint.iacr.org/2019/458.pdf).</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConstantLength</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">L</span>: <span class="ident">usize</span><span class="op">&gt;</span>;
+<span class="doccomment">/// A Poseidon hash function used with constant input length.
+///
+/// Domain specified in [ePrint 2019/458 section 4.2](https://eprint.iacr.org/2019/458.pdf).
+</span><span class="attribute">#[derive(Clone, Copy, Debug)]</span>
+<span class="kw">pub struct </span>ConstantLength&lt;<span class="kw">const </span>L: usize&gt;;
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">L</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Domain</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ConstantLength</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Padding</span> <span class="op">=</span> <span class="ident">iter::Take</span><span class="op">&lt;</span><span class="ident">iter::Repeat</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: FieldExt, <span class="kw">const </span>RATE: usize, <span class="kw">const </span>L: usize&gt; Domain&lt;F, RATE&gt; <span class="kw">for </span>ConstantLength&lt;L&gt; {
+    <span class="kw">type </span>Padding = iter::Take&lt;iter::Repeat&lt;F&gt;&gt;;
 
-    <span class="kw">fn</span> <span class="ident">name</span>() -&gt; <span class="ident">String</span> {
-        <span class="macro">format!</span>(<span class="string">&quot;ConstantLength&lt;{}&gt;&quot;</span>, <span class="ident">L</span>)
+    <span class="kw">fn </span>name() -&gt; String {
+        <span class="macro">format!</span>(<span class="string">&quot;ConstantLength&lt;{}&gt;&quot;</span>, L)
     }
 
-    <span class="kw">fn</span> <span class="ident">initial_capacity_element</span>() -&gt; <span class="ident">F</span> {
-        <span class="comment">// Capacity value is $length \cdot 2^64 + (o-1)$ where o is the output length.</span>
-        <span class="comment">// We hard-code an output length of 1.</span>
-        <span class="ident">F::from_u128</span>((<span class="ident">L</span> <span class="kw">as</span> <span class="ident">u128</span>) <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">64</span>)
+    <span class="kw">fn </span>initial_capacity_element() -&gt; F {
+        <span class="comment">// Capacity value is $length \cdot 2^64 + (o-1)$ where o is the output length.
+        // We hard-code an output length of 1.
+        </span>F::from_u128((L <span class="kw">as </span>u128) &lt;&lt; <span class="number">64</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">padding</span>(<span class="ident">input_len</span>: <span class="ident">usize</span>) -&gt; <span class="ident"><span class="self">Self</span>::Padding</span> {
-        <span class="macro">assert_eq!</span>(<span class="ident">input_len</span>, <span class="ident">L</span>);
-        <span class="comment">// For constant-input-length hashing, we pad the input with zeroes to a multiple</span>
-        <span class="comment">// of RATE. On its own this would not be sponge-compliant padding, but the</span>
-        <span class="comment">// Poseidon authors encode the constant length into the capacity element, ensuring</span>
-        <span class="comment">// that inputs of different lengths do not share the same permutation.</span>
-        <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> (<span class="ident">L</span> <span class="op">+</span> <span class="ident">RATE</span> <span class="op">-</span> <span class="number">1</span>) <span class="op">/</span> <span class="ident">RATE</span>;
-        <span class="ident">iter::repeat</span>(<span class="ident">F::zero</span>()).<span class="ident">take</span>(<span class="ident">k</span> <span class="op">*</span> <span class="ident">RATE</span> <span class="op">-</span> <span class="ident">L</span>)
+    <span class="kw">fn </span>padding(input_len: usize) -&gt; <span class="self">Self</span>::Padding {
+        <span class="macro">assert_eq!</span>(input_len, L);
+        <span class="comment">// For constant-input-length hashing, we pad the input with zeroes to a multiple
+        // of RATE. On its own this would not be sponge-compliant padding, but the
+        // Poseidon authors encode the constant length into the capacity element, ensuring
+        // that inputs of different lengths do not share the same permutation.
+        </span><span class="kw">let </span>k = (L + RATE - <span class="number">1</span>) / RATE;
+        iter::repeat(F::zero()).take(k * RATE - L)
     }
 }
 
-<span class="doccomment">/// A Poseidon hash function, built around a sponge.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Hash</span><span class="op">&lt;</span>
-    <span class="ident">F</span>: <span class="ident">FieldExt</span>,
-    <span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>,
-    <span class="ident">D</span>: <span class="ident">Domain</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span>,
-    <span class="kw">const</span> <span class="ident">T</span>: <span class="ident">usize</span>,
-    <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span>,
-<span class="op">&gt;</span> {
-    <span class="ident">sponge</span>: <span class="ident">Sponge</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span>, <span class="ident">Absorbing</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>,
-    <span class="ident">_domain</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A Poseidon hash function, built around a sponge.
+</span><span class="kw">pub struct </span>Hash&lt;
+    F: FieldExt,
+    S: Spec&lt;F, T, RATE&gt;,
+    D: Domain&lt;F, RATE&gt;,
+    <span class="kw">const </span>T: usize,
+    <span class="kw">const </span>RATE: usize,
+&gt; {
+    sponge: Sponge&lt;F, S, Absorbing&lt;F, RATE&gt;, T, RATE&gt;,
+    _domain: PhantomData&lt;D&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="ident">D</span>: <span class="ident">Domain</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">T</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-    <span class="ident">fmt::Debug</span> <span class="kw">for</span> <span class="ident">Hash</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span>, <span class="ident">D</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;F: FieldExt, S: Spec&lt;F, T, RATE&gt;, D: Domain&lt;F, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;
+    fmt::Debug <span class="kw">for </span>Hash&lt;F, S, D, T, RATE&gt;
 {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
-        <span class="ident">f</span>.<span class="ident">debug_struct</span>(<span class="string">&quot;Hash&quot;</span>)
-            .<span class="ident">field</span>(<span class="string">&quot;width&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">T</span>)
-            .<span class="ident">field</span>(<span class="string">&quot;rate&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">RATE</span>)
-            .<span class="ident">field</span>(<span class="string">&quot;R_F&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">S::full_rounds</span>())
-            .<span class="ident">field</span>(<span class="string">&quot;R_P&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">S::partial_rounds</span>())
-            .<span class="ident">field</span>(<span class="string">&quot;domain&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">D::name</span>())
-            .<span class="ident">finish</span>()
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+        f.debug_struct(<span class="string">&quot;Hash&quot;</span>)
+            .field(<span class="string">&quot;width&quot;</span>, <span class="kw-2">&amp;</span>T)
+            .field(<span class="string">&quot;rate&quot;</span>, <span class="kw-2">&amp;</span>RATE)
+            .field(<span class="string">&quot;R_F&quot;</span>, <span class="kw-2">&amp;</span>S::full_rounds())
+            .field(<span class="string">&quot;R_P&quot;</span>, <span class="kw-2">&amp;</span>S::partial_rounds())
+            .field(<span class="string">&quot;domain&quot;</span>, <span class="kw-2">&amp;</span>D::name())
+            .finish()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="ident">D</span>: <span class="ident">Domain</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">T</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-    <span class="ident">Hash</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span>, <span class="ident">D</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;F: FieldExt, S: Spec&lt;F, T, RATE&gt;, D: Domain&lt;F, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;
+    Hash&lt;F, S, D, T, RATE&gt;
 {
-    <span class="doccomment">/// Initializes a new hasher.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">init</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident">Hash</span> {
-            <span class="ident">sponge</span>: <span class="ident">Sponge::new</span>(<span class="ident">D::initial_capacity_element</span>()),
-            <span class="ident">_domain</span>: <span class="ident">PhantomData::default</span>(),
+    <span class="doccomment">/// Initializes a new hasher.
+    </span><span class="kw">pub fn </span>init() -&gt; <span class="self">Self </span>{
+        Hash {
+            sponge: Sponge::new(D::initial_capacity_element()),
+            _domain: PhantomData::default(),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">T</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">L</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-    <span class="ident">Hash</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span>, <span class="ident">ConstantLength</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span>, <span class="ident">T</span>, <span class="ident">RATE</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;F: FieldExt, S: Spec&lt;F, T, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize, <span class="kw">const </span>L: usize&gt;
+    Hash&lt;F, S, ConstantLength&lt;L&gt;, T, RATE&gt;
 {
-    <span class="doccomment">/// Hashes the given input.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">hash</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">message</span>: [<span class="ident">F</span>; <span class="ident">L</span>]) -&gt; <span class="ident">F</span> {
-        <span class="kw">for</span> <span class="ident">value</span> <span class="kw">in</span> <span class="ident">message</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">chain</span>(<span class="op">&lt;</span><span class="ident">ConstantLength</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">Domain</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::padding</span>(<span class="ident">L</span>))
+    <span class="doccomment">/// Hashes the given input.
+    </span><span class="kw">pub fn </span>hash(<span class="kw-2">mut </span><span class="self">self</span>, message: [F; L]) -&gt; F {
+        <span class="kw">for </span>value <span class="kw">in </span>message
+            .into_iter()
+            .chain(&lt;ConstantLength&lt;L&gt; <span class="kw">as </span>Domain&lt;F, RATE&gt;&gt;::padding(L))
         {
-            <span class="self">self</span>.<span class="ident">sponge</span>.<span class="ident">absorb</span>(<span class="ident">value</span>);
+            <span class="self">self</span>.sponge.absorb(value);
         }
-        <span class="self">self</span>.<span class="ident">sponge</span>.<span class="ident">finish_absorbing</span>().<span class="ident">squeeze</span>()
+        <span class="self">self</span>.sponge.finish_absorbing().squeeze()
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">halo2_proofs::arithmetic::FieldExt</span>;
-    <span class="kw">use</span> <span class="ident">pasta_curves::pallas</span>;
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">mod </span>tests {
+    <span class="kw">use </span>halo2_proofs::arithmetic::FieldExt;
+    <span class="kw">use </span>pasta_curves::pallas;
 
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">permute</span>, <span class="ident">ConstantLength</span>, <span class="ident">Hash</span>, <span class="ident">P128Pow5T3</span> <span class="kw">as</span> <span class="ident">OrchardNullifier</span>, <span class="ident">Spec</span>};
+    <span class="kw">use super</span>::{permute, ConstantLength, Hash, P128Pow5T3 <span class="kw">as </span>OrchardNullifier, Spec};
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">orchard_spec_equivalence</span>() {
-        <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> [<span class="ident">pallas::Base::from</span>(<span class="number">6</span>), <span class="ident">pallas::Base::from</span>(<span class="number">42</span>)];
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>orchard_spec_equivalence() {
+        <span class="kw">let </span>message = [pallas::Base::from(<span class="number">6</span>), pallas::Base::from(<span class="number">42</span>)];
 
-        <span class="kw">let</span> (<span class="ident">round_constants</span>, <span class="ident">mds</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">OrchardNullifier::constants</span>();
+        <span class="kw">let </span>(round_constants, mds, <span class="kw">_</span>) = OrchardNullifier::constants();
 
-        <span class="kw">let</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">Hash</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">OrchardNullifier</span>, <span class="ident">ConstantLength</span><span class="op">&lt;</span><span class="number">2</span><span class="op">&gt;</span>, <span class="number">3</span>, <span class="number">2</span><span class="op">&gt;</span><span class="ident">::init</span>();
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">hasher</span>.<span class="ident">hash</span>(<span class="ident">message</span>);
+        <span class="kw">let </span>hasher = Hash::&lt;<span class="kw">_</span>, OrchardNullifier, ConstantLength&lt;<span class="number">2</span>&gt;, <span class="number">3</span>, <span class="number">2</span>&gt;::init();
+        <span class="kw">let </span>result = hasher.hash(message);
 
-        <span class="comment">// The result should be equivalent to just directly applying the permutation and</span>
-        <span class="comment">// taking the first state element as the output.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> [<span class="ident">message</span>[<span class="number">0</span>], <span class="ident">message</span>[<span class="number">1</span>], <span class="ident">pallas::Base::from_u128</span>(<span class="number">2</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">64</span>)];
-        <span class="ident">permute</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">OrchardNullifier</span>, <span class="number">3</span>, <span class="number">2</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="ident">state</span>, <span class="kw-2">&amp;</span><span class="ident">mds</span>, <span class="kw-2">&amp;</span><span class="ident">round_constants</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">state</span>[<span class="number">0</span>], <span class="ident">result</span>);
+        <span class="comment">// The result should be equivalent to just directly applying the permutation and
+        // taking the first state element as the output.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>state = [message[<span class="number">0</span>], message[<span class="number">1</span>], pallas::Base::from_u128(<span class="number">2 </span>&lt;&lt; <span class="number">64</span>)];
+        permute::&lt;<span class="kw">_</span>, OrchardNullifier, <span class="number">3</span>, <span class="number">2</span>&gt;(<span class="kw-2">&amp;mut </span>state, <span class="kw-2">&amp;</span>mds, <span class="kw-2">&amp;</span>round_constants);
+        <span class="macro">assert_eq!</span>(state[<span class="number">0</span>], result);
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

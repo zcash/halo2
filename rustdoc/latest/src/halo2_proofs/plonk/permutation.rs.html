@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -106,93 +100,92 @@
 <span id="85">85</span>
 <span id="86">86</span>
 <span id="87">87</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::circuit</span>::{<span class="ident">Any</span>, <span class="ident">Column</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">arithmetic::CurveAffine</span>,
-    <span class="ident">helpers::CurveRead</span>,
-    <span class="ident">poly</span>::{<span class="ident">Coeff</span>, <span class="ident">ExtendedLagrangeCoeff</span>, <span class="ident">LagrangeCoeff</span>, <span class="ident">Polynomial</span>},
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::circuit::{Any, Column};
+<span class="kw">use crate</span>::{
+    arithmetic::CurveAffine,
+    helpers::CurveRead,
+    poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
 };
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">keygen</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">prover</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">verifier</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>keygen;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>prover;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>verifier;
 
-<span class="kw">use</span> <span class="ident">std::io</span>;
+<span class="kw">use </span>std::io;
 
-<span class="doccomment">/// A permutation argument.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">Argument</span> {
-    <span class="doccomment">/// A sequence of columns involved in the argument.</span>
-    <span class="ident">columns</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A permutation argument.
+</span><span class="attribute">#[derive(Debug, Clone)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Argument {
+    <span class="doccomment">/// A sequence of columns involved in the argument.
+    </span>columns: Vec&lt;Column&lt;Any&gt;&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Argument</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident">Argument</span> { <span class="ident">columns</span>: <span class="macro">vec!</span>[] }
+<span class="kw">impl </span>Argument {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
+        Argument { columns: <span class="macro">vec!</span>[] }
     }
 
-    <span class="doccomment">/// Returns the minimum circuit degree required by the permutation argument.</span>
-    <span class="doccomment">/// The argument may use larger degree gates depending on the actual</span>
-    <span class="doccomment">/// circuit&#39;s degree and how many columns are involved in the permutation.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">required_degree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="comment">// degree 2:</span>
-        <span class="comment">// l_0(X) * (1 - z(X)) = 0</span>
-        <span class="comment">//</span>
-        <span class="comment">// We will fit as many polynomials p_i(X) as possible</span>
-        <span class="comment">// into the required degree of the circuit, so the</span>
-        <span class="comment">// following will not affect the required degree of</span>
-        <span class="comment">// this middleware.</span>
-        <span class="comment">//</span>
-        <span class="comment">// (1 - (l_last(X) + l_blind(X))) * (</span>
-        <span class="comment">//   z(\omega X) \prod (p(X) + \beta s_i(X) + \gamma)</span>
-        <span class="comment">// - z(X) \prod (p(X) + \delta^i \beta X + \gamma)</span>
-        <span class="comment">// )</span>
-        <span class="comment">//</span>
-        <span class="comment">// On the first sets of columns, except the first</span>
-        <span class="comment">// set, we will do</span>
-        <span class="comment">//</span>
-        <span class="comment">// l_0(X) * (z(X) - z&#39;(\omega^(last) X)) = 0</span>
-        <span class="comment">//</span>
-        <span class="comment">// where z&#39;(X) is the permutation for the previous set</span>
-        <span class="comment">// of columns.</span>
-        <span class="comment">//</span>
-        <span class="comment">// On the final set of columns, we will do</span>
-        <span class="comment">//</span>
-        <span class="comment">// degree 3:</span>
-        <span class="comment">// l_last(X) * (z&#39;(X)^2 - z&#39;(X)) = 0</span>
-        <span class="comment">//</span>
-        <span class="comment">// which will allow the last value to be zero to</span>
-        <span class="comment">// ensure the argument is perfectly complete.</span>
+    <span class="doccomment">/// Returns the minimum circuit degree required by the permutation argument.
+    /// The argument may use larger degree gates depending on the actual
+    /// circuit&#39;s degree and how many columns are involved in the permutation.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>required_degree(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="comment">// degree 2:
+        // l_0(X) * (1 - z(X)) = 0
+        //
+        // We will fit as many polynomials p_i(X) as possible
+        // into the required degree of the circuit, so the
+        // following will not affect the required degree of
+        // this middleware.
+        //
+        // (1 - (l_last(X) + l_blind(X))) * (
+        //   z(\omega X) \prod (p(X) + \beta s_i(X) + \gamma)
+        // - z(X) \prod (p(X) + \delta^i \beta X + \gamma)
+        // )
+        //
+        // On the first sets of columns, except the first
+        // set, we will do
+        //
+        // l_0(X) * (z(X) - z&#39;(\omega^(last) X)) = 0
+        //
+        // where z&#39;(X) is the permutation for the previous set
+        // of columns.
+        //
+        // On the final set of columns, we will do
+        //
+        // degree 3:
+        // l_last(X) * (z&#39;(X)^2 - z&#39;(X)) = 0
+        //
+        // which will allow the last value to be zero to
+        // ensure the argument is perfectly complete.
 
-        <span class="comment">// There are constraints of degree 3 regardless of the</span>
-        <span class="comment">// number of columns involved.</span>
-        <span class="number">3</span>
-    }
+        // There are constraints of degree 3 regardless of the
+        // number of columns involved.
+        </span><span class="number">3
+    </span>}
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">add_column</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>) {
-        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">columns</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">column</span>) {
-            <span class="self">self</span>.<span class="ident">columns</span>.<span class="ident">push</span>(<span class="ident">column</span>);
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>add_column(<span class="kw-2">&amp;mut </span><span class="self">self</span>, column: Column&lt;Any&gt;) {
+        <span class="kw">if </span>!<span class="self">self</span>.columns.contains(<span class="kw-2">&amp;</span>column) {
+            <span class="self">self</span>.columns.push(column);
         }
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">get_columns</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">columns</span>.<span class="ident">clone</span>()
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_columns(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;Column&lt;Any&gt;&gt; {
+        <span class="self">self</span>.columns.clone()
     }
 }
 
-<span class="doccomment">/// The verifying key for a single permutation argument.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">commitments</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
+<span class="doccomment">/// The verifying key for a single permutation argument.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>VerifyingKey&lt;C: CurveAffine&gt; {
+    commitments: Vec&lt;C&gt;,
 }
 
-<span class="doccomment">/// The proving key for a single permutation argument.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">permutations</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">polys</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">Coeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">cosets</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="doccomment">/// The proving key for a single permutation argument.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ProvingKey&lt;C: CurveAffine&gt; {
+    permutations: Vec&lt;Polynomial&lt;C::Scalar, LagrangeCoeff&gt;&gt;,
+    polys: Vec&lt;Polynomial&lt;C::Scalar, Coeff&gt;&gt;,
+    <span class="kw">pub</span>(<span class="kw">super</span>) cosets: Vec&lt;Polynomial&lt;C::Scalar, ExtendedLagrangeCoeff&gt;&gt;,
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

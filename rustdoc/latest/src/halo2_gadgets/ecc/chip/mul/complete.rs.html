@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -215,202 +209,201 @@
 <span id="194">194</span>
 <span id="195">195</span>
 <span id="196">196</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">add</span>, <span class="ident">EccPoint</span>};
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">COMPLETE_RANGE</span>, <span class="ident">X</span>, <span class="ident">Y</span>, <span class="ident">Z</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities</span>::{<span class="ident">bool_check</span>, <span class="ident">ternary</span>};
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{add, EccPoint};
+<span class="kw">use super</span>::{COMPLETE_RANGE, X, Y, Z};
+<span class="kw">use </span><span class="kw">crate</span>::utilities::{bool_check, ternary};
 
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">Region</span>, <span class="ident">Value</span>},
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>},
-    <span class="ident">poly::Rotation</span>,
+<span class="kw">use </span>halo2_proofs::{
+    circuit::{Region, Value},
+    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
+    poly::Rotation,
 };
 
-<span class="kw">use</span> <span class="ident">pasta_curves::pallas</span>;
+<span class="kw">use </span>pasta_curves::pallas;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
-    <span class="comment">// Selector used to constrain the cells used in complete addition.</span>
-    <span class="ident">q_mul_decompose_var</span>: <span class="ident">Selector</span>,
-    <span class="comment">// Advice column used to decompose scalar in complete addition.</span>
-    <span class="kw">pub</span> <span class="ident">z_complete</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="comment">// Configuration used in complete addition</span>
-    <span class="ident">add_config</span>: <span class="ident">add::Config</span>,
+<span class="attribute">#[derive(Copy, Clone, Debug, Eq, PartialEq)]</span>
+<span class="kw">pub struct </span>Config {
+    <span class="comment">// Selector used to constrain the cells used in complete addition.
+    </span>q_mul_decompose_var: Selector,
+    <span class="comment">// Advice column used to decompose scalar in complete addition.
+    </span><span class="kw">pub </span>z_complete: Column&lt;Advice&gt;,
+    <span class="comment">// Configuration used in complete addition
+    </span>add_config: add::Config,
 }
 
-<span class="kw">impl</span> <span class="ident">Config</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">configure</span>(
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">z_complete</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">add_config</span>: <span class="ident">add::Config</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="ident">meta</span>.<span class="ident">enable_equality</span>(<span class="ident">z_complete</span>);
+<span class="kw">impl </span>Config {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>configure(
+        meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;,
+        z_complete: Column&lt;Advice&gt;,
+        add_config: add::Config,
+    ) -&gt; <span class="self">Self </span>{
+        meta.enable_equality(z_complete);
 
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">Self</span> {
-            <span class="ident">q_mul_decompose_var</span>: <span class="ident">meta</span>.<span class="ident">selector</span>(),
-            <span class="ident">z_complete</span>,
-            <span class="ident">add_config</span>,
+        <span class="kw">let </span>config = <span class="self">Self </span>{
+            q_mul_decompose_var: meta.selector(),
+            z_complete,
+            add_config,
         };
 
-        <span class="ident">config</span>.<span class="ident">create_gate</span>(<span class="ident">meta</span>);
+        config.create_gate(meta);
 
-        <span class="ident">config</span>
+        config
     }
 
-    <span class="doccomment">/// Gate used to check scalar decomposition is correct.</span>
-    <span class="doccomment">/// This is used to check the bits used in complete addition, since the incomplete</span>
-    <span class="doccomment">/// addition gate (controlled by `q_mul`) already checks scalar decomposition for</span>
-    <span class="doccomment">/// the other bits.</span>
-    <span class="kw">fn</span> <span class="ident">create_gate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) {
-        <span class="comment">// | y_p | z_complete |</span>
-        <span class="comment">// --------------------</span>
-        <span class="comment">// | y_p | z_{i + 1}  |</span>
-        <span class="comment">// |     | base_y     |</span>
-        <span class="comment">// |     | z_i        |</span>
-        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-complete-gate</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(
+    <span class="doccomment">/// Gate used to check scalar decomposition is correct.
+    /// This is used to check the bits used in complete addition, since the incomplete
+    /// addition gate (controlled by `q_mul`) already checks scalar decomposition for
+    /// the other bits.
+    </span><span class="kw">fn </span>create_gate(<span class="kw-2">&amp;</span><span class="self">self</span>, meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) {
+        <span class="comment">// | y_p | z_complete |
+        // --------------------
+        // | y_p | z_{i + 1}  |
+        // |     | base_y     |
+        // |     | z_i        |
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-complete-gate
+        </span>meta.create_gate(
             <span class="string">&quot;Decompose scalar for complete bits of variable-base mul&quot;</span>,
-            <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">q_mul_decompose_var</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul_decompose_var</span>);
-                <span class="comment">// z_{i + 1}</span>
-                <span class="kw">let</span> <span class="ident">z_prev</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">z_complete</span>, <span class="ident">Rotation::prev</span>());
-                <span class="comment">// z_i</span>
-                <span class="kw">let</span> <span class="ident">z_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">z_complete</span>, <span class="ident">Rotation::next</span>());
+            |meta| {
+                <span class="kw">let </span>q_mul_decompose_var = meta.query_selector(<span class="self">self</span>.q_mul_decompose_var);
+                <span class="comment">// z_{i + 1}
+                </span><span class="kw">let </span>z_prev = meta.query_advice(<span class="self">self</span>.z_complete, Rotation::prev());
+                <span class="comment">// z_i
+                </span><span class="kw">let </span>z_next = meta.query_advice(<span class="self">self</span>.z_complete, Rotation::next());
 
-                <span class="comment">// k_{i} = z_{i} - 2⋅z_{i+1}</span>
-                <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="ident">z_next</span> <span class="op">-</span> <span class="ident">Expression::Constant</span>(<span class="ident">pallas::Base::from</span>(<span class="number">2</span>)) <span class="op">*</span> <span class="ident">z_prev</span>;
-                <span class="comment">// (k_i) ⋅ (1 - k_i) = 0</span>
-                <span class="kw">let</span> <span class="ident">bool_check</span> <span class="op">=</span> <span class="ident">bool_check</span>(<span class="ident">k</span>.<span class="ident">clone</span>());
+                <span class="comment">// k_{i} = z_{i} - 2⋅z_{i+1}
+                </span><span class="kw">let </span>k = z_next - Expression::Constant(pallas::Base::from(<span class="number">2</span>)) * z_prev;
+                <span class="comment">// (k_i) ⋅ (1 - k_i) = 0
+                </span><span class="kw">let </span>bool_check = bool_check(k.clone());
 
-                <span class="comment">// base_y</span>
-                <span class="kw">let</span> <span class="ident">base_y</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">z_complete</span>, <span class="ident">Rotation::cur</span>());
-                <span class="comment">// y_p</span>
-                <span class="kw">let</span> <span class="ident">y_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">add_config</span>.<span class="ident">y_p</span>, <span class="ident">Rotation::prev</span>());
+                <span class="comment">// base_y
+                </span><span class="kw">let </span>base_y = meta.query_advice(<span class="self">self</span>.z_complete, Rotation::cur());
+                <span class="comment">// y_p
+                </span><span class="kw">let </span>y_p = meta.query_advice(<span class="self">self</span>.add_config.y_p, Rotation::prev());
 
-                <span class="comment">// k_i = 0 =&gt; y_p = -base_y</span>
-                <span class="comment">// k_i = 1 =&gt; y_p = base_y</span>
-                <span class="kw">let</span> <span class="ident">y_switch</span> <span class="op">=</span> <span class="ident">ternary</span>(<span class="ident">k</span>, <span class="ident">base_y</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">y_p</span>.<span class="ident">clone</span>(), <span class="ident">base_y</span> <span class="op">+</span> <span class="ident">y_p</span>);
+                <span class="comment">// k_i = 0 =&gt; y_p = -base_y
+                // k_i = 1 =&gt; y_p = base_y
+                </span><span class="kw">let </span>y_switch = ternary(k, base_y.clone() - y_p.clone(), base_y + y_p);
 
-                <span class="ident">Constraints::with_selector</span>(
-                    <span class="ident">q_mul_decompose_var</span>,
-                    [(<span class="string">&quot;bool_check&quot;</span>, <span class="ident">bool_check</span>), (<span class="string">&quot;y_switch&quot;</span>, <span class="ident">y_switch</span>)],
+                Constraints::with_selector(
+                    q_mul_decompose_var,
+                    [(<span class="string">&quot;bool_check&quot;</span>, bool_check), (<span class="string">&quot;y_switch&quot;</span>, y_switch)],
                 )
             },
         );
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">assign_region</span>(
+    <span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>assign_region(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">bits</span>: <span class="kw-2">&amp;</span>[<span class="ident">Value</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>],
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">EccPoint</span>,
-        <span class="ident">x_a</span>: <span class="ident">X</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">y_a</span>: <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">z</span>: <span class="ident">Z</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">EccPoint</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Z</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Make sure we have the correct number of bits for the complete addition</span>
-        <span class="comment">// part of variable-base scalar mul.</span>
-        <span class="macro">assert_eq!</span>(<span class="ident">bits</span>.<span class="ident">len</span>(), <span class="ident">COMPLETE_RANGE</span>.<span class="ident">len</span>());
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        offset: usize,
+        bits: <span class="kw-2">&amp;</span>[Value&lt;bool&gt;],
+        base: <span class="kw-2">&amp;</span>EccPoint,
+        x_a: X&lt;pallas::Base&gt;,
+        y_a: Y&lt;pallas::Base&gt;,
+        z: Z&lt;pallas::Base&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(EccPoint, Vec&lt;Z&lt;pallas::Base&gt;&gt;), Error&gt; {
+        <span class="comment">// Make sure we have the correct number of bits for the complete addition
+        // part of variable-base scalar mul.
+        </span><span class="macro">assert_eq!</span>(bits.len(), COMPLETE_RANGE.len());
 
-        <span class="comment">// Enable selectors for complete range</span>
-        <span class="kw">for</span> <span class="ident">row</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">COMPLETE_RANGE</span>.<span class="ident">len</span>() {
-            <span class="comment">// Each iteration uses 2 rows (two complete additions)</span>
-            <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="number">2</span> <span class="op">*</span> <span class="ident">row</span>;
-            <span class="comment">// Check scalar decomposition for each iteration. Since the gate enabled by</span>
-            <span class="comment">// `q_mul_decompose_var` queries the previous row, we enable the selector on</span>
-            <span class="comment">// `row + offset + 1` (instead of `row + offset`).</span>
-            <span class="self">self</span>.<span class="ident">q_mul_decompose_var</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Enable selectors for complete range
+        </span><span class="kw">for </span>row <span class="kw">in </span><span class="number">0</span>..COMPLETE_RANGE.len() {
+            <span class="comment">// Each iteration uses 2 rows (two complete additions)
+            </span><span class="kw">let </span>row = <span class="number">2 </span>* row;
+            <span class="comment">// Check scalar decomposition for each iteration. Since the gate enabled by
+            // `q_mul_decompose_var` queries the previous row, we enable the selector on
+            // `row + offset + 1` (instead of `row + offset`).
+            </span><span class="self">self</span>.q_mul_decompose_var.enable(region, row + offset + <span class="number">1</span>)<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// Use x_a, y_a output from incomplete addition</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">acc</span> <span class="op">=</span> <span class="ident">EccPoint</span> { <span class="ident">x</span>: <span class="ident">x_a</span>.<span class="number">0</span>, <span class="ident">y</span>: <span class="ident">y_a</span>.<span class="number">0</span> };
+        <span class="comment">// Use x_a, y_a output from incomplete addition
+        </span><span class="kw">let </span><span class="kw-2">mut </span>acc = EccPoint { x: x_a.<span class="number">0</span>, y: y_a.<span class="number">0 </span>};
 
-        <span class="comment">// Copy running sum `z` from incomplete addition</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">z</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">z</span> <span class="op">=</span> <span class="ident">z</span>.<span class="ident">copy_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;Copy `z` running sum from incomplete addition&quot;</span>,
-                <span class="ident">region</span>,
-                <span class="self">self</span>.<span class="ident">z_complete</span>,
-                <span class="ident">offset</span>,
+        <span class="comment">// Copy running sum `z` from incomplete addition
+        </span><span class="kw">let </span><span class="kw-2">mut </span>z = {
+            <span class="kw">let </span>z = z.copy_advice(
+                || <span class="string">&quot;Copy `z` running sum from incomplete addition&quot;</span>,
+                region,
+                <span class="self">self</span>.z_complete,
+                offset,
             )<span class="question-mark">?</span>;
-            <span class="ident">Z</span>(<span class="ident">z</span>)
+            Z(z)
         };
 
-        <span class="comment">// Store interstitial running sum `z`s in vector</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">zs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Z</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">bits</span>.<span class="ident">len</span>());
+        <span class="comment">// Store interstitial running sum `z`s in vector
+        </span><span class="kw">let </span><span class="kw-2">mut </span>zs: Vec&lt;Z&lt;pallas::Base&gt;&gt; = Vec::with_capacity(bits.len());
 
-        <span class="comment">// Complete addition</span>
-        <span class="kw">for</span> (<span class="ident">iter</span>, <span class="ident">k</span>) <span class="kw">in</span> <span class="ident">bits</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-            <span class="comment">// Each iteration uses 2 rows (two complete additions)</span>
-            <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="number">2</span> <span class="op">*</span> <span class="ident">iter</span>;
+        <span class="comment">// Complete addition
+        </span><span class="kw">for </span>(iter, k) <span class="kw">in </span>bits.iter().enumerate() {
+            <span class="comment">// Each iteration uses 2 rows (two complete additions)
+            </span><span class="kw">let </span>row = <span class="number">2 </span>* iter;
 
-            <span class="comment">// | x_p | y_p | x_qr  | y_qr  | z_complete |</span>
-            <span class="comment">// ------------------------------------------</span>
-            <span class="comment">// | U_x | U_y | acc_x | acc_y | z_{i + 1}  | row + offset</span>
-            <span class="comment">// |acc_x|acc_y|acc+U_x|acc+U_y| base_y     |</span>
-            <span class="comment">// |     |     | res_x | res_y | z_i        |</span>
+            <span class="comment">// | x_p | y_p | x_qr  | y_qr  | z_complete |
+            // ------------------------------------------
+            // | U_x | U_y | acc_x | acc_y | z_{i + 1}  | row + offset
+            // |acc_x|acc_y|acc+U_x|acc+U_y| base_y     |
+            // |     |     | res_x | res_y | z_i        |
 
-            <span class="comment">// Update `z`.</span>
-            <span class="ident">z</span> <span class="op">=</span> {
-                <span class="comment">// z_next = z_cur * 2 + k_next</span>
-                <span class="kw">let</span> <span class="ident">z_val</span> <span class="op">=</span> <span class="ident">z</span>.<span class="ident">value</span>() <span class="op">*</span> <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from</span>(<span class="number">2</span>))
-                    <span class="op">+</span> <span class="ident">k</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">k</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">k</span> <span class="kw">as</span> <span class="ident">u64</span>));
-                <span class="kw">let</span> <span class="ident">z_cell</span> <span class="op">=</span>
-                    <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;z&quot;</span>, <span class="self">self</span>.<span class="ident">z_complete</span>, <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span> <span class="op">+</span> <span class="number">2</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">z_val</span>)<span class="question-mark">?</span>;
-                <span class="ident">Z</span>(<span class="ident">z_cell</span>)
+            // Update `z`.
+            </span>z = {
+                <span class="comment">// z_next = z_cur * 2 + k_next
+                </span><span class="kw">let </span>z_val = z.value() * Value::known(pallas::Base::from(<span class="number">2</span>))
+                    + k.map(|k| pallas::Base::from(k <span class="kw">as </span>u64));
+                <span class="kw">let </span>z_cell =
+                    region.assign_advice(|| <span class="string">&quot;z&quot;</span>, <span class="self">self</span>.z_complete, row + offset + <span class="number">2</span>, || z_val)<span class="question-mark">?</span>;
+                Z(z_cell)
             };
-            <span class="ident">zs</span>.<span class="ident">push</span>(<span class="ident">z</span>.<span class="ident">clone</span>());
+            zs.push(z.clone());
 
-            <span class="comment">// Assign `y_p` for complete addition.</span>
-            <span class="kw">let</span> <span class="ident">y_p</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">base_y</span> <span class="op">=</span> <span class="ident">base</span>.<span class="ident">y</span>.<span class="ident">copy_advice</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="string">&quot;Copy `base.y`&quot;</span>,
-                    <span class="ident">region</span>,
-                    <span class="self">self</span>.<span class="ident">z_complete</span>,
-                    <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>,
+            <span class="comment">// Assign `y_p` for complete addition.
+            </span><span class="kw">let </span>y_p = {
+                <span class="kw">let </span>base_y = base.y.copy_advice(
+                    || <span class="string">&quot;Copy `base.y`&quot;</span>,
+                    region,
+                    <span class="self">self</span>.z_complete,
+                    row + offset + <span class="number">1</span>,
                 )<span class="question-mark">?</span>;
 
-                <span class="comment">// If the bit is set, use `y`; if the bit is not set, use `-y`</span>
-                <span class="kw">let</span> <span class="ident">y_p</span> <span class="op">=</span>
-                    <span class="ident">base_y</span>
-                        .<span class="ident">value</span>()
-                        .<span class="ident">cloned</span>()
-                        .<span class="ident">zip</span>(<span class="ident">k</span>.<span class="ident">as_ref</span>())
-                        .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">base_y</span>, <span class="ident">k</span>)<span class="op">|</span> <span class="kw">if</span> <span class="op">!</span><span class="ident">k</span> { <span class="op">-</span><span class="ident">base_y</span> } <span class="kw">else</span> { <span class="ident">base_y</span> });
+                <span class="comment">// If the bit is set, use `y`; if the bit is not set, use `-y`
+                </span><span class="kw">let </span>y_p =
+                    base_y
+                        .value()
+                        .cloned()
+                        .zip(k.as_ref())
+                        .map(|(base_y, k)| <span class="kw">if </span>!k { -base_y } <span class="kw">else </span>{ base_y });
 
-                <span class="comment">// Assign the conditionally-negated y coordinate into the cell it will be</span>
-                <span class="comment">// used from by both the complete addition gate, and the decomposition and</span>
-                <span class="comment">// conditional negation gate.</span>
-                <span class="comment">//</span>
-                <span class="comment">// The complete addition gate will copy this cell onto itself. This is</span>
-                <span class="comment">// fine because we are just assigning the same value to the same cell</span>
-                <span class="comment">// twice, and then applying an equality constraint between the cell and</span>
-                <span class="comment">// itself (which the permutation argument treats as a no-op).</span>
-                <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_p&quot;</span>, <span class="self">self</span>.<span class="ident">add_config</span>.<span class="ident">y_p</span>, <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">y_p</span>)<span class="question-mark">?</span>
+                <span class="comment">// Assign the conditionally-negated y coordinate into the cell it will be
+                // used from by both the complete addition gate, and the decomposition and
+                // conditional negation gate.
+                //
+                // The complete addition gate will copy this cell onto itself. This is
+                // fine because we are just assigning the same value to the same cell
+                // twice, and then applying an equality constraint between the cell and
+                // itself (which the permutation argument treats as a no-op).
+                </span>region.assign_advice(|| <span class="string">&quot;y_p&quot;</span>, <span class="self">self</span>.add_config.y_p, row + offset, || y_p)<span class="question-mark">?
+            </span>};
+
+            <span class="comment">// U = P if the bit is set; U = -P is the bit is not set.
+            </span><span class="kw">let </span>U = EccPoint {
+                x: base.x.clone(),
+                y: y_p,
             };
 
-            <span class="comment">// U = P if the bit is set; U = -P is the bit is not set.</span>
-            <span class="kw">let</span> <span class="ident">U</span> <span class="op">=</span> <span class="ident">EccPoint</span> {
-                <span class="ident">x</span>: <span class="ident">base</span>.<span class="ident">x</span>.<span class="ident">clone</span>(),
-                <span class="ident">y</span>: <span class="ident">y_p</span>,
-            };
+            <span class="comment">// Acc + U
+            </span><span class="kw">let </span>tmp_acc = <span class="self">self
+                </span>.add_config
+                .assign_region(<span class="kw-2">&amp;</span>U, <span class="kw-2">&amp;</span>acc, row + offset, region)<span class="question-mark">?</span>;
 
-            <span class="comment">// Acc + U</span>
-            <span class="kw">let</span> <span class="ident">tmp_acc</span> <span class="op">=</span> <span class="self">self</span>
-                .<span class="ident">add_config</span>
-                .<span class="ident">assign_region</span>(<span class="kw-2">&amp;</span><span class="ident">U</span>, <span class="kw-2">&amp;</span><span class="ident">acc</span>, <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span>, <span class="ident">region</span>)<span class="question-mark">?</span>;
-
-            <span class="comment">// Acc + U + Acc</span>
-            <span class="ident">acc</span> <span class="op">=</span> <span class="self">self</span>
-                .<span class="ident">add_config</span>
-                .<span class="ident">assign_region</span>(<span class="kw-2">&amp;</span><span class="ident">acc</span>, <span class="kw-2">&amp;</span><span class="ident">tmp_acc</span>, <span class="ident">row</span> <span class="op">+</span> <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">region</span>)<span class="question-mark">?</span>;
+            <span class="comment">// Acc + U + Acc
+            </span>acc = <span class="self">self
+                </span>.add_config
+                .assign_region(<span class="kw-2">&amp;</span>acc, <span class="kw-2">&amp;</span>tmp_acc, row + offset + <span class="number">1</span>, region)<span class="question-mark">?</span>;
         }
-        <span class="prelude-val">Ok</span>((<span class="ident">acc</span>, <span class="ident">zs</span>))
+        <span class="prelude-val">Ok</span>((acc, zs))
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

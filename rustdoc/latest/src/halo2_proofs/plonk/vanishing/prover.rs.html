@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -192,179 +186,178 @@
 <span id="171">171</span>
 <span id="172">172</span>
 <span id="173">173</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::iter</span>;
+</pre><pre class="rust"><code><span class="kw">use </span>std::iter;
 
-<span class="kw">use</span> <span class="ident">ff::Field</span>;
-<span class="kw">use</span> <span class="ident">group::Curve</span>;
-<span class="kw">use</span> <span class="ident">rand_core::RngCore</span>;
+<span class="kw">use </span>ff::Field;
+<span class="kw">use </span>group::Curve;
+<span class="kw">use </span>rand_core::RngCore;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::Argument</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">arithmetic</span>::{<span class="ident">eval_polynomial</span>, <span class="ident">CurveAffine</span>, <span class="ident">FieldExt</span>},
-    <span class="ident">plonk</span>::{<span class="ident">ChallengeX</span>, <span class="ident">ChallengeY</span>, <span class="ident">Error</span>},
-    <span class="ident">poly</span>::{
+<span class="kw">use </span><span class="kw">super</span>::Argument;
+<span class="kw">use crate</span>::{
+    arithmetic::{eval_polynomial, CurveAffine, FieldExt},
+    plonk::{ChallengeX, ChallengeY, Error},
+    poly::{
         <span class="self">self</span>,
-        <span class="ident">commitment</span>::{<span class="ident">Blind</span>, <span class="ident">Params</span>},
-        <span class="ident">multiopen::ProverQuery</span>,
-        <span class="ident">Coeff</span>, <span class="ident">EvaluationDomain</span>, <span class="ident">ExtendedLagrangeCoeff</span>, <span class="ident">Polynomial</span>,
+        commitment::{Blind, Params},
+        multiopen::ProverQuery,
+        Coeff, EvaluationDomain, ExtendedLagrangeCoeff, Polynomial,
     },
-    <span class="ident">transcript</span>::{<span class="ident">EncodedChallenge</span>, <span class="ident">TranscriptWrite</span>},
+    transcript::{EncodedChallenge, TranscriptWrite},
 };
 
-<span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">struct</span> <span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">random_poly</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">Coeff</span><span class="op">&gt;</span>,
-    <span class="ident">random_blind</span>: <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
+<span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">struct </span>Committed&lt;C: CurveAffine&gt; {
+    random_poly: Polynomial&lt;C::Scalar, Coeff&gt;,
+    random_blind: Blind&lt;C::Scalar&gt;,
 }
 
-<span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">struct</span> <span class="ident">Constructed</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">h_pieces</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">Coeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">h_blinds</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">committed</span>: <span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
+<span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">struct </span>Constructed&lt;C: CurveAffine&gt; {
+    h_pieces: Vec&lt;Polynomial&lt;C::Scalar, Coeff&gt;&gt;,
+    h_blinds: Vec&lt;Blind&lt;C::Scalar&gt;&gt;,
+    committed: Committed&lt;C&gt;,
 }
 
-<span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">struct</span> <span class="ident">Evaluated</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">h_poly</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">Coeff</span><span class="op">&gt;</span>,
-    <span class="ident">h_blind</span>: <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
-    <span class="ident">committed</span>: <span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
+<span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">struct </span>Evaluated&lt;C: CurveAffine&gt; {
+    h_poly: Polynomial&lt;C::Scalar, Coeff&gt;,
+    h_blind: Blind&lt;C::Scalar&gt;,
+    committed: Committed&lt;C&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Argument</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">commit</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">R</span>: <span class="ident">RngCore</span>, <span class="ident">T</span>: <span class="ident">TranscriptWrite</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>(
-        <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">domain</span>: <span class="kw-2">&amp;</span><span class="ident">EvaluationDomain</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
-        <span class="kw-2">mut</span> <span class="ident">rng</span>: <span class="ident">R</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Sample a random polynomial of degree n - 1</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">random_poly</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">empty_coeff</span>();
-        <span class="kw">for</span> <span class="ident">coeff</span> <span class="kw">in</span> <span class="ident">random_poly</span>.<span class="ident">iter_mut</span>() {
-            <span class="kw-2">*</span><span class="ident">coeff</span> <span class="op">=</span> <span class="ident">C::Scalar::random</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>);
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; Argument&lt;C&gt; {
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>commit&lt;E: EncodedChallenge&lt;C&gt;, R: RngCore, T: TranscriptWrite&lt;C, E&gt;&gt;(
+        params: <span class="kw-2">&amp;</span>Params&lt;C&gt;,
+        domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;C::Scalar&gt;,
+        <span class="kw-2">mut </span>rng: R,
+        transcript: <span class="kw-2">&amp;mut </span>T,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Committed&lt;C&gt;, Error&gt; {
+        <span class="comment">// Sample a random polynomial of degree n - 1
+        </span><span class="kw">let </span><span class="kw-2">mut </span>random_poly = domain.empty_coeff();
+        <span class="kw">for </span>coeff <span class="kw">in </span>random_poly.iter_mut() {
+            <span class="kw-2">*</span>coeff = C::Scalar::random(<span class="kw-2">&amp;mut </span>rng);
         }
-        <span class="comment">// Sample a random blinding factor</span>
-        <span class="kw">let</span> <span class="ident">random_blind</span> <span class="op">=</span> <span class="ident">Blind</span>(<span class="ident">C::Scalar::random</span>(<span class="ident">rng</span>));
+        <span class="comment">// Sample a random blinding factor
+        </span><span class="kw">let </span>random_blind = Blind(C::Scalar::random(rng));
 
-        <span class="comment">// Commit</span>
-        <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">commit</span>(<span class="kw-2">&amp;</span><span class="ident">random_poly</span>, <span class="ident">random_blind</span>).<span class="ident">to_affine</span>();
-        <span class="ident">transcript</span>.<span class="ident">write_point</span>(<span class="ident">c</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Commit
+        </span><span class="kw">let </span>c = params.commit(<span class="kw-2">&amp;</span>random_poly, random_blind).to_affine();
+        transcript.write_point(c)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Committed</span> {
-            <span class="ident">random_poly</span>,
-            <span class="ident">random_blind</span>,
+        <span class="prelude-val">Ok</span>(Committed {
+            random_poly,
+            random_blind,
         })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">construct</span><span class="op">&lt;</span>
-        <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">Ev</span>: <span class="ident">Copy</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span>,
-        <span class="ident">R</span>: <span class="ident">RngCore</span>,
-        <span class="ident">T</span>: <span class="ident">TranscriptWrite</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>,
-    <span class="op">&gt;</span>(
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; Committed&lt;C&gt; {
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>construct&lt;
+        E: EncodedChallenge&lt;C&gt;,
+        Ev: Copy + Send + Sync,
+        R: RngCore,
+        T: TranscriptWrite&lt;C, E&gt;,
+    &gt;(
         <span class="self">self</span>,
-        <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">domain</span>: <span class="kw-2">&amp;</span><span class="ident">EvaluationDomain</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
-        <span class="ident">evaluator</span>: <span class="ident">poly::Evaluator</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
-        <span class="ident">expressions</span>: <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">poly::Ast</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">y</span>: <span class="ident">ChallengeY</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="kw-2">mut</span> <span class="ident">rng</span>: <span class="ident">R</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Constructed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Evaluate the h(X) polynomial&#39;s constraint system expressions for the constraints provided</span>
-        <span class="kw">let</span> <span class="ident">h_poly</span> <span class="op">=</span> <span class="ident">poly::Ast::distribute_powers</span>(<span class="ident">expressions</span>, <span class="kw-2">*</span><span class="ident">y</span>); <span class="comment">// Fold the gates together with the y challenge</span>
-        <span class="kw">let</span> <span class="ident">h_poly</span> <span class="op">=</span> <span class="ident">evaluator</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">h_poly</span>, <span class="ident">domain</span>); <span class="comment">// Evaluate the h(X) polynomial</span>
+        params: <span class="kw-2">&amp;</span>Params&lt;C&gt;,
+        domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;C::Scalar&gt;,
+        evaluator: poly::Evaluator&lt;Ev, C::Scalar, ExtendedLagrangeCoeff&gt;,
+        expressions: <span class="kw">impl </span>Iterator&lt;Item = poly::Ast&lt;Ev, C::Scalar, ExtendedLagrangeCoeff&gt;&gt;,
+        y: ChallengeY&lt;C&gt;,
+        <span class="kw-2">mut </span>rng: R,
+        transcript: <span class="kw-2">&amp;mut </span>T,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Constructed&lt;C&gt;, Error&gt; {
+        <span class="comment">// Evaluate the h(X) polynomial&#39;s constraint system expressions for the constraints provided
+        </span><span class="kw">let </span>h_poly = poly::Ast::distribute_powers(expressions, <span class="kw-2">*</span>y); <span class="comment">// Fold the gates together with the y challenge
+        </span><span class="kw">let </span>h_poly = evaluator.evaluate(<span class="kw-2">&amp;</span>h_poly, domain); <span class="comment">// Evaluate the h(X) polynomial
 
-        <span class="comment">// Divide by t(X) = X^{params.n} - 1.</span>
-        <span class="kw">let</span> <span class="ident">h_poly</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">divide_by_vanishing_poly</span>(<span class="ident">h_poly</span>);
+        // Divide by t(X) = X^{params.n} - 1.
+        </span><span class="kw">let </span>h_poly = domain.divide_by_vanishing_poly(h_poly);
 
-        <span class="comment">// Obtain final h(X) polynomial</span>
-        <span class="kw">let</span> <span class="ident">h_poly</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">extended_to_coeff</span>(<span class="ident">h_poly</span>);
+        <span class="comment">// Obtain final h(X) polynomial
+        </span><span class="kw">let </span>h_poly = domain.extended_to_coeff(h_poly);
 
-        <span class="comment">// Split h(X) up into pieces</span>
-        <span class="kw">let</span> <span class="ident">h_pieces</span> <span class="op">=</span> <span class="ident">h_poly</span>
-            .<span class="ident">chunks_exact</span>(<span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>)
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">domain</span>.<span class="ident">coeff_from_vec</span>(<span class="ident">v</span>.<span class="ident">to_vec</span>()))
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-        <span class="ident">drop</span>(<span class="ident">h_poly</span>);
-        <span class="kw">let</span> <span class="ident">h_blinds</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">h_pieces</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Blind</span>(<span class="ident">C::Scalar::random</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>)))
-            .<span class="ident">collect</span>();
+        <span class="comment">// Split h(X) up into pieces
+        </span><span class="kw">let </span>h_pieces = h_poly
+            .chunks_exact(params.n <span class="kw">as </span>usize)
+            .map(|v| domain.coeff_from_vec(v.to_vec()))
+            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+        drop(h_poly);
+        <span class="kw">let </span>h_blinds: Vec&lt;<span class="kw">_</span>&gt; = h_pieces
+            .iter()
+            .map(|<span class="kw">_</span>| Blind(C::Scalar::random(<span class="kw-2">&amp;mut </span>rng)))
+            .collect();
 
-        <span class="comment">// Compute commitments to each h(X) piece</span>
-        <span class="kw">let</span> <span class="ident">h_commitments_projective</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">h_pieces</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">zip</span>(<span class="ident">h_blinds</span>.<span class="ident">iter</span>())
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">h_piece</span>, <span class="ident">blind</span>)<span class="op">|</span> <span class="ident">params</span>.<span class="ident">commit</span>(<span class="ident">h_piece</span>, <span class="kw-2">*</span><span class="ident">blind</span>))
-            .<span class="ident">collect</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">h_commitments</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">C::identity</span>(); <span class="ident">h_commitments_projective</span>.<span class="ident">len</span>()];
-        <span class="ident">C::Curve::batch_normalize</span>(<span class="kw-2">&amp;</span><span class="ident">h_commitments_projective</span>, <span class="kw-2">&amp;mut</span> <span class="ident">h_commitments</span>);
-        <span class="kw">let</span> <span class="ident">h_commitments</span> <span class="op">=</span> <span class="ident">h_commitments</span>;
+        <span class="comment">// Compute commitments to each h(X) piece
+        </span><span class="kw">let </span>h_commitments_projective: Vec&lt;<span class="kw">_</span>&gt; = h_pieces
+            .iter()
+            .zip(h_blinds.iter())
+            .map(|(h_piece, blind)| params.commit(h_piece, <span class="kw-2">*</span>blind))
+            .collect();
+        <span class="kw">let </span><span class="kw-2">mut </span>h_commitments = <span class="macro">vec!</span>[C::identity(); h_commitments_projective.len()];
+        C::Curve::batch_normalize(<span class="kw-2">&amp;</span>h_commitments_projective, <span class="kw-2">&amp;mut </span>h_commitments);
+        <span class="kw">let </span>h_commitments = h_commitments;
 
-        <span class="comment">// Hash each h(X) piece</span>
-        <span class="kw">for</span> <span class="ident">c</span> <span class="kw">in</span> <span class="ident">h_commitments</span>.<span class="ident">iter</span>() {
-            <span class="ident">transcript</span>.<span class="ident">write_point</span>(<span class="kw-2">*</span><span class="ident">c</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Hash each h(X) piece
+        </span><span class="kw">for </span>c <span class="kw">in </span>h_commitments.iter() {
+            transcript.write_point(<span class="kw-2">*</span>c)<span class="question-mark">?</span>;
         }
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Constructed</span> {
-            <span class="ident">h_pieces</span>,
-            <span class="ident">h_blinds</span>,
-            <span class="ident">committed</span>: <span class="self">self</span>,
+        <span class="prelude-val">Ok</span>(Constructed {
+            h_pieces,
+            h_blinds,
+            committed: <span class="self">self</span>,
         })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Constructed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">evaluate</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">T</span>: <span class="ident">TranscriptWrite</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; Constructed&lt;C&gt; {
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>evaluate&lt;E: EncodedChallenge&lt;C&gt;, T: TranscriptWrite&lt;C, E&gt;&gt;(
         <span class="self">self</span>,
-        <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">xn</span>: <span class="ident">C::Scalar</span>,
-        <span class="ident">domain</span>: <span class="kw-2">&amp;</span><span class="ident">EvaluationDomain</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Evaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">h_poly</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">h_pieces</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">rev</span>()
-            .<span class="ident">fold</span>(<span class="ident">domain</span>.<span class="ident">empty_coeff</span>(), <span class="op">|</span><span class="ident">acc</span>, <span class="ident">eval</span><span class="op">|</span> <span class="ident">acc</span> <span class="op">*</span> <span class="ident">xn</span> <span class="op">+</span> <span class="ident">eval</span>);
+        x: ChallengeX&lt;C&gt;,
+        xn: C::Scalar,
+        domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;C::Scalar&gt;,
+        transcript: <span class="kw-2">&amp;mut </span>T,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Evaluated&lt;C&gt;, Error&gt; {
+        <span class="kw">let </span>h_poly = <span class="self">self
+            </span>.h_pieces
+            .iter()
+            .rev()
+            .fold(domain.empty_coeff(), |acc, eval| acc * xn + eval);
 
-        <span class="kw">let</span> <span class="ident">h_blind</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">h_blinds</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">rev</span>()
-            .<span class="ident">fold</span>(<span class="ident">Blind</span>(<span class="ident">C::Scalar::zero</span>()), <span class="op">|</span><span class="ident">acc</span>, <span class="ident">eval</span><span class="op">|</span> {
-                <span class="ident">acc</span> <span class="op">*</span> <span class="ident">Blind</span>(<span class="ident">xn</span>) <span class="op">+</span> <span class="kw-2">*</span><span class="ident">eval</span>
+        <span class="kw">let </span>h_blind = <span class="self">self
+            </span>.h_blinds
+            .iter()
+            .rev()
+            .fold(Blind(C::Scalar::zero()), |acc, eval| {
+                acc * Blind(xn) + <span class="kw-2">*</span>eval
             });
 
-        <span class="kw">let</span> <span class="ident">random_eval</span> <span class="op">=</span> <span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">committed</span>.<span class="ident">random_poly</span>, <span class="kw-2">*</span><span class="ident">x</span>);
-        <span class="ident">transcript</span>.<span class="ident">write_scalar</span>(<span class="ident">random_eval</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>random_eval = eval_polynomial(<span class="kw-2">&amp;</span><span class="self">self</span>.committed.random_poly, <span class="kw-2">*</span>x);
+        transcript.write_scalar(random_eval)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Evaluated</span> {
-            <span class="ident">h_poly</span>,
-            <span class="ident">h_blind</span>,
-            <span class="ident">committed</span>: <span class="self">self</span>.<span class="ident">committed</span>,
+        <span class="prelude-val">Ok</span>(Evaluated {
+            h_poly,
+            h_blind,
+            committed: <span class="self">self</span>.committed,
         })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Evaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">open</span>(
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; Evaluated&lt;C&gt; {
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>open(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">ProverQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> {
-        <span class="ident">iter::empty</span>()
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">ProverQuery</span> {
-                <span class="ident">point</span>: <span class="kw-2">*</span><span class="ident">x</span>,
-                <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">h_poly</span>,
-                <span class="ident">blind</span>: <span class="self">self</span>.<span class="ident">h_blind</span>,
+        x: ChallengeX&lt;C&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = ProverQuery&lt;<span class="lifetime">&#39;_</span>, C&gt;&gt; + Clone {
+        iter::empty()
+            .chain(<span class="prelude-val">Some</span>(ProverQuery {
+                point: <span class="kw-2">*</span>x,
+                poly: <span class="kw-2">&amp;</span><span class="self">self</span>.h_poly,
+                blind: <span class="self">self</span>.h_blind,
             }))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">ProverQuery</span> {
-                <span class="ident">point</span>: <span class="kw-2">*</span><span class="ident">x</span>,
-                <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">committed</span>.<span class="ident">random_poly</span>,
-                <span class="ident">blind</span>: <span class="self">self</span>.<span class="ident">committed</span>.<span class="ident">random_blind</span>,
+            .chain(<span class="prelude-val">Some</span>(ProverQuery {
+                point: <span class="kw-2">*</span>x,
+                poly: <span class="kw-2">&amp;</span><span class="self">self</span>.committed.random_poly,
+                blind: <span class="self">self</span>.committed.random_blind,
             }))
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

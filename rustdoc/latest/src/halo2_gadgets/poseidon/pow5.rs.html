@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -908,710 +902,710 @@
 <span id="887">887</span>
 <span id="888">888</span>
 <span id="889">889</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
-<span class="kw">use</span> <span class="ident">std::iter</span>;
+</pre><pre class="rust"><code><span class="kw">use </span>std::convert::TryInto;
+<span class="kw">use </span>std::iter;
 
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">arithmetic::FieldExt</span>,
-    <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Cell</span>, <span class="ident">Chip</span>, <span class="ident">Layouter</span>, <span class="ident">Region</span>, <span class="ident">Value</span>},
-    <span class="ident">plonk</span>::{
-        <span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Fixed</span>, <span class="ident">Selector</span>,
+<span class="kw">use </span>halo2_proofs::{
+    arithmetic::FieldExt,
+    circuit::{AssignedCell, Cell, Chip, Layouter, Region, Value},
+    plonk::{
+        Advice, Any, Column, ConstraintSystem, Constraints, Error, Expression, Fixed, Selector,
     },
-    <span class="ident">poly::Rotation</span>,
+    poly::Rotation,
 };
 
-<span class="kw">use</span> <span class="kw">super</span>::{
-    <span class="ident">primitives</span>::{<span class="ident">Absorbing</span>, <span class="ident">Domain</span>, <span class="ident">Mds</span>, <span class="ident">Spec</span>, <span class="ident">Squeezing</span>, <span class="ident">State</span>},
-    <span class="ident">PaddedWord</span>, <span class="ident">PoseidonInstructions</span>, <span class="ident">PoseidonSpongeInstructions</span>,
+<span class="kw">use super</span>::{
+    primitives::{Absorbing, Domain, Mds, Spec, Squeezing, State},
+    PaddedWord, PoseidonInstructions, PoseidonSpongeInstructions,
 };
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::utilities::Var</span>;
+<span class="kw">use </span><span class="kw">crate</span>::utilities::Var;
 
-<span class="doccomment">/// Configuration for a [`Pow5Chip`].</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Pow5Config</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="kw">const</span> <span class="ident">WIDTH</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="ident">state</span>: [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>; <span class="ident">WIDTH</span>],
-    <span class="ident">partial_sbox</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="ident">rc_a</span>: [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>; <span class="ident">WIDTH</span>],
-    <span class="ident">rc_b</span>: [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>; <span class="ident">WIDTH</span>],
-    <span class="ident">s_full</span>: <span class="ident">Selector</span>,
-    <span class="ident">s_partial</span>: <span class="ident">Selector</span>,
-    <span class="ident">s_pad_and_add</span>: <span class="ident">Selector</span>,
+<span class="doccomment">/// Configuration for a [`Pow5Chip`].
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>Pow5Config&lt;F: FieldExt, <span class="kw">const </span>WIDTH: usize, <span class="kw">const </span>RATE: usize&gt; {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) state: [Column&lt;Advice&gt;; WIDTH],
+    partial_sbox: Column&lt;Advice&gt;,
+    rc_a: [Column&lt;Fixed&gt;; WIDTH],
+    rc_b: [Column&lt;Fixed&gt;; WIDTH],
+    s_full: Selector,
+    s_partial: Selector,
+    s_pad_and_add: Selector,
 
-    <span class="ident">half_full_rounds</span>: <span class="ident">usize</span>,
-    <span class="ident">half_partial_rounds</span>: <span class="ident">usize</span>,
-    <span class="ident">alpha</span>: [<span class="ident">u64</span>; <span class="number">4</span>],
-    <span class="ident">round_constants</span>: <span class="ident">Vec</span><span class="op">&lt;</span>[<span class="ident">F</span>; <span class="ident">WIDTH</span>]<span class="op">&gt;</span>,
-    <span class="ident">m_reg</span>: <span class="ident">Mds</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span><span class="op">&gt;</span>,
-    <span class="ident">m_inv</span>: <span class="ident">Mds</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span><span class="op">&gt;</span>,
+    half_full_rounds: usize,
+    half_partial_rounds: usize,
+    alpha: [u64; <span class="number">4</span>],
+    round_constants: Vec&lt;[F; WIDTH]&gt;,
+    m_reg: Mds&lt;F, WIDTH&gt;,
+    m_inv: Mds&lt;F, WIDTH&gt;,
 }
 
-<span class="doccomment">/// A Poseidon chip using an $x^5$ S-Box.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The chip is implemented using a single round per row for full rounds, and two rounds</span>
-<span class="doccomment">/// per row for partial rounds.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Pow5Chip</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="kw">const</span> <span class="ident">WIDTH</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="ident">config</span>: <span class="ident">Pow5Config</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A Poseidon chip using an $x^5$ S-Box.
+///
+/// The chip is implemented using a single round per row for full rounds, and two rounds
+/// per row for partial rounds.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>Pow5Chip&lt;F: FieldExt, <span class="kw">const </span>WIDTH: usize, <span class="kw">const </span>RATE: usize&gt; {
+    config: Pow5Config&lt;F, WIDTH, RATE&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="kw">const</span> <span class="ident">WIDTH</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Pow5Chip</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Configures this chip for use in a circuit.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Side-effects</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// All columns in `state` will be equality-enabled.</span>
-    <span class="comment">//</span>
-    <span class="comment">// TODO: Does the rate need to be hard-coded here, or only the width? It probably</span>
-    <span class="comment">// needs to be known wherever we implement the hashing gadget, but it isn&#39;t strictly</span>
-    <span class="comment">// necessary for the permutation.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span><span class="op">&gt;</span>(
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">state</span>: [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>; <span class="ident">WIDTH</span>],
-        <span class="ident">partial_sbox</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">rc_a</span>: [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>; <span class="ident">WIDTH</span>],
-        <span class="ident">rc_b</span>: [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>; <span class="ident">WIDTH</span>],
-    ) -&gt; <span class="ident">Pow5Config</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="ident">RATE</span>, <span class="ident">WIDTH</span> <span class="op">-</span> <span class="number">1</span>);
-        <span class="comment">// Generate constants for the Poseidon permutation.</span>
-        <span class="comment">// This gadget requires R_F and R_P to be even.</span>
-        <span class="macro">assert!</span>(<span class="ident">S::full_rounds</span>() <span class="op">&amp;</span> <span class="number">1</span> <span class="op">==</span> <span class="number">0</span>);
-        <span class="macro">assert!</span>(<span class="ident">S::partial_rounds</span>() <span class="op">&amp;</span> <span class="number">1</span> <span class="op">==</span> <span class="number">0</span>);
-        <span class="kw">let</span> <span class="ident">half_full_rounds</span> <span class="op">=</span> <span class="ident">S::full_rounds</span>() <span class="op">/</span> <span class="number">2</span>;
-        <span class="kw">let</span> <span class="ident">half_partial_rounds</span> <span class="op">=</span> <span class="ident">S::partial_rounds</span>() <span class="op">/</span> <span class="number">2</span>;
-        <span class="kw">let</span> (<span class="ident">round_constants</span>, <span class="ident">m_reg</span>, <span class="ident">m_inv</span>) <span class="op">=</span> <span class="ident">S::constants</span>();
+<span class="kw">impl</span>&lt;F: FieldExt, <span class="kw">const </span>WIDTH: usize, <span class="kw">const </span>RATE: usize&gt; Pow5Chip&lt;F, WIDTH, RATE&gt; {
+    <span class="doccomment">/// Configures this chip for use in a circuit.
+    ///
+    /// # Side-effects
+    ///
+    /// All columns in `state` will be equality-enabled.
+    </span><span class="comment">//
+    // TODO: Does the rate need to be hard-coded here, or only the width? It probably
+    // needs to be known wherever we implement the hashing gadget, but it isn&#39;t strictly
+    // necessary for the permutation.
+    </span><span class="kw">pub fn </span>configure&lt;S: Spec&lt;F, WIDTH, RATE&gt;&gt;(
+        meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;F&gt;,
+        state: [Column&lt;Advice&gt;; WIDTH],
+        partial_sbox: Column&lt;Advice&gt;,
+        rc_a: [Column&lt;Fixed&gt;; WIDTH],
+        rc_b: [Column&lt;Fixed&gt;; WIDTH],
+    ) -&gt; Pow5Config&lt;F, WIDTH, RATE&gt; {
+        <span class="macro">assert_eq!</span>(RATE, WIDTH - <span class="number">1</span>);
+        <span class="comment">// Generate constants for the Poseidon permutation.
+        // This gadget requires R_F and R_P to be even.
+        </span><span class="macro">assert!</span>(S::full_rounds() &amp; <span class="number">1 </span>== <span class="number">0</span>);
+        <span class="macro">assert!</span>(S::partial_rounds() &amp; <span class="number">1 </span>== <span class="number">0</span>);
+        <span class="kw">let </span>half_full_rounds = S::full_rounds() / <span class="number">2</span>;
+        <span class="kw">let </span>half_partial_rounds = S::partial_rounds() / <span class="number">2</span>;
+        <span class="kw">let </span>(round_constants, m_reg, m_inv) = S::constants();
 
-        <span class="comment">// This allows state words to be initialized (by constraining them equal to fixed</span>
-        <span class="comment">// values), and used in a permutation from an arbitrary region. rc_a is used in</span>
-        <span class="comment">// every permutation round, while rc_b is empty in the initial and final full</span>
-        <span class="comment">// rounds, so we use rc_b as &quot;scratch space&quot; for fixed values (enabling potential</span>
-        <span class="comment">// layouter optimisations).</span>
-        <span class="kw">for</span> <span class="ident">column</span> <span class="kw">in</span> <span class="ident">iter::empty</span>()
-            .<span class="ident">chain</span>(<span class="ident">state</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">map</span>(<span class="ident">Column</span>::<span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="ident">::from</span>))
-            .<span class="ident">chain</span>(<span class="ident">rc_b</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">map</span>(<span class="ident">Column</span>::<span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="ident">::from</span>))
+        <span class="comment">// This allows state words to be initialized (by constraining them equal to fixed
+        // values), and used in a permutation from an arbitrary region. rc_a is used in
+        // every permutation round, while rc_b is empty in the initial and final full
+        // rounds, so we use rc_b as &quot;scratch space&quot; for fixed values (enabling potential
+        // layouter optimisations).
+        </span><span class="kw">for </span>column <span class="kw">in </span>iter::empty()
+            .chain(state.iter().cloned().map(Column::&lt;Any&gt;::from))
+            .chain(rc_b.iter().cloned().map(Column::&lt;Any&gt;::from))
         {
-            <span class="ident">meta</span>.<span class="ident">enable_equality</span>(<span class="ident">column</span>);
+            meta.enable_equality(column);
         }
 
-        <span class="kw">let</span> <span class="ident">s_full</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
-        <span class="kw">let</span> <span class="ident">s_partial</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
-        <span class="kw">let</span> <span class="ident">s_pad_and_add</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
+        <span class="kw">let </span>s_full = meta.selector();
+        <span class="kw">let </span>s_partial = meta.selector();
+        <span class="kw">let </span>s_pad_and_add = meta.selector();
 
-        <span class="kw">let</span> <span class="ident">alpha</span> <span class="op">=</span> [<span class="number">5</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">pow_5</span> <span class="op">=</span> <span class="op">|</span><span class="ident">v</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">v2</span> <span class="op">=</span> <span class="ident">v</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">v</span>.<span class="ident">clone</span>();
-            <span class="ident">v2</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">v2</span> <span class="op">*</span> <span class="ident">v</span>
+        <span class="kw">let </span>alpha = [<span class="number">5</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>];
+        <span class="kw">let </span>pow_5 = |v: Expression&lt;F&gt;| {
+            <span class="kw">let </span>v2 = v.clone() * v.clone();
+            v2.clone() * v2 * v
         };
 
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;full round&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">s_full</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">s_full</span>);
+        meta.create_gate(<span class="string">&quot;full round&quot;</span>, |meta| {
+            <span class="kw">let </span>s_full = meta.query_selector(s_full);
 
-            <span class="ident">Constraints::with_selector</span>(
-                <span class="ident">s_full</span>,
-                (<span class="number">0</span>..<span class="ident">WIDTH</span>)
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">next_idx</span><span class="op">|</span> {
-                        <span class="kw">let</span> <span class="ident">state_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">state</span>[<span class="ident">next_idx</span>], <span class="ident">Rotation::next</span>());
-                        <span class="kw">let</span> <span class="ident">expr</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">WIDTH</span>)
-                            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">idx</span><span class="op">|</span> {
-                                <span class="kw">let</span> <span class="ident">state_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">state</span>[<span class="ident">idx</span>], <span class="ident">Rotation::cur</span>());
-                                <span class="kw">let</span> <span class="ident">rc_a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_fixed</span>(<span class="ident">rc_a</span>[<span class="ident">idx</span>], <span class="ident">Rotation::cur</span>());
-                                <span class="ident">pow_5</span>(<span class="ident">state_cur</span> <span class="op">+</span> <span class="ident">rc_a</span>) <span class="op">*</span> <span class="ident">m_reg</span>[<span class="ident">next_idx</span>][<span class="ident">idx</span>]
+            Constraints::with_selector(
+                s_full,
+                (<span class="number">0</span>..WIDTH)
+                    .map(|next_idx| {
+                        <span class="kw">let </span>state_next = meta.query_advice(state[next_idx], Rotation::next());
+                        <span class="kw">let </span>expr = (<span class="number">0</span>..WIDTH)
+                            .map(|idx| {
+                                <span class="kw">let </span>state_cur = meta.query_advice(state[idx], Rotation::cur());
+                                <span class="kw">let </span>rc_a = meta.query_fixed(rc_a[idx], Rotation::cur());
+                                pow_5(state_cur + rc_a) * m_reg[next_idx][idx]
                             })
-                            .<span class="ident">reduce</span>(<span class="op">|</span><span class="ident">acc</span>, <span class="ident">term</span><span class="op">|</span> <span class="ident">acc</span> <span class="op">+</span> <span class="ident">term</span>)
-                            .<span class="ident">expect</span>(<span class="string">&quot;WIDTH &gt; 0&quot;</span>);
-                        <span class="ident">expr</span> <span class="op">-</span> <span class="ident">state_next</span>
+                            .reduce(|acc, term| acc + term)
+                            .expect(<span class="string">&quot;WIDTH &gt; 0&quot;</span>);
+                        expr - state_next
                     })
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
             )
         });
 
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;partial rounds&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">cur_0</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">state</span>[<span class="number">0</span>], <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">mid_0</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">partial_sbox</span>, <span class="ident">Rotation::cur</span>());
+        meta.create_gate(<span class="string">&quot;partial rounds&quot;</span>, |meta| {
+            <span class="kw">let </span>cur_0 = meta.query_advice(state[<span class="number">0</span>], Rotation::cur());
+            <span class="kw">let </span>mid_0 = meta.query_advice(partial_sbox, Rotation::cur());
 
-            <span class="kw">let</span> <span class="ident">rc_a0</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_fixed</span>(<span class="ident">rc_a</span>[<span class="number">0</span>], <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">rc_b0</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_fixed</span>(<span class="ident">rc_b</span>[<span class="number">0</span>], <span class="ident">Rotation::cur</span>());
+            <span class="kw">let </span>rc_a0 = meta.query_fixed(rc_a[<span class="number">0</span>], Rotation::cur());
+            <span class="kw">let </span>rc_b0 = meta.query_fixed(rc_b[<span class="number">0</span>], Rotation::cur());
 
-            <span class="kw">let</span> <span class="ident">s_partial</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">s_partial</span>);
+            <span class="kw">let </span>s_partial = meta.query_selector(s_partial);
 
-            <span class="kw">use</span> <span class="ident">halo2_proofs::plonk::VirtualCells</span>;
-            <span class="kw">let</span> <span class="ident">mid</span> <span class="op">=</span> <span class="op">|</span><span class="ident">idx</span>: <span class="ident">usize</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">mid</span> <span class="op">=</span> <span class="ident">mid_0</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">m_reg</span>[<span class="ident">idx</span>][<span class="number">0</span>];
-                (<span class="number">1</span>..<span class="ident">WIDTH</span>).<span class="ident">fold</span>(<span class="ident">mid</span>, <span class="op">|</span><span class="ident">acc</span>, <span class="ident">cur_idx</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">state</span>[<span class="ident">cur_idx</span>], <span class="ident">Rotation::cur</span>());
-                    <span class="kw">let</span> <span class="ident">rc_a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_fixed</span>(<span class="ident">rc_a</span>[<span class="ident">cur_idx</span>], <span class="ident">Rotation::cur</span>());
-                    <span class="ident">acc</span> <span class="op">+</span> (<span class="ident">cur</span> <span class="op">+</span> <span class="ident">rc_a</span>) <span class="op">*</span> <span class="ident">m_reg</span>[<span class="ident">idx</span>][<span class="ident">cur_idx</span>]
+            <span class="kw">use </span>halo2_proofs::plonk::VirtualCells;
+            <span class="kw">let </span>mid = |idx: usize, meta: <span class="kw-2">&amp;mut </span>VirtualCells&lt;F&gt;| {
+                <span class="kw">let </span>mid = mid_0.clone() * m_reg[idx][<span class="number">0</span>];
+                (<span class="number">1</span>..WIDTH).fold(mid, |acc, cur_idx| {
+                    <span class="kw">let </span>cur = meta.query_advice(state[cur_idx], Rotation::cur());
+                    <span class="kw">let </span>rc_a = meta.query_fixed(rc_a[cur_idx], Rotation::cur());
+                    acc + (cur + rc_a) * m_reg[idx][cur_idx]
                 })
             };
 
-            <span class="kw">let</span> <span class="ident">next</span> <span class="op">=</span> <span class="op">|</span><span class="ident">idx</span>: <span class="ident">usize</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">|</span> {
-                (<span class="number">0</span>..<span class="ident">WIDTH</span>)
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">next_idx</span><span class="op">|</span> {
-                        <span class="kw">let</span> <span class="ident">next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">state</span>[<span class="ident">next_idx</span>], <span class="ident">Rotation::next</span>());
-                        <span class="ident">next</span> <span class="op">*</span> <span class="ident">m_inv</span>[<span class="ident">idx</span>][<span class="ident">next_idx</span>]
+            <span class="kw">let </span>next = |idx: usize, meta: <span class="kw-2">&amp;mut </span>VirtualCells&lt;F&gt;| {
+                (<span class="number">0</span>..WIDTH)
+                    .map(|next_idx| {
+                        <span class="kw">let </span>next = meta.query_advice(state[next_idx], Rotation::next());
+                        next * m_inv[idx][next_idx]
                     })
-                    .<span class="ident">reduce</span>(<span class="op">|</span><span class="ident">acc</span>, <span class="ident">next</span><span class="op">|</span> <span class="ident">acc</span> <span class="op">+</span> <span class="ident">next</span>)
-                    .<span class="ident">expect</span>(<span class="string">&quot;WIDTH &gt; 0&quot;</span>)
+                    .reduce(|acc, next| acc + next)
+                    .expect(<span class="string">&quot;WIDTH &gt; 0&quot;</span>)
             };
 
-            <span class="kw">let</span> <span class="ident">partial_round_linear</span> <span class="op">=</span> <span class="op">|</span><span class="ident">idx</span>: <span class="ident">usize</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">rc_b</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_fixed</span>(<span class="ident">rc_b</span>[<span class="ident">idx</span>], <span class="ident">Rotation::cur</span>());
-                <span class="ident">mid</span>(<span class="ident">idx</span>, <span class="ident">meta</span>) <span class="op">+</span> <span class="ident">rc_b</span> <span class="op">-</span> <span class="ident">next</span>(<span class="ident">idx</span>, <span class="ident">meta</span>)
+            <span class="kw">let </span>partial_round_linear = |idx: usize, meta: <span class="kw-2">&amp;mut </span>VirtualCells&lt;F&gt;| {
+                <span class="kw">let </span>rc_b = meta.query_fixed(rc_b[idx], Rotation::cur());
+                mid(idx, meta) + rc_b - next(idx, meta)
             };
 
-            <span class="ident">Constraints::with_selector</span>(
-                <span class="ident">s_partial</span>,
-                <span class="ident">std::iter::empty</span>()
-                    <span class="comment">// state[0] round a</span>
-                    .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">pow_5</span>(<span class="ident">cur_0</span> <span class="op">+</span> <span class="ident">rc_a0</span>) <span class="op">-</span> <span class="ident">mid_0</span>.<span class="ident">clone</span>()))
-                    <span class="comment">// state[0] round b</span>
-                    .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">pow_5</span>(<span class="ident">mid</span>(<span class="number">0</span>, <span class="ident">meta</span>) <span class="op">+</span> <span class="ident">rc_b0</span>) <span class="op">-</span> <span class="ident">next</span>(<span class="number">0</span>, <span class="ident">meta</span>)))
-                    .<span class="ident">chain</span>((<span class="number">1</span>..<span class="ident">WIDTH</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">idx</span><span class="op">|</span> <span class="ident">partial_round_linear</span>(<span class="ident">idx</span>, <span class="ident">meta</span>)))
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+            Constraints::with_selector(
+                s_partial,
+                std::iter::empty()
+                    <span class="comment">// state[0] round a
+                    </span>.chain(<span class="prelude-val">Some</span>(pow_5(cur_0 + rc_a0) - mid_0.clone()))
+                    <span class="comment">// state[0] round b
+                    </span>.chain(<span class="prelude-val">Some</span>(pow_5(mid(<span class="number">0</span>, meta) + rc_b0) - next(<span class="number">0</span>, meta)))
+                    .chain((<span class="number">1</span>..WIDTH).map(|idx| partial_round_linear(idx, meta)))
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
             )
         });
 
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;pad-and-add&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">initial_state_rate</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">state</span>[<span class="ident">RATE</span>], <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">output_state_rate</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">state</span>[<span class="ident">RATE</span>], <span class="ident">Rotation::next</span>());
+        meta.create_gate(<span class="string">&quot;pad-and-add&quot;</span>, |meta| {
+            <span class="kw">let </span>initial_state_rate = meta.query_advice(state[RATE], Rotation::prev());
+            <span class="kw">let </span>output_state_rate = meta.query_advice(state[RATE], Rotation::next());
 
-            <span class="kw">let</span> <span class="ident">s_pad_and_add</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">s_pad_and_add</span>);
+            <span class="kw">let </span>s_pad_and_add = meta.query_selector(s_pad_and_add);
 
-            <span class="kw">let</span> <span class="ident">pad_and_add</span> <span class="op">=</span> <span class="op">|</span><span class="ident">idx</span>: <span class="ident">usize</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">initial_state</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">state</span>[<span class="ident">idx</span>], <span class="ident">Rotation::prev</span>());
-                <span class="kw">let</span> <span class="ident">input</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">state</span>[<span class="ident">idx</span>], <span class="ident">Rotation::cur</span>());
-                <span class="kw">let</span> <span class="ident">output_state</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">state</span>[<span class="ident">idx</span>], <span class="ident">Rotation::next</span>());
+            <span class="kw">let </span>pad_and_add = |idx: usize| {
+                <span class="kw">let </span>initial_state = meta.query_advice(state[idx], Rotation::prev());
+                <span class="kw">let </span>input = meta.query_advice(state[idx], Rotation::cur());
+                <span class="kw">let </span>output_state = meta.query_advice(state[idx], Rotation::next());
 
-                <span class="comment">// We pad the input by storing the required padding in fixed columns and</span>
-                <span class="comment">// then constraining the corresponding input columns to be equal to it.</span>
-                <span class="ident">initial_state</span> <span class="op">+</span> <span class="ident">input</span> <span class="op">-</span> <span class="ident">output_state</span>
+                <span class="comment">// We pad the input by storing the required padding in fixed columns and
+                // then constraining the corresponding input columns to be equal to it.
+                </span>initial_state + input - output_state
             };
 
-            <span class="ident">Constraints::with_selector</span>(
-                <span class="ident">s_pad_and_add</span>,
-                (<span class="number">0</span>..<span class="ident">RATE</span>)
-                    .<span class="ident">map</span>(<span class="ident">pad_and_add</span>)
-                    <span class="comment">// The capacity element is never altered by the input.</span>
-                    .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">initial_state_rate</span> <span class="op">-</span> <span class="ident">output_state_rate</span>))
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+            Constraints::with_selector(
+                s_pad_and_add,
+                (<span class="number">0</span>..RATE)
+                    .map(pad_and_add)
+                    <span class="comment">// The capacity element is never altered by the input.
+                    </span>.chain(<span class="prelude-val">Some</span>(initial_state_rate - output_state_rate))
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
             )
         });
 
-        <span class="ident">Pow5Config</span> {
-            <span class="ident">state</span>,
-            <span class="ident">partial_sbox</span>,
-            <span class="ident">rc_a</span>,
-            <span class="ident">rc_b</span>,
-            <span class="ident">s_full</span>,
-            <span class="ident">s_partial</span>,
-            <span class="ident">s_pad_and_add</span>,
-            <span class="ident">half_full_rounds</span>,
-            <span class="ident">half_partial_rounds</span>,
-            <span class="ident">alpha</span>,
-            <span class="ident">round_constants</span>,
-            <span class="ident">m_reg</span>,
-            <span class="ident">m_inv</span>,
+        Pow5Config {
+            state,
+            partial_sbox,
+            rc_a,
+            rc_b,
+            s_full,
+            s_partial,
+            s_pad_and_add,
+            half_full_rounds,
+            half_partial_rounds,
+            alpha,
+            round_constants,
+            m_reg,
+            m_inv,
         }
     }
 
-    <span class="doccomment">/// Construct a [`Pow5Chip`].</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">construct</span>(<span class="ident">config</span>: <span class="ident">Pow5Config</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Pow5Chip</span> { <span class="ident">config</span> }
+    <span class="doccomment">/// Construct a [`Pow5Chip`].
+    </span><span class="kw">pub fn </span>construct(config: Pow5Config&lt;F, WIDTH, RATE&gt;) -&gt; <span class="self">Self </span>{
+        Pow5Chip { config }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="kw">const</span> <span class="ident">WIDTH</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Pow5Chip</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">Pow5Config</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">Loaded</span> <span class="op">=</span> ();
+<span class="kw">impl</span>&lt;F: FieldExt, <span class="kw">const </span>WIDTH: usize, <span class="kw">const </span>RATE: usize&gt; Chip&lt;F&gt; <span class="kw">for </span>Pow5Chip&lt;F, WIDTH, RATE&gt; {
+    <span class="kw">type </span>Config = Pow5Config&lt;F, WIDTH, RATE&gt;;
+    <span class="kw">type </span>Loaded = ();
 
-    <span class="kw">fn</span> <span class="ident">config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Config</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span>
+    <span class="kw">fn </span>config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Config {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.config
     }
 
-    <span class="kw">fn</span> <span class="ident">loaded</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Loaded</span> {
+    <span class="kw">fn </span>loaded(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Loaded {
         <span class="kw-2">&amp;</span>()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">WIDTH</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-    <span class="ident">PoseidonInstructions</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Pow5Chip</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;F: FieldExt, S: Spec&lt;F, WIDTH, RATE&gt;, <span class="kw">const </span>WIDTH: usize, <span class="kw">const </span>RATE: usize&gt;
+    PoseidonInstructions&lt;F, S, WIDTH, RATE&gt; <span class="kw">for </span>Pow5Chip&lt;F, WIDTH, RATE&gt;
 {
-    <span class="kw">type</span> <span class="ident">Word</span> <span class="op">=</span> <span class="ident">StateWord</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Word = StateWord&lt;F&gt;;
 
-    <span class="kw">fn</span> <span class="ident">permute</span>(
+    <span class="kw">fn </span>permute(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">initial_state</span>: <span class="kw-2">&amp;</span><span class="ident">State</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Word</span>, <span class="ident">WIDTH</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">State</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Word</span>, <span class="ident">WIDTH</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>();
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;F&gt;,
+        initial_state: <span class="kw-2">&amp;</span>State&lt;<span class="self">Self</span>::Word, WIDTH&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;State&lt;<span class="self">Self</span>::Word, WIDTH&gt;, Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config();
 
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;permute state&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                <span class="comment">// Load the initial state into this region.</span>
-                <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">Pow5State::load</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">config</span>, <span class="ident">initial_state</span>)<span class="question-mark">?</span>;
+        layouter.assign_region(
+            || <span class="string">&quot;permute state&quot;</span>,
+            |<span class="kw-2">mut </span>region| {
+                <span class="comment">// Load the initial state into this region.
+                </span><span class="kw">let </span>state = Pow5State::load(<span class="kw-2">&amp;mut </span>region, config, initial_state)<span class="question-mark">?</span>;
 
-                <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">config</span>.<span class="ident">half_full_rounds</span>).<span class="ident">fold</span>(<span class="prelude-val">Ok</span>(<span class="ident">state</span>), <span class="op">|</span><span class="ident">res</span>, <span class="ident">r</span><span class="op">|</span> {
-                    <span class="ident">res</span>.<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">state</span><span class="op">|</span> <span class="ident">state</span>.<span class="ident">full_round</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">config</span>, <span class="ident">r</span>, <span class="ident">r</span>))
+                <span class="kw">let </span>state = (<span class="number">0</span>..config.half_full_rounds).fold(<span class="prelude-val">Ok</span>(state), |res, r| {
+                    res.and_then(|state| state.full_round(<span class="kw-2">&amp;mut </span>region, config, r, r))
                 })<span class="question-mark">?</span>;
 
-                <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">config</span>.<span class="ident">half_partial_rounds</span>).<span class="ident">fold</span>(<span class="prelude-val">Ok</span>(<span class="ident">state</span>), <span class="op">|</span><span class="ident">res</span>, <span class="ident">r</span><span class="op">|</span> {
-                    <span class="ident">res</span>.<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">state</span><span class="op">|</span> {
-                        <span class="ident">state</span>.<span class="ident">partial_round</span>(
-                            <span class="kw-2">&amp;mut</span> <span class="ident">region</span>,
-                            <span class="ident">config</span>,
-                            <span class="ident">config</span>.<span class="ident">half_full_rounds</span> <span class="op">+</span> <span class="number">2</span> <span class="op">*</span> <span class="ident">r</span>,
-                            <span class="ident">config</span>.<span class="ident">half_full_rounds</span> <span class="op">+</span> <span class="ident">r</span>,
+                <span class="kw">let </span>state = (<span class="number">0</span>..config.half_partial_rounds).fold(<span class="prelude-val">Ok</span>(state), |res, r| {
+                    res.and_then(|state| {
+                        state.partial_round(
+                            <span class="kw-2">&amp;mut </span>region,
+                            config,
+                            config.half_full_rounds + <span class="number">2 </span>* r,
+                            config.half_full_rounds + r,
                         )
                     })
                 })<span class="question-mark">?</span>;
 
-                <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">config</span>.<span class="ident">half_full_rounds</span>).<span class="ident">fold</span>(<span class="prelude-val">Ok</span>(<span class="ident">state</span>), <span class="op">|</span><span class="ident">res</span>, <span class="ident">r</span><span class="op">|</span> {
-                    <span class="ident">res</span>.<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">state</span><span class="op">|</span> {
-                        <span class="ident">state</span>.<span class="ident">full_round</span>(
-                            <span class="kw-2">&amp;mut</span> <span class="ident">region</span>,
-                            <span class="ident">config</span>,
-                            <span class="ident">config</span>.<span class="ident">half_full_rounds</span> <span class="op">+</span> <span class="number">2</span> <span class="op">*</span> <span class="ident">config</span>.<span class="ident">half_partial_rounds</span> <span class="op">+</span> <span class="ident">r</span>,
-                            <span class="ident">config</span>.<span class="ident">half_full_rounds</span> <span class="op">+</span> <span class="ident">config</span>.<span class="ident">half_partial_rounds</span> <span class="op">+</span> <span class="ident">r</span>,
+                <span class="kw">let </span>state = (<span class="number">0</span>..config.half_full_rounds).fold(<span class="prelude-val">Ok</span>(state), |res, r| {
+                    res.and_then(|state| {
+                        state.full_round(
+                            <span class="kw-2">&amp;mut </span>region,
+                            config,
+                            config.half_full_rounds + <span class="number">2 </span>* config.half_partial_rounds + r,
+                            config.half_full_rounds + config.half_partial_rounds + r,
                         )
                     })
                 })<span class="question-mark">?</span>;
 
-                <span class="prelude-val">Ok</span>(<span class="ident">state</span>.<span class="number">0</span>)
+                <span class="prelude-val">Ok</span>(state.<span class="number">0</span>)
             },
         )
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span>
-        <span class="ident">F</span>: <span class="ident">FieldExt</span>,
-        <span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>,
-        <span class="ident">D</span>: <span class="ident">Domain</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">RATE</span><span class="op">&gt;</span>,
-        <span class="kw">const</span> <span class="ident">WIDTH</span>: <span class="ident">usize</span>,
-        <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span>,
-    <span class="op">&gt;</span> <span class="ident">PoseidonSpongeInstructions</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">S</span>, <span class="ident">D</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Pow5Chip</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;
+        F: FieldExt,
+        S: Spec&lt;F, WIDTH, RATE&gt;,
+        D: Domain&lt;F, RATE&gt;,
+        <span class="kw">const </span>WIDTH: usize,
+        <span class="kw">const </span>RATE: usize,
+    &gt; PoseidonSpongeInstructions&lt;F, S, D, WIDTH, RATE&gt; <span class="kw">for </span>Pow5Chip&lt;F, WIDTH, RATE&gt;
 {
-    <span class="kw">fn</span> <span class="ident">initial_state</span>(
+    <span class="kw">fn </span>initial_state(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">State</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Word</span>, <span class="ident">WIDTH</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>();
-        <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;initial state for domain {}&quot;</span>, <span class="ident">D::name</span>()),
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">WIDTH</span>);
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">load_state_word</span> <span class="op">=</span> <span class="op">|</span><span class="ident">i</span>: <span class="ident">usize</span>, <span class="ident">value</span>: <span class="ident">F</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">var</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice_from_constant</span>(
-                        <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;state_{}&quot;</span>, <span class="ident">i</span>),
-                        <span class="ident">config</span>.<span class="ident">state</span>[<span class="ident">i</span>],
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;F&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;State&lt;<span class="self">Self</span>::Word, WIDTH&gt;, Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config();
+        <span class="kw">let </span>state = layouter.assign_region(
+            || <span class="macro">format!</span>(<span class="string">&quot;initial state for domain {}&quot;</span>, D::name()),
+            |<span class="kw-2">mut </span>region| {
+                <span class="kw">let </span><span class="kw-2">mut </span>state = Vec::with_capacity(WIDTH);
+                <span class="kw">let </span><span class="kw-2">mut </span>load_state_word = |i: usize, value: F| -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, Error&gt; {
+                    <span class="kw">let </span>var = region.assign_advice_from_constant(
+                        || <span class="macro">format!</span>(<span class="string">&quot;state_{}&quot;</span>, i),
+                        config.state[i],
                         <span class="number">0</span>,
-                        <span class="ident">value</span>,
+                        value,
                     )<span class="question-mark">?</span>;
-                    <span class="ident">state</span>.<span class="ident">push</span>(<span class="ident">StateWord</span>(<span class="ident">var</span>));
+                    state.push(StateWord(var));
 
                     <span class="prelude-val">Ok</span>(())
                 };
 
-                <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">RATE</span> {
-                    <span class="ident">load_state_word</span>(<span class="ident">i</span>, <span class="ident">F::zero</span>())<span class="question-mark">?</span>;
+                <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..RATE {
+                    load_state_word(i, F::zero())<span class="question-mark">?</span>;
                 }
-                <span class="ident">load_state_word</span>(<span class="ident">RATE</span>, <span class="ident">D::initial_capacity_element</span>())<span class="question-mark">?</span>;
+                load_state_word(RATE, D::initial_capacity_element())<span class="question-mark">?</span>;
 
-                <span class="prelude-val">Ok</span>(<span class="ident">state</span>)
+                <span class="prelude-val">Ok</span>(state)
             },
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">state</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>())
+        <span class="prelude-val">Ok</span>(state.try_into().unwrap())
     }
 
-    <span class="kw">fn</span> <span class="ident">add_input</span>(
+    <span class="kw">fn </span>add_input(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">initial_state</span>: <span class="kw-2">&amp;</span><span class="ident">State</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Word</span>, <span class="ident">WIDTH</span><span class="op">&gt;</span>,
-        <span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">Absorbing</span><span class="op">&lt;</span><span class="ident">PaddedWord</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">RATE</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">State</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Word</span>, <span class="ident">WIDTH</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>();
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;add input for domain {}&quot;</span>, <span class="ident">D::name</span>()),
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                <span class="ident">config</span>.<span class="ident">s_pad_and_add</span>.<span class="ident">enable</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="number">1</span>)<span class="question-mark">?</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;F&gt;,
+        initial_state: <span class="kw-2">&amp;</span>State&lt;<span class="self">Self</span>::Word, WIDTH&gt;,
+        input: <span class="kw-2">&amp;</span>Absorbing&lt;PaddedWord&lt;F&gt;, RATE&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;State&lt;<span class="self">Self</span>::Word, WIDTH&gt;, Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config();
+        layouter.assign_region(
+            || <span class="macro">format!</span>(<span class="string">&quot;add input for domain {}&quot;</span>, D::name()),
+            |<span class="kw-2">mut </span>region| {
+                config.s_pad_and_add.enable(<span class="kw-2">&amp;mut </span>region, <span class="number">1</span>)<span class="question-mark">?</span>;
 
-                <span class="comment">// Load the initial state into this region.</span>
-                <span class="kw">let</span> <span class="ident">load_state_word</span> <span class="op">=</span> <span class="op">|</span><span class="ident">i</span>: <span class="ident">usize</span><span class="op">|</span> {
-                    <span class="ident">initial_state</span>[<span class="ident">i</span>]
-                        .<span class="number">0</span>
-                        .<span class="ident">copy_advice</span>(
-                            <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;load state_{}&quot;</span>, <span class="ident">i</span>),
-                            <span class="kw-2">&amp;mut</span> <span class="ident">region</span>,
-                            <span class="ident">config</span>.<span class="ident">state</span>[<span class="ident">i</span>],
+                <span class="comment">// Load the initial state into this region.
+                </span><span class="kw">let </span>load_state_word = |i: usize| {
+                    initial_state[i]
+                        .<span class="number">0
+                        </span>.copy_advice(
+                            || <span class="macro">format!</span>(<span class="string">&quot;load state_{}&quot;</span>, i),
+                            <span class="kw-2">&amp;mut </span>region,
+                            config.state[i],
                             <span class="number">0</span>,
                         )
-                        .<span class="ident">map</span>(<span class="ident">StateWord</span>)
+                        .map(StateWord)
                 };
-                <span class="kw">let</span> <span class="ident">initial_state</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">=</span>
-                    (<span class="number">0</span>..<span class="ident">WIDTH</span>).<span class="ident">map</span>(<span class="ident">load_state_word</span>).<span class="ident">collect</span>();
-                <span class="kw">let</span> <span class="ident">initial_state</span> <span class="op">=</span> <span class="ident">initial_state</span><span class="question-mark">?</span>;
+                <span class="kw">let </span>initial_state: <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, Error&gt; =
+                    (<span class="number">0</span>..WIDTH).map(load_state_word).collect();
+                <span class="kw">let </span>initial_state = initial_state<span class="question-mark">?</span>;
 
-                <span class="comment">// Load the input into this region.</span>
-                <span class="kw">let</span> <span class="ident">load_input_word</span> <span class="op">=</span> <span class="op">|</span><span class="ident">i</span>: <span class="ident">usize</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">constraint_var</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">input</span>.<span class="number">0</span>[<span class="ident">i</span>].<span class="ident">clone</span>() {
-                        <span class="prelude-val">Some</span>(<span class="ident">PaddedWord::Message</span>(<span class="ident">word</span>)) =&gt; <span class="ident">word</span>,
-                        <span class="prelude-val">Some</span>(<span class="ident">PaddedWord::Padding</span>(<span class="ident">padding_value</span>)) =&gt; <span class="ident">region</span>.<span class="ident">assign_fixed</span>(
-                            <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;load pad_{}&quot;</span>, <span class="ident">i</span>),
-                            <span class="ident">config</span>.<span class="ident">rc_b</span>[<span class="ident">i</span>],
+                <span class="comment">// Load the input into this region.
+                </span><span class="kw">let </span>load_input_word = |i: usize| {
+                    <span class="kw">let </span>constraint_var = <span class="kw">match </span>input.<span class="number">0</span>[i].clone() {
+                        <span class="prelude-val">Some</span>(PaddedWord::Message(word)) =&gt; word,
+                        <span class="prelude-val">Some</span>(PaddedWord::Padding(padding_value)) =&gt; region.assign_fixed(
+                            || <span class="macro">format!</span>(<span class="string">&quot;load pad_{}&quot;</span>, i),
+                            config.rc_b[i],
                             <span class="number">1</span>,
-                            <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">padding_value</span>),
+                            || Value::known(padding_value),
                         )<span class="question-mark">?</span>,
-                        <span class="kw">_</span> =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Input is not padded&quot;</span>),
+                        <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;Input is not padded&quot;</span>),
                     };
-                    <span class="ident">constraint_var</span>
-                        .<span class="ident">copy_advice</span>(
-                            <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;load input_{}&quot;</span>, <span class="ident">i</span>),
-                            <span class="kw-2">&amp;mut</span> <span class="ident">region</span>,
-                            <span class="ident">config</span>.<span class="ident">state</span>[<span class="ident">i</span>],
+                    constraint_var
+                        .copy_advice(
+                            || <span class="macro">format!</span>(<span class="string">&quot;load input_{}&quot;</span>, i),
+                            <span class="kw-2">&amp;mut </span>region,
+                            config.state[i],
                             <span class="number">1</span>,
                         )
-                        .<span class="ident">map</span>(<span class="ident">StateWord</span>)
+                        .map(StateWord)
                 };
-                <span class="kw">let</span> <span class="ident">input</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">RATE</span>).<span class="ident">map</span>(<span class="ident">load_input_word</span>).<span class="ident">collect</span>();
-                <span class="kw">let</span> <span class="ident">input</span> <span class="op">=</span> <span class="ident">input</span><span class="question-mark">?</span>;
+                <span class="kw">let </span>input: <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, Error&gt; = (<span class="number">0</span>..RATE).map(load_input_word).collect();
+                <span class="kw">let </span>input = input<span class="question-mark">?</span>;
 
-                <span class="comment">// Constrain the output.</span>
-                <span class="kw">let</span> <span class="ident">constrain_output_word</span> <span class="op">=</span> <span class="op">|</span><span class="ident">i</span>: <span class="ident">usize</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">initial_state</span>[<span class="ident">i</span>].<span class="number">0</span>.<span class="ident">value</span>().<span class="ident">copied</span>()
-                        <span class="op">+</span> <span class="ident">input</span>
-                            .<span class="ident">get</span>(<span class="ident">i</span>)
-                            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident">word</span>.<span class="number">0</span>.<span class="ident">value</span>().<span class="ident">cloned</span>())
-                            <span class="comment">// The capacity element is never altered by the input.</span>
-                            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">F::zero</span>()));
-                    <span class="ident">region</span>
-                        .<span class="ident">assign_advice</span>(
-                            <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;load output_{}&quot;</span>, <span class="ident">i</span>),
-                            <span class="ident">config</span>.<span class="ident">state</span>[<span class="ident">i</span>],
+                <span class="comment">// Constrain the output.
+                </span><span class="kw">let </span>constrain_output_word = |i: usize| {
+                    <span class="kw">let </span>value = initial_state[i].<span class="number">0</span>.value().copied()
+                        + input
+                            .get(i)
+                            .map(|word| word.<span class="number">0</span>.value().cloned())
+                            <span class="comment">// The capacity element is never altered by the input.
+                            </span>.unwrap_or_else(|| Value::known(F::zero()));
+                    region
+                        .assign_advice(
+                            || <span class="macro">format!</span>(<span class="string">&quot;load output_{}&quot;</span>, i),
+                            config.state[i],
                             <span class="number">2</span>,
-                            <span class="op">|</span><span class="op">|</span> <span class="ident">value</span>,
+                            || value,
                         )
-                        .<span class="ident">map</span>(<span class="ident">StateWord</span>)
+                        .map(StateWord)
                 };
 
-                <span class="kw">let</span> <span class="ident">output</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">WIDTH</span>).<span class="ident">map</span>(<span class="ident">constrain_output_word</span>).<span class="ident">collect</span>();
-                <span class="ident">output</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">output</span><span class="op">|</span> <span class="ident">output</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>())
+                <span class="kw">let </span>output: <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, Error&gt; = (<span class="number">0</span>..WIDTH).map(constrain_output_word).collect();
+                output.map(|output| output.try_into().unwrap())
             },
         )
     }
 
-    <span class="kw">fn</span> <span class="ident">get_output</span>(<span class="ident">state</span>: <span class="kw-2">&amp;</span><span class="ident">State</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Word</span>, <span class="ident">WIDTH</span><span class="op">&gt;</span>) -&gt; <span class="ident">Squeezing</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Word</span>, <span class="ident">RATE</span><span class="op">&gt;</span> {
-        <span class="ident">Squeezing</span>(
-            <span class="ident">state</span>[..<span class="ident">RATE</span>]
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="prelude-val">Some</span>(<span class="ident">word</span>.<span class="ident">clone</span>()))
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-                .<span class="ident">try_into</span>()
-                .<span class="ident">unwrap</span>(),
+    <span class="kw">fn </span>get_output(state: <span class="kw-2">&amp;</span>State&lt;<span class="self">Self</span>::Word, WIDTH&gt;) -&gt; Squeezing&lt;<span class="self">Self</span>::Word, RATE&gt; {
+        Squeezing(
+            state[..RATE]
+                .iter()
+                .map(|word| <span class="prelude-val">Some</span>(word.clone()))
+                .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+                .try_into()
+                .unwrap(),
         )
     }
 }
 
-<span class="doccomment">/// A word in the Poseidon state.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StateWord</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(<span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>);
+<span class="doccomment">/// A word in the Poseidon state.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>StateWord&lt;F: FieldExt&gt;(AssignedCell&lt;F, F&gt;);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">StateWord</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">state_word</span>: <span class="ident">StateWord</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="ident">state_word</span>.<span class="number">0</span>
+<span class="kw">impl</span>&lt;F: FieldExt&gt; From&lt;StateWord&lt;F&gt;&gt; <span class="kw">for </span>AssignedCell&lt;F, F&gt; {
+    <span class="kw">fn </span>from(state_word: StateWord&lt;F&gt;) -&gt; AssignedCell&lt;F, F&gt; {
+        state_word.<span class="number">0
+    </span>}
+}
+
+<span class="kw">impl</span>&lt;F: FieldExt&gt; From&lt;AssignedCell&lt;F, F&gt;&gt; <span class="kw">for </span>StateWord&lt;F&gt; {
+    <span class="kw">fn </span>from(cell_value: AssignedCell&lt;F, F&gt;) -&gt; StateWord&lt;F&gt; {
+        StateWord(cell_value)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StateWord</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">cell_value</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident">StateWord</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="ident">StateWord</span>(<span class="ident">cell_value</span>)
+<span class="kw">impl</span>&lt;F: FieldExt&gt; Var&lt;F&gt; <span class="kw">for </span>StateWord&lt;F&gt; {
+    <span class="kw">fn </span>cell(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Cell {
+        <span class="self">self</span>.<span class="number">0</span>.cell()
+    }
+
+    <span class="kw">fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;F&gt; {
+        <span class="self">self</span>.<span class="number">0</span>.value().cloned()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Var</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StateWord</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">cell</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Cell</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">cell</span>()
-    }
+<span class="attribute">#[derive(Debug)]</span>
+<span class="kw">struct </span>Pow5State&lt;F: FieldExt, <span class="kw">const </span>WIDTH: usize&gt;([StateWord&lt;F&gt;; WIDTH]);
 
-    <span class="kw">fn</span> <span class="ident">value</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">value</span>().<span class="ident">cloned</span>()
-    }
-}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">struct</span> <span class="ident">Pow5State</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="kw">const</span> <span class="ident">WIDTH</span>: <span class="ident">usize</span><span class="op">&gt;</span>([<span class="ident">StateWord</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>; <span class="ident">WIDTH</span>]);
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="kw">const</span> <span class="ident">WIDTH</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Pow5State</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">full_round</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
+<span class="kw">impl</span>&lt;F: FieldExt, <span class="kw">const </span>WIDTH: usize&gt; Pow5State&lt;F, WIDTH&gt; {
+    <span class="kw">fn </span>full_round&lt;<span class="kw">const </span>RATE: usize&gt;(
         <span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">Pow5Config</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>,
-        <span class="ident">round</span>: <span class="ident">usize</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident"><span class="self">Self</span>::round</span>(<span class="ident">region</span>, <span class="ident">config</span>, <span class="ident">round</span>, <span class="ident">offset</span>, <span class="ident">config</span>.<span class="ident">s_full</span>, <span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q</span> <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">idx</span>, <span class="ident">word</span>)<span class="op">|</span> {
-                <span class="ident">word</span>.<span class="number">0</span>
-                    .<span class="ident">value</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">v</span> <span class="op">+</span> <span class="ident">config</span>.<span class="ident">round_constants</span>[<span class="ident">round</span>][<span class="ident">idx</span>])
+        region: <span class="kw-2">&amp;mut </span>Region&lt;F&gt;,
+        config: <span class="kw-2">&amp;</span>Pow5Config&lt;F, WIDTH, RATE&gt;,
+        round: usize,
+        offset: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="self">Self</span>::round(region, config, round, offset, config.s_full, |<span class="kw">_</span>| {
+            <span class="kw">let </span>q = <span class="self">self</span>.<span class="number">0</span>.iter().enumerate().map(|(idx, word)| {
+                word.<span class="number">0
+                    </span>.value()
+                    .map(|v| <span class="kw-2">*</span>v + config.round_constants[round][idx])
             });
-            <span class="kw">let</span> <span class="ident">r</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">q</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">q</span><span class="op">|</span> <span class="ident">q</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">q</span><span class="op">|</span> <span class="ident">q</span>.<span class="ident">pow</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">alpha</span>))).<span class="ident">collect</span>();
-            <span class="kw">let</span> <span class="ident">m</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">m_reg</span>;
-            <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">m</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">m_i</span><span class="op">|</span> {
-                <span class="ident">r</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> {
-                    <span class="ident">r</span>.<span class="ident">iter</span>()
-                        .<span class="ident">enumerate</span>()
-                        .<span class="ident">fold</span>(<span class="ident">F::zero</span>(), <span class="op">|</span><span class="ident">acc</span>, (<span class="ident">j</span>, <span class="ident">r_j</span>)<span class="op">|</span> <span class="ident">acc</span> <span class="op">+</span> <span class="ident">m_i</span>[<span class="ident">j</span>] <span class="op">*</span> <span class="ident">r_j</span>)
+            <span class="kw">let </span>r: Value&lt;Vec&lt;F&gt;&gt; = q.map(|q| q.map(|q| q.pow(<span class="kw-2">&amp;</span>config.alpha))).collect();
+            <span class="kw">let </span>m = <span class="kw-2">&amp;</span>config.m_reg;
+            <span class="kw">let </span>state = m.iter().map(|m_i| {
+                r.as_ref().map(|r| {
+                    r.iter()
+                        .enumerate()
+                        .fold(F::zero(), |acc, (j, r_j)| acc + m_i[j] * r_j)
                 })
             });
 
-            <span class="prelude-val">Ok</span>((<span class="ident">round</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">state</span>.<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>().<span class="ident">try_into</span>().<span class="ident">unwrap</span>()))
+            <span class="prelude-val">Ok</span>((round + <span class="number">1</span>, state.collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().try_into().unwrap()))
         })
     }
 
-    <span class="kw">fn</span> <span class="ident">partial_round</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
+    <span class="kw">fn </span>partial_round&lt;<span class="kw">const </span>RATE: usize&gt;(
         <span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">Pow5Config</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>,
-        <span class="ident">round</span>: <span class="ident">usize</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident"><span class="self">Self</span>::round</span>(<span class="ident">region</span>, <span class="ident">config</span>, <span class="ident">round</span>, <span class="ident">offset</span>, <span class="ident">config</span>.<span class="ident">s_partial</span>, <span class="op">|</span><span class="ident">region</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">m</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">m_reg</span>;
-            <span class="kw">let</span> <span class="ident">p</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>.<span class="number">0</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident">word</span>.<span class="number">0</span>.<span class="ident">value</span>().<span class="ident">cloned</span>()).<span class="ident">collect</span>();
+        region: <span class="kw-2">&amp;mut </span>Region&lt;F&gt;,
+        config: <span class="kw-2">&amp;</span>Pow5Config&lt;F, WIDTH, RATE&gt;,
+        round: usize,
+        offset: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="self">Self</span>::round(region, config, round, offset, config.s_partial, |region| {
+            <span class="kw">let </span>m = <span class="kw-2">&amp;</span>config.m_reg;
+            <span class="kw">let </span>p: Value&lt;Vec&lt;<span class="kw">_</span>&gt;&gt; = <span class="self">self</span>.<span class="number">0</span>.iter().map(|word| word.<span class="number">0</span>.value().cloned()).collect();
 
-            <span class="kw">let</span> <span class="ident">r</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">p</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">r_0</span> <span class="op">=</span> (<span class="ident">p</span>[<span class="number">0</span>] <span class="op">+</span> <span class="ident">config</span>.<span class="ident">round_constants</span>[<span class="ident">round</span>][<span class="number">0</span>]).<span class="ident">pow</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">alpha</span>);
-                <span class="kw">let</span> <span class="ident">r_i</span> <span class="op">=</span> <span class="ident">p</span>[<span class="number">1</span>..]
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">enumerate</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">i</span>, <span class="ident">p_i</span>)<span class="op">|</span> <span class="kw-2">*</span><span class="ident">p_i</span> <span class="op">+</span> <span class="ident">config</span>.<span class="ident">round_constants</span>[<span class="ident">round</span>][<span class="ident">i</span> <span class="op">+</span> <span class="number">1</span>]);
-                <span class="ident">std::iter::empty</span>().<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">r_0</span>)).<span class="ident">chain</span>(<span class="ident">r_i</span>).<span class="ident">collect</span>()
+            <span class="kw">let </span>r: Value&lt;Vec&lt;<span class="kw">_</span>&gt;&gt; = p.map(|p| {
+                <span class="kw">let </span>r_0 = (p[<span class="number">0</span>] + config.round_constants[round][<span class="number">0</span>]).pow(<span class="kw-2">&amp;</span>config.alpha);
+                <span class="kw">let </span>r_i = p[<span class="number">1</span>..]
+                    .iter()
+                    .enumerate()
+                    .map(|(i, p_i)| <span class="kw-2">*</span>p_i + config.round_constants[round][i + <span class="number">1</span>]);
+                std::iter::empty().chain(<span class="prelude-val">Some</span>(r_0)).chain(r_i).collect()
             });
 
-            <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;round_{} partial_sbox&quot;</span>, <span class="ident">round</span>),
-                <span class="ident">config</span>.<span class="ident">partial_sbox</span>,
-                <span class="ident">offset</span>,
-                <span class="op">|</span><span class="op">|</span> <span class="ident">r</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>[<span class="number">0</span>]),
+            region.assign_advice(
+                || <span class="macro">format!</span>(<span class="string">&quot;round_{} partial_sbox&quot;</span>, round),
+                config.partial_sbox,
+                offset,
+                || r.as_ref().map(|r| r[<span class="number">0</span>]),
             )<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">p_mid</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">m</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">m_i</span><span class="op">|</span> {
-                    <span class="ident">r</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> {
-                        <span class="ident">m_i</span>.<span class="ident">iter</span>()
-                            .<span class="ident">zip</span>(<span class="ident">r</span>.<span class="ident">iter</span>())
-                            .<span class="ident">fold</span>(<span class="ident">F::zero</span>(), <span class="op">|</span><span class="ident">acc</span>, (<span class="ident">m_ij</span>, <span class="ident">r_j</span>)<span class="op">|</span> <span class="ident">acc</span> <span class="op">+</span> <span class="kw-2">*</span><span class="ident">m_ij</span> <span class="op">*</span> <span class="ident">r_j</span>)
+            <span class="kw">let </span>p_mid: Value&lt;Vec&lt;<span class="kw">_</span>&gt;&gt; = m
+                .iter()
+                .map(|m_i| {
+                    r.as_ref().map(|r| {
+                        m_i.iter()
+                            .zip(r.iter())
+                            .fold(F::zero(), |acc, (m_ij, r_j)| acc + <span class="kw-2">*</span>m_ij * r_j)
                     })
                 })
-                .<span class="ident">collect</span>();
+                .collect();
 
-            <span class="comment">// Load the second round constants.</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">load_round_constant</span> <span class="op">=</span> <span class="op">|</span><span class="ident">i</span>: <span class="ident">usize</span><span class="op">|</span> {
-                <span class="ident">region</span>.<span class="ident">assign_fixed</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;round_{} rc_{}&quot;</span>, <span class="ident">round</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">i</span>),
-                    <span class="ident">config</span>.<span class="ident">rc_b</span>[<span class="ident">i</span>],
-                    <span class="ident">offset</span>,
-                    <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">config</span>.<span class="ident">round_constants</span>[<span class="ident">round</span> <span class="op">+</span> <span class="number">1</span>][<span class="ident">i</span>]),
+            <span class="comment">// Load the second round constants.
+            </span><span class="kw">let </span><span class="kw-2">mut </span>load_round_constant = |i: usize| {
+                region.assign_fixed(
+                    || <span class="macro">format!</span>(<span class="string">&quot;round_{} rc_{}&quot;</span>, round + <span class="number">1</span>, i),
+                    config.rc_b[i],
+                    offset,
+                    || Value::known(config.round_constants[round + <span class="number">1</span>][i]),
                 )
             };
-            <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">WIDTH</span> {
-                <span class="ident">load_round_constant</span>(<span class="ident">i</span>)<span class="question-mark">?</span>;
+            <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..WIDTH {
+                load_round_constant(i)<span class="question-mark">?</span>;
             }
 
-            <span class="kw">let</span> <span class="ident">r_mid</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">p_mid</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">r_0</span> <span class="op">=</span> (<span class="ident">p</span>[<span class="number">0</span>] <span class="op">+</span> <span class="ident">config</span>.<span class="ident">round_constants</span>[<span class="ident">round</span> <span class="op">+</span> <span class="number">1</span>][<span class="number">0</span>]).<span class="ident">pow</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">alpha</span>);
-                <span class="kw">let</span> <span class="ident">r_i</span> <span class="op">=</span> <span class="ident">p</span>[<span class="number">1</span>..]
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">enumerate</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">i</span>, <span class="ident">p_i</span>)<span class="op">|</span> <span class="kw-2">*</span><span class="ident">p_i</span> <span class="op">+</span> <span class="ident">config</span>.<span class="ident">round_constants</span>[<span class="ident">round</span> <span class="op">+</span> <span class="number">1</span>][<span class="ident">i</span> <span class="op">+</span> <span class="number">1</span>]);
-                <span class="ident">std::iter::empty</span>().<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">r_0</span>)).<span class="ident">chain</span>(<span class="ident">r_i</span>).<span class="ident">collect</span>()
+            <span class="kw">let </span>r_mid: Value&lt;Vec&lt;<span class="kw">_</span>&gt;&gt; = p_mid.map(|p| {
+                <span class="kw">let </span>r_0 = (p[<span class="number">0</span>] + config.round_constants[round + <span class="number">1</span>][<span class="number">0</span>]).pow(<span class="kw-2">&amp;</span>config.alpha);
+                <span class="kw">let </span>r_i = p[<span class="number">1</span>..]
+                    .iter()
+                    .enumerate()
+                    .map(|(i, p_i)| <span class="kw-2">*</span>p_i + config.round_constants[round + <span class="number">1</span>][i + <span class="number">1</span>]);
+                std::iter::empty().chain(<span class="prelude-val">Some</span>(r_0)).chain(r_i).collect()
             });
 
-            <span class="kw">let</span> <span class="ident">state</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">m</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">m_i</span><span class="op">|</span> {
-                    <span class="ident">r_mid</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> {
-                        <span class="ident">m_i</span>.<span class="ident">iter</span>()
-                            .<span class="ident">zip</span>(<span class="ident">r</span>.<span class="ident">iter</span>())
-                            .<span class="ident">fold</span>(<span class="ident">F::zero</span>(), <span class="op">|</span><span class="ident">acc</span>, (<span class="ident">m_ij</span>, <span class="ident">r_j</span>)<span class="op">|</span> <span class="ident">acc</span> <span class="op">+</span> <span class="kw-2">*</span><span class="ident">m_ij</span> <span class="op">*</span> <span class="ident">r_j</span>)
+            <span class="kw">let </span>state: Vec&lt;Value&lt;<span class="kw">_</span>&gt;&gt; = m
+                .iter()
+                .map(|m_i| {
+                    r_mid.as_ref().map(|r| {
+                        m_i.iter()
+                            .zip(r.iter())
+                            .fold(F::zero(), |acc, (m_ij, r_j)| acc + <span class="kw-2">*</span>m_ij * r_j)
                     })
                 })
-                .<span class="ident">collect</span>();
+                .collect();
 
-            <span class="prelude-val">Ok</span>((<span class="ident">round</span> <span class="op">+</span> <span class="number">2</span>, <span class="ident">state</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>()))
+            <span class="prelude-val">Ok</span>((round + <span class="number">2</span>, state.try_into().unwrap()))
         })
     }
 
-    <span class="kw">fn</span> <span class="ident">load</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">Pow5Config</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>,
-        <span class="ident">initial_state</span>: <span class="kw-2">&amp;</span><span class="ident">State</span><span class="op">&lt;</span><span class="ident">StateWord</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">WIDTH</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">load_state_word</span> <span class="op">=</span> <span class="op">|</span><span class="ident">i</span>: <span class="ident">usize</span><span class="op">|</span> {
-            <span class="ident">initial_state</span>[<span class="ident">i</span>]
-                .<span class="number">0</span>
-                .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;load state_{}&quot;</span>, <span class="ident">i</span>), <span class="ident">region</span>, <span class="ident">config</span>.<span class="ident">state</span>[<span class="ident">i</span>], <span class="number">0</span>)
-                .<span class="ident">map</span>(<span class="ident">StateWord</span>)
+    <span class="kw">fn </span>load&lt;<span class="kw">const </span>RATE: usize&gt;(
+        region: <span class="kw-2">&amp;mut </span>Region&lt;F&gt;,
+        config: <span class="kw-2">&amp;</span>Pow5Config&lt;F, WIDTH, RATE&gt;,
+        initial_state: <span class="kw-2">&amp;</span>State&lt;StateWord&lt;F&gt;, WIDTH&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>load_state_word = |i: usize| {
+            initial_state[i]
+                .<span class="number">0
+                </span>.copy_advice(|| <span class="macro">format!</span>(<span class="string">&quot;load state_{}&quot;</span>, i), region, config.state[i], <span class="number">0</span>)
+                .map(StateWord)
         };
 
-        <span class="kw">let</span> <span class="ident">state</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">WIDTH</span>).<span class="ident">map</span>(<span class="ident">load_state_word</span>).<span class="ident">collect</span>();
-        <span class="ident">state</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">state</span><span class="op">|</span> <span class="ident">Pow5State</span>(<span class="ident">state</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>()))
+        <span class="kw">let </span>state: <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt; = (<span class="number">0</span>..WIDTH).map(load_state_word).collect();
+        state.map(|state| Pow5State(state.try_into().unwrap()))
     }
 
-    <span class="kw">fn</span> <span class="ident">round</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="ident">Pow5Config</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>,
-        <span class="ident">round</span>: <span class="ident">usize</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">round_gate</span>: <span class="ident">Selector</span>,
-        <span class="ident">round_fn</span>: <span class="kw">impl</span> <span class="ident">FnOnce</span>(<span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">usize</span>, [<span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>; <span class="ident">WIDTH</span>]), <span class="ident">Error</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Enable the required gate.</span>
-        <span class="ident">round_gate</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
+    <span class="kw">fn </span>round&lt;<span class="kw">const </span>RATE: usize&gt;(
+        region: <span class="kw-2">&amp;mut </span>Region&lt;F&gt;,
+        config: <span class="kw-2">&amp;</span>Pow5Config&lt;F, WIDTH, RATE&gt;,
+        round: usize,
+        offset: usize,
+        round_gate: Selector,
+        round_fn: <span class="kw">impl </span>FnOnce(<span class="kw-2">&amp;mut </span>Region&lt;F&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(usize, [Value&lt;F&gt;; WIDTH]), Error&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="comment">// Enable the required gate.
+        </span>round_gate.enable(region, offset)<span class="question-mark">?</span>;
 
-        <span class="comment">// Load the round constants.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">load_round_constant</span> <span class="op">=</span> <span class="op">|</span><span class="ident">i</span>: <span class="ident">usize</span><span class="op">|</span> {
-            <span class="ident">region</span>.<span class="ident">assign_fixed</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;round_{} rc_{}&quot;</span>, <span class="ident">round</span>, <span class="ident">i</span>),
-                <span class="ident">config</span>.<span class="ident">rc_a</span>[<span class="ident">i</span>],
-                <span class="ident">offset</span>,
-                <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">config</span>.<span class="ident">round_constants</span>[<span class="ident">round</span>][<span class="ident">i</span>]),
+        <span class="comment">// Load the round constants.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>load_round_constant = |i: usize| {
+            region.assign_fixed(
+                || <span class="macro">format!</span>(<span class="string">&quot;round_{} rc_{}&quot;</span>, round, i),
+                config.rc_a[i],
+                offset,
+                || Value::known(config.round_constants[round][i]),
             )
         };
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">WIDTH</span> {
-            <span class="ident">load_round_constant</span>(<span class="ident">i</span>)<span class="question-mark">?</span>;
+        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..WIDTH {
+            load_round_constant(i)<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// Compute the next round&#39;s state.</span>
-        <span class="kw">let</span> (<span class="ident">next_round</span>, <span class="ident">next_state</span>) <span class="op">=</span> <span class="ident">round_fn</span>(<span class="ident">region</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Compute the next round&#39;s state.
+        </span><span class="kw">let </span>(next_round, next_state) = round_fn(region)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">next_state_word</span> <span class="op">=</span> <span class="op">|</span><span class="ident">i</span>: <span class="ident">usize</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">next_state</span>[<span class="ident">i</span>];
-            <span class="kw">let</span> <span class="ident">var</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;round_{} state_{}&quot;</span>, <span class="ident">next_round</span>, <span class="ident">i</span>),
-                <span class="ident">config</span>.<span class="ident">state</span>[<span class="ident">i</span>],
-                <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>,
-                <span class="op">|</span><span class="op">|</span> <span class="ident">value</span>,
+        <span class="kw">let </span>next_state_word = |i: usize| {
+            <span class="kw">let </span>value = next_state[i];
+            <span class="kw">let </span>var = region.assign_advice(
+                || <span class="macro">format!</span>(<span class="string">&quot;round_{} state_{}&quot;</span>, next_round, i),
+                config.state[i],
+                offset + <span class="number">1</span>,
+                || value,
             )<span class="question-mark">?</span>;
-            <span class="prelude-val">Ok</span>(<span class="ident">StateWord</span>(<span class="ident">var</span>))
+            <span class="prelude-val">Ok</span>(StateWord(var))
         };
 
-        <span class="kw">let</span> <span class="ident">next_state</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">WIDTH</span>).<span class="ident">map</span>(<span class="ident">next_state_word</span>).<span class="ident">collect</span>();
-        <span class="ident">next_state</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">next_state</span><span class="op">|</span> <span class="ident">Pow5State</span>(<span class="ident">next_state</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>()))
+        <span class="kw">let </span>next_state: <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt; = (<span class="number">0</span>..WIDTH).map(next_state_word).collect();
+        next_state.map(|next_state| Pow5State(next_state.try_into().unwrap()))
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">group::ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeField</span>};
-    <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-        <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">SimpleFloorPlanner</span>, <span class="ident">Value</span>},
-        <span class="ident">dev::MockProver</span>,
-        <span class="ident">pasta::Fp</span>,
-        <span class="ident">plonk</span>::{<span class="ident">Circuit</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>},
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">mod </span>tests {
+    <span class="kw">use </span>group::ff::{Field, PrimeField};
+    <span class="kw">use </span>halo2_proofs::{
+        circuit::{Layouter, SimpleFloorPlanner, Value},
+        dev::MockProver,
+        pasta::Fp,
+        plonk::{Circuit, ConstraintSystem, Error},
     };
-    <span class="kw">use</span> <span class="ident">pasta_curves::pallas</span>;
-    <span class="kw">use</span> <span class="ident">rand::rngs::OsRng</span>;
+    <span class="kw">use </span>pasta_curves::pallas;
+    <span class="kw">use </span>rand::rngs::OsRng;
 
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">PoseidonInstructions</span>, <span class="ident">Pow5Chip</span>, <span class="ident">Pow5Config</span>, <span class="ident">StateWord</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::poseidon</span>::{
-        <span class="ident">primitives</span>::{<span class="self">self</span> <span class="kw">as</span> <span class="ident">poseidon</span>, <span class="ident">ConstantLength</span>, <span class="ident">P128Pow5T3</span> <span class="kw">as</span> <span class="ident">OrchardNullifier</span>, <span class="ident">Spec</span>},
-        <span class="ident">Hash</span>,
+    <span class="kw">use super</span>::{PoseidonInstructions, Pow5Chip, Pow5Config, StateWord};
+    <span class="kw">use </span><span class="kw">crate</span>::poseidon::{
+        primitives::{<span class="self">self </span><span class="kw">as </span>poseidon, ConstantLength, P128Pow5T3 <span class="kw">as </span>OrchardNullifier, Spec},
+        Hash,
     };
-    <span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
-    <span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
+    <span class="kw">use </span>std::convert::TryInto;
+    <span class="kw">use </span>std::marker::PhantomData;
 
-    <span class="kw">struct</span> <span class="ident">PermuteCircuit</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">Fp</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">WIDTH</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
-        <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>,
+    <span class="kw">struct </span>PermuteCircuit&lt;S: Spec&lt;Fp, WIDTH, RATE&gt;, <span class="kw">const </span>WIDTH: usize, <span class="kw">const </span>RATE: usize&gt;(
+        PhantomData&lt;S&gt;,
     );
 
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">Fp</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">WIDTH</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span>
-        <span class="kw">for</span> <span class="ident">PermuteCircuit</span><span class="op">&lt;</span><span class="ident">S</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>
+    <span class="kw">impl</span>&lt;S: Spec&lt;Fp, WIDTH, RATE&gt;, <span class="kw">const </span>WIDTH: usize, <span class="kw">const </span>RATE: usize&gt; Circuit&lt;Fp&gt;
+        <span class="kw">for </span>PermuteCircuit&lt;S, WIDTH, RATE&gt;
     {
-        <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">Pow5Config</span><span class="op">&lt;</span><span class="ident">Fp</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>;
-        <span class="kw">type</span> <span class="ident">FloorPlanner</span> <span class="op">=</span> <span class="ident">SimpleFloorPlanner</span>;
+        <span class="kw">type </span>Config = Pow5Config&lt;Fp, WIDTH, RATE&gt;;
+        <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
 
-        <span class="kw">fn</span> <span class="ident">without_witnesses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-            <span class="ident">PermuteCircuit</span>::<span class="op">&lt;</span><span class="ident">S</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>(<span class="ident">PhantomData</span>)
+        <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+            PermuteCircuit::&lt;S, WIDTH, RATE&gt;(PhantomData)
         }
 
-        <span class="kw">fn</span> <span class="ident">configure</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span>) -&gt; <span class="ident">Pow5Config</span><span class="op">&lt;</span><span class="ident">Fp</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">WIDTH</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-            <span class="kw">let</span> <span class="ident">partial_sbox</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>();
+        <span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;Fp&gt;) -&gt; Pow5Config&lt;Fp, WIDTH, RATE&gt; {
+            <span class="kw">let </span>state = (<span class="number">0</span>..WIDTH).map(|<span class="kw">_</span>| meta.advice_column()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+            <span class="kw">let </span>partial_sbox = meta.advice_column();
 
-            <span class="kw">let</span> <span class="ident">rc_a</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">WIDTH</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">meta</span>.<span class="ident">fixed_column</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-            <span class="kw">let</span> <span class="ident">rc_b</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">WIDTH</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">meta</span>.<span class="ident">fixed_column</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+            <span class="kw">let </span>rc_a = (<span class="number">0</span>..WIDTH).map(|<span class="kw">_</span>| meta.fixed_column()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+            <span class="kw">let </span>rc_b = (<span class="number">0</span>..WIDTH).map(|<span class="kw">_</span>| meta.fixed_column()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-            <span class="ident">Pow5Chip::configure</span>::<span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(
-                <span class="ident">meta</span>,
-                <span class="ident">state</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">partial_sbox</span>,
-                <span class="ident">rc_a</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">rc_b</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>(),
+            Pow5Chip::configure::&lt;S&gt;(
+                meta,
+                state.try_into().unwrap(),
+                partial_sbox,
+                rc_a.try_into().unwrap(),
+                rc_b.try_into().unwrap(),
             )
         }
 
-        <span class="kw">fn</span> <span class="ident">synthesize</span>(
+        <span class="kw">fn </span>synthesize(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
-            <span class="ident">config</span>: <span class="ident">Pow5Config</span><span class="op">&lt;</span><span class="ident">Fp</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>,
-            <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span>,
-        ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">initial_state</span> <span class="op">=</span> <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;prepare initial state&quot;</span>,
-                <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">state_word</span> <span class="op">=</span> <span class="op">|</span><span class="ident">i</span>: <span class="ident">usize</span><span class="op">|</span> {
-                        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">Value::known</span>(<span class="ident">Fp::from</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>));
-                        <span class="kw">let</span> <span class="ident">var</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                            <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;load state_{}&quot;</span>, <span class="ident">i</span>),
-                            <span class="ident">config</span>.<span class="ident">state</span>[<span class="ident">i</span>],
+            config: Pow5Config&lt;Fp, WIDTH, RATE&gt;,
+            <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;Fp&gt;,
+        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+            <span class="kw">let </span>initial_state = layouter.assign_region(
+                || <span class="string">&quot;prepare initial state&quot;</span>,
+                |<span class="kw-2">mut </span>region| {
+                    <span class="kw">let </span>state_word = |i: usize| {
+                        <span class="kw">let </span>value = Value::known(Fp::from(i <span class="kw">as </span>u64));
+                        <span class="kw">let </span>var = region.assign_advice(
+                            || <span class="macro">format!</span>(<span class="string">&quot;load state_{}&quot;</span>, i),
+                            config.state[i],
                             <span class="number">0</span>,
-                            <span class="op">|</span><span class="op">|</span> <span class="ident">value</span>,
+                            || value,
                         )<span class="question-mark">?</span>;
-                        <span class="prelude-val">Ok</span>(<span class="ident">StateWord</span>(<span class="ident">var</span>))
+                        <span class="prelude-val">Ok</span>(StateWord(var))
                     };
 
-                    <span class="kw">let</span> <span class="ident">state</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">WIDTH</span>).<span class="ident">map</span>(<span class="ident">state_word</span>).<span class="ident">collect</span>();
-                    <span class="prelude-val">Ok</span>(<span class="ident">state</span><span class="question-mark">?</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>())
+                    <span class="kw">let </span>state: <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, Error&gt; = (<span class="number">0</span>..WIDTH).map(state_word).collect();
+                    <span class="prelude-val">Ok</span>(state<span class="question-mark">?</span>.try_into().unwrap())
                 },
             )<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">chip</span> <span class="op">=</span> <span class="ident">Pow5Chip::construct</span>(<span class="ident">config</span>.<span class="ident">clone</span>());
-            <span class="kw">let</span> <span class="ident">final_state</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">Pow5Chip</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span> <span class="kw">as</span> <span class="ident">PoseidonInstructions</span><span class="op">&lt;</span>
-                <span class="ident">Fp</span>,
-                <span class="ident">S</span>,
-                <span class="ident">WIDTH</span>,
-                <span class="ident">RATE</span>,
-            <span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::permute</span>(<span class="kw-2">&amp;</span><span class="ident">chip</span>, <span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="kw-2">&amp;</span><span class="ident">initial_state</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>chip = Pow5Chip::construct(config.clone());
+            <span class="kw">let </span>final_state = &lt;Pow5Chip&lt;<span class="kw">_</span>, WIDTH, RATE&gt; <span class="kw">as </span>PoseidonInstructions&lt;
+                Fp,
+                S,
+                WIDTH,
+                RATE,
+            &gt;&gt;::permute(<span class="kw-2">&amp;</span>chip, <span class="kw-2">&amp;mut </span>layouter, <span class="kw-2">&amp;</span>initial_state)<span class="question-mark">?</span>;
 
-            <span class="comment">// For the purpose of this test, compute the real final state inline.</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expected_final_state</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">WIDTH</span>)
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">idx</span><span class="op">|</span> <span class="ident">Fp::from</span>(<span class="ident">idx</span> <span class="kw">as</span> <span class="ident">u64</span>))
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-                .<span class="ident">try_into</span>()
-                .<span class="ident">unwrap</span>();
-            <span class="kw">let</span> (<span class="ident">round_constants</span>, <span class="ident">mds</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">S::constants</span>();
-            <span class="ident">poseidon::permute</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">S</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>(
-                <span class="kw-2">&amp;mut</span> <span class="ident">expected_final_state</span>,
-                <span class="kw-2">&amp;</span><span class="ident">mds</span>,
-                <span class="kw-2">&amp;</span><span class="ident">round_constants</span>,
+            <span class="comment">// For the purpose of this test, compute the real final state inline.
+            </span><span class="kw">let </span><span class="kw-2">mut </span>expected_final_state = (<span class="number">0</span>..WIDTH)
+                .map(|idx| Fp::from(idx <span class="kw">as </span>u64))
+                .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+                .try_into()
+                .unwrap();
+            <span class="kw">let </span>(round_constants, mds, <span class="kw">_</span>) = S::constants();
+            poseidon::permute::&lt;<span class="kw">_</span>, S, WIDTH, RATE&gt;(
+                <span class="kw-2">&amp;mut </span>expected_final_state,
+                <span class="kw-2">&amp;</span>mds,
+                <span class="kw-2">&amp;</span>round_constants,
             );
 
-            <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;constrain final state&quot;</span>,
-                <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">final_state_word</span> <span class="op">=</span> <span class="op">|</span><span class="ident">i</span>: <span class="ident">usize</span><span class="op">|</span> {
-                        <span class="kw">let</span> <span class="ident">var</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                            <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;load final_state_{}&quot;</span>, <span class="ident">i</span>),
-                            <span class="ident">config</span>.<span class="ident">state</span>[<span class="ident">i</span>],
+            layouter.assign_region(
+                || <span class="string">&quot;constrain final state&quot;</span>,
+                |<span class="kw-2">mut </span>region| {
+                    <span class="kw">let </span><span class="kw-2">mut </span>final_state_word = |i: usize| {
+                        <span class="kw">let </span>var = region.assign_advice(
+                            || <span class="macro">format!</span>(<span class="string">&quot;load final_state_{}&quot;</span>, i),
+                            config.state[i],
                             <span class="number">0</span>,
-                            <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">expected_final_state</span>[<span class="ident">i</span>]),
+                            || Value::known(expected_final_state[i]),
                         )<span class="question-mark">?</span>;
-                        <span class="ident">region</span>.<span class="ident">constrain_equal</span>(<span class="ident">final_state</span>[<span class="ident">i</span>].<span class="number">0</span>.<span class="ident">cell</span>(), <span class="ident">var</span>.<span class="ident">cell</span>())
+                        region.constrain_equal(final_state[i].<span class="number">0</span>.cell(), var.cell())
                     };
 
-                    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="ident">WIDTH</span>) {
-                        <span class="ident">final_state_word</span>(<span class="ident">i</span>)<span class="question-mark">?</span>;
+                    <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..(WIDTH) {
+                        final_state_word(i)<span class="question-mark">?</span>;
                     }
 
                     <span class="prelude-val">Ok</span>(())
@@ -1620,183 +1614,182 @@
         }
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">poseidon_permute</span>() {
-        <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="number">6</span>;
-        <span class="kw">let</span> <span class="ident">circuit</span> <span class="op">=</span> <span class="ident">PermuteCircuit</span>::<span class="op">&lt;</span><span class="ident">OrchardNullifier</span>, <span class="number">3</span>, <span class="number">2</span><span class="op">&gt;</span>(<span class="ident">PhantomData</span>);
-        <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver::run</span>(<span class="ident">k</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()))
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>poseidon_permute() {
+        <span class="kw">let </span>k = <span class="number">6</span>;
+        <span class="kw">let </span>circuit = PermuteCircuit::&lt;OrchardNullifier, <span class="number">3</span>, <span class="number">2</span>&gt;(PhantomData);
+        <span class="kw">let </span>prover = MockProver::run(k, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+        <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()))
     }
 
-    <span class="kw">struct</span> <span class="ident">HashCircuit</span><span class="op">&lt;</span>
-        <span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">Fp</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>,
-        <span class="kw">const</span> <span class="ident">WIDTH</span>: <span class="ident">usize</span>,
-        <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span>,
-        <span class="kw">const</span> <span class="ident">L</span>: <span class="ident">usize</span>,
-    <span class="op">&gt;</span> {
-        <span class="ident">message</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">Fp</span>; <span class="ident">L</span>]<span class="op">&gt;</span>,
-        <span class="comment">// For the purpose of this test, witness the result.</span>
-        <span class="comment">// TODO: Move this into an instance column.</span>
-        <span class="ident">output</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span>,
-        <span class="ident">_spec</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>,
+    <span class="kw">struct </span>HashCircuit&lt;
+        S: Spec&lt;Fp, WIDTH, RATE&gt;,
+        <span class="kw">const </span>WIDTH: usize,
+        <span class="kw">const </span>RATE: usize,
+        <span class="kw">const </span>L: usize,
+    &gt; {
+        message: Value&lt;[Fp; L]&gt;,
+        <span class="comment">// For the purpose of this test, witness the result.
+        // TODO: Move this into an instance column.
+        </span>output: Value&lt;Fp&gt;,
+        _spec: PhantomData&lt;S&gt;,
     }
 
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">Spec</span><span class="op">&lt;</span><span class="ident">Fp</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>, <span class="kw">const</span> <span class="ident">WIDTH</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">RATE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">L</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-        <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">HashCircuit</span><span class="op">&lt;</span><span class="ident">S</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span>, <span class="ident">L</span><span class="op">&gt;</span>
+    <span class="kw">impl</span>&lt;S: Spec&lt;Fp, WIDTH, RATE&gt;, <span class="kw">const </span>WIDTH: usize, <span class="kw">const </span>RATE: usize, <span class="kw">const </span>L: usize&gt;
+        Circuit&lt;Fp&gt; <span class="kw">for </span>HashCircuit&lt;S, WIDTH, RATE, L&gt;
     {
-        <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">Pow5Config</span><span class="op">&lt;</span><span class="ident">Fp</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>;
-        <span class="kw">type</span> <span class="ident">FloorPlanner</span> <span class="op">=</span> <span class="ident">SimpleFloorPlanner</span>;
+        <span class="kw">type </span>Config = Pow5Config&lt;Fp, WIDTH, RATE&gt;;
+        <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
 
-        <span class="kw">fn</span> <span class="ident">without_witnesses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-            <span class="self">Self</span> {
-                <span class="ident">message</span>: <span class="ident">Value::unknown</span>(),
-                <span class="ident">output</span>: <span class="ident">Value::unknown</span>(),
-                <span class="ident">_spec</span>: <span class="ident">PhantomData</span>,
+        <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+            <span class="self">Self </span>{
+                message: Value::unknown(),
+                output: Value::unknown(),
+                _spec: PhantomData,
             }
         }
 
-        <span class="kw">fn</span> <span class="ident">configure</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span>) -&gt; <span class="ident">Pow5Config</span><span class="op">&lt;</span><span class="ident">Fp</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">WIDTH</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-            <span class="kw">let</span> <span class="ident">partial_sbox</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>();
+        <span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;Fp&gt;) -&gt; Pow5Config&lt;Fp, WIDTH, RATE&gt; {
+            <span class="kw">let </span>state = (<span class="number">0</span>..WIDTH).map(|<span class="kw">_</span>| meta.advice_column()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+            <span class="kw">let </span>partial_sbox = meta.advice_column();
 
-            <span class="kw">let</span> <span class="ident">rc_a</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">WIDTH</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">meta</span>.<span class="ident">fixed_column</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-            <span class="kw">let</span> <span class="ident">rc_b</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">WIDTH</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">meta</span>.<span class="ident">fixed_column</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+            <span class="kw">let </span>rc_a = (<span class="number">0</span>..WIDTH).map(|<span class="kw">_</span>| meta.fixed_column()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+            <span class="kw">let </span>rc_b = (<span class="number">0</span>..WIDTH).map(|<span class="kw">_</span>| meta.fixed_column()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-            <span class="ident">meta</span>.<span class="ident">enable_constant</span>(<span class="ident">rc_b</span>[<span class="number">0</span>]);
+            meta.enable_constant(rc_b[<span class="number">0</span>]);
 
-            <span class="ident">Pow5Chip::configure</span>::<span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(
-                <span class="ident">meta</span>,
-                <span class="ident">state</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">partial_sbox</span>,
-                <span class="ident">rc_a</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">rc_b</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>(),
+            Pow5Chip::configure::&lt;S&gt;(
+                meta,
+                state.try_into().unwrap(),
+                partial_sbox,
+                rc_a.try_into().unwrap(),
+                rc_b.try_into().unwrap(),
             )
         }
 
-        <span class="kw">fn</span> <span class="ident">synthesize</span>(
+        <span class="kw">fn </span>synthesize(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
-            <span class="ident">config</span>: <span class="ident">Pow5Config</span><span class="op">&lt;</span><span class="ident">Fp</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span>,
-            <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span>,
-        ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">chip</span> <span class="op">=</span> <span class="ident">Pow5Chip::construct</span>(<span class="ident">config</span>.<span class="ident">clone</span>());
+            config: Pow5Config&lt;Fp, WIDTH, RATE&gt;,
+            <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;Fp&gt;,
+        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+            <span class="kw">let </span>chip = Pow5Chip::construct(config.clone());
 
-            <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;load message&quot;</span>,
-                <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">message_word</span> <span class="op">=</span> <span class="op">|</span><span class="ident">i</span>: <span class="ident">usize</span><span class="op">|</span> {
-                        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">message</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">message_vals</span><span class="op">|</span> <span class="ident">message_vals</span>[<span class="ident">i</span>]);
-                        <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                            <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;load message_{}&quot;</span>, <span class="ident">i</span>),
-                            <span class="ident">config</span>.<span class="ident">state</span>[<span class="ident">i</span>],
+            <span class="kw">let </span>message = layouter.assign_region(
+                || <span class="string">&quot;load message&quot;</span>,
+                |<span class="kw-2">mut </span>region| {
+                    <span class="kw">let </span>message_word = |i: usize| {
+                        <span class="kw">let </span>value = <span class="self">self</span>.message.map(|message_vals| message_vals[i]);
+                        region.assign_advice(
+                            || <span class="macro">format!</span>(<span class="string">&quot;load message_{}&quot;</span>, i),
+                            config.state[i],
                             <span class="number">0</span>,
-                            <span class="op">|</span><span class="op">|</span> <span class="ident">value</span>,
+                            || value,
                         )
                     };
 
-                    <span class="kw">let</span> <span class="ident">message</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">L</span>).<span class="ident">map</span>(<span class="ident">message_word</span>).<span class="ident">collect</span>();
-                    <span class="prelude-val">Ok</span>(<span class="ident">message</span><span class="question-mark">?</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>())
+                    <span class="kw">let </span>message: <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, Error&gt; = (<span class="number">0</span>..L).map(message_word).collect();
+                    <span class="prelude-val">Ok</span>(message<span class="question-mark">?</span>.try_into().unwrap())
                 },
             )<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">Hash</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">S</span>, <span class="ident">ConstantLength</span><span class="op">&lt;</span><span class="ident">L</span><span class="op">&gt;</span>, <span class="ident">WIDTH</span>, <span class="ident">RATE</span><span class="op">&gt;</span><span class="ident">::init</span>(
-                <span class="ident">chip</span>,
-                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;init&quot;</span>),
+            <span class="kw">let </span>hasher = Hash::&lt;<span class="kw">_</span>, <span class="kw">_</span>, S, ConstantLength&lt;L&gt;, WIDTH, RATE&gt;::init(
+                chip,
+                layouter.namespace(|| <span class="string">&quot;init&quot;</span>),
             )<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">hasher</span>.<span class="ident">hash</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;hash&quot;</span>), <span class="ident">message</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>output = hasher.hash(layouter.namespace(|| <span class="string">&quot;hash&quot;</span>), message)<span class="question-mark">?</span>;
 
-            <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;constrain output&quot;</span>,
-                <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">expected_var</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                        <span class="op">|</span><span class="op">|</span> <span class="string">&quot;load output&quot;</span>,
-                        <span class="ident">config</span>.<span class="ident">state</span>[<span class="number">0</span>],
+            layouter.assign_region(
+                || <span class="string">&quot;constrain output&quot;</span>,
+                |<span class="kw-2">mut </span>region| {
+                    <span class="kw">let </span>expected_var = region.assign_advice(
+                        || <span class="string">&quot;load output&quot;</span>,
+                        config.state[<span class="number">0</span>],
                         <span class="number">0</span>,
-                        <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">output</span>,
+                        || <span class="self">self</span>.output,
                     )<span class="question-mark">?</span>;
-                    <span class="ident">region</span>.<span class="ident">constrain_equal</span>(<span class="ident">output</span>.<span class="ident">cell</span>(), <span class="ident">expected_var</span>.<span class="ident">cell</span>())
+                    region.constrain_equal(output.cell(), expected_var.cell())
                 },
             )
         }
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">poseidon_hash</span>() {
-        <span class="kw">let</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">OsRng</span>;
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>poseidon_hash() {
+        <span class="kw">let </span>rng = OsRng;
 
-        <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> [<span class="ident">Fp::random</span>(<span class="ident">rng</span>), <span class="ident">Fp::random</span>(<span class="ident">rng</span>)];
-        <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span>
-            <span class="ident">poseidon::Hash</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">OrchardNullifier</span>, <span class="ident">ConstantLength</span><span class="op">&lt;</span><span class="number">2</span><span class="op">&gt;</span>, <span class="number">3</span>, <span class="number">2</span><span class="op">&gt;</span><span class="ident">::init</span>().<span class="ident">hash</span>(<span class="ident">message</span>);
+        <span class="kw">let </span>message = [Fp::random(rng), Fp::random(rng)];
+        <span class="kw">let </span>output =
+            poseidon::Hash::&lt;<span class="kw">_</span>, OrchardNullifier, ConstantLength&lt;<span class="number">2</span>&gt;, <span class="number">3</span>, <span class="number">2</span>&gt;::init().hash(message);
 
-        <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="number">6</span>;
-        <span class="kw">let</span> <span class="ident">circuit</span> <span class="op">=</span> <span class="ident">HashCircuit</span>::<span class="op">&lt;</span><span class="ident">OrchardNullifier</span>, <span class="number">3</span>, <span class="number">2</span>, <span class="number">2</span><span class="op">&gt;</span> {
-            <span class="ident">message</span>: <span class="ident">Value::known</span>(<span class="ident">message</span>),
-            <span class="ident">output</span>: <span class="ident">Value::known</span>(<span class="ident">output</span>),
-            <span class="ident">_spec</span>: <span class="ident">PhantomData</span>,
+        <span class="kw">let </span>k = <span class="number">6</span>;
+        <span class="kw">let </span>circuit = HashCircuit::&lt;OrchardNullifier, <span class="number">3</span>, <span class="number">2</span>, <span class="number">2</span>&gt; {
+            message: Value::known(message),
+            output: Value::known(output),
+            _spec: PhantomData,
         };
-        <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver::run</span>(<span class="ident">k</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()))
+        <span class="kw">let </span>prover = MockProver::run(k, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+        <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()))
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">poseidon_hash_longer_input</span>() {
-        <span class="kw">let</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">OsRng</span>;
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>poseidon_hash_longer_input() {
+        <span class="kw">let </span>rng = OsRng;
 
-        <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> [<span class="ident">Fp::random</span>(<span class="ident">rng</span>), <span class="ident">Fp::random</span>(<span class="ident">rng</span>), <span class="ident">Fp::random</span>(<span class="ident">rng</span>)];
-        <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span>
-            <span class="ident">poseidon::Hash</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">OrchardNullifier</span>, <span class="ident">ConstantLength</span><span class="op">&lt;</span><span class="number">3</span><span class="op">&gt;</span>, <span class="number">3</span>, <span class="number">2</span><span class="op">&gt;</span><span class="ident">::init</span>().<span class="ident">hash</span>(<span class="ident">message</span>);
+        <span class="kw">let </span>message = [Fp::random(rng), Fp::random(rng), Fp::random(rng)];
+        <span class="kw">let </span>output =
+            poseidon::Hash::&lt;<span class="kw">_</span>, OrchardNullifier, ConstantLength&lt;<span class="number">3</span>&gt;, <span class="number">3</span>, <span class="number">2</span>&gt;::init().hash(message);
 
-        <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="number">7</span>;
-        <span class="kw">let</span> <span class="ident">circuit</span> <span class="op">=</span> <span class="ident">HashCircuit</span>::<span class="op">&lt;</span><span class="ident">OrchardNullifier</span>, <span class="number">3</span>, <span class="number">2</span>, <span class="number">3</span><span class="op">&gt;</span> {
-            <span class="ident">message</span>: <span class="ident">Value::known</span>(<span class="ident">message</span>),
-            <span class="ident">output</span>: <span class="ident">Value::known</span>(<span class="ident">output</span>),
-            <span class="ident">_spec</span>: <span class="ident">PhantomData</span>,
+        <span class="kw">let </span>k = <span class="number">7</span>;
+        <span class="kw">let </span>circuit = HashCircuit::&lt;OrchardNullifier, <span class="number">3</span>, <span class="number">2</span>, <span class="number">3</span>&gt; {
+            message: Value::known(message),
+            output: Value::known(output),
+            _spec: PhantomData,
         };
-        <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver::run</span>(<span class="ident">k</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()))
+        <span class="kw">let </span>prover = MockProver::run(k, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+        <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()))
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">hash_test_vectors</span>() {
-        <span class="kw">for</span> <span class="ident">tv</span> <span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::poseidon::primitives::test_vectors::fp::hash</span>() {
-            <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> [
-                <span class="ident">pallas::Base::from_repr</span>(<span class="ident">tv</span>.<span class="ident">input</span>[<span class="number">0</span>]).<span class="ident">unwrap</span>(),
-                <span class="ident">pallas::Base::from_repr</span>(<span class="ident">tv</span>.<span class="ident">input</span>[<span class="number">1</span>]).<span class="ident">unwrap</span>(),
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>hash_test_vectors() {
+        <span class="kw">for </span>tv <span class="kw">in </span><span class="kw">crate</span>::poseidon::primitives::test_vectors::fp::hash() {
+            <span class="kw">let </span>message = [
+                pallas::Base::from_repr(tv.input[<span class="number">0</span>]).unwrap(),
+                pallas::Base::from_repr(tv.input[<span class="number">1</span>]).unwrap(),
             ];
-            <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">poseidon::Hash</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">OrchardNullifier</span>, <span class="ident">ConstantLength</span><span class="op">&lt;</span><span class="number">2</span><span class="op">&gt;</span>, <span class="number">3</span>, <span class="number">2</span><span class="op">&gt;</span><span class="ident">::init</span>()
-                .<span class="ident">hash</span>(<span class="ident">message</span>);
+            <span class="kw">let </span>output = poseidon::Hash::&lt;<span class="kw">_</span>, OrchardNullifier, ConstantLength&lt;<span class="number">2</span>&gt;, <span class="number">3</span>, <span class="number">2</span>&gt;::init()
+                .hash(message);
 
-            <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="number">6</span>;
-            <span class="kw">let</span> <span class="ident">circuit</span> <span class="op">=</span> <span class="ident">HashCircuit</span>::<span class="op">&lt;</span><span class="ident">OrchardNullifier</span>, <span class="number">3</span>, <span class="number">2</span>, <span class="number">2</span><span class="op">&gt;</span> {
-                <span class="ident">message</span>: <span class="ident">Value::known</span>(<span class="ident">message</span>),
-                <span class="ident">output</span>: <span class="ident">Value::known</span>(<span class="ident">output</span>),
-                <span class="ident">_spec</span>: <span class="ident">PhantomData</span>,
+            <span class="kw">let </span>k = <span class="number">6</span>;
+            <span class="kw">let </span>circuit = HashCircuit::&lt;OrchardNullifier, <span class="number">3</span>, <span class="number">2</span>, <span class="number">2</span>&gt; {
+                message: Value::known(message),
+                output: Value::known(output),
+                _spec: PhantomData,
             };
-            <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver::run</span>(<span class="ident">k</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
-            <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()));
+            <span class="kw">let </span>prover = MockProver::run(k, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+            <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()));
         }
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;dev-graph&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">print_poseidon_chip</span>() {
-        <span class="kw">use</span> <span class="ident">plotters::prelude</span>::<span class="kw-2">*</span>;
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]</span>
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>print_poseidon_chip() {
+        <span class="kw">use </span>plotters::prelude::<span class="kw-2">*</span>;
 
-        <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span> <span class="ident">BitMapBackend::new</span>(<span class="string">&quot;poseidon-chip-layout.png&quot;</span>, (<span class="number">1024</span>, <span class="number">768</span>)).<span class="ident">into_drawing_area</span>();
-        <span class="ident">root</span>.<span class="ident">fill</span>(<span class="kw-2">&amp;</span><span class="ident">WHITE</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span> <span class="ident">root</span>
-            .<span class="ident">titled</span>(<span class="string">&quot;Poseidon Chip Layout&quot;</span>, (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">60</span>))
-            .<span class="ident">unwrap</span>();
+        <span class="kw">let </span>root = BitMapBackend::new(<span class="string">&quot;poseidon-chip-layout.png&quot;</span>, (<span class="number">1024</span>, <span class="number">768</span>)).into_drawing_area();
+        root.fill(<span class="kw-2">&amp;</span>WHITE).unwrap();
+        <span class="kw">let </span>root = root
+            .titled(<span class="string">&quot;Poseidon Chip Layout&quot;</span>, (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">60</span>))
+            .unwrap();
 
-        <span class="kw">let</span> <span class="ident">circuit</span> <span class="op">=</span> <span class="ident">HashCircuit</span>::<span class="op">&lt;</span><span class="ident">OrchardNullifier</span>, <span class="number">3</span>, <span class="number">2</span>, <span class="number">2</span><span class="op">&gt;</span> {
-            <span class="ident">message</span>: <span class="ident">Value::unknown</span>(),
-            <span class="ident">output</span>: <span class="ident">Value::unknown</span>(),
-            <span class="ident">_spec</span>: <span class="ident">PhantomData</span>,
+        <span class="kw">let </span>circuit = HashCircuit::&lt;OrchardNullifier, <span class="number">3</span>, <span class="number">2</span>, <span class="number">2</span>&gt; {
+            message: Value::unknown(),
+            output: Value::unknown(),
+            _spec: PhantomData,
         };
-        <span class="ident">halo2_proofs::dev::CircuitLayout::default</span>()
-            .<span class="ident">render</span>(<span class="number">6</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="kw-2">&amp;</span><span class="ident">root</span>)
-            .<span class="ident">unwrap</span>();
+        halo2_proofs::dev::CircuitLayout::default()
+            .render(<span class="number">6</span>, <span class="kw-2">&amp;</span>circuit, <span class="kw-2">&amp;</span>root)
+            .unwrap();
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

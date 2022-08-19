@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -158,145 +152,144 @@
 <span id="137">137</span>
 <span id="138">138</span>
 <span id="139">139</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::iter</span>;
+</pre><pre class="rust"><code><span class="kw">use </span>std::iter;
 
-<span class="kw">use</span> <span class="ident">ff::Field</span>;
+<span class="kw">use </span>ff::Field;
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">arithmetic::CurveAffine</span>,
-    <span class="ident">plonk</span>::{<span class="ident">Error</span>, <span class="ident">VerifyingKey</span>},
-    <span class="ident">poly</span>::{
-        <span class="ident">commitment</span>::{<span class="ident">Params</span>, <span class="ident">MSM</span>},
-        <span class="ident">multiopen::VerifierQuery</span>,
+<span class="kw">use crate</span>::{
+    arithmetic::CurveAffine,
+    plonk::{Error, VerifyingKey},
+    poly::{
+        commitment::{Params, MSM},
+        multiopen::VerifierQuery,
     },
-    <span class="ident">transcript</span>::{<span class="ident">read_n_points</span>, <span class="ident">EncodedChallenge</span>, <span class="ident">TranscriptRead</span>},
+    transcript::{read_n_points, EncodedChallenge, TranscriptRead},
 };
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">ChallengeX</span>, <span class="ident">ChallengeY</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::Argument</span>;
+<span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{ChallengeX, ChallengeY};
+<span class="kw">use </span><span class="kw">super</span>::Argument;
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">random_poly_commitment</span>: <span class="ident">C</span>,
+<span class="kw">pub struct </span>Committed&lt;C: CurveAffine&gt; {
+    random_poly_commitment: C,
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Constructed</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">h_commitments</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="ident">random_poly_commitment</span>: <span class="ident">C</span>,
+<span class="kw">pub struct </span>Constructed&lt;C: CurveAffine&gt; {
+    h_commitments: Vec&lt;C&gt;,
+    random_poly_commitment: C,
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PartiallyEvaluated</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">h_commitments</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="ident">random_poly_commitment</span>: <span class="ident">C</span>,
-    <span class="ident">random_eval</span>: <span class="ident">C::Scalar</span>,
+<span class="kw">pub struct </span>PartiallyEvaluated&lt;C: CurveAffine&gt; {
+    h_commitments: Vec&lt;C&gt;,
+    random_poly_commitment: C,
+    random_eval: C::Scalar,
 }
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Evaluated</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">h_commitment</span>: <span class="ident">MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="ident">random_poly_commitment</span>: <span class="ident">C</span>,
-    <span class="ident">expected_h_eval</span>: <span class="ident">C::Scalar</span>,
-    <span class="ident">random_eval</span>: <span class="ident">C::Scalar</span>,
+<span class="kw">pub struct </span>Evaluated&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; {
+    h_commitment: MSM&lt;<span class="lifetime">&#39;params</span>, C&gt;,
+    random_poly_commitment: C,
+    expected_h_eval: C::Scalar,
+    random_eval: C::Scalar,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Argument</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">read_commitments_before_y</span><span class="op">&lt;</span>
-        <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">T</span>: <span class="ident">TranscriptRead</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>,
-    <span class="op">&gt;</span>(
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">random_poly_commitment</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">read_point</span>()<span class="question-mark">?</span>;
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; Argument&lt;C&gt; {
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>read_commitments_before_y&lt;
+        E: EncodedChallenge&lt;C&gt;,
+        T: TranscriptRead&lt;C, E&gt;,
+    &gt;(
+        transcript: <span class="kw-2">&amp;mut </span>T,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Committed&lt;C&gt;, Error&gt; {
+        <span class="kw">let </span>random_poly_commitment = transcript.read_point()<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Committed</span> {
-            <span class="ident">random_poly_commitment</span>,
+        <span class="prelude-val">Ok</span>(Committed {
+            random_poly_commitment,
         })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">read_commitments_after_y</span><span class="op">&lt;</span>
-        <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">T</span>: <span class="ident">TranscriptRead</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>,
-    <span class="op">&gt;</span>(
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; Committed&lt;C&gt; {
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>read_commitments_after_y&lt;
+        E: EncodedChallenge&lt;C&gt;,
+        T: TranscriptRead&lt;C, E&gt;,
+    &gt;(
         <span class="self">self</span>,
-        <span class="ident">vk</span>: <span class="kw-2">&amp;</span><span class="ident">VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Constructed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Obtain a commitment to h(X) in the form of multiple pieces of degree n - 1</span>
-        <span class="kw">let</span> <span class="ident">h_commitments</span> <span class="op">=</span> <span class="ident">read_n_points</span>(<span class="ident">transcript</span>, <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">get_quotient_poly_degree</span>())<span class="question-mark">?</span>;
+        vk: <span class="kw-2">&amp;</span>VerifyingKey&lt;C&gt;,
+        transcript: <span class="kw-2">&amp;mut </span>T,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Constructed&lt;C&gt;, Error&gt; {
+        <span class="comment">// Obtain a commitment to h(X) in the form of multiple pieces of degree n - 1
+        </span><span class="kw">let </span>h_commitments = read_n_points(transcript, vk.domain.get_quotient_poly_degree())<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Constructed</span> {
-            <span class="ident">h_commitments</span>,
-            <span class="ident">random_poly_commitment</span>: <span class="self">self</span>.<span class="ident">random_poly_commitment</span>,
+        <span class="prelude-val">Ok</span>(Constructed {
+            h_commitments,
+            random_poly_commitment: <span class="self">self</span>.random_poly_commitment,
         })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Constructed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">evaluate_after_x</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">T</span>: <span class="ident">TranscriptRead</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; Constructed&lt;C&gt; {
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>evaluate_after_x&lt;E: EncodedChallenge&lt;C&gt;, T: TranscriptRead&lt;C, E&gt;&gt;(
         <span class="self">self</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PartiallyEvaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">random_eval</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">read_scalar</span>()<span class="question-mark">?</span>;
+        transcript: <span class="kw-2">&amp;mut </span>T,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;PartiallyEvaluated&lt;C&gt;, Error&gt; {
+        <span class="kw">let </span>random_eval = transcript.read_scalar()<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">PartiallyEvaluated</span> {
-            <span class="ident">h_commitments</span>: <span class="self">self</span>.<span class="ident">h_commitments</span>,
-            <span class="ident">random_poly_commitment</span>: <span class="self">self</span>.<span class="ident">random_poly_commitment</span>,
-            <span class="ident">random_eval</span>,
+        <span class="prelude-val">Ok</span>(PartiallyEvaluated {
+            h_commitments: <span class="self">self</span>.h_commitments,
+            random_poly_commitment: <span class="self">self</span>.random_poly_commitment,
+            random_eval,
         })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">PartiallyEvaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">verify</span>(
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; PartiallyEvaluated&lt;C&gt; {
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>verify(
         <span class="self">self</span>,
-        <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">expressions</span>: <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">C::Scalar</span><span class="op">&gt;</span>,
-        <span class="ident">y</span>: <span class="ident">ChallengeY</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">xn</span>: <span class="ident">C::Scalar</span>,
-    ) -&gt; <span class="ident">Evaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">expected_h_eval</span> <span class="op">=</span> <span class="ident">expressions</span>.<span class="ident">fold</span>(<span class="ident">C::Scalar::zero</span>(), <span class="op">|</span><span class="ident">h_eval</span>, <span class="ident">v</span><span class="op">|</span> <span class="ident">h_eval</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">y</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">v</span>);
-        <span class="kw">let</span> <span class="ident">expected_h_eval</span> <span class="op">=</span> <span class="ident">expected_h_eval</span> <span class="op">*</span> ((<span class="ident">xn</span> <span class="op">-</span> <span class="ident">C::Scalar::one</span>()).<span class="ident">invert</span>().<span class="ident">unwrap</span>());
+        params: <span class="kw-2">&amp;</span>Params&lt;C&gt;,
+        expressions: <span class="kw">impl </span>Iterator&lt;Item = C::Scalar&gt;,
+        y: ChallengeY&lt;C&gt;,
+        xn: C::Scalar,
+    ) -&gt; Evaluated&lt;C&gt; {
+        <span class="kw">let </span>expected_h_eval = expressions.fold(C::Scalar::zero(), |h_eval, v| h_eval * <span class="kw-2">&amp;*</span>y + <span class="kw-2">&amp;</span>v);
+        <span class="kw">let </span>expected_h_eval = expected_h_eval * ((xn - C::Scalar::one()).invert().unwrap());
 
-        <span class="kw">let</span> <span class="ident">h_commitment</span> <span class="op">=</span>
-            <span class="self">self</span>.<span class="ident">h_commitments</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">rev</span>()
-                .<span class="ident">fold</span>(<span class="ident">params</span>.<span class="ident">empty_msm</span>(), <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">acc</span>, <span class="ident">commitment</span><span class="op">|</span> {
-                    <span class="ident">acc</span>.<span class="ident">scale</span>(<span class="ident">xn</span>);
-                    <span class="ident">acc</span>.<span class="ident">append_term</span>(<span class="ident">C::Scalar::one</span>(), <span class="kw-2">*</span><span class="ident">commitment</span>);
-                    <span class="ident">acc</span>
+        <span class="kw">let </span>h_commitment =
+            <span class="self">self</span>.h_commitments
+                .iter()
+                .rev()
+                .fold(params.empty_msm(), |<span class="kw-2">mut </span>acc, commitment| {
+                    acc.scale(xn);
+                    acc.append_term(C::Scalar::one(), <span class="kw-2">*</span>commitment);
+                    acc
                 });
 
-        <span class="ident">Evaluated</span> {
-            <span class="ident">expected_h_eval</span>,
-            <span class="ident">h_commitment</span>,
-            <span class="ident">random_poly_commitment</span>: <span class="self">self</span>.<span class="ident">random_poly_commitment</span>,
-            <span class="ident">random_eval</span>: <span class="self">self</span>.<span class="ident">random_eval</span>,
+        Evaluated {
+            expected_h_eval,
+            h_commitment,
+            random_poly_commitment: <span class="self">self</span>.random_poly_commitment,
+            random_eval: <span class="self">self</span>.random_eval,
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Evaluated</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">queries</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;r</span> <span class="self">self</span>,
-        <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">VerifierQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>
-    <span class="kw">where</span>
-        <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span>,
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; Evaluated&lt;<span class="lifetime">&#39;params</span>, C&gt; {
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>queries&lt;<span class="lifetime">&#39;r</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span><span class="self">self</span>,
+        x: ChallengeX&lt;C&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = VerifierQuery&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, C&gt;&gt; + Clone
+    <span class="kw">where
+        </span><span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span>,
     {
-        <span class="ident">iter::empty</span>()
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">VerifierQuery::new_msm</span>(
-                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">h_commitment</span>,
-                <span class="kw-2">*</span><span class="ident">x</span>,
-                <span class="self">self</span>.<span class="ident">expected_h_eval</span>,
+        iter::empty()
+            .chain(<span class="prelude-val">Some</span>(VerifierQuery::new_msm(
+                <span class="kw-2">&amp;</span><span class="self">self</span>.h_commitment,
+                <span class="kw-2">*</span>x,
+                <span class="self">self</span>.expected_h_eval,
             )))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">VerifierQuery::new_commitment</span>(
-                <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">random_poly_commitment</span>,
-                <span class="kw-2">*</span><span class="ident">x</span>,
-                <span class="self">self</span>.<span class="ident">random_eval</span>,
+            .chain(<span class="prelude-val">Some</span>(VerifierQuery::new_commitment(
+                <span class="kw-2">&amp;</span><span class="self">self</span>.random_poly_commitment,
+                <span class="kw-2">*</span>x,
+                <span class="self">self</span>.random_eval,
             )))
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

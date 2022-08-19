@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -566,553 +560,552 @@
 <span id="545">545</span>
 <span id="546">546</span>
 <span id="547">547</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Contains utilities for performing polynomial arithmetic over an evaluation</span>
-<span class="doccomment">//! domain that is of a suitable size for the application.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Contains utilities for performing polynomial arithmetic over an evaluation
+//! domain that is of a suitable size for the application.
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">arithmetic</span>::{<span class="ident">best_fft</span>, <span class="ident">parallelize</span>, <span class="ident">FieldExt</span>, <span class="ident">Group</span>},
-    <span class="ident">plonk::Assigned</span>,
+</span><span class="kw">use crate</span>::{
+    arithmetic::{best_fft, parallelize, FieldExt, Group},
+    plonk::Assigned,
 };
 
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Coeff</span>, <span class="ident">ExtendedLagrangeCoeff</span>, <span class="ident">LagrangeCoeff</span>, <span class="ident">Polynomial</span>, <span class="ident">Rotation</span>};
+<span class="kw">use super</span>::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation};
 
-<span class="kw">use</span> <span class="ident">group::ff</span>::{<span class="ident">BatchInvert</span>, <span class="ident">Field</span>, <span class="ident">PrimeField</span>};
+<span class="kw">use </span>group::ff::{BatchInvert, Field, PrimeField};
 
-<span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
+<span class="kw">use </span>std::marker::PhantomData;
 
-<span class="doccomment">/// This structure contains precomputed constants and other details needed for</span>
-<span class="doccomment">/// performing operations on an evaluation domain of size $2^k$ and an extended</span>
-<span class="doccomment">/// domain of size $2^{k} * j$ with $j \neq 0$.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EvaluationDomain</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">Group</span><span class="op">&gt;</span> {
-    <span class="ident">n</span>: <span class="ident">u64</span>,
-    <span class="ident">k</span>: <span class="ident">u32</span>,
-    <span class="ident">extended_k</span>: <span class="ident">u32</span>,
-    <span class="ident">omega</span>: <span class="ident">G::Scalar</span>,
-    <span class="ident">omega_inv</span>: <span class="ident">G::Scalar</span>,
-    <span class="ident">extended_omega</span>: <span class="ident">G::Scalar</span>,
-    <span class="ident">extended_omega_inv</span>: <span class="ident">G::Scalar</span>,
-    <span class="ident">g_coset</span>: <span class="ident">G::Scalar</span>,
-    <span class="ident">g_coset_inv</span>: <span class="ident">G::Scalar</span>,
-    <span class="ident">quotient_poly_degree</span>: <span class="ident">u64</span>,
-    <span class="ident">ifft_divisor</span>: <span class="ident">G::Scalar</span>,
-    <span class="ident">extended_ifft_divisor</span>: <span class="ident">G::Scalar</span>,
-    <span class="ident">t_evaluations</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">G::Scalar</span><span class="op">&gt;</span>,
-    <span class="ident">barycentric_weight</span>: <span class="ident">G::Scalar</span>,
+<span class="doccomment">/// This structure contains precomputed constants and other details needed for
+/// performing operations on an evaluation domain of size $2^k$ and an extended
+/// domain of size $2^{k} * j$ with $j \neq 0$.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>EvaluationDomain&lt;G: Group&gt; {
+    n: u64,
+    k: u32,
+    extended_k: u32,
+    omega: G::Scalar,
+    omega_inv: G::Scalar,
+    extended_omega: G::Scalar,
+    extended_omega_inv: G::Scalar,
+    g_coset: G::Scalar,
+    g_coset_inv: G::Scalar,
+    quotient_poly_degree: u64,
+    ifft_divisor: G::Scalar,
+    extended_ifft_divisor: G::Scalar,
+    t_evaluations: Vec&lt;G::Scalar&gt;,
+    barycentric_weight: G::Scalar,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">Group</span><span class="op">&gt;</span> <span class="ident">EvaluationDomain</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// This constructs a new evaluation domain object based on the provided</span>
-    <span class="doccomment">/// values $j, k$.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">j</span>: <span class="ident">u32</span>, <span class="ident">k</span>: <span class="ident">u32</span>) -&gt; <span class="self">Self</span> {
-        <span class="comment">// quotient_poly_degree * params.n - 1 is the degree of the quotient polynomial</span>
-        <span class="kw">let</span> <span class="ident">quotient_poly_degree</span> <span class="op">=</span> (<span class="ident">j</span> <span class="op">-</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">u64</span>;
+<span class="kw">impl</span>&lt;G: Group&gt; EvaluationDomain&lt;G&gt; {
+    <span class="doccomment">/// This constructs a new evaluation domain object based on the provided
+    /// values $j, k$.
+    </span><span class="kw">pub fn </span>new(j: u32, k: u32) -&gt; <span class="self">Self </span>{
+        <span class="comment">// quotient_poly_degree * params.n - 1 is the degree of the quotient polynomial
+        </span><span class="kw">let </span>quotient_poly_degree = (j - <span class="number">1</span>) <span class="kw">as </span>u64;
 
-        <span class="comment">// n = 2^k</span>
-        <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="number">1u64</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">k</span>;
+        <span class="comment">// n = 2^k
+        </span><span class="kw">let </span>n = <span class="number">1u64 </span>&lt;&lt; k;
 
-        <span class="comment">// We need to work within an extended domain, not params.k but params.k + i</span>
-        <span class="comment">// for some integer i such that 2^(params.k + i) is sufficiently large to</span>
-        <span class="comment">// describe the quotient polynomial.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extended_k</span> <span class="op">=</span> <span class="ident">k</span>;
-        <span class="kw">while</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">extended_k</span>) <span class="op">&lt;</span> (<span class="ident">n</span> <span class="op">*</span> <span class="ident">quotient_poly_degree</span>) {
-            <span class="ident">extended_k</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+        <span class="comment">// We need to work within an extended domain, not params.k but params.k + i
+        // for some integer i such that 2^(params.k + i) is sufficiently large to
+        // describe the quotient polynomial.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>extended_k = k;
+        <span class="kw">while </span>(<span class="number">1 </span>&lt;&lt; extended_k) &lt; (n * quotient_poly_degree) {
+            extended_k += <span class="number">1</span>;
         }
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extended_omega</span> <span class="op">=</span> <span class="ident">G::Scalar::root_of_unity</span>();
+        <span class="kw">let </span><span class="kw-2">mut </span>extended_omega = G::Scalar::root_of_unity();
 
-        <span class="comment">// Get extended_omega, the 2^{extended_k}&#39;th root of unity</span>
-        <span class="comment">// The loop computes extended_omega = omega^{2 ^ (S - extended_k)}</span>
-        <span class="comment">// Notice that extended_omega ^ {2 ^ extended_k} = omega ^ {2^S} = 1.</span>
-        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="ident">extended_k</span>..<span class="ident">G::Scalar::S</span> {
-            <span class="ident">extended_omega</span> <span class="op">=</span> <span class="ident">extended_omega</span>.<span class="ident">square</span>();
+        <span class="comment">// Get extended_omega, the 2^{extended_k}&#39;th root of unity
+        // The loop computes extended_omega = omega^{2 ^ (S - extended_k)}
+        // Notice that extended_omega ^ {2 ^ extended_k} = omega ^ {2^S} = 1.
+        </span><span class="kw">for _ in </span>extended_k..G::Scalar::S {
+            extended_omega = extended_omega.square();
         }
-        <span class="kw">let</span> <span class="ident">extended_omega</span> <span class="op">=</span> <span class="ident">extended_omega</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extended_omega_inv</span> <span class="op">=</span> <span class="ident">extended_omega</span>; <span class="comment">// Inversion computed later</span>
+        <span class="kw">let </span>extended_omega = extended_omega;
+        <span class="kw">let </span><span class="kw-2">mut </span>extended_omega_inv = extended_omega; <span class="comment">// Inversion computed later
 
-        <span class="comment">// Get omega, the 2^{k}&#39;th root of unity (i.e. n&#39;th root of unity)</span>
-        <span class="comment">// The loop computes omega = extended_omega ^ {2 ^ (extended_k - k)}</span>
-        <span class="comment">//           = (omega^{2 ^ (S - extended_k)})  ^ {2 ^ (extended_k - k)}</span>
-        <span class="comment">//           = omega ^ {2 ^ (S - k)}.</span>
-        <span class="comment">// Notice that omega ^ {2^k} = omega ^ {2^S} = 1.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">omega</span> <span class="op">=</span> <span class="ident">extended_omega</span>;
-        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="ident">k</span>..<span class="ident">extended_k</span> {
-            <span class="ident">omega</span> <span class="op">=</span> <span class="ident">omega</span>.<span class="ident">square</span>();
+        // Get omega, the 2^{k}&#39;th root of unity (i.e. n&#39;th root of unity)
+        // The loop computes omega = extended_omega ^ {2 ^ (extended_k - k)}
+        //           = (omega^{2 ^ (S - extended_k)})  ^ {2 ^ (extended_k - k)}
+        //           = omega ^ {2 ^ (S - k)}.
+        // Notice that omega ^ {2^k} = omega ^ {2^S} = 1.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>omega = extended_omega;
+        <span class="kw">for _ in </span>k..extended_k {
+            omega = omega.square();
         }
-        <span class="kw">let</span> <span class="ident">omega</span> <span class="op">=</span> <span class="ident">omega</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">omega_inv</span> <span class="op">=</span> <span class="ident">omega</span>; <span class="comment">// Inversion computed later</span>
+        <span class="kw">let </span>omega = omega;
+        <span class="kw">let </span><span class="kw-2">mut </span>omega_inv = omega; <span class="comment">// Inversion computed later
 
-        <span class="comment">// We use zeta here because we know it generates a coset, and it&#39;s available</span>
-        <span class="comment">// already.</span>
-        <span class="comment">// The coset evaluation domain is:</span>
-        <span class="comment">// zeta {1, extended_omega, extended_omega^2, ..., extended_omega^{(2^extended_k) - 1}}</span>
-        <span class="kw">let</span> <span class="ident">g_coset</span> <span class="op">=</span> <span class="ident">G::Scalar::ZETA</span>;
-        <span class="kw">let</span> <span class="ident">g_coset_inv</span> <span class="op">=</span> <span class="ident">g_coset</span>.<span class="ident">square</span>();
+        // We use zeta here because we know it generates a coset, and it&#39;s available
+        // already.
+        // The coset evaluation domain is:
+        // zeta {1, extended_omega, extended_omega^2, ..., extended_omega^{(2^extended_k) - 1}}
+        </span><span class="kw">let </span>g_coset = G::Scalar::ZETA;
+        <span class="kw">let </span>g_coset_inv = g_coset.square();
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">t_evaluations</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">extended_k</span> <span class="op">-</span> <span class="ident">k</span>));
+        <span class="kw">let </span><span class="kw-2">mut </span>t_evaluations = Vec::with_capacity(<span class="number">1 </span>&lt;&lt; (extended_k - k));
         {
-            <span class="comment">// Compute the evaluations of t(X) = X^n - 1 in the coset evaluation domain.</span>
-            <span class="comment">// We don&#39;t have to compute all of them, because it will repeat.</span>
-            <span class="kw">let</span> <span class="ident">orig</span> <span class="op">=</span> <span class="ident">G::Scalar::ZETA</span>.<span class="ident">pow_vartime</span>(<span class="kw-2">&amp;</span>[<span class="ident">n</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
-            <span class="kw">let</span> <span class="ident">step</span> <span class="op">=</span> <span class="ident">extended_omega</span>.<span class="ident">pow_vartime</span>(<span class="kw-2">&amp;</span>[<span class="ident">n</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur</span> <span class="op">=</span> <span class="ident">orig</span>;
-            <span class="kw">loop</span> {
-                <span class="ident">t_evaluations</span>.<span class="ident">push</span>(<span class="ident">cur</span>);
-                <span class="ident">cur</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">step</span>;
-                <span class="kw">if</span> <span class="ident">cur</span> <span class="op">==</span> <span class="ident">orig</span> {
+            <span class="comment">// Compute the evaluations of t(X) = X^n - 1 in the coset evaluation domain.
+            // We don&#39;t have to compute all of them, because it will repeat.
+            </span><span class="kw">let </span>orig = G::Scalar::ZETA.pow_vartime(<span class="kw-2">&amp;</span>[n <span class="kw">as </span>u64, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
+            <span class="kw">let </span>step = extended_omega.pow_vartime(<span class="kw-2">&amp;</span>[n <span class="kw">as </span>u64, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
+            <span class="kw">let </span><span class="kw-2">mut </span>cur = orig;
+            <span class="kw">loop </span>{
+                t_evaluations.push(cur);
+                cur <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>step;
+                <span class="kw">if </span>cur == orig {
                     <span class="kw">break</span>;
                 }
             }
-            <span class="macro">assert_eq!</span>(<span class="ident">t_evaluations</span>.<span class="ident">len</span>(), <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">extended_k</span> <span class="op">-</span> <span class="ident">k</span>));
+            <span class="macro">assert_eq!</span>(t_evaluations.len(), <span class="number">1 </span>&lt;&lt; (extended_k - k));
 
-            <span class="comment">// Subtract 1 from each to give us t_evaluations[i] = t(zeta * extended_omega^i)</span>
-            <span class="kw">for</span> <span class="ident">coeff</span> <span class="kw">in</span> <span class="kw-2">&amp;mut</span> <span class="ident">t_evaluations</span> {
-                <span class="kw-2">*</span><span class="ident">coeff</span> <span class="op">-</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">G::Scalar::one</span>();
+            <span class="comment">// Subtract 1 from each to give us t_evaluations[i] = t(zeta * extended_omega^i)
+            </span><span class="kw">for </span>coeff <span class="kw">in </span><span class="kw-2">&amp;mut </span>t_evaluations {
+                <span class="kw-2">*</span>coeff -= <span class="kw-2">&amp;</span>G::Scalar::one();
             }
 
-            <span class="comment">// Invert, because we&#39;re dividing by this polynomial.</span>
-            <span class="comment">// We invert in a batch, below.</span>
-        }
+            <span class="comment">// Invert, because we&#39;re dividing by this polynomial.
+            // We invert in a batch, below.
+        </span>}
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ifft_divisor</span> <span class="op">=</span> <span class="ident">G::Scalar::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">k</span>); <span class="comment">// Inversion computed later</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">extended_ifft_divisor</span> <span class="op">=</span> <span class="ident">G::Scalar::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">extended_k</span>); <span class="comment">// Inversion computed later</span>
+        <span class="kw">let </span><span class="kw-2">mut </span>ifft_divisor = G::Scalar::from(<span class="number">1 </span>&lt;&lt; k); <span class="comment">// Inversion computed later
+        </span><span class="kw">let </span><span class="kw-2">mut </span>extended_ifft_divisor = G::Scalar::from(<span class="number">1 </span>&lt;&lt; extended_k); <span class="comment">// Inversion computed later
 
-        <span class="comment">// The barycentric weight of 1 over the evaluation domain</span>
-        <span class="comment">// 1 / \prod_{i != 0} (1 - omega^i)</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">barycentric_weight</span> <span class="op">=</span> <span class="ident">G::Scalar::from</span>(<span class="ident">n</span>); <span class="comment">// Inversion computed later</span>
+        // The barycentric weight of 1 over the evaluation domain
+        // 1 / \prod_{i != 0} (1 - omega^i)
+        </span><span class="kw">let </span><span class="kw-2">mut </span>barycentric_weight = G::Scalar::from(n); <span class="comment">// Inversion computed later
 
-        <span class="comment">// Compute batch inversion</span>
-        <span class="ident">t_evaluations</span>
-            .<span class="ident">iter_mut</span>()
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut</span> <span class="ident">ifft_divisor</span>))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut</span> <span class="ident">extended_ifft_divisor</span>))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut</span> <span class="ident">barycentric_weight</span>))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut</span> <span class="ident">extended_omega_inv</span>))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut</span> <span class="ident">omega_inv</span>))
-            .<span class="ident">batch_invert</span>();
+        // Compute batch inversion
+        </span>t_evaluations
+            .iter_mut()
+            .chain(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>ifft_divisor))
+            .chain(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>extended_ifft_divisor))
+            .chain(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>barycentric_weight))
+            .chain(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>extended_omega_inv))
+            .chain(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>omega_inv))
+            .batch_invert();
 
-        <span class="ident">EvaluationDomain</span> {
-            <span class="ident">n</span>,
-            <span class="ident">k</span>,
-            <span class="ident">extended_k</span>,
-            <span class="ident">omega</span>,
-            <span class="ident">omega_inv</span>,
-            <span class="ident">extended_omega</span>,
-            <span class="ident">extended_omega_inv</span>,
-            <span class="ident">g_coset</span>,
-            <span class="ident">g_coset_inv</span>,
-            <span class="ident">quotient_poly_degree</span>,
-            <span class="ident">ifft_divisor</span>,
-            <span class="ident">extended_ifft_divisor</span>,
-            <span class="ident">t_evaluations</span>,
-            <span class="ident">barycentric_weight</span>,
-        }
-    }
-
-    <span class="doccomment">/// Obtains a polynomial in Lagrange form when given a vector of Lagrange</span>
-    <span class="doccomment">/// coefficients of size `n`; panics if the provided vector is the wrong</span>
-    <span class="doccomment">/// length.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lagrange_from_vec</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">values</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="ident">values</span>.<span class="ident">len</span>(), <span class="self">self</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>);
-
-        <span class="ident">Polynomial</span> {
-            <span class="ident">values</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+        EvaluationDomain {
+            n,
+            k,
+            extended_k,
+            omega,
+            omega_inv,
+            extended_omega,
+            extended_omega_inv,
+            g_coset,
+            g_coset_inv,
+            quotient_poly_degree,
+            ifft_divisor,
+            extended_ifft_divisor,
+            t_evaluations,
+            barycentric_weight,
         }
     }
 
-    <span class="doccomment">/// Obtains a polynomial in coefficient form when given a vector of</span>
-    <span class="doccomment">/// coefficients of size `n`; panics if the provided vector is the wrong</span>
-    <span class="doccomment">/// length.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">coeff_from_vec</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">values</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">Coeff</span><span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="ident">values</span>.<span class="ident">len</span>(), <span class="self">self</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>);
+    <span class="doccomment">/// Obtains a polynomial in Lagrange form when given a vector of Lagrange
+    /// coefficients of size `n`; panics if the provided vector is the wrong
+    /// length.
+    </span><span class="kw">pub fn </span>lagrange_from_vec(<span class="kw-2">&amp;</span><span class="self">self</span>, values: Vec&lt;G&gt;) -&gt; Polynomial&lt;G, LagrangeCoeff&gt; {
+        <span class="macro">assert_eq!</span>(values.len(), <span class="self">self</span>.n <span class="kw">as </span>usize);
 
-        <span class="ident">Polynomial</span> {
-            <span class="ident">values</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+        Polynomial {
+            values,
+            _marker: PhantomData,
         }
     }
 
-    <span class="doccomment">/// Returns an empty (zero) polynomial in the coefficient basis</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_coeff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">Coeff</span><span class="op">&gt;</span> {
-        <span class="ident">Polynomial</span> {
-            <span class="ident">values</span>: <span class="macro">vec!</span>[<span class="ident">G::group_zero</span>(); <span class="self">self</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>],
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+    <span class="doccomment">/// Obtains a polynomial in coefficient form when given a vector of
+    /// coefficients of size `n`; panics if the provided vector is the wrong
+    /// length.
+    </span><span class="kw">pub fn </span>coeff_from_vec(<span class="kw-2">&amp;</span><span class="self">self</span>, values: Vec&lt;G&gt;) -&gt; Polynomial&lt;G, Coeff&gt; {
+        <span class="macro">assert_eq!</span>(values.len(), <span class="self">self</span>.n <span class="kw">as </span>usize);
+
+        Polynomial {
+            values,
+            _marker: PhantomData,
         }
     }
 
-    <span class="doccomment">/// Returns an empty (zero) polynomial in the Lagrange coefficient basis</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_lagrange</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span> {
-        <span class="ident">Polynomial</span> {
-            <span class="ident">values</span>: <span class="macro">vec!</span>[<span class="ident">G::group_zero</span>(); <span class="self">self</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>],
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+    <span class="doccomment">/// Returns an empty (zero) polynomial in the coefficient basis
+    </span><span class="kw">pub fn </span>empty_coeff(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Polynomial&lt;G, Coeff&gt; {
+        Polynomial {
+            values: <span class="macro">vec!</span>[G::group_zero(); <span class="self">self</span>.n <span class="kw">as </span>usize],
+            _marker: PhantomData,
         }
     }
 
-    <span class="doccomment">/// Returns an empty (zero) polynomial in the Lagrange coefficient basis, with</span>
-    <span class="doccomment">/// deferred inversions.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">empty_lagrange_assigned</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">G</span>: <span class="ident">Field</span>,
+    <span class="doccomment">/// Returns an empty (zero) polynomial in the Lagrange coefficient basis
+    </span><span class="kw">pub fn </span>empty_lagrange(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Polynomial&lt;G, LagrangeCoeff&gt; {
+        Polynomial {
+            values: <span class="macro">vec!</span>[G::group_zero(); <span class="self">self</span>.n <span class="kw">as </span>usize],
+            _marker: PhantomData,
+        }
+    }
+
+    <span class="doccomment">/// Returns an empty (zero) polynomial in the Lagrange coefficient basis, with
+    /// deferred inversions.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>empty_lagrange_assigned(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Polynomial&lt;Assigned&lt;G&gt;, LagrangeCoeff&gt;
+    <span class="kw">where
+        </span>G: Field,
     {
-        <span class="ident">Polynomial</span> {
-            <span class="ident">values</span>: <span class="macro">vec!</span>[<span class="ident">G::group_zero</span>().<span class="ident">into</span>(); <span class="self">self</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>],
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+        Polynomial {
+            values: <span class="macro">vec!</span>[G::group_zero().into(); <span class="self">self</span>.n <span class="kw">as </span>usize],
+            _marker: PhantomData,
         }
     }
 
-    <span class="doccomment">/// Returns a constant polynomial in the Lagrange coefficient basis</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">constant_lagrange</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">scalar</span>: <span class="ident">G</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span> {
-        <span class="ident">Polynomial</span> {
-            <span class="ident">values</span>: <span class="macro">vec!</span>[<span class="ident">scalar</span>; <span class="self">self</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>],
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+    <span class="doccomment">/// Returns a constant polynomial in the Lagrange coefficient basis
+    </span><span class="kw">pub fn </span>constant_lagrange(<span class="kw-2">&amp;</span><span class="self">self</span>, scalar: G) -&gt; Polynomial&lt;G, LagrangeCoeff&gt; {
+        Polynomial {
+            values: <span class="macro">vec!</span>[scalar; <span class="self">self</span>.n <span class="kw">as </span>usize],
+            _marker: PhantomData,
         }
     }
 
-    <span class="doccomment">/// Returns an empty (zero) polynomial in the extended Lagrange coefficient</span>
-    <span class="doccomment">/// basis</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_extended</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
-        <span class="ident">Polynomial</span> {
-            <span class="ident">values</span>: <span class="macro">vec!</span>[<span class="ident">G::group_zero</span>(); <span class="self">self</span>.<span class="ident">extended_len</span>()],
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+    <span class="doccomment">/// Returns an empty (zero) polynomial in the extended Lagrange coefficient
+    /// basis
+    </span><span class="kw">pub fn </span>empty_extended(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Polynomial&lt;G, ExtendedLagrangeCoeff&gt; {
+        Polynomial {
+            values: <span class="macro">vec!</span>[G::group_zero(); <span class="self">self</span>.extended_len()],
+            _marker: PhantomData,
         }
     }
 
-    <span class="doccomment">/// Returns a constant polynomial in the extended Lagrange coefficient</span>
-    <span class="doccomment">/// basis</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">constant_extended</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">scalar</span>: <span class="ident">G</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
-        <span class="ident">Polynomial</span> {
-            <span class="ident">values</span>: <span class="macro">vec!</span>[<span class="ident">scalar</span>; <span class="self">self</span>.<span class="ident">extended_len</span>()],
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+    <span class="doccomment">/// Returns a constant polynomial in the extended Lagrange coefficient
+    /// basis
+    </span><span class="kw">pub fn </span>constant_extended(<span class="kw-2">&amp;</span><span class="self">self</span>, scalar: G) -&gt; Polynomial&lt;G, ExtendedLagrangeCoeff&gt; {
+        Polynomial {
+            values: <span class="macro">vec!</span>[scalar; <span class="self">self</span>.extended_len()],
+            _marker: PhantomData,
         }
     }
 
-    <span class="doccomment">/// This takes us from an n-length vector into the coefficient form.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This function will panic if the provided vector is not the correct</span>
-    <span class="doccomment">/// length.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lagrange_to_coeff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">a</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">Coeff</span><span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="ident">a</span>.<span class="ident">values</span>.<span class="ident">len</span>(), <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">k</span>);
+    <span class="doccomment">/// This takes us from an n-length vector into the coefficient form.
+    ///
+    /// This function will panic if the provided vector is not the correct
+    /// length.
+    </span><span class="kw">pub fn </span>lagrange_to_coeff(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>a: Polynomial&lt;G, LagrangeCoeff&gt;) -&gt; Polynomial&lt;G, Coeff&gt; {
+        <span class="macro">assert_eq!</span>(a.values.len(), <span class="number">1 </span>&lt;&lt; <span class="self">self</span>.k);
 
-        <span class="comment">// Perform inverse FFT to obtain the polynomial in coefficient form</span>
-        <span class="ident"><span class="self">Self</span>::ifft</span>(<span class="kw-2">&amp;mut</span> <span class="ident">a</span>.<span class="ident">values</span>, <span class="self">self</span>.<span class="ident">omega_inv</span>, <span class="self">self</span>.<span class="ident">k</span>, <span class="self">self</span>.<span class="ident">ifft_divisor</span>);
+        <span class="comment">// Perform inverse FFT to obtain the polynomial in coefficient form
+        </span><span class="self">Self</span>::ifft(<span class="kw-2">&amp;mut </span>a.values, <span class="self">self</span>.omega_inv, <span class="self">self</span>.k, <span class="self">self</span>.ifft_divisor);
 
-        <span class="ident">Polynomial</span> {
-            <span class="ident">values</span>: <span class="ident">a</span>.<span class="ident">values</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+        Polynomial {
+            values: a.values,
+            _marker: PhantomData,
         }
     }
 
-    <span class="doccomment">/// This takes us from an n-length coefficient vector into a coset of the extended</span>
-    <span class="doccomment">/// evaluation domain, rotating by `rotation` if desired.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">coeff_to_extended</span>(
+    <span class="doccomment">/// This takes us from an n-length coefficient vector into a coset of the extended
+    /// evaluation domain, rotating by `rotation` if desired.
+    </span><span class="kw">pub fn </span>coeff_to_extended(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">a</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">Coeff</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="ident">a</span>.<span class="ident">values</span>.<span class="ident">len</span>(), <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">k</span>);
+        <span class="kw-2">mut </span>a: Polynomial&lt;G, Coeff&gt;,
+    ) -&gt; Polynomial&lt;G, ExtendedLagrangeCoeff&gt; {
+        <span class="macro">assert_eq!</span>(a.values.len(), <span class="number">1 </span>&lt;&lt; <span class="self">self</span>.k);
 
-        <span class="self">self</span>.<span class="ident">distribute_powers_zeta</span>(<span class="kw-2">&amp;mut</span> <span class="ident">a</span>.<span class="ident">values</span>, <span class="bool-val">true</span>);
-        <span class="ident">a</span>.<span class="ident">values</span>.<span class="ident">resize</span>(<span class="self">self</span>.<span class="ident">extended_len</span>(), <span class="ident">G::group_zero</span>());
-        <span class="ident">best_fft</span>(<span class="kw-2">&amp;mut</span> <span class="ident">a</span>.<span class="ident">values</span>, <span class="self">self</span>.<span class="ident">extended_omega</span>, <span class="self">self</span>.<span class="ident">extended_k</span>);
+        <span class="self">self</span>.distribute_powers_zeta(<span class="kw-2">&amp;mut </span>a.values, <span class="bool-val">true</span>);
+        a.values.resize(<span class="self">self</span>.extended_len(), G::group_zero());
+        best_fft(<span class="kw-2">&amp;mut </span>a.values, <span class="self">self</span>.extended_omega, <span class="self">self</span>.extended_k);
 
-        <span class="ident">Polynomial</span> {
-            <span class="ident">values</span>: <span class="ident">a</span>.<span class="ident">values</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+        Polynomial {
+            values: a.values,
+            _marker: PhantomData,
         }
     }
 
-    <span class="doccomment">/// Rotate the extended domain polynomial over the original domain.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">rotate_extended</span>(
+    <span class="doccomment">/// Rotate the extended domain polynomial over the original domain.
+    </span><span class="kw">pub fn </span>rotate_extended(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
-        <span class="ident">rotation</span>: <span class="ident">Rotation</span>,
-    ) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">new_rotation</span> <span class="op">=</span> ((<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="self">self</span>.<span class="ident">extended_k</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">k</span>)) <span class="op">*</span> <span class="ident">rotation</span>.<span class="number">0</span>.<span class="ident">abs</span>()) <span class="kw">as</span> <span class="ident">usize</span>;
+        poly: <span class="kw-2">&amp;</span>Polynomial&lt;G, ExtendedLagrangeCoeff&gt;,
+        rotation: Rotation,
+    ) -&gt; Polynomial&lt;G, ExtendedLagrangeCoeff&gt; {
+        <span class="kw">let </span>new_rotation = ((<span class="number">1 </span>&lt;&lt; (<span class="self">self</span>.extended_k - <span class="self">self</span>.k)) * rotation.<span class="number">0</span>.abs()) <span class="kw">as </span>usize;
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">clone</span>();
+        <span class="kw">let </span><span class="kw-2">mut </span>poly = poly.clone();
 
-        <span class="kw">if</span> <span class="ident">rotation</span>.<span class="number">0</span> <span class="op">&gt;</span><span class="op">=</span> <span class="number">0</span> {
-            <span class="ident">poly</span>.<span class="ident">values</span>.<span class="ident">rotate_left</span>(<span class="ident">new_rotation</span>);
-        } <span class="kw">else</span> {
-            <span class="ident">poly</span>.<span class="ident">values</span>.<span class="ident">rotate_right</span>(<span class="ident">new_rotation</span>);
+        <span class="kw">if </span>rotation.<span class="number">0 </span>&gt;= <span class="number">0 </span>{
+            poly.values.rotate_left(new_rotation);
+        } <span class="kw">else </span>{
+            poly.values.rotate_right(new_rotation);
         }
 
-        <span class="ident">poly</span>
+        poly
     }
 
-    <span class="doccomment">/// This takes us from the extended evaluation domain and gets us the</span>
-    <span class="doccomment">/// quotient polynomial coefficients.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This function will panic if the provided vector is not the correct</span>
-    <span class="doccomment">/// length.</span>
-    <span class="comment">// TODO/FIXME: caller should be responsible for truncating</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extended_to_coeff</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut</span> <span class="ident">a</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="ident">a</span>.<span class="ident">values</span>.<span class="ident">len</span>(), <span class="self">self</span>.<span class="ident">extended_len</span>());
+    <span class="doccomment">/// This takes us from the extended evaluation domain and gets us the
+    /// quotient polynomial coefficients.
+    ///
+    /// This function will panic if the provided vector is not the correct
+    /// length.
+    </span><span class="comment">// TODO/FIXME: caller should be responsible for truncating
+    </span><span class="kw">pub fn </span>extended_to_coeff(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>a: Polynomial&lt;G, ExtendedLagrangeCoeff&gt;) -&gt; Vec&lt;G&gt; {
+        <span class="macro">assert_eq!</span>(a.values.len(), <span class="self">self</span>.extended_len());
 
-        <span class="comment">// Inverse FFT</span>
-        <span class="ident"><span class="self">Self</span>::ifft</span>(
-            <span class="kw-2">&amp;mut</span> <span class="ident">a</span>.<span class="ident">values</span>,
-            <span class="self">self</span>.<span class="ident">extended_omega_inv</span>,
-            <span class="self">self</span>.<span class="ident">extended_k</span>,
-            <span class="self">self</span>.<span class="ident">extended_ifft_divisor</span>,
+        <span class="comment">// Inverse FFT
+        </span><span class="self">Self</span>::ifft(
+            <span class="kw-2">&amp;mut </span>a.values,
+            <span class="self">self</span>.extended_omega_inv,
+            <span class="self">self</span>.extended_k,
+            <span class="self">self</span>.extended_ifft_divisor,
         );
 
-        <span class="comment">// Distribute powers to move from coset; opposite from the</span>
-        <span class="comment">// transformation we performed earlier.</span>
-        <span class="self">self</span>.<span class="ident">distribute_powers_zeta</span>(<span class="kw-2">&amp;mut</span> <span class="ident">a</span>.<span class="ident">values</span>, <span class="bool-val">false</span>);
+        <span class="comment">// Distribute powers to move from coset; opposite from the
+        // transformation we performed earlier.
+        </span><span class="self">self</span>.distribute_powers_zeta(<span class="kw-2">&amp;mut </span>a.values, <span class="bool-val">false</span>);
 
-        <span class="comment">// Truncate it to match the size of the quotient polynomial; the</span>
-        <span class="comment">// evaluation domain might be slightly larger than necessary because</span>
-        <span class="comment">// it always lies on a power-of-two boundary.</span>
-        <span class="ident">a</span>.<span class="ident">values</span>
-            .<span class="ident">truncate</span>((<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">n</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">quotient_poly_degree</span>) <span class="kw">as</span> <span class="ident">usize</span>);
+        <span class="comment">// Truncate it to match the size of the quotient polynomial; the
+        // evaluation domain might be slightly larger than necessary because
+        // it always lies on a power-of-two boundary.
+        </span>a.values
+            .truncate((<span class="kw-2">&amp;</span><span class="self">self</span>.n * <span class="self">self</span>.quotient_poly_degree) <span class="kw">as </span>usize);
 
-        <span class="ident">a</span>.<span class="ident">values</span>
+        a.values
     }
 
-    <span class="doccomment">/// This divides the polynomial (in the extended domain) by the vanishing</span>
-    <span class="doccomment">/// polynomial of the $2^k$ size domain.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">divide_by_vanishing_poly</span>(
+    <span class="doccomment">/// This divides the polynomial (in the extended domain) by the vanishing
+    /// polynomial of the $2^k$ size domain.
+    </span><span class="kw">pub fn </span>divide_by_vanishing_poly(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">a</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="ident">a</span>.<span class="ident">values</span>.<span class="ident">len</span>(), <span class="self">self</span>.<span class="ident">extended_len</span>());
+        <span class="kw-2">mut </span>a: Polynomial&lt;G, ExtendedLagrangeCoeff&gt;,
+    ) -&gt; Polynomial&lt;G, ExtendedLagrangeCoeff&gt; {
+        <span class="macro">assert_eq!</span>(a.values.len(), <span class="self">self</span>.extended_len());
 
-        <span class="comment">// Divide to obtain the quotient polynomial in the coset evaluation</span>
-        <span class="comment">// domain.</span>
-        <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="ident">a</span>.<span class="ident">values</span>, <span class="op">|</span><span class="ident">h</span>, <span class="kw-2">mut</span> <span class="ident">index</span><span class="op">|</span> {
-            <span class="kw">for</span> <span class="ident">h</span> <span class="kw">in</span> <span class="ident">h</span> {
-                <span class="ident">h</span>.<span class="ident">group_scale</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">t_evaluations</span>[<span class="ident">index</span> <span class="op">%</span> <span class="self">self</span>.<span class="ident">t_evaluations</span>.<span class="ident">len</span>()]);
-                <span class="ident">index</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+        <span class="comment">// Divide to obtain the quotient polynomial in the coset evaluation
+        // domain.
+        </span>parallelize(<span class="kw-2">&amp;mut </span>a.values, |h, <span class="kw-2">mut </span>index| {
+            <span class="kw">for </span>h <span class="kw">in </span>h {
+                h.group_scale(<span class="kw-2">&amp;</span><span class="self">self</span>.t_evaluations[index % <span class="self">self</span>.t_evaluations.len()]);
+                index += <span class="number">1</span>;
             }
         });
 
-        <span class="ident">Polynomial</span> {
-            <span class="ident">values</span>: <span class="ident">a</span>.<span class="ident">values</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+        Polynomial {
+            values: a.values,
+            _marker: PhantomData,
         }
     }
 
-    <span class="doccomment">/// Given a slice of group elements `[a_0, a_1, a_2, ...]`, this returns</span>
-    <span class="doccomment">/// `[a_0, [zeta]a_1, [zeta^2]a_2, a_3, [zeta]a_4, [zeta^2]a_5, a_6, ...]`,</span>
-    <span class="doccomment">/// where zeta is a cube root of unity in the multiplicative subgroup with</span>
-    <span class="doccomment">/// order (p - 1), i.e. zeta^3 = 1.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// `into_coset` should be set to `true` when moving into the coset,</span>
-    <span class="doccomment">/// and `false` when moving out. This toggles the choice of `zeta`.</span>
-    <span class="kw">fn</span> <span class="ident">distribute_powers_zeta</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">a</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">G</span>], <span class="ident">into_coset</span>: <span class="ident">bool</span>) {
-        <span class="kw">let</span> <span class="ident">coset_powers</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">into_coset</span> {
-            [<span class="self">self</span>.<span class="ident">g_coset</span>, <span class="self">self</span>.<span class="ident">g_coset_inv</span>]
-        } <span class="kw">else</span> {
-            [<span class="self">self</span>.<span class="ident">g_coset_inv</span>, <span class="self">self</span>.<span class="ident">g_coset</span>]
+    <span class="doccomment">/// Given a slice of group elements `[a_0, a_1, a_2, ...]`, this returns
+    /// `[a_0, [zeta]a_1, [zeta^2]a_2, a_3, [zeta]a_4, [zeta^2]a_5, a_6, ...]`,
+    /// where zeta is a cube root of unity in the multiplicative subgroup with
+    /// order (p - 1), i.e. zeta^3 = 1.
+    ///
+    /// `into_coset` should be set to `true` when moving into the coset,
+    /// and `false` when moving out. This toggles the choice of `zeta`.
+    </span><span class="kw">fn </span>distribute_powers_zeta(<span class="kw-2">&amp;</span><span class="self">self</span>, a: <span class="kw-2">&amp;mut </span>[G], into_coset: bool) {
+        <span class="kw">let </span>coset_powers = <span class="kw">if </span>into_coset {
+            [<span class="self">self</span>.g_coset, <span class="self">self</span>.g_coset_inv]
+        } <span class="kw">else </span>{
+            [<span class="self">self</span>.g_coset_inv, <span class="self">self</span>.g_coset]
         };
-        <span class="ident">parallelize</span>(<span class="ident">a</span>, <span class="op">|</span><span class="ident">a</span>, <span class="kw-2">mut</span> <span class="ident">index</span><span class="op">|</span> {
-            <span class="kw">for</span> <span class="ident">a</span> <span class="kw">in</span> <span class="ident">a</span> {
-                <span class="comment">// Distribute powers to move into/from coset</span>
-                <span class="kw">let</span> <span class="ident">i</span> <span class="op">=</span> <span class="ident">index</span> <span class="op">%</span> (<span class="ident">coset_powers</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="number">1</span>);
-                <span class="kw">if</span> <span class="ident">i</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-                    <span class="ident">a</span>.<span class="ident">group_scale</span>(<span class="kw-2">&amp;</span><span class="ident">coset_powers</span>[<span class="ident">i</span> <span class="op">-</span> <span class="number">1</span>]);
+        parallelize(a, |a, <span class="kw-2">mut </span>index| {
+            <span class="kw">for </span>a <span class="kw">in </span>a {
+                <span class="comment">// Distribute powers to move into/from coset
+                </span><span class="kw">let </span>i = index % (coset_powers.len() + <span class="number">1</span>);
+                <span class="kw">if </span>i != <span class="number">0 </span>{
+                    a.group_scale(<span class="kw-2">&amp;</span>coset_powers[i - <span class="number">1</span>]);
                 }
-                <span class="ident">index</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+                index += <span class="number">1</span>;
             }
         });
     }
 
-    <span class="kw">fn</span> <span class="ident">ifft</span>(<span class="ident">a</span>: <span class="kw-2">&amp;mut</span> [<span class="ident">G</span>], <span class="ident">omega_inv</span>: <span class="ident">G::Scalar</span>, <span class="ident">log_n</span>: <span class="ident">u32</span>, <span class="ident">divisor</span>: <span class="ident">G::Scalar</span>) {
-        <span class="ident">best_fft</span>(<span class="ident">a</span>, <span class="ident">omega_inv</span>, <span class="ident">log_n</span>);
-        <span class="ident">parallelize</span>(<span class="ident">a</span>, <span class="op">|</span><span class="ident">a</span>, <span class="kw">_</span><span class="op">|</span> {
-            <span class="kw">for</span> <span class="ident">a</span> <span class="kw">in</span> <span class="ident">a</span> {
-                <span class="comment">// Finish iFFT</span>
-                <span class="ident">a</span>.<span class="ident">group_scale</span>(<span class="kw-2">&amp;</span><span class="ident">divisor</span>);
+    <span class="kw">fn </span>ifft(a: <span class="kw-2">&amp;mut </span>[G], omega_inv: G::Scalar, log_n: u32, divisor: G::Scalar) {
+        best_fft(a, omega_inv, log_n);
+        parallelize(a, |a, <span class="kw">_</span>| {
+            <span class="kw">for </span>a <span class="kw">in </span>a {
+                <span class="comment">// Finish iFFT
+                </span>a.group_scale(<span class="kw-2">&amp;</span>divisor);
             }
         });
     }
 
-    <span class="doccomment">/// Get the size of the extended domain</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extended_len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="self">self</span>.<span class="ident">extended_k</span>
+    <span class="doccomment">/// Get the size of the extended domain
+    </span><span class="kw">pub fn </span>extended_len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="number">1 </span>&lt;&lt; <span class="self">self</span>.extended_k
     }
 
-    <span class="doccomment">/// Get $\omega$, the generator of the $2^k$ order multiplicative subgroup.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_omega</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">G::Scalar</span> {
-        <span class="self">self</span>.<span class="ident">omega</span>
+    <span class="doccomment">/// Get $\omega$, the generator of the $2^k$ order multiplicative subgroup.
+    </span><span class="kw">pub fn </span>get_omega(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; G::Scalar {
+        <span class="self">self</span>.omega
     }
 
-    <span class="doccomment">/// Get $\omega^{-1}$, the inverse of the generator of the $2^k$ order</span>
-    <span class="doccomment">/// multiplicative subgroup.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_omega_inv</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">G::Scalar</span> {
-        <span class="self">self</span>.<span class="ident">omega_inv</span>
+    <span class="doccomment">/// Get $\omega^{-1}$, the inverse of the generator of the $2^k$ order
+    /// multiplicative subgroup.
+    </span><span class="kw">pub fn </span>get_omega_inv(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; G::Scalar {
+        <span class="self">self</span>.omega_inv
     }
 
-    <span class="doccomment">/// Get the generator of the extended domain&#39;s multiplicative subgroup.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_extended_omega</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">G::Scalar</span> {
-        <span class="self">self</span>.<span class="ident">extended_omega</span>
+    <span class="doccomment">/// Get the generator of the extended domain&#39;s multiplicative subgroup.
+    </span><span class="kw">pub fn </span>get_extended_omega(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; G::Scalar {
+        <span class="self">self</span>.extended_omega
     }
 
-    <span class="doccomment">/// Multiplies a value by some power of $\omega$, essentially rotating over</span>
-    <span class="doccomment">/// the domain.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">rotate_omega</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">value</span>: <span class="ident">G::Scalar</span>, <span class="ident">rotation</span>: <span class="ident">Rotation</span>) -&gt; <span class="ident">G::Scalar</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">point</span> <span class="op">=</span> <span class="ident">value</span>;
-        <span class="kw">if</span> <span class="ident">rotation</span>.<span class="number">0</span> <span class="op">&gt;</span><span class="op">=</span> <span class="number">0</span> {
-            <span class="ident">point</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">get_omega</span>().<span class="ident">pow_vartime</span>(<span class="kw-2">&amp;</span>[<span class="ident">rotation</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">u64</span>]);
-        } <span class="kw">else</span> {
-            <span class="ident">point</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>
-                .<span class="ident">get_omega_inv</span>()
-                .<span class="ident">pow_vartime</span>(<span class="kw-2">&amp;</span>[(<span class="ident">rotation</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">i64</span>).<span class="ident">unsigned_abs</span>()]);
+    <span class="doccomment">/// Multiplies a value by some power of $\omega$, essentially rotating over
+    /// the domain.
+    </span><span class="kw">pub fn </span>rotate_omega(<span class="kw-2">&amp;</span><span class="self">self</span>, value: G::Scalar, rotation: Rotation) -&gt; G::Scalar {
+        <span class="kw">let </span><span class="kw-2">mut </span>point = value;
+        <span class="kw">if </span>rotation.<span class="number">0 </span>&gt;= <span class="number">0 </span>{
+            point <span class="kw-2">*</span>= <span class="kw-2">&amp;</span><span class="self">self</span>.get_omega().pow_vartime(<span class="kw-2">&amp;</span>[rotation.<span class="number">0 </span><span class="kw">as </span>u64]);
+        } <span class="kw">else </span>{
+            point <span class="kw-2">*</span>= <span class="kw-2">&amp;</span><span class="self">self
+                </span>.get_omega_inv()
+                .pow_vartime(<span class="kw-2">&amp;</span>[(rotation.<span class="number">0 </span><span class="kw">as </span>i64).unsigned_abs()]);
         }
-        <span class="ident">point</span>
+        point
     }
 
-    <span class="doccomment">/// Computes evaluations (at the point `x`, where `xn = x^n`) of Lagrange</span>
-    <span class="doccomment">/// basis polynomials `l_i(X)` defined such that `l_i(omega^i) = 1` and</span>
-    <span class="doccomment">/// `l_i(omega^j) = 0` for all `j != i` at each provided rotation `i`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Implementation</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The polynomial</span>
-    <span class="doccomment">///     $$\prod_{j=0,j \neq i}^{n - 1} (X - \omega^j)$$</span>
-    <span class="doccomment">/// has a root at all points in the domain except $\omega^i$, where it evaluates to</span>
-    <span class="doccomment">///     $$\prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)$$</span>
-    <span class="doccomment">/// and so we divide that polynomial by this value to obtain $l_i(X)$. Since</span>
-    <span class="doccomment">///     $$\prod_{j=0,j \neq i}^{n - 1} (X - \omega^j)</span>
-    <span class="doccomment">///       = \frac{X^n - 1}{X - \omega^i}$$</span>
-    <span class="doccomment">/// then $l_i(x)$ for some $x$ is evaluated as</span>
-    <span class="doccomment">///     $$\left(\frac{x^n - 1}{x - \omega^i}\right)</span>
-    <span class="doccomment">///       \cdot \left(\frac{1}{\prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)}\right).$$</span>
-    <span class="doccomment">/// We refer to</span>
-    <span class="doccomment">///     $$1 \over \prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)$$</span>
-    <span class="doccomment">/// as the barycentric weight of $\omega^i$.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// We know that for $i = 0$</span>
-    <span class="doccomment">///     $$\frac{1}{\prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)} = \frac{1}{n}.$$</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If we multiply $(1 / n)$ by $\omega^i$ then we obtain</span>
-    <span class="doccomment">///     $$\frac{1}{\prod_{j=0,j \neq 0}^{n - 1} (\omega^i - \omega^j)}</span>
-    <span class="doccomment">///       = \frac{1}{\prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)}$$</span>
-    <span class="doccomment">/// which is the barycentric weight of $\omega^i$.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">l_i_range</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">i32</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(
+    <span class="doccomment">/// Computes evaluations (at the point `x`, where `xn = x^n`) of Lagrange
+    /// basis polynomials `l_i(X)` defined such that `l_i(omega^i) = 1` and
+    /// `l_i(omega^j) = 0` for all `j != i` at each provided rotation `i`.
+    ///
+    /// # Implementation
+    ///
+    /// The polynomial
+    ///     $$\prod_{j=0,j \neq i}^{n - 1} (X - \omega^j)$$
+    /// has a root at all points in the domain except $\omega^i$, where it evaluates to
+    ///     $$\prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)$$
+    /// and so we divide that polynomial by this value to obtain $l_i(X)$. Since
+    ///     $$\prod_{j=0,j \neq i}^{n - 1} (X - \omega^j)
+    ///       = \frac{X^n - 1}{X - \omega^i}$$
+    /// then $l_i(x)$ for some $x$ is evaluated as
+    ///     $$\left(\frac{x^n - 1}{x - \omega^i}\right)
+    ///       \cdot \left(\frac{1}{\prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)}\right).$$
+    /// We refer to
+    ///     $$1 \over \prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)$$
+    /// as the barycentric weight of $\omega^i$.
+    ///
+    /// We know that for $i = 0$
+    ///     $$\frac{1}{\prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)} = \frac{1}{n}.$$
+    ///
+    /// If we multiply $(1 / n)$ by $\omega^i$ then we obtain
+    ///     $$\frac{1}{\prod_{j=0,j \neq 0}^{n - 1} (\omega^i - \omega^j)}
+    ///       = \frac{1}{\prod_{j=0,j \neq i}^{n - 1} (\omega^i - \omega^j)}$$
+    /// which is the barycentric weight of $\omega^i$.
+    </span><span class="kw">pub fn </span>l_i_range&lt;I: IntoIterator&lt;Item = i32&gt; + Clone&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">x</span>: <span class="ident">G::Scalar</span>,
-        <span class="ident">xn</span>: <span class="ident">G::Scalar</span>,
-        <span class="ident">rotations</span>: <span class="ident">I</span>,
-    ) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">G::Scalar</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">results</span>;
+        x: G::Scalar,
+        xn: G::Scalar,
+        rotations: I,
+    ) -&gt; Vec&lt;G::Scalar&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>results;
         {
-            <span class="kw">let</span> <span class="ident">rotations</span> <span class="op">=</span> <span class="ident">rotations</span>.<span class="ident">clone</span>().<span class="ident">into_iter</span>();
-            <span class="ident">results</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">rotations</span>.<span class="ident">size_hint</span>().<span class="number">1</span>.<span class="ident">unwrap_or</span>(<span class="number">0</span>));
-            <span class="kw">for</span> <span class="ident">rotation</span> <span class="kw">in</span> <span class="ident">rotations</span> {
-                <span class="kw">let</span> <span class="ident">rotation</span> <span class="op">=</span> <span class="ident">Rotation</span>(<span class="ident">rotation</span>);
-                <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">x</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">rotate_omega</span>(<span class="ident">G::Scalar::one</span>(), <span class="ident">rotation</span>);
-                <span class="ident">results</span>.<span class="ident">push</span>(<span class="ident">result</span>);
+            <span class="kw">let </span>rotations = rotations.clone().into_iter();
+            results = Vec::with_capacity(rotations.size_hint().<span class="number">1</span>.unwrap_or(<span class="number">0</span>));
+            <span class="kw">for </span>rotation <span class="kw">in </span>rotations {
+                <span class="kw">let </span>rotation = Rotation(rotation);
+                <span class="kw">let </span>result = x - <span class="self">self</span>.rotate_omega(G::Scalar::one(), rotation);
+                results.push(result);
             }
-            <span class="ident">results</span>.<span class="ident">iter_mut</span>().<span class="ident">batch_invert</span>();
+            results.iter_mut().batch_invert();
         }
 
-        <span class="kw">let</span> <span class="ident">common</span> <span class="op">=</span> (<span class="ident">xn</span> <span class="op">-</span> <span class="ident">G::Scalar::one</span>()) <span class="op">*</span> <span class="self">self</span>.<span class="ident">barycentric_weight</span>;
-        <span class="kw">for</span> (<span class="ident">rotation</span>, <span class="ident">result</span>) <span class="kw">in</span> <span class="ident">rotations</span>.<span class="ident">into_iter</span>().<span class="ident">zip</span>(<span class="ident">results</span>.<span class="ident">iter_mut</span>()) {
-            <span class="kw">let</span> <span class="ident">rotation</span> <span class="op">=</span> <span class="ident">Rotation</span>(<span class="ident">rotation</span>);
-            <span class="kw-2">*</span><span class="ident">result</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">rotate_omega</span>(<span class="kw-2">*</span><span class="ident">result</span> <span class="op">*</span> <span class="ident">common</span>, <span class="ident">rotation</span>);
+        <span class="kw">let </span>common = (xn - G::Scalar::one()) * <span class="self">self</span>.barycentric_weight;
+        <span class="kw">for </span>(rotation, result) <span class="kw">in </span>rotations.into_iter().zip(results.iter_mut()) {
+            <span class="kw">let </span>rotation = Rotation(rotation);
+            <span class="kw-2">*</span>result = <span class="self">self</span>.rotate_omega(<span class="kw-2">*</span>result * common, rotation);
         }
 
-        <span class="ident">results</span>
+        results
     }
 
-    <span class="doccomment">/// Gets the quotient polynomial&#39;s degree (as a multiple of n)</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_quotient_poly_degree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="self">self</span>.<span class="ident">quotient_poly_degree</span> <span class="kw">as</span> <span class="ident">usize</span>
+    <span class="doccomment">/// Gets the quotient polynomial&#39;s degree (as a multiple of n)
+    </span><span class="kw">pub fn </span>get_quotient_poly_degree(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.quotient_poly_degree <span class="kw">as </span>usize
     }
 
-    <span class="doccomment">/// Obtain a pinned version of this evaluation domain; a structure with the</span>
-    <span class="doccomment">/// minimal parameters needed to determine the rest of the evaluation</span>
-    <span class="doccomment">/// domain.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">pinned</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">PinnedEvaluationDomain</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">G</span><span class="op">&gt;</span> {
-        <span class="ident">PinnedEvaluationDomain</span> {
-            <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">k</span>,
-            <span class="ident">extended_k</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">extended_k</span>,
-            <span class="ident">omega</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">omega</span>,
+    <span class="doccomment">/// Obtain a pinned version of this evaluation domain; a structure with the
+    /// minimal parameters needed to determine the rest of the evaluation
+    /// domain.
+    </span><span class="kw">pub fn </span>pinned(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PinnedEvaluationDomain&lt;<span class="lifetime">&#39;_</span>, G&gt; {
+        PinnedEvaluationDomain {
+            k: <span class="kw-2">&amp;</span><span class="self">self</span>.k,
+            extended_k: <span class="kw-2">&amp;</span><span class="self">self</span>.extended_k,
+            omega: <span class="kw-2">&amp;</span><span class="self">self</span>.omega,
         }
     }
 }
 
-<span class="doccomment">/// Represents the minimal parameters that determine an `EvaluationDomain`.</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">dead_code</span>)]</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PinnedEvaluationDomain</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">G</span>: <span class="ident">Group</span><span class="op">&gt;</span> {
-    <span class="ident">k</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">u32</span>,
-    <span class="ident">extended_k</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">u32</span>,
-    <span class="ident">omega</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">G::Scalar</span>,
+<span class="doccomment">/// Represents the minimal parameters that determine an `EvaluationDomain`.
+</span><span class="attribute">#[allow(dead_code)]</span>
+<span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>PinnedEvaluationDomain&lt;<span class="lifetime">&#39;a</span>, G: Group&gt; {
+    k: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u32,
+    extended_k: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u32,
+    omega: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>G::Scalar,
 }
 
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">fn</span> <span class="ident">test_rotate</span>() {
-    <span class="kw">use</span> <span class="ident">rand_core::OsRng</span>;
+<span class="attribute">#[test]</span>
+<span class="kw">fn </span>test_rotate() {
+    <span class="kw">use </span>rand_core::OsRng;
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic::eval_polynomial</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::pasta::pallas::Scalar</span>;
+    <span class="kw">use </span><span class="kw">crate</span>::arithmetic::eval_polynomial;
+    <span class="kw">use </span><span class="kw">crate</span>::pasta::pallas::Scalar;
 
-    <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="ident">EvaluationDomain</span>::<span class="op">&lt;</span><span class="ident">Scalar</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="number">1</span>, <span class="number">3</span>);
-    <span class="kw">let</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">OsRng</span>;
+    <span class="kw">let </span>domain = EvaluationDomain::&lt;Scalar&gt;::new(<span class="number">1</span>, <span class="number">3</span>);
+    <span class="kw">let </span>rng = OsRng;
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">empty_lagrange</span>();
-    <span class="macro">assert_eq!</span>(<span class="ident">poly</span>.<span class="ident">len</span>(), <span class="number">8</span>);
-    <span class="kw">for</span> <span class="ident">value</span> <span class="kw">in</span> <span class="ident">poly</span>.<span class="ident">iter_mut</span>() {
-        <span class="kw-2">*</span><span class="ident">value</span> <span class="op">=</span> <span class="ident">Scalar::random</span>(<span class="ident">rng</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>poly = domain.empty_lagrange();
+    <span class="macro">assert_eq!</span>(poly.len(), <span class="number">8</span>);
+    <span class="kw">for </span>value <span class="kw">in </span>poly.iter_mut() {
+        <span class="kw-2">*</span>value = Scalar::random(rng);
     }
 
-    <span class="kw">let</span> <span class="ident">poly_rotated_cur</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">rotate</span>(<span class="ident">Rotation::cur</span>());
-    <span class="kw">let</span> <span class="ident">poly_rotated_next</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">rotate</span>(<span class="ident">Rotation::next</span>());
-    <span class="kw">let</span> <span class="ident">poly_rotated_prev</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">rotate</span>(<span class="ident">Rotation::prev</span>());
+    <span class="kw">let </span>poly_rotated_cur = poly.rotate(Rotation::cur());
+    <span class="kw">let </span>poly_rotated_next = poly.rotate(Rotation::next());
+    <span class="kw">let </span>poly_rotated_prev = poly.rotate(Rotation::prev());
 
-    <span class="kw">let</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">lagrange_to_coeff</span>(<span class="ident">poly</span>);
-    <span class="kw">let</span> <span class="ident">poly_rotated_cur</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">lagrange_to_coeff</span>(<span class="ident">poly_rotated_cur</span>);
-    <span class="kw">let</span> <span class="ident">poly_rotated_next</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">lagrange_to_coeff</span>(<span class="ident">poly_rotated_next</span>);
-    <span class="kw">let</span> <span class="ident">poly_rotated_prev</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">lagrange_to_coeff</span>(<span class="ident">poly_rotated_prev</span>);
+    <span class="kw">let </span>poly = domain.lagrange_to_coeff(poly);
+    <span class="kw">let </span>poly_rotated_cur = domain.lagrange_to_coeff(poly_rotated_cur);
+    <span class="kw">let </span>poly_rotated_next = domain.lagrange_to_coeff(poly_rotated_next);
+    <span class="kw">let </span>poly_rotated_prev = domain.lagrange_to_coeff(poly_rotated_prev);
 
-    <span class="kw">let</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">Scalar::random</span>(<span class="ident">rng</span>);
+    <span class="kw">let </span>x = Scalar::random(rng);
 
     <span class="macro">assert_eq!</span>(
-        <span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>[..], <span class="ident">x</span>),
-        <span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="ident">poly_rotated_cur</span>[..], <span class="ident">x</span>)
+        eval_polynomial(<span class="kw-2">&amp;</span>poly[..], x),
+        eval_polynomial(<span class="kw-2">&amp;</span>poly_rotated_cur[..], x)
     );
     <span class="macro">assert_eq!</span>(
-        <span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>[..], <span class="ident">x</span> <span class="op">*</span> <span class="ident">domain</span>.<span class="ident">omega</span>),
-        <span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="ident">poly_rotated_next</span>[..], <span class="ident">x</span>)
+        eval_polynomial(<span class="kw-2">&amp;</span>poly[..], x * domain.omega),
+        eval_polynomial(<span class="kw-2">&amp;</span>poly_rotated_next[..], x)
     );
     <span class="macro">assert_eq!</span>(
-        <span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>[..], <span class="ident">x</span> <span class="op">*</span> <span class="ident">domain</span>.<span class="ident">omega_inv</span>),
-        <span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="ident">poly_rotated_prev</span>[..], <span class="ident">x</span>)
+        eval_polynomial(<span class="kw-2">&amp;</span>poly[..], x * domain.omega_inv),
+        eval_polynomial(<span class="kw-2">&amp;</span>poly_rotated_prev[..], x)
     );
 }
 
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">fn</span> <span class="ident">test_l_i</span>() {
-    <span class="kw">use</span> <span class="ident">rand_core::OsRng</span>;
+<span class="attribute">#[test]</span>
+<span class="kw">fn </span>test_l_i() {
+    <span class="kw">use </span>rand_core::OsRng;
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic</span>::{<span class="ident">eval_polynomial</span>, <span class="ident">lagrange_interpolate</span>};
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::pasta::pallas::Scalar</span>;
-    <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="ident">EvaluationDomain</span>::<span class="op">&lt;</span><span class="ident">Scalar</span><span class="op">&gt;</span><span class="ident">::new</span>(<span class="number">1</span>, <span class="number">3</span>);
+    <span class="kw">use </span><span class="kw">crate</span>::arithmetic::{eval_polynomial, lagrange_interpolate};
+    <span class="kw">use </span><span class="kw">crate</span>::pasta::pallas::Scalar;
+    <span class="kw">let </span>domain = EvaluationDomain::&lt;Scalar&gt;::new(<span class="number">1</span>, <span class="number">3</span>);
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">l</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">points</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">8</span> {
-        <span class="ident">points</span>.<span class="ident">push</span>(<span class="ident">domain</span>.<span class="ident">omega</span>.<span class="ident">pow</span>(<span class="kw-2">&amp;</span>[<span class="ident">i</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]));
+    <span class="kw">let </span><span class="kw-2">mut </span>l = <span class="macro">vec!</span>[];
+    <span class="kw">let </span><span class="kw-2">mut </span>points = <span class="macro">vec!</span>[];
+    <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">8 </span>{
+        points.push(domain.omega.pow(<span class="kw-2">&amp;</span>[i, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]));
     }
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">8</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">l_i</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Scalar::zero</span>(); <span class="number">8</span>];
-        <span class="ident">l_i</span>[<span class="ident">i</span>] <span class="op">=</span> <span class="ident">Scalar::one</span>();
-        <span class="kw">let</span> <span class="ident">l_i</span> <span class="op">=</span> <span class="ident">lagrange_interpolate</span>(<span class="kw-2">&amp;</span><span class="ident">points</span>[..], <span class="kw-2">&amp;</span><span class="ident">l_i</span>[..]);
-        <span class="ident">l</span>.<span class="ident">push</span>(<span class="ident">l_i</span>);
+    <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">8 </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>l_i = <span class="macro">vec!</span>[Scalar::zero(); <span class="number">8</span>];
+        l_i[i] = Scalar::one();
+        <span class="kw">let </span>l_i = lagrange_interpolate(<span class="kw-2">&amp;</span>points[..], <span class="kw-2">&amp;</span>l_i[..]);
+        l.push(l_i);
     }
 
-    <span class="kw">let</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">Scalar::random</span>(<span class="ident">OsRng</span>);
-    <span class="kw">let</span> <span class="ident">xn</span> <span class="op">=</span> <span class="ident">x</span>.<span class="ident">pow</span>(<span class="kw-2">&amp;</span>[<span class="number">8</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
+    <span class="kw">let </span>x = Scalar::random(OsRng);
+    <span class="kw">let </span>xn = x.pow(<span class="kw-2">&amp;</span>[<span class="number">8</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
 
-    <span class="kw">let</span> <span class="ident">evaluations</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">l_i_range</span>(<span class="ident">x</span>, <span class="ident">xn</span>, <span class="op">-</span><span class="number">7</span>..<span class="op">=</span><span class="number">7</span>);
-    <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">8</span> {
-        <span class="macro">assert_eq!</span>(<span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="ident">l</span>[<span class="ident">i</span>][..], <span class="ident">x</span>), <span class="ident">evaluations</span>[<span class="number">7</span> <span class="op">+</span> <span class="ident">i</span>]);
-        <span class="macro">assert_eq!</span>(<span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="ident">l</span>[(<span class="number">8</span> <span class="op">-</span> <span class="ident">i</span>) <span class="op">%</span> <span class="number">8</span>][..], <span class="ident">x</span>), <span class="ident">evaluations</span>[<span class="number">7</span> <span class="op">-</span> <span class="ident">i</span>]);
+    <span class="kw">let </span>evaluations = domain.l_i_range(x, xn, -<span class="number">7</span>..=<span class="number">7</span>);
+    <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">8 </span>{
+        <span class="macro">assert_eq!</span>(eval_polynomial(<span class="kw-2">&amp;</span>l[i][..], x), evaluations[<span class="number">7 </span>+ i]);
+        <span class="macro">assert_eq!</span>(eval_polynomial(<span class="kw-2">&amp;</span>l[(<span class="number">8 </span>- i) % <span class="number">8</span>][..], x), evaluations[<span class="number">7 </span>- i]);
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

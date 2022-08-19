@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -193,180 +187,179 @@
 <span id="172">172</span>
 <span id="173">173</span>
 <span id="174">174</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">EccPoint</span>, <span class="ident">NonIdentityEccPoint</span>};
+</pre><pre class="rust"><code><span class="kw">use super</span>::{EccPoint, NonIdentityEccPoint};
 
-<span class="kw">use</span> <span class="ident">group::prime::PrimeCurveAffine</span>;
+<span class="kw">use </span>group::prime::PrimeCurveAffine;
 
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Region</span>, <span class="ident">Value</span>},
-    <span class="ident">plonk</span>::{
-        <span class="ident">Advice</span>, <span class="ident">Assigned</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Selector</span>,
-        <span class="ident">VirtualCells</span>,
+<span class="kw">use </span>halo2_proofs::{
+    circuit::{AssignedCell, Region, Value},
+    plonk::{
+        Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector,
+        VirtualCells,
     },
-    <span class="ident">poly::Rotation</span>,
+    poly::Rotation,
 };
-<span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::CurveAffine</span>, <span class="ident">pallas</span>};
+<span class="kw">use </span>pasta_curves::{arithmetic::CurveAffine, pallas};
 
-<span class="kw">type</span> <span class="ident">Coordinates</span> <span class="op">=</span> (
-    <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-    <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
+<span class="kw">type </span>Coordinates = (
+    AssignedCell&lt;Assigned&lt;pallas::Base&gt;, pallas::Base&gt;,
+    AssignedCell&lt;Assigned&lt;pallas::Base&gt;, pallas::Base&gt;,
 );
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
-    <span class="ident">q_point</span>: <span class="ident">Selector</span>,
-    <span class="ident">q_point_non_id</span>: <span class="ident">Selector</span>,
-    <span class="comment">// x-coordinate</span>
-    <span class="kw">pub</span> <span class="ident">x</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="comment">// y-coordinate</span>
-    <span class="kw">pub</span> <span class="ident">y</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Clone, Copy, Debug, Eq, PartialEq)]</span>
+<span class="kw">pub struct </span>Config {
+    q_point: Selector,
+    q_point_non_id: Selector,
+    <span class="comment">// x-coordinate
+    </span><span class="kw">pub </span>x: Column&lt;Advice&gt;,
+    <span class="comment">// y-coordinate
+    </span><span class="kw">pub </span>y: Column&lt;Advice&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Config</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">configure</span>(
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">x</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">y</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">Self</span> {
-            <span class="ident">q_point</span>: <span class="ident">meta</span>.<span class="ident">selector</span>(),
-            <span class="ident">q_point_non_id</span>: <span class="ident">meta</span>.<span class="ident">selector</span>(),
-            <span class="ident">x</span>,
-            <span class="ident">y</span>,
+<span class="kw">impl </span>Config {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>configure(
+        meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;,
+        x: Column&lt;Advice&gt;,
+        y: Column&lt;Advice&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>config = <span class="self">Self </span>{
+            q_point: meta.selector(),
+            q_point_non_id: meta.selector(),
+            x,
+            y,
         };
 
-        <span class="ident">config</span>.<span class="ident">create_gate</span>(<span class="ident">meta</span>);
+        config.create_gate(meta);
 
-        <span class="ident">config</span>
+        config
     }
 
-    <span class="kw">fn</span> <span class="ident">create_gate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) {
-        <span class="kw">let</span> <span class="ident">curve_eqn</span> <span class="op">=</span> <span class="op">|</span><span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">y</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">y</span>, <span class="ident">Rotation::cur</span>());
+    <span class="kw">fn </span>create_gate(<span class="kw-2">&amp;</span><span class="self">self</span>, meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) {
+        <span class="kw">let </span>curve_eqn = |meta: <span class="kw-2">&amp;mut </span>VirtualCells&lt;pallas::Base&gt;| {
+            <span class="kw">let </span>x = meta.query_advice(<span class="self">self</span>.x, Rotation::cur());
+            <span class="kw">let </span>y = meta.query_advice(<span class="self">self</span>.y, Rotation::cur());
 
-            <span class="comment">// y^2 = x^3 + b</span>
-            <span class="ident">y</span>.<span class="ident">square</span>() <span class="op">-</span> (<span class="ident">x</span>.<span class="ident">clone</span>().<span class="ident">square</span>() <span class="op">*</span> <span class="ident">x</span>) <span class="op">-</span> <span class="ident">Expression::Constant</span>(<span class="ident">pallas::Affine::b</span>())
+            <span class="comment">// y^2 = x^3 + b
+            </span>y.square() - (x.clone().square() * x) - Expression::Constant(pallas::Affine::b())
         };
 
-        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-witness-point</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;witness point&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="comment">// Check that the point being witnessed is either:</span>
-            <span class="comment">// - the identity, which is mapped to (0, 0) in affine coordinates; or</span>
-            <span class="comment">// - a valid curve point y^2 = x^3 + b, where b = 5 in the Pallas equation</span>
+        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-witness-point
+        </span>meta.create_gate(<span class="string">&quot;witness point&quot;</span>, |meta| {
+            <span class="comment">// Check that the point being witnessed is either:
+            // - the identity, which is mapped to (0, 0) in affine coordinates; or
+            // - a valid curve point y^2 = x^3 + b, where b = 5 in the Pallas equation
 
-            <span class="kw">let</span> <span class="ident">q_point</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_point</span>);
-            <span class="kw">let</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">y</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">y</span>, <span class="ident">Rotation::cur</span>());
+            </span><span class="kw">let </span>q_point = meta.query_selector(<span class="self">self</span>.q_point);
+            <span class="kw">let </span>x = meta.query_advice(<span class="self">self</span>.x, Rotation::cur());
+            <span class="kw">let </span>y = meta.query_advice(<span class="self">self</span>.y, Rotation::cur());
 
-            <span class="comment">// We can&#39;t use `Constraints::with_selector` because that creates constraints</span>
-            <span class="comment">// of the form `q_point * (x * curve_eqn)`, but this was implemented without</span>
-            <span class="comment">// parentheses, and thus evaluates as `(q_point * x) * curve_eqn`, which is</span>
-            <span class="comment">// structurally different in the pinned verifying key.</span>
-            [
-                (<span class="string">&quot;x == 0 v on_curve&quot;</span>, <span class="ident">q_point</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">x</span> <span class="op">*</span> <span class="ident">curve_eqn</span>(<span class="ident">meta</span>)),
-                (<span class="string">&quot;y == 0 v on_curve&quot;</span>, <span class="ident">q_point</span> <span class="op">*</span> <span class="ident">y</span> <span class="op">*</span> <span class="ident">curve_eqn</span>(<span class="ident">meta</span>)),
+            <span class="comment">// We can&#39;t use `Constraints::with_selector` because that creates constraints
+            // of the form `q_point * (x * curve_eqn)`, but this was implemented without
+            // parentheses, and thus evaluates as `(q_point * x) * curve_eqn`, which is
+            // structurally different in the pinned verifying key.
+            </span>[
+                (<span class="string">&quot;x == 0 v on_curve&quot;</span>, q_point.clone() * x * curve_eqn(meta)),
+                (<span class="string">&quot;y == 0 v on_curve&quot;</span>, q_point * y * curve_eqn(meta)),
             ]
         });
 
-        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-witness-non-identity-point</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;witness non-identity point&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="comment">// Check that the point being witnessed is a valid curve point y^2 = x^3 + b,</span>
-            <span class="comment">// where b = 5 in the Pallas equation</span>
+        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-witness-non-identity-point
+        </span>meta.create_gate(<span class="string">&quot;witness non-identity point&quot;</span>, |meta| {
+            <span class="comment">// Check that the point being witnessed is a valid curve point y^2 = x^3 + b,
+            // where b = 5 in the Pallas equation
 
-            <span class="kw">let</span> <span class="ident">q_point_non_id</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_point_non_id</span>);
+            </span><span class="kw">let </span>q_point_non_id = meta.query_selector(<span class="self">self</span>.q_point_non_id);
 
-            <span class="ident">Constraints::with_selector</span>(<span class="ident">q_point_non_id</span>, <span class="prelude-val">Some</span>((<span class="string">&quot;on_curve&quot;</span>, <span class="ident">curve_eqn</span>(<span class="ident">meta</span>))))
+            Constraints::with_selector(q_point_non_id, <span class="prelude-val">Some</span>((<span class="string">&quot;on_curve&quot;</span>, curve_eqn(meta))))
         });
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_xy</span>(
+    <span class="kw">fn </span>assign_xy(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span>(<span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>)<span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Coordinates</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Assign `x` value</span>
-        <span class="kw">let</span> <span class="ident">x_val</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">value</span><span class="op">|</span> <span class="ident">value</span>.<span class="number">0</span>);
-        <span class="kw">let</span> <span class="ident">x_var</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;x&quot;</span>, <span class="self">self</span>.<span class="ident">x</span>, <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">x_val</span>)<span class="question-mark">?</span>;
+        value: Value&lt;(Assigned&lt;pallas::Base&gt;, Assigned&lt;pallas::Base&gt;)&gt;,
+        offset: usize,
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Coordinates, Error&gt; {
+        <span class="comment">// Assign `x` value
+        </span><span class="kw">let </span>x_val = value.map(|value| value.<span class="number">0</span>);
+        <span class="kw">let </span>x_var = region.assign_advice(|| <span class="string">&quot;x&quot;</span>, <span class="self">self</span>.x, offset, || x_val)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign `y` value</span>
-        <span class="kw">let</span> <span class="ident">y_val</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">value</span><span class="op">|</span> <span class="ident">value</span>.<span class="number">1</span>);
-        <span class="kw">let</span> <span class="ident">y_var</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;y&quot;</span>, <span class="self">self</span>.<span class="ident">y</span>, <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">y_val</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign `y` value
+        </span><span class="kw">let </span>y_val = value.map(|value| value.<span class="number">1</span>);
+        <span class="kw">let </span>y_var = region.assign_advice(|| <span class="string">&quot;y&quot;</span>, <span class="self">self</span>.y, offset, || y_val)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>((<span class="ident">x_var</span>, <span class="ident">y_var</span>))
+        <span class="prelude-val">Ok</span>((x_var, y_var))
     }
 
-    <span class="doccomment">/// Assigns a point that can be the identity.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">point</span>(
+    <span class="doccomment">/// Assigns a point that can be the identity.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>point(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">EccPoint</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Enable `q_point` selector</span>
-        <span class="self">self</span>.<span class="ident">q_point</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
+        value: Value&lt;pallas::Affine&gt;,
+        offset: usize,
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;EccPoint, Error&gt; {
+        <span class="comment">// Enable `q_point` selector
+        </span><span class="self">self</span>.q_point.enable(region, offset)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">value</span><span class="op">|</span> {
-            <span class="comment">// Map the identity to (0, 0).</span>
-            <span class="kw">if</span> <span class="ident">value</span> <span class="op">==</span> <span class="ident">pallas::Affine::identity</span>() {
-                (<span class="ident">Assigned::Zero</span>, <span class="ident">Assigned::Zero</span>)
-            } <span class="kw">else</span> {
-                <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">coordinates</span>().<span class="ident">unwrap</span>();
-                (<span class="ident">value</span>.<span class="ident">x</span>().<span class="ident">into</span>(), <span class="ident">value</span>.<span class="ident">y</span>().<span class="ident">into</span>())
+        <span class="kw">let </span>value = value.map(|value| {
+            <span class="comment">// Map the identity to (0, 0).
+            </span><span class="kw">if </span>value == pallas::Affine::identity() {
+                (Assigned::Zero, Assigned::Zero)
+            } <span class="kw">else </span>{
+                <span class="kw">let </span>value = value.coordinates().unwrap();
+                (value.x().into(), value.y().into())
             }
         });
 
-        <span class="self">self</span>.<span class="ident">assign_xy</span>(<span class="ident">value</span>, <span class="ident">offset</span>, <span class="ident">region</span>)
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">x</span>, <span class="ident">y</span>)<span class="op">|</span> <span class="ident">EccPoint</span> { <span class="ident">x</span>, <span class="ident">y</span> })
+        <span class="self">self</span>.assign_xy(value, offset, region)
+            .map(|(x, y)| EccPoint { x, y })
     }
 
-    <span class="doccomment">/// Assigns a non-identity point.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">point_non_id</span>(
+    <span class="doccomment">/// Assigns a non-identity point.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>point_non_id(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">NonIdentityEccPoint</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Enable `q_point_non_id` selector</span>
-        <span class="self">self</span>.<span class="ident">q_point_non_id</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
+        value: Value&lt;pallas::Affine&gt;,
+        offset: usize,
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;NonIdentityEccPoint, Error&gt; {
+        <span class="comment">// Enable `q_point_non_id` selector
+        </span><span class="self">self</span>.q_point_non_id.enable(region, offset)<span class="question-mark">?</span>;
 
-        <span class="comment">// Return an error if the point is the identity.</span>
-        <span class="ident">value</span>.<span class="ident">error_if_known_and</span>(<span class="op">|</span><span class="ident">value</span><span class="op">|</span> <span class="ident">value</span> <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">pallas::Affine::identity</span>())<span class="question-mark">?</span>;
+        <span class="comment">// Return an error if the point is the identity.
+        </span>value.error_if_known_and(|value| value == <span class="kw-2">&amp;</span>pallas::Affine::identity())<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">value</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">coordinates</span>().<span class="ident">unwrap</span>();
-            (<span class="ident">value</span>.<span class="ident">x</span>().<span class="ident">into</span>(), <span class="ident">value</span>.<span class="ident">y</span>().<span class="ident">into</span>())
+        <span class="kw">let </span>value = value.map(|value| {
+            <span class="kw">let </span>value = value.coordinates().unwrap();
+            (value.x().into(), value.y().into())
         });
 
-        <span class="self">self</span>.<span class="ident">assign_xy</span>(<span class="ident">value</span>, <span class="ident">offset</span>, <span class="ident">region</span>)
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">x</span>, <span class="ident">y</span>)<span class="op">|</span> <span class="ident">NonIdentityEccPoint</span> { <span class="ident">x</span>, <span class="ident">y</span> })
+        <span class="self">self</span>.assign_xy(value, offset, region)
+            .map(|(x, y)| NonIdentityEccPoint { x, y })
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">halo2_proofs::circuit::Layouter</span>;
-    <span class="kw">use</span> <span class="ident">pasta_curves::pallas</span>;
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">pub mod </span>tests {
+    <span class="kw">use </span>halo2_proofs::circuit::Layouter;
+    <span class="kw">use </span>pasta_curves::pallas;
 
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::ecc</span>::{<span class="ident">EccInstructions</span>, <span class="ident">NonIdentityPoint</span>};
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span><span class="kw">crate</span>::ecc::{EccInstructions, NonIdentityPoint};
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test_witness_non_id</span><span class="op">&lt;</span>
-        <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">std::fmt::Debug</span>,
-    <span class="op">&gt;</span>(
-        <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
+    <span class="kw">pub fn </span>test_witness_non_id&lt;
+        EccChip: EccInstructions&lt;pallas::Affine&gt; + Clone + Eq + std::fmt::Debug,
+    &gt;(
+        chip: EccChip,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
     ) {
-        <span class="comment">// Witnessing the identity should return an error.</span>
-        <span class="ident">NonIdentityPoint::new</span>(
-            <span class="ident">chip</span>,
-            <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;witness identity&quot;</span>),
-            <span class="ident">Value::known</span>(<span class="ident">pallas::Affine::identity</span>()),
+        <span class="comment">// Witnessing the identity should return an error.
+        </span>NonIdentityPoint::new(
+            chip,
+            layouter.namespace(|| <span class="string">&quot;witness identity&quot;</span>),
+            Value::known(pallas::Affine::identity()),
         )
-        .<span class="ident">expect_err</span>(<span class="string">&quot;witnessing 𝒪 should return an error&quot;</span>);
+        .expect_err(<span class="string">&quot;witnessing 𝒪 should return an error&quot;</span>);
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

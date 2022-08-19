@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -685,672 +679,671 @@
 <span id="664">664</span>
 <span id="665">665</span>
 <span id="666">666</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::ops</span>::{<span class="ident">Add</span>, <span class="ident">AddAssign</span>, <span class="ident">Mul</span>, <span class="ident">MulAssign</span>, <span class="ident">Neg</span>, <span class="ident">Sub</span>, <span class="ident">SubAssign</span>};
+</pre><pre class="rust"><code><span class="kw">use </span>std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-<span class="kw">use</span> <span class="ident">group::ff::Field</span>;
+<span class="kw">use </span>group::ff::Field;
 
-<span class="doccomment">/// A value assigned to a cell within a circuit.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Stored as a fraction, so the backend can use batch inversion.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// A denominator of zero maps to an assigned value of zero.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The field element zero.</span>
-    <span class="ident">Zero</span>,
-    <span class="doccomment">/// A value that does not require inversion to evaluate.</span>
-    <span class="ident">Trivial</span>(<span class="ident">F</span>),
-    <span class="doccomment">/// A value stored as a fraction to enable batch inversion.</span>
-    <span class="ident">Rational</span>(<span class="ident">F</span>, <span class="ident">F</span>),
+<span class="doccomment">/// A value assigned to a cell within a circuit.
+///
+/// Stored as a fraction, so the backend can use batch inversion.
+///
+/// A denominator of zero maps to an assigned value of zero.
+</span><span class="attribute">#[derive(Clone, Copy, Debug)]</span>
+<span class="kw">pub enum </span>Assigned&lt;F&gt; {
+    <span class="doccomment">/// The field element zero.
+    </span>Zero,
+    <span class="doccomment">/// A value that does not require inversion to evaluate.
+    </span>Trivial(F),
+    <span class="doccomment">/// A value stored as a fraction to enable batch inversion.
+    </span>Rational(F, F),
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">val</span>: <span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw-2">*</span><span class="ident">val</span>
+<span class="kw">impl</span>&lt;F: Field&gt; From&lt;<span class="kw-2">&amp;</span>Assigned&lt;F&gt;&gt; <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">fn </span>from(val: <span class="kw-2">&amp;</span>Assigned&lt;F&gt;) -&gt; <span class="self">Self </span>{
+        <span class="kw-2">*</span>val
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">numerator</span>: <span class="kw-2">&amp;</span><span class="ident">F</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Assigned::Trivial</span>(<span class="kw-2">*</span><span class="ident">numerator</span>)
+<span class="kw">impl</span>&lt;F: Field&gt; From&lt;<span class="kw-2">&amp;</span>F&gt; <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">fn </span>from(numerator: <span class="kw-2">&amp;</span>F) -&gt; <span class="self">Self </span>{
+        Assigned::Trivial(<span class="kw-2">*</span>numerator)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">numerator</span>: <span class="ident">F</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Assigned::Trivial</span>(<span class="ident">numerator</span>)
+<span class="kw">impl</span>&lt;F: Field&gt; From&lt;F&gt; <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">fn </span>from(numerator: F) -&gt; <span class="self">Self </span>{
+        Assigned::Trivial(numerator)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">F</span>, <span class="ident">F</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">numerator</span>, <span class="ident">denominator</span>): (<span class="ident">F</span>, <span class="ident">F</span>)) -&gt; <span class="self">Self</span> {
-        <span class="ident">Assigned::Rational</span>(<span class="ident">numerator</span>, <span class="ident">denominator</span>)
+<span class="kw">impl</span>&lt;F: Field&gt; From&lt;(F, F)&gt; <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">fn </span>from((numerator, denominator): (F, F)) -&gt; <span class="self">Self </span>{
+        Assigned::Rational(numerator, denominator)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">PartialEq</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">eq</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="kw">match</span> (<span class="self">self</span>, <span class="ident">other</span>) {
-            <span class="comment">// At least one side is directly zero.</span>
-            (<span class="ident"><span class="self">Self</span>::Zero</span>, <span class="ident"><span class="self">Self</span>::Zero</span>) =&gt; <span class="bool-val">true</span>,
-            (<span class="ident"><span class="self">Self</span>::Zero</span>, <span class="ident">x</span>) <span class="op">|</span> (<span class="ident">x</span>, <span class="ident"><span class="self">Self</span>::Zero</span>) =&gt; <span class="ident">x</span>.<span class="ident">is_zero_vartime</span>(),
+<span class="kw">impl</span>&lt;F: Field&gt; PartialEq <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">fn </span>eq(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; bool {
+        <span class="kw">match </span>(<span class="self">self</span>, other) {
+            <span class="comment">// At least one side is directly zero.
+            </span>(<span class="self">Self</span>::Zero, <span class="self">Self</span>::Zero) =&gt; <span class="bool-val">true</span>,
+            (<span class="self">Self</span>::Zero, x) | (x, <span class="self">Self</span>::Zero) =&gt; x.is_zero_vartime(),
 
-            <span class="comment">// One side is x/0 which maps to zero.</span>
-            (<span class="ident"><span class="self">Self</span>::Rational</span>(<span class="kw">_</span>, <span class="ident">denominator</span>), <span class="ident">x</span>) <span class="op">|</span> (<span class="ident">x</span>, <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="kw">_</span>, <span class="ident">denominator</span>))
-                <span class="kw">if</span> <span class="ident">denominator</span>.<span class="ident">is_zero_vartime</span>() =&gt;
+            <span class="comment">// One side is x/0 which maps to zero.
+            </span>(<span class="self">Self</span>::Rational(<span class="kw">_</span>, denominator), x) | (x, <span class="self">Self</span>::Rational(<span class="kw">_</span>, denominator))
+                <span class="kw">if </span>denominator.is_zero_vartime() =&gt;
             {
-                <span class="ident">x</span>.<span class="ident">is_zero_vartime</span>()
+                x.is_zero_vartime()
             }
 
-            <span class="comment">// Okay, we need to do some actual math...</span>
-            (<span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">lhs</span>), <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">rhs</span>)) =&gt; <span class="ident">lhs</span> <span class="op">==</span> <span class="ident">rhs</span>,
-            (<span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">x</span>), <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span>, <span class="ident">denominator</span>))
-            <span class="op">|</span> (<span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span>, <span class="ident">denominator</span>), <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">x</span>)) =&gt; {
-                <span class="kw-2">&amp;</span>(<span class="kw-2">*</span><span class="ident">x</span> <span class="op">*</span> <span class="ident">denominator</span>) <span class="op">==</span> <span class="ident">numerator</span>
+            <span class="comment">// Okay, we need to do some actual math...
+            </span>(<span class="self">Self</span>::Trivial(lhs), <span class="self">Self</span>::Trivial(rhs)) =&gt; lhs == rhs,
+            (<span class="self">Self</span>::Trivial(x), <span class="self">Self</span>::Rational(numerator, denominator))
+            | (<span class="self">Self</span>::Rational(numerator, denominator), <span class="self">Self</span>::Trivial(x)) =&gt; {
+                <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>x * denominator) == numerator
             }
             (
-                <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">lhs_numerator</span>, <span class="ident">lhs_denominator</span>),
-                <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">rhs_numerator</span>, <span class="ident">rhs_denominator</span>),
-            ) =&gt; <span class="kw-2">*</span><span class="ident">lhs_numerator</span> <span class="op">*</span> <span class="ident">rhs_denominator</span> <span class="op">==</span> <span class="kw-2">*</span><span class="ident">lhs_denominator</span> <span class="op">*</span> <span class="ident">rhs_numerator</span>,
+                <span class="self">Self</span>::Rational(lhs_numerator, lhs_denominator),
+                <span class="self">Self</span>::Rational(rhs_numerator, rhs_denominator),
+            ) =&gt; <span class="kw-2">*</span>lhs_numerator * rhs_denominator == <span class="kw-2">*</span>lhs_denominator * rhs_numerator,
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Eq</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {}
+<span class="kw">impl</span>&lt;F: Field&gt; Eq <span class="kw">for </span>Assigned&lt;F&gt; {}
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Neg</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">neg</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::Zero</span> =&gt; <span class="ident"><span class="self">Self</span>::Zero</span>,
-            <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">numerator</span>) =&gt; <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="op">-</span><span class="ident">numerator</span>),
-            <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span>, <span class="ident">denominator</span>) =&gt; <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="op">-</span><span class="ident">numerator</span>, <span class="ident">denominator</span>),
+<span class="kw">impl</span>&lt;F: Field&gt; Neg <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>neg(<span class="self">self</span>) -&gt; <span class="self">Self</span>::Output {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Zero =&gt; <span class="self">Self</span>::Zero,
+            <span class="self">Self</span>::Trivial(numerator) =&gt; <span class="self">Self</span>::Trivial(-numerator),
+            <span class="self">Self</span>::Rational(numerator, denominator) =&gt; <span class="self">Self</span>::Rational(-numerator, denominator),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Neg</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">neg</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="op">-</span><span class="kw-2">*</span><span class="self">self</span>
-    }
+<span class="kw">impl</span>&lt;F: Field&gt; Neg <span class="kw">for </span><span class="kw-2">&amp;</span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>neg(<span class="self">self</span>) -&gt; <span class="self">Self</span>::Output {
+        -<span class="kw-2">*</span><span class="self">self
+    </span>}
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Add</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> (<span class="self">self</span>, <span class="ident">rhs</span>) {
-            <span class="comment">// One side is directly zero.</span>
-            (<span class="ident"><span class="self">Self</span>::Zero</span>, <span class="kw">_</span>) =&gt; <span class="ident">rhs</span>,
-            (<span class="kw">_</span>, <span class="ident"><span class="self">Self</span>::Zero</span>) =&gt; <span class="self">self</span>,
+<span class="kw">impl</span>&lt;F: Field&gt; Add <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: Assigned&lt;F&gt;) -&gt; Assigned&lt;F&gt; {
+        <span class="kw">match </span>(<span class="self">self</span>, rhs) {
+            <span class="comment">// One side is directly zero.
+            </span>(<span class="self">Self</span>::Zero, <span class="kw">_</span>) =&gt; rhs,
+            (<span class="kw">_</span>, <span class="self">Self</span>::Zero) =&gt; <span class="self">self</span>,
 
-            <span class="comment">// One side is x/0 which maps to zero.</span>
-            (<span class="ident"><span class="self">Self</span>::Rational</span>(<span class="kw">_</span>, <span class="ident">denominator</span>), <span class="ident">other</span>) <span class="op">|</span> (<span class="ident">other</span>, <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="kw">_</span>, <span class="ident">denominator</span>))
-                <span class="kw">if</span> <span class="ident">denominator</span>.<span class="ident">is_zero_vartime</span>() =&gt;
+            <span class="comment">// One side is x/0 which maps to zero.
+            </span>(<span class="self">Self</span>::Rational(<span class="kw">_</span>, denominator), other) | (other, <span class="self">Self</span>::Rational(<span class="kw">_</span>, denominator))
+                <span class="kw">if </span>denominator.is_zero_vartime() =&gt;
             {
-                <span class="ident">other</span>
+                other
             }
 
-            <span class="comment">// Okay, we need to do some actual math...</span>
-            (<span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">lhs</span>), <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">rhs</span>)) =&gt; <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">lhs</span> <span class="op">+</span> <span class="ident">rhs</span>),
-            (<span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span>, <span class="ident">denominator</span>), <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">other</span>))
-            <span class="op">|</span> (<span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">other</span>), <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span>, <span class="ident">denominator</span>)) =&gt; {
-                <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span> <span class="op">+</span> <span class="ident">denominator</span> <span class="op">*</span> <span class="ident">other</span>, <span class="ident">denominator</span>)
+            <span class="comment">// Okay, we need to do some actual math...
+            </span>(<span class="self">Self</span>::Trivial(lhs), <span class="self">Self</span>::Trivial(rhs)) =&gt; <span class="self">Self</span>::Trivial(lhs + rhs),
+            (<span class="self">Self</span>::Rational(numerator, denominator), <span class="self">Self</span>::Trivial(other))
+            | (<span class="self">Self</span>::Trivial(other), <span class="self">Self</span>::Rational(numerator, denominator)) =&gt; {
+                <span class="self">Self</span>::Rational(numerator + denominator * other, denominator)
             }
             (
-                <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">lhs_numerator</span>, <span class="ident">lhs_denominator</span>),
-                <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">rhs_numerator</span>, <span class="ident">rhs_denominator</span>),
-            ) =&gt; <span class="ident"><span class="self">Self</span>::Rational</span>(
-                <span class="ident">lhs_numerator</span> <span class="op">*</span> <span class="ident">rhs_denominator</span> <span class="op">+</span> <span class="ident">lhs_denominator</span> <span class="op">*</span> <span class="ident">rhs_numerator</span>,
-                <span class="ident">lhs_denominator</span> <span class="op">*</span> <span class="ident">rhs_denominator</span>,
+                <span class="self">Self</span>::Rational(lhs_numerator, lhs_denominator),
+                <span class="self">Self</span>::Rational(rhs_numerator, rhs_denominator),
+            ) =&gt; <span class="self">Self</span>::Rational(
+                lhs_numerator * rhs_denominator + lhs_denominator * rhs_numerator,
+                lhs_denominator * rhs_denominator,
             ),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="self">self</span> <span class="op">+</span> <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">rhs</span>)
+<span class="kw">impl</span>&lt;F: Field&gt; Add&lt;F&gt; <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: F) -&gt; Assigned&lt;F&gt; {
+        <span class="self">self </span>+ <span class="self">Self</span>::Trivial(rhs)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="kw-2">*</span><span class="self">self</span> <span class="op">+</span> <span class="ident">rhs</span>
+<span class="kw">impl</span>&lt;F: Field&gt; Add&lt;F&gt; <span class="kw">for </span><span class="kw-2">&amp;</span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: F) -&gt; Assigned&lt;F&gt; {
+        <span class="kw-2">*</span><span class="self">self </span>+ rhs
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="self">self</span> <span class="op">+</span> <span class="kw-2">*</span><span class="ident">rhs</span>
+<span class="kw">impl</span>&lt;F: Field&gt; Add&lt;<span class="kw-2">&amp;</span>Assigned&lt;F&gt;&gt; <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; Assigned&lt;F&gt; {
+        <span class="self">self </span>+ <span class="kw-2">*</span>rhs
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="kw-2">*</span><span class="self">self</span> <span class="op">+</span> <span class="ident">rhs</span>
+<span class="kw">impl</span>&lt;F: Field&gt; Add&lt;Assigned&lt;F&gt;&gt; <span class="kw">for </span><span class="kw-2">&amp;</span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: Assigned&lt;F&gt;) -&gt; Assigned&lt;F&gt; {
+        <span class="kw-2">*</span><span class="self">self </span>+ rhs
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="kw-2">*</span><span class="self">self</span> <span class="op">+</span> <span class="kw-2">*</span><span class="ident">rhs</span>
+<span class="kw">impl</span>&lt;F: Field&gt; Add&lt;<span class="kw-2">&amp;</span>Assigned&lt;F&gt;&gt; <span class="kw">for </span><span class="kw-2">&amp;</span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: <span class="kw-2">&amp;</span>Assigned&lt;F&gt;) -&gt; Assigned&lt;F&gt; {
+        <span class="kw-2">*</span><span class="self">self </span>+ <span class="kw-2">*</span>rhs
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">AddAssign</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">add_assign</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">rhs</span>: <span class="self">Self</span>) {
-        <span class="kw-2">*</span><span class="self">self</span> <span class="op">=</span> <span class="kw-2">*</span><span class="self">self</span> <span class="op">+</span> <span class="ident">rhs</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; AddAssign <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">fn </span>add_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: <span class="self">Self</span>) {
+        <span class="kw-2">*</span><span class="self">self </span>= <span class="kw-2">*</span><span class="self">self </span>+ rhs;
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">AddAssign</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">add_assign</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) {
-        <span class="kw-2">*</span><span class="self">self</span> <span class="op">=</span> <span class="kw-2">*</span><span class="self">self</span> <span class="op">+</span> <span class="ident">rhs</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; AddAssign&lt;<span class="kw-2">&amp;</span>Assigned&lt;F&gt;&gt; <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">fn </span>add_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="self">Self</span>) {
+        <span class="kw-2">*</span><span class="self">self </span>= <span class="kw-2">*</span><span class="self">self </span>+ rhs;
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Sub</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="self">self</span> <span class="op">+</span> (<span class="op">-</span><span class="ident">rhs</span>)
+<span class="kw">impl</span>&lt;F: Field&gt; Sub <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: Assigned&lt;F&gt;) -&gt; Assigned&lt;F&gt; {
+        <span class="self">self </span>+ (-rhs)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Sub</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="self">self</span> <span class="op">+</span> (<span class="op">-</span><span class="ident">rhs</span>)
+<span class="kw">impl</span>&lt;F: Field&gt; Sub&lt;F&gt; <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: F) -&gt; Assigned&lt;F&gt; {
+        <span class="self">self </span>+ (-rhs)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Sub</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="kw-2">*</span><span class="self">self</span> <span class="op">-</span> <span class="ident">rhs</span>
+<span class="kw">impl</span>&lt;F: Field&gt; Sub&lt;F&gt; <span class="kw">for </span><span class="kw-2">&amp;</span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: F) -&gt; Assigned&lt;F&gt; {
+        <span class="kw-2">*</span><span class="self">self </span>- rhs
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Sub</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="self">self</span> <span class="op">-</span> <span class="kw-2">*</span><span class="ident">rhs</span>
+<span class="kw">impl</span>&lt;F: Field&gt; Sub&lt;<span class="kw-2">&amp;</span>Assigned&lt;F&gt;&gt; <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; Assigned&lt;F&gt; {
+        <span class="self">self </span>- <span class="kw-2">*</span>rhs
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Sub</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="kw-2">*</span><span class="self">self</span> <span class="op">-</span> <span class="ident">rhs</span>
+<span class="kw">impl</span>&lt;F: Field&gt; Sub&lt;Assigned&lt;F&gt;&gt; <span class="kw">for </span><span class="kw-2">&amp;</span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: Assigned&lt;F&gt;) -&gt; Assigned&lt;F&gt; {
+        <span class="kw-2">*</span><span class="self">self </span>- rhs
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Sub</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="kw-2">*</span><span class="self">self</span> <span class="op">-</span> <span class="kw-2">*</span><span class="ident">rhs</span>
+<span class="kw">impl</span>&lt;F: Field&gt; Sub&lt;<span class="kw-2">&amp;</span>Assigned&lt;F&gt;&gt; <span class="kw">for </span><span class="kw-2">&amp;</span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: <span class="kw-2">&amp;</span>Assigned&lt;F&gt;) -&gt; Assigned&lt;F&gt; {
+        <span class="kw-2">*</span><span class="self">self </span>- <span class="kw-2">*</span>rhs
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">SubAssign</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">sub_assign</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">rhs</span>: <span class="self">Self</span>) {
-        <span class="kw-2">*</span><span class="self">self</span> <span class="op">=</span> <span class="kw-2">*</span><span class="self">self</span> <span class="op">-</span> <span class="ident">rhs</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; SubAssign <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">fn </span>sub_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: <span class="self">Self</span>) {
+        <span class="kw-2">*</span><span class="self">self </span>= <span class="kw-2">*</span><span class="self">self </span>- rhs;
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">SubAssign</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">sub_assign</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) {
-        <span class="kw-2">*</span><span class="self">self</span> <span class="op">=</span> <span class="kw-2">*</span><span class="self">self</span> <span class="op">-</span> <span class="ident">rhs</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; SubAssign&lt;<span class="kw-2">&amp;</span>Assigned&lt;F&gt;&gt; <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">fn </span>sub_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="self">Self</span>) {
+        <span class="kw-2">*</span><span class="self">self </span>= <span class="kw-2">*</span><span class="self">self </span>- rhs;
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Mul</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> (<span class="self">self</span>, <span class="ident">rhs</span>) {
-            (<span class="ident"><span class="self">Self</span>::Zero</span>, <span class="kw">_</span>) <span class="op">|</span> (<span class="kw">_</span>, <span class="ident"><span class="self">Self</span>::Zero</span>) =&gt; <span class="ident"><span class="self">Self</span>::Zero</span>,
-            (<span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">lhs</span>), <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">rhs</span>)) =&gt; <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">lhs</span> <span class="op">*</span> <span class="ident">rhs</span>),
-            (<span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span>, <span class="ident">denominator</span>), <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">other</span>))
-            <span class="op">|</span> (<span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">other</span>), <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span>, <span class="ident">denominator</span>)) =&gt; {
-                <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span> <span class="op">*</span> <span class="ident">other</span>, <span class="ident">denominator</span>)
+<span class="kw">impl</span>&lt;F: Field&gt; Mul <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: Assigned&lt;F&gt;) -&gt; Assigned&lt;F&gt; {
+        <span class="kw">match </span>(<span class="self">self</span>, rhs) {
+            (<span class="self">Self</span>::Zero, <span class="kw">_</span>) | (<span class="kw">_</span>, <span class="self">Self</span>::Zero) =&gt; <span class="self">Self</span>::Zero,
+            (<span class="self">Self</span>::Trivial(lhs), <span class="self">Self</span>::Trivial(rhs)) =&gt; <span class="self">Self</span>::Trivial(lhs * rhs),
+            (<span class="self">Self</span>::Rational(numerator, denominator), <span class="self">Self</span>::Trivial(other))
+            | (<span class="self">Self</span>::Trivial(other), <span class="self">Self</span>::Rational(numerator, denominator)) =&gt; {
+                <span class="self">Self</span>::Rational(numerator * other, denominator)
             }
             (
-                <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">lhs_numerator</span>, <span class="ident">lhs_denominator</span>),
-                <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">rhs_numerator</span>, <span class="ident">rhs_denominator</span>),
-            ) =&gt; <span class="ident"><span class="self">Self</span>::Rational</span>(
-                <span class="ident">lhs_numerator</span> <span class="op">*</span> <span class="ident">rhs_numerator</span>,
-                <span class="ident">lhs_denominator</span> <span class="op">*</span> <span class="ident">rhs_denominator</span>,
+                <span class="self">Self</span>::Rational(lhs_numerator, lhs_denominator),
+                <span class="self">Self</span>::Rational(rhs_numerator, rhs_denominator),
+            ) =&gt; <span class="self">Self</span>::Rational(
+                lhs_numerator * rhs_numerator,
+                lhs_denominator * rhs_denominator,
             ),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="self">self</span> <span class="op">*</span> <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">rhs</span>)
+<span class="kw">impl</span>&lt;F: Field&gt; Mul&lt;F&gt; <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: F) -&gt; Assigned&lt;F&gt; {
+        <span class="self">self </span>* <span class="self">Self</span>::Trivial(rhs)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="kw-2">*</span><span class="self">self</span> <span class="op">*</span> <span class="ident">rhs</span>
+<span class="kw">impl</span>&lt;F: Field&gt; Mul&lt;F&gt; <span class="kw">for </span><span class="kw-2">&amp;</span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: F) -&gt; Assigned&lt;F&gt; {
+        <span class="kw-2">*</span><span class="self">self </span>* rhs
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="self">self</span> <span class="op">*</span> <span class="kw-2">*</span><span class="ident">rhs</span>
+<span class="kw">impl</span>&lt;F: Field&gt; Mul&lt;<span class="kw-2">&amp;</span>Assigned&lt;F&gt;&gt; <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">type </span>Output = Assigned&lt;F&gt;;
+    <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: <span class="kw-2">&amp;</span>Assigned&lt;F&gt;) -&gt; Assigned&lt;F&gt; {
+        <span class="self">self </span>* <span class="kw-2">*</span>rhs
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">MulAssign</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">mul_assign</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">rhs</span>: <span class="self">Self</span>) {
-        <span class="kw-2">*</span><span class="self">self</span> <span class="op">=</span> <span class="kw-2">*</span><span class="self">self</span> <span class="op">*</span> <span class="ident">rhs</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; MulAssign <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">fn </span>mul_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: <span class="self">Self</span>) {
+        <span class="kw-2">*</span><span class="self">self </span>= <span class="kw-2">*</span><span class="self">self </span>* rhs;
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">MulAssign</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">mul_assign</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) {
-        <span class="kw-2">*</span><span class="self">self</span> <span class="op">=</span> <span class="kw-2">*</span><span class="self">self</span> <span class="op">*</span> <span class="ident">rhs</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; MulAssign&lt;<span class="kw-2">&amp;</span>Assigned&lt;F&gt;&gt; <span class="kw">for </span>Assigned&lt;F&gt; {
+    <span class="kw">fn </span>mul_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="self">Self</span>) {
+        <span class="kw-2">*</span><span class="self">self </span>= <span class="kw-2">*</span><span class="self">self </span>* rhs;
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Returns the numerator.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">numerator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">F</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::Zero</span> =&gt; <span class="ident">F::zero</span>(),
-            <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">x</span>) =&gt; <span class="kw-2">*</span><span class="ident">x</span>,
-            <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span>, <span class="kw">_</span>) =&gt; <span class="kw-2">*</span><span class="ident">numerator</span>,
+<span class="kw">impl</span>&lt;F: Field&gt; Assigned&lt;F&gt; {
+    <span class="doccomment">/// Returns the numerator.
+    </span><span class="kw">pub fn </span>numerator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; F {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Zero =&gt; F::zero(),
+            <span class="self">Self</span>::Trivial(x) =&gt; <span class="kw-2">*</span>x,
+            <span class="self">Self</span>::Rational(numerator, <span class="kw">_</span>) =&gt; <span class="kw-2">*</span>numerator,
         }
     }
 
-    <span class="doccomment">/// Returns the denominator, if non-trivial.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">denominator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::Zero</span> =&gt; <span class="prelude-val">None</span>,
-            <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
-            <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="kw">_</span>, <span class="ident">denominator</span>) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">denominator</span>),
+    <span class="doccomment">/// Returns the denominator, if non-trivial.
+    </span><span class="kw">pub fn </span>denominator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;F&gt; {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Zero =&gt; <span class="prelude-val">None</span>,
+            <span class="self">Self</span>::Trivial(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
+            <span class="self">Self</span>::Rational(<span class="kw">_</span>, denominator) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">*</span>denominator),
         }
     }
 
-    <span class="doccomment">/// Returns true iff this element is zero.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_zero_vartime</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">bool</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::Zero</span> =&gt; <span class="bool-val">true</span>,
-            <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">x</span>) =&gt; <span class="ident">x</span>.<span class="ident">is_zero_vartime</span>(),
-            <span class="comment">// Assigned maps x/0 -&gt; 0.</span>
-            <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span>, <span class="ident">denominator</span>) =&gt; {
-                <span class="ident">numerator</span>.<span class="ident">is_zero_vartime</span>() <span class="op">|</span><span class="op">|</span> <span class="ident">denominator</span>.<span class="ident">is_zero_vartime</span>()
+    <span class="doccomment">/// Returns true iff this element is zero.
+    </span><span class="kw">pub fn </span>is_zero_vartime(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Zero =&gt; <span class="bool-val">true</span>,
+            <span class="self">Self</span>::Trivial(x) =&gt; x.is_zero_vartime(),
+            <span class="comment">// Assigned maps x/0 -&gt; 0.
+            </span><span class="self">Self</span>::Rational(numerator, denominator) =&gt; {
+                numerator.is_zero_vartime() || denominator.is_zero_vartime()
             }
         }
     }
 
-    <span class="doccomment">/// Doubles this element.</span>
-    <span class="attribute">#[<span class="ident">must_use</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">double</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::Zero</span> =&gt; <span class="ident"><span class="self">Self</span>::Zero</span>,
-            <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">x</span>) =&gt; <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">x</span>.<span class="ident">double</span>()),
-            <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span>, <span class="ident">denominator</span>) =&gt; {
-                <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span>.<span class="ident">double</span>(), <span class="kw-2">*</span><span class="ident">denominator</span>)
+    <span class="doccomment">/// Doubles this element.
+    </span><span class="attribute">#[must_use]</span>
+    <span class="kw">pub fn </span>double(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Zero =&gt; <span class="self">Self</span>::Zero,
+            <span class="self">Self</span>::Trivial(x) =&gt; <span class="self">Self</span>::Trivial(x.double()),
+            <span class="self">Self</span>::Rational(numerator, denominator) =&gt; {
+                <span class="self">Self</span>::Rational(numerator.double(), <span class="kw-2">*</span>denominator)
             }
         }
     }
 
-    <span class="doccomment">/// Squares this element.</span>
-    <span class="attribute">#[<span class="ident">must_use</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">square</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::Zero</span> =&gt; <span class="ident"><span class="self">Self</span>::Zero</span>,
-            <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">x</span>) =&gt; <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">x</span>.<span class="ident">square</span>()),
-            <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span>, <span class="ident">denominator</span>) =&gt; {
-                <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span>.<span class="ident">square</span>(), <span class="ident">denominator</span>.<span class="ident">square</span>())
+    <span class="doccomment">/// Squares this element.
+    </span><span class="attribute">#[must_use]</span>
+    <span class="kw">pub fn </span>square(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Zero =&gt; <span class="self">Self</span>::Zero,
+            <span class="self">Self</span>::Trivial(x) =&gt; <span class="self">Self</span>::Trivial(x.square()),
+            <span class="self">Self</span>::Rational(numerator, denominator) =&gt; {
+                <span class="self">Self</span>::Rational(numerator.square(), denominator.square())
             }
         }
     }
 
-    <span class="doccomment">/// Cubes this element.</span>
-    <span class="attribute">#[<span class="ident">must_use</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cube</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">square</span>() <span class="op">*</span> <span class="self">self</span>
-    }
+    <span class="doccomment">/// Cubes this element.
+    </span><span class="attribute">#[must_use]</span>
+    <span class="kw">pub fn </span>cube(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.square() * <span class="self">self
+    </span>}
 
-    <span class="doccomment">/// Inverts this assigned value (taking the inverse of zero to be zero).</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">invert</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::Zero</span> =&gt; <span class="ident"><span class="self">Self</span>::Zero</span>,
-            <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">x</span>) =&gt; <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">F::one</span>(), <span class="kw-2">*</span><span class="ident">x</span>),
-            <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span>, <span class="ident">denominator</span>) =&gt; <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="kw-2">*</span><span class="ident">denominator</span>, <span class="kw-2">*</span><span class="ident">numerator</span>),
+    <span class="doccomment">/// Inverts this assigned value (taking the inverse of zero to be zero).
+    </span><span class="kw">pub fn </span>invert(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Zero =&gt; <span class="self">Self</span>::Zero,
+            <span class="self">Self</span>::Trivial(x) =&gt; <span class="self">Self</span>::Rational(F::one(), <span class="kw-2">*</span>x),
+            <span class="self">Self</span>::Rational(numerator, denominator) =&gt; <span class="self">Self</span>::Rational(<span class="kw-2">*</span>denominator, <span class="kw-2">*</span>numerator),
         }
     }
 
-    <span class="doccomment">/// Evaluates this assigned value directly, performing an unbatched inversion if</span>
-    <span class="doccomment">/// necessary.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If the denominator is zero, this returns zero.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">evaluate</span>(<span class="self">self</span>) -&gt; <span class="ident">F</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident"><span class="self">Self</span>::Zero</span> =&gt; <span class="ident">F::zero</span>(),
-            <span class="ident"><span class="self">Self</span>::Trivial</span>(<span class="ident">x</span>) =&gt; <span class="ident">x</span>,
-            <span class="ident"><span class="self">Self</span>::Rational</span>(<span class="ident">numerator</span>, <span class="ident">denominator</span>) =&gt; {
-                <span class="kw">if</span> <span class="ident">denominator</span> <span class="op">==</span> <span class="ident">F::one</span>() {
-                    <span class="ident">numerator</span>
-                } <span class="kw">else</span> {
-                    <span class="ident">numerator</span> <span class="op">*</span> <span class="ident">denominator</span>.<span class="ident">invert</span>().<span class="ident">unwrap_or</span>(<span class="ident">F::zero</span>())
+    <span class="doccomment">/// Evaluates this assigned value directly, performing an unbatched inversion if
+    /// necessary.
+    ///
+    /// If the denominator is zero, this returns zero.
+    </span><span class="kw">pub fn </span>evaluate(<span class="self">self</span>) -&gt; F {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Zero =&gt; F::zero(),
+            <span class="self">Self</span>::Trivial(x) =&gt; x,
+            <span class="self">Self</span>::Rational(numerator, denominator) =&gt; {
+                <span class="kw">if </span>denominator == F::one() {
+                    numerator
+                } <span class="kw">else </span>{
+                    numerator * denominator.invert().unwrap_or(F::zero())
                 }
             }
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">pasta_curves::Fp</span>;
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">mod </span>tests {
+    <span class="kw">use </span>pasta_curves::Fp;
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::Assigned</span>;
-    <span class="comment">// We use (numerator, denominator) in the comments below to denote a rational.</span>
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">add_trivial_to_inv0_rational</span>() {
-        <span class="comment">// a = 2</span>
-        <span class="comment">// b = (1,0)</span>
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">Assigned::Trivial</span>(<span class="ident">Fp::from</span>(<span class="number">2</span>));
-        <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">Assigned::Rational</span>(<span class="ident">Fp::one</span>(), <span class="ident">Fp::zero</span>());
+    <span class="kw">use </span><span class="kw">super</span>::Assigned;
+    <span class="comment">// We use (numerator, denominator) in the comments below to denote a rational.
+    </span><span class="attribute">#[test]</span>
+    <span class="kw">fn </span>add_trivial_to_inv0_rational() {
+        <span class="comment">// a = 2
+        // b = (1,0)
+        </span><span class="kw">let </span>a = Assigned::Trivial(Fp::from(<span class="number">2</span>));
+        <span class="kw">let </span>b = Assigned::Rational(Fp::one(), Fp::zero());
 
-        <span class="comment">// 2 + (1,0) = 2 + 0 = 2</span>
-        <span class="comment">// This fails if addition is implemented using normal rules for rationals.</span>
-        <span class="macro">assert_eq!</span>((<span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>).<span class="ident">evaluate</span>(), <span class="ident">a</span>.<span class="ident">evaluate</span>());
-        <span class="macro">assert_eq!</span>((<span class="ident">b</span> <span class="op">+</span> <span class="ident">a</span>).<span class="ident">evaluate</span>(), <span class="ident">a</span>.<span class="ident">evaluate</span>());
+        <span class="comment">// 2 + (1,0) = 2 + 0 = 2
+        // This fails if addition is implemented using normal rules for rationals.
+        </span><span class="macro">assert_eq!</span>((a + b).evaluate(), a.evaluate());
+        <span class="macro">assert_eq!</span>((b + a).evaluate(), a.evaluate());
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">add_rational_to_inv0_rational</span>() {
-        <span class="comment">// a = (1,2)</span>
-        <span class="comment">// b = (1,0)</span>
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">Assigned::Rational</span>(<span class="ident">Fp::one</span>(), <span class="ident">Fp::from</span>(<span class="number">2</span>));
-        <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">Assigned::Rational</span>(<span class="ident">Fp::one</span>(), <span class="ident">Fp::zero</span>());
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>add_rational_to_inv0_rational() {
+        <span class="comment">// a = (1,2)
+        // b = (1,0)
+        </span><span class="kw">let </span>a = Assigned::Rational(Fp::one(), Fp::from(<span class="number">2</span>));
+        <span class="kw">let </span>b = Assigned::Rational(Fp::one(), Fp::zero());
 
-        <span class="comment">// (1,2) + (1,0) = (1,2) + 0 = (1,2)</span>
-        <span class="comment">// This fails if addition is implemented using normal rules for rationals.</span>
-        <span class="macro">assert_eq!</span>((<span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>).<span class="ident">evaluate</span>(), <span class="ident">a</span>.<span class="ident">evaluate</span>());
-        <span class="macro">assert_eq!</span>((<span class="ident">b</span> <span class="op">+</span> <span class="ident">a</span>).<span class="ident">evaluate</span>(), <span class="ident">a</span>.<span class="ident">evaluate</span>());
+        <span class="comment">// (1,2) + (1,0) = (1,2) + 0 = (1,2)
+        // This fails if addition is implemented using normal rules for rationals.
+        </span><span class="macro">assert_eq!</span>((a + b).evaluate(), a.evaluate());
+        <span class="macro">assert_eq!</span>((b + a).evaluate(), a.evaluate());
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">sub_trivial_from_inv0_rational</span>() {
-        <span class="comment">// a = 2</span>
-        <span class="comment">// b = (1,0)</span>
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">Assigned::Trivial</span>(<span class="ident">Fp::from</span>(<span class="number">2</span>));
-        <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">Assigned::Rational</span>(<span class="ident">Fp::one</span>(), <span class="ident">Fp::zero</span>());
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>sub_trivial_from_inv0_rational() {
+        <span class="comment">// a = 2
+        // b = (1,0)
+        </span><span class="kw">let </span>a = Assigned::Trivial(Fp::from(<span class="number">2</span>));
+        <span class="kw">let </span>b = Assigned::Rational(Fp::one(), Fp::zero());
 
-        <span class="comment">// (1,0) - 2 = 0 - 2 = -2</span>
-        <span class="comment">// This fails if subtraction is implemented using normal rules for rationals.</span>
-        <span class="macro">assert_eq!</span>((<span class="ident">b</span> <span class="op">-</span> <span class="ident">a</span>).<span class="ident">evaluate</span>(), (<span class="op">-</span><span class="ident">a</span>).<span class="ident">evaluate</span>());
+        <span class="comment">// (1,0) - 2 = 0 - 2 = -2
+        // This fails if subtraction is implemented using normal rules for rationals.
+        </span><span class="macro">assert_eq!</span>((b - a).evaluate(), (-a).evaluate());
 
-        <span class="comment">// 2 - (1,0) = 2 - 0 = 2</span>
-        <span class="macro">assert_eq!</span>((<span class="ident">a</span> <span class="op">-</span> <span class="ident">b</span>).<span class="ident">evaluate</span>(), <span class="ident">a</span>.<span class="ident">evaluate</span>());
+        <span class="comment">// 2 - (1,0) = 2 - 0 = 2
+        </span><span class="macro">assert_eq!</span>((a - b).evaluate(), a.evaluate());
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">sub_rational_from_inv0_rational</span>() {
-        <span class="comment">// a = (1,2)</span>
-        <span class="comment">// b = (1,0)</span>
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">Assigned::Rational</span>(<span class="ident">Fp::one</span>(), <span class="ident">Fp::from</span>(<span class="number">2</span>));
-        <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">Assigned::Rational</span>(<span class="ident">Fp::one</span>(), <span class="ident">Fp::zero</span>());
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>sub_rational_from_inv0_rational() {
+        <span class="comment">// a = (1,2)
+        // b = (1,0)
+        </span><span class="kw">let </span>a = Assigned::Rational(Fp::one(), Fp::from(<span class="number">2</span>));
+        <span class="kw">let </span>b = Assigned::Rational(Fp::one(), Fp::zero());
 
-        <span class="comment">// (1,0) - (1,2) = 0 - (1,2) = -(1,2)</span>
-        <span class="comment">// This fails if subtraction is implemented using normal rules for rationals.</span>
-        <span class="macro">assert_eq!</span>((<span class="ident">b</span> <span class="op">-</span> <span class="ident">a</span>).<span class="ident">evaluate</span>(), (<span class="op">-</span><span class="ident">a</span>).<span class="ident">evaluate</span>());
+        <span class="comment">// (1,0) - (1,2) = 0 - (1,2) = -(1,2)
+        // This fails if subtraction is implemented using normal rules for rationals.
+        </span><span class="macro">assert_eq!</span>((b - a).evaluate(), (-a).evaluate());
 
-        <span class="comment">// (1,2) - (1,0) = (1,2) - 0 = (1,2)</span>
-        <span class="macro">assert_eq!</span>((<span class="ident">a</span> <span class="op">-</span> <span class="ident">b</span>).<span class="ident">evaluate</span>(), <span class="ident">a</span>.<span class="ident">evaluate</span>());
+        <span class="comment">// (1,2) - (1,0) = (1,2) - 0 = (1,2)
+        </span><span class="macro">assert_eq!</span>((a - b).evaluate(), a.evaluate());
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">mul_rational_by_inv0_rational</span>() {
-        <span class="comment">// a = (1,2)</span>
-        <span class="comment">// b = (1,0)</span>
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">Assigned::Rational</span>(<span class="ident">Fp::one</span>(), <span class="ident">Fp::from</span>(<span class="number">2</span>));
-        <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">Assigned::Rational</span>(<span class="ident">Fp::one</span>(), <span class="ident">Fp::zero</span>());
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>mul_rational_by_inv0_rational() {
+        <span class="comment">// a = (1,2)
+        // b = (1,0)
+        </span><span class="kw">let </span>a = Assigned::Rational(Fp::one(), Fp::from(<span class="number">2</span>));
+        <span class="kw">let </span>b = Assigned::Rational(Fp::one(), Fp::zero());
 
-        <span class="comment">// (1,2) * (1,0) = (1,2) * 0 = 0</span>
-        <span class="macro">assert_eq!</span>((<span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>).<span class="ident">evaluate</span>(), <span class="ident">Fp::zero</span>());
+        <span class="comment">// (1,2) * (1,0) = (1,2) * 0 = 0
+        </span><span class="macro">assert_eq!</span>((a * b).evaluate(), Fp::zero());
 
-        <span class="comment">// (1,0) * (1,2) = 0 * (1,2) = 0</span>
-        <span class="macro">assert_eq!</span>((<span class="ident">b</span> <span class="op">*</span> <span class="ident">a</span>).<span class="ident">evaluate</span>(), <span class="ident">Fp::zero</span>());
+        <span class="comment">// (1,0) * (1,2) = 0 * (1,2) = 0
+        </span><span class="macro">assert_eq!</span>((b * a).evaluate(), Fp::zero());
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">proptests</span> {
-    <span class="kw">use</span> <span class="ident">std</span>::{
-        <span class="ident">cmp</span>,
-        <span class="ident">convert::TryFrom</span>,
-        <span class="ident">ops</span>::{<span class="ident">Add</span>, <span class="ident">Mul</span>, <span class="ident">Neg</span>, <span class="ident">Sub</span>},
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">mod </span>proptests {
+    <span class="kw">use </span>std::{
+        cmp,
+        convert::TryFrom,
+        ops::{Add, Mul, Neg, Sub},
     };
 
-    <span class="kw">use</span> <span class="ident">group::ff::Field</span>;
-    <span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">Fp</span>};
-    <span class="kw">use</span> <span class="ident">proptest</span>::{<span class="ident">collection::vec</span>, <span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">sample::select</span>};
+    <span class="kw">use </span>group::ff::Field;
+    <span class="kw">use </span>pasta_curves::{arithmetic::FieldExt, Fp};
+    <span class="kw">use </span>proptest::{collection::vec, prelude::<span class="kw-2">*</span>, sample::select};
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::Assigned</span>;
+    <span class="kw">use </span><span class="kw">super</span>::Assigned;
 
-    <span class="kw">trait</span> <span class="ident">UnaryOperand</span>: <span class="ident">Neg</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="kw">fn</span> <span class="ident">double</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>;
-        <span class="kw">fn</span> <span class="ident">square</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>;
-        <span class="kw">fn</span> <span class="ident">cube</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>;
-        <span class="kw">fn</span> <span class="ident">inv0</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>;
+    <span class="kw">trait </span>UnaryOperand: Neg&lt;Output = <span class="self">Self</span>&gt; {
+        <span class="kw">fn </span>double(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>;
+        <span class="kw">fn </span>square(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>;
+        <span class="kw">fn </span>cube(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>;
+        <span class="kw">fn </span>inv0(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>;
     }
 
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">UnaryOperand</span> <span class="kw">for</span> <span class="ident">F</span> {
-        <span class="kw">fn</span> <span class="ident">double</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-            <span class="self">self</span>.<span class="ident">double</span>()
+    <span class="kw">impl</span>&lt;F: Field&gt; UnaryOperand <span class="kw">for </span>F {
+        <span class="kw">fn </span>double(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+            <span class="self">self</span>.double()
         }
 
-        <span class="kw">fn</span> <span class="ident">square</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-            <span class="self">self</span>.<span class="ident">square</span>()
+        <span class="kw">fn </span>square(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+            <span class="self">self</span>.square()
         }
 
-        <span class="kw">fn</span> <span class="ident">cube</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-            <span class="self">self</span>.<span class="ident">cube</span>()
+        <span class="kw">fn </span>cube(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+            <span class="self">self</span>.cube()
         }
 
-        <span class="kw">fn</span> <span class="ident">inv0</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-            <span class="self">self</span>.<span class="ident">invert</span>().<span class="ident">unwrap_or</span>(<span class="ident">F::zero</span>())
-        }
-    }
-
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">UnaryOperand</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="kw">fn</span> <span class="ident">double</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-            <span class="self">self</span>.<span class="ident">double</span>()
-        }
-
-        <span class="kw">fn</span> <span class="ident">square</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-            <span class="self">self</span>.<span class="ident">square</span>()
-        }
-
-        <span class="kw">fn</span> <span class="ident">cube</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-            <span class="self">self</span>.<span class="ident">cube</span>()
-        }
-
-        <span class="kw">fn</span> <span class="ident">inv0</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-            <span class="self">self</span>.<span class="ident">invert</span>()
+        <span class="kw">fn </span>inv0(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+            <span class="self">self</span>.invert().unwrap_or(F::zero())
         }
     }
 
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-    <span class="kw">enum</span> <span class="ident">UnaryOperator</span> {
-        <span class="ident">Neg</span>,
-        <span class="ident">Double</span>,
-        <span class="ident">Square</span>,
-        <span class="ident">Cube</span>,
-        <span class="ident">Inv0</span>,
+    <span class="kw">impl</span>&lt;F: Field&gt; UnaryOperand <span class="kw">for </span>Assigned&lt;F&gt; {
+        <span class="kw">fn </span>double(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+            <span class="self">self</span>.double()
+        }
+
+        <span class="kw">fn </span>square(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+            <span class="self">self</span>.square()
+        }
+
+        <span class="kw">fn </span>cube(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+            <span class="self">self</span>.cube()
+        }
+
+        <span class="kw">fn </span>inv0(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+            <span class="self">self</span>.invert()
+        }
     }
 
-    <span class="kw">const</span> <span class="ident">UNARY_OPERATORS</span>: <span class="kw-2">&amp;</span>[<span class="ident">UnaryOperator</span>] <span class="op">=</span> <span class="kw-2">&amp;</span>[
-        <span class="ident">UnaryOperator::Neg</span>,
-        <span class="ident">UnaryOperator::Double</span>,
-        <span class="ident">UnaryOperator::Square</span>,
-        <span class="ident">UnaryOperator::Cube</span>,
-        <span class="ident">UnaryOperator::Inv0</span>,
+    <span class="attribute">#[derive(Clone, Debug)]</span>
+    <span class="kw">enum </span>UnaryOperator {
+        Neg,
+        Double,
+        Square,
+        Cube,
+        Inv0,
+    }
+
+    <span class="kw">const </span>UNARY_OPERATORS: <span class="kw-2">&amp;</span>[UnaryOperator] = <span class="kw-2">&amp;</span>[
+        UnaryOperator::Neg,
+        UnaryOperator::Double,
+        UnaryOperator::Square,
+        UnaryOperator::Cube,
+        UnaryOperator::Inv0,
     ];
 
-    <span class="kw">impl</span> <span class="ident">UnaryOperator</span> {
-        <span class="kw">fn</span> <span class="ident">apply</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">UnaryOperand</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">a</span>: <span class="ident">F</span>) -&gt; <span class="ident">F</span> {
-            <span class="kw">match</span> <span class="self">self</span> {
-                <span class="ident"><span class="self">Self</span>::Neg</span> =&gt; <span class="op">-</span><span class="ident">a</span>,
-                <span class="ident"><span class="self">Self</span>::Double</span> =&gt; <span class="ident">a</span>.<span class="ident">double</span>(),
-                <span class="ident"><span class="self">Self</span>::Square</span> =&gt; <span class="ident">a</span>.<span class="ident">square</span>(),
-                <span class="ident"><span class="self">Self</span>::Cube</span> =&gt; <span class="ident">a</span>.<span class="ident">cube</span>(),
-                <span class="ident"><span class="self">Self</span>::Inv0</span> =&gt; <span class="ident">a</span>.<span class="ident">inv0</span>(),
+    <span class="kw">impl </span>UnaryOperator {
+        <span class="kw">fn </span>apply&lt;F: UnaryOperand&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, a: F) -&gt; F {
+            <span class="kw">match </span><span class="self">self </span>{
+                <span class="self">Self</span>::Neg =&gt; -a,
+                <span class="self">Self</span>::Double =&gt; a.double(),
+                <span class="self">Self</span>::Square =&gt; a.square(),
+                <span class="self">Self</span>::Cube =&gt; a.cube(),
+                <span class="self">Self</span>::Inv0 =&gt; a.inv0(),
             }
         }
     }
 
-    <span class="kw">trait</span> <span class="ident">BinaryOperand</span>: <span class="ident">Sized</span> <span class="op">+</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Sub</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span><span class="op">&gt;</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">BinaryOperand</span> <span class="kw">for</span> <span class="ident">F</span> {}
-    <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">BinaryOperand</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {}
+    <span class="kw">trait </span>BinaryOperand: Sized + Add&lt;Output = <span class="self">Self</span>&gt; + Sub&lt;Output = <span class="self">Self</span>&gt; + Mul&lt;Output = <span class="self">Self</span>&gt; {}
+    <span class="kw">impl</span>&lt;F: Field&gt; BinaryOperand <span class="kw">for </span>F {}
+    <span class="kw">impl</span>&lt;F: Field&gt; BinaryOperand <span class="kw">for </span>Assigned&lt;F&gt; {}
 
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-    <span class="kw">enum</span> <span class="ident">BinaryOperator</span> {
-        <span class="ident">Add</span>,
-        <span class="ident">Sub</span>,
-        <span class="ident">Mul</span>,
+    <span class="attribute">#[derive(Clone, Debug)]</span>
+    <span class="kw">enum </span>BinaryOperator {
+        Add,
+        Sub,
+        Mul,
     }
 
-    <span class="kw">const</span> <span class="ident">BINARY_OPERATORS</span>: <span class="kw-2">&amp;</span>[<span class="ident">BinaryOperator</span>] <span class="op">=</span> <span class="kw-2">&amp;</span>[
-        <span class="ident">BinaryOperator::Add</span>,
-        <span class="ident">BinaryOperator::Sub</span>,
-        <span class="ident">BinaryOperator::Mul</span>,
+    <span class="kw">const </span>BINARY_OPERATORS: <span class="kw-2">&amp;</span>[BinaryOperator] = <span class="kw-2">&amp;</span>[
+        BinaryOperator::Add,
+        BinaryOperator::Sub,
+        BinaryOperator::Mul,
     ];
 
-    <span class="kw">impl</span> <span class="ident">BinaryOperator</span> {
-        <span class="kw">fn</span> <span class="ident">apply</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">BinaryOperand</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">a</span>: <span class="ident">F</span>, <span class="ident">b</span>: <span class="ident">F</span>) -&gt; <span class="ident">F</span> {
-            <span class="kw">match</span> <span class="self">self</span> {
-                <span class="ident"><span class="self">Self</span>::Add</span> =&gt; <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>,
-                <span class="ident"><span class="self">Self</span>::Sub</span> =&gt; <span class="ident">a</span> <span class="op">-</span> <span class="ident">b</span>,
-                <span class="ident"><span class="self">Self</span>::Mul</span> =&gt; <span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>,
+    <span class="kw">impl </span>BinaryOperator {
+        <span class="kw">fn </span>apply&lt;F: BinaryOperand&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, a: F, b: F) -&gt; F {
+            <span class="kw">match </span><span class="self">self </span>{
+                <span class="self">Self</span>::Add =&gt; a + b,
+                <span class="self">Self</span>::Sub =&gt; a - b,
+                <span class="self">Self</span>::Mul =&gt; a * b,
             }
         }
     }
 
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-    <span class="kw">enum</span> <span class="ident">Operator</span> {
-        <span class="ident">Unary</span>(<span class="ident">UnaryOperator</span>),
-        <span class="ident">Binary</span>(<span class="ident">BinaryOperator</span>),
+    <span class="attribute">#[derive(Clone, Debug)]</span>
+    <span class="kw">enum </span>Operator {
+        Unary(UnaryOperator),
+        Binary(BinaryOperator),
     }
 
     <span class="macro">prop_compose!</span> {
-        <span class="doccomment">/// Use narrow that can be easily reduced.</span>
-        <span class="kw">fn</span> <span class="ident">arb_element</span>()(<span class="ident">val</span> <span class="kw">in</span> <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>()) -&gt; <span class="ident">Fp</span> {
-            <span class="ident">Fp::from</span>(<span class="ident">val</span>)
+        <span class="doccomment">/// Use narrow that can be easily reduced.
+        </span><span class="kw">fn </span>arb_element()(val <span class="kw">in </span>any::&lt;u64&gt;()) -&gt; Fp {
+            Fp::from(val)
         }
     }
 
     <span class="macro">prop_compose!</span> {
-        <span class="kw">fn</span> <span class="ident">arb_trivial</span>()(<span class="ident">element</span> <span class="kw">in</span> <span class="ident">arb_element</span>()) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span> {
-            <span class="ident">Assigned::Trivial</span>(<span class="ident">element</span>)
+        <span class="kw">fn </span>arb_trivial()(element <span class="kw">in </span>arb_element()) -&gt; Assigned&lt;Fp&gt; {
+            Assigned::Trivial(element)
         }
     }
 
     <span class="macro">prop_compose!</span> {
-        <span class="doccomment">/// Generates half of the denominators as zero to represent a deferred inversion.</span>
-        <span class="kw">fn</span> <span class="ident">arb_rational</span>()(
-            <span class="ident">numerator</span> <span class="kw">in</span> <span class="ident">arb_element</span>(),
-            <span class="ident">denominator</span> <span class="kw">in</span> <span class="macro">prop_oneof!</span>[
-                <span class="number">1</span> =&gt; <span class="ident">Just</span>(<span class="ident">Fp::zero</span>()),
-                <span class="number">2</span> =&gt; <span class="ident">arb_element</span>(),
+        <span class="doccomment">/// Generates half of the denominators as zero to represent a deferred inversion.
+        </span><span class="kw">fn </span>arb_rational()(
+            numerator <span class="kw">in </span>arb_element(),
+            denominator <span class="kw">in </span><span class="macro">prop_oneof!</span>[
+                <span class="number">1 </span>=&gt; Just(Fp::zero()),
+                <span class="number">2 </span>=&gt; arb_element(),
             ],
-        ) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span> {
-            <span class="ident">Assigned::Rational</span>(<span class="ident">numerator</span>, <span class="ident">denominator</span>)
+        ) -&gt; Assigned&lt;Fp&gt; {
+            Assigned::Rational(numerator, denominator)
         }
     }
 
     <span class="macro">prop_compose!</span> {
-        <span class="kw">fn</span> <span class="ident">arb_operators</span>(<span class="ident">num_unary</span>: <span class="ident">usize</span>, <span class="ident">num_binary</span>: <span class="ident">usize</span>)(
-            <span class="ident">unary</span> <span class="kw">in</span> <span class="ident">vec</span>(<span class="ident">select</span>(<span class="ident">UNARY_OPERATORS</span>), <span class="ident">num_unary</span>),
-            <span class="ident">binary</span> <span class="kw">in</span> <span class="ident">vec</span>(<span class="ident">select</span>(<span class="ident">BINARY_OPERATORS</span>), <span class="ident">num_binary</span>),
-        ) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Operator</span><span class="op">&gt;</span> {
-            <span class="ident">unary</span>.<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="ident">Operator::Unary</span>)
-                .<span class="ident">chain</span>(<span class="ident">binary</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="ident">Operator::Binary</span>))
-                .<span class="ident">collect</span>()
+        <span class="kw">fn </span>arb_operators(num_unary: usize, num_binary: usize)(
+            unary <span class="kw">in </span>vec(select(UNARY_OPERATORS), num_unary),
+            binary <span class="kw">in </span>vec(select(BINARY_OPERATORS), num_binary),
+        ) -&gt; Vec&lt;Operator&gt; {
+            unary.into_iter()
+                .map(Operator::Unary)
+                .chain(binary.into_iter().map(Operator::Binary))
+                .collect()
         }
     }
 
     <span class="macro">prop_compose!</span> {
-        <span class="kw">fn</span> <span class="ident">arb_testcase</span>()(
-            <span class="ident">num_unary</span> <span class="kw">in</span> <span class="number">0usize</span>..<span class="number">5</span>,
-            <span class="ident">num_binary</span> <span class="kw">in</span> <span class="number">0usize</span>..<span class="number">5</span>,
+        <span class="kw">fn </span>arb_testcase()(
+            num_unary <span class="kw">in </span><span class="number">0usize</span>..<span class="number">5</span>,
+            num_binary <span class="kw">in </span><span class="number">0usize</span>..<span class="number">5</span>,
         )(
-            <span class="ident">values</span> <span class="kw">in</span> <span class="ident">vec</span>(
+            values <span class="kw">in </span>vec(
                 <span class="macro">prop_oneof!</span>[
-                    <span class="number">1</span> =&gt; <span class="ident">Just</span>(<span class="ident">Assigned::Zero</span>),
-                    <span class="number">2</span> =&gt; <span class="ident">arb_trivial</span>(),
-                    <span class="number">2</span> =&gt; <span class="ident">arb_rational</span>(),
+                    <span class="number">1 </span>=&gt; Just(Assigned::Zero),
+                    <span class="number">2 </span>=&gt; arb_trivial(),
+                    <span class="number">2 </span>=&gt; arb_rational(),
                 ],
-                <span class="comment">// Ensure that:</span>
-                <span class="comment">// - we have at least one value to apply unary operators to.</span>
-                <span class="comment">// - we can apply every binary operator pairwise sequentially.</span>
-                <span class="ident">cmp::max</span>(<span class="kw">if</span> <span class="ident">num_unary</span> <span class="op">&gt;</span> <span class="number">0</span> { <span class="number">1</span> } <span class="kw">else</span> { <span class="number">0</span> }, <span class="ident">num_binary</span> <span class="op">+</span> <span class="number">1</span>)),
-            <span class="ident">operations</span> <span class="kw">in</span> <span class="ident">arb_operators</span>(<span class="ident">num_unary</span>, <span class="ident">num_binary</span>).<span class="ident">prop_shuffle</span>(),
-        ) -&gt; (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Operator</span><span class="op">&gt;</span>) {
-            (<span class="ident">values</span>, <span class="ident">operations</span>)
+                <span class="comment">// Ensure that:
+                // - we have at least one value to apply unary operators to.
+                // - we can apply every binary operator pairwise sequentially.
+                </span>cmp::max(<span class="kw">if </span>num_unary &gt; <span class="number">0 </span>{ <span class="number">1 </span>} <span class="kw">else </span>{ <span class="number">0 </span>}, num_binary + <span class="number">1</span>)),
+            operations <span class="kw">in </span>arb_operators(num_unary, num_binary).prop_shuffle(),
+        ) -&gt; (Vec&lt;Assigned&lt;Fp&gt;&gt;, Vec&lt;Operator&gt;) {
+            (values, operations)
         }
     }
 
     <span class="macro">proptest!</span> {
-        <span class="attribute">#[<span class="ident">test</span>]</span>
-        <span class="kw">fn</span> <span class="ident">operation_commutativity</span>((<span class="ident">values</span>, <span class="ident">operations</span>) <span class="kw">in</span> <span class="ident">arb_testcase</span>()) {
-            <span class="comment">// Evaluate the values at the start.</span>
-            <span class="kw">let</span> <span class="ident">elements</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">values</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">evaluate</span>()).<span class="ident">collect</span>();
+        <span class="attribute">#[test]</span>
+        <span class="kw">fn </span>operation_commutativity((values, operations) <span class="kw">in </span>arb_testcase()) {
+            <span class="comment">// Evaluate the values at the start.
+            </span><span class="kw">let </span>elements: Vec&lt;<span class="kw">_</span>&gt; = values.iter().cloned().map(|v| v.evaluate()).collect();
 
-            <span class="comment">// Apply the operations to both the deferred and evaluated values.</span>
-            <span class="kw">fn</span> <span class="ident">evaluate</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">UnaryOperand</span> <span class="op">+</span> <span class="ident">BinaryOperand</span><span class="op">&gt;</span>(
-                <span class="ident">items</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-                <span class="ident">operators</span>: <span class="kw-2">&amp;</span>[<span class="ident">Operator</span>],
-            ) -&gt; <span class="ident">F</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ops</span> <span class="op">=</span> <span class="ident">operators</span>.<span class="ident">iter</span>();
+            <span class="comment">// Apply the operations to both the deferred and evaluated values.
+            </span><span class="kw">fn </span>evaluate&lt;F: UnaryOperand + BinaryOperand&gt;(
+                items: Vec&lt;F&gt;,
+                operators: <span class="kw-2">&amp;</span>[Operator],
+            ) -&gt; F {
+                <span class="kw">let </span><span class="kw-2">mut </span>ops = operators.iter();
 
-                <span class="comment">// Process all binary operators. We are guaranteed to have exactly as many</span>
-                <span class="comment">// binary operators as we need calls to the reduction closure.</span>
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">items</span>.<span class="ident">into_iter</span>().<span class="ident">reduce</span>(<span class="op">|</span><span class="kw-2">mut</span> <span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="kw">loop</span> {
-                    <span class="kw">match</span> <span class="ident">ops</span>.<span class="ident">next</span>() {
-                        <span class="prelude-val">Some</span>(<span class="ident">Operator::Unary</span>(<span class="ident">op</span>)) =&gt; <span class="ident">a</span> <span class="op">=</span> <span class="ident">op</span>.<span class="ident">apply</span>(<span class="ident">a</span>),
-                        <span class="prelude-val">Some</span>(<span class="ident">Operator::Binary</span>(<span class="ident">op</span>)) =&gt; <span class="kw">break</span> <span class="ident">op</span>.<span class="ident">apply</span>(<span class="ident">a</span>, <span class="ident">b</span>),
-                        <span class="prelude-val">None</span> =&gt; <span class="macro">unreachable!</span>(),
+                <span class="comment">// Process all binary operators. We are guaranteed to have exactly as many
+                // binary operators as we need calls to the reduction closure.
+                </span><span class="kw">let </span><span class="kw-2">mut </span>res = items.into_iter().reduce(|<span class="kw-2">mut </span>a, b| <span class="kw">loop </span>{
+                    <span class="kw">match </span>ops.next() {
+                        <span class="prelude-val">Some</span>(Operator::Unary(op)) =&gt; a = op.apply(a),
+                        <span class="prelude-val">Some</span>(Operator::Binary(op)) =&gt; <span class="kw">break </span>op.apply(a, b),
+                        <span class="prelude-val">None </span>=&gt; <span class="macro">unreachable!</span>(),
                     }
-                }).<span class="ident">unwrap</span>();
+                }).unwrap();
 
-                <span class="comment">// Process any unary operators that weren&#39;t handled in the reduce() call</span>
-                <span class="comment">// above (either if we only had one item, or there were unary operators</span>
-                <span class="comment">// after the last binary operator). We are guaranteed to have no binary</span>
-                <span class="comment">// operators remaining at this point.</span>
-                <span class="kw">loop</span> {
-                    <span class="kw">match</span> <span class="ident">ops</span>.<span class="ident">next</span>() {
-                        <span class="prelude-val">Some</span>(<span class="ident">Operator::Unary</span>(<span class="ident">op</span>)) =&gt; <span class="ident">res</span> <span class="op">=</span> <span class="ident">op</span>.<span class="ident">apply</span>(<span class="ident">res</span>),
-                        <span class="prelude-val">Some</span>(<span class="ident">Operator::Binary</span>(<span class="kw">_</span>)) =&gt; <span class="macro">unreachable!</span>(),
-                        <span class="prelude-val">None</span> =&gt; <span class="kw">break</span> <span class="ident">res</span>,
+                <span class="comment">// Process any unary operators that weren&#39;t handled in the reduce() call
+                // above (either if we only had one item, or there were unary operators
+                // after the last binary operator). We are guaranteed to have no binary
+                // operators remaining at this point.
+                </span><span class="kw">loop </span>{
+                    <span class="kw">match </span>ops.next() {
+                        <span class="prelude-val">Some</span>(Operator::Unary(op)) =&gt; res = op.apply(res),
+                        <span class="prelude-val">Some</span>(Operator::Binary(<span class="kw">_</span>)) =&gt; <span class="macro">unreachable!</span>(),
+                        <span class="prelude-val">None </span>=&gt; <span class="kw">break </span>res,
                     }
                 }
             }
-            <span class="kw">let</span> <span class="ident">deferred_result</span> <span class="op">=</span> <span class="ident">evaluate</span>(<span class="ident">values</span>, <span class="kw-2">&amp;</span><span class="ident">operations</span>);
-            <span class="kw">let</span> <span class="ident">evaluated_result</span> <span class="op">=</span> <span class="ident">evaluate</span>(<span class="ident">elements</span>, <span class="kw-2">&amp;</span><span class="ident">operations</span>);
+            <span class="kw">let </span>deferred_result = evaluate(values, <span class="kw-2">&amp;</span>operations);
+            <span class="kw">let </span>evaluated_result = evaluate(elements, <span class="kw-2">&amp;</span>operations);
 
-            <span class="comment">// The two should be equal, i.e. deferred inversion should commute with the</span>
-            <span class="comment">// list of operations.</span>
-            <span class="macro">assert_eq!</span>(<span class="ident">deferred_result</span>.<span class="ident">evaluate</span>(), <span class="ident">evaluated_result</span>);
+            <span class="comment">// The two should be equal, i.e. deferred inversion should commute with the
+            // list of operations.
+            </span><span class="macro">assert_eq!</span>(deferred_result.evaluate(), evaluated_result);
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -606,587 +600,587 @@
 <span id="585">585</span>
 <span id="586">586</span>
 <span id="587">587</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">add</span>, <span class="ident">EccPoint</span>, <span class="ident">NonIdentityEccPoint</span>, <span class="ident">ScalarVar</span>, <span class="ident">T_Q</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">sinsemilla::primitives</span> <span class="kw">as</span> <span class="ident">sinsemilla</span>,
-    <span class="ident">utilities</span>::{<span class="ident">bool_check</span>, <span class="ident">lookup_range_check::LookupRangeCheckConfig</span>, <span class="ident">ternary</span>},
+</pre><pre class="rust"><code><span class="kw">use super</span>::{add, EccPoint, NonIdentityEccPoint, ScalarVar, T_Q};
+<span class="kw">use crate</span>::{
+    sinsemilla::primitives <span class="kw">as </span>sinsemilla,
+    utilities::{bool_check, lookup_range_check::LookupRangeCheckConfig, ternary},
 };
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">convert::TryInto</span>,
-    <span class="ident">ops</span>::{<span class="ident">Deref</span>, <span class="ident">Range</span>},
+<span class="kw">use </span>std::{
+    convert::TryInto,
+    ops::{Deref, Range},
 };
 
-<span class="kw">use</span> <span class="ident">ff::PrimeField</span>;
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">arithmetic::FieldExt</span>,
-    <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Layouter</span>, <span class="ident">Region</span>, <span class="ident">Value</span>},
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Assigned</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
-    <span class="ident">poly::Rotation</span>,
+<span class="kw">use </span>ff::PrimeField;
+<span class="kw">use </span>halo2_proofs::{
+    arithmetic::FieldExt,
+    circuit::{AssignedCell, Layouter, Region, Value},
+    plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Selector},
+    poly::Rotation,
 };
-<span class="kw">use</span> <span class="ident">uint::construct_uint</span>;
+<span class="kw">use </span>uint::construct_uint;
 
-<span class="kw">use</span> <span class="ident">pasta_curves::pallas</span>;
+<span class="kw">use </span>pasta_curves::pallas;
 
-<span class="kw">mod</span> <span class="ident">complete</span>;
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod</span> <span class="ident">incomplete</span>;
-<span class="kw">mod</span> <span class="ident">overflow</span>;
+<span class="kw">mod </span>complete;
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod </span>incomplete;
+<span class="kw">mod </span>overflow;
 
-<span class="doccomment">/// Number of bits for which complete addition needs to be used in variable-base</span>
-<span class="doccomment">/// scalar multiplication</span>
-<span class="kw">const</span> <span class="ident">NUM_COMPLETE_BITS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">3</span>;
+<span class="doccomment">/// Number of bits for which complete addition needs to be used in variable-base
+/// scalar multiplication
+</span><span class="kw">const </span>NUM_COMPLETE_BITS: usize = <span class="number">3</span>;
 
-<span class="comment">// Bits used in incomplete addition. k_{254} to k_{4} inclusive</span>
-<span class="kw">const</span> <span class="ident">INCOMPLETE_LEN</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">pallas::Scalar::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">-</span> <span class="number">1</span> <span class="op">-</span> <span class="ident">NUM_COMPLETE_BITS</span>;
-<span class="kw">const</span> <span class="ident">INCOMPLETE_RANGE</span>: <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="op">=</span> <span class="number">0</span>..<span class="ident">INCOMPLETE_LEN</span>;
+<span class="comment">// Bits used in incomplete addition. k_{254} to k_{4} inclusive
+</span><span class="kw">const </span>INCOMPLETE_LEN: usize = pallas::Scalar::NUM_BITS <span class="kw">as </span>usize - <span class="number">1 </span>- NUM_COMPLETE_BITS;
+<span class="kw">const </span>INCOMPLETE_RANGE: Range&lt;usize&gt; = <span class="number">0</span>..INCOMPLETE_LEN;
 
-<span class="comment">// Bits k_{254} to k_{4} inclusive are used in incomplete addition.</span>
-<span class="comment">// The `hi` half is k_{254} to k_{130} inclusive (length 125 bits).</span>
-<span class="comment">// (It is a coincidence that k_{130} matches the boundary of the</span>
-<span class="comment">// overflow check described in [the book](https://zcash.github.io/halo2/design/gadgets/ecc/var-base-scalar-mul.html#overflow-check).)</span>
-<span class="kw">const</span> <span class="ident">INCOMPLETE_HI_RANGE</span>: <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="op">=</span> <span class="number">0</span>..<span class="ident">INCOMPLETE_HI_LEN</span>;
-<span class="kw">const</span> <span class="ident">INCOMPLETE_HI_LEN</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">INCOMPLETE_LEN</span> <span class="op">/</span> <span class="number">2</span>;
+<span class="comment">// Bits k_{254} to k_{4} inclusive are used in incomplete addition.
+// The `hi` half is k_{254} to k_{130} inclusive (length 125 bits).
+// (It is a coincidence that k_{130} matches the boundary of the
+// overflow check described in [the book](https://zcash.github.io/halo2/design/gadgets/ecc/var-base-scalar-mul.html#overflow-check).)
+</span><span class="kw">const </span>INCOMPLETE_HI_RANGE: Range&lt;usize&gt; = <span class="number">0</span>..INCOMPLETE_HI_LEN;
+<span class="kw">const </span>INCOMPLETE_HI_LEN: usize = INCOMPLETE_LEN / <span class="number">2</span>;
 
-<span class="comment">// Bits k_{254} to k_{4} inclusive are used in incomplete addition.</span>
-<span class="comment">// The `lo` half is k_{129} to k_{4} inclusive (length 126 bits).</span>
-<span class="kw">const</span> <span class="ident">INCOMPLETE_LO_RANGE</span>: <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">INCOMPLETE_HI_LEN</span>..<span class="ident">INCOMPLETE_LEN</span>;
-<span class="kw">const</span> <span class="ident">INCOMPLETE_LO_LEN</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">INCOMPLETE_LEN</span> <span class="op">-</span> <span class="ident">INCOMPLETE_HI_LEN</span>;
+<span class="comment">// Bits k_{254} to k_{4} inclusive are used in incomplete addition.
+// The `lo` half is k_{129} to k_{4} inclusive (length 126 bits).
+</span><span class="kw">const </span>INCOMPLETE_LO_RANGE: Range&lt;usize&gt; = INCOMPLETE_HI_LEN..INCOMPLETE_LEN;
+<span class="kw">const </span>INCOMPLETE_LO_LEN: usize = INCOMPLETE_LEN - INCOMPLETE_HI_LEN;
 
-<span class="comment">// Bits k_{3} to k_{1} inclusive are used in complete addition.</span>
-<span class="comment">// Bit k_{0} is handled separately.</span>
-<span class="kw">const</span> <span class="ident">COMPLETE_RANGE</span>: <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">INCOMPLETE_LEN</span>..(<span class="ident">INCOMPLETE_LEN</span> <span class="op">+</span> <span class="ident">NUM_COMPLETE_BITS</span>);
+<span class="comment">// Bits k_{3} to k_{1} inclusive are used in complete addition.
+// Bit k_{0} is handled separately.
+</span><span class="kw">const </span>COMPLETE_RANGE: Range&lt;usize&gt; = INCOMPLETE_LEN..(INCOMPLETE_LEN + NUM_COMPLETE_BITS);
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
-    <span class="comment">// Selector used to check switching logic on LSB</span>
-    <span class="ident">q_mul_lsb</span>: <span class="ident">Selector</span>,
-    <span class="comment">// Configuration used in complete addition</span>
-    <span class="ident">add_config</span>: <span class="ident">add::Config</span>,
-    <span class="comment">// Configuration used for `hi` bits of the scalar</span>
-    <span class="ident">hi_config</span>: <span class="ident">incomplete::Config</span><span class="op">&lt;</span><span class="ident">INCOMPLETE_HI_LEN</span><span class="op">&gt;</span>,
-    <span class="comment">// Configuration used for `lo` bits of the scalar</span>
-    <span class="ident">lo_config</span>: <span class="ident">incomplete::Config</span><span class="op">&lt;</span><span class="ident">INCOMPLETE_LO_LEN</span><span class="op">&gt;</span>,
-    <span class="comment">// Configuration used for complete addition part of double-and-add algorithm</span>
-    <span class="ident">complete_config</span>: <span class="ident">complete::Config</span>,
-    <span class="comment">// Configuration used to check for overflow</span>
-    <span class="ident">overflow_config</span>: <span class="ident">overflow::Config</span>,
+<span class="attribute">#[derive(Copy, Clone, Debug, Eq, PartialEq)]</span>
+<span class="kw">pub struct </span>Config {
+    <span class="comment">// Selector used to check switching logic on LSB
+    </span>q_mul_lsb: Selector,
+    <span class="comment">// Configuration used in complete addition
+    </span>add_config: add::Config,
+    <span class="comment">// Configuration used for `hi` bits of the scalar
+    </span>hi_config: incomplete::Config&lt;INCOMPLETE_HI_LEN&gt;,
+    <span class="comment">// Configuration used for `lo` bits of the scalar
+    </span>lo_config: incomplete::Config&lt;INCOMPLETE_LO_LEN&gt;,
+    <span class="comment">// Configuration used for complete addition part of double-and-add algorithm
+    </span>complete_config: complete::Config,
+    <span class="comment">// Configuration used to check for overflow
+    </span>overflow_config: overflow::Config,
 }
 
-<span class="kw">impl</span> <span class="ident">Config</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">configure</span>(
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">add_config</span>: <span class="ident">add::Config</span>,
-        <span class="ident">lookup_config</span>: <span class="ident">LookupRangeCheckConfig</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, { <span class="ident">sinsemilla::K</span> }<span class="op">&gt;</span>,
-        <span class="ident">advices</span>: [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>; <span class="number">10</span>],
-    ) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">hi_config</span> <span class="op">=</span> <span class="ident">incomplete::Config::configure</span>(
-            <span class="ident">meta</span>, <span class="ident">advices</span>[<span class="number">9</span>], <span class="ident">advices</span>[<span class="number">3</span>], <span class="ident">advices</span>[<span class="number">0</span>], <span class="ident">advices</span>[<span class="number">1</span>], <span class="ident">advices</span>[<span class="number">4</span>], <span class="ident">advices</span>[<span class="number">5</span>],
+<span class="kw">impl </span>Config {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>configure(
+        meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;,
+        add_config: add::Config,
+        lookup_config: LookupRangeCheckConfig&lt;pallas::Base, { sinsemilla::K }&gt;,
+        advices: [Column&lt;Advice&gt;; <span class="number">10</span>],
+    ) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>hi_config = incomplete::Config::configure(
+            meta, advices[<span class="number">9</span>], advices[<span class="number">3</span>], advices[<span class="number">0</span>], advices[<span class="number">1</span>], advices[<span class="number">4</span>], advices[<span class="number">5</span>],
         );
-        <span class="kw">let</span> <span class="ident">lo_config</span> <span class="op">=</span> <span class="ident">incomplete::Config::configure</span>(
-            <span class="ident">meta</span>, <span class="ident">advices</span>[<span class="number">6</span>], <span class="ident">advices</span>[<span class="number">7</span>], <span class="ident">advices</span>[<span class="number">0</span>], <span class="ident">advices</span>[<span class="number">1</span>], <span class="ident">advices</span>[<span class="number">8</span>], <span class="ident">advices</span>[<span class="number">2</span>],
+        <span class="kw">let </span>lo_config = incomplete::Config::configure(
+            meta, advices[<span class="number">6</span>], advices[<span class="number">7</span>], advices[<span class="number">0</span>], advices[<span class="number">1</span>], advices[<span class="number">8</span>], advices[<span class="number">2</span>],
         );
-        <span class="kw">let</span> <span class="ident">complete_config</span> <span class="op">=</span> <span class="ident">complete::Config::configure</span>(<span class="ident">meta</span>, <span class="ident">advices</span>[<span class="number">9</span>], <span class="ident">add_config</span>);
-        <span class="kw">let</span> <span class="ident">overflow_config</span> <span class="op">=</span>
-            <span class="ident">overflow::Config::configure</span>(<span class="ident">meta</span>, <span class="ident">lookup_config</span>, <span class="ident">advices</span>[<span class="number">6</span>..<span class="number">9</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
+        <span class="kw">let </span>complete_config = complete::Config::configure(meta, advices[<span class="number">9</span>], add_config);
+        <span class="kw">let </span>overflow_config =
+            overflow::Config::configure(meta, lookup_config, advices[<span class="number">6</span>..<span class="number">9</span>].try_into().unwrap());
 
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">Self</span> {
-            <span class="ident">q_mul_lsb</span>: <span class="ident">meta</span>.<span class="ident">selector</span>(),
-            <span class="ident">add_config</span>,
-            <span class="ident">hi_config</span>,
-            <span class="ident">lo_config</span>,
-            <span class="ident">complete_config</span>,
-            <span class="ident">overflow_config</span>,
+        <span class="kw">let </span>config = <span class="self">Self </span>{
+            q_mul_lsb: meta.selector(),
+            add_config,
+            hi_config,
+            lo_config,
+            complete_config,
+            overflow_config,
         };
 
-        <span class="ident">config</span>.<span class="ident">create_gate</span>(<span class="ident">meta</span>);
+        config.create_gate(meta);
 
         <span class="macro">assert_eq!</span>(
-            <span class="ident">config</span>.<span class="ident">hi_config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>, <span class="ident">config</span>.<span class="ident">lo_config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>,
-            <span class="string">&quot;x_p is shared across hi and lo halves.&quot;</span>
-        );
+            config.hi_config.double_and_add.x_p, config.lo_config.double_and_add.x_p,
+            <span class="string">&quot;x_p is shared across hi and lo halves.&quot;
+        </span>);
         <span class="macro">assert_eq!</span>(
-            <span class="ident">config</span>.<span class="ident">hi_config</span>.<span class="ident">y_p</span>, <span class="ident">config</span>.<span class="ident">lo_config</span>.<span class="ident">y_p</span>,
-            <span class="string">&quot;y_p is shared across hi and lo halves.&quot;</span>
-        );
+            config.hi_config.y_p, config.lo_config.y_p,
+            <span class="string">&quot;y_p is shared across hi and lo halves.&quot;
+        </span>);
 
-        <span class="comment">// For both hi_config and lo_config:</span>
-        <span class="comment">// z and lambda1 are assigned on the same row as the add_config output.</span>
-        <span class="comment">// Therefore, z and lambda1 must not overlap with add_config.x_qr, add_config.y_qr.</span>
-        <span class="kw">let</span> <span class="ident">add_config_outputs</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">add_config</span>.<span class="ident">output_columns</span>();
+        <span class="comment">// For both hi_config and lo_config:
+        // z and lambda1 are assigned on the same row as the add_config output.
+        // Therefore, z and lambda1 must not overlap with add_config.x_qr, add_config.y_qr.
+        </span><span class="kw">let </span>add_config_outputs = config.add_config.output_columns();
         {
             <span class="macro">assert!</span>(
-                <span class="op">!</span><span class="ident">add_config_outputs</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">hi_config</span>.<span class="ident">z</span>),
-                <span class="string">&quot;incomplete config z cannot overlap with complete addition columns.&quot;</span>
-            );
+                !add_config_outputs.contains(<span class="kw-2">&amp;</span>config.hi_config.z),
+                <span class="string">&quot;incomplete config z cannot overlap with complete addition columns.&quot;
+            </span>);
             <span class="macro">assert!</span>(
-                <span class="op">!</span><span class="ident">add_config_outputs</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">hi_config</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>),
-                <span class="string">&quot;incomplete config lambda1 cannot overlap with complete addition columns.&quot;</span>
-            );
+                !add_config_outputs.contains(<span class="kw-2">&amp;</span>config.hi_config.double_and_add.lambda_1),
+                <span class="string">&quot;incomplete config lambda1 cannot overlap with complete addition columns.&quot;
+            </span>);
         }
         {
             <span class="macro">assert!</span>(
-                <span class="op">!</span><span class="ident">add_config_outputs</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">lo_config</span>.<span class="ident">z</span>),
-                <span class="string">&quot;incomplete config z cannot overlap with complete addition columns.&quot;</span>
-            );
+                !add_config_outputs.contains(<span class="kw-2">&amp;</span>config.lo_config.z),
+                <span class="string">&quot;incomplete config z cannot overlap with complete addition columns.&quot;
+            </span>);
             <span class="macro">assert!</span>(
-                <span class="op">!</span><span class="ident">add_config_outputs</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">lo_config</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>),
-                <span class="string">&quot;incomplete config lambda1 cannot overlap with complete addition columns.&quot;</span>
-            );
+                !add_config_outputs.contains(<span class="kw-2">&amp;</span>config.lo_config.double_and_add.lambda_1),
+                <span class="string">&quot;incomplete config lambda1 cannot overlap with complete addition columns.&quot;
+            </span>);
         }
 
-        <span class="ident">config</span>
+        config
     }
 
-    <span class="kw">fn</span> <span class="ident">create_gate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) {
-        <span class="comment">// If `lsb` is 0, (x, y) = (x_p, -y_p). If `lsb` is 1, (x, y) = (0,0).</span>
-        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-lsb-gate?partial</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;LSB check&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q_mul_lsb</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_mul_lsb</span>);
+    <span class="kw">fn </span>create_gate(<span class="kw-2">&amp;</span><span class="self">self</span>, meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) {
+        <span class="comment">// If `lsb` is 0, (x, y) = (x_p, -y_p). If `lsb` is 1, (x, y) = (0,0).
+        // https://p.z.cash/halo2-0.1:ecc-var-mul-lsb-gate?partial
+        </span>meta.create_gate(<span class="string">&quot;LSB check&quot;</span>, |meta| {
+            <span class="kw">let </span>q_mul_lsb = meta.query_selector(<span class="self">self</span>.q_mul_lsb);
 
-            <span class="kw">let</span> <span class="ident">z_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">complete_config</span>.<span class="ident">z_complete</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">z_0</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">complete_config</span>.<span class="ident">z_complete</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">x_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">add_config</span>.<span class="ident">x_p</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">y_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">add_config</span>.<span class="ident">y_p</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">base_x</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">add_config</span>.<span class="ident">x_p</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">base_y</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">add_config</span>.<span class="ident">y_p</span>, <span class="ident">Rotation::next</span>());
+            <span class="kw">let </span>z_1 = meta.query_advice(<span class="self">self</span>.complete_config.z_complete, Rotation::cur());
+            <span class="kw">let </span>z_0 = meta.query_advice(<span class="self">self</span>.complete_config.z_complete, Rotation::next());
+            <span class="kw">let </span>x_p = meta.query_advice(<span class="self">self</span>.add_config.x_p, Rotation::cur());
+            <span class="kw">let </span>y_p = meta.query_advice(<span class="self">self</span>.add_config.y_p, Rotation::cur());
+            <span class="kw">let </span>base_x = meta.query_advice(<span class="self">self</span>.add_config.x_p, Rotation::next());
+            <span class="kw">let </span>base_y = meta.query_advice(<span class="self">self</span>.add_config.y_p, Rotation::next());
 
-            <span class="comment">//    z_0 = 2 * z_1 + k_0</span>
-            <span class="comment">// =&gt; k_0 = z_0 - 2 * z_1</span>
-            <span class="kw">let</span> <span class="ident">lsb</span> <span class="op">=</span> <span class="ident">z_0</span> <span class="op">-</span> <span class="ident">z_1</span> <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="number">2</span>);
+            <span class="comment">//    z_0 = 2 * z_1 + k_0
+            // =&gt; k_0 = z_0 - 2 * z_1
+            </span><span class="kw">let </span>lsb = z_0 - z_1 * pallas::Base::from(<span class="number">2</span>);
 
-            <span class="kw">let</span> <span class="ident">bool_check</span> <span class="op">=</span> <span class="ident">bool_check</span>(<span class="ident">lsb</span>.<span class="ident">clone</span>());
+            <span class="kw">let </span>bool_check = bool_check(lsb.clone());
 
-            <span class="comment">// `lsb` = 0 =&gt; (x_p, y_p) = (x, -y)</span>
-            <span class="comment">// `lsb` = 1 =&gt; (x_p, y_p) = (0,0)</span>
-            <span class="kw">let</span> <span class="ident">lsb_x</span> <span class="op">=</span> <span class="ident">ternary</span>(<span class="ident">lsb</span>.<span class="ident">clone</span>(), <span class="ident">x_p</span>.<span class="ident">clone</span>(), <span class="ident">x_p</span> <span class="op">-</span> <span class="ident">base_x</span>);
-            <span class="kw">let</span> <span class="ident">lsb_y</span> <span class="op">=</span> <span class="ident">ternary</span>(<span class="ident">lsb</span>, <span class="ident">y_p</span>.<span class="ident">clone</span>(), <span class="ident">y_p</span> <span class="op">+</span> <span class="ident">base_y</span>);
+            <span class="comment">// `lsb` = 0 =&gt; (x_p, y_p) = (x, -y)
+            // `lsb` = 1 =&gt; (x_p, y_p) = (0,0)
+            </span><span class="kw">let </span>lsb_x = ternary(lsb.clone(), x_p.clone(), x_p - base_x);
+            <span class="kw">let </span>lsb_y = ternary(lsb, y_p.clone(), y_p + base_y);
 
-            <span class="ident">Constraints::with_selector</span>(
-                <span class="ident">q_mul_lsb</span>,
+            Constraints::with_selector(
+                q_mul_lsb,
                 [
-                    (<span class="string">&quot;bool_check&quot;</span>, <span class="ident">bool_check</span>),
-                    (<span class="string">&quot;lsb_x&quot;</span>, <span class="ident">lsb_x</span>),
-                    (<span class="string">&quot;lsb_y&quot;</span>, <span class="ident">lsb_y</span>),
+                    (<span class="string">&quot;bool_check&quot;</span>, bool_check),
+                    (<span class="string">&quot;lsb_x&quot;</span>, lsb_x),
+                    (<span class="string">&quot;lsb_y&quot;</span>, lsb_y),
                 ],
             )
         });
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">assign</span>(
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>assign(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">alpha</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">NonIdentityEccPoint</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">EccPoint</span>, <span class="ident">ScalarVar</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">result</span>, <span class="ident">zs</span>): (<span class="ident">EccPoint</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Z</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">&gt;</span>) <span class="op">=</span> <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;variable-base scalar mul&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="number">0</span>;
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        alpha: AssignedCell&lt;pallas::Base, pallas::Base&gt;,
+        base: <span class="kw-2">&amp;</span>NonIdentityEccPoint,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(EccPoint, ScalarVar), Error&gt; {
+        <span class="kw">let </span>(result, zs): (EccPoint, Vec&lt;Z&lt;pallas::Base&gt;&gt;) = layouter.assign_region(
+            || <span class="string">&quot;variable-base scalar mul&quot;</span>,
+            |<span class="kw-2">mut </span>region| {
+                <span class="kw">let </span>offset = <span class="number">0</span>;
 
-                <span class="comment">// Case `base` into an `EccPoint` for later use.</span>
-                <span class="kw">let</span> <span class="ident">base_point</span>: <span class="ident">EccPoint</span> <span class="op">=</span> <span class="ident">base</span>.<span class="ident">clone</span>().<span class="ident">into</span>();
+                <span class="comment">// Case `base` into an `EccPoint` for later use.
+                </span><span class="kw">let </span>base_point: EccPoint = base.clone().into();
 
-                <span class="comment">// Decompose `k = alpha + t_q` bitwise (big-endian bit order).</span>
-                <span class="kw">let</span> <span class="ident">bits</span> <span class="op">=</span> <span class="ident">decompose_for_scalar_mul</span>(<span class="ident">alpha</span>.<span class="ident">value</span>());
+                <span class="comment">// Decompose `k = alpha + t_q` bitwise (big-endian bit order).
+                </span><span class="kw">let </span>bits = decompose_for_scalar_mul(alpha.value());
 
-                <span class="comment">// Define ranges for each part of the algorithm.</span>
-                <span class="kw">let</span> <span class="ident">bits_incomplete_hi</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">bits</span>[<span class="ident">INCOMPLETE_HI_RANGE</span>];
-                <span class="kw">let</span> <span class="ident">bits_incomplete_lo</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">bits</span>[<span class="ident">INCOMPLETE_LO_RANGE</span>];
-                <span class="kw">let</span> <span class="ident">lsb</span> <span class="op">=</span> <span class="ident">bits</span>[<span class="ident">pallas::Scalar::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">-</span> <span class="number">1</span>];
+                <span class="comment">// Define ranges for each part of the algorithm.
+                </span><span class="kw">let </span>bits_incomplete_hi = <span class="kw-2">&amp;</span>bits[INCOMPLETE_HI_RANGE];
+                <span class="kw">let </span>bits_incomplete_lo = <span class="kw-2">&amp;</span>bits[INCOMPLETE_LO_RANGE];
+                <span class="kw">let </span>lsb = bits[pallas::Scalar::NUM_BITS <span class="kw">as </span>usize - <span class="number">1</span>];
 
-                <span class="comment">// Initialize the accumulator `acc = [2]base` using complete addition.</span>
-                <span class="kw">let</span> <span class="ident">acc</span> <span class="op">=</span>
-                    <span class="self">self</span>.<span class="ident">add_config</span>
-                        .<span class="ident">assign_region</span>(<span class="kw-2">&amp;</span><span class="ident">base_point</span>, <span class="kw-2">&amp;</span><span class="ident">base_point</span>, <span class="ident">offset</span>, <span class="kw-2">&amp;mut</span> <span class="ident">region</span>)<span class="question-mark">?</span>;
+                <span class="comment">// Initialize the accumulator `acc = [2]base` using complete addition.
+                </span><span class="kw">let </span>acc =
+                    <span class="self">self</span>.add_config
+                        .assign_region(<span class="kw-2">&amp;</span>base_point, <span class="kw-2">&amp;</span>base_point, offset, <span class="kw-2">&amp;mut </span>region)<span class="question-mark">?</span>;
 
-                <span class="comment">// Increase the offset by 1 after complete addition.</span>
-                <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>;
+                <span class="comment">// Increase the offset by 1 after complete addition.
+                </span><span class="kw">let </span>offset = offset + <span class="number">1</span>;
 
-                <span class="comment">// Initialize the running sum for scalar decomposition to zero.</span>
-                <span class="comment">//</span>
-                <span class="comment">// `incomplete::Config::double_and_add` will copy this cell directly into</span>
-                <span class="comment">// itself. This is fine because we are just assigning the same value to</span>
-                <span class="comment">// the same cell twice, and then applying an equality constraint between</span>
-                <span class="comment">// the cell and itself (which the permutation argument treats as a no-op).</span>
-                <span class="kw">let</span> <span class="ident">z_init</span> <span class="op">=</span> <span class="ident">Z</span>(<span class="ident">region</span>.<span class="ident">assign_advice_from_constant</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="string">&quot;z_init = 0&quot;</span>,
-                    <span class="self">self</span>.<span class="ident">hi_config</span>.<span class="ident">z</span>,
-                    <span class="ident">offset</span>,
-                    <span class="ident">pallas::Base::zero</span>(),
+                <span class="comment">// Initialize the running sum for scalar decomposition to zero.
+                //
+                // `incomplete::Config::double_and_add` will copy this cell directly into
+                // itself. This is fine because we are just assigning the same value to
+                // the same cell twice, and then applying an equality constraint between
+                // the cell and itself (which the permutation argument treats as a no-op).
+                </span><span class="kw">let </span>z_init = Z(region.assign_advice_from_constant(
+                    || <span class="string">&quot;z_init = 0&quot;</span>,
+                    <span class="self">self</span>.hi_config.z,
+                    offset,
+                    pallas::Base::zero(),
                 )<span class="question-mark">?</span>);
 
-                <span class="comment">// Double-and-add (incomplete addition) for the `hi` half of the scalar decomposition</span>
-                <span class="kw">let</span> (<span class="ident">x_a</span>, <span class="ident">y_a</span>, <span class="ident">zs_incomplete_hi</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">hi_config</span>.<span class="ident">double_and_add</span>(
-                    <span class="kw-2">&amp;mut</span> <span class="ident">region</span>,
-                    <span class="ident">offset</span>,
-                    <span class="ident">base</span>,
-                    <span class="ident">bits_incomplete_hi</span>,
-                    (<span class="ident">X</span>(<span class="ident">acc</span>.<span class="ident">x</span>), <span class="ident">Y</span>(<span class="ident">acc</span>.<span class="ident">y</span>), <span class="ident">z_init</span>.<span class="ident">clone</span>()),
+                <span class="comment">// Double-and-add (incomplete addition) for the `hi` half of the scalar decomposition
+                </span><span class="kw">let </span>(x_a, y_a, zs_incomplete_hi) = <span class="self">self</span>.hi_config.double_and_add(
+                    <span class="kw-2">&amp;mut </span>region,
+                    offset,
+                    base,
+                    bits_incomplete_hi,
+                    (X(acc.x), Y(acc.y), z_init.clone()),
                 )<span class="question-mark">?</span>;
 
-                <span class="comment">// Double-and-add (incomplete addition) for the `lo` half of the scalar decomposition</span>
-                <span class="kw">let</span> <span class="ident">z</span> <span class="op">=</span> <span class="ident">zs_incomplete_hi</span>.<span class="ident">last</span>().<span class="ident">expect</span>(<span class="string">&quot;should not be empty&quot;</span>);
-                <span class="kw">let</span> (<span class="ident">x_a</span>, <span class="ident">y_a</span>, <span class="ident">zs_incomplete_lo</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">lo_config</span>.<span class="ident">double_and_add</span>(
-                    <span class="kw-2">&amp;mut</span> <span class="ident">region</span>,
-                    <span class="ident">offset</span>,
-                    <span class="ident">base</span>,
-                    <span class="ident">bits_incomplete_lo</span>,
-                    (<span class="ident">x_a</span>, <span class="ident">y_a</span>, <span class="ident">z</span>.<span class="ident">clone</span>()),
+                <span class="comment">// Double-and-add (incomplete addition) for the `lo` half of the scalar decomposition
+                </span><span class="kw">let </span>z = zs_incomplete_hi.last().expect(<span class="string">&quot;should not be empty&quot;</span>);
+                <span class="kw">let </span>(x_a, y_a, zs_incomplete_lo) = <span class="self">self</span>.lo_config.double_and_add(
+                    <span class="kw-2">&amp;mut </span>region,
+                    offset,
+                    base,
+                    bits_incomplete_lo,
+                    (x_a, y_a, z.clone()),
                 )<span class="question-mark">?</span>;
 
-                <span class="comment">// Move from incomplete addition to complete addition.</span>
-                <span class="comment">// Inside incomplete::double_and_add, the offset was increased once after initialization</span>
-                <span class="comment">// of the running sum.</span>
-                <span class="comment">// Then, the final assignment of double-and-add was made on row + offset + 1.</span>
-                <span class="comment">// Outside of incomplete addition, we must account for these offset increases by adding</span>
-                <span class="comment">// 2 to the incomplete addition length.</span>
-                <span class="macro">assert!</span>(<span class="ident">INCOMPLETE_LO_RANGE</span>.<span class="ident">len</span>() <span class="op">&gt;</span><span class="op">=</span> <span class="ident">INCOMPLETE_HI_RANGE</span>.<span class="ident">len</span>());
-                <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">offset</span> <span class="op">+</span> <span class="ident">INCOMPLETE_LO_RANGE</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="number">2</span>;
+                <span class="comment">// Move from incomplete addition to complete addition.
+                // Inside incomplete::double_and_add, the offset was increased once after initialization
+                // of the running sum.
+                // Then, the final assignment of double-and-add was made on row + offset + 1.
+                // Outside of incomplete addition, we must account for these offset increases by adding
+                // 2 to the incomplete addition length.
+                </span><span class="macro">assert!</span>(INCOMPLETE_LO_RANGE.len() &gt;= INCOMPLETE_HI_RANGE.len());
+                <span class="kw">let </span>offset = offset + INCOMPLETE_LO_RANGE.len() + <span class="number">2</span>;
 
-                <span class="comment">// Complete addition</span>
-                <span class="kw">let</span> (<span class="ident">acc</span>, <span class="ident">zs_complete</span>) <span class="op">=</span> {
-                    <span class="kw">let</span> <span class="ident">z</span> <span class="op">=</span> <span class="ident">zs_incomplete_lo</span>.<span class="ident">last</span>().<span class="ident">expect</span>(<span class="string">&quot;should not be empty&quot;</span>);
-                    <span class="comment">// Bits used in complete addition. k_{3} to k_{1} inclusive</span>
-                    <span class="comment">// The LSB k_{0} is handled separately.</span>
-                    <span class="kw">let</span> <span class="ident">bits_complete</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">bits</span>[<span class="ident">COMPLETE_RANGE</span>];
-                    <span class="self">self</span>.<span class="ident">complete_config</span>.<span class="ident">assign_region</span>(
-                        <span class="kw-2">&amp;mut</span> <span class="ident">region</span>,
-                        <span class="ident">offset</span>,
-                        <span class="ident">bits_complete</span>,
-                        <span class="kw-2">&amp;</span><span class="ident">base_point</span>,
-                        <span class="ident">x_a</span>,
-                        <span class="ident">y_a</span>,
-                        <span class="ident">z</span>.<span class="ident">clone</span>(),
-                    )<span class="question-mark">?</span>
-                };
+                <span class="comment">// Complete addition
+                </span><span class="kw">let </span>(acc, zs_complete) = {
+                    <span class="kw">let </span>z = zs_incomplete_lo.last().expect(<span class="string">&quot;should not be empty&quot;</span>);
+                    <span class="comment">// Bits used in complete addition. k_{3} to k_{1} inclusive
+                    // The LSB k_{0} is handled separately.
+                    </span><span class="kw">let </span>bits_complete = <span class="kw-2">&amp;</span>bits[COMPLETE_RANGE];
+                    <span class="self">self</span>.complete_config.assign_region(
+                        <span class="kw-2">&amp;mut </span>region,
+                        offset,
+                        bits_complete,
+                        <span class="kw-2">&amp;</span>base_point,
+                        x_a,
+                        y_a,
+                        z.clone(),
+                    )<span class="question-mark">?
+                </span>};
 
-                <span class="comment">// Each iteration of the complete addition uses two rows.</span>
-                <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">offset</span> <span class="op">+</span> <span class="ident">COMPLETE_RANGE</span>.<span class="ident">len</span>() <span class="op">*</span> <span class="number">2</span>;
+                <span class="comment">// Each iteration of the complete addition uses two rows.
+                </span><span class="kw">let </span>offset = offset + COMPLETE_RANGE.len() * <span class="number">2</span>;
 
-                <span class="comment">// Process the least significant bit</span>
-                <span class="kw">let</span> <span class="ident">z_1</span> <span class="op">=</span> <span class="ident">zs_complete</span>.<span class="ident">last</span>().<span class="ident">unwrap</span>().<span class="ident">clone</span>();
-                <span class="kw">let</span> (<span class="ident">result</span>, <span class="ident">z_0</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">process_lsb</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">offset</span>, <span class="ident">base</span>, <span class="ident">acc</span>, <span class="ident">z_1</span>, <span class="ident">lsb</span>)<span class="question-mark">?</span>;
+                <span class="comment">// Process the least significant bit
+                </span><span class="kw">let </span>z_1 = zs_complete.last().unwrap().clone();
+                <span class="kw">let </span>(result, z_0) = <span class="self">self</span>.process_lsb(<span class="kw-2">&amp;mut </span>region, offset, base, acc, z_1, lsb)<span class="question-mark">?</span>;
 
-                <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-                <span class="comment">// Check that the correct multiple is obtained.</span>
-                {
-                    <span class="kw">use</span> <span class="ident">group::Curve</span>;
+                <span class="attribute">#[cfg(test)]</span>
+                <span class="comment">// Check that the correct multiple is obtained.
+                </span>{
+                    <span class="kw">use </span>group::Curve;
 
-                    <span class="kw">let</span> <span class="ident">base</span> <span class="op">=</span> <span class="ident">base</span>.<span class="ident">point</span>();
-                    <span class="kw">let</span> <span class="ident">alpha</span> <span class="op">=</span> <span class="ident">alpha</span>
-                        .<span class="ident">value</span>()
-                        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">alpha</span><span class="op">|</span> <span class="ident">pallas::Scalar::from_repr</span>(<span class="ident">alpha</span>.<span class="ident">to_repr</span>()).<span class="ident">unwrap</span>());
-                    <span class="kw">let</span> <span class="ident">real_mul</span> <span class="op">=</span> <span class="ident">base</span>.<span class="ident">zip</span>(<span class="ident">alpha</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">base</span>, <span class="ident">alpha</span>)<span class="op">|</span> <span class="ident">base</span> <span class="op">*</span> <span class="ident">alpha</span>);
-                    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">point</span>();
+                    <span class="kw">let </span>base = base.point();
+                    <span class="kw">let </span>alpha = alpha
+                        .value()
+                        .map(|alpha| pallas::Scalar::from_repr(alpha.to_repr()).unwrap());
+                    <span class="kw">let </span>real_mul = base.zip(alpha).map(|(base, alpha)| base * alpha);
+                    <span class="kw">let </span>result = result.point();
 
-                    <span class="ident">real_mul</span>
-                        .<span class="ident">zip</span>(<span class="ident">result</span>)
-                        .<span class="ident">assert_if_known</span>(<span class="op">|</span>(<span class="ident">real_mul</span>, <span class="ident">result</span>)<span class="op">|</span> <span class="kw-2">&amp;</span><span class="ident">real_mul</span>.<span class="ident">to_affine</span>() <span class="op">==</span> <span class="ident">result</span>);
+                    real_mul
+                        .zip(result)
+                        .assert_if_known(|(real_mul, result)| <span class="kw-2">&amp;</span>real_mul.to_affine() == result);
                 }
 
-                <span class="kw">let</span> <span class="ident">zs</span> <span class="op">=</span> {
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">zs</span> <span class="op">=</span> <span class="ident">std::iter::empty</span>()
-                        .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">z_init</span>))
-                        .<span class="ident">chain</span>(<span class="ident">zs_incomplete_hi</span>.<span class="ident">into_iter</span>())
-                        .<span class="ident">chain</span>(<span class="ident">zs_incomplete_lo</span>.<span class="ident">into_iter</span>())
-                        .<span class="ident">chain</span>(<span class="ident">zs_complete</span>.<span class="ident">into_iter</span>())
-                        .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">z_0</span>))
-                        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-                    <span class="macro">assert_eq!</span>(<span class="ident">zs</span>.<span class="ident">len</span>(), <span class="ident">pallas::Scalar::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">+</span> <span class="number">1</span>);
+                <span class="kw">let </span>zs = {
+                    <span class="kw">let </span><span class="kw-2">mut </span>zs = std::iter::empty()
+                        .chain(<span class="prelude-val">Some</span>(z_init))
+                        .chain(zs_incomplete_hi.into_iter())
+                        .chain(zs_incomplete_lo.into_iter())
+                        .chain(zs_complete.into_iter())
+                        .chain(<span class="prelude-val">Some</span>(z_0))
+                        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+                    <span class="macro">assert_eq!</span>(zs.len(), pallas::Scalar::NUM_BITS <span class="kw">as </span>usize + <span class="number">1</span>);
 
-                    <span class="comment">// This reverses zs to give us [z_0, z_1, ..., z_{254}, z_{255}].</span>
-                    <span class="ident">zs</span>.<span class="ident">reverse</span>();
-                    <span class="ident">zs</span>
+                    <span class="comment">// This reverses zs to give us [z_0, z_1, ..., z_{254}, z_{255}].
+                    </span>zs.reverse();
+                    zs
                 };
 
-                <span class="prelude-val">Ok</span>((<span class="ident">result</span>, <span class="ident">zs</span>))
+                <span class="prelude-val">Ok</span>((result, zs))
             },
         )<span class="question-mark">?</span>;
 
-        <span class="self">self</span>.<span class="ident">overflow_config</span>.<span class="ident">overflow_check</span>(
-            <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;overflow check&quot;</span>),
-            <span class="ident">alpha</span>.<span class="ident">clone</span>(),
-            <span class="kw-2">&amp;</span><span class="ident">zs</span>,
+        <span class="self">self</span>.overflow_config.overflow_check(
+            layouter.namespace(|| <span class="string">&quot;overflow check&quot;</span>),
+            alpha.clone(),
+            <span class="kw-2">&amp;</span>zs,
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>((<span class="ident">result</span>, <span class="ident">ScalarVar::BaseFieldElem</span>(<span class="ident">alpha</span>)))
+        <span class="prelude-val">Ok</span>((result, ScalarVar::BaseFieldElem(alpha)))
     }
 
-    <span class="doccomment">/// Processes the final scalar bit `k_0`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Assumptions for this sub-region:</span>
-    <span class="doccomment">/// - `acc_x` and `acc_y` are assigned in row `offset` by the previous complete</span>
-    <span class="doccomment">///   addition. They will be copied into themselves.</span>
-    <span class="doccomment">/// - `z_1 is assigned in row `offset` by the mul::complete region assignment. We only</span>
-    <span class="doccomment">///   use its value here.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// `x_p` and `y_p` are assigned here, and then copied into themselves by the complete</span>
-    <span class="doccomment">/// addition subregion.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// ```text</span>
-    <span class="doccomment">/// | x_p  | y_p  | acc_x | acc_y | complete addition  | z_1 | q_mul_lsb = 1</span>
-    <span class="doccomment">/// |base_x|base_y| res_x | res_y |   |   |    |   |   | z_0 |</span>
-    <span class="doccomment">/// ```</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [Specification](https://p.z.cash/halo2-0.1:ecc-var-mul-lsb-gate?partial).</span>
-    <span class="kw">fn</span> <span class="ident">process_lsb</span>(
+    <span class="doccomment">/// Processes the final scalar bit `k_0`.
+    ///
+    /// Assumptions for this sub-region:
+    /// - `acc_x` and `acc_y` are assigned in row `offset` by the previous complete
+    ///   addition. They will be copied into themselves.
+    /// - `z_1 is assigned in row `offset` by the mul::complete region assignment. We only
+    ///   use its value here.
+    ///
+    /// `x_p` and `y_p` are assigned here, and then copied into themselves by the complete
+    /// addition subregion.
+    ///
+    /// ```text
+    /// | x_p  | y_p  | acc_x | acc_y | complete addition  | z_1 | q_mul_lsb = 1
+    /// |base_x|base_y| res_x | res_y |   |   |    |   |   | z_0 |
+    /// ```
+    ///
+    /// [Specification](https://p.z.cash/halo2-0.1:ecc-var-mul-lsb-gate?partial).
+    </span><span class="kw">fn </span>process_lsb(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident">NonIdentityEccPoint</span>,
-        <span class="ident">acc</span>: <span class="ident">EccPoint</span>,
-        <span class="ident">z_1</span>: <span class="ident">Z</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">lsb</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">EccPoint</span>, <span class="ident">Z</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Enforce switching logic on LSB using a custom gate</span>
-        <span class="self">self</span>.<span class="ident">q_mul_lsb</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        offset: usize,
+        base: <span class="kw-2">&amp;</span>NonIdentityEccPoint,
+        acc: EccPoint,
+        z_1: Z&lt;pallas::Base&gt;,
+        lsb: Value&lt;bool&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(EccPoint, Z&lt;pallas::Base&gt;), Error&gt; {
+        <span class="comment">// Enforce switching logic on LSB using a custom gate
+        </span><span class="self">self</span>.q_mul_lsb.enable(region, offset)<span class="question-mark">?</span>;
 
-        <span class="comment">// z_1 has been assigned at (z_complete, offset).</span>
-        <span class="comment">// Assign z_0 = 2⋅z_1 + k_0</span>
-        <span class="kw">let</span> <span class="ident">z_0</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">z_0_val</span> <span class="op">=</span> <span class="ident">z_1</span>.<span class="ident">value</span>().<span class="ident">zip</span>(<span class="ident">lsb</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">z_1</span>, <span class="ident">lsb</span>)<span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">lsb</span> <span class="op">=</span> <span class="ident">pallas::Base::from</span>(<span class="ident">lsb</span> <span class="kw">as</span> <span class="ident">u64</span>);
-                <span class="ident">z_1</span> <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="number">2</span>) <span class="op">+</span> <span class="ident">lsb</span>
+        <span class="comment">// z_1 has been assigned at (z_complete, offset).
+        // Assign z_0 = 2⋅z_1 + k_0
+        </span><span class="kw">let </span>z_0 = {
+            <span class="kw">let </span>z_0_val = z_1.value().zip(lsb).map(|(z_1, lsb)| {
+                <span class="kw">let </span>lsb = pallas::Base::from(lsb <span class="kw">as </span>u64);
+                z_1 * pallas::Base::from(<span class="number">2</span>) + lsb
             });
-            <span class="kw">let</span> <span class="ident">z_0_cell</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;z_0&quot;</span>,
-                <span class="self">self</span>.<span class="ident">complete_config</span>.<span class="ident">z_complete</span>,
-                <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>,
-                <span class="op">|</span><span class="op">|</span> <span class="ident">z_0_val</span>,
+            <span class="kw">let </span>z_0_cell = region.assign_advice(
+                || <span class="string">&quot;z_0&quot;</span>,
+                <span class="self">self</span>.complete_config.z_complete,
+                offset + <span class="number">1</span>,
+                || z_0_val,
             )<span class="question-mark">?</span>;
 
-            <span class="ident">Z</span>(<span class="ident">z_0_cell</span>)
+            Z(z_0_cell)
         };
 
-        <span class="comment">// Copy in `base_x`, `base_y` to use in the LSB gate</span>
-        <span class="ident">base</span>.<span class="ident">x</span>()
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;copy base_x&quot;</span>, <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">add_config</span>.<span class="ident">x_p</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
-        <span class="ident">base</span>.<span class="ident">y</span>()
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;copy base_y&quot;</span>, <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">add_config</span>.<span class="ident">y_p</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Copy in `base_x`, `base_y` to use in the LSB gate
+        </span>base.x()
+            .copy_advice(|| <span class="string">&quot;copy base_x&quot;</span>, region, <span class="self">self</span>.add_config.x_p, offset + <span class="number">1</span>)<span class="question-mark">?</span>;
+        base.y()
+            .copy_advice(|| <span class="string">&quot;copy base_y&quot;</span>, region, <span class="self">self</span>.add_config.y_p, offset + <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// If `lsb` is 0, return `Acc + (-P)`. If `lsb` is 1, simply return `Acc + 0`.</span>
-        <span class="kw">let</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">lsb</span>.<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">lsb</span><span class="op">|</span> {
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">lsb</span> {
-                <span class="ident">base</span>.<span class="ident">x</span>.<span class="ident">value</span>().<span class="ident">cloned</span>()
-            } <span class="kw">else</span> {
-                <span class="ident">Value::known</span>(<span class="ident">Assigned::Zero</span>)
+        <span class="comment">// If `lsb` is 0, return `Acc + (-P)`. If `lsb` is 1, simply return `Acc + 0`.
+        </span><span class="kw">let </span>x = lsb.and_then(|lsb| {
+            <span class="kw">if </span>!lsb {
+                base.x.value().cloned()
+            } <span class="kw">else </span>{
+                Value::known(Assigned::Zero)
             }
         });
 
-        <span class="kw">let</span> <span class="ident">y</span> <span class="op">=</span> <span class="ident">lsb</span>.<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">lsb</span><span class="op">|</span> {
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">lsb</span> {
-                <span class="op">-</span><span class="ident">base</span>.<span class="ident">y</span>.<span class="ident">value</span>()
-            } <span class="kw">else</span> {
-                <span class="ident">Value::known</span>(<span class="ident">Assigned::Zero</span>)
+        <span class="kw">let </span>y = lsb.and_then(|lsb| {
+            <span class="kw">if </span>!lsb {
+                -base.y.value()
+            } <span class="kw">else </span>{
+                Value::known(Assigned::Zero)
             }
         });
 
-        <span class="kw">let</span> <span class="ident">x_cell</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;x&quot;</span>, <span class="self">self</span>.<span class="ident">add_config</span>.<span class="ident">x_p</span>, <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">x</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">y_cell</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;y&quot;</span>, <span class="self">self</span>.<span class="ident">add_config</span>.<span class="ident">y_p</span>, <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">y</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>x_cell = region.assign_advice(|| <span class="string">&quot;x&quot;</span>, <span class="self">self</span>.add_config.x_p, offset, || x)<span class="question-mark">?</span>;
+        <span class="kw">let </span>y_cell = region.assign_advice(|| <span class="string">&quot;y&quot;</span>, <span class="self">self</span>.add_config.y_p, offset, || y)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">p</span> <span class="op">=</span> <span class="ident">EccPoint</span> {
-            <span class="ident">x</span>: <span class="ident">x_cell</span>,
-            <span class="ident">y</span>: <span class="ident">y_cell</span>,
+        <span class="kw">let </span>p = EccPoint {
+            x: x_cell,
+            y: y_cell,
         };
 
-        <span class="comment">// Return the result of the final complete addition as `[scalar]B`</span>
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">add_config</span>.<span class="ident">assign_region</span>(<span class="kw-2">&amp;</span><span class="ident">p</span>, <span class="kw-2">&amp;</span><span class="ident">acc</span>, <span class="ident">offset</span>, <span class="ident">region</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Return the result of the final complete addition as `[scalar]B`
+        </span><span class="kw">let </span>result = <span class="self">self</span>.add_config.assign_region(<span class="kw-2">&amp;</span>p, <span class="kw-2">&amp;</span>acc, offset, region)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>((<span class="ident">result</span>, <span class="ident">z_0</span>))
+        <span class="prelude-val">Ok</span>((result, z_0))
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="comment">// `x`-coordinate of the accumulator.</span>
-<span class="kw">struct</span> <span class="ident">X</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(<span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span><span class="op">&gt;</span>);
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">X</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span><span class="op">&gt;</span>;
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="comment">// `x`-coordinate of the accumulator.
+</span><span class="kw">struct </span>X&lt;F: FieldExt&gt;(AssignedCell&lt;Assigned&lt;F&gt;, F&gt;);
+<span class="kw">impl</span>&lt;F: FieldExt&gt; Deref <span class="kw">for </span>X&lt;F&gt; {
+    <span class="kw">type </span>Target = AssignedCell&lt;Assigned&lt;F&gt;, F&gt;;
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
-    }
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="comment">// `y`-coordinate of the accumulator.</span>
-<span class="kw">struct</span> <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(<span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span><span class="op">&gt;</span>);
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">Y</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">F</span><span class="op">&gt;</span>;
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="comment">// `y`-coordinate of the accumulator.
+</span><span class="kw">struct </span>Y&lt;F: FieldExt&gt;(AssignedCell&lt;Assigned&lt;F&gt;, F&gt;);
+<span class="kw">impl</span>&lt;F: FieldExt&gt; Deref <span class="kw">for </span>Y&lt;F&gt; {
+    <span class="kw">type </span>Target = AssignedCell&lt;Assigned&lt;F&gt;, F&gt;;
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
-    }
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="comment">// Cumulative sum `z` used to decompose the scalar.</span>
-<span class="kw">struct</span> <span class="ident">Z</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(<span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>);
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Deref</span> <span class="kw">for</span> <span class="ident">Z</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>;
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="comment">// Cumulative sum `z` used to decompose the scalar.
+</span><span class="kw">struct </span>Z&lt;F: FieldExt&gt;(AssignedCell&lt;F, F&gt;);
+<span class="kw">impl</span>&lt;F: FieldExt&gt; Deref <span class="kw">for </span>Z&lt;F&gt; {
+    <span class="kw">type </span>Target = AssignedCell&lt;F, F&gt;;
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
-    }
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
 }
 
-<span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-witness-scalar?partial</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::assign_op_pattern</span>)]</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::ptr_offset_with_cast</span>)]</span>
-<span class="kw">fn</span> <span class="ident">decompose_for_scalar_mul</span>(<span class="ident">scalar</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+<span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-witness-scalar?partial
+</span><span class="attribute">#[allow(clippy::assign_op_pattern)]</span>
+<span class="attribute">#[allow(clippy::ptr_offset_with_cast)]</span>
+<span class="kw">fn </span>decompose_for_scalar_mul(scalar: Value&lt;<span class="kw-2">&amp;</span>pallas::Base&gt;) -&gt; Vec&lt;Value&lt;bool&gt;&gt; {
     <span class="macro">construct_uint!</span> {
-        <span class="kw">struct</span> <span class="ident">U256</span>(<span class="number">4</span>);
+        <span class="kw">struct </span>U256(<span class="number">4</span>);
     }
 
-    <span class="kw">let</span> <span class="ident">bitstring</span> <span class="op">=</span> <span class="ident">scalar</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">scalar</span><span class="op">|</span> {
-        <span class="comment">// We use `k = scalar + t_q` in the double-and-add algorithm, where</span>
-        <span class="comment">// the scalar field `F_q = 2^254 + t_q`.</span>
-        <span class="comment">// Note that the addition `scalar + t_q` is not reduced.</span>
-        <span class="comment">//</span>
-        <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">U256::from_little_endian</span>(<span class="kw-2">&amp;</span><span class="ident">scalar</span>.<span class="ident">to_repr</span>());
-        <span class="kw">let</span> <span class="ident">t_q</span> <span class="op">=</span> <span class="ident">U256::from_little_endian</span>(<span class="kw-2">&amp;</span><span class="ident">T_Q</span>.<span class="ident">to_le_bytes</span>());
-        <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="ident">scalar</span> <span class="op">+</span> <span class="ident">t_q</span>;
+    <span class="kw">let </span>bitstring = scalar.map(|scalar| {
+        <span class="comment">// We use `k = scalar + t_q` in the double-and-add algorithm, where
+        // the scalar field `F_q = 2^254 + t_q`.
+        // Note that the addition `scalar + t_q` is not reduced.
+        //
+        </span><span class="kw">let </span>scalar = U256::from_little_endian(<span class="kw-2">&amp;</span>scalar.to_repr());
+        <span class="kw">let </span>t_q = U256::from_little_endian(<span class="kw-2">&amp;</span>T_Q.to_le_bytes());
+        <span class="kw">let </span>k = scalar + t_q;
 
-        <span class="comment">// Little-endian bit representation of `k`.</span>
-        <span class="kw">let</span> <span class="ident">bitstring</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">le_bytes</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">32</span>];
-            <span class="ident">k</span>.<span class="ident">to_little_endian</span>(<span class="kw-2">&amp;mut</span> <span class="ident">le_bytes</span>);
-            <span class="ident">le_bytes</span>
-                .<span class="ident">into_iter</span>()
-                .<span class="ident">flat_map</span>(<span class="op">|</span><span class="ident">byte</span><span class="op">|</span> (<span class="number">0</span>..<span class="number">8</span>).<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">shift</span><span class="op">|</span> (<span class="ident">byte</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">shift</span>) <span class="op">%</span> <span class="number">2</span> <span class="op">==</span> <span class="number">1</span>))
+        <span class="comment">// Little-endian bit representation of `k`.
+        </span><span class="kw">let </span>bitstring = {
+            <span class="kw">let </span><span class="kw-2">mut </span>le_bytes = [<span class="number">0u8</span>; <span class="number">32</span>];
+            k.to_little_endian(<span class="kw-2">&amp;mut </span>le_bytes);
+            le_bytes
+                .into_iter()
+                .flat_map(|byte| (<span class="number">0</span>..<span class="number">8</span>).map(<span class="kw">move </span>|shift| (byte &gt;&gt; shift) % <span class="number">2 </span>== <span class="number">1</span>))
         };
 
-        <span class="comment">// Take the first 255 bits.</span>
-        <span class="ident">bitstring</span>
-            .<span class="ident">take</span>(<span class="ident">pallas::Scalar::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span>)
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+        <span class="comment">// Take the first 255 bits.
+        </span>bitstring
+            .take(pallas::Scalar::NUM_BITS <span class="kw">as </span>usize)
+            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
     });
 
-    <span class="comment">// Transpose.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bitstring</span> <span class="op">=</span> <span class="ident">bitstring</span>.<span class="ident">transpose_vec</span>(<span class="ident">pallas::Scalar::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span>);
-    <span class="comment">// Reverse to get the big-endian bit representation.</span>
-    <span class="ident">bitstring</span>.<span class="ident">reverse</span>();
-    <span class="ident">bitstring</span>
+    <span class="comment">// Transpose.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>bitstring = bitstring.transpose_vec(pallas::Scalar::NUM_BITS <span class="kw">as </span>usize);
+    <span class="comment">// Reverse to get the big-endian bit representation.
+    </span>bitstring.reverse();
+    bitstring
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">group</span>::{
-        <span class="ident">ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeField</span>},
-        <span class="ident">Curve</span>,
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">pub mod </span>tests {
+    <span class="kw">use </span>group::{
+        ff::{Field, PrimeField},
+        Curve,
     };
-    <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-        <span class="ident">circuit</span>::{<span class="ident">Chip</span>, <span class="ident">Layouter</span>, <span class="ident">Value</span>},
-        <span class="ident">plonk::Error</span>,
+    <span class="kw">use </span>halo2_proofs::{
+        circuit::{Chip, Layouter, Value},
+        plonk::Error,
     };
-    <span class="kw">use</span> <span class="ident">pasta_curves::pallas</span>;
-    <span class="kw">use</span> <span class="ident">rand::rngs::OsRng</span>;
+    <span class="kw">use </span>pasta_curves::pallas;
+    <span class="kw">use </span>rand::rngs::OsRng;
 
-    <span class="kw">use</span> <span class="kw">crate</span>::{
-        <span class="ident">ecc</span>::{
-            <span class="ident">chip</span>::{<span class="ident">EccChip</span>, <span class="ident">EccPoint</span>},
-            <span class="ident">tests::TestFixedBases</span>,
-            <span class="ident">EccInstructions</span>, <span class="ident">NonIdentityPoint</span>, <span class="ident">Point</span>, <span class="ident">ScalarVar</span>,
+    <span class="kw">use crate</span>::{
+        ecc::{
+            chip::{EccChip, EccPoint},
+            tests::TestFixedBases,
+            EccInstructions, NonIdentityPoint, Point, ScalarVar,
         },
-        <span class="ident">utilities::UtilitiesInstructions</span>,
+        utilities::UtilitiesInstructions,
     };
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">test_mul</span>(
-        <span class="ident">chip</span>: <span class="ident">EccChip</span><span class="op">&lt;</span><span class="ident">TestFixedBases</span><span class="op">&gt;</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">p</span>: <span class="kw-2">&amp;</span><span class="ident">NonIdentityPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">EccChip</span><span class="op">&lt;</span><span class="ident">TestFixedBases</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">p_val</span>: <span class="ident">pallas::Affine</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">column</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">config</span>().<span class="ident">advices</span>[<span class="number">0</span>];
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>test_mul(
+        chip: EccChip&lt;TestFixedBases&gt;,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        p: <span class="kw-2">&amp;</span>NonIdentityPoint&lt;pallas::Affine, EccChip&lt;TestFixedBases&gt;&gt;,
+        p_val: pallas::Affine,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">let </span>column = chip.config().advices[<span class="number">0</span>];
 
-        <span class="kw">fn</span> <span class="ident">constrain_equal_non_id</span><span class="op">&lt;</span>
-            <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">Point</span> <span class="op">=</span> <span class="ident">EccPoint</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">std::fmt::Debug</span>,
-        <span class="op">&gt;</span>(
-            <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-            <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-            <span class="ident">base_val</span>: <span class="ident">pallas::Affine</span>,
-            <span class="ident">scalar_val</span>: <span class="ident">pallas::Base</span>,
-            <span class="ident">result</span>: <span class="ident">Point</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
-        ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-            <span class="comment">// Move scalar from base field into scalar field (which always fits</span>
-            <span class="comment">// for Pallas).</span>
-            <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">pallas::Scalar::from_repr</span>(<span class="ident">scalar_val</span>.<span class="ident">to_repr</span>()).<span class="ident">unwrap</span>();
-            <span class="kw">let</span> <span class="ident">expected</span> <span class="op">=</span> <span class="ident">NonIdentityPoint::new</span>(
-                <span class="ident">chip</span>,
-                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;expected point&quot;</span>),
-                <span class="ident">Value::known</span>((<span class="ident">base_val</span> <span class="op">*</span> <span class="ident">scalar</span>).<span class="ident">to_affine</span>()),
+        <span class="kw">fn </span>constrain_equal_non_id&lt;
+            EccChip: EccInstructions&lt;pallas::Affine, Point = EccPoint&gt; + Clone + Eq + std::fmt::Debug,
+        &gt;(
+            chip: EccChip,
+            <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+            base_val: pallas::Affine,
+            scalar_val: pallas::Base,
+            result: Point&lt;pallas::Affine, EccChip&gt;,
+        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+            <span class="comment">// Move scalar from base field into scalar field (which always fits
+            // for Pallas).
+            </span><span class="kw">let </span>scalar = pallas::Scalar::from_repr(scalar_val.to_repr()).unwrap();
+            <span class="kw">let </span>expected = NonIdentityPoint::new(
+                chip,
+                layouter.namespace(|| <span class="string">&quot;expected point&quot;</span>),
+                Value::known((base_val * scalar).to_affine()),
             )<span class="question-mark">?</span>;
-            <span class="ident">result</span>.<span class="ident">constrain_equal</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;constrain result&quot;</span>), <span class="kw-2">&amp;</span><span class="ident">expected</span>)
+            result.constrain_equal(layouter.namespace(|| <span class="string">&quot;constrain result&quot;</span>), <span class="kw-2">&amp;</span>expected)
         }
 
-        <span class="comment">// [a]B</span>
-        {
-            <span class="kw">let</span> <span class="ident">scalar_val</span> <span class="op">=</span> <span class="ident">pallas::Base::random</span>(<span class="ident">OsRng</span>);
-            <span class="kw">let</span> (<span class="ident">result</span>, <span class="kw">_</span>) <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">load_private</span>(
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;random scalar&quot;</span>),
-                    <span class="ident">column</span>,
-                    <span class="ident">Value::known</span>(<span class="ident">scalar_val</span>),
+        <span class="comment">// [a]B
+        </span>{
+            <span class="kw">let </span>scalar_val = pallas::Base::random(OsRng);
+            <span class="kw">let </span>(result, <span class="kw">_</span>) = {
+                <span class="kw">let </span>scalar = chip.load_private(
+                    layouter.namespace(|| <span class="string">&quot;random scalar&quot;</span>),
+                    column,
+                    Value::known(scalar_val),
                 )<span class="question-mark">?</span>;
-                <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">ScalarVar::from_base</span>(
-                    <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;ScalarVar from_base&quot;</span>),
-                    <span class="kw-2">&amp;</span><span class="ident">scalar</span>,
+                <span class="kw">let </span>scalar = ScalarVar::from_base(
+                    chip.clone(),
+                    layouter.namespace(|| <span class="string">&quot;ScalarVar from_base&quot;</span>),
+                    <span class="kw-2">&amp;</span>scalar,
                 )<span class="question-mark">?</span>;
-                <span class="ident">p</span>.<span class="ident">mul</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;random [a]B&quot;</span>), <span class="ident">scalar</span>)<span class="question-mark">?</span>
-            };
-            <span class="ident">constrain_equal_non_id</span>(
-                <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;random [a]B&quot;</span>),
-                <span class="ident">p_val</span>,
-                <span class="ident">scalar_val</span>,
-                <span class="ident">result</span>,
+                p.mul(layouter.namespace(|| <span class="string">&quot;random [a]B&quot;</span>), scalar)<span class="question-mark">?
+            </span>};
+            constrain_equal_non_id(
+                chip.clone(),
+                layouter.namespace(|| <span class="string">&quot;random [a]B&quot;</span>),
+                p_val,
+                scalar_val,
+                result,
             )<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// [0]B should return (0,0) since variable-base scalar multiplication</span>
-        <span class="comment">// uses complete addition for the final bits of the scalar.</span>
-        {
-            <span class="kw">let</span> <span class="ident">scalar_val</span> <span class="op">=</span> <span class="ident">pallas::Base::zero</span>();
-            <span class="kw">let</span> (<span class="ident">result</span>, <span class="kw">_</span>) <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">load_private</span>(
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;zero&quot;</span>),
-                    <span class="ident">column</span>,
-                    <span class="ident">Value::known</span>(<span class="ident">scalar_val</span>),
+        <span class="comment">// [0]B should return (0,0) since variable-base scalar multiplication
+        // uses complete addition for the final bits of the scalar.
+        </span>{
+            <span class="kw">let </span>scalar_val = pallas::Base::zero();
+            <span class="kw">let </span>(result, <span class="kw">_</span>) = {
+                <span class="kw">let </span>scalar = chip.load_private(
+                    layouter.namespace(|| <span class="string">&quot;zero&quot;</span>),
+                    column,
+                    Value::known(scalar_val),
                 )<span class="question-mark">?</span>;
-                <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">ScalarVar::from_base</span>(
-                    <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;ScalarVar from_base&quot;</span>),
-                    <span class="kw-2">&amp;</span><span class="ident">scalar</span>,
+                <span class="kw">let </span>scalar = ScalarVar::from_base(
+                    chip.clone(),
+                    layouter.namespace(|| <span class="string">&quot;ScalarVar from_base&quot;</span>),
+                    <span class="kw-2">&amp;</span>scalar,
                 )<span class="question-mark">?</span>;
-                <span class="ident">p</span>.<span class="ident">mul</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;[0]B&quot;</span>), <span class="ident">scalar</span>)<span class="question-mark">?</span>
-            };
-            <span class="ident">result</span>
-                .<span class="ident">inner</span>()
-                .<span class="ident">is_identity</span>()
-                .<span class="ident">assert_if_known</span>(<span class="op">|</span><span class="ident">is_identity</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">is_identity</span>);
+                p.mul(layouter.namespace(|| <span class="string">&quot;[0]B&quot;</span>), scalar)<span class="question-mark">?
+            </span>};
+            result
+                .inner()
+                .is_identity()
+                .assert_if_known(|is_identity| <span class="kw-2">*</span>is_identity);
         }
 
-        <span class="comment">// [-1]B (the largest possible base field element)</span>
-        {
-            <span class="kw">let</span> <span class="ident">scalar_val</span> <span class="op">=</span> <span class="op">-</span><span class="ident">pallas::Base::one</span>();
-            <span class="kw">let</span> (<span class="ident">result</span>, <span class="kw">_</span>) <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">load_private</span>(
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;-1&quot;</span>),
-                    <span class="ident">column</span>,
-                    <span class="ident">Value::known</span>(<span class="ident">scalar_val</span>),
+        <span class="comment">// [-1]B (the largest possible base field element)
+        </span>{
+            <span class="kw">let </span>scalar_val = -pallas::Base::one();
+            <span class="kw">let </span>(result, <span class="kw">_</span>) = {
+                <span class="kw">let </span>scalar = chip.load_private(
+                    layouter.namespace(|| <span class="string">&quot;-1&quot;</span>),
+                    column,
+                    Value::known(scalar_val),
                 )<span class="question-mark">?</span>;
-                <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">ScalarVar::from_base</span>(
-                    <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;ScalarVar from_base&quot;</span>),
-                    <span class="kw-2">&amp;</span><span class="ident">scalar</span>,
+                <span class="kw">let </span>scalar = ScalarVar::from_base(
+                    chip.clone(),
+                    layouter.namespace(|| <span class="string">&quot;ScalarVar from_base&quot;</span>),
+                    <span class="kw-2">&amp;</span>scalar,
                 )<span class="question-mark">?</span>;
-                <span class="ident">p</span>.<span class="ident">mul</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;[-1]B&quot;</span>), <span class="ident">scalar</span>)<span class="question-mark">?</span>
-            };
-            <span class="ident">constrain_equal_non_id</span>(
-                <span class="ident">chip</span>,
-                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;[-1]B&quot;</span>),
-                <span class="ident">p_val</span>,
-                <span class="ident">scalar_val</span>,
-                <span class="ident">result</span>,
+                p.mul(layouter.namespace(|| <span class="string">&quot;[-1]B&quot;</span>), scalar)<span class="question-mark">?
+            </span>};
+            constrain_equal_non_id(
+                chip,
+                layouter.namespace(|| <span class="string">&quot;[-1]B&quot;</span>),
+                p_val,
+                scalar_val,
+                result,
             )<span class="question-mark">?</span>;
         }
 
@@ -1194,5 +1188,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -143,130 +137,129 @@
 <span id="122">122</span>
 <span id="123">123</span>
 <span id="124">124</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">halo2_proofs</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">plonk::Expression</span>};
+</pre><pre class="rust"><code><span class="kw">use </span>halo2_proofs::{arithmetic::FieldExt, plonk::Expression};
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Gate</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(<span class="kw">pub</span> <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>);
+<span class="kw">pub struct </span>Gate&lt;F: FieldExt&gt;(<span class="kw">pub </span>Expression&lt;F&gt;);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Gate</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">ones</span>() -&gt; <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="ident">Expression::Constant</span>(<span class="ident">F::one</span>())
+<span class="kw">impl</span>&lt;F: FieldExt&gt; Gate&lt;F&gt; {
+    <span class="kw">fn </span>ones() -&gt; Expression&lt;F&gt; {
+        Expression::Constant(F::one())
     }
 
-    <span class="comment">// Helper gates</span>
-    <span class="kw">fn</span> <span class="ident">lagrange_interpolate</span>(
-        <span class="ident">var</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">points</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
-        <span class="ident">evals</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    ) -&gt; (<span class="ident">F</span>, <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) {
-        <span class="macro">assert_eq!</span>(<span class="ident">points</span>.<span class="ident">len</span>(), <span class="ident">evals</span>.<span class="ident">len</span>());
-        <span class="kw">let</span> <span class="ident">deg</span> <span class="op">=</span> <span class="ident">points</span>.<span class="ident">len</span>();
+    <span class="comment">// Helper gates
+    </span><span class="kw">fn </span>lagrange_interpolate(
+        var: Expression&lt;F&gt;,
+        points: Vec&lt;u16&gt;,
+        evals: Vec&lt;u32&gt;,
+    ) -&gt; (F, Expression&lt;F&gt;) {
+        <span class="macro">assert_eq!</span>(points.len(), evals.len());
+        <span class="kw">let </span>deg = points.len();
 
-        <span class="kw">fn</span> <span class="ident">factorial</span>(<span class="ident">n</span>: <span class="ident">u64</span>) -&gt; <span class="ident">u64</span> {
-            <span class="kw">if</span> <span class="ident">n</span> <span class="op">&lt;</span> <span class="number">2</span> {
-                <span class="number">1</span>
-            } <span class="kw">else</span> {
-                <span class="ident">n</span> <span class="op">*</span> <span class="ident">factorial</span>(<span class="ident">n</span> <span class="op">-</span> <span class="number">1</span>)
+        <span class="kw">fn </span>factorial(n: u64) -&gt; u64 {
+            <span class="kw">if </span>n &lt; <span class="number">2 </span>{
+                <span class="number">1
+            </span>} <span class="kw">else </span>{
+                n * factorial(n - <span class="number">1</span>)
             }
         }
 
-        <span class="comment">// Scale the whole expression by factor to avoid divisions</span>
-        <span class="kw">let</span> <span class="ident">factor</span> <span class="op">=</span> <span class="ident">factorial</span>((<span class="ident">deg</span> <span class="op">-</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">u64</span>);
+        <span class="comment">// Scale the whole expression by factor to avoid divisions
+        </span><span class="kw">let </span>factor = factorial((deg - <span class="number">1</span>) <span class="kw">as </span>u64);
 
-        <span class="kw">let</span> <span class="ident">numerator</span> <span class="op">=</span> <span class="op">|</span><span class="ident">var</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">eval</span>: <span class="ident">u32</span>, <span class="ident">idx</span>: <span class="ident">u64</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expr</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::ones</span>();
-            <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">deg</span> {
-                <span class="kw">let</span> <span class="ident">i</span> <span class="op">=</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>;
-                <span class="kw">if</span> <span class="ident">i</span> <span class="op">!</span><span class="op">=</span> <span class="ident">idx</span> {
-                    <span class="ident">expr</span> <span class="op">=</span> <span class="ident">expr</span> <span class="op">*</span> (<span class="ident"><span class="self">Self</span>::ones</span>() <span class="op">*</span> (<span class="op">-</span><span class="ident">F::one</span>()) <span class="op">*</span> <span class="ident">F::from</span>(<span class="ident">i</span>) <span class="op">+</span> <span class="ident">var</span>.<span class="ident">clone</span>());
+        <span class="kw">let </span>numerator = |var: Expression&lt;F&gt;, eval: u32, idx: u64| {
+            <span class="kw">let </span><span class="kw-2">mut </span>expr = <span class="self">Self</span>::ones();
+            <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..deg {
+                <span class="kw">let </span>i = i <span class="kw">as </span>u64;
+                <span class="kw">if </span>i != idx {
+                    expr = expr * (<span class="self">Self</span>::ones() * (-F::one()) * F::from(i) + var.clone());
                 }
             }
-            <span class="ident">expr</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="ident">u64::from</span>(<span class="ident">eval</span>))
+            expr * F::from(u64::from(eval))
         };
-        <span class="kw">let</span> <span class="ident">denominator</span> <span class="op">=</span> <span class="op">|</span><span class="ident">idx</span>: <span class="ident">i32</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">denom</span>: <span class="ident">i32</span> <span class="op">=</span> <span class="number">1</span>;
-            <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">deg</span> {
-                <span class="kw">let</span> <span class="ident">i</span> <span class="op">=</span> <span class="ident">i</span> <span class="kw">as</span> <span class="ident">i32</span>;
-                <span class="kw">if</span> <span class="ident">i</span> <span class="op">!</span><span class="op">=</span> <span class="ident">idx</span> {
-                    <span class="ident">denom</span> <span class="kw-2">*</span><span class="op">=</span> <span class="ident">idx</span> <span class="op">-</span> <span class="ident">i</span>
+        <span class="kw">let </span>denominator = |idx: i32| {
+            <span class="kw">let </span><span class="kw-2">mut </span>denom: i32 = <span class="number">1</span>;
+            <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..deg {
+                <span class="kw">let </span>i = i <span class="kw">as </span>i32;
+                <span class="kw">if </span>i != idx {
+                    denom <span class="kw-2">*</span>= idx - i
                 }
             }
-            <span class="kw">if</span> <span class="ident">denom</span> <span class="op">&lt;</span> <span class="number">0</span> {
-                <span class="op">-</span><span class="ident">F::one</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="ident">factor</span> <span class="op">/</span> (<span class="op">-</span><span class="ident">denom</span> <span class="kw">as</span> <span class="ident">u64</span>))
-            } <span class="kw">else</span> {
-                <span class="ident">F::from</span>(<span class="ident">factor</span> <span class="op">/</span> (<span class="ident">denom</span> <span class="kw">as</span> <span class="ident">u64</span>))
+            <span class="kw">if </span>denom &lt; <span class="number">0 </span>{
+                -F::one() * F::from(factor / (-denom <span class="kw">as </span>u64))
+            } <span class="kw">else </span>{
+                F::from(factor / (denom <span class="kw">as </span>u64))
             }
         };
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expr</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::ones</span>() <span class="op">*</span> <span class="ident">F::zero</span>();
-        <span class="kw">for</span> ((<span class="ident">idx</span>, <span class="kw">_</span>), <span class="ident">eval</span>) <span class="kw">in</span> <span class="ident">points</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>().<span class="ident">zip</span>(<span class="ident">evals</span>.<span class="ident">iter</span>()) {
-            <span class="ident">expr</span> <span class="op">=</span> <span class="ident">expr</span> <span class="op">+</span> <span class="ident">numerator</span>(<span class="ident">var</span>.<span class="ident">clone</span>(), <span class="kw-2">*</span><span class="ident">eval</span>, <span class="ident">idx</span> <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">*</span> <span class="ident">denominator</span>(<span class="ident">idx</span> <span class="kw">as</span> <span class="ident">i32</span>)
+        <span class="kw">let </span><span class="kw-2">mut </span>expr = <span class="self">Self</span>::ones() * F::zero();
+        <span class="kw">for </span>((idx, <span class="kw">_</span>), eval) <span class="kw">in </span>points.iter().enumerate().zip(evals.iter()) {
+            expr = expr + numerator(var.clone(), <span class="kw-2">*</span>eval, idx <span class="kw">as </span>u64) * denominator(idx <span class="kw">as </span>i32)
         }
 
-        (<span class="ident">F::from</span>(<span class="ident">factor</span>), <span class="ident">expr</span>)
+        (F::from(factor), expr)
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">range_check</span>(<span class="ident">value</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">lower_range</span>: <span class="ident">u64</span>, <span class="ident">upper_range</span>: <span class="ident">u64</span>) -&gt; <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expr</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::ones</span>();
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="ident">lower_range</span>..(<span class="ident">upper_range</span> <span class="op">+</span> <span class="number">1</span>) {
-            <span class="ident">expr</span> <span class="op">=</span> <span class="ident">expr</span> <span class="op">*</span> (<span class="ident"><span class="self">Self</span>::ones</span>() <span class="op">*</span> (<span class="op">-</span><span class="ident">F::one</span>()) <span class="op">*</span> <span class="ident">F::from</span>(<span class="ident">i</span>) <span class="op">+</span> <span class="ident">value</span>.<span class="ident">clone</span>())
+    <span class="kw">pub fn </span>range_check(value: Expression&lt;F&gt;, lower_range: u64, upper_range: u64) -&gt; Expression&lt;F&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>expr = <span class="self">Self</span>::ones();
+        <span class="kw">for </span>i <span class="kw">in </span>lower_range..(upper_range + <span class="number">1</span>) {
+            expr = expr * (<span class="self">Self</span>::ones() * (-F::one()) * F::from(i) + value.clone())
         }
-        <span class="ident">expr</span>
+        expr
     }
 
-    <span class="doccomment">/// Spread and range check on 2-bit word</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">two_bit_spread_and_range</span>(
-        <span class="ident">dense</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">two_bit_spread</span> <span class="op">=</span> <span class="op">|</span><span class="ident">dense</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">spread</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">|</span> {
-            <span class="kw">let</span> (<span class="ident">factor</span>, <span class="ident">lagrange_poly</span>) <span class="op">=</span> <span class="ident"><span class="self">Self</span>::lagrange_interpolate</span>(
-                <span class="ident">dense</span>,
+    <span class="doccomment">/// Spread and range check on 2-bit word
+    </span><span class="kw">pub fn </span>two_bit_spread_and_range(
+        dense: Expression&lt;F&gt;,
+        spread: Expression&lt;F&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Expression&lt;F&gt;)&gt; {
+        <span class="kw">let </span>two_bit_spread = |dense: Expression&lt;F&gt;, spread: Expression&lt;F&gt;| {
+            <span class="kw">let </span>(factor, lagrange_poly) = <span class="self">Self</span>::lagrange_interpolate(
+                dense,
                 <span class="macro">vec!</span>[<span class="number">0b00</span>, <span class="number">0b01</span>, <span class="number">0b10</span>, <span class="number">0b11</span>],
                 <span class="macro">vec!</span>[<span class="number">0b0000</span>, <span class="number">0b0001</span>, <span class="number">0b0100</span>, <span class="number">0b0101</span>],
             );
 
-            <span class="ident">lagrange_poly</span> <span class="op">-</span> <span class="ident">spread</span> <span class="op">*</span> <span class="ident">factor</span>
+            lagrange_poly - spread * factor
         };
 
-        <span class="ident">std::iter::empty</span>()
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((
+        std::iter::empty()
+            .chain(<span class="prelude-val">Some</span>((
                 <span class="string">&quot;two_bit_range_check&quot;</span>,
-                <span class="ident"><span class="self">Self</span>::range_check</span>(<span class="ident">dense</span>.<span class="ident">clone</span>(), <span class="number">0</span>, (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">2</span>) <span class="op">-</span> <span class="number">1</span>),
+                <span class="self">Self</span>::range_check(dense.clone(), <span class="number">0</span>, (<span class="number">1 </span>&lt;&lt; <span class="number">2</span>) - <span class="number">1</span>),
             )))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((
+            .chain(<span class="prelude-val">Some</span>((
                 <span class="string">&quot;two_bit_spread_check&quot;</span>,
-                <span class="ident">two_bit_spread</span>(<span class="ident">dense</span>, <span class="ident">spread</span>),
+                two_bit_spread(dense, spread),
             )))
     }
 
-    <span class="doccomment">/// Spread and range check on 3-bit word</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">three_bit_spread_and_range</span>(
-        <span class="ident">dense</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">three_bit_spread</span> <span class="op">=</span> <span class="op">|</span><span class="ident">dense</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">spread</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">|</span> {
-            <span class="kw">let</span> (<span class="ident">factor</span>, <span class="ident">lagrange_poly</span>) <span class="op">=</span> <span class="ident"><span class="self">Self</span>::lagrange_interpolate</span>(
-                <span class="ident">dense</span>,
+    <span class="doccomment">/// Spread and range check on 3-bit word
+    </span><span class="kw">pub fn </span>three_bit_spread_and_range(
+        dense: Expression&lt;F&gt;,
+        spread: Expression&lt;F&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Expression&lt;F&gt;)&gt; {
+        <span class="kw">let </span>three_bit_spread = |dense: Expression&lt;F&gt;, spread: Expression&lt;F&gt;| {
+            <span class="kw">let </span>(factor, lagrange_poly) = <span class="self">Self</span>::lagrange_interpolate(
+                dense,
                 <span class="macro">vec!</span>[<span class="number">0b000</span>, <span class="number">0b001</span>, <span class="number">0b010</span>, <span class="number">0b011</span>, <span class="number">0b100</span>, <span class="number">0b101</span>, <span class="number">0b110</span>, <span class="number">0b111</span>],
                 <span class="macro">vec!</span>[
                     <span class="number">0b000000</span>, <span class="number">0b000001</span>, <span class="number">0b000100</span>, <span class="number">0b000101</span>, <span class="number">0b010000</span>, <span class="number">0b010001</span>, <span class="number">0b010100</span>, <span class="number">0b010101</span>,
                 ],
             );
 
-            <span class="ident">lagrange_poly</span> <span class="op">-</span> <span class="ident">spread</span> <span class="op">*</span> <span class="ident">factor</span>
+            lagrange_poly - spread * factor
         };
 
-        <span class="ident">std::iter::empty</span>()
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((
+        std::iter::empty()
+            .chain(<span class="prelude-val">Some</span>((
                 <span class="string">&quot;three_bit_range_check&quot;</span>,
-                <span class="ident"><span class="self">Self</span>::range_check</span>(<span class="ident">dense</span>.<span class="ident">clone</span>(), <span class="number">0</span>, (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">3</span>) <span class="op">-</span> <span class="number">1</span>),
+                <span class="self">Self</span>::range_check(dense.clone(), <span class="number">0</span>, (<span class="number">1 </span>&lt;&lt; <span class="number">3</span>) - <span class="number">1</span>),
             )))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((
+            .chain(<span class="prelude-val">Some</span>((
                 <span class="string">&quot;three_bit_spread_check&quot;</span>,
-                <span class="ident">three_bit_spread</span>(<span class="ident">dense</span>, <span class="ident">spread</span>),
+                three_bit_spread(dense, spread),
             )))
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

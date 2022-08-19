@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -180,167 +174,166 @@
 <span id="159">159</span>
 <span id="160">160</span>
 <span id="161">161</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::collections::BTreeMap</span>;
+</pre><pre class="rust"><code><span class="kw">use </span>std::collections::BTreeMap;
 
-<span class="kw">use</span> <span class="ident">group::ff::Field</span>;
-<span class="kw">use</span> <span class="ident">pasta_curves::arithmetic::FieldExt</span>;
+<span class="kw">use </span>group::ff::Field;
+<span class="kw">use </span>pasta_curves::arithmetic::FieldExt;
 
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">metadata</span>, <span class="ident">CellValue</span>, <span class="ident">Value</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">plonk</span>::{
-        <span class="ident">AdviceQuery</span>, <span class="ident">Any</span>, <span class="ident">Column</span>, <span class="ident">ColumnType</span>, <span class="ident">Expression</span>, <span class="ident">FixedQuery</span>, <span class="ident">Gate</span>, <span class="ident">InstanceQuery</span>,
-        <span class="ident">VirtualCell</span>,
+<span class="kw">use super</span>::{metadata, CellValue, Value};
+<span class="kw">use crate</span>::{
+    plonk::{
+        AdviceQuery, Any, Column, ColumnType, Expression, FixedQuery, Gate, InstanceQuery,
+        VirtualCell,
     },
-    <span class="ident">poly::Rotation</span>,
+    poly::Rotation,
 };
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">AnyQuery</span> {
-    <span class="doccomment">/// Query index</span>
-    <span class="kw">pub</span> <span class="ident">index</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// Column type</span>
-    <span class="kw">pub</span> <span class="ident">column_type</span>: <span class="ident">Any</span>,
-    <span class="doccomment">/// Column index</span>
-    <span class="kw">pub</span> <span class="ident">column_index</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// Rotation of this query</span>
-    <span class="kw">pub</span> <span class="ident">rotation</span>: <span class="ident">Rotation</span>,
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>AnyQuery {
+    <span class="doccomment">/// Query index
+    </span><span class="kw">pub </span>index: usize,
+    <span class="doccomment">/// Column type
+    </span><span class="kw">pub </span>column_type: Any,
+    <span class="doccomment">/// Column index
+    </span><span class="kw">pub </span>column_index: usize,
+    <span class="doccomment">/// Rotation of this query
+    </span><span class="kw">pub </span>rotation: Rotation,
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">FixedQuery</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">AnyQuery</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">query</span>: <span class="ident">FixedQuery</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">index</span>: <span class="ident">query</span>.<span class="ident">index</span>,
-            <span class="ident">column_type</span>: <span class="ident">Any::Fixed</span>,
-            <span class="ident">column_index</span>: <span class="ident">query</span>.<span class="ident">column_index</span>,
-            <span class="ident">rotation</span>: <span class="ident">query</span>.<span class="ident">rotation</span>,
+<span class="kw">impl </span>From&lt;FixedQuery&gt; <span class="kw">for </span>AnyQuery {
+    <span class="kw">fn </span>from(query: FixedQuery) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            index: query.index,
+            column_type: Any::Fixed,
+            column_index: query.column_index,
+            rotation: query.rotation,
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">AdviceQuery</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">AnyQuery</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">query</span>: <span class="ident">AdviceQuery</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">index</span>: <span class="ident">query</span>.<span class="ident">index</span>,
-            <span class="ident">column_type</span>: <span class="ident">Any::Advice</span>,
-            <span class="ident">column_index</span>: <span class="ident">query</span>.<span class="ident">column_index</span>,
-            <span class="ident">rotation</span>: <span class="ident">query</span>.<span class="ident">rotation</span>,
+<span class="kw">impl </span>From&lt;AdviceQuery&gt; <span class="kw">for </span>AnyQuery {
+    <span class="kw">fn </span>from(query: AdviceQuery) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            index: query.index,
+            column_type: Any::Advice,
+            column_index: query.column_index,
+            rotation: query.rotation,
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">InstanceQuery</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">AnyQuery</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">query</span>: <span class="ident">InstanceQuery</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">index</span>: <span class="ident">query</span>.<span class="ident">index</span>,
-            <span class="ident">column_type</span>: <span class="ident">Any::Instance</span>,
-            <span class="ident">column_index</span>: <span class="ident">query</span>.<span class="ident">column_index</span>,
-            <span class="ident">rotation</span>: <span class="ident">query</span>.<span class="ident">rotation</span>,
+<span class="kw">impl </span>From&lt;InstanceQuery&gt; <span class="kw">for </span>AnyQuery {
+    <span class="kw">fn </span>from(query: InstanceQuery) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            index: query.index,
+            column_type: Any::Instance,
+            column_index: query.column_index,
+            rotation: query.rotation,
         }
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">format_value</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="ident">v</span>: <span class="ident">F</span>) -&gt; <span class="ident">String</span> {
-    <span class="kw">if</span> <span class="ident">v</span>.<span class="ident">is_zero_vartime</span>() {
-        <span class="string">&quot;0&quot;</span>.<span class="ident">into</span>()
-    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">v</span> <span class="op">==</span> <span class="ident">F::one</span>() {
-        <span class="string">&quot;1&quot;</span>.<span class="ident">into</span>()
-    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">v</span> <span class="op">==</span> <span class="op">-</span><span class="ident">F::one</span>() {
-        <span class="string">&quot;-1&quot;</span>.<span class="ident">into</span>()
-    } <span class="kw">else</span> {
-        <span class="comment">// Format value as hex.</span>
-        <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">v</span>);
-        <span class="comment">// Remove leading zeroes.</span>
-        <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">s</span>.<span class="ident">strip_prefix</span>(<span class="string">&quot;0x&quot;</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="ident">s</span>.<span class="ident">trim_start_matches</span>(<span class="string">&#39;0&#39;</span>);
-        <span class="macro">format!</span>(<span class="string">&quot;0x{}&quot;</span>, <span class="ident">s</span>)
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>format_value&lt;F: Field&gt;(v: F) -&gt; String {
+    <span class="kw">if </span>v.is_zero_vartime() {
+        <span class="string">&quot;0&quot;</span>.into()
+    } <span class="kw">else if </span>v == F::one() {
+        <span class="string">&quot;1&quot;</span>.into()
+    } <span class="kw">else if </span>v == -F::one() {
+        <span class="string">&quot;-1&quot;</span>.into()
+    } <span class="kw">else </span>{
+        <span class="comment">// Format value as hex.
+        </span><span class="kw">let </span>s = <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, v);
+        <span class="comment">// Remove leading zeroes.
+        </span><span class="kw">let </span>s = s.strip_prefix(<span class="string">&quot;0x&quot;</span>).unwrap();
+        <span class="kw">let </span>s = s.trim_start_matches(<span class="string">&#39;0&#39;</span>);
+        <span class="macro">format!</span>(<span class="string">&quot;0x{}&quot;</span>, s)
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">load</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="ident">T</span>: <span class="ident">ColumnType</span>, <span class="ident">Q</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">AnyQuery</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Copy</span><span class="op">&gt;</span>(
-    <span class="ident">n</span>: <span class="ident">i32</span>,
-    <span class="ident">row</span>: <span class="ident">i32</span>,
-    <span class="ident">queries</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [(<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">Rotation</span>)],
-    <span class="ident">cells</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">CellValue</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>],
-) -&gt; <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="ident">Q</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span> {
-    <span class="kw">move</span> <span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
-        <span class="kw">let</span> (<span class="ident">column</span>, <span class="ident">at</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">queries</span>[<span class="ident">query</span>.<span class="ident">into</span>().<span class="ident">index</span>];
-        <span class="kw">let</span> <span class="ident">resolved_row</span> <span class="op">=</span> (<span class="ident">row</span> <span class="op">+</span> <span class="ident">at</span>.<span class="number">0</span>) <span class="op">%</span> <span class="ident">n</span>;
-        <span class="ident">cells</span>[<span class="ident">column</span>.<span class="ident">index</span>()][<span class="ident">resolved_row</span> <span class="kw">as</span> <span class="ident">usize</span>].<span class="ident">into</span>()
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>load&lt;<span class="lifetime">&#39;a</span>, F: FieldExt, T: ColumnType, Q: Into&lt;AnyQuery&gt; + Copy&gt;(
+    n: i32,
+    row: i32,
+    queries: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[(Column&lt;T&gt;, Rotation)],
+    cells: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Vec&lt;CellValue&lt;F&gt;&gt;],
+) -&gt; <span class="kw">impl </span>Fn(Q) -&gt; Value&lt;F&gt; + <span class="lifetime">&#39;a </span>{
+    <span class="kw">move </span>|query| {
+        <span class="kw">let </span>(column, at) = <span class="kw-2">&amp;</span>queries[query.into().index];
+        <span class="kw">let </span>resolved_row = (row + at.<span class="number">0</span>) % n;
+        cells[column.index()][resolved_row <span class="kw">as </span>usize].into()
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">load_instance</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="ident">T</span>: <span class="ident">ColumnType</span>, <span class="ident">Q</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">AnyQuery</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Copy</span><span class="op">&gt;</span>(
-    <span class="ident">n</span>: <span class="ident">i32</span>,
-    <span class="ident">row</span>: <span class="ident">i32</span>,
-    <span class="ident">queries</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [(<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">Rotation</span>)],
-    <span class="ident">cells</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>],
-) -&gt; <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="ident">Q</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span> {
-    <span class="kw">move</span> <span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
-        <span class="kw">let</span> (<span class="ident">column</span>, <span class="ident">at</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">queries</span>[<span class="ident">query</span>.<span class="ident">into</span>().<span class="ident">index</span>];
-        <span class="kw">let</span> <span class="ident">resolved_row</span> <span class="op">=</span> (<span class="ident">row</span> <span class="op">+</span> <span class="ident">at</span>.<span class="number">0</span>) <span class="op">%</span> <span class="ident">n</span>;
-        <span class="ident">Value::Real</span>(<span class="ident">cells</span>[<span class="ident">column</span>.<span class="ident">index</span>()][<span class="ident">resolved_row</span> <span class="kw">as</span> <span class="ident">usize</span>])
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>load_instance&lt;<span class="lifetime">&#39;a</span>, F: FieldExt, T: ColumnType, Q: Into&lt;AnyQuery&gt; + Copy&gt;(
+    n: i32,
+    row: i32,
+    queries: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[(Column&lt;T&gt;, Rotation)],
+    cells: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Vec&lt;F&gt;],
+) -&gt; <span class="kw">impl </span>Fn(Q) -&gt; Value&lt;F&gt; + <span class="lifetime">&#39;a </span>{
+    <span class="kw">move </span>|query| {
+        <span class="kw">let </span>(column, at) = <span class="kw-2">&amp;</span>queries[query.into().index];
+        <span class="kw">let </span>resolved_row = (row + at.<span class="number">0</span>) % n;
+        Value::Real(cells[column.index()][resolved_row <span class="kw">as </span>usize])
     }
 }
 
-<span class="kw">fn</span> <span class="ident">cell_value</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">FieldExt</span>, <span class="ident">Q</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">AnyQuery</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Copy</span><span class="op">&gt;</span>(
-    <span class="ident">virtual_cells</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">VirtualCell</span>],
-    <span class="ident">load</span>: <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="ident">Q</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-) -&gt; <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="ident">Q</span>) -&gt; <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">metadata::VirtualCell</span>, <span class="ident">String</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span> {
-    <span class="kw">move</span> <span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
-        <span class="kw">let</span> <span class="ident">AnyQuery</span> {
-            <span class="ident">column_type</span>,
-            <span class="ident">column_index</span>,
-            <span class="ident">rotation</span>,
+<span class="kw">fn </span>cell_value&lt;<span class="lifetime">&#39;a</span>, F: FieldExt, Q: Into&lt;AnyQuery&gt; + Copy&gt;(
+    virtual_cells: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[VirtualCell],
+    load: <span class="kw">impl </span>Fn(Q) -&gt; Value&lt;F&gt; + <span class="lifetime">&#39;a</span>,
+) -&gt; <span class="kw">impl </span>Fn(Q) -&gt; BTreeMap&lt;metadata::VirtualCell, String&gt; + <span class="lifetime">&#39;a </span>{
+    <span class="kw">move </span>|query| {
+        <span class="kw">let </span>AnyQuery {
+            column_type,
+            column_index,
+            rotation,
             ..
-        } <span class="op">=</span> <span class="ident">query</span>.<span class="ident">into</span>();
-        <span class="ident">virtual_cells</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">find</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> {
-                <span class="ident">c</span>.<span class="ident">column</span>.<span class="ident">column_type</span>() <span class="op">==</span> <span class="kw-2">&amp;</span><span class="ident">column_type</span>
-                    <span class="op">&amp;&amp;</span> <span class="ident">c</span>.<span class="ident">column</span>.<span class="ident">index</span>() <span class="op">==</span> <span class="ident">column_index</span>
-                    <span class="op">&amp;&amp;</span> <span class="ident">c</span>.<span class="ident">rotation</span> <span class="op">==</span> <span class="ident">rotation</span>
+        } = query.into();
+        virtual_cells
+            .iter()
+            .find(|c| {
+                c.column.column_type() == <span class="kw-2">&amp;</span>column_type
+                    &amp;&amp; c.column.index() == column_index
+                    &amp;&amp; c.rotation == rotation
             })
-            <span class="comment">// None indicates a selector, which we don&#39;t bother showing.</span>
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">cell</span><span class="op">|</span> {
+            <span class="comment">// None indicates a selector, which we don&#39;t bother showing.
+            </span>.map(|cell| {
                 (
-                    <span class="ident">cell</span>.<span class="ident">clone</span>().<span class="ident">into</span>(),
-                    <span class="kw">match</span> <span class="ident">load</span>(<span class="ident">query</span>) {
-                        <span class="ident">Value::Real</span>(<span class="ident">v</span>) =&gt; <span class="ident">format_value</span>(<span class="ident">v</span>),
-                        <span class="ident">Value::Poison</span> =&gt; <span class="macro">unreachable!</span>(),
+                    cell.clone().into(),
+                    <span class="kw">match </span>load(query) {
+                        Value::Real(v) =&gt; format_value(v),
+                        Value::Poison =&gt; <span class="macro">unreachable!</span>(),
                     },
                 )
             })
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">collect</span>()
+            .into_iter()
+            .collect()
     }
 }
 
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">cell_values</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(
-    <span class="ident">gate</span>: <span class="kw-2">&amp;</span><span class="ident">Gate</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    <span class="ident">load_fixed</span>: <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="ident">FixedQuery</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-    <span class="ident">load_advice</span>: <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="ident">AdviceQuery</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-    <span class="ident">load_instance</span>: <span class="kw">impl</span> <span class="ident">Fn</span>(<span class="ident">InstanceQuery</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
-) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">metadata::VirtualCell</span>, <span class="ident">String</span>)<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">virtual_cells</span> <span class="op">=</span> <span class="ident">gate</span>.<span class="ident">queried_cells</span>();
-    <span class="kw">let</span> <span class="ident">cell_values</span> <span class="op">=</span> <span class="ident">poly</span>.<span class="ident">evaluate</span>(
-        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">BTreeMap::default</span>(),
-        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
-        <span class="kw-2">&amp;</span><span class="ident">cell_value</span>(<span class="ident">virtual_cells</span>, <span class="ident">load_fixed</span>),
-        <span class="kw-2">&amp;</span><span class="ident">cell_value</span>(<span class="ident">virtual_cells</span>, <span class="ident">load_advice</span>),
-        <span class="kw-2">&amp;</span><span class="ident">cell_value</span>(<span class="ident">virtual_cells</span>, <span class="ident">load_instance</span>),
-        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>,
-        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw-2">mut</span> <span class="ident">a</span>, <span class="kw-2">mut</span> <span class="ident">b</span><span class="op">|</span> {
-            <span class="ident">a</span>.<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="ident">b</span>);
-            <span class="ident">a</span>
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>cell_values&lt;<span class="lifetime">&#39;a</span>, F: FieldExt&gt;(
+    gate: <span class="kw-2">&amp;</span>Gate&lt;F&gt;,
+    poly: <span class="kw-2">&amp;</span>Expression&lt;F&gt;,
+    load_fixed: <span class="kw">impl </span>Fn(FixedQuery) -&gt; Value&lt;F&gt; + <span class="lifetime">&#39;a</span>,
+    load_advice: <span class="kw">impl </span>Fn(AdviceQuery) -&gt; Value&lt;F&gt; + <span class="lifetime">&#39;a</span>,
+    load_instance: <span class="kw">impl </span>Fn(InstanceQuery) -&gt; Value&lt;F&gt; + <span class="lifetime">&#39;a</span>,
+) -&gt; Vec&lt;(metadata::VirtualCell, String)&gt; {
+    <span class="kw">let </span>virtual_cells = gate.queried_cells();
+    <span class="kw">let </span>cell_values = poly.evaluate(
+        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| BTreeMap::default(),
+        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
+        <span class="kw-2">&amp;</span>cell_value(virtual_cells, load_fixed),
+        <span class="kw-2">&amp;</span>cell_value(virtual_cells, load_advice),
+        <span class="kw-2">&amp;</span>cell_value(virtual_cells, load_instance),
+        <span class="kw-2">&amp;</span>|a| a,
+        <span class="kw-2">&amp;</span>|<span class="kw-2">mut </span>a, <span class="kw-2">mut </span>b| {
+            a.append(<span class="kw-2">&amp;mut </span>b);
+            a
         },
-        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw-2">mut</span> <span class="ident">a</span>, <span class="kw-2">mut</span> <span class="ident">b</span><span class="op">|</span> {
-            <span class="ident">a</span>.<span class="ident">append</span>(<span class="kw-2">&amp;mut</span> <span class="ident">b</span>);
-            <span class="ident">a</span>
+        <span class="kw-2">&amp;</span>|<span class="kw-2">mut </span>a, <span class="kw-2">mut </span>b| {
+            a.append(<span class="kw-2">&amp;mut </span>b);
+            a
         },
-        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="kw">_</span><span class="op">|</span> <span class="ident">a</span>,
+        <span class="kw-2">&amp;</span>|a, <span class="kw">_</span>| a,
     );
-    <span class="ident">cell_values</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>()
+    cell_values.into_iter().collect()
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

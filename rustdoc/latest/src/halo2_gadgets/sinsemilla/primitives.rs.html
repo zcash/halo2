@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -327,314 +321,313 @@
 <span id="306">306</span>
 <span id="307">307</span>
 <span id="308">308</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Implementation of Sinsemilla outside the circuit.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Implementation of Sinsemilla outside the circuit.
 
-<span class="kw">use</span> <span class="ident">group</span>::{<span class="ident">Curve</span>, <span class="ident">Wnaf</span>};
-<span class="kw">use</span> <span class="ident">halo2_proofs::arithmetic</span>::{<span class="ident">CurveAffine</span>, <span class="ident">CurveExt</span>};
-<span class="kw">use</span> <span class="ident">pasta_curves::pallas</span>;
-<span class="kw">use</span> <span class="ident">subtle::CtOption</span>;
+</span><span class="kw">use </span>group::{Curve, Wnaf};
+<span class="kw">use </span>halo2_proofs::arithmetic::{CurveAffine, CurveExt};
+<span class="kw">use </span>pasta_curves::pallas;
+<span class="kw">use </span>subtle::CtOption;
 
-<span class="kw">mod</span> <span class="ident">addition</span>;
-<span class="kw">use</span> <span class="ident"><span class="self">self</span>::addition::IncompletePoint</span>;
-<span class="kw">mod</span> <span class="ident">sinsemilla_s</span>;
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">sinsemilla_s::SINSEMILLA_S</span>;
+<span class="kw">mod </span>addition;
+<span class="kw">use </span><span class="self">self</span>::addition::IncompletePoint;
+<span class="kw">mod </span>sinsemilla_s;
+<span class="kw">pub use </span>sinsemilla_s::SINSEMILLA_S;
 
-<span class="doccomment">/// Number of bits of each message piece in $\mathsf{SinsemillaHashToPoint}$</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">10</span>;
+<span class="doccomment">/// Number of bits of each message piece in $\mathsf{SinsemillaHashToPoint}$
+</span><span class="kw">pub const </span>K: usize = <span class="number">10</span>;
 
-<span class="doccomment">/// $\frac{1}{2^K}$</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">INV_TWO_POW_K</span>: [<span class="ident">u8</span>; <span class="number">32</span>] <span class="op">=</span> [
+<span class="doccomment">/// $\frac{1}{2^K}$
+</span><span class="kw">pub const </span>INV_TWO_POW_K: [u8; <span class="number">32</span>] = [
     <span class="number">1</span>, <span class="number">0</span>, <span class="number">192</span>, <span class="number">196</span>, <span class="number">160</span>, <span class="number">229</span>, <span class="number">70</span>, <span class="number">82</span>, <span class="number">221</span>, <span class="number">165</span>, <span class="number">74</span>, <span class="number">202</span>, <span class="number">85</span>, <span class="number">7</span>, <span class="number">62</span>, <span class="number">34</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>,
     <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">240</span>, <span class="number">63</span>,
 ];
 
-<span class="doccomment">/// The largest integer such that $2^c \leq (r_P - 1) / 2$, where $r_P$ is the order</span>
-<span class="doccomment">/// of Pallas.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">C</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">253</span>;
+<span class="doccomment">/// The largest integer such that $2^c \leq (r_P - 1) / 2$, where $r_P$ is the order
+/// of Pallas.
+</span><span class="kw">pub const </span>C: usize = <span class="number">253</span>;
 
-<span class="comment">// Sinsemilla Q generators</span>
+<span class="comment">// Sinsemilla Q generators
 
-<span class="doccomment">/// SWU hash-to-curve personalization for Sinsemilla $Q$ generators.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">Q_PERSONALIZATION</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;z.cash:SinsemillaQ&quot;</span>;
+</span><span class="doccomment">/// SWU hash-to-curve personalization for Sinsemilla $Q$ generators.
+</span><span class="kw">pub const </span>Q_PERSONALIZATION: <span class="kw-2">&amp;</span>str = <span class="string">&quot;z.cash:SinsemillaQ&quot;</span>;
 
-<span class="comment">// Sinsemilla S generators</span>
+<span class="comment">// Sinsemilla S generators
 
-<span class="doccomment">/// SWU hash-to-curve personalization for Sinsemilla $S$ generators.</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">S_PERSONALIZATION</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;z.cash:SinsemillaS&quot;</span>;
+</span><span class="doccomment">/// SWU hash-to-curve personalization for Sinsemilla $S$ generators.
+</span><span class="kw">pub const </span>S_PERSONALIZATION: <span class="kw-2">&amp;</span>str = <span class="string">&quot;z.cash:SinsemillaS&quot;</span>;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">lebs2ip_k</span>(<span class="ident">bits</span>: <span class="kw-2">&amp;</span>[<span class="ident">bool</span>]) -&gt; <span class="ident">u32</span> {
-    <span class="macro">assert!</span>(<span class="ident">bits</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="ident">K</span>);
-    <span class="ident">bits</span>.<span class="ident">iter</span>()
-        .<span class="ident">enumerate</span>()
-        .<span class="ident">fold</span>(<span class="number">0u32</span>, <span class="op">|</span><span class="ident">acc</span>, (<span class="ident">i</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">acc</span> <span class="op">+</span> <span class="kw">if</span> <span class="kw-2">*</span><span class="ident">b</span> { <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">i</span> } <span class="kw">else</span> { <span class="number">0</span> })
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>lebs2ip_k(bits: <span class="kw-2">&amp;</span>[bool]) -&gt; u32 {
+    <span class="macro">assert!</span>(bits.len() == K);
+    bits.iter()
+        .enumerate()
+        .fold(<span class="number">0u32</span>, |acc, (i, b)| acc + <span class="kw">if </span><span class="kw-2">*</span>b { <span class="number">1 </span>&lt;&lt; i } <span class="kw">else </span>{ <span class="number">0 </span>})
 }
 
-<span class="doccomment">/// Coordinate extractor for Pallas.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Defined in [Zcash Protocol Spec § 5.4.9.7: Coordinate Extractor for Pallas][concreteextractorpallas].</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// [concreteextractorpallas]: https://zips.z.cash/protocol/nu5.pdf#concreteextractorpallas</span>
-<span class="kw">fn</span> <span class="ident">extract_p_bottom</span>(<span class="ident">point</span>: <span class="ident">CtOption</span><span class="op">&lt;</span><span class="ident">pallas::Point</span><span class="op">&gt;</span>) -&gt; <span class="ident">CtOption</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> {
-    <span class="ident">point</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> {
-        <span class="ident">p</span>.<span class="ident">to_affine</span>()
-            .<span class="ident">coordinates</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">c</span>.<span class="ident">x</span>())
-            .<span class="ident">unwrap_or_else</span>(<span class="ident">pallas::Base::zero</span>)
+<span class="doccomment">/// Coordinate extractor for Pallas.
+///
+/// Defined in [Zcash Protocol Spec § 5.4.9.7: Coordinate Extractor for Pallas][concreteextractorpallas].
+///
+/// [concreteextractorpallas]: https://zips.z.cash/protocol/nu5.pdf#concreteextractorpallas
+</span><span class="kw">fn </span>extract_p_bottom(point: CtOption&lt;pallas::Point&gt;) -&gt; CtOption&lt;pallas::Base&gt; {
+    point.map(|p| {
+        p.to_affine()
+            .coordinates()
+            .map(|c| <span class="kw-2">*</span>c.x())
+            .unwrap_or_else(pallas::Base::zero)
     })
 }
 
-<span class="doccomment">/// Pads the given iterator (which MUST have length $\leq K * C$) with zero-bits to a</span>
-<span class="doccomment">/// multiple of $K$ bits.</span>
-<span class="kw">struct</span> <span class="ident">Pad</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The iterator we are padding.</span>
-    <span class="ident">inner</span>: <span class="ident">I</span>,
-    <span class="doccomment">/// The measured length of the inner iterator.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This starts as a lower bound, and will be accurate once `padding_left.is_some()`.</span>
-    <span class="ident">len</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// The amount of padding that remains to be emitted.</span>
-    <span class="ident">padding_left</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Pads the given iterator (which MUST have length $\leq K * C$) with zero-bits to a
+/// multiple of $K$ bits.
+</span><span class="kw">struct </span>Pad&lt;I: Iterator&lt;Item = bool&gt;&gt; {
+    <span class="doccomment">/// The iterator we are padding.
+    </span>inner: I,
+    <span class="doccomment">/// The measured length of the inner iterator.
+    ///
+    /// This starts as a lower bound, and will be accurate once `padding_left.is_some()`.
+    </span>len: usize,
+    <span class="doccomment">/// The amount of padding that remains to be emitted.
+    </span>padding_left: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">Pad</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">inner</span>: <span class="ident">I</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Pad</span> {
-            <span class="ident">inner</span>,
-            <span class="ident">len</span>: <span class="number">0</span>,
-            <span class="ident">padding_left</span>: <span class="prelude-val">None</span>,
+<span class="kw">impl</span>&lt;I: Iterator&lt;Item = bool&gt;&gt; Pad&lt;I&gt; {
+    <span class="kw">fn </span>new(inner: I) -&gt; <span class="self">Self </span>{
+        Pad {
+            inner,
+            len: <span class="number">0</span>,
+            padding_left: <span class="prelude-val">None</span>,
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">Iterator</span> <span class="kw">for</span> <span class="ident">Pad</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Item</span> <span class="op">=</span> <span class="ident">bool</span>;
+<span class="kw">impl</span>&lt;I: Iterator&lt;Item = bool&gt;&gt; Iterator <span class="kw">for </span>Pad&lt;I&gt; {
+    <span class="kw">type </span>Item = bool;
 
-    <span class="kw">fn</span> <span class="ident">next</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Item</span><span class="op">&gt;</span> {
-        <span class="kw">loop</span> {
-            <span class="comment">// If we have identified the required padding, the inner iterator has ended,</span>
-            <span class="comment">// and we will never poll it again.</span>
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">n</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">padding_left</span>.<span class="ident">as_mut</span>() {
-                <span class="kw">if</span> <span class="kw-2">*</span><span class="ident">n</span> <span class="op">==</span> <span class="number">0</span> {
-                    <span class="comment">// Either we already emitted all necessary padding, or there was no</span>
-                    <span class="comment">// padding required.</span>
-                    <span class="kw">break</span> <span class="prelude-val">None</span>;
-                } <span class="kw">else</span> {
-                    <span class="comment">// Emit the next padding bit.</span>
-                    <span class="kw-2">*</span><span class="ident">n</span> <span class="op">-</span><span class="op">=</span> <span class="number">1</span>;
-                    <span class="kw">break</span> <span class="prelude-val">Some</span>(<span class="bool-val">false</span>);
+    <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
+        <span class="kw">loop </span>{
+            <span class="comment">// If we have identified the required padding, the inner iterator has ended,
+            // and we will never poll it again.
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(n) = <span class="self">self</span>.padding_left.as_mut() {
+                <span class="kw">if </span><span class="kw-2">*</span>n == <span class="number">0 </span>{
+                    <span class="comment">// Either we already emitted all necessary padding, or there was no
+                    // padding required.
+                    </span><span class="kw">break </span><span class="prelude-val">None</span>;
+                } <span class="kw">else </span>{
+                    <span class="comment">// Emit the next padding bit.
+                    </span><span class="kw-2">*</span>n -= <span class="number">1</span>;
+                    <span class="kw">break </span><span class="prelude-val">Some</span>(<span class="bool-val">false</span>);
                 }
-            } <span class="kw">else</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">ret</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">next</span>() {
-                <span class="comment">// We haven&#39;t reached the end of the inner iterator yet.</span>
-                <span class="self">self</span>.<span class="ident">len</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
-                <span class="macro">assert!</span>(<span class="self">self</span>.<span class="ident">len</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">K</span> <span class="op">*</span> <span class="ident">C</span>);
-                <span class="kw">break</span> <span class="prelude-val">Some</span>(<span class="ident">ret</span>);
-            } <span class="kw">else</span> {
-                <span class="comment">// Inner iterator just ended, so we now know its length.</span>
-                <span class="kw">let</span> <span class="ident">rem</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">len</span> <span class="op">%</span> <span class="ident">K</span>;
-                <span class="kw">if</span> <span class="ident">rem</span> <span class="op">&gt;</span> <span class="number">0</span> {
-                    <span class="comment">// The inner iterator requires padding in the range [1,K).</span>
-                    <span class="self">self</span>.<span class="ident">padding_left</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">K</span> <span class="op">-</span> <span class="ident">rem</span>);
-                } <span class="kw">else</span> {
-                    <span class="comment">// No padding required.</span>
-                    <span class="self">self</span>.<span class="ident">padding_left</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="number">0</span>);
+            } <span class="kw">else if let </span><span class="prelude-val">Some</span>(ret) = <span class="self">self</span>.inner.next() {
+                <span class="comment">// We haven&#39;t reached the end of the inner iterator yet.
+                </span><span class="self">self</span>.len += <span class="number">1</span>;
+                <span class="macro">assert!</span>(<span class="self">self</span>.len &lt;= K * C);
+                <span class="kw">break </span><span class="prelude-val">Some</span>(ret);
+            } <span class="kw">else </span>{
+                <span class="comment">// Inner iterator just ended, so we now know its length.
+                </span><span class="kw">let </span>rem = <span class="self">self</span>.len % K;
+                <span class="kw">if </span>rem &gt; <span class="number">0 </span>{
+                    <span class="comment">// The inner iterator requires padding in the range [1,K).
+                    </span><span class="self">self</span>.padding_left = <span class="prelude-val">Some</span>(K - rem);
+                } <span class="kw">else </span>{
+                    <span class="comment">// No padding required.
+                    </span><span class="self">self</span>.padding_left = <span class="prelude-val">Some</span>(<span class="number">0</span>);
                 }
             }
         }
     }
 }
 
-<span class="doccomment">/// A domain in which $\mathsf{SinsemillaHashToPoint}$ and $\mathsf{SinsemillaHash}$ can</span>
-<span class="doccomment">/// be used.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HashDomain</span> {
-    <span class="ident">Q</span>: <span class="ident">pallas::Point</span>,
+<span class="doccomment">/// A domain in which $\mathsf{SinsemillaHashToPoint}$ and $\mathsf{SinsemillaHash}$ can
+/// be used.
+</span><span class="attribute">#[derive(Debug, Clone)]</span>
+<span class="attribute">#[allow(non_snake_case)]</span>
+<span class="kw">pub struct </span>HashDomain {
+    Q: pallas::Point,
 }
 
-<span class="kw">impl</span> <span class="ident">HashDomain</span> {
-    <span class="doccomment">/// Constructs a new `HashDomain` with a specific prefix string.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">domain</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">HashDomain</span> {
-            <span class="ident">Q</span>: <span class="ident">pallas::Point::hash_to_curve</span>(<span class="ident">Q_PERSONALIZATION</span>)(<span class="ident">domain</span>.<span class="ident">as_bytes</span>()),
+<span class="kw">impl </span>HashDomain {
+    <span class="doccomment">/// Constructs a new `HashDomain` with a specific prefix string.
+    </span><span class="kw">pub fn </span>new(domain: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
+        HashDomain {
+            Q: pallas::Point::hash_to_curve(Q_PERSONALIZATION)(domain.as_bytes()),
         }
     }
 
-    <span class="doccomment">/// $\mathsf{SinsemillaHashToPoint}$ from [§ 5.4.1.9][concretesinsemillahash].</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">hash_to_point</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">msg</span>: <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">bool</span><span class="op">&gt;</span>) -&gt; <span class="ident">CtOption</span><span class="op">&lt;</span><span class="ident">pallas::Point</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">hash_to_point_inner</span>(<span class="ident">msg</span>).<span class="ident">into</span>()
+    <span class="doccomment">/// $\mathsf{SinsemillaHashToPoint}$ from [§ 5.4.1.9][concretesinsemillahash].
+    ///
+    /// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
+    </span><span class="kw">pub fn </span>hash_to_point(<span class="kw-2">&amp;</span><span class="self">self</span>, msg: <span class="kw">impl </span>Iterator&lt;Item = bool&gt;) -&gt; CtOption&lt;pallas::Point&gt; {
+        <span class="self">self</span>.hash_to_point_inner(msg).into()
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="kw">fn</span> <span class="ident">hash_to_point_inner</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">msg</span>: <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">bool</span><span class="op">&gt;</span>) -&gt; <span class="ident">IncompletePoint</span> {
-        <span class="kw">let</span> <span class="ident">padded</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Pad::new</span>(<span class="ident">msg</span>).<span class="ident">collect</span>();
+    <span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="kw">fn </span>hash_to_point_inner(<span class="kw-2">&amp;</span><span class="self">self</span>, msg: <span class="kw">impl </span>Iterator&lt;Item = bool&gt;) -&gt; IncompletePoint {
+        <span class="kw">let </span>padded: Vec&lt;<span class="kw">_</span>&gt; = Pad::new(msg).collect();
 
-        <span class="ident">padded</span>
-            .<span class="ident">chunks</span>(<span class="ident">K</span>)
-            .<span class="ident">fold</span>(<span class="ident">IncompletePoint::from</span>(<span class="self">self</span>.<span class="ident">Q</span>), <span class="op">|</span><span class="ident">acc</span>, <span class="ident">chunk</span><span class="op">|</span> {
-                <span class="kw">let</span> (<span class="ident">S_x</span>, <span class="ident">S_y</span>) <span class="op">=</span> <span class="ident">SINSEMILLA_S</span>[<span class="ident">lebs2ip_k</span>(<span class="ident">chunk</span>) <span class="kw">as</span> <span class="ident">usize</span>];
-                <span class="kw">let</span> <span class="ident">S_chunk</span> <span class="op">=</span> <span class="ident">pallas::Affine::from_xy</span>(<span class="ident">S_x</span>, <span class="ident">S_y</span>).<span class="ident">unwrap</span>();
-                (<span class="ident">acc</span> <span class="op">+</span> <span class="ident">S_chunk</span>) <span class="op">+</span> <span class="ident">acc</span>
+        padded
+            .chunks(K)
+            .fold(IncompletePoint::from(<span class="self">self</span>.Q), |acc, chunk| {
+                <span class="kw">let </span>(S_x, S_y) = SINSEMILLA_S[lebs2ip_k(chunk) <span class="kw">as </span>usize];
+                <span class="kw">let </span>S_chunk = pallas::Affine::from_xy(S_x, S_y).unwrap();
+                (acc + S_chunk) + acc
             })
     }
 
-    <span class="doccomment">/// $\mathsf{SinsemillaHash}$ from [§ 5.4.1.9][concretesinsemillahash].</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Panics</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This panics if the message length is greater than [`K`] * [`C`]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">msg</span>: <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">bool</span><span class="op">&gt;</span>) -&gt; <span class="ident">CtOption</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> {
-        <span class="ident">extract_p_bottom</span>(<span class="self">self</span>.<span class="ident">hash_to_point</span>(<span class="ident">msg</span>))
+    <span class="doccomment">/// $\mathsf{SinsemillaHash}$ from [§ 5.4.1.9][concretesinsemillahash].
+    ///
+    /// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
+    ///
+    /// # Panics
+    ///
+    /// This panics if the message length is greater than [`K`] * [`C`]
+    </span><span class="kw">pub fn </span>hash(<span class="kw-2">&amp;</span><span class="self">self</span>, msg: <span class="kw">impl </span>Iterator&lt;Item = bool&gt;) -&gt; CtOption&lt;pallas::Base&gt; {
+        extract_p_bottom(<span class="self">self</span>.hash_to_point(msg))
     }
 
-    <span class="doccomment">/// Constructs a new `HashDomain` from a given `Q`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This is only for testing use.</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">from_Q</span>(<span class="ident">Q</span>: <span class="ident">pallas::Point</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">HashDomain</span> { <span class="ident">Q</span> }
+    <span class="doccomment">/// Constructs a new `HashDomain` from a given `Q`.
+    ///
+    /// This is only for testing use.
+    </span><span class="attribute">#[cfg(test)]</span>
+    <span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>from_Q(Q: pallas::Point) -&gt; <span class="self">Self </span>{
+        HashDomain { Q }
     }
 
-    <span class="doccomment">/// Returns the Sinsemilla $Q$ constant for this domain.</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;test-dependencies&quot;</span>))]</span>
-    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;test-dependencies&quot;</span>)))]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">Q</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">pallas::Point</span> {
-        <span class="self">self</span>.<span class="ident">Q</span>
+    <span class="doccomment">/// Returns the Sinsemilla $Q$ constant for this domain.
+    </span><span class="attribute">#[cfg(any(test, feature = <span class="string">&quot;test-dependencies&quot;</span>))]</span>
+    <span class="attribute">#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;test-dependencies&quot;</span>)))]</span>
+    <span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="kw">pub fn </span>Q(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; pallas::Point {
+        <span class="self">self</span>.Q
     }
 }
 
-<span class="doccomment">/// A domain in which $\mathsf{SinsemillaCommit}$ and $\mathsf{SinsemillaShortCommit}$ can</span>
-<span class="doccomment">/// be used.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CommitDomain</span> {
-    <span class="ident">M</span>: <span class="ident">HashDomain</span>,
-    <span class="ident">R</span>: <span class="ident">pallas::Point</span>,
+<span class="doccomment">/// A domain in which $\mathsf{SinsemillaCommit}$ and $\mathsf{SinsemillaShortCommit}$ can
+/// be used.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="attribute">#[allow(non_snake_case)]</span>
+<span class="kw">pub struct </span>CommitDomain {
+    M: HashDomain,
+    R: pallas::Point,
 }
 
-<span class="kw">impl</span> <span class="ident">CommitDomain</span> {
-    <span class="doccomment">/// Constructs a new `CommitDomain` with a specific prefix string.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">domain</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">m_prefix</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;{}-M&quot;</span>, <span class="ident">domain</span>);
-        <span class="kw">let</span> <span class="ident">r_prefix</span> <span class="op">=</span> <span class="macro">format!</span>(<span class="string">&quot;{}-r&quot;</span>, <span class="ident">domain</span>);
-        <span class="kw">let</span> <span class="ident">hasher_r</span> <span class="op">=</span> <span class="ident">pallas::Point::hash_to_curve</span>(<span class="kw-2">&amp;</span><span class="ident">r_prefix</span>);
-        <span class="ident">CommitDomain</span> {
-            <span class="ident">M</span>: <span class="ident">HashDomain::new</span>(<span class="kw-2">&amp;</span><span class="ident">m_prefix</span>),
-            <span class="ident">R</span>: <span class="ident">hasher_r</span>(<span class="kw-2">&amp;</span>[]),
+<span class="kw">impl </span>CommitDomain {
+    <span class="doccomment">/// Constructs a new `CommitDomain` with a specific prefix string.
+    </span><span class="kw">pub fn </span>new(domain: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>m_prefix = <span class="macro">format!</span>(<span class="string">&quot;{}-M&quot;</span>, domain);
+        <span class="kw">let </span>r_prefix = <span class="macro">format!</span>(<span class="string">&quot;{}-r&quot;</span>, domain);
+        <span class="kw">let </span>hasher_r = pallas::Point::hash_to_curve(<span class="kw-2">&amp;</span>r_prefix);
+        CommitDomain {
+            M: HashDomain::new(<span class="kw-2">&amp;</span>m_prefix),
+            R: hasher_r(<span class="kw-2">&amp;</span>[]),
         }
     }
 
-    <span class="doccomment">/// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">commit</span>(
+    <span class="doccomment">/// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
+    ///
+    /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
+    </span><span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="kw">pub fn </span>commit(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">msg</span>: <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">bool</span><span class="op">&gt;</span>,
-        <span class="ident">r</span>: <span class="kw-2">&amp;</span><span class="ident">pallas::Scalar</span>,
-    ) -&gt; <span class="ident">CtOption</span><span class="op">&lt;</span><span class="ident">pallas::Point</span><span class="op">&gt;</span> {
-        <span class="comment">// We use complete addition for the blinding factor.</span>
-        <span class="ident">CtOption</span>::<span class="op">&lt;</span><span class="ident">pallas::Point</span><span class="op">&gt;</span><span class="ident">::from</span>(<span class="self">self</span>.<span class="ident">M</span>.<span class="ident">hash_to_point_inner</span>(<span class="ident">msg</span>))
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span> <span class="op">+</span> <span class="ident">Wnaf::new</span>().<span class="ident">scalar</span>(<span class="ident">r</span>).<span class="ident">base</span>(<span class="self">self</span>.<span class="ident">R</span>))
+        msg: <span class="kw">impl </span>Iterator&lt;Item = bool&gt;,
+        r: <span class="kw-2">&amp;</span>pallas::Scalar,
+    ) -&gt; CtOption&lt;pallas::Point&gt; {
+        <span class="comment">// We use complete addition for the blinding factor.
+        </span>CtOption::&lt;pallas::Point&gt;::from(<span class="self">self</span>.M.hash_to_point_inner(msg))
+            .map(|p| p + Wnaf::new().scalar(r).base(<span class="self">self</span>.R))
     }
 
-    <span class="doccomment">/// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">short_commit</span>(
+    <span class="doccomment">/// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
+    ///
+    /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
+    </span><span class="kw">pub fn </span>short_commit(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">msg</span>: <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">bool</span><span class="op">&gt;</span>,
-        <span class="ident">r</span>: <span class="kw-2">&amp;</span><span class="ident">pallas::Scalar</span>,
-    ) -&gt; <span class="ident">CtOption</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> {
-        <span class="ident">extract_p_bottom</span>(<span class="self">self</span>.<span class="ident">commit</span>(<span class="ident">msg</span>, <span class="ident">r</span>))
+        msg: <span class="kw">impl </span>Iterator&lt;Item = bool&gt;,
+        r: <span class="kw-2">&amp;</span>pallas::Scalar,
+    ) -&gt; CtOption&lt;pallas::Base&gt; {
+        extract_p_bottom(<span class="self">self</span>.commit(msg, r))
     }
 
-    <span class="doccomment">/// Returns the Sinsemilla $R$ constant for this domain.</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;test-dependencies&quot;</span>))]</span>
-    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;test-dependencies&quot;</span>)))]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">R</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">pallas::Point</span> {
-        <span class="self">self</span>.<span class="ident">R</span>
+    <span class="doccomment">/// Returns the Sinsemilla $R$ constant for this domain.
+    </span><span class="attribute">#[cfg(any(test, feature = <span class="string">&quot;test-dependencies&quot;</span>))]</span>
+    <span class="attribute">#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;test-dependencies&quot;</span>)))]</span>
+    <span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="kw">pub fn </span>R(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; pallas::Point {
+        <span class="self">self</span>.R
     }
 
-    <span class="doccomment">/// Returns the Sinsemilla $Q$ constant for this domain.</span>
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;test-dependencies&quot;</span>))]</span>
-    <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;test-dependencies&quot;</span>)))]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">Q</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">pallas::Point</span> {
-        <span class="self">self</span>.<span class="ident">M</span>.<span class="ident">Q</span>
+    <span class="doccomment">/// Returns the Sinsemilla $Q$ constant for this domain.
+    </span><span class="attribute">#[cfg(any(test, feature = <span class="string">&quot;test-dependencies&quot;</span>))]</span>
+    <span class="attribute">#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;test-dependencies&quot;</span>)))]</span>
+    <span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="kw">pub fn </span>Q(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; pallas::Point {
+        <span class="self">self</span>.M.Q
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Pad</span>, <span class="ident">K</span>};
-    <span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::CurveExt</span>, <span class="ident">pallas</span>};
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::{Pad, K};
+    <span class="kw">use </span>pasta_curves::{arithmetic::CurveExt, pallas};
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">pad</span>() {
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>pad() {
         <span class="macro">assert_eq!</span>(
-            <span class="ident">Pad::new</span>([].<span class="ident">iter</span>().<span class="ident">cloned</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+            Pad::new([].iter().cloned()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
             <span class="macro">vec!</span>[<span class="bool-val">false</span>; <span class="number">0</span>]
         );
         <span class="macro">assert_eq!</span>(
-            <span class="ident">Pad::new</span>([<span class="bool-val">true</span>].<span class="ident">iter</span>().<span class="ident">cloned</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+            Pad::new([<span class="bool-val">true</span>].iter().cloned()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
             <span class="macro">vec!</span>[<span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>]
         );
         <span class="macro">assert_eq!</span>(
-            <span class="ident">Pad::new</span>([<span class="bool-val">true</span>, <span class="bool-val">true</span>].<span class="ident">iter</span>().<span class="ident">cloned</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+            Pad::new([<span class="bool-val">true</span>, <span class="bool-val">true</span>].iter().cloned()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
             <span class="macro">vec!</span>[<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>]
         );
         <span class="macro">assert_eq!</span>(
-            <span class="ident">Pad::new</span>([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>].<span class="ident">iter</span>().<span class="ident">cloned</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+            Pad::new([<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>].iter().cloned()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
             <span class="macro">vec!</span>[<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>]
         );
         <span class="macro">assert_eq!</span>(
-            <span class="ident">Pad::new</span>(
+            Pad::new(
                 [<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>]
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">cloned</span>()
+                    .iter()
+                    .cloned()
             )
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
             <span class="macro">vec!</span>[<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>]
         );
         <span class="macro">assert_eq!</span>(
-            <span class="ident">Pad::new</span>(
+            Pad::new(
                 [<span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>]
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">cloned</span>()
+                    .iter()
+                    .cloned()
             )
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
+            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
             <span class="macro">vec!</span>[
                 <span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">true</span>, <span class="bool-val">true</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>,
-                <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>
-            ]
+                <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false
+            </span>]
         );
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">sinsemilla_s</span>() {
-        <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::sinsemilla_s::SINSEMILLA_S</span>;
-        <span class="kw">use</span> <span class="ident">group::Curve</span>;
-        <span class="kw">use</span> <span class="ident">pasta_curves::arithmetic::CurveAffine</span>;
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>sinsemilla_s() {
+        <span class="kw">use </span><span class="kw">super</span>::sinsemilla_s::SINSEMILLA_S;
+        <span class="kw">use </span>group::Curve;
+        <span class="kw">use </span>pasta_curves::arithmetic::CurveAffine;
 
-        <span class="kw">let</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="ident">pallas::Point::hash_to_curve</span>(<span class="ident"><span class="kw">super</span>::S_PERSONALIZATION</span>);
+        <span class="kw">let </span>hasher = pallas::Point::hash_to_curve(<span class="kw">super</span>::S_PERSONALIZATION);
 
-        <span class="kw">for</span> <span class="ident">j</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="number">1u32</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">K</span>) {
-            <span class="kw">let</span> <span class="ident">computed</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">point</span> <span class="op">=</span> <span class="ident">hasher</span>(<span class="kw-2">&amp;</span><span class="ident">j</span>.<span class="ident">to_le_bytes</span>()).<span class="ident">to_affine</span>().<span class="ident">coordinates</span>().<span class="ident">unwrap</span>();
-                (<span class="kw-2">*</span><span class="ident">point</span>.<span class="ident">x</span>(), <span class="kw-2">*</span><span class="ident">point</span>.<span class="ident">y</span>())
+        <span class="kw">for </span>j <span class="kw">in </span><span class="number">0</span>..(<span class="number">1u32 </span>&lt;&lt; K) {
+            <span class="kw">let </span>computed = {
+                <span class="kw">let </span>point = hasher(<span class="kw-2">&amp;</span>j.to_le_bytes()).to_affine().coordinates().unwrap();
+                (<span class="kw-2">*</span>point.x(), <span class="kw-2">*</span>point.y())
             };
-            <span class="kw">let</span> <span class="ident">actual</span> <span class="op">=</span> <span class="ident">SINSEMILLA_S</span>[<span class="ident">j</span> <span class="kw">as</span> <span class="ident">usize</span>];
-            <span class="macro">assert_eq!</span>(<span class="ident">computed</span>, <span class="ident">actual</span>);
+            <span class="kw">let </span>actual = SINSEMILLA_S[j <span class="kw">as </span>usize];
+            <span class="macro">assert_eq!</span>(computed, actual);
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

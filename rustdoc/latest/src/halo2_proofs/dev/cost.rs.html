@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -397,384 +391,383 @@
 <span id="376">376</span>
 <span id="377">377</span>
 <span id="378">378</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Developer tools for investigating the cost of a circuit.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Developer tools for investigating the cost of a circuit.
 
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>},
-    <span class="ident">iter</span>,
-    <span class="ident">marker::PhantomData</span>,
-    <span class="ident">ops</span>::{<span class="ident">Add</span>, <span class="ident">Mul</span>},
+</span><span class="kw">use </span>std::{
+    collections::{HashMap, HashSet},
+    iter,
+    marker::PhantomData,
+    ops::{Add, Mul},
 };
 
-<span class="kw">use</span> <span class="ident">ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeField</span>};
-<span class="kw">use</span> <span class="ident">group::prime::PrimeGroup</span>;
+<span class="kw">use </span>ff::{Field, PrimeField};
+<span class="kw">use </span>group::prime::PrimeGroup;
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">circuit::Value</span>,
-    <span class="ident">plonk</span>::{
-        <span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Assigned</span>, <span class="ident">Assignment</span>, <span class="ident">Circuit</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>,
-        <span class="ident">FloorPlanner</span>, <span class="ident">Instance</span>, <span class="ident">Selector</span>,
+<span class="kw">use crate</span>::{
+    circuit::Value,
+    plonk::{
+        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
+        FloorPlanner, Instance, Selector,
     },
-    <span class="ident">poly::Rotation</span>,
+    poly::Rotation,
 };
 
-<span class="doccomment">/// Measures a circuit to determine its costs, and explain what contributes to them.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CircuitCost</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">PrimeGroup</span>, <span class="ident">ConcreteCircuit</span>: <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">G::Scalar</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Power-of-2 bound on the number of rows in the circuit.</span>
-    <span class="ident">k</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// Maximum degree of the circuit.</span>
-    <span class="ident">max_deg</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// Number of advice columns.</span>
-    <span class="ident">advice_columns</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// Number of direct queries for each column type.</span>
-    <span class="ident">instance_queries</span>: <span class="ident">usize</span>,
-    <span class="ident">advice_queries</span>: <span class="ident">usize</span>,
-    <span class="ident">fixed_queries</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// Number of lookup arguments.</span>
-    <span class="ident">lookups</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// Number of columns in the global permutation.</span>
-    <span class="ident">permutation_cols</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// Number of distinct sets of points in the multiopening argument.</span>
-    <span class="ident">point_sets</span>: <span class="ident">usize</span>,
+<span class="doccomment">/// Measures a circuit to determine its costs, and explain what contributes to them.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>CircuitCost&lt;G: PrimeGroup, ConcreteCircuit: Circuit&lt;G::Scalar&gt;&gt; {
+    <span class="doccomment">/// Power-of-2 bound on the number of rows in the circuit.
+    </span>k: usize,
+    <span class="doccomment">/// Maximum degree of the circuit.
+    </span>max_deg: usize,
+    <span class="doccomment">/// Number of advice columns.
+    </span>advice_columns: usize,
+    <span class="doccomment">/// Number of direct queries for each column type.
+    </span>instance_queries: usize,
+    advice_queries: usize,
+    fixed_queries: usize,
+    <span class="doccomment">/// Number of lookup arguments.
+    </span>lookups: usize,
+    <span class="doccomment">/// Number of columns in the global permutation.
+    </span>permutation_cols: usize,
+    <span class="doccomment">/// Number of distinct sets of points in the multiopening argument.
+    </span>point_sets: usize,
 
-    <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span>(<span class="ident">G</span>, <span class="ident">ConcreteCircuit</span>)<span class="op">&gt;</span>,
+    _marker: PhantomData&lt;(G, ConcreteCircuit)&gt;,
 }
 
-<span class="kw">struct</span> <span class="ident">Assembly</span> {
-    <span class="ident">selectors</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="kw">struct </span>Assembly {
+    selectors: Vec&lt;Vec&lt;bool&gt;&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assembly</span> {
-    <span class="kw">fn</span> <span class="ident">enter_region</span><span class="op">&lt;</span><span class="ident">NR</span>, <span class="ident">N</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="kw">_</span>: <span class="ident">N</span>)
-    <span class="kw">where</span>
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">NR</span>,
+<span class="kw">impl</span>&lt;F: Field&gt; Assignment&lt;F&gt; <span class="kw">for </span>Assembly {
+    <span class="kw">fn </span>enter_region&lt;NR, N&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: N)
+    <span class="kw">where
+        </span>NR: Into&lt;String&gt;,
+        N: FnOnce() -&gt; NR,
     {
-        <span class="comment">// Do nothing; we don&#39;t care about regions in this context.</span>
-    }
+        <span class="comment">// Do nothing; we don&#39;t care about regions in this context.
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">exit_region</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="comment">// Do nothing; we don&#39;t care about regions in this context.</span>
-    }
+    <span class="kw">fn </span>exit_region(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="comment">// Do nothing; we don&#39;t care about regions in this context.
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">enable_selector</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="kw">_</span>: <span class="ident">A</span>, <span class="ident">selector</span>: <span class="kw-2">&amp;</span><span class="ident">Selector</span>, <span class="ident">row</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">fn </span>enable_selector&lt;A, AR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: A, selector: <span class="kw-2">&amp;</span>Selector, row: usize) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+    <span class="kw">where
+        </span>A: FnOnce() -&gt; AR,
+        AR: Into&lt;String&gt;,
     {
-        <span class="self">self</span>.<span class="ident">selectors</span>[<span class="ident">selector</span>.<span class="number">0</span>][<span class="ident">row</span>] <span class="op">=</span> <span class="bool-val">true</span>;
+        <span class="self">self</span>.selectors[selector.<span class="number">0</span>][row] = <span class="bool-val">true</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">query_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="kw">_</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">Value::unknown</span>())
+    <span class="kw">fn </span>query_instance(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: Column&lt;Instance&gt;, <span class="kw">_</span>: usize) -&gt; <span class="prelude-ty">Result</span>&lt;Value&lt;F&gt;, Error&gt; {
+        <span class="prelude-val">Ok</span>(Value::unknown())
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_advice</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">VR</span>, <span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="kw">_</span>: <span class="ident">A</span>,
-        <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="kw">_</span>: <span class="ident">usize</span>,
-        <span class="kw">_</span>: <span class="ident">V</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span>,
-        <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">fn </span>assign_advice&lt;V, VR, A, AR&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw">_</span>: A,
+        <span class="kw">_</span>: Column&lt;Advice&gt;,
+        <span class="kw">_</span>: usize,
+        <span class="kw">_</span>: V,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+    <span class="kw">where
+        </span>V: FnOnce() -&gt; Value&lt;VR&gt;,
+        VR: Into&lt;Assigned&lt;F&gt;&gt;,
+        A: FnOnce() -&gt; AR,
+        AR: Into&lt;String&gt;,
     {
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_fixed</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">VR</span>, <span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="kw">_</span>: <span class="ident">A</span>,
-        <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
-        <span class="kw">_</span>: <span class="ident">usize</span>,
-        <span class="kw">_</span>: <span class="ident">V</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span>,
-        <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">fn </span>assign_fixed&lt;V, VR, A, AR&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw">_</span>: A,
+        <span class="kw">_</span>: Column&lt;Fixed&gt;,
+        <span class="kw">_</span>: usize,
+        <span class="kw">_</span>: V,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+    <span class="kw">where
+        </span>V: FnOnce() -&gt; Value&lt;VR&gt;,
+        VR: Into&lt;Assigned&lt;F&gt;&gt;,
+        A: FnOnce() -&gt; AR,
+        AR: Into&lt;String&gt;,
     {
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">copy</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>, <span class="kw">_</span>: <span class="ident">usize</span>, <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>, <span class="kw">_</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn </span>copy(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: Column&lt;Any&gt;, <span class="kw">_</span>: usize, <span class="kw">_</span>: Column&lt;Any&gt;, <span class="kw">_</span>: usize) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">fill_from_row</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
-        <span class="kw">_</span>: <span class="ident">usize</span>,
-        <span class="kw">_</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn </span>fill_from_row(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw">_</span>: Column&lt;Fixed&gt;,
+        <span class="kw">_</span>: usize,
+        <span class="kw">_</span>: Value&lt;Assigned&lt;F&gt;&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">push_namespace</span><span class="op">&lt;</span><span class="ident">NR</span>, <span class="ident">N</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="kw">_</span>: <span class="ident">N</span>)
-    <span class="kw">where</span>
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">NR</span>,
+    <span class="kw">fn </span>push_namespace&lt;NR, N&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: N)
+    <span class="kw">where
+        </span>NR: Into&lt;String&gt;,
+        N: FnOnce() -&gt; NR,
     {
-        <span class="comment">// Do nothing; we don&#39;t care about namespaces in this context.</span>
-    }
+        <span class="comment">// Do nothing; we don&#39;t care about namespaces in this context.
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">pop_namespace</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="kw">_</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) {
-        <span class="comment">// Do nothing; we don&#39;t care about namespaces in this context.</span>
-    }
+    <span class="kw">fn </span>pop_namespace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;String&gt;) {
+        <span class="comment">// Do nothing; we don&#39;t care about namespaces in this context.
+    </span>}
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">PrimeGroup</span>, <span class="ident">ConcreteCircuit</span>: <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">G::Scalar</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">CircuitCost</span><span class="op">&lt;</span><span class="ident">G</span>, <span class="ident">ConcreteCircuit</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Measures a circuit with parameter constant `k`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Panics if `k` is not large enough for the circuit.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">measure</span>(<span class="ident">k</span>: <span class="ident">usize</span>, <span class="ident">circuit</span>: <span class="kw-2">&amp;</span><span class="ident">ConcreteCircuit</span>) -&gt; <span class="self">Self</span> {
-        <span class="comment">// Collect the layout details.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cs</span> <span class="op">=</span> <span class="ident">ConstraintSystem::default</span>();
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">ConcreteCircuit::configure</span>(<span class="kw-2">&amp;mut</span> <span class="ident">cs</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">assembly</span> <span class="op">=</span> <span class="ident">Assembly</span> {
-            <span class="ident">selectors</span>: <span class="macro">vec!</span>[<span class="macro">vec!</span>[<span class="bool-val">false</span>; <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">k</span>]; <span class="ident">cs</span>.<span class="ident">num_selectors</span>],
+<span class="kw">impl</span>&lt;G: PrimeGroup, ConcreteCircuit: Circuit&lt;G::Scalar&gt;&gt; CircuitCost&lt;G, ConcreteCircuit&gt; {
+    <span class="doccomment">/// Measures a circuit with parameter constant `k`.
+    ///
+    /// Panics if `k` is not large enough for the circuit.
+    </span><span class="kw">pub fn </span>measure(k: usize, circuit: <span class="kw-2">&amp;</span>ConcreteCircuit) -&gt; <span class="self">Self </span>{
+        <span class="comment">// Collect the layout details.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>cs = ConstraintSystem::default();
+        <span class="kw">let </span>config = ConcreteCircuit::configure(<span class="kw-2">&amp;mut </span>cs);
+        <span class="kw">let </span><span class="kw-2">mut </span>assembly = Assembly {
+            selectors: <span class="macro">vec!</span>[<span class="macro">vec!</span>[<span class="bool-val">false</span>; <span class="number">1 </span>&lt;&lt; k]; cs.num_selectors],
         };
-        <span class="ident">ConcreteCircuit::FloorPlanner::synthesize</span>(
-            <span class="kw-2">&amp;mut</span> <span class="ident">assembly</span>,
-            <span class="ident">circuit</span>,
-            <span class="ident">config</span>,
-            <span class="ident">cs</span>.<span class="ident">constants</span>.<span class="ident">clone</span>(),
+        ConcreteCircuit::FloorPlanner::synthesize(
+            <span class="kw-2">&amp;mut </span>assembly,
+            circuit,
+            config,
+            cs.constants.clone(),
         )
-        .<span class="ident">unwrap</span>();
-        <span class="kw">let</span> (<span class="ident">cs</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">cs</span>.<span class="ident">compress_selectors</span>(<span class="ident">assembly</span>.<span class="ident">selectors</span>);
+        .unwrap();
+        <span class="kw">let </span>(cs, <span class="kw">_</span>) = cs.compress_selectors(assembly.selectors);
 
-        <span class="macro">assert!</span>((<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">k</span>) <span class="op">&gt;</span><span class="op">=</span> <span class="ident">cs</span>.<span class="ident">minimum_rows</span>());
+        <span class="macro">assert!</span>((<span class="number">1 </span>&lt;&lt; k) &gt;= cs.minimum_rows());
 
-        <span class="comment">// Figure out how many point sets we have due to queried cells.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">column_queries</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>, <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HashMap::new</span>();
-        <span class="kw">for</span> (<span class="ident">c</span>, <span class="ident">r</span>) <span class="kw">in</span> <span class="ident">iter::empty</span>()
-            .<span class="ident">chain</span>(
-                <span class="ident">cs</span>.<span class="ident">advice_queries</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">c</span>, <span class="ident">r</span>)<span class="op">|</span> (<span class="ident">Column</span>::<span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="ident">::from</span>(<span class="kw-2">*</span><span class="ident">c</span>), <span class="kw-2">*</span><span class="ident">r</span>)),
+        <span class="comment">// Figure out how many point sets we have due to queried cells.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>column_queries: HashMap&lt;Column&lt;Any&gt;, HashSet&lt;i32&gt;&gt; = HashMap::new();
+        <span class="kw">for </span>(c, r) <span class="kw">in </span>iter::empty()
+            .chain(
+                cs.advice_queries
+                    .iter()
+                    .map(|(c, r)| (Column::&lt;Any&gt;::from(<span class="kw-2">*</span>c), <span class="kw-2">*</span>r)),
             )
-            .<span class="ident">chain</span>(<span class="ident">cs</span>.<span class="ident">instance_queries</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">c</span>, <span class="ident">r</span>)<span class="op">|</span> ((<span class="kw-2">*</span><span class="ident">c</span>).<span class="ident">into</span>(), <span class="kw-2">*</span><span class="ident">r</span>)))
-            .<span class="ident">chain</span>(<span class="ident">cs</span>.<span class="ident">fixed_queries</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">c</span>, <span class="ident">r</span>)<span class="op">|</span> ((<span class="kw-2">*</span><span class="ident">c</span>).<span class="ident">into</span>(), <span class="kw-2">*</span><span class="ident">r</span>)))
-            .<span class="ident">chain</span>(
-                <span class="ident">cs</span>.<span class="ident">permutation</span>
-                    .<span class="ident">get_columns</span>()
-                    .<span class="ident">into_iter</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> (<span class="ident">c</span>, <span class="ident">Rotation::cur</span>())),
+            .chain(cs.instance_queries.iter().map(|(c, r)| ((<span class="kw-2">*</span>c).into(), <span class="kw-2">*</span>r)))
+            .chain(cs.fixed_queries.iter().map(|(c, r)| ((<span class="kw-2">*</span>c).into(), <span class="kw-2">*</span>r)))
+            .chain(
+                cs.permutation
+                    .get_columns()
+                    .into_iter()
+                    .map(|c| (c, Rotation::cur())),
             )
         {
-            <span class="ident">column_queries</span>.<span class="ident">entry</span>(<span class="ident">c</span>).<span class="ident">or_default</span>().<span class="ident">insert</span>(<span class="ident">r</span>.<span class="number">0</span>);
+            column_queries.entry(c).or_default().insert(r.<span class="number">0</span>);
         }
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">point_sets</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">i32</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HashSet::new</span>();
-        <span class="kw">for</span> (<span class="kw">_</span>, <span class="ident">r</span>) <span class="kw">in</span> <span class="ident">column_queries</span> {
-            <span class="comment">// Sort the query sets so we merge duplicates.</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">query_set</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>();
-            <span class="ident">query_set</span>.<span class="ident">sort_unstable</span>();
-            <span class="ident">point_sets</span>.<span class="ident">insert</span>(<span class="ident">query_set</span>);
-        }
-
-        <span class="comment">// Include lookup polynomials in point sets:</span>
-        <span class="ident">point_sets</span>.<span class="ident">insert</span>(<span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>]); <span class="comment">// product_poly</span>
-        <span class="ident">point_sets</span>.<span class="ident">insert</span>(<span class="macro">vec!</span>[<span class="op">-</span><span class="number">1</span>, <span class="number">0</span>]); <span class="comment">// permuted_input_poly</span>
-        <span class="ident">point_sets</span>.<span class="ident">insert</span>(<span class="macro">vec!</span>[<span class="number">0</span>]); <span class="comment">// permuted_table_poly</span>
-
-        <span class="comment">// Include permutation polynomials in point sets.</span>
-        <span class="ident">point_sets</span>.<span class="ident">insert</span>(<span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>]); <span class="comment">// permutation_product_poly</span>
-        <span class="kw">let</span> <span class="ident">max_deg</span> <span class="op">=</span> <span class="ident">cs</span>.<span class="ident">degree</span>();
-        <span class="kw">let</span> <span class="ident">permutation_cols</span> <span class="op">=</span> <span class="ident">cs</span>.<span class="ident">permutation</span>.<span class="ident">get_columns</span>().<span class="ident">len</span>();
-        <span class="kw">if</span> <span class="ident">permutation_cols</span> <span class="op">&gt;</span> <span class="ident">max_deg</span> <span class="op">-</span> <span class="number">2</span> {
-            <span class="comment">// permutation_product_poly for chaining chunks.</span>
-            <span class="ident">point_sets</span>.<span class="ident">insert</span>(<span class="macro">vec!</span>[<span class="op">-</span>((<span class="ident">cs</span>.<span class="ident">blinding_factors</span>() <span class="op">+</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">i32</span>), <span class="number">0</span>, <span class="number">1</span>]);
+        <span class="kw">let </span><span class="kw-2">mut </span>point_sets: HashSet&lt;Vec&lt;i32&gt;&gt; = HashSet::new();
+        <span class="kw">for </span>(<span class="kw">_</span>, r) <span class="kw">in </span>column_queries {
+            <span class="comment">// Sort the query sets so we merge duplicates.
+            </span><span class="kw">let </span><span class="kw-2">mut </span>query_set: Vec&lt;<span class="kw">_</span>&gt; = r.into_iter().collect();
+            query_set.sort_unstable();
+            point_sets.insert(query_set);
         }
 
-        <span class="ident">CircuitCost</span> {
-            <span class="ident">k</span>,
-            <span class="ident">max_deg</span>,
-            <span class="ident">advice_columns</span>: <span class="ident">cs</span>.<span class="ident">num_advice_columns</span>,
-            <span class="ident">instance_queries</span>: <span class="ident">cs</span>.<span class="ident">instance_queries</span>.<span class="ident">len</span>(),
-            <span class="ident">advice_queries</span>: <span class="ident">cs</span>.<span class="ident">advice_queries</span>.<span class="ident">len</span>(),
-            <span class="ident">fixed_queries</span>: <span class="ident">cs</span>.<span class="ident">fixed_queries</span>.<span class="ident">len</span>(),
-            <span class="ident">lookups</span>: <span class="ident">cs</span>.<span class="ident">lookups</span>.<span class="ident">len</span>(),
-            <span class="ident">permutation_cols</span>,
-            <span class="ident">point_sets</span>: <span class="ident">point_sets</span>.<span class="ident">len</span>(),
-            <span class="ident">_marker</span>: <span class="ident">PhantomData::default</span>(),
+        <span class="comment">// Include lookup polynomials in point sets:
+        </span>point_sets.insert(<span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>]); <span class="comment">// product_poly
+        </span>point_sets.insert(<span class="macro">vec!</span>[-<span class="number">1</span>, <span class="number">0</span>]); <span class="comment">// permuted_input_poly
+        </span>point_sets.insert(<span class="macro">vec!</span>[<span class="number">0</span>]); <span class="comment">// permuted_table_poly
+
+        // Include permutation polynomials in point sets.
+        </span>point_sets.insert(<span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>]); <span class="comment">// permutation_product_poly
+        </span><span class="kw">let </span>max_deg = cs.degree();
+        <span class="kw">let </span>permutation_cols = cs.permutation.get_columns().len();
+        <span class="kw">if </span>permutation_cols &gt; max_deg - <span class="number">2 </span>{
+            <span class="comment">// permutation_product_poly for chaining chunks.
+            </span>point_sets.insert(<span class="macro">vec!</span>[-((cs.blinding_factors() + <span class="number">1</span>) <span class="kw">as </span>i32), <span class="number">0</span>, <span class="number">1</span>]);
         }
-    }
 
-    <span class="kw">fn</span> <span class="ident">permutation_chunks</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="kw">let</span> <span class="ident">chunk_size</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">max_deg</span> <span class="op">-</span> <span class="number">2</span>;
-        (<span class="self">self</span>.<span class="ident">permutation_cols</span> <span class="op">+</span> <span class="ident">chunk_size</span> <span class="op">-</span> <span class="number">1</span>) <span class="op">/</span> <span class="ident">chunk_size</span>
-    }
-
-    <span class="doccomment">/// Returns the marginal proof size per instance of this circuit.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">marginal_proof_size</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">MarginalProofSize</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">chunks</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">permutation_chunks</span>();
-
-        <span class="ident">MarginalProofSize</span> {
-            <span class="comment">// Cells:</span>
-            <span class="comment">// - 1 commitment per advice column per instance</span>
-            <span class="comment">// - 1 eval per instance column query per instance</span>
-            <span class="comment">// - 1 eval per advice column query per instance</span>
-            <span class="ident">instance</span>: <span class="ident">ProofContribution::new</span>(<span class="number">0</span>, <span class="self">self</span>.<span class="ident">instance_queries</span>),
-            <span class="ident">advice</span>: <span class="ident">ProofContribution::new</span>(<span class="self">self</span>.<span class="ident">advice_columns</span>, <span class="self">self</span>.<span class="ident">advice_queries</span>),
-
-            <span class="comment">// Lookup arguments:</span>
-            <span class="comment">// - 3 commitments per lookup argument per instance</span>
-            <span class="comment">// - 5 evals per lookup argument per instance</span>
-            <span class="ident">lookups</span>: <span class="ident">ProofContribution::new</span>(<span class="number">3</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">lookups</span>, <span class="number">5</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">lookups</span>),
-
-            <span class="comment">// Global permutation argument:</span>
-            <span class="comment">// - chunks commitments per instance</span>
-            <span class="comment">// - 2*chunks + (chunks - 1) evals per instance</span>
-            <span class="ident">equality</span>: <span class="ident">ProofContribution::new</span>(<span class="ident">chunks</span>, <span class="number">3</span> <span class="op">*</span> <span class="ident">chunks</span> <span class="op">-</span> <span class="number">1</span>),
-
-            <span class="ident">_marker</span>: <span class="ident">PhantomData::default</span>(),
+        CircuitCost {
+            k,
+            max_deg,
+            advice_columns: cs.num_advice_columns,
+            instance_queries: cs.instance_queries.len(),
+            advice_queries: cs.advice_queries.len(),
+            fixed_queries: cs.fixed_queries.len(),
+            lookups: cs.lookups.len(),
+            permutation_cols,
+            point_sets: point_sets.len(),
+            _marker: PhantomData::default(),
         }
     }
 
-    <span class="doccomment">/// Returns the proof size for the given number of instances of this circuit.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">proof_size</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">instances</span>: <span class="ident">usize</span>) -&gt; <span class="ident">ProofSize</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">marginal</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">marginal_proof_size</span>();
-
-        <span class="ident">ProofSize</span> {
-            <span class="comment">// Cells:</span>
-            <span class="comment">// - marginal cost per instance</span>
-            <span class="comment">// - 1 eval per fixed column query</span>
-            <span class="ident">instance</span>: <span class="ident">marginal</span>.<span class="ident">instance</span> <span class="op">*</span> <span class="ident">instances</span>,
-            <span class="ident">advice</span>: <span class="ident">marginal</span>.<span class="ident">advice</span> <span class="op">*</span> <span class="ident">instances</span>,
-            <span class="ident">fixed</span>: <span class="ident">ProofContribution::new</span>(<span class="number">0</span>, <span class="self">self</span>.<span class="ident">fixed_queries</span>),
-
-            <span class="comment">// Lookup arguments:</span>
-            <span class="comment">// - marginal cost per instance</span>
-            <span class="ident">lookups</span>: <span class="ident">marginal</span>.<span class="ident">lookups</span> <span class="op">*</span> <span class="ident">instances</span>,
-
-            <span class="comment">// Global permutation argument:</span>
-            <span class="comment">// - marginal cost per instance</span>
-            <span class="comment">// - 1 eval per column</span>
-            <span class="ident">equality</span>: <span class="ident">marginal</span>.<span class="ident">equality</span> <span class="op">*</span> <span class="ident">instances</span>
-                <span class="op">+</span> <span class="ident">ProofContribution::new</span>(<span class="number">0</span>, <span class="self">self</span>.<span class="ident">permutation_cols</span>),
-
-            <span class="comment">// Vanishing argument:</span>
-            <span class="comment">// - 1 + (max_deg - 1) commitments</span>
-            <span class="comment">// - 1 random_poly eval</span>
-            <span class="ident">vanishing</span>: <span class="ident">ProofContribution::new</span>(<span class="self">self</span>.<span class="ident">max_deg</span>, <span class="number">1</span>),
-
-            <span class="comment">// Multiopening argument:</span>
-            <span class="comment">// - f_commitment</span>
-            <span class="comment">// - 1 eval per set of points in multiopen argument</span>
-            <span class="ident">multiopen</span>: <span class="ident">ProofContribution::new</span>(<span class="number">1</span>, <span class="self">self</span>.<span class="ident">point_sets</span>),
-
-            <span class="comment">// Polycommit:</span>
-            <span class="comment">// - s_poly commitment</span>
-            <span class="comment">// - inner product argument (2 * k round commitments)</span>
-            <span class="comment">// - a</span>
-            <span class="comment">// - xi</span>
-            <span class="ident">polycomm</span>: <span class="ident">ProofContribution::new</span>(<span class="number">1</span> <span class="op">+</span> <span class="number">2</span> <span class="op">*</span> <span class="self">self</span>.<span class="ident">k</span>, <span class="number">2</span>),
-
-            <span class="ident">_marker</span>: <span class="ident">PhantomData::default</span>(),
-        }
+    <span class="kw">fn </span>permutation_chunks(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="kw">let </span>chunk_size = <span class="self">self</span>.max_deg - <span class="number">2</span>;
+        (<span class="self">self</span>.permutation_cols + chunk_size - <span class="number">1</span>) / chunk_size
     }
-}
 
-<span class="doccomment">/// (commitments, evaluations)</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">struct</span> <span class="ident">ProofContribution</span> {
-    <span class="ident">commitments</span>: <span class="ident">usize</span>,
-    <span class="ident">evaluations</span>: <span class="ident">usize</span>,
-}
+    <span class="doccomment">/// Returns the marginal proof size per instance of this circuit.
+    </span><span class="kw">pub fn </span>marginal_proof_size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MarginalProofSize&lt;G&gt; {
+        <span class="kw">let </span>chunks = <span class="self">self</span>.permutation_chunks();
 
-<span class="kw">impl</span> <span class="ident">ProofContribution</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">commitments</span>: <span class="ident">usize</span>, <span class="ident">evaluations</span>: <span class="ident">usize</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">ProofContribution</span> {
-            <span class="ident">commitments</span>,
-            <span class="ident">evaluations</span>,
+        MarginalProofSize {
+            <span class="comment">// Cells:
+            // - 1 commitment per advice column per instance
+            // - 1 eval per instance column query per instance
+            // - 1 eval per advice column query per instance
+            </span>instance: ProofContribution::new(<span class="number">0</span>, <span class="self">self</span>.instance_queries),
+            advice: ProofContribution::new(<span class="self">self</span>.advice_columns, <span class="self">self</span>.advice_queries),
+
+            <span class="comment">// Lookup arguments:
+            // - 3 commitments per lookup argument per instance
+            // - 5 evals per lookup argument per instance
+            </span>lookups: ProofContribution::new(<span class="number">3 </span>* <span class="self">self</span>.lookups, <span class="number">5 </span>* <span class="self">self</span>.lookups),
+
+            <span class="comment">// Global permutation argument:
+            // - chunks commitments per instance
+            // - 2*chunks + (chunks - 1) evals per instance
+            </span>equality: ProofContribution::new(chunks, <span class="number">3 </span>* chunks - <span class="number">1</span>),
+
+            _marker: PhantomData::default(),
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">len</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">point</span>: <span class="ident">usize</span>, <span class="ident">scalar</span>: <span class="ident">usize</span>) -&gt; <span class="ident">usize</span> {
-        <span class="self">self</span>.<span class="ident">commitments</span> <span class="op">*</span> <span class="ident">point</span> <span class="op">+</span> <span class="self">self</span>.<span class="ident">evaluations</span> <span class="op">*</span> <span class="ident">scalar</span>
-    }
-}
+    <span class="doccomment">/// Returns the proof size for the given number of instances of this circuit.
+    </span><span class="kw">pub fn </span>proof_size(<span class="kw-2">&amp;</span><span class="self">self</span>, instances: usize) -&gt; ProofSize&lt;G&gt; {
+        <span class="kw">let </span>marginal = <span class="self">self</span>.marginal_proof_size();
 
-<span class="kw">impl</span> <span class="ident">Add</span> <span class="kw">for</span> <span class="ident">ProofContribution</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span>;
+        ProofSize {
+            <span class="comment">// Cells:
+            // - marginal cost per instance
+            // - 1 eval per fixed column query
+            </span>instance: marginal.instance * instances,
+            advice: marginal.advice * instances,
+            fixed: ProofContribution::new(<span class="number">0</span>, <span class="self">self</span>.fixed_queries),
 
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="self">Self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="self">Self</span> {
-            <span class="ident">commitments</span>: <span class="self">self</span>.<span class="ident">commitments</span> <span class="op">+</span> <span class="ident">rhs</span>.<span class="ident">commitments</span>,
-            <span class="ident">evaluations</span>: <span class="self">self</span>.<span class="ident">evaluations</span> <span class="op">+</span> <span class="ident">rhs</span>.<span class="ident">evaluations</span>,
+            <span class="comment">// Lookup arguments:
+            // - marginal cost per instance
+            </span>lookups: marginal.lookups * instances,
+
+            <span class="comment">// Global permutation argument:
+            // - marginal cost per instance
+            // - 1 eval per column
+            </span>equality: marginal.equality * instances
+                + ProofContribution::new(<span class="number">0</span>, <span class="self">self</span>.permutation_cols),
+
+            <span class="comment">// Vanishing argument:
+            // - 1 + (max_deg - 1) commitments
+            // - 1 random_poly eval
+            </span>vanishing: ProofContribution::new(<span class="self">self</span>.max_deg, <span class="number">1</span>),
+
+            <span class="comment">// Multiopening argument:
+            // - f_commitment
+            // - 1 eval per set of points in multiopen argument
+            </span>multiopen: ProofContribution::new(<span class="number">1</span>, <span class="self">self</span>.point_sets),
+
+            <span class="comment">// Polycommit:
+            // - s_poly commitment
+            // - inner product argument (2 * k round commitments)
+            // - a
+            // - xi
+            </span>polycomm: ProofContribution::new(<span class="number">1 </span>+ <span class="number">2 </span>* <span class="self">self</span>.k, <span class="number">2</span>),
+
+            _marker: PhantomData::default(),
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">ProofContribution</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="self">Self</span>;
+<span class="doccomment">/// (commitments, evaluations)
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">struct </span>ProofContribution {
+    commitments: usize,
+    evaluations: usize,
+}
 
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">instances</span>: <span class="ident">usize</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="self">Self</span> {
-            <span class="ident">commitments</span>: <span class="self">self</span>.<span class="ident">commitments</span> <span class="op">*</span> <span class="ident">instances</span>,
-            <span class="ident">evaluations</span>: <span class="self">self</span>.<span class="ident">evaluations</span> <span class="op">*</span> <span class="ident">instances</span>,
+<span class="kw">impl </span>ProofContribution {
+    <span class="kw">fn </span>new(commitments: usize, evaluations: usize) -&gt; <span class="self">Self </span>{
+        ProofContribution {
+            commitments,
+            evaluations,
+        }
+    }
+
+    <span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>, point: usize, scalar: usize) -&gt; usize {
+        <span class="self">self</span>.commitments * point + <span class="self">self</span>.evaluations * scalar
+    }
+}
+
+<span class="kw">impl </span>Add <span class="kw">for </span>ProofContribution {
+    <span class="kw">type </span>Output = <span class="self">Self</span>;
+
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
+        <span class="self">Self </span>{
+            commitments: <span class="self">self</span>.commitments + rhs.commitments,
+            evaluations: <span class="self">self</span>.evaluations + rhs.evaluations,
         }
     }
 }
 
-<span class="doccomment">/// The marginal size of a Halo 2 proof, broken down into its contributing factors.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MarginalProofSize</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">PrimeGroup</span><span class="op">&gt;</span> {
-    <span class="ident">instance</span>: <span class="ident">ProofContribution</span>,
-    <span class="ident">advice</span>: <span class="ident">ProofContribution</span>,
-    <span class="ident">lookups</span>: <span class="ident">ProofContribution</span>,
-    <span class="ident">equality</span>: <span class="ident">ProofContribution</span>,
-    <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span>,
-}
+<span class="kw">impl </span>Mul&lt;usize&gt; <span class="kw">for </span>ProofContribution {
+    <span class="kw">type </span>Output = <span class="self">Self</span>;
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">PrimeGroup</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">MarginalProofSize</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">usize</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">proof</span>: <span class="ident">MarginalProofSize</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">point</span> <span class="op">=</span> <span class="ident">G::Repr::default</span>().<span class="ident">as_ref</span>().<span class="ident">len</span>();
-        <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">G::Scalar</span> <span class="kw">as</span> <span class="ident">PrimeField</span><span class="op">&gt;</span><span class="ident">::Repr::default</span>().<span class="ident">as_ref</span>().<span class="ident">len</span>();
-
-        <span class="ident">proof</span>.<span class="ident">instance</span>.<span class="ident">len</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)
-            <span class="op">+</span> <span class="ident">proof</span>.<span class="ident">advice</span>.<span class="ident">len</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)
-            <span class="op">+</span> <span class="ident">proof</span>.<span class="ident">lookups</span>.<span class="ident">len</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)
-            <span class="op">+</span> <span class="ident">proof</span>.<span class="ident">equality</span>.<span class="ident">len</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)
+    <span class="kw">fn </span>mul(<span class="self">self</span>, instances: usize) -&gt; <span class="self">Self</span>::Output {
+        <span class="self">Self </span>{
+            commitments: <span class="self">self</span>.commitments * instances,
+            evaluations: <span class="self">self</span>.evaluations * instances,
+        }
     }
 }
 
-<span class="doccomment">/// The size of a Halo 2 proof, broken down into its contributing factors.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ProofSize</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">PrimeGroup</span><span class="op">&gt;</span> {
-    <span class="ident">instance</span>: <span class="ident">ProofContribution</span>,
-    <span class="ident">advice</span>: <span class="ident">ProofContribution</span>,
-    <span class="ident">fixed</span>: <span class="ident">ProofContribution</span>,
-    <span class="ident">lookups</span>: <span class="ident">ProofContribution</span>,
-    <span class="ident">equality</span>: <span class="ident">ProofContribution</span>,
-    <span class="ident">vanishing</span>: <span class="ident">ProofContribution</span>,
-    <span class="ident">multiopen</span>: <span class="ident">ProofContribution</span>,
-    <span class="ident">polycomm</span>: <span class="ident">ProofContribution</span>,
-    <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span>,
+<span class="doccomment">/// The marginal size of a Halo 2 proof, broken down into its contributing factors.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>MarginalProofSize&lt;G: PrimeGroup&gt; {
+    instance: ProofContribution,
+    advice: ProofContribution,
+    lookups: ProofContribution,
+    equality: ProofContribution,
+    _marker: PhantomData&lt;G&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">G</span>: <span class="ident">PrimeGroup</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ProofSize</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">usize</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">proof</span>: <span class="ident">ProofSize</span><span class="op">&lt;</span><span class="ident">G</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">point</span> <span class="op">=</span> <span class="ident">G::Repr::default</span>().<span class="ident">as_ref</span>().<span class="ident">len</span>();
-        <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">G::Scalar</span> <span class="kw">as</span> <span class="ident">PrimeField</span><span class="op">&gt;</span><span class="ident">::Repr::default</span>().<span class="ident">as_ref</span>().<span class="ident">len</span>();
+<span class="kw">impl</span>&lt;G: PrimeGroup&gt; From&lt;MarginalProofSize&lt;G&gt;&gt; <span class="kw">for </span>usize {
+    <span class="kw">fn </span>from(proof: MarginalProofSize&lt;G&gt;) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>point = G::Repr::default().as_ref().len();
+        <span class="kw">let </span>scalar = &lt;G::Scalar <span class="kw">as </span>PrimeField&gt;::Repr::default().as_ref().len();
 
-        <span class="ident">proof</span>.<span class="ident">instance</span>.<span class="ident">len</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)
-            <span class="op">+</span> <span class="ident">proof</span>.<span class="ident">advice</span>.<span class="ident">len</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)
-            <span class="op">+</span> <span class="ident">proof</span>.<span class="ident">fixed</span>.<span class="ident">len</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)
-            <span class="op">+</span> <span class="ident">proof</span>.<span class="ident">lookups</span>.<span class="ident">len</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)
-            <span class="op">+</span> <span class="ident">proof</span>.<span class="ident">equality</span>.<span class="ident">len</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)
-            <span class="op">+</span> <span class="ident">proof</span>.<span class="ident">vanishing</span>.<span class="ident">len</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)
-            <span class="op">+</span> <span class="ident">proof</span>.<span class="ident">multiopen</span>.<span class="ident">len</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)
-            <span class="op">+</span> <span class="ident">proof</span>.<span class="ident">polycomm</span>.<span class="ident">len</span>(<span class="ident">point</span>, <span class="ident">scalar</span>)
+        proof.instance.len(point, scalar)
+            + proof.advice.len(point, scalar)
+            + proof.lookups.len(point, scalar)
+            + proof.equality.len(point, scalar)
+    }
+}
+
+<span class="doccomment">/// The size of a Halo 2 proof, broken down into its contributing factors.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>ProofSize&lt;G: PrimeGroup&gt; {
+    instance: ProofContribution,
+    advice: ProofContribution,
+    fixed: ProofContribution,
+    lookups: ProofContribution,
+    equality: ProofContribution,
+    vanishing: ProofContribution,
+    multiopen: ProofContribution,
+    polycomm: ProofContribution,
+    _marker: PhantomData&lt;G&gt;,
+}
+
+<span class="kw">impl</span>&lt;G: PrimeGroup&gt; From&lt;ProofSize&lt;G&gt;&gt; <span class="kw">for </span>usize {
+    <span class="kw">fn </span>from(proof: ProofSize&lt;G&gt;) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>point = G::Repr::default().as_ref().len();
+        <span class="kw">let </span>scalar = &lt;G::Scalar <span class="kw">as </span>PrimeField&gt;::Repr::default().as_ref().len();
+
+        proof.instance.len(point, scalar)
+            + proof.advice.len(point, scalar)
+            + proof.fixed.len(point, scalar)
+            + proof.lookups.len(point, scalar)
+            + proof.equality.len(point, scalar)
+            + proof.vanishing.len(point, scalar)
+            + proof.multiopen.len(point, scalar)
+            + proof.polycomm.len(point, scalar)
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -534,33 +528,33 @@
 <span id="513">513</span>
 <span id="514">514</span>
 <span id="515">515</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
-<span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
+</pre><pre class="rust"><code><span class="kw">use </span>std::convert::TryInto;
+<span class="kw">use </span>std::marker::PhantomData;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::Sha256Instructions</span>;
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Chip</span>, <span class="ident">Layouter</span>, <span class="ident">Region</span>, <span class="ident">Value</span>},
-    <span class="ident">pasta::pallas</span>,
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Assigned</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>},
+<span class="kw">use </span><span class="kw">super</span>::Sha256Instructions;
+<span class="kw">use </span>halo2_proofs::{
+    circuit::{AssignedCell, Chip, Layouter, Region, Value},
+    pasta::pallas,
+    plonk::{Advice, Any, Assigned, Column, ConstraintSystem, Error},
 };
 
-<span class="kw">mod</span> <span class="ident">compression</span>;
-<span class="kw">mod</span> <span class="ident">gates</span>;
-<span class="kw">mod</span> <span class="ident">message_schedule</span>;
-<span class="kw">mod</span> <span class="ident">spread_table</span>;
-<span class="kw">mod</span> <span class="ident">util</span>;
+<span class="kw">mod </span>compression;
+<span class="kw">mod </span>gates;
+<span class="kw">mod </span>message_schedule;
+<span class="kw">mod </span>spread_table;
+<span class="kw">mod </span>util;
 
-<span class="kw">use</span> <span class="ident">compression</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">gates</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">message_schedule</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">spread_table</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">util</span>::<span class="kw-2">*</span>;
+<span class="kw">use </span>compression::<span class="kw-2">*</span>;
+<span class="kw">use </span>gates::<span class="kw-2">*</span>;
+<span class="kw">use </span>message_schedule::<span class="kw-2">*</span>;
+<span class="kw">use </span>spread_table::<span class="kw-2">*</span>;
+<span class="kw">use </span>util::<span class="kw-2">*</span>;
 
-<span class="kw">const</span> <span class="ident">ROUNDS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">64</span>;
-<span class="kw">const</span> <span class="ident">STATE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">8</span>;
+<span class="kw">const </span>ROUNDS: usize = <span class="number">64</span>;
+<span class="kw">const </span>STATE: usize = <span class="number">8</span>;
 
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::unreadable_literal</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">ROUND_CONSTANTS</span>: [<span class="ident">u32</span>; <span class="ident">ROUNDS</span>] <span class="op">=</span> [
+<span class="attribute">#[allow(clippy::unreadable_literal)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>ROUND_CONSTANTS: [u32; ROUNDS] = [
     <span class="number">0x428a2f98</span>, <span class="number">0x71374491</span>, <span class="number">0xb5c0fbcf</span>, <span class="number">0xe9b5dba5</span>, <span class="number">0x3956c25b</span>, <span class="number">0x59f111f1</span>, <span class="number">0x923f82a4</span>, <span class="number">0xab1c5ed5</span>,
     <span class="number">0xd807aa98</span>, <span class="number">0x12835b01</span>, <span class="number">0x243185be</span>, <span class="number">0x550c7dc3</span>, <span class="number">0x72be5d74</span>, <span class="number">0x80deb1fe</span>, <span class="number">0x9bdc06a7</span>, <span class="number">0xc19bf174</span>,
     <span class="number">0xe49b69c1</span>, <span class="number">0xefbe4786</span>, <span class="number">0x0fc19dc6</span>, <span class="number">0x240ca1cc</span>, <span class="number">0x2de92c6f</span>, <span class="number">0x4a7484aa</span>, <span class="number">0x5cb0a9dc</span>, <span class="number">0x76f988da</span>,
@@ -571,7 +565,7 @@
     <span class="number">0x748f82ee</span>, <span class="number">0x78a5636f</span>, <span class="number">0x84c87814</span>, <span class="number">0x8cc70208</span>, <span class="number">0x90befffa</span>, <span class="number">0xa4506ceb</span>, <span class="number">0xbef9a3f7</span>, <span class="number">0xc67178f2</span>,
 ];
 
-<span class="kw">const</span> <span class="ident">IV</span>: [<span class="ident">u32</span>; <span class="ident">STATE</span>] <span class="op">=</span> [
+<span class="kw">const </span>IV: [u32; STATE] = [
     <span class="number">0x6a09_e667</span>,
     <span class="number">0xbb67_ae85</span>,
     <span class="number">0x3c6e_f372</span>,
@@ -582,473 +576,472 @@
     <span class="number">0x5be0_cd19</span>,
 ];
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
-<span class="doccomment">/// A word in a `Table16` message block.</span>
-<span class="comment">// TODO: Make the internals of this struct private.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BlockWord</span>(<span class="kw">pub</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>);
+<span class="attribute">#[derive(Clone, Copy, Debug, Default)]</span>
+<span class="doccomment">/// A word in a `Table16` message block.
+</span><span class="comment">// TODO: Make the internals of this struct private.
+</span><span class="kw">pub struct </span>BlockWord(<span class="kw">pub </span>Value&lt;u32&gt;);
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="doccomment">/// Little-endian bits (up to 64 bits)</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Bits</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">LEN</span>: <span class="ident">usize</span><span class="op">&gt;</span>([<span class="ident">bool</span>; <span class="ident">LEN</span>]);
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="doccomment">/// Little-endian bits (up to 64 bits)
+</span><span class="kw">pub struct </span>Bits&lt;<span class="kw">const </span>LEN: usize&gt;([bool; LEN]);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">LEN</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Bits</span><span class="op">&lt;</span><span class="ident">LEN</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">spread</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">SPREAD</span>: <span class="ident">usize</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; [<span class="ident">bool</span>; <span class="ident">SPREAD</span>] {
-        <span class="ident">spread_bits</span>(<span class="self">self</span>.<span class="number">0</span>)
+<span class="kw">impl</span>&lt;<span class="kw">const </span>LEN: usize&gt; Bits&lt;LEN&gt; {
+    <span class="kw">fn </span>spread&lt;<span class="kw">const </span>SPREAD: usize&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; [bool; SPREAD] {
+        spread_bits(<span class="self">self</span>.<span class="number">0</span>)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">LEN</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">std::ops::Deref</span> <span class="kw">for</span> <span class="ident">Bits</span><span class="op">&lt;</span><span class="ident">LEN</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> [<span class="ident">bool</span>; <span class="ident">LEN</span>];
+<span class="kw">impl</span>&lt;<span class="kw">const </span>LEN: usize&gt; std::ops::Deref <span class="kw">for </span>Bits&lt;LEN&gt; {
+    <span class="kw">type </span>Target = [bool; LEN];
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
+}
+
+<span class="kw">impl</span>&lt;<span class="kw">const </span>LEN: usize&gt; From&lt;[bool; LEN]&gt; <span class="kw">for </span>Bits&lt;LEN&gt; {
+    <span class="kw">fn </span>from(bits: [bool; LEN]) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(bits)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">LEN</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">LEN</span>]<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Bits</span><span class="op">&lt;</span><span class="ident">LEN</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">bits</span>: [<span class="ident">bool</span>; <span class="ident">LEN</span>]) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span>(<span class="ident">bits</span>)
+<span class="kw">impl</span>&lt;<span class="kw">const </span>LEN: usize&gt; From&lt;<span class="kw-2">&amp;</span>Bits&lt;LEN&gt;&gt; <span class="kw">for </span>[bool; LEN] {
+    <span class="kw">fn </span>from(bits: <span class="kw-2">&amp;</span>Bits&lt;LEN&gt;) -&gt; <span class="self">Self </span>{
+        bits.<span class="number">0
+    </span>}
+}
+
+<span class="kw">impl</span>&lt;<span class="kw">const </span>LEN: usize&gt; From&lt;<span class="kw-2">&amp;</span>Bits&lt;LEN&gt;&gt; <span class="kw">for </span>Assigned&lt;pallas::Base&gt; {
+    <span class="kw">fn </span>from(bits: <span class="kw-2">&amp;</span>Bits&lt;LEN&gt;) -&gt; Assigned&lt;pallas::Base&gt; {
+        <span class="macro">assert!</span>(LEN &lt;= <span class="number">64</span>);
+        pallas::Base::from(lebs2ip(<span class="kw-2">&amp;</span>bits.<span class="number">0</span>)).into()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">LEN</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Bits</span><span class="op">&lt;</span><span class="ident">LEN</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> [<span class="ident">bool</span>; <span class="ident">LEN</span>] {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">bits</span>: <span class="kw-2">&amp;</span><span class="ident">Bits</span><span class="op">&lt;</span><span class="ident">LEN</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">bits</span>.<span class="number">0</span>
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>Bits&lt;<span class="number">16</span>&gt;&gt; <span class="kw">for </span>u16 {
+    <span class="kw">fn </span>from(bits: <span class="kw-2">&amp;</span>Bits&lt;<span class="number">16</span>&gt;) -&gt; u16 {
+        lebs2ip(<span class="kw-2">&amp;</span>bits.<span class="number">0</span>) <span class="kw">as </span>u16
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">LEN</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Bits</span><span class="op">&lt;</span><span class="ident">LEN</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">bits</span>: <span class="kw-2">&amp;</span><span class="ident">Bits</span><span class="op">&lt;</span><span class="ident">LEN</span><span class="op">&gt;</span>) -&gt; <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> {
-        <span class="macro">assert!</span>(<span class="ident">LEN</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">64</span>);
-        <span class="ident">pallas::Base::from</span>(<span class="ident">lebs2ip</span>(<span class="kw-2">&amp;</span><span class="ident">bits</span>.<span class="number">0</span>)).<span class="ident">into</span>()
+<span class="kw">impl </span>From&lt;u16&gt; <span class="kw">for </span>Bits&lt;<span class="number">16</span>&gt; {
+    <span class="kw">fn </span>from(int: u16) -&gt; Bits&lt;<span class="number">16</span>&gt; {
+        Bits(i2lebsp::&lt;<span class="number">16</span>&gt;(int.into()))
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Bits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">u16</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">bits</span>: <span class="kw-2">&amp;</span><span class="ident">Bits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>) -&gt; <span class="ident">u16</span> {
-        <span class="ident">lebs2ip</span>(<span class="kw-2">&amp;</span><span class="ident">bits</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">u16</span>
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>Bits&lt;<span class="number">32</span>&gt;&gt; <span class="kw">for </span>u32 {
+    <span class="kw">fn </span>from(bits: <span class="kw-2">&amp;</span>Bits&lt;<span class="number">32</span>&gt;) -&gt; u32 {
+        lebs2ip(<span class="kw-2">&amp;</span>bits.<span class="number">0</span>) <span class="kw">as </span>u32
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Bits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">int</span>: <span class="ident">u16</span>) -&gt; <span class="ident">Bits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span> {
-        <span class="ident">Bits</span>(<span class="ident">i2lebsp</span>::<span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>(<span class="ident">int</span>.<span class="ident">into</span>()))
+<span class="kw">impl </span>From&lt;u32&gt; <span class="kw">for </span>Bits&lt;<span class="number">32</span>&gt; {
+    <span class="kw">fn </span>from(int: u32) -&gt; Bits&lt;<span class="number">32</span>&gt; {
+        Bits(i2lebsp::&lt;<span class="number">32</span>&gt;(int.into()))
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Bits</span><span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">u32</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">bits</span>: <span class="kw-2">&amp;</span><span class="ident">Bits</span><span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span>) -&gt; <span class="ident">u32</span> {
-        <span class="ident">lebs2ip</span>(<span class="kw-2">&amp;</span><span class="ident">bits</span>.<span class="number">0</span>) <span class="kw">as</span> <span class="ident">u32</span>
-    }
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>AssignedBits&lt;<span class="kw">const </span>LEN: usize&gt;(AssignedCell&lt;Bits&lt;LEN&gt;, pallas::Base&gt;);
+
+<span class="kw">impl</span>&lt;<span class="kw">const </span>LEN: usize&gt; std::ops::Deref <span class="kw">for </span>AssignedBits&lt;LEN&gt; {
+    <span class="kw">type </span>Target = AssignedCell&lt;Bits&lt;LEN&gt;, pallas::Base&gt;;
+
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Bits</span><span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">int</span>: <span class="ident">u32</span>) -&gt; <span class="ident">Bits</span><span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span> {
-        <span class="ident">Bits</span>(<span class="ident">i2lebsp</span>::<span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span>(<span class="ident">int</span>.<span class="ident">into</span>()))
-    }
-}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">LEN</span>: <span class="ident">usize</span><span class="op">&gt;</span>(<span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Bits</span><span class="op">&lt;</span><span class="ident">LEN</span><span class="op">&gt;</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>);
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">LEN</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">std::ops::Deref</span> <span class="kw">for</span> <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="ident">LEN</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Bits</span><span class="op">&lt;</span><span class="ident">LEN</span><span class="op">&gt;</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>;
-
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Target</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">LEN</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="ident">LEN</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">assign_bits</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span>, <span class="ident">T</span>: <span class="ident">TryInto</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">LEN</span>]<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">std::fmt::Debug</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">annotation</span>: <span class="ident">A</span>,
-        <span class="ident">column</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-        <span class="op">&lt;</span><span class="ident">T</span> <span class="kw">as</span> <span class="ident">TryInto</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">LEN</span>]<span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Error</span>: <span class="ident">std::fmt::Debug</span>,
+<span class="kw">impl</span>&lt;<span class="kw">const </span>LEN: usize&gt; AssignedBits&lt;LEN&gt; {
+    <span class="kw">fn </span>assign_bits&lt;A, AR, T: TryInto&lt;[bool; LEN]&gt; + std::fmt::Debug + Clone&gt;(
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        annotation: A,
+        column: <span class="kw">impl </span>Into&lt;Column&lt;Any&gt;&gt;,
+        offset: usize,
+        value: Value&lt;T&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt;
+    <span class="kw">where
+        </span>A: Fn() -&gt; AR,
+        AR: Into&lt;String&gt;,
+        &lt;T <span class="kw">as </span>TryInto&lt;[bool; LEN]&gt;&gt;::Error: std::fmt::Debug,
     {
-        <span class="kw">let</span> <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">LEN</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-        <span class="kw">let</span> <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Bits</span><span class="op">&lt;</span><span class="ident">LEN</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">into</span>());
+        <span class="kw">let </span>value: Value&lt;[bool; LEN]&gt; = value.map(|v| v.try_into().unwrap());
+        <span class="kw">let </span>value: Value&lt;Bits&lt;LEN&gt;&gt; = value.map(|v| v.into());
 
-        <span class="kw">let</span> <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">column</span>.<span class="ident">into</span>();
-        <span class="kw">match</span> <span class="ident">column</span>.<span class="ident">column_type</span>() {
-            <span class="ident">Any::Advice</span> =&gt; {
-                <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="ident">annotation</span>, <span class="ident">column</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>(), <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> {
-                    <span class="ident">value</span>.<span class="ident">clone</span>()
+        <span class="kw">let </span>column: Column&lt;Any&gt; = column.into();
+        <span class="kw">match </span>column.column_type() {
+            Any::Advice =&gt; {
+                region.assign_advice(annotation, column.try_into().unwrap(), offset, || {
+                    value.clone()
                 })
             }
-            <span class="ident">Any::Fixed</span> =&gt; {
-                <span class="ident">region</span>.<span class="ident">assign_fixed</span>(<span class="ident">annotation</span>, <span class="ident">column</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>(), <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> {
-                    <span class="ident">value</span>.<span class="ident">clone</span>()
+            Any::Fixed =&gt; {
+                region.assign_fixed(annotation, column.try_into().unwrap(), offset, || {
+                    value.clone()
                 })
             }
-            <span class="kw">_</span> =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Cannot assign to instance column&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;Cannot assign to instance column&quot;</span>),
         }
-        .<span class="ident">map</span>(<span class="ident">AssignedBits</span>)
+        .map(AssignedBits)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">value_u16</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">into</span>())
+<span class="kw">impl </span>AssignedBits&lt;<span class="number">16</span>&gt; {
+    <span class="kw">fn </span>value_u16(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;u16&gt; {
+        <span class="self">self</span>.value().map(|v| v.into())
     }
 
-    <span class="kw">fn</span> <span class="ident">assign</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">annotation</span>: <span class="ident">A</span>,
-        <span class="ident">column</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u16</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">fn </span>assign&lt;A, AR&gt;(
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        annotation: A,
+        column: <span class="kw">impl </span>Into&lt;Column&lt;Any&gt;&gt;,
+        offset: usize,
+        value: Value&lt;u16&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt;
+    <span class="kw">where
+        </span>A: Fn() -&gt; AR,
+        AR: Into&lt;String&gt;,
     {
-        <span class="kw">let</span> <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">column</span>.<span class="ident">into</span>();
-        <span class="kw">let</span> <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Bits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">into</span>());
-        <span class="kw">match</span> <span class="ident">column</span>.<span class="ident">column_type</span>() {
-            <span class="ident">Any::Advice</span> =&gt; {
-                <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="ident">annotation</span>, <span class="ident">column</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>(), <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> {
-                    <span class="ident">value</span>.<span class="ident">clone</span>()
+        <span class="kw">let </span>column: Column&lt;Any&gt; = column.into();
+        <span class="kw">let </span>value: Value&lt;Bits&lt;<span class="number">16</span>&gt;&gt; = value.map(|v| v.into());
+        <span class="kw">match </span>column.column_type() {
+            Any::Advice =&gt; {
+                region.assign_advice(annotation, column.try_into().unwrap(), offset, || {
+                    value.clone()
                 })
             }
-            <span class="ident">Any::Fixed</span> =&gt; {
-                <span class="ident">region</span>.<span class="ident">assign_fixed</span>(<span class="ident">annotation</span>, <span class="ident">column</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>(), <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> {
-                    <span class="ident">value</span>.<span class="ident">clone</span>()
+            Any::Fixed =&gt; {
+                region.assign_fixed(annotation, column.try_into().unwrap(), offset, || {
+                    value.clone()
                 })
             }
-            <span class="kw">_</span> =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Cannot assign to instance column&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;Cannot assign to instance column&quot;</span>),
         }
-        .<span class="ident">map</span>(<span class="ident">AssignedBits</span>)
+        .map(AssignedBits)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">value_u32</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">into</span>())
+<span class="kw">impl </span>AssignedBits&lt;<span class="number">32</span>&gt; {
+    <span class="kw">fn </span>value_u32(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;u32&gt; {
+        <span class="self">self</span>.value().map(|v| v.into())
     }
 
-    <span class="kw">fn</span> <span class="ident">assign</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">annotation</span>: <span class="ident">A</span>,
-        <span class="ident">column</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">Fn</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">fn </span>assign&lt;A, AR&gt;(
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        annotation: A,
+        column: <span class="kw">impl </span>Into&lt;Column&lt;Any&gt;&gt;,
+        offset: usize,
+        value: Value&lt;u32&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt;
+    <span class="kw">where
+        </span>A: Fn() -&gt; AR,
+        AR: Into&lt;String&gt;,
     {
-        <span class="kw">let</span> <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">column</span>.<span class="ident">into</span>();
-        <span class="kw">let</span> <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Bits</span><span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">into</span>());
-        <span class="kw">match</span> <span class="ident">column</span>.<span class="ident">column_type</span>() {
-            <span class="ident">Any::Advice</span> =&gt; {
-                <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="ident">annotation</span>, <span class="ident">column</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>(), <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> {
-                    <span class="ident">value</span>.<span class="ident">clone</span>()
+        <span class="kw">let </span>column: Column&lt;Any&gt; = column.into();
+        <span class="kw">let </span>value: Value&lt;Bits&lt;<span class="number">32</span>&gt;&gt; = value.map(|v| v.into());
+        <span class="kw">match </span>column.column_type() {
+            Any::Advice =&gt; {
+                region.assign_advice(annotation, column.try_into().unwrap(), offset, || {
+                    value.clone()
                 })
             }
-            <span class="ident">Any::Fixed</span> =&gt; {
-                <span class="ident">region</span>.<span class="ident">assign_fixed</span>(<span class="ident">annotation</span>, <span class="ident">column</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>(), <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> {
-                    <span class="ident">value</span>.<span class="ident">clone</span>()
+            Any::Fixed =&gt; {
+                region.assign_fixed(annotation, column.try_into().unwrap(), offset, || {
+                    value.clone()
                 })
             }
-            <span class="kw">_</span> =&gt; <span class="macro">panic!</span>(<span class="string">&quot;Cannot assign to instance column&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;Cannot assign to instance column&quot;</span>),
         }
-        .<span class="ident">map</span>(<span class="ident">AssignedBits</span>)
+        .map(AssignedBits)
     }
 }
 
-<span class="doccomment">/// Configuration for a [`Table16Chip`].</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Table16Config</span> {
-    <span class="ident">lookup</span>: <span class="ident">SpreadTableConfig</span>,
-    <span class="ident">message_schedule</span>: <span class="ident">MessageScheduleConfig</span>,
-    <span class="ident">compression</span>: <span class="ident">CompressionConfig</span>,
+<span class="doccomment">/// Configuration for a [`Table16Chip`].
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>Table16Config {
+    lookup: SpreadTableConfig,
+    message_schedule: MessageScheduleConfig,
+    compression: CompressionConfig,
 }
 
-<span class="doccomment">/// A chip that implements SHA-256 with a maximum lookup table size of $2^16$.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Table16Chip</span> {
-    <span class="ident">config</span>: <span class="ident">Table16Config</span>,
-    <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A chip that implements SHA-256 with a maximum lookup table size of $2^16$.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>Table16Chip {
+    config: Table16Config,
+    _marker: PhantomData&lt;pallas::Base&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Table16Chip</span> {
-    <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">Table16Config</span>;
-    <span class="kw">type</span> <span class="ident">Loaded</span> <span class="op">=</span> ();
+<span class="kw">impl </span>Chip&lt;pallas::Base&gt; <span class="kw">for </span>Table16Chip {
+    <span class="kw">type </span>Config = Table16Config;
+    <span class="kw">type </span>Loaded = ();
 
-    <span class="kw">fn</span> <span class="ident">config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Config</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span>
+    <span class="kw">fn </span>config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Config {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.config
     }
 
-    <span class="kw">fn</span> <span class="ident">loaded</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Loaded</span> {
+    <span class="kw">fn </span>loaded(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Loaded {
         <span class="kw-2">&amp;</span>()
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Table16Chip</span> {
-    <span class="doccomment">/// Reconstructs this chip from the given config.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">construct</span>(<span class="ident">config</span>: <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Config</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">config</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+<span class="kw">impl </span>Table16Chip {
+    <span class="doccomment">/// Reconstructs this chip from the given config.
+    </span><span class="kw">pub fn </span>construct(config: &lt;<span class="self">Self </span><span class="kw">as </span>Chip&lt;pallas::Base&gt;&gt;::Config) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            config,
+            _marker: PhantomData,
         }
     }
 
-    <span class="doccomment">/// Configures a circuit to include this chip.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure</span>(
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Config</span> {
-        <span class="comment">// Columns required by this chip:</span>
-        <span class="kw">let</span> <span class="ident">message_schedule</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>();
-        <span class="kw">let</span> <span class="ident">extras</span> <span class="op">=</span> [
-            <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-            <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-            <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-            <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-            <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-            <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
+    <span class="doccomment">/// Configures a circuit to include this chip.
+    </span><span class="kw">pub fn </span>configure(
+        meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;,
+    ) -&gt; &lt;<span class="self">Self </span><span class="kw">as </span>Chip&lt;pallas::Base&gt;&gt;::Config {
+        <span class="comment">// Columns required by this chip:
+        </span><span class="kw">let </span>message_schedule = meta.advice_column();
+        <span class="kw">let </span>extras = [
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
         ];
 
-        <span class="comment">// - Three advice columns to interact with the lookup table.</span>
-        <span class="kw">let</span> <span class="ident">input_tag</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>();
-        <span class="kw">let</span> <span class="ident">input_dense</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>();
-        <span class="kw">let</span> <span class="ident">input_spread</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>();
+        <span class="comment">// - Three advice columns to interact with the lookup table.
+        </span><span class="kw">let </span>input_tag = meta.advice_column();
+        <span class="kw">let </span>input_dense = meta.advice_column();
+        <span class="kw">let </span>input_spread = meta.advice_column();
 
-        <span class="kw">let</span> <span class="ident">lookup</span> <span class="op">=</span> <span class="ident">SpreadTableChip::configure</span>(<span class="ident">meta</span>, <span class="ident">input_tag</span>, <span class="ident">input_dense</span>, <span class="ident">input_spread</span>);
-        <span class="kw">let</span> <span class="ident">lookup_inputs</span> <span class="op">=</span> <span class="ident">lookup</span>.<span class="ident">input</span>.<span class="ident">clone</span>();
+        <span class="kw">let </span>lookup = SpreadTableChip::configure(meta, input_tag, input_dense, input_spread);
+        <span class="kw">let </span>lookup_inputs = lookup.input.clone();
 
-        <span class="comment">// Rename these here for ease of matching the gates to the specification.</span>
-        <span class="kw">let</span> <span class="ident">_a_0</span> <span class="op">=</span> <span class="ident">lookup_inputs</span>.<span class="ident">tag</span>;
-        <span class="kw">let</span> <span class="ident">a_1</span> <span class="op">=</span> <span class="ident">lookup_inputs</span>.<span class="ident">dense</span>;
-        <span class="kw">let</span> <span class="ident">a_2</span> <span class="op">=</span> <span class="ident">lookup_inputs</span>.<span class="ident">spread</span>;
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">a_4</span> <span class="op">=</span> <span class="ident">extras</span>[<span class="number">1</span>];
-        <span class="kw">let</span> <span class="ident">a_5</span> <span class="op">=</span> <span class="ident">message_schedule</span>;
-        <span class="kw">let</span> <span class="ident">a_6</span> <span class="op">=</span> <span class="ident">extras</span>[<span class="number">2</span>];
-        <span class="kw">let</span> <span class="ident">a_7</span> <span class="op">=</span> <span class="ident">extras</span>[<span class="number">3</span>];
-        <span class="kw">let</span> <span class="ident">a_8</span> <span class="op">=</span> <span class="ident">extras</span>[<span class="number">4</span>];
-        <span class="kw">let</span> <span class="ident">_a_9</span> <span class="op">=</span> <span class="ident">extras</span>[<span class="number">5</span>];
+        <span class="comment">// Rename these here for ease of matching the gates to the specification.
+        </span><span class="kw">let </span>_a_0 = lookup_inputs.tag;
+        <span class="kw">let </span>a_1 = lookup_inputs.dense;
+        <span class="kw">let </span>a_2 = lookup_inputs.spread;
+        <span class="kw">let </span>a_3 = extras[<span class="number">0</span>];
+        <span class="kw">let </span>a_4 = extras[<span class="number">1</span>];
+        <span class="kw">let </span>a_5 = message_schedule;
+        <span class="kw">let </span>a_6 = extras[<span class="number">2</span>];
+        <span class="kw">let </span>a_7 = extras[<span class="number">3</span>];
+        <span class="kw">let </span>a_8 = extras[<span class="number">4</span>];
+        <span class="kw">let </span>_a_9 = extras[<span class="number">5</span>];
 
-        <span class="comment">// Add all advice columns to permutation</span>
-        <span class="kw">for</span> <span class="ident">column</span> <span class="kw">in</span> [<span class="ident">a_1</span>, <span class="ident">a_2</span>, <span class="ident">a_3</span>, <span class="ident">a_4</span>, <span class="ident">a_5</span>, <span class="ident">a_6</span>, <span class="ident">a_7</span>, <span class="ident">a_8</span>].<span class="ident">iter</span>() {
-            <span class="ident">meta</span>.<span class="ident">enable_equality</span>(<span class="kw-2">*</span><span class="ident">column</span>);
+        <span class="comment">// Add all advice columns to permutation
+        </span><span class="kw">for </span>column <span class="kw">in </span>[a_1, a_2, a_3, a_4, a_5, a_6, a_7, a_8].iter() {
+            meta.enable_equality(<span class="kw-2">*</span>column);
         }
 
-        <span class="kw">let</span> <span class="ident">compression</span> <span class="op">=</span>
-            <span class="ident">CompressionConfig::configure</span>(<span class="ident">meta</span>, <span class="ident">lookup_inputs</span>.<span class="ident">clone</span>(), <span class="ident">message_schedule</span>, <span class="ident">extras</span>);
+        <span class="kw">let </span>compression =
+            CompressionConfig::configure(meta, lookup_inputs.clone(), message_schedule, extras);
 
-        <span class="kw">let</span> <span class="ident">message_schedule</span> <span class="op">=</span>
-            <span class="ident">MessageScheduleConfig::configure</span>(<span class="ident">meta</span>, <span class="ident">lookup_inputs</span>, <span class="ident">message_schedule</span>, <span class="ident">extras</span>);
+        <span class="kw">let </span>message_schedule =
+            MessageScheduleConfig::configure(meta, lookup_inputs, message_schedule, extras);
 
-        <span class="ident">Table16Config</span> {
-            <span class="ident">lookup</span>,
-            <span class="ident">message_schedule</span>,
-            <span class="ident">compression</span>,
+        Table16Config {
+            lookup,
+            message_schedule,
+            compression,
         }
     }
 
-    <span class="doccomment">/// Loads the lookup table required by this chip into the circuit.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load</span>(
-        <span class="ident">config</span>: <span class="ident">Table16Config</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident">SpreadTableChip::load</span>(<span class="ident">config</span>.<span class="ident">lookup</span>, <span class="ident">layouter</span>)
+    <span class="doccomment">/// Loads the lookup table required by this chip into the circuit.
+    </span><span class="kw">pub fn </span>load(
+        config: Table16Config,
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        SpreadTableChip::load(config.lookup, layouter)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">Sha256Instructions</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Table16Chip</span> {
-    <span class="kw">type</span> <span class="ident">State</span> <span class="op">=</span> <span class="ident">State</span>;
-    <span class="kw">type</span> <span class="ident">BlockWord</span> <span class="op">=</span> <span class="ident">BlockWord</span>;
+<span class="kw">impl </span>Sha256Instructions&lt;pallas::Base&gt; <span class="kw">for </span>Table16Chip {
+    <span class="kw">type </span>State = State;
+    <span class="kw">type </span>BlockWord = BlockWord;
 
-    <span class="kw">fn</span> <span class="ident">initialization_vector</span>(
+    <span class="kw">fn </span>initialization_vector(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">State</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">compression</span>.<span class="ident">initialize_with_iv</span>(<span class="ident">layouter</span>, <span class="ident">IV</span>)
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;State, Error&gt; {
+        <span class="self">self</span>.config().compression.initialize_with_iv(layouter, IV)
     }
 
-    <span class="kw">fn</span> <span class="ident">initialization</span>(
+    <span class="kw">fn </span>initialization(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">init_state</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::State</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::State</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">config</span>()
-            .<span class="ident">compression</span>
-            .<span class="ident">initialize_with_state</span>(<span class="ident">layouter</span>, <span class="ident">init_state</span>.<span class="ident">clone</span>())
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        init_state: <span class="kw-2">&amp;</span><span class="self">Self</span>::State,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::State, Error&gt; {
+        <span class="self">self</span>.config()
+            .compression
+            .initialize_with_state(layouter, init_state.clone())
     }
 
-    <span class="comment">// Given an initialized state and an input message block, compress the</span>
-    <span class="comment">// message block and return the final state.</span>
-    <span class="kw">fn</span> <span class="ident">compress</span>(
+    <span class="comment">// Given an initialized state and an input message block, compress the
+    // message block and return the final state.
+    </span><span class="kw">fn </span>compress(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">initialized_state</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::State</span>,
-        <span class="ident">input</span>: [<span class="ident"><span class="self">Self</span>::BlockWord</span>; <span class="ident"><span class="kw">super</span>::BLOCK_SIZE</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::State</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>();
-        <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">w_halves</span>) <span class="op">=</span> <span class="ident">config</span>.<span class="ident">message_schedule</span>.<span class="ident">process</span>(<span class="ident">layouter</span>, <span class="ident">input</span>)<span class="question-mark">?</span>;
-        <span class="ident">config</span>
-            .<span class="ident">compression</span>
-            .<span class="ident">compress</span>(<span class="ident">layouter</span>, <span class="ident">initialized_state</span>.<span class="ident">clone</span>(), <span class="ident">w_halves</span>)
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        initialized_state: <span class="kw-2">&amp;</span><span class="self">Self</span>::State,
+        input: [<span class="self">Self</span>::BlockWord; <span class="kw">super</span>::BLOCK_SIZE],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::State, Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config();
+        <span class="kw">let </span>(<span class="kw">_</span>, w_halves) = config.message_schedule.process(layouter, input)<span class="question-mark">?</span>;
+        config
+            .compression
+            .compress(layouter, initialized_state.clone(), w_halves)
     }
 
-    <span class="kw">fn</span> <span class="ident">digest</span>(
+    <span class="kw">fn </span>digest(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">state</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::State</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>[<span class="ident"><span class="self">Self</span>::BlockWord</span>; <span class="ident"><span class="kw">super</span>::DIGEST_SIZE</span>], <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Copy the dense forms of the state variable chunks down to this gate.</span>
-        <span class="comment">// Reconstruct the 32-bit dense words.</span>
-        <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">compression</span>.<span class="ident">digest</span>(<span class="ident">layouter</span>, <span class="ident">state</span>.<span class="ident">clone</span>())
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        state: <span class="kw-2">&amp;</span><span class="self">Self</span>::State,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;[<span class="self">Self</span>::BlockWord; <span class="kw">super</span>::DIGEST_SIZE], Error&gt; {
+        <span class="comment">// Copy the dense forms of the state variable chunks down to this gate.
+        // Reconstruct the 32-bit dense words.
+        </span><span class="self">self</span>.config().compression.digest(layouter, state.clone())
     }
 }
 
-<span class="doccomment">/// Common assignment patterns used by Table16 regions.</span>
-<span class="kw">trait</span> <span class="ident">Table16Assignment</span> {
-    <span class="doccomment">/// Assign cells for general spread computation used in sigma, ch, ch_neg, maj gates</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">fn</span> <span class="ident">assign_spread_outputs</span>(
+<span class="doccomment">/// Common assignment patterns used by Table16 regions.
+</span><span class="kw">trait </span>Table16Assignment {
+    <span class="doccomment">/// Assign cells for general spread computation used in sigma, ch, ch_neg, maj gates
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="kw">fn </span>assign_spread_outputs(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">lookup</span>: <span class="kw-2">&amp;</span><span class="ident">SpreadInputs</span>,
-        <span class="ident">a_3</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-        <span class="ident">r_0_even</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-        <span class="ident">r_0_odd</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-        <span class="ident">r_1_even</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-        <span class="ident">r_1_odd</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        lookup: <span class="kw-2">&amp;</span>SpreadInputs,
+        a_3: Column&lt;Advice&gt;,
+        row: usize,
+        r_0_even: Value&lt;[bool; <span class="number">16</span>]&gt;,
+        r_0_odd: Value&lt;[bool; <span class="number">16</span>]&gt;,
+        r_1_even: Value&lt;[bool; <span class="number">16</span>]&gt;,
+        r_1_odd: Value&lt;[bool; <span class="number">16</span>]&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;
         (
-            (<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>),
-            (<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>),
+            (AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;),
+            (AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;),
         ),
-        <span class="ident">Error</span>,
-    <span class="op">&gt;</span> {
-        <span class="comment">// Lookup R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}</span>
-        <span class="kw">let</span> <span class="ident">r_0_even</span> <span class="op">=</span> <span class="ident">SpreadVar::with_lookup</span>(
-            <span class="ident">region</span>,
-            <span class="ident">lookup</span>,
-            <span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>,
-            <span class="ident">r_0_even</span>.<span class="ident">map</span>(<span class="ident">SpreadWord</span>::<span class="op">&lt;</span><span class="number">16</span>, <span class="number">32</span><span class="op">&gt;</span><span class="ident">::new</span>),
+        Error,
+    &gt; {
+        <span class="comment">// Lookup R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
+        </span><span class="kw">let </span>r_0_even = SpreadVar::with_lookup(
+            region,
+            lookup,
+            row - <span class="number">1</span>,
+            r_0_even.map(SpreadWord::&lt;<span class="number">16</span>, <span class="number">32</span>&gt;::new),
         )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">r_0_odd</span> <span class="op">=</span>
-            <span class="ident">SpreadVar::with_lookup</span>(<span class="ident">region</span>, <span class="ident">lookup</span>, <span class="ident">row</span>, <span class="ident">r_0_odd</span>.<span class="ident">map</span>(<span class="ident">SpreadWord</span>::<span class="op">&lt;</span><span class="number">16</span>, <span class="number">32</span><span class="op">&gt;</span><span class="ident">::new</span>))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">r_1_even</span> <span class="op">=</span> <span class="ident">SpreadVar::with_lookup</span>(
-            <span class="ident">region</span>,
-            <span class="ident">lookup</span>,
-            <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>,
-            <span class="ident">r_1_even</span>.<span class="ident">map</span>(<span class="ident">SpreadWord</span>::<span class="op">&lt;</span><span class="number">16</span>, <span class="number">32</span><span class="op">&gt;</span><span class="ident">::new</span>),
+        <span class="kw">let </span>r_0_odd =
+            SpreadVar::with_lookup(region, lookup, row, r_0_odd.map(SpreadWord::&lt;<span class="number">16</span>, <span class="number">32</span>&gt;::new))<span class="question-mark">?</span>;
+        <span class="kw">let </span>r_1_even = SpreadVar::with_lookup(
+            region,
+            lookup,
+            row + <span class="number">1</span>,
+            r_1_even.map(SpreadWord::&lt;<span class="number">16</span>, <span class="number">32</span>&gt;::new),
         )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">r_1_odd</span> <span class="op">=</span> <span class="ident">SpreadVar::with_lookup</span>(
-            <span class="ident">region</span>,
-            <span class="ident">lookup</span>,
-            <span class="ident">row</span> <span class="op">+</span> <span class="number">2</span>,
-            <span class="ident">r_1_odd</span>.<span class="ident">map</span>(<span class="ident">SpreadWord</span>::<span class="op">&lt;</span><span class="number">16</span>, <span class="number">32</span><span class="op">&gt;</span><span class="ident">::new</span>),
+        <span class="kw">let </span>r_1_odd = SpreadVar::with_lookup(
+            region,
+            lookup,
+            row + <span class="number">2</span>,
+            r_1_odd.map(SpreadWord::&lt;<span class="number">16</span>, <span class="number">32</span>&gt;::new),
         )<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign and copy R_1^{odd}</span>
-        <span class="ident">r_1_odd</span>
-            .<span class="ident">spread</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;Assign and copy R_1^{odd}&quot;</span>, <span class="ident">region</span>, <span class="ident">a_3</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign and copy R_1^{odd}
+        </span>r_1_odd
+            .spread
+            .copy_advice(|| <span class="string">&quot;Assign and copy R_1^{odd}&quot;</span>, region, a_3, row)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>((
-            (<span class="ident">r_0_even</span>.<span class="ident">dense</span>, <span class="ident">r_1_even</span>.<span class="ident">dense</span>),
-            (<span class="ident">r_0_odd</span>.<span class="ident">dense</span>, <span class="ident">r_1_odd</span>.<span class="ident">dense</span>),
+            (r_0_even.dense, r_1_even.dense),
+            (r_0_odd.dense, r_1_odd.dense),
         ))
     }
 
-    <span class="doccomment">/// Assign outputs of sigma gates</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="kw">fn</span> <span class="ident">assign_sigma_outputs</span>(
+    <span class="doccomment">/// Assign outputs of sigma gates
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="kw">fn </span>assign_sigma_outputs(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">lookup</span>: <span class="kw-2">&amp;</span><span class="ident">SpreadInputs</span>,
-        <span class="ident">a_3</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-        <span class="ident">r_0_even</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-        <span class="ident">r_0_odd</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-        <span class="ident">r_1_even</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-        <span class="ident">r_1_odd</span>: <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">16</span>]<span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">even</span>, <span class="ident">_odd</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_spread_outputs</span>(
-            <span class="ident">region</span>, <span class="ident">lookup</span>, <span class="ident">a_3</span>, <span class="ident">row</span>, <span class="ident">r_0_even</span>, <span class="ident">r_0_odd</span>, <span class="ident">r_1_even</span>, <span class="ident">r_1_odd</span>,
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        lookup: <span class="kw-2">&amp;</span>SpreadInputs,
+        a_3: Column&lt;Advice&gt;,
+        row: usize,
+        r_0_even: Value&lt;[bool; <span class="number">16</span>]&gt;,
+        r_0_odd: Value&lt;[bool; <span class="number">16</span>]&gt;,
+        r_1_even: Value&lt;[bool; <span class="number">16</span>]&gt;,
+        r_1_odd: Value&lt;[bool; <span class="number">16</span>]&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;), Error&gt; {
+        <span class="kw">let </span>(even, _odd) = <span class="self">self</span>.assign_spread_outputs(
+            region, lookup, a_3, row, r_0_even, r_0_odd, r_1_even, r_1_odd,
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">even</span>)
+        <span class="prelude-val">Ok</span>(even)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;dev-graph&quot;</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">Sha256</span>, <span class="ident">BLOCK_SIZE</span>};
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">message_schedule::msg_schedule_test_input</span>, <span class="ident">Table16Chip</span>, <span class="ident">Table16Config</span>};
-    <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-        <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">SimpleFloorPlanner</span>},
-        <span class="ident">pasta::pallas</span>,
-        <span class="ident">plonk</span>::{<span class="ident">Circuit</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>},
+<span class="attribute">#[cfg(test)]</span>
+<span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]</span>
+<span class="kw">mod </span>tests {
+    <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{Sha256, BLOCK_SIZE};
+    <span class="kw">use super</span>::{message_schedule::msg_schedule_test_input, Table16Chip, Table16Config};
+    <span class="kw">use </span>halo2_proofs::{
+        circuit::{Layouter, SimpleFloorPlanner},
+        pasta::pallas,
+        plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">print_sha256_circuit</span>() {
-        <span class="kw">use</span> <span class="ident">plotters::prelude</span>::<span class="kw-2">*</span>;
-        <span class="kw">struct</span> <span class="ident">MyCircuit</span> {}
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>print_sha256_circuit() {
+        <span class="kw">use </span>plotters::prelude::<span class="kw-2">*</span>;
+        <span class="kw">struct </span>MyCircuit {}
 
-        <span class="kw">impl</span> <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyCircuit</span> {
-            <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">Table16Config</span>;
-            <span class="kw">type</span> <span class="ident">FloorPlanner</span> <span class="op">=</span> <span class="ident">SimpleFloorPlanner</span>;
+        <span class="kw">impl </span>Circuit&lt;pallas::Base&gt; <span class="kw">for </span>MyCircuit {
+            <span class="kw">type </span>Config = Table16Config;
+            <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
 
-            <span class="kw">fn</span> <span class="ident">without_witnesses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-                <span class="ident">MyCircuit</span> {}
+            <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+                MyCircuit {}
             }
 
-            <span class="kw">fn</span> <span class="ident">configure</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Config</span> {
-                <span class="ident">Table16Chip::configure</span>(<span class="ident">meta</span>)
+            <span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) -&gt; <span class="self">Self</span>::Config {
+                Table16Chip::configure(meta)
             }
 
-            <span class="kw">fn</span> <span class="ident">synthesize</span>(
+            <span class="kw">fn </span>synthesize(
                 <span class="kw-2">&amp;</span><span class="self">self</span>,
-                <span class="ident">config</span>: <span class="ident"><span class="self">Self</span>::Config</span>,
-                <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-            ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">table16_chip</span> <span class="op">=</span> <span class="ident">Table16Chip::construct</span>(<span class="ident">config</span>.<span class="ident">clone</span>());
-                <span class="ident">Table16Chip::load</span>(<span class="ident">config</span>, <span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>)<span class="question-mark">?</span>;
+                config: <span class="self">Self</span>::Config,
+                <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+            ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+                <span class="kw">let </span>table16_chip = Table16Chip::construct(config.clone());
+                Table16Chip::load(config, <span class="kw-2">&amp;mut </span>layouter)<span class="question-mark">?</span>;
 
-                <span class="comment">// Test vector: &quot;abc&quot;</span>
-                <span class="kw">let</span> <span class="ident">test_input</span> <span class="op">=</span> <span class="ident">msg_schedule_test_input</span>();
+                <span class="comment">// Test vector: &quot;abc&quot;
+                </span><span class="kw">let </span>test_input = msg_schedule_test_input();
 
-                <span class="comment">// Create a message of length 31 blocks</span>
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">input</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="number">31</span> <span class="op">*</span> <span class="ident">BLOCK_SIZE</span>);
-                <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">31</span> {
-                    <span class="ident">input</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">test_input</span>);
+                <span class="comment">// Create a message of length 31 blocks
+                </span><span class="kw">let </span><span class="kw-2">mut </span>input = Vec::with_capacity(<span class="number">31 </span>* BLOCK_SIZE);
+                <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">31 </span>{
+                    input.extend_from_slice(<span class="kw-2">&amp;</span>test_input);
                 }
 
-                <span class="ident">Sha256::digest</span>(<span class="ident">table16_chip</span>, <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;&#39;abc&#39; * 31&quot;</span>), <span class="kw-2">&amp;</span><span class="ident">input</span>)<span class="question-mark">?</span>;
+                Sha256::digest(table16_chip, layouter.namespace(|| <span class="string">&quot;&#39;abc&#39; * 31&quot;</span>), <span class="kw-2">&amp;</span>input)<span class="question-mark">?</span>;
 
                 <span class="prelude-val">Ok</span>(())
             }
         }
 
-        <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span>
-            <span class="ident">BitMapBackend::new</span>(<span class="string">&quot;sha-256-table16-chip-layout.png&quot;</span>, (<span class="number">1024</span>, <span class="number">3480</span>)).<span class="ident">into_drawing_area</span>();
-        <span class="ident">root</span>.<span class="ident">fill</span>(<span class="kw-2">&amp;</span><span class="ident">WHITE</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span> <span class="ident">root</span>
-            .<span class="ident">titled</span>(<span class="string">&quot;16-bit Table SHA-256 Chip&quot;</span>, (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">60</span>))
-            .<span class="ident">unwrap</span>();
+        <span class="kw">let </span>root =
+            BitMapBackend::new(<span class="string">&quot;sha-256-table16-chip-layout.png&quot;</span>, (<span class="number">1024</span>, <span class="number">3480</span>)).into_drawing_area();
+        root.fill(<span class="kw-2">&amp;</span>WHITE).unwrap();
+        <span class="kw">let </span>root = root
+            .titled(<span class="string">&quot;16-bit Table SHA-256 Chip&quot;</span>, (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">60</span>))
+            .unwrap();
 
-        <span class="kw">let</span> <span class="ident">circuit</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {};
-        <span class="ident">halo2_proofs::dev::CircuitLayout::default</span>()
-            .<span class="ident">render</span>::<span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span>(<span class="number">17</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="kw-2">&amp;</span><span class="ident">root</span>)
-            .<span class="ident">unwrap</span>();
+        <span class="kw">let </span>circuit = MyCircuit {};
+        halo2_proofs::dev::CircuitLayout::default()
+            .render::&lt;pallas::Base, <span class="kw">_</span>, <span class="kw">_</span>&gt;(<span class="number">17</span>, <span class="kw-2">&amp;</span>circuit, <span class="kw-2">&amp;</span>root)
+            .unwrap();
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -373,354 +367,354 @@
 <span id="352">352</span>
 <span id="353">353</span>
 <span id="354">354</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::Expression</span>;
-<span class="kw">use</span> <span class="ident">ff::Field</span>;
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::Expression;
+<span class="kw">use </span>ff::Field;
 
-<span class="doccomment">/// This describes a selector and where it is activated.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SelectorDescription</span> {
-    <span class="doccomment">/// The selector that this description references, by index.</span>
-    <span class="kw">pub</span> <span class="ident">selector</span>: <span class="ident">usize</span>,
+<span class="doccomment">/// This describes a selector and where it is activated.
+</span><span class="attribute">#[derive(Debug, Clone)]</span>
+<span class="kw">pub struct </span>SelectorDescription {
+    <span class="doccomment">/// The selector that this description references, by index.
+    </span><span class="kw">pub </span>selector: usize,
 
-    <span class="doccomment">/// The vector of booleans defining which rows are active for this selector.</span>
-    <span class="kw">pub</span> <span class="ident">activations</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// The vector of booleans defining which rows are active for this selector.
+    </span><span class="kw">pub </span>activations: Vec&lt;bool&gt;,
 
-    <span class="doccomment">/// The maximum degree of a gate involving this selector, including the</span>
-    <span class="doccomment">/// virtual selector itself. This means this will be at least 1 for any</span>
-    <span class="doccomment">/// expression containing a simple selector, even if that selector is not</span>
-    <span class="doccomment">/// multiplied by anything.</span>
-    <span class="kw">pub</span> <span class="ident">max_degree</span>: <span class="ident">usize</span>,
+    <span class="doccomment">/// The maximum degree of a gate involving this selector, including the
+    /// virtual selector itself. This means this will be at least 1 for any
+    /// expression containing a simple selector, even if that selector is not
+    /// multiplied by anything.
+    </span><span class="kw">pub </span>max_degree: usize,
 }
 
-<span class="doccomment">/// This describes the assigned combination of a particular selector as well as</span>
-<span class="doccomment">/// the expression it should be substituted with.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SelectorAssignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The selector that this structure references, by index.</span>
-    <span class="kw">pub</span> <span class="ident">selector</span>: <span class="ident">usize</span>,
+<span class="doccomment">/// This describes the assigned combination of a particular selector as well as
+/// the expression it should be substituted with.
+</span><span class="attribute">#[derive(Debug, Clone)]</span>
+<span class="kw">pub struct </span>SelectorAssignment&lt;F&gt; {
+    <span class="doccomment">/// The selector that this structure references, by index.
+    </span><span class="kw">pub </span>selector: usize,
 
-    <span class="doccomment">/// The combination this selector was assigned to</span>
-    <span class="kw">pub</span> <span class="ident">combination_index</span>: <span class="ident">usize</span>,
+    <span class="doccomment">/// The combination this selector was assigned to
+    </span><span class="kw">pub </span>combination_index: usize,
 
-    <span class="doccomment">/// The expression we wish to substitute with</span>
-    <span class="kw">pub</span> <span class="ident">expression</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// The expression we wish to substitute with
+    </span><span class="kw">pub </span>expression: Expression&lt;F&gt;,
 }
 
-<span class="doccomment">/// This function takes a vector that defines each selector as well as a closure</span>
-<span class="doccomment">/// used to allocate new fixed columns, and returns the assignment of each</span>
-<span class="doccomment">/// combination as well as details about each selector assignment.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This function takes</span>
-<span class="doccomment">/// * `selectors`, a vector of `SelectorDescription`s that describe each</span>
-<span class="doccomment">///   selector</span>
-<span class="doccomment">/// * `max_degree`, the maximum allowed degree of any gate</span>
-<span class="doccomment">/// * `allocate_fixed_columns`, a closure that constructs a new fixed column and</span>
-<span class="doccomment">///   queries it at Rotation::cur(), returning the expression</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// and returns `Vec&lt;Vec&lt;F&gt;&gt;` containing the assignment of each new fixed column</span>
-<span class="doccomment">/// (which each correspond to a combination) as well as a vector of</span>
-<span class="doccomment">/// `SelectorAssignment` that the caller can use to perform the necessary</span>
-<span class="doccomment">/// substitutions to the constraint system.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This function is completely deterministic.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">process</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">E</span><span class="op">&gt;</span>(
-    <span class="kw-2">mut</span> <span class="ident">selectors</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SelectorDescription</span><span class="op">&gt;</span>,
-    <span class="ident">max_degree</span>: <span class="ident">usize</span>,
-    <span class="kw-2">mut</span> <span class="ident">allocate_fixed_column</span>: <span class="ident">E</span>,
-) -&gt; (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SelectorAssignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>)
-<span class="kw">where</span>
-    <span class="ident">E</span>: <span class="ident">FnMut</span>() -&gt; <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+<span class="doccomment">/// This function takes a vector that defines each selector as well as a closure
+/// used to allocate new fixed columns, and returns the assignment of each
+/// combination as well as details about each selector assignment.
+///
+/// This function takes
+/// * `selectors`, a vector of `SelectorDescription`s that describe each
+///   selector
+/// * `max_degree`, the maximum allowed degree of any gate
+/// * `allocate_fixed_columns`, a closure that constructs a new fixed column and
+///   queries it at Rotation::cur(), returning the expression
+///
+/// and returns `Vec&lt;Vec&lt;F&gt;&gt;` containing the assignment of each new fixed column
+/// (which each correspond to a combination) as well as a vector of
+/// `SelectorAssignment` that the caller can use to perform the necessary
+/// substitutions to the constraint system.
+///
+/// This function is completely deterministic.
+</span><span class="kw">pub fn </span>process&lt;F: Field, E&gt;(
+    <span class="kw-2">mut </span>selectors: Vec&lt;SelectorDescription&gt;,
+    max_degree: usize,
+    <span class="kw-2">mut </span>allocate_fixed_column: E,
+) -&gt; (Vec&lt;Vec&lt;F&gt;&gt;, Vec&lt;SelectorAssignment&lt;F&gt;&gt;)
+<span class="kw">where
+    </span>E: FnMut() -&gt; Expression&lt;F&gt;,
 {
-    <span class="kw">if</span> <span class="ident">selectors</span>.<span class="ident">is_empty</span>() {
-        <span class="comment">// There is nothing to optimize.</span>
-        <span class="kw">return</span> (<span class="macro">vec!</span>[], <span class="macro">vec!</span>[]);
+    <span class="kw">if </span>selectors.is_empty() {
+        <span class="comment">// There is nothing to optimize.
+        </span><span class="kw">return </span>(<span class="macro">vec!</span>[], <span class="macro">vec!</span>[]);
     }
 
-    <span class="comment">// The length of all provided selectors must be the same.</span>
-    <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">selectors</span>[<span class="number">0</span>].<span class="ident">activations</span>.<span class="ident">len</span>();
-    <span class="macro">assert!</span>(<span class="ident">selectors</span>.<span class="ident">iter</span>().<span class="ident">all</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>.<span class="ident">activations</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="ident">n</span>));
+    <span class="comment">// The length of all provided selectors must be the same.
+    </span><span class="kw">let </span>n = selectors[<span class="number">0</span>].activations.len();
+    <span class="macro">assert!</span>(selectors.iter().all(|a| a.activations.len() == n));
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">combination_assignments</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">selector_assignments</span> <span class="op">=</span> <span class="macro">vec!</span>[];
+    <span class="kw">let </span><span class="kw-2">mut </span>combination_assignments = <span class="macro">vec!</span>[];
+    <span class="kw">let </span><span class="kw-2">mut </span>selector_assignments = <span class="macro">vec!</span>[];
 
-    <span class="comment">// All provided selectors of degree 0 are assumed to be either concrete</span>
-    <span class="comment">// selectors or do not appear in a gate. Let&#39;s address these first.</span>
-    <span class="ident">selectors</span> <span class="op">=</span> <span class="ident">selectors</span>
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">selector</span><span class="op">|</span> {
-            <span class="kw">if</span> <span class="ident">selector</span>.<span class="ident">max_degree</span> <span class="op">==</span> <span class="number">0</span> {
-                <span class="comment">// This is a complex selector, or a selector that does not appear in any</span>
-                <span class="comment">// gate constraint.</span>
-                <span class="kw">let</span> <span class="ident">expression</span> <span class="op">=</span> <span class="ident">allocate_fixed_column</span>();
+    <span class="comment">// All provided selectors of degree 0 are assumed to be either concrete
+    // selectors or do not appear in a gate. Let&#39;s address these first.
+    </span>selectors = selectors
+        .into_iter()
+        .filter(|selector| {
+            <span class="kw">if </span>selector.max_degree == <span class="number">0 </span>{
+                <span class="comment">// This is a complex selector, or a selector that does not appear in any
+                // gate constraint.
+                </span><span class="kw">let </span>expression = allocate_fixed_column();
 
-                <span class="kw">let</span> <span class="ident">combination_assignment</span> <span class="op">=</span> <span class="ident">selector</span>
-                    .<span class="ident">activations</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">b</span><span class="op">|</span> <span class="kw">if</span> <span class="kw-2">*</span><span class="ident">b</span> { <span class="ident">F::one</span>() } <span class="kw">else</span> { <span class="ident">F::zero</span>() })
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-                <span class="kw">let</span> <span class="ident">combination_index</span> <span class="op">=</span> <span class="ident">combination_assignments</span>.<span class="ident">len</span>();
-                <span class="ident">combination_assignments</span>.<span class="ident">push</span>(<span class="ident">combination_assignment</span>);
-                <span class="ident">selector_assignments</span>.<span class="ident">push</span>(<span class="ident">SelectorAssignment</span> {
-                    <span class="ident">selector</span>: <span class="ident">selector</span>.<span class="ident">selector</span>,
-                    <span class="ident">combination_index</span>,
-                    <span class="ident">expression</span>,
+                <span class="kw">let </span>combination_assignment = selector
+                    .activations
+                    .iter()
+                    .map(|b| <span class="kw">if </span><span class="kw-2">*</span>b { F::one() } <span class="kw">else </span>{ F::zero() })
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+                <span class="kw">let </span>combination_index = combination_assignments.len();
+                combination_assignments.push(combination_assignment);
+                selector_assignments.push(SelectorAssignment {
+                    selector: selector.selector,
+                    combination_index,
+                    expression,
                 });
 
-                <span class="bool-val">false</span>
-            } <span class="kw">else</span> {
-                <span class="bool-val">true</span>
-            }
+                <span class="bool-val">false
+            </span>} <span class="kw">else </span>{
+                <span class="bool-val">true
+            </span>}
         })
-        .<span class="ident">collect</span>();
+        .collect();
 
-    <span class="comment">// All of the remaining `selectors` are simple. Let&#39;s try to combine them.</span>
-    <span class="comment">// First, we compute the exclusion matrix that has (j, k) = true if selector</span>
-    <span class="comment">// j and selector k conflict -- that is, they are both enabled on the same</span>
-    <span class="comment">// row. This matrix is symmetric and the diagonal entries are false, so we</span>
-    <span class="comment">// only need to store the lower triangular entries.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">exclusion_matrix</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">selectors</span>.<span class="ident">len</span>())
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="macro">vec!</span>[<span class="bool-val">false</span>; <span class="ident">i</span>])
-        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+    <span class="comment">// All of the remaining `selectors` are simple. Let&#39;s try to combine them.
+    // First, we compute the exclusion matrix that has (j, k) = true if selector
+    // j and selector k conflict -- that is, they are both enabled on the same
+    // row. This matrix is symmetric and the diagonal entries are false, so we
+    // only need to store the lower triangular entries.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>exclusion_matrix = (<span class="number">0</span>..selectors.len())
+        .map(|i| <span class="macro">vec!</span>[<span class="bool-val">false</span>; i])
+        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-    <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">rows</span>) <span class="kw">in</span> <span class="ident">selectors</span>
-        .<span class="ident">iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">selector</span><span class="op">|</span> <span class="kw-2">&amp;</span><span class="ident">selector</span>.<span class="ident">activations</span>)
-        .<span class="ident">enumerate</span>()
+    <span class="kw">for </span>(i, rows) <span class="kw">in </span>selectors
+        .iter()
+        .map(|selector| <span class="kw-2">&amp;</span>selector.activations)
+        .enumerate()
     {
-        <span class="comment">// Loop over the selectors previous to this one</span>
-        <span class="kw">for</span> (<span class="ident">j</span>, <span class="ident">other_selector</span>) <span class="kw">in</span> <span class="ident">selectors</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>().<span class="ident">take</span>(<span class="ident">i</span>) {
-            <span class="comment">// Look at what selectors are active at the same row</span>
-            <span class="kw">if</span> <span class="ident">rows</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">zip</span>(<span class="ident">other_selector</span>.<span class="ident">activations</span>.<span class="ident">iter</span>())
-                .<span class="ident">any</span>(<span class="op">|</span>(<span class="ident">l</span>, <span class="ident">r</span>)<span class="op">|</span> <span class="ident">l</span> <span class="op">&amp;</span> <span class="ident">r</span>)
+        <span class="comment">// Loop over the selectors previous to this one
+        </span><span class="kw">for </span>(j, other_selector) <span class="kw">in </span>selectors.iter().enumerate().take(i) {
+            <span class="comment">// Look at what selectors are active at the same row
+            </span><span class="kw">if </span>rows
+                .iter()
+                .zip(other_selector.activations.iter())
+                .any(|(l, r)| l &amp; r)
             {
-                <span class="comment">// Mark them as incompatible</span>
-                <span class="ident">exclusion_matrix</span>[<span class="ident">i</span>][<span class="ident">j</span>] <span class="op">=</span> <span class="bool-val">true</span>;
+                <span class="comment">// Mark them as incompatible
+                </span>exclusion_matrix[i][j] = <span class="bool-val">true</span>;
             }
         }
     }
 
-    <span class="comment">// Simple selectors that we&#39;ve added to combinations already.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">added</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="bool-val">false</span>; <span class="ident">selectors</span>.<span class="ident">len</span>()];
+    <span class="comment">// Simple selectors that we&#39;ve added to combinations already.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>added = <span class="macro">vec!</span>[<span class="bool-val">false</span>; selectors.len()];
 
-    <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">selector</span>) <span class="kw">in</span> <span class="ident">selectors</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-        <span class="kw">if</span> <span class="ident">added</span>[<span class="ident">i</span>] {
+    <span class="kw">for </span>(i, selector) <span class="kw">in </span>selectors.iter().enumerate() {
+        <span class="kw">if </span>added[i] {
             <span class="kw">continue</span>;
         }
-        <span class="ident">added</span>[<span class="ident">i</span>] <span class="op">=</span> <span class="bool-val">true</span>;
-        <span class="macro">assert!</span>(<span class="ident">selector</span>.<span class="ident">max_degree</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">max_degree</span>);
-        <span class="comment">// This is used to keep track of the largest degree gate involved in the</span>
-        <span class="comment">// combination so far. We subtract by one to omit the virtual selector</span>
-        <span class="comment">// which will be substituted by the caller with the expression we give</span>
-        <span class="comment">// them.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">d</span> <span class="op">=</span> <span class="ident">selector</span>.<span class="ident">max_degree</span> <span class="op">-</span> <span class="number">1</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">combination</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">selector</span>];
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">combination_added</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">i</span>];
+        added[i] = <span class="bool-val">true</span>;
+        <span class="macro">assert!</span>(selector.max_degree &lt;= max_degree);
+        <span class="comment">// This is used to keep track of the largest degree gate involved in the
+        // combination so far. We subtract by one to omit the virtual selector
+        // which will be substituted by the caller with the expression we give
+        // them.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>d = selector.max_degree - <span class="number">1</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>combination = <span class="macro">vec!</span>[selector];
+        <span class="kw">let </span><span class="kw-2">mut </span>combination_added = <span class="macro">vec!</span>[i];
 
-        <span class="comment">// Try to find other selectors that can join this one.</span>
-        <span class="lifetime">&#39;try_selectors</span>: <span class="kw">for</span> (<span class="ident">j</span>, <span class="ident">selector</span>) <span class="kw">in</span> <span class="ident">selectors</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>().<span class="ident">skip</span>(<span class="ident">i</span> <span class="op">+</span> <span class="number">1</span>) {
-            <span class="kw">if</span> <span class="ident">d</span> <span class="op">+</span> <span class="ident">combination</span>.<span class="ident">len</span>() <span class="op">==</span> <span class="ident">max_degree</span> {
-                <span class="comment">// Short circuit; nothing can be added to this</span>
-                <span class="comment">// combination.</span>
-                <span class="kw">break</span> <span class="lifetime">&#39;try_selectors</span>;
+        <span class="comment">// Try to find other selectors that can join this one.
+        </span><span class="lifetime">&#39;try_selectors</span>: <span class="kw">for </span>(j, selector) <span class="kw">in </span>selectors.iter().enumerate().skip(i + <span class="number">1</span>) {
+            <span class="kw">if </span>d + combination.len() == max_degree {
+                <span class="comment">// Short circuit; nothing can be added to this
+                // combination.
+                </span><span class="kw">break </span><span class="lifetime">&#39;try_selectors</span>;
             }
 
-            <span class="comment">// Skip selectors that have been added to previous combinations</span>
-            <span class="kw">if</span> <span class="ident">added</span>[<span class="ident">j</span>] {
-                <span class="kw">continue</span> <span class="lifetime">&#39;try_selectors</span>;
+            <span class="comment">// Skip selectors that have been added to previous combinations
+            </span><span class="kw">if </span>added[j] {
+                <span class="kw">continue </span><span class="lifetime">&#39;try_selectors</span>;
             }
 
-            <span class="comment">// Is this selector excluded from co-existing in the same</span>
-            <span class="comment">// combination with any of the other selectors so far?</span>
-            <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">i</span> <span class="kw">in</span> <span class="ident">combination_added</span>.<span class="ident">iter</span>() {
-                <span class="kw">if</span> <span class="ident">exclusion_matrix</span>[<span class="ident">j</span>][<span class="ident">i</span>] {
-                    <span class="kw">continue</span> <span class="lifetime">&#39;try_selectors</span>;
+            <span class="comment">// Is this selector excluded from co-existing in the same
+            // combination with any of the other selectors so far?
+            </span><span class="kw">for </span><span class="kw-2">&amp;</span>i <span class="kw">in </span>combination_added.iter() {
+                <span class="kw">if </span>exclusion_matrix[j][i] {
+                    <span class="kw">continue </span><span class="lifetime">&#39;try_selectors</span>;
                 }
             }
 
-            <span class="comment">// Can the new selector join the combination? Reminder: we use</span>
-            <span class="comment">// selector.max_degree - 1 to omit the influence of the virtual</span>
-            <span class="comment">// selector on the degree, as it will be substituted.</span>
-            <span class="kw">let</span> <span class="ident">new_d</span> <span class="op">=</span> <span class="ident">std::cmp::max</span>(<span class="ident">d</span>, <span class="ident">selector</span>.<span class="ident">max_degree</span> <span class="op">-</span> <span class="number">1</span>);
-            <span class="kw">if</span> <span class="ident">new_d</span> <span class="op">+</span> <span class="ident">combination</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="number">1</span> <span class="op">&gt;</span> <span class="ident">max_degree</span> {
-                <span class="comment">// Guess not.</span>
-                <span class="kw">continue</span> <span class="lifetime">&#39;try_selectors</span>;
+            <span class="comment">// Can the new selector join the combination? Reminder: we use
+            // selector.max_degree - 1 to omit the influence of the virtual
+            // selector on the degree, as it will be substituted.
+            </span><span class="kw">let </span>new_d = std::cmp::max(d, selector.max_degree - <span class="number">1</span>);
+            <span class="kw">if </span>new_d + combination.len() + <span class="number">1 </span>&gt; max_degree {
+                <span class="comment">// Guess not.
+                </span><span class="kw">continue </span><span class="lifetime">&#39;try_selectors</span>;
             }
 
-            <span class="ident">d</span> <span class="op">=</span> <span class="ident">new_d</span>;
-            <span class="ident">combination</span>.<span class="ident">push</span>(<span class="ident">selector</span>);
-            <span class="ident">combination_added</span>.<span class="ident">push</span>(<span class="ident">j</span>);
-            <span class="ident">added</span>[<span class="ident">j</span>] <span class="op">=</span> <span class="bool-val">true</span>;
+            d = new_d;
+            combination.push(selector);
+            combination_added.push(j);
+            added[j] = <span class="bool-val">true</span>;
         }
 
-        <span class="comment">// Now, compute the selector and combination assignments.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">combination_assignment</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">F::zero</span>(); <span class="ident">n</span>];
-        <span class="kw">let</span> <span class="ident">combination_len</span> <span class="op">=</span> <span class="ident">combination</span>.<span class="ident">len</span>();
-        <span class="kw">let</span> <span class="ident">combination_index</span> <span class="op">=</span> <span class="ident">combination_assignments</span>.<span class="ident">len</span>();
-        <span class="kw">let</span> <span class="ident">query</span> <span class="op">=</span> <span class="ident">allocate_fixed_column</span>();
+        <span class="comment">// Now, compute the selector and combination assignments.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>combination_assignment = <span class="macro">vec!</span>[F::zero(); n];
+        <span class="kw">let </span>combination_len = combination.len();
+        <span class="kw">let </span>combination_index = combination_assignments.len();
+        <span class="kw">let </span>query = allocate_fixed_column();
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">assigned_root</span> <span class="op">=</span> <span class="ident">F::one</span>();
-        <span class="ident">selector_assignments</span>.<span class="ident">extend</span>(<span class="ident">combination</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">selector</span><span class="op">|</span> {
-            <span class="comment">// Compute the expression for substitution. This produces an expression of the</span>
-            <span class="comment">// form</span>
-            <span class="comment">//     q * Prod[i = 1..=combination_len, i != assigned_root](i - q)</span>
-            <span class="comment">//</span>
-            <span class="comment">// which is non-zero only on rows where `combination_assignment` is set to</span>
-            <span class="comment">// `assigned_root`. In particular, rows set to 0 correspond to all selectors</span>
-            <span class="comment">// being disabled.</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">expression</span> <span class="op">=</span> <span class="ident">query</span>.<span class="ident">clone</span>();
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">root</span> <span class="op">=</span> <span class="ident">F::one</span>();
-            <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">combination_len</span> {
-                <span class="kw">if</span> <span class="ident">root</span> <span class="op">!</span><span class="op">=</span> <span class="ident">assigned_root</span> {
-                    <span class="ident">expression</span> <span class="op">=</span> <span class="ident">expression</span> <span class="op">*</span> (<span class="ident">Expression::Constant</span>(<span class="ident">root</span>) <span class="op">-</span> <span class="ident">query</span>.<span class="ident">clone</span>());
+        <span class="kw">let </span><span class="kw-2">mut </span>assigned_root = F::one();
+        selector_assignments.extend(combination.into_iter().map(|selector| {
+            <span class="comment">// Compute the expression for substitution. This produces an expression of the
+            // form
+            //     q * Prod[i = 1..=combination_len, i != assigned_root](i - q)
+            //
+            // which is non-zero only on rows where `combination_assignment` is set to
+            // `assigned_root`. In particular, rows set to 0 correspond to all selectors
+            // being disabled.
+            </span><span class="kw">let </span><span class="kw-2">mut </span>expression = query.clone();
+            <span class="kw">let </span><span class="kw-2">mut </span>root = F::one();
+            <span class="kw">for _ in </span><span class="number">0</span>..combination_len {
+                <span class="kw">if </span>root != assigned_root {
+                    expression = expression * (Expression::Constant(root) - query.clone());
                 }
-                <span class="ident">root</span> <span class="op">+</span><span class="op">=</span> <span class="ident">F::one</span>();
+                root += F::one();
             }
 
-            <span class="comment">// Update the combination assignment</span>
-            <span class="kw">for</span> (<span class="ident">combination</span>, <span class="ident">selector</span>) <span class="kw">in</span> <span class="ident">combination_assignment</span>
-                .<span class="ident">iter_mut</span>()
-                .<span class="ident">zip</span>(<span class="ident">selector</span>.<span class="ident">activations</span>.<span class="ident">iter</span>())
+            <span class="comment">// Update the combination assignment
+            </span><span class="kw">for </span>(combination, selector) <span class="kw">in </span>combination_assignment
+                .iter_mut()
+                .zip(selector.activations.iter())
             {
-                <span class="comment">// This will not overwrite another selector&#39;s activations because</span>
-                <span class="comment">// we have ensured that selectors are disjoint.</span>
-                <span class="kw">if</span> <span class="kw-2">*</span><span class="ident">selector</span> {
-                    <span class="kw-2">*</span><span class="ident">combination</span> <span class="op">=</span> <span class="ident">assigned_root</span>;
+                <span class="comment">// This will not overwrite another selector&#39;s activations because
+                // we have ensured that selectors are disjoint.
+                </span><span class="kw">if </span><span class="kw-2">*</span>selector {
+                    <span class="kw-2">*</span>combination = assigned_root;
                 }
             }
 
-            <span class="ident">assigned_root</span> <span class="op">+</span><span class="op">=</span> <span class="ident">F::one</span>();
+            assigned_root += F::one();
 
-            <span class="ident">SelectorAssignment</span> {
-                <span class="ident">selector</span>: <span class="ident">selector</span>.<span class="ident">selector</span>,
-                <span class="ident">combination_index</span>,
-                <span class="ident">expression</span>,
+            SelectorAssignment {
+                selector: selector.selector,
+                combination_index,
+                expression,
             }
         }));
-        <span class="ident">combination_assignments</span>.<span class="ident">push</span>(<span class="ident">combination_assignment</span>);
+        combination_assignments.push(combination_assignment);
     }
 
-    (<span class="ident">combination_assignments</span>, <span class="ident">selector_assignments</span>)
+    (combination_assignments, selector_assignments)
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">plonk::FixedQuery</span>, <span class="ident">poly::Rotation</span>};
-    <span class="kw">use</span> <span class="ident">pasta_curves::Fp</span>;
-    <span class="kw">use</span> <span class="ident">proptest::collection</span>::{<span class="ident">vec</span>, <span class="ident">SizeRange</span>};
-    <span class="kw">use</span> <span class="ident">proptest::prelude</span>::<span class="kw-2">*</span>;
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use crate</span>::{plonk::FixedQuery, poly::Rotation};
+    <span class="kw">use </span>pasta_curves::Fp;
+    <span class="kw">use </span>proptest::collection::{vec, SizeRange};
+    <span class="kw">use </span>proptest::prelude::<span class="kw-2">*</span>;
 
     <span class="macro">prop_compose!</span> {
-        <span class="kw">fn</span> <span class="ident">arb_selector</span>(<span class="ident">assignment_size</span>: <span class="ident">usize</span>, <span class="ident">max_degree</span>: <span class="ident">usize</span>)
-                       (<span class="ident">degree</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">max_degree</span>,
-                        <span class="ident">assignment</span> <span class="kw">in</span> <span class="ident">vec</span>(<span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>(), <span class="ident">assignment_size</span>))
-                       -&gt; (<span class="ident">usize</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>) {
-            (<span class="ident">degree</span>, <span class="ident">assignment</span>)
+        <span class="kw">fn </span>arb_selector(assignment_size: usize, max_degree: usize)
+                       (degree <span class="kw">in </span><span class="number">0</span>..max_degree,
+                        assignment <span class="kw">in </span>vec(any::&lt;bool&gt;(), assignment_size))
+                       -&gt; (usize, Vec&lt;bool&gt;) {
+            (degree, assignment)
         }
     }
 
     <span class="macro">prop_compose!</span> {
-        <span class="kw">fn</span> <span class="ident">arb_selector_list</span>(<span class="ident">assignment_size</span>: <span class="ident">usize</span>, <span class="ident">max_degree</span>: <span class="ident">usize</span>, <span class="ident">num_selectors</span>: <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">SizeRange</span><span class="op">&gt;</span>)
-                            (<span class="ident">list</span> <span class="kw">in</span> <span class="ident">vec</span>(<span class="ident">arb_selector</span>(<span class="ident">assignment_size</span>, <span class="ident">max_degree</span>), <span class="ident">num_selectors</span>))
-                            -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SelectorDescription</span><span class="op">&gt;</span>
+        <span class="kw">fn </span>arb_selector_list(assignment_size: usize, max_degree: usize, num_selectors: <span class="kw">impl </span>Into&lt;SizeRange&gt;)
+                            (list <span class="kw">in </span>vec(arb_selector(assignment_size, max_degree), num_selectors))
+                            -&gt; Vec&lt;SelectorDescription&gt;
         {
-            <span class="ident">list</span>.<span class="ident">into_iter</span>().<span class="ident">enumerate</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">i</span>, (<span class="ident">max_degree</span>, <span class="ident">activations</span>))<span class="op">|</span> {
-                <span class="ident">SelectorDescription</span> {
-                    <span class="ident">selector</span>: <span class="ident">i</span>,
-                    <span class="ident">activations</span>,
-                    <span class="ident">max_degree</span>,
+            list.into_iter().enumerate().map(|(i, (max_degree, activations))| {
+                SelectorDescription {
+                    selector: i,
+                    activations,
+                    max_degree,
                 }
-            }).<span class="ident">collect</span>()
+            }).collect()
         }
     }
 
     <span class="macro">prop_compose!</span> {
-        <span class="kw">fn</span> <span class="ident">arb_instance</span>(<span class="ident">max_assignment_size</span>: <span class="ident">usize</span>,
-                        <span class="ident">max_degree</span>: <span class="ident">usize</span>,
-                        <span class="ident">max_selectors</span>: <span class="ident">usize</span>)
-                       (<span class="ident">assignment_size</span> <span class="kw">in</span> <span class="number">1</span>..<span class="ident">max_assignment_size</span>,
-                        <span class="ident">degree</span> <span class="kw">in</span> <span class="number">1</span>..<span class="ident">max_degree</span>,
-                        <span class="ident">num_selectors</span> <span class="kw">in</span> <span class="number">1</span>..<span class="ident">max_selectors</span>)
-                       (<span class="ident">list</span> <span class="kw">in</span> <span class="ident">arb_selector_list</span>(<span class="ident">assignment_size</span>, <span class="ident">degree</span>, <span class="ident">num_selectors</span>),
-                        <span class="ident">degree</span> <span class="kw">in</span> <span class="ident">Just</span>(<span class="ident">degree</span>))
-                       -&gt; (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SelectorDescription</span><span class="op">&gt;</span>, <span class="ident">usize</span>)
+        <span class="kw">fn </span>arb_instance(max_assignment_size: usize,
+                        max_degree: usize,
+                        max_selectors: usize)
+                       (assignment_size <span class="kw">in </span><span class="number">1</span>..max_assignment_size,
+                        degree <span class="kw">in </span><span class="number">1</span>..max_degree,
+                        num_selectors <span class="kw">in </span><span class="number">1</span>..max_selectors)
+                       (list <span class="kw">in </span>arb_selector_list(assignment_size, degree, num_selectors),
+                        degree <span class="kw">in </span>Just(degree))
+                       -&gt; (Vec&lt;SelectorDescription&gt;, usize)
         {
-            (<span class="ident">list</span>, <span class="ident">degree</span>)
+            (list, degree)
         }
     }
 
     <span class="macro">proptest!</span> {
-        <span class="attribute">#![<span class="ident">proptest_config</span>(<span class="ident">ProptestConfig::with_cases</span>(<span class="number">10000</span>))]</span>
-        <span class="attribute">#[<span class="ident">test</span>]</span>
-        <span class="kw">fn</span> <span class="ident">test_selector_combination</span>((<span class="ident">selectors</span>, <span class="ident">max_degree</span>) <span class="kw">in</span> <span class="ident">arb_instance</span>(<span class="number">10</span>, <span class="number">10</span>, <span class="number">15</span>)) {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">query</span> <span class="op">=</span> <span class="number">0</span>;
-            <span class="kw">let</span> (<span class="ident">combination_assignments</span>, <span class="ident">selector_assignments</span>) <span class="op">=</span>
-                <span class="ident">process</span>::<span class="op">&lt;</span><span class="ident">Fp</span>, <span class="kw">_</span><span class="op">&gt;</span>(<span class="ident">selectors</span>.<span class="ident">clone</span>(), <span class="ident">max_degree</span>, <span class="op">|</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">tmp</span> <span class="op">=</span> <span class="ident">Expression::Fixed</span>(<span class="ident">FixedQuery</span> {
-                        <span class="ident">index</span>: <span class="ident">query</span>,
-                        <span class="ident">column_index</span>: <span class="ident">query</span>,
-                        <span class="ident">rotation</span>: <span class="ident">Rotation::cur</span>(),
+        <span class="attribute">#![proptest_config(ProptestConfig::with_cases(<span class="number">10000</span>))]</span>
+        <span class="attribute">#[test]</span>
+        <span class="kw">fn </span>test_selector_combination((selectors, max_degree) <span class="kw">in </span>arb_instance(<span class="number">10</span>, <span class="number">10</span>, <span class="number">15</span>)) {
+            <span class="kw">let </span><span class="kw-2">mut </span>query = <span class="number">0</span>;
+            <span class="kw">let </span>(combination_assignments, selector_assignments) =
+                process::&lt;Fp, <span class="kw">_</span>&gt;(selectors.clone(), max_degree, || {
+                    <span class="kw">let </span>tmp = Expression::Fixed(FixedQuery {
+                        index: query,
+                        column_index: query,
+                        rotation: Rotation::cur(),
                     });
-                    <span class="ident">query</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
-                    <span class="ident">tmp</span>
+                    query += <span class="number">1</span>;
+                    tmp
                 });
 
             {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">selectors_seen</span> <span class="op">=</span> <span class="macro">vec!</span>[];
-                <span class="macro">assert_eq!</span>(<span class="ident">selectors</span>.<span class="ident">len</span>(), <span class="ident">selector_assignments</span>.<span class="ident">len</span>());
-                <span class="kw">for</span> <span class="ident">selector</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">selector_assignments</span> {
-                    <span class="comment">// Every selector should be assigned to a combination</span>
-                    <span class="macro">assert!</span>(<span class="ident">selector</span>.<span class="ident">combination_index</span> <span class="op">&lt;</span> <span class="ident">combination_assignments</span>.<span class="ident">len</span>());
-                    <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">selectors_seen</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">selector</span>.<span class="ident">selector</span>));
-                    <span class="ident">selectors_seen</span>.<span class="ident">push</span>(<span class="ident">selector</span>.<span class="ident">selector</span>);
+                <span class="kw">let </span><span class="kw-2">mut </span>selectors_seen = <span class="macro">vec!</span>[];
+                <span class="macro">assert_eq!</span>(selectors.len(), selector_assignments.len());
+                <span class="kw">for </span>selector <span class="kw">in </span><span class="kw-2">&amp;</span>selector_assignments {
+                    <span class="comment">// Every selector should be assigned to a combination
+                    </span><span class="macro">assert!</span>(selector.combination_index &lt; combination_assignments.len());
+                    <span class="macro">assert!</span>(!selectors_seen.contains(<span class="kw-2">&amp;</span>selector.selector));
+                    selectors_seen.push(selector.selector);
                 }
             }
 
-            <span class="comment">// Test that, for each selector, the provided expression</span>
-            <span class="comment">//  1. evaluates to zero on rows where the selector&#39;s activation is off</span>
-            <span class="comment">//  2. evaluates to nonzero on rows where the selector&#39;s activation is on</span>
-            <span class="comment">//  3. is of degree d such that d + (selector.max_degree - 1) &lt;= max_degree</span>
-            <span class="comment">//     OR selector.max_degree is zero</span>
-            <span class="kw">for</span> <span class="ident">selector</span> <span class="kw">in</span> <span class="ident">selector_assignments</span> {
+            <span class="comment">// Test that, for each selector, the provided expression
+            //  1. evaluates to zero on rows where the selector&#39;s activation is off
+            //  2. evaluates to nonzero on rows where the selector&#39;s activation is on
+            //  3. is of degree d such that d + (selector.max_degree - 1) &lt;= max_degree
+            //     OR selector.max_degree is zero
+            </span><span class="kw">for </span>selector <span class="kw">in </span>selector_assignments {
                 <span class="macro">assert_eq!</span>(
-                    <span class="ident">selectors</span>[<span class="ident">selector</span>.<span class="ident">selector</span>].<span class="ident">activations</span>.<span class="ident">len</span>(),
-                    <span class="ident">combination_assignments</span>[<span class="ident">selector</span>.<span class="ident">combination_index</span>].<span class="ident">len</span>()
+                    selectors[selector.selector].activations.len(),
+                    combination_assignments[selector.combination_index].len()
                 );
-                <span class="kw">for</span> (<span class="kw-2">&amp;</span><span class="ident">activation</span>, <span class="kw-2">&amp;</span><span class="ident">assignment</span>) <span class="kw">in</span> <span class="ident">selectors</span>[<span class="ident">selector</span>.<span class="ident">selector</span>]
-                    .<span class="ident">activations</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">zip</span>(<span class="ident">combination_assignments</span>[<span class="ident">selector</span>.<span class="ident">combination_index</span>].<span class="ident">iter</span>())
+                <span class="kw">for </span>(<span class="kw-2">&amp;</span>activation, <span class="kw-2">&amp;</span>assignment) <span class="kw">in </span>selectors[selector.selector]
+                    .activations
+                    .iter()
+                    .zip(combination_assignments[selector.combination_index].iter())
                 {
-                    <span class="kw">let</span> <span class="ident">eval</span> <span class="op">=</span> <span class="ident">selector</span>.<span class="ident">expression</span>.<span class="ident">evaluate</span>(
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="ident">c</span>,
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;should not occur in returned expressions&quot;</span>),
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
-                            <span class="comment">// Should be the correct combination in the expression</span>
-                            <span class="macro">assert_eq!</span>(<span class="ident">selector</span>.<span class="ident">combination_index</span>, <span class="ident">query</span>.<span class="ident">index</span>);
-                            <span class="ident">assignment</span>
+                    <span class="kw">let </span>eval = selector.expression.evaluate(
+                        <span class="kw-2">&amp;</span>|c| c,
+                        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;should not occur in returned expressions&quot;</span>),
+                        <span class="kw-2">&amp;</span>|query| {
+                            <span class="comment">// Should be the correct combination in the expression
+                            </span><span class="macro">assert_eq!</span>(selector.combination_index, query.index);
+                            assignment
                         },
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;should not occur in returned expressions&quot;</span>),
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;should not occur in returned expressions&quot;</span>),
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="op">-</span><span class="ident">a</span>,
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>,
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>,
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">f</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">f</span>,
+                        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;should not occur in returned expressions&quot;</span>),
+                        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;should not occur in returned expressions&quot;</span>),
+                        <span class="kw-2">&amp;</span>|a| -a,
+                        <span class="kw-2">&amp;</span>|a, b| a + b,
+                        <span class="kw-2">&amp;</span>|a, b| a * b,
+                        <span class="kw-2">&amp;</span>|a, f| a * f,
                     );
 
-                    <span class="kw">if</span> <span class="ident">activation</span> {
-                        <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">eval</span>.<span class="ident">is_zero_vartime</span>());
-                    } <span class="kw">else</span> {
-                        <span class="macro">assert!</span>(<span class="ident">eval</span>.<span class="ident">is_zero_vartime</span>());
+                    <span class="kw">if </span>activation {
+                        <span class="macro">assert!</span>(!eval.is_zero_vartime());
+                    } <span class="kw">else </span>{
+                        <span class="macro">assert!</span>(eval.is_zero_vartime());
                     }
                 }
 
-                <span class="kw">let</span> <span class="ident">expr_degree</span> <span class="op">=</span> <span class="ident">selector</span>.<span class="ident">expression</span>.<span class="ident">degree</span>();
-                <span class="macro">assert!</span>(<span class="ident">expr_degree</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">max_degree</span>);
-                <span class="kw">if</span> <span class="ident">selectors</span>[<span class="ident">selector</span>.<span class="ident">selector</span>].<span class="ident">max_degree</span> <span class="op">&gt;</span> <span class="number">0</span> {
+                <span class="kw">let </span>expr_degree = selector.expression.degree();
+                <span class="macro">assert!</span>(expr_degree &lt;= max_degree);
+                <span class="kw">if </span>selectors[selector.selector].max_degree &gt; <span class="number">0 </span>{
                     <span class="macro">assert!</span>(
-                        (<span class="ident">selectors</span>[<span class="ident">selector</span>.<span class="ident">selector</span>].<span class="ident">max_degree</span> <span class="op">-</span> <span class="number">1</span>) <span class="op">+</span> <span class="ident">expr_degree</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">max_degree</span>
+                        (selectors[selector.selector].max_degree - <span class="number">1</span>) + expr_degree &lt;= max_degree
                     );
                 }
             }
@@ -728,5 +722,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

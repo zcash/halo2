@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -669,174 +663,174 @@
 <span id="648">648</span>
 <span id="649">649</span>
 <span id="650">650</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Make use of a K-bit lookup table to decompose a field element into K-bit</span>
-<span class="doccomment">//! words.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Make use of a K-bit lookup table to decompose a field element into K-bit
+//! words.
 
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Layouter</span>, <span class="ident">Region</span>},
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>, <span class="ident">TableColumn</span>},
-    <span class="ident">poly::Rotation</span>,
+</span><span class="kw">use </span>halo2_proofs::{
+    circuit::{AssignedCell, Layouter, Region},
+    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector, TableColumn},
+    poly::Rotation,
 };
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert::TryInto</span>, <span class="ident">marker::PhantomData</span>};
+<span class="kw">use </span>std::{convert::TryInto, marker::PhantomData};
 
-<span class="kw">use</span> <span class="ident">ff::PrimeFieldBits</span>;
+<span class="kw">use </span>ff::PrimeFieldBits;
 
-<span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+<span class="kw">use super</span>::<span class="kw-2">*</span>;
 
-<span class="doccomment">/// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RunningSum</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span><span class="op">&gt;</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>);
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span><span class="op">&gt;</span> <span class="ident">std::ops::Deref</span> <span class="kw">for</span> <span class="ident">RunningSum</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="doccomment">/// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>RunningSum&lt;F: FieldExt + PrimeFieldBits&gt;(Vec&lt;AssignedCell&lt;F, F&gt;&gt;);
+<span class="kw">impl</span>&lt;F: FieldExt + PrimeFieldBits&gt; std::ops::Deref <span class="kw">for </span>RunningSum&lt;F&gt; {
+    <span class="kw">type </span>Target = Vec&lt;AssignedCell&lt;F, F&gt;&gt;;
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
-    }
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vec&lt;AssignedCell&lt;F, F&gt;&gt; {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span><span class="op">&gt;</span> <span class="ident">RangeConstrained</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Witnesses a subset of the bits in `value` and constrains them to be the correct</span>
-    <span class="doccomment">/// number of bits.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Panics</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Panics if `bitrange.len() &gt;= K`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">witness_short</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
-        <span class="ident">lookup_config</span>: <span class="kw-2">&amp;</span><span class="ident">LookupRangeCheckConfig</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">K</span><span class="op">&gt;</span>,
-        <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">bitrange</span>: <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">num_bits</span> <span class="op">=</span> <span class="ident">bitrange</span>.<span class="ident">len</span>();
-        <span class="macro">assert!</span>(<span class="ident">num_bits</span> <span class="op">&lt;</span> <span class="ident">K</span>);
+<span class="kw">impl</span>&lt;F: FieldExt + PrimeFieldBits&gt; RangeConstrained&lt;F, AssignedCell&lt;F, F&gt;&gt; {
+    <span class="doccomment">/// Witnesses a subset of the bits in `value` and constrains them to be the correct
+    /// number of bits.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `bitrange.len() &gt;= K`.
+    </span><span class="kw">pub fn </span>witness_short&lt;<span class="kw">const </span>K: usize&gt;(
+        lookup_config: <span class="kw-2">&amp;</span>LookupRangeCheckConfig&lt;F, K&gt;,
+        layouter: <span class="kw">impl </span>Layouter&lt;F&gt;,
+        value: Value&lt;<span class="kw-2">&amp;</span>F&gt;,
+        bitrange: Range&lt;usize&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>num_bits = bitrange.len();
+        <span class="macro">assert!</span>(num_bits &lt; K);
 
-        <span class="comment">// Witness the subset and constrain it to be the correct number of bits.</span>
-        <span class="ident">lookup_config</span>
-            .<span class="ident">witness_short_check</span>(
-                <span class="ident">layouter</span>,
-                <span class="ident">value</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">value</span><span class="op">|</span> <span class="ident">bitrange_subset</span>(<span class="ident">value</span>, <span class="ident">bitrange</span>)),
-                <span class="ident">num_bits</span>,
+        <span class="comment">// Witness the subset and constrain it to be the correct number of bits.
+        </span>lookup_config
+            .witness_short_check(
+                layouter,
+                value.map(|value| bitrange_subset(value, bitrange)),
+                num_bits,
             )
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">inner</span><span class="op">|</span> <span class="self">Self</span> {
-                <span class="ident">inner</span>,
-                <span class="ident">num_bits</span>,
-                <span class="ident">_phantom</span>: <span class="ident">PhantomData::default</span>(),
+            .map(|inner| <span class="self">Self </span>{
+                inner,
+                num_bits,
+                _phantom: PhantomData::default(),
             })
     }
 }
 
-<span class="doccomment">/// Configuration that provides methods for a lookup range check.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LookupRangeCheckConfig</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span>, <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="ident">q_lookup</span>: <span class="ident">Selector</span>,
-    <span class="ident">q_running</span>: <span class="ident">Selector</span>,
-    <span class="ident">q_bitshift</span>: <span class="ident">Selector</span>,
-    <span class="ident">running_sum</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="ident">table_idx</span>: <span class="ident">TableColumn</span>,
-    <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Configuration that provides methods for a lookup range check.
+</span><span class="attribute">#[derive(Eq, PartialEq, Debug, Clone, Copy)]</span>
+<span class="kw">pub struct </span>LookupRangeCheckConfig&lt;F: FieldExt + PrimeFieldBits, <span class="kw">const </span>K: usize&gt; {
+    q_lookup: Selector,
+    q_running: Selector,
+    q_bitshift: Selector,
+    running_sum: Column&lt;Advice&gt;,
+    table_idx: TableColumn,
+    _marker: PhantomData&lt;F&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span>, <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">LookupRangeCheckConfig</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">K</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The `running_sum` advice column breaks the field element into `K`-bit</span>
-    <span class="doccomment">/// words. It is used to construct the input expression to the lookup</span>
-    <span class="doccomment">/// argument.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The `table_idx` fixed column contains values from [0..2^K). Looking up</span>
-    <span class="doccomment">/// a value in `table_idx` constrains it to be within this range. The table</span>
-    <span class="doccomment">/// can be loaded outside this helper.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Side-effects</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Both the `running_sum` and `constants` columns will be equality-enabled.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure</span>(
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">running_sum</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">table_idx</span>: <span class="ident">TableColumn</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="ident">meta</span>.<span class="ident">enable_equality</span>(<span class="ident">running_sum</span>);
+<span class="kw">impl</span>&lt;F: FieldExt + PrimeFieldBits, <span class="kw">const </span>K: usize&gt; LookupRangeCheckConfig&lt;F, K&gt; {
+    <span class="doccomment">/// The `running_sum` advice column breaks the field element into `K`-bit
+    /// words. It is used to construct the input expression to the lookup
+    /// argument.
+    ///
+    /// The `table_idx` fixed column contains values from [0..2^K). Looking up
+    /// a value in `table_idx` constrains it to be within this range. The table
+    /// can be loaded outside this helper.
+    ///
+    /// # Side-effects
+    ///
+    /// Both the `running_sum` and `constants` columns will be equality-enabled.
+    </span><span class="kw">pub fn </span>configure(
+        meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;F&gt;,
+        running_sum: Column&lt;Advice&gt;,
+        table_idx: TableColumn,
+    ) -&gt; <span class="self">Self </span>{
+        meta.enable_equality(running_sum);
 
-        <span class="kw">let</span> <span class="ident">q_lookup</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">complex_selector</span>();
-        <span class="kw">let</span> <span class="ident">q_running</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">complex_selector</span>();
-        <span class="kw">let</span> <span class="ident">q_bitshift</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">LookupRangeCheckConfig</span> {
-            <span class="ident">q_lookup</span>,
-            <span class="ident">q_running</span>,
-            <span class="ident">q_bitshift</span>,
-            <span class="ident">running_sum</span>,
-            <span class="ident">table_idx</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+        <span class="kw">let </span>q_lookup = meta.complex_selector();
+        <span class="kw">let </span>q_running = meta.complex_selector();
+        <span class="kw">let </span>q_bitshift = meta.selector();
+        <span class="kw">let </span>config = LookupRangeCheckConfig {
+            q_lookup,
+            q_running,
+            q_bitshift,
+            running_sum,
+            table_idx,
+            _marker: PhantomData,
         };
 
-        <span class="comment">// https://p.z.cash/halo2-0.1:decompose-combined-lookup</span>
-        <span class="ident">meta</span>.<span class="ident">lookup</span>(<span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q_lookup</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">config</span>.<span class="ident">q_lookup</span>);
-            <span class="kw">let</span> <span class="ident">q_running</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">config</span>.<span class="ident">q_running</span>);
-            <span class="kw">let</span> <span class="ident">z_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">running_sum</span>, <span class="ident">Rotation::cur</span>());
+        <span class="comment">// https://p.z.cash/halo2-0.1:decompose-combined-lookup
+        </span>meta.lookup(|meta| {
+            <span class="kw">let </span>q_lookup = meta.query_selector(config.q_lookup);
+            <span class="kw">let </span>q_running = meta.query_selector(config.q_running);
+            <span class="kw">let </span>z_cur = meta.query_advice(config.running_sum, Rotation::cur());
 
-            <span class="comment">// In the case of a running sum decomposition, we recover the word from</span>
-            <span class="comment">// the difference of the running sums:</span>
-            <span class="comment">//    z_i = 2^{K}⋅z_{i + 1} + a_i</span>
-            <span class="comment">// =&gt; a_i = z_i - 2^{K}⋅z_{i + 1}</span>
-            <span class="kw">let</span> <span class="ident">running_sum_lookup</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">running_sum_word</span> <span class="op">=</span> {
-                    <span class="kw">let</span> <span class="ident">z_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">running_sum</span>, <span class="ident">Rotation::next</span>());
-                    <span class="ident">z_cur</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">z_next</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">K</span>)
+            <span class="comment">// In the case of a running sum decomposition, we recover the word from
+            // the difference of the running sums:
+            //    z_i = 2^{K}⋅z_{i + 1} + a_i
+            // =&gt; a_i = z_i - 2^{K}⋅z_{i + 1}
+            </span><span class="kw">let </span>running_sum_lookup = {
+                <span class="kw">let </span>running_sum_word = {
+                    <span class="kw">let </span>z_next = meta.query_advice(config.running_sum, Rotation::next());
+                    z_cur.clone() - z_next * F::from(<span class="number">1 </span>&lt;&lt; K)
                 };
 
-                <span class="ident">q_running</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">running_sum_word</span>
+                q_running.clone() * running_sum_word
             };
 
-            <span class="comment">// In the short range check, the word is directly witnessed.</span>
-            <span class="kw">let</span> <span class="ident">short_lookup</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">short_word</span> <span class="op">=</span> <span class="ident">z_cur</span>;
-                <span class="kw">let</span> <span class="ident">q_short</span> <span class="op">=</span> <span class="ident">Expression::Constant</span>(<span class="ident">F::one</span>()) <span class="op">-</span> <span class="ident">q_running</span>;
+            <span class="comment">// In the short range check, the word is directly witnessed.
+            </span><span class="kw">let </span>short_lookup = {
+                <span class="kw">let </span>short_word = z_cur;
+                <span class="kw">let </span>q_short = Expression::Constant(F::one()) - q_running;
 
-                <span class="ident">q_short</span> <span class="op">*</span> <span class="ident">short_word</span>
+                q_short * short_word
             };
 
-            <span class="comment">// Combine the running sum and short lookups:</span>
-            <span class="macro">vec!</span>[(
-                <span class="ident">q_lookup</span> <span class="op">*</span> (<span class="ident">running_sum_lookup</span> <span class="op">+</span> <span class="ident">short_lookup</span>),
-                <span class="ident">config</span>.<span class="ident">table_idx</span>,
+            <span class="comment">// Combine the running sum and short lookups:
+            </span><span class="macro">vec!</span>[(
+                q_lookup * (running_sum_lookup + short_lookup),
+                config.table_idx,
             )]
         });
 
-        <span class="comment">// For short lookups, check that the word has been shifted by the correct number of bits.</span>
-        <span class="comment">// https://p.z.cash/halo2-0.1:decompose-short-lookup</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;Short lookup bitshift&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q_bitshift</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">config</span>.<span class="ident">q_bitshift</span>);
-            <span class="kw">let</span> <span class="ident">word</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">running_sum</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">shifted_word</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">running_sum</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">inv_two_pow_s</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">running_sum</span>, <span class="ident">Rotation::next</span>());
+        <span class="comment">// For short lookups, check that the word has been shifted by the correct number of bits.
+        // https://p.z.cash/halo2-0.1:decompose-short-lookup
+        </span>meta.create_gate(<span class="string">&quot;Short lookup bitshift&quot;</span>, |meta| {
+            <span class="kw">let </span>q_bitshift = meta.query_selector(config.q_bitshift);
+            <span class="kw">let </span>word = meta.query_advice(config.running_sum, Rotation::prev());
+            <span class="kw">let </span>shifted_word = meta.query_advice(config.running_sum, Rotation::cur());
+            <span class="kw">let </span>inv_two_pow_s = meta.query_advice(config.running_sum, Rotation::next());
 
-            <span class="kw">let</span> <span class="ident">two_pow_k</span> <span class="op">=</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">K</span>);
+            <span class="kw">let </span>two_pow_k = F::from(<span class="number">1 </span>&lt;&lt; K);
 
-            <span class="comment">// shifted_word = word * 2^{K-s}</span>
-            <span class="comment">//              = word * 2^K * inv_two_pow_s</span>
-            <span class="ident">Constraints::with_selector</span>(
-                <span class="ident">q_bitshift</span>,
-                <span class="prelude-val">Some</span>(<span class="ident">word</span> <span class="op">*</span> <span class="ident">two_pow_k</span> <span class="op">*</span> <span class="ident">inv_two_pow_s</span> <span class="op">-</span> <span class="ident">shifted_word</span>),
+            <span class="comment">// shifted_word = word * 2^{K-s}
+            //              = word * 2^K * inv_two_pow_s
+            </span>Constraints::with_selector(
+                q_bitshift,
+                <span class="prelude-val">Some</span>(word * two_pow_k * inv_two_pow_s - shifted_word),
             )
         });
 
-        <span class="ident">config</span>
+        config
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-    <span class="comment">// Loads the values [0..2^K) into `table_idx`. This is only used in testing</span>
-    <span class="comment">// for now, since the Sinsemilla chip provides a pre-loaded table in the</span>
-    <span class="comment">// Orchard context.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident">layouter</span>.<span class="ident">assign_table</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;table_idx&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">table</span><span class="op">|</span> {
-                <span class="comment">// We generate the row values lazily (we only need them during keygen).</span>
-                <span class="kw">for</span> <span class="ident">index</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">K</span>) {
-                    <span class="ident">table</span>.<span class="ident">assign_cell</span>(
-                        <span class="op">|</span><span class="op">|</span> <span class="string">&quot;table_idx&quot;</span>,
-                        <span class="self">self</span>.<span class="ident">table_idx</span>,
-                        <span class="ident">index</span>,
-                        <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">F::from</span>(<span class="ident">index</span> <span class="kw">as</span> <span class="ident">u64</span>)),
+    <span class="attribute">#[cfg(test)]</span>
+    <span class="comment">// Loads the values [0..2^K) into `table_idx`. This is only used in testing
+    // for now, since the Sinsemilla chip provides a pre-loaded table in the
+    // Orchard context.
+    </span><span class="kw">pub fn </span>load(<span class="kw-2">&amp;</span><span class="self">self</span>, layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;F&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        layouter.assign_table(
+            || <span class="string">&quot;table_idx&quot;</span>,
+            |<span class="kw-2">mut </span>table| {
+                <span class="comment">// We generate the row values lazily (we only need them during keygen).
+                </span><span class="kw">for </span>index <span class="kw">in </span><span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; K) {
+                    table.assign_cell(
+                        || <span class="string">&quot;table_idx&quot;</span>,
+                        <span class="self">self</span>.table_idx,
+                        index,
+                        || Value::known(F::from(index <span class="kw">as </span>u64)),
                     )<span class="question-mark">?</span>;
                 }
                 <span class="prelude-val">Ok</span>(())
@@ -844,312 +838,312 @@
         )
     }
 
-    <span class="doccomment">/// Range check on an existing cell that is copied into this helper.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns an error if `element` is not in a column that was passed to</span>
-    <span class="doccomment">/// [`ConstraintSystem::enable_equality`] during circuit configuration.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">copy_check</span>(
+    <span class="doccomment">/// Range check on an existing cell that is copied into this helper.
+    ///
+    /// Returns an error if `element` is not in a column that was passed to
+    /// [`ConstraintSystem::enable_equality`] during circuit configuration.
+    </span><span class="kw">pub fn </span>copy_check(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">element</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">num_words</span>: <span class="ident">usize</span>,
-        <span class="ident">strict</span>: <span class="ident">bool</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RunningSum</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;{:?} words range check&quot;</span>, <span class="ident">num_words</span>),
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                <span class="comment">// Copy `element` and initialize running sum `z_0 = element` to decompose it.</span>
-                <span class="kw">let</span> <span class="ident">z_0</span> <span class="op">=</span> <span class="ident">element</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;z_0&quot;</span>, <span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">running_sum</span>, <span class="number">0</span>)<span class="question-mark">?</span>;
-                <span class="self">self</span>.<span class="ident">range_check</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">z_0</span>, <span class="ident">num_words</span>, <span class="ident">strict</span>)
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;F&gt;,
+        element: AssignedCell&lt;F, F&gt;,
+        num_words: usize,
+        strict: bool,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RunningSum&lt;F&gt;, Error&gt; {
+        layouter.assign_region(
+            || <span class="macro">format!</span>(<span class="string">&quot;{:?} words range check&quot;</span>, num_words),
+            |<span class="kw-2">mut </span>region| {
+                <span class="comment">// Copy `element` and initialize running sum `z_0 = element` to decompose it.
+                </span><span class="kw">let </span>z_0 = element.copy_advice(|| <span class="string">&quot;z_0&quot;</span>, <span class="kw-2">&amp;mut </span>region, <span class="self">self</span>.running_sum, <span class="number">0</span>)<span class="question-mark">?</span>;
+                <span class="self">self</span>.range_check(<span class="kw-2">&amp;mut </span>region, z_0, num_words, strict)
             },
         )
     }
 
-    <span class="doccomment">/// Range check on a value that is witnessed in this helper.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">witness_check</span>(
+    <span class="doccomment">/// Range check on a value that is witnessed in this helper.
+    </span><span class="kw">pub fn </span>witness_check(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">num_words</span>: <span class="ident">usize</span>,
-        <span class="ident">strict</span>: <span class="ident">bool</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RunningSum</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;Witness element&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">z_0</span> <span class="op">=</span>
-                    <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;Witness element&quot;</span>, <span class="self">self</span>.<span class="ident">running_sum</span>, <span class="number">0</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">value</span>)<span class="question-mark">?</span>;
-                <span class="self">self</span>.<span class="ident">range_check</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">z_0</span>, <span class="ident">num_words</span>, <span class="ident">strict</span>)
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;F&gt;,
+        value: Value&lt;F&gt;,
+        num_words: usize,
+        strict: bool,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RunningSum&lt;F&gt;, Error&gt; {
+        layouter.assign_region(
+            || <span class="string">&quot;Witness element&quot;</span>,
+            |<span class="kw-2">mut </span>region| {
+                <span class="kw">let </span>z_0 =
+                    region.assign_advice(|| <span class="string">&quot;Witness element&quot;</span>, <span class="self">self</span>.running_sum, <span class="number">0</span>, || value)<span class="question-mark">?</span>;
+                <span class="self">self</span>.range_check(<span class="kw-2">&amp;mut </span>region, z_0, num_words, strict)
             },
         )
     }
 
-    <span class="doccomment">/// If `strict` is set to &quot;true&quot;, the field element must fit into</span>
-    <span class="doccomment">/// `num_words * K` bits. In other words, the the final cumulative sum `z_{num_words}`</span>
-    <span class="doccomment">/// must be zero.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If `strict` is set to &quot;false&quot;, the final `z_{num_words}` is not constrained.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// `element` must have been assigned to `self.running_sum` at offset 0.</span>
-    <span class="kw">fn</span> <span class="ident">range_check</span>(
+    <span class="doccomment">/// If `strict` is set to &quot;true&quot;, the field element must fit into
+    /// `num_words * K` bits. In other words, the the final cumulative sum `z_{num_words}`
+    /// must be zero.
+    ///
+    /// If `strict` is set to &quot;false&quot;, the final `z_{num_words}` is not constrained.
+    ///
+    /// `element` must have been assigned to `self.running_sum` at offset 0.
+    </span><span class="kw">fn </span>range_check(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">element</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">num_words</span>: <span class="ident">usize</span>,
-        <span class="ident">strict</span>: <span class="ident">bool</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RunningSum</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// `num_words` must fit into a single field element.</span>
-        <span class="macro">assert!</span>(<span class="ident">num_words</span> <span class="op">*</span> <span class="ident">K</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">F::CAPACITY</span> <span class="kw">as</span> <span class="ident">usize</span>);
-        <span class="kw">let</span> <span class="ident">num_bits</span> <span class="op">=</span> <span class="ident">num_words</span> <span class="op">*</span> <span class="ident">K</span>;
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, F&gt;,
+        element: AssignedCell&lt;F, F&gt;,
+        num_words: usize,
+        strict: bool,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RunningSum&lt;F&gt;, Error&gt; {
+        <span class="comment">// `num_words` must fit into a single field element.
+        </span><span class="macro">assert!</span>(num_words * K &lt;= F::CAPACITY <span class="kw">as </span>usize);
+        <span class="kw">let </span>num_bits = num_words * K;
 
-        <span class="comment">// Chunk the first num_bits bits into K-bit words.</span>
-        <span class="kw">let</span> <span class="ident">words</span> <span class="op">=</span> {
-            <span class="comment">// Take first num_bits bits of `element`.</span>
-            <span class="kw">let</span> <span class="ident">bits</span> <span class="op">=</span> <span class="ident">element</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">element</span><span class="op">|</span> {
-                <span class="ident">element</span>
-                    .<span class="ident">to_le_bits</span>()
-                    .<span class="ident">into_iter</span>()
-                    .<span class="ident">take</span>(<span class="ident">num_bits</span>)
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+        <span class="comment">// Chunk the first num_bits bits into K-bit words.
+        </span><span class="kw">let </span>words = {
+            <span class="comment">// Take first num_bits bits of `element`.
+            </span><span class="kw">let </span>bits = element.value().map(|element| {
+                element
+                    .to_le_bits()
+                    .into_iter()
+                    .take(num_bits)
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
             });
 
-            <span class="ident">bits</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">bits</span><span class="op">|</span> {
-                <span class="ident">bits</span>.<span class="ident">chunks_exact</span>(<span class="ident">K</span>)
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident">F::from</span>(<span class="ident">lebs2ip</span>::<span class="op">&lt;</span><span class="ident">K</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span>(<span class="ident">word</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>()))))
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+            bits.map(|bits| {
+                bits.chunks_exact(K)
+                    .map(|word| F::from(lebs2ip::&lt;K&gt;(<span class="kw-2">&amp;</span>(word.try_into().unwrap()))))
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
             })
-            .<span class="ident">transpose_vec</span>(<span class="ident">num_words</span>)
+            .transpose_vec(num_words)
         };
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">zs</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">element</span>.<span class="ident">clone</span>()];
+        <span class="kw">let </span><span class="kw-2">mut </span>zs = <span class="macro">vec!</span>[element.clone()];
 
-        <span class="comment">// Assign cumulative sum such that</span>
-        <span class="comment">//          z_i = 2^{K}⋅z_{i + 1} + a_i</span>
-        <span class="comment">// =&gt; z_{i + 1} = (z_i - a_i) / (2^K)</span>
-        <span class="comment">//</span>
-        <span class="comment">// For `element` = a_0 + 2^10 a_1 + ... + 2^{120} a_{12}}, initialize z_0 = `element`.</span>
-        <span class="comment">// If `element` fits in 130 bits, we end up with z_{13} = 0.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">z</span> <span class="op">=</span> <span class="ident">element</span>;
-        <span class="kw">let</span> <span class="ident">inv_two_pow_k</span> <span class="op">=</span> <span class="ident">F::from</span>(<span class="number">1u64</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">K</span>).<span class="ident">invert</span>().<span class="ident">unwrap</span>();
-        <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">word</span>) <span class="kw">in</span> <span class="ident">words</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-            <span class="comment">// Enable q_lookup on this row</span>
-            <span class="self">self</span>.<span class="ident">q_lookup</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">idx</span>)<span class="question-mark">?</span>;
-            <span class="comment">// Enable q_running on this row</span>
-            <span class="self">self</span>.<span class="ident">q_running</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">idx</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign cumulative sum such that
+        //          z_i = 2^{K}⋅z_{i + 1} + a_i
+        // =&gt; z_{i + 1} = (z_i - a_i) / (2^K)
+        //
+        // For `element` = a_0 + 2^10 a_1 + ... + 2^{120} a_{12}}, initialize z_0 = `element`.
+        // If `element` fits in 130 bits, we end up with z_{13} = 0.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>z = element;
+        <span class="kw">let </span>inv_two_pow_k = F::from(<span class="number">1u64 </span>&lt;&lt; K).invert().unwrap();
+        <span class="kw">for </span>(idx, word) <span class="kw">in </span>words.iter().enumerate() {
+            <span class="comment">// Enable q_lookup on this row
+            </span><span class="self">self</span>.q_lookup.enable(region, idx)<span class="question-mark">?</span>;
+            <span class="comment">// Enable q_running on this row
+            </span><span class="self">self</span>.q_running.enable(region, idx)<span class="question-mark">?</span>;
 
-            <span class="comment">// z_next = (z_cur - m_cur) / 2^K</span>
-            <span class="ident">z</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">z_val</span> <span class="op">=</span> <span class="ident">z</span>
-                    .<span class="ident">value</span>()
-                    .<span class="ident">zip</span>(<span class="kw-2">*</span><span class="ident">word</span>)
-                    .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">z</span>, <span class="ident">word</span>)<span class="op">|</span> (<span class="kw-2">*</span><span class="ident">z</span> <span class="op">-</span> <span class="ident">word</span>) <span class="op">*</span> <span class="ident">inv_two_pow_k</span>);
+            <span class="comment">// z_next = (z_cur - m_cur) / 2^K
+            </span>z = {
+                <span class="kw">let </span>z_val = z
+                    .value()
+                    .zip(<span class="kw-2">*</span>word)
+                    .map(|(z, word)| (<span class="kw-2">*</span>z - word) * inv_two_pow_k);
 
-                <span class="comment">// Assign z_next</span>
-                <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;z_{:?}&quot;</span>, <span class="ident">idx</span> <span class="op">+</span> <span class="number">1</span>),
-                    <span class="self">self</span>.<span class="ident">running_sum</span>,
-                    <span class="ident">idx</span> <span class="op">+</span> <span class="number">1</span>,
-                    <span class="op">|</span><span class="op">|</span> <span class="ident">z_val</span>,
-                )<span class="question-mark">?</span>
-            };
-            <span class="ident">zs</span>.<span class="ident">push</span>(<span class="ident">z</span>.<span class="ident">clone</span>());
+                <span class="comment">// Assign z_next
+                </span>region.assign_advice(
+                    || <span class="macro">format!</span>(<span class="string">&quot;z_{:?}&quot;</span>, idx + <span class="number">1</span>),
+                    <span class="self">self</span>.running_sum,
+                    idx + <span class="number">1</span>,
+                    || z_val,
+                )<span class="question-mark">?
+            </span>};
+            zs.push(z.clone());
         }
 
-        <span class="kw">if</span> <span class="ident">strict</span> {
-            <span class="comment">// Constrain the final `z` to be zero.</span>
-            <span class="ident">region</span>.<span class="ident">constrain_constant</span>(<span class="ident">zs</span>.<span class="ident">last</span>().<span class="ident">unwrap</span>().<span class="ident">cell</span>(), <span class="ident">F::zero</span>())<span class="question-mark">?</span>;
+        <span class="kw">if </span>strict {
+            <span class="comment">// Constrain the final `z` to be zero.
+            </span>region.constrain_constant(zs.last().unwrap().cell(), F::zero())<span class="question-mark">?</span>;
         }
 
-        <span class="prelude-val">Ok</span>(<span class="ident">RunningSum</span>(<span class="ident">zs</span>))
+        <span class="prelude-val">Ok</span>(RunningSum(zs))
     }
 
-    <span class="doccomment">/// Short range check on an existing cell that is copied into this helper.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Panics</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Panics if NUM_BITS is equal to or larger than K.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">copy_short_check</span>(
+    <span class="doccomment">/// Short range check on an existing cell that is copied into this helper.
+    ///
+    /// # Panics
+    ///
+    /// Panics if NUM_BITS is equal to or larger than K.
+    </span><span class="kw">pub fn </span>copy_short_check(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">element</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">num_bits</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="macro">assert!</span>(<span class="ident">num_bits</span> <span class="op">&lt;</span> <span class="ident">K</span>);
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Range check {:?} bits&quot;</span>, <span class="ident">num_bits</span>),
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                <span class="comment">// Copy `element` to use in the k-bit lookup.</span>
-                <span class="kw">let</span> <span class="ident">element</span> <span class="op">=</span>
-                    <span class="ident">element</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;element&quot;</span>, <span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">running_sum</span>, <span class="number">0</span>)<span class="question-mark">?</span>;
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;F&gt;,
+        element: AssignedCell&lt;F, F&gt;,
+        num_bits: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="macro">assert!</span>(num_bits &lt; K);
+        layouter.assign_region(
+            || <span class="macro">format!</span>(<span class="string">&quot;Range check {:?} bits&quot;</span>, num_bits),
+            |<span class="kw-2">mut </span>region| {
+                <span class="comment">// Copy `element` to use in the k-bit lookup.
+                </span><span class="kw">let </span>element =
+                    element.copy_advice(|| <span class="string">&quot;element&quot;</span>, <span class="kw-2">&amp;mut </span>region, <span class="self">self</span>.running_sum, <span class="number">0</span>)<span class="question-mark">?</span>;
 
-                <span class="self">self</span>.<span class="ident">short_range_check</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">element</span>, <span class="ident">num_bits</span>)
+                <span class="self">self</span>.short_range_check(<span class="kw-2">&amp;mut </span>region, element, num_bits)
             },
         )
     }
 
-    <span class="doccomment">/// Short range check on value that is witnessed in this helper.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Panics</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Panics if num_bits is larger than K.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">witness_short_check</span>(
+    <span class="doccomment">/// Short range check on value that is witnessed in this helper.
+    ///
+    /// # Panics
+    ///
+    /// Panics if num_bits is larger than K.
+    </span><span class="kw">pub fn </span>witness_short_check(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">element</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">num_bits</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="macro">assert!</span>(<span class="ident">num_bits</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">K</span>);
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Range check {:?} bits&quot;</span>, <span class="ident">num_bits</span>),
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                <span class="comment">// Witness `element` to use in the k-bit lookup.</span>
-                <span class="kw">let</span> <span class="ident">element</span> <span class="op">=</span>
-                    <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;Witness element&quot;</span>, <span class="self">self</span>.<span class="ident">running_sum</span>, <span class="number">0</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">element</span>)<span class="question-mark">?</span>;
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;F&gt;,
+        element: Value&lt;F&gt;,
+        num_bits: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;AssignedCell&lt;F, F&gt;, Error&gt; {
+        <span class="macro">assert!</span>(num_bits &lt;= K);
+        layouter.assign_region(
+            || <span class="macro">format!</span>(<span class="string">&quot;Range check {:?} bits&quot;</span>, num_bits),
+            |<span class="kw-2">mut </span>region| {
+                <span class="comment">// Witness `element` to use in the k-bit lookup.
+                </span><span class="kw">let </span>element =
+                    region.assign_advice(|| <span class="string">&quot;Witness element&quot;</span>, <span class="self">self</span>.running_sum, <span class="number">0</span>, || element)<span class="question-mark">?</span>;
 
-                <span class="self">self</span>.<span class="ident">short_range_check</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">element</span>.<span class="ident">clone</span>(), <span class="ident">num_bits</span>)<span class="question-mark">?</span>;
+                <span class="self">self</span>.short_range_check(<span class="kw-2">&amp;mut </span>region, element.clone(), num_bits)<span class="question-mark">?</span>;
 
-                <span class="prelude-val">Ok</span>(<span class="ident">element</span>)
+                <span class="prelude-val">Ok</span>(element)
             },
         )
     }
 
-    <span class="doccomment">/// Constrain `x` to be a NUM_BITS word.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// `element` must have been assigned to `self.running_sum` at offset 0.</span>
-    <span class="kw">fn</span> <span class="ident">short_range_check</span>(
+    <span class="doccomment">/// Constrain `x` to be a NUM_BITS word.
+    ///
+    /// `element` must have been assigned to `self.running_sum` at offset 0.
+    </span><span class="kw">fn </span>short_range_check(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">element</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">num_bits</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Enable lookup for `element`, to constrain it to 10 bits.</span>
-        <span class="self">self</span>.<span class="ident">q_lookup</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="number">0</span>)<span class="question-mark">?</span>;
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, F&gt;,
+        element: AssignedCell&lt;F, F&gt;,
+        num_bits: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="comment">// Enable lookup for `element`, to constrain it to 10 bits.
+        </span><span class="self">self</span>.q_lookup.enable(region, <span class="number">0</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Enable lookup for shifted element, to constrain it to 10 bits.</span>
-        <span class="self">self</span>.<span class="ident">q_lookup</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Enable lookup for shifted element, to constrain it to 10 bits.
+        </span><span class="self">self</span>.q_lookup.enable(region, <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Check element has been shifted by the correct number of bits.</span>
-        <span class="self">self</span>.<span class="ident">q_bitshift</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Check element has been shifted by the correct number of bits.
+        </span><span class="self">self</span>.q_bitshift.enable(region, <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign shifted `element * 2^{K - num_bits}`</span>
-        <span class="kw">let</span> <span class="ident">shifted</span> <span class="op">=</span> <span class="ident">element</span>.<span class="ident">value</span>().<span class="ident">into_field</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">K</span> <span class="op">-</span> <span class="ident">num_bits</span>));
+        <span class="comment">// Assign shifted `element * 2^{K - num_bits}`
+        </span><span class="kw">let </span>shifted = element.value().into_field() * F::from(<span class="number">1 </span>&lt;&lt; (K - num_bits));
 
-        <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;element * 2^({}-{})&quot;</span>, <span class="ident">K</span>, <span class="ident">num_bits</span>),
-            <span class="self">self</span>.<span class="ident">running_sum</span>,
+        region.assign_advice(
+            || <span class="macro">format!</span>(<span class="string">&quot;element * 2^({}-{})&quot;</span>, K, num_bits),
+            <span class="self">self</span>.running_sum,
             <span class="number">1</span>,
-            <span class="op">|</span><span class="op">|</span> <span class="ident">shifted</span>,
+            || shifted,
         )<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign 2^{-num_bits} from a fixed column.</span>
-        <span class="kw">let</span> <span class="ident">inv_two_pow_s</span> <span class="op">=</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_bits</span>).<span class="ident">invert</span>().<span class="ident">unwrap</span>();
-        <span class="ident">region</span>.<span class="ident">assign_advice_from_constant</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;2^(-{})&quot;</span>, <span class="ident">num_bits</span>),
-            <span class="self">self</span>.<span class="ident">running_sum</span>,
+        <span class="comment">// Assign 2^{-num_bits} from a fixed column.
+        </span><span class="kw">let </span>inv_two_pow_s = F::from(<span class="number">1 </span>&lt;&lt; num_bits).invert().unwrap();
+        region.assign_advice_from_constant(
+            || <span class="macro">format!</span>(<span class="string">&quot;2^(-{})&quot;</span>, num_bits),
+            <span class="self">self</span>.running_sum,
             <span class="number">2</span>,
-            <span class="ident">inv_two_pow_s</span>,
+            inv_two_pow_s,
         )<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::LookupRangeCheckConfig</span>;
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">mod </span>tests {
+    <span class="kw">use </span><span class="kw">super</span>::LookupRangeCheckConfig;
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::lebs2ip</span>;
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::sinsemilla::primitives::K</span>;
+    <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::lebs2ip;
+    <span class="kw">use </span><span class="kw">crate</span>::sinsemilla::primitives::K;
 
-    <span class="kw">use</span> <span class="ident">ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeFieldBits</span>};
-    <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-        <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">SimpleFloorPlanner</span>, <span class="ident">Value</span>},
-        <span class="ident">dev</span>::{<span class="ident">FailureLocation</span>, <span class="ident">MockProver</span>, <span class="ident">VerifyFailure</span>},
-        <span class="ident">plonk</span>::{<span class="ident">Circuit</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>},
+    <span class="kw">use </span>ff::{Field, PrimeFieldBits};
+    <span class="kw">use </span>halo2_proofs::{
+        circuit::{Layouter, SimpleFloorPlanner, Value},
+        dev::{FailureLocation, MockProver, VerifyFailure},
+        plonk::{Circuit, ConstraintSystem, Error},
     };
-    <span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">pallas</span>};
+    <span class="kw">use </span>pasta_curves::{arithmetic::FieldExt, pallas};
 
-    <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert::TryInto</span>, <span class="ident">marker::PhantomData</span>};
+    <span class="kw">use </span>std::{convert::TryInto, marker::PhantomData};
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">lookup_range_check</span>() {
-        <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>)]</span>
-        <span class="kw">struct</span> <span class="ident">MyCircuit</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span><span class="op">&gt;</span> {
-            <span class="ident">num_words</span>: <span class="ident">usize</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>lookup_range_check() {
+        <span class="attribute">#[derive(Clone, Copy)]</span>
+        <span class="kw">struct </span>MyCircuit&lt;F: FieldExt + PrimeFieldBits&gt; {
+            num_words: usize,
+            _marker: PhantomData&lt;F&gt;,
         }
 
-        <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span><span class="op">&gt;</span> <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyCircuit</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-            <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">LookupRangeCheckConfig</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">K</span><span class="op">&gt;</span>;
-            <span class="kw">type</span> <span class="ident">FloorPlanner</span> <span class="op">=</span> <span class="ident">SimpleFloorPlanner</span>;
+        <span class="kw">impl</span>&lt;F: FieldExt + PrimeFieldBits&gt; Circuit&lt;F&gt; <span class="kw">for </span>MyCircuit&lt;F&gt; {
+            <span class="kw">type </span>Config = LookupRangeCheckConfig&lt;F, K&gt;;
+            <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
 
-            <span class="kw">fn</span> <span class="ident">without_witnesses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-                <span class="kw-2">*</span><span class="self">self</span>
+            <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+                <span class="kw-2">*</span><span class="self">self
+            </span>}
+
+            <span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;F&gt;) -&gt; <span class="self">Self</span>::Config {
+                <span class="kw">let </span>running_sum = meta.advice_column();
+                <span class="kw">let </span>table_idx = meta.lookup_table_column();
+                <span class="kw">let </span>constants = meta.fixed_column();
+                meta.enable_constant(constants);
+
+                LookupRangeCheckConfig::&lt;F, K&gt;::configure(meta, running_sum, table_idx)
             }
 
-            <span class="kw">fn</span> <span class="ident">configure</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Config</span> {
-                <span class="kw">let</span> <span class="ident">running_sum</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>();
-                <span class="kw">let</span> <span class="ident">table_idx</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">lookup_table_column</span>();
-                <span class="kw">let</span> <span class="ident">constants</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">fixed_column</span>();
-                <span class="ident">meta</span>.<span class="ident">enable_constant</span>(<span class="ident">constants</span>);
-
-                <span class="ident">LookupRangeCheckConfig</span>::<span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">K</span><span class="op">&gt;</span><span class="ident">::configure</span>(<span class="ident">meta</span>, <span class="ident">running_sum</span>, <span class="ident">table_idx</span>)
-            }
-
-            <span class="kw">fn</span> <span class="ident">synthesize</span>(
+            <span class="kw">fn </span>synthesize(
                 <span class="kw-2">&amp;</span><span class="self">self</span>,
-                <span class="ident">config</span>: <span class="ident"><span class="self">Self</span>::Config</span>,
-                <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-            ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-                <span class="comment">// Load table_idx</span>
-                <span class="ident">config</span>.<span class="ident">load</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>)<span class="question-mark">?</span>;
+                config: <span class="self">Self</span>::Config,
+                <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;F&gt;,
+            ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+                <span class="comment">// Load table_idx
+                </span>config.load(<span class="kw-2">&amp;mut </span>layouter)<span class="question-mark">?</span>;
 
-                <span class="comment">// Lookup constraining element to be no longer than num_words * K bits.</span>
-                <span class="kw">let</span> <span class="ident">elements_and_expected_final_zs</span> <span class="op">=</span> [
-                    (<span class="ident">F::from</span>((<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="self">self</span>.<span class="ident">num_words</span> <span class="op">*</span> <span class="ident">K</span>)) <span class="op">-</span> <span class="number">1</span>), <span class="ident">F::zero</span>(), <span class="bool-val">true</span>), <span class="comment">// a word that is within self.num_words * K bits long</span>
-                    (<span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="self">self</span>.<span class="ident">num_words</span> <span class="op">*</span> <span class="ident">K</span>)), <span class="ident">F::one</span>(), <span class="bool-val">false</span>), <span class="comment">// a word that is just over self.num_words * K bits long</span>
-                ];
+                <span class="comment">// Lookup constraining element to be no longer than num_words * K bits.
+                </span><span class="kw">let </span>elements_and_expected_final_zs = [
+                    (F::from((<span class="number">1 </span>&lt;&lt; (<span class="self">self</span>.num_words * K)) - <span class="number">1</span>), F::zero(), <span class="bool-val">true</span>), <span class="comment">// a word that is within self.num_words * K bits long
+                    </span>(F::from(<span class="number">1 </span>&lt;&lt; (<span class="self">self</span>.num_words * K)), F::one(), <span class="bool-val">false</span>), <span class="comment">// a word that is just over self.num_words * K bits long
+                </span>];
 
-                <span class="kw">fn</span> <span class="ident">expected_zs</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span>, <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span><span class="op">&gt;</span>(
-                    <span class="ident">element</span>: <span class="ident">F</span>,
-                    <span class="ident">num_words</span>: <span class="ident">usize</span>,
-                ) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">chunks</span> <span class="op">=</span> {
-                        <span class="ident">element</span>
-                            .<span class="ident">to_le_bits</span>()
-                            .<span class="ident">iter</span>()
-                            .<span class="ident">by_vals</span>()
-                            .<span class="ident">take</span>(<span class="ident">num_words</span> <span class="op">*</span> <span class="ident">K</span>)
-                            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-                            .<span class="ident">chunks_exact</span>(<span class="ident">K</span>)
-                            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">chunk</span><span class="op">|</span> <span class="ident">F::from</span>(<span class="ident">lebs2ip</span>::<span class="op">&lt;</span><span class="ident">K</span><span class="op">&gt;</span>(<span class="ident">chunk</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>())))
-                            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+                <span class="kw">fn </span>expected_zs&lt;F: FieldExt + PrimeFieldBits, <span class="kw">const </span>K: usize&gt;(
+                    element: F,
+                    num_words: usize,
+                ) -&gt; Vec&lt;F&gt; {
+                    <span class="kw">let </span>chunks = {
+                        element
+                            .to_le_bits()
+                            .iter()
+                            .by_vals()
+                            .take(num_words * K)
+                            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+                            .chunks_exact(K)
+                            .map(|chunk| F::from(lebs2ip::&lt;K&gt;(chunk.try_into().unwrap())))
+                            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
                     };
-                    <span class="kw">let</span> <span class="ident">expected_zs</span> <span class="op">=</span> {
-                        <span class="kw">let</span> <span class="ident">inv_two_pow_k</span> <span class="op">=</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">K</span>).<span class="ident">invert</span>().<span class="ident">unwrap</span>();
-                        <span class="ident">chunks</span>.<span class="ident">iter</span>().<span class="ident">fold</span>(<span class="macro">vec!</span>[<span class="ident">element</span>], <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">zs</span>, <span class="ident">a_i</span><span class="op">|</span> {
-                            <span class="comment">// z_{i + 1} = (z_i - a_i) / 2^{K}</span>
-                            <span class="kw">let</span> <span class="ident">z</span> <span class="op">=</span> (<span class="ident">zs</span>[<span class="ident">zs</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span>] <span class="op">-</span> <span class="ident">a_i</span>) <span class="op">*</span> <span class="ident">inv_two_pow_k</span>;
-                            <span class="ident">zs</span>.<span class="ident">push</span>(<span class="ident">z</span>);
-                            <span class="ident">zs</span>
+                    <span class="kw">let </span>expected_zs = {
+                        <span class="kw">let </span>inv_two_pow_k = F::from(<span class="number">1 </span>&lt;&lt; K).invert().unwrap();
+                        chunks.iter().fold(<span class="macro">vec!</span>[element], |<span class="kw-2">mut </span>zs, a_i| {
+                            <span class="comment">// z_{i + 1} = (z_i - a_i) / 2^{K}
+                            </span><span class="kw">let </span>z = (zs[zs.len() - <span class="number">1</span>] - a_i) * inv_two_pow_k;
+                            zs.push(z);
+                            zs
                         })
                     };
-                    <span class="ident">expected_zs</span>
+                    expected_zs
                 }
 
-                <span class="kw">for</span> (<span class="ident">element</span>, <span class="ident">expected_final_z</span>, <span class="ident">strict</span>) <span class="kw">in</span> <span class="ident">elements_and_expected_final_zs</span>.<span class="ident">iter</span>() {
-                    <span class="kw">let</span> <span class="ident">expected_zs</span> <span class="op">=</span> <span class="ident">expected_zs</span>::<span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">K</span><span class="op">&gt;</span>(<span class="kw-2">*</span><span class="ident">element</span>, <span class="self">self</span>.<span class="ident">num_words</span>);
+                <span class="kw">for </span>(element, expected_final_z, strict) <span class="kw">in </span>elements_and_expected_final_zs.iter() {
+                    <span class="kw">let </span>expected_zs = expected_zs::&lt;F, K&gt;(<span class="kw-2">*</span>element, <span class="self">self</span>.num_words);
 
-                    <span class="kw">let</span> <span class="ident">zs</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">witness_check</span>(
-                        <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Lookup {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">num_words</span>)),
-                        <span class="ident">Value::known</span>(<span class="kw-2">*</span><span class="ident">element</span>),
-                        <span class="self">self</span>.<span class="ident">num_words</span>,
-                        <span class="kw-2">*</span><span class="ident">strict</span>,
+                    <span class="kw">let </span>zs = config.witness_check(
+                        layouter.namespace(|| <span class="macro">format!</span>(<span class="string">&quot;Lookup {:?}&quot;</span>, <span class="self">self</span>.num_words)),
+                        Value::known(<span class="kw-2">*</span>element),
+                        <span class="self">self</span>.num_words,
+                        <span class="kw-2">*</span>strict,
                     )<span class="question-mark">?</span>;
 
-                    <span class="macro">assert_eq!</span>(<span class="kw-2">*</span><span class="ident">expected_zs</span>.<span class="ident">last</span>().<span class="ident">unwrap</span>(), <span class="kw-2">*</span><span class="ident">expected_final_z</span>);
+                    <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>expected_zs.last().unwrap(), <span class="kw-2">*</span>expected_final_z);
 
-                    <span class="kw">for</span> (<span class="ident">expected_z</span>, <span class="ident">z</span>) <span class="kw">in</span> <span class="ident">expected_zs</span>.<span class="ident">into_iter</span>().<span class="ident">zip</span>(<span class="ident">zs</span>.<span class="ident">iter</span>()) {
-                        <span class="ident">z</span>.<span class="ident">value</span>().<span class="ident">assert_if_known</span>(<span class="op">|</span><span class="ident">z</span><span class="op">|</span> <span class="op">&amp;&amp;</span><span class="ident">expected_z</span> <span class="op">==</span> <span class="ident">z</span>);
+                    <span class="kw">for </span>(expected_z, z) <span class="kw">in </span>expected_zs.into_iter().zip(zs.iter()) {
+                        z.value().assert_if_known(|z| &amp;&amp;expected_z == z);
                     }
                 }
                 <span class="prelude-val">Ok</span>(())
@@ -1157,162 +1151,162 @@
         }
 
         {
-            <span class="kw">let</span> <span class="ident">circuit</span>: <span class="ident">MyCircuit</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {
-                <span class="ident">num_words</span>: <span class="number">6</span>,
-                <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+            <span class="kw">let </span>circuit: MyCircuit&lt;pallas::Base&gt; = MyCircuit {
+                num_words: <span class="number">6</span>,
+                _marker: PhantomData,
             };
 
-            <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver</span>::<span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="ident">::run</span>(<span class="number">11</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
-            <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()));
+            <span class="kw">let </span>prover = MockProver::&lt;pallas::Base&gt;::run(<span class="number">11</span>, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+            <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()));
         }
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">short_range_check</span>() {
-        <span class="kw">struct</span> <span class="ident">MyCircuit</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span><span class="op">&gt;</span> {
-            <span class="ident">element</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-            <span class="ident">num_bits</span>: <span class="ident">usize</span>,
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>short_range_check() {
+        <span class="kw">struct </span>MyCircuit&lt;F: FieldExt + PrimeFieldBits&gt; {
+            element: Value&lt;F&gt;,
+            num_bits: usize,
         }
 
-        <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span><span class="op">&gt;</span> <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyCircuit</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-            <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">LookupRangeCheckConfig</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">K</span><span class="op">&gt;</span>;
-            <span class="kw">type</span> <span class="ident">FloorPlanner</span> <span class="op">=</span> <span class="ident">SimpleFloorPlanner</span>;
+        <span class="kw">impl</span>&lt;F: FieldExt + PrimeFieldBits&gt; Circuit&lt;F&gt; <span class="kw">for </span>MyCircuit&lt;F&gt; {
+            <span class="kw">type </span>Config = LookupRangeCheckConfig&lt;F, K&gt;;
+            <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
 
-            <span class="kw">fn</span> <span class="ident">without_witnesses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-                <span class="ident">MyCircuit</span> {
-                    <span class="ident">element</span>: <span class="ident">Value::unknown</span>(),
-                    <span class="ident">num_bits</span>: <span class="self">self</span>.<span class="ident">num_bits</span>,
+            <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+                MyCircuit {
+                    element: Value::unknown(),
+                    num_bits: <span class="self">self</span>.num_bits,
                 }
             }
 
-            <span class="kw">fn</span> <span class="ident">configure</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Config</span> {
-                <span class="kw">let</span> <span class="ident">running_sum</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>();
-                <span class="kw">let</span> <span class="ident">table_idx</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">lookup_table_column</span>();
-                <span class="kw">let</span> <span class="ident">constants</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">fixed_column</span>();
-                <span class="ident">meta</span>.<span class="ident">enable_constant</span>(<span class="ident">constants</span>);
+            <span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;F&gt;) -&gt; <span class="self">Self</span>::Config {
+                <span class="kw">let </span>running_sum = meta.advice_column();
+                <span class="kw">let </span>table_idx = meta.lookup_table_column();
+                <span class="kw">let </span>constants = meta.fixed_column();
+                meta.enable_constant(constants);
 
-                <span class="ident">LookupRangeCheckConfig</span>::<span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">K</span><span class="op">&gt;</span><span class="ident">::configure</span>(<span class="ident">meta</span>, <span class="ident">running_sum</span>, <span class="ident">table_idx</span>)
+                LookupRangeCheckConfig::&lt;F, K&gt;::configure(meta, running_sum, table_idx)
             }
 
-            <span class="kw">fn</span> <span class="ident">synthesize</span>(
+            <span class="kw">fn </span>synthesize(
                 <span class="kw-2">&amp;</span><span class="self">self</span>,
-                <span class="ident">config</span>: <span class="ident"><span class="self">Self</span>::Config</span>,
-                <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-            ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-                <span class="comment">// Load table_idx</span>
-                <span class="ident">config</span>.<span class="ident">load</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>)<span class="question-mark">?</span>;
+                config: <span class="self">Self</span>::Config,
+                <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;F&gt;,
+            ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+                <span class="comment">// Load table_idx
+                </span>config.load(<span class="kw-2">&amp;mut </span>layouter)<span class="question-mark">?</span>;
 
-                <span class="comment">// Lookup constraining element to be no longer than num_bits.</span>
-                <span class="ident">config</span>.<span class="ident">witness_short_check</span>(
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;Lookup {:?} bits&quot;</span>, <span class="self">self</span>.<span class="ident">num_bits</span>)),
-                    <span class="self">self</span>.<span class="ident">element</span>,
-                    <span class="self">self</span>.<span class="ident">num_bits</span>,
+                <span class="comment">// Lookup constraining element to be no longer than num_bits.
+                </span>config.witness_short_check(
+                    layouter.namespace(|| <span class="macro">format!</span>(<span class="string">&quot;Lookup {:?} bits&quot;</span>, <span class="self">self</span>.num_bits)),
+                    <span class="self">self</span>.element,
+                    <span class="self">self</span>.num_bits,
                 )<span class="question-mark">?</span>;
 
                 <span class="prelude-val">Ok</span>(())
             }
         }
 
-        <span class="comment">// Edge case: zero bits</span>
-        {
-            <span class="kw">let</span> <span class="ident">circuit</span>: <span class="ident">MyCircuit</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {
-                <span class="ident">element</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::zero</span>()),
-                <span class="ident">num_bits</span>: <span class="number">0</span>,
+        <span class="comment">// Edge case: zero bits
+        </span>{
+            <span class="kw">let </span>circuit: MyCircuit&lt;pallas::Base&gt; = MyCircuit {
+                element: Value::known(pallas::Base::zero()),
+                num_bits: <span class="number">0</span>,
             };
-            <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver</span>::<span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="ident">::run</span>(<span class="number">11</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
-            <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()));
+            <span class="kw">let </span>prover = MockProver::&lt;pallas::Base&gt;::run(<span class="number">11</span>, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+            <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()));
         }
 
-        <span class="comment">// Edge case: K bits</span>
-        {
-            <span class="kw">let</span> <span class="ident">circuit</span>: <span class="ident">MyCircuit</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {
-                <span class="ident">element</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from</span>((<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">K</span>) <span class="op">-</span> <span class="number">1</span>)),
-                <span class="ident">num_bits</span>: <span class="ident">K</span>,
+        <span class="comment">// Edge case: K bits
+        </span>{
+            <span class="kw">let </span>circuit: MyCircuit&lt;pallas::Base&gt; = MyCircuit {
+                element: Value::known(pallas::Base::from((<span class="number">1 </span>&lt;&lt; K) - <span class="number">1</span>)),
+                num_bits: K,
             };
-            <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver</span>::<span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="ident">::run</span>(<span class="number">11</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
-            <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()));
+            <span class="kw">let </span>prover = MockProver::&lt;pallas::Base&gt;::run(<span class="number">11</span>, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+            <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()));
         }
 
-        <span class="comment">// Element within `num_bits`</span>
-        {
-            <span class="kw">let</span> <span class="ident">circuit</span>: <span class="ident">MyCircuit</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {
-                <span class="ident">element</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from</span>((<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">6</span>) <span class="op">-</span> <span class="number">1</span>)),
-                <span class="ident">num_bits</span>: <span class="number">6</span>,
+        <span class="comment">// Element within `num_bits`
+        </span>{
+            <span class="kw">let </span>circuit: MyCircuit&lt;pallas::Base&gt; = MyCircuit {
+                element: Value::known(pallas::Base::from((<span class="number">1 </span>&lt;&lt; <span class="number">6</span>) - <span class="number">1</span>)),
+                num_bits: <span class="number">6</span>,
             };
-            <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver</span>::<span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="ident">::run</span>(<span class="number">11</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
-            <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()));
+            <span class="kw">let </span>prover = MockProver::&lt;pallas::Base&gt;::run(<span class="number">11</span>, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+            <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()));
         }
 
-        <span class="comment">// Element larger than `num_bits` but within K bits</span>
-        {
-            <span class="kw">let</span> <span class="ident">circuit</span>: <span class="ident">MyCircuit</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {
-                <span class="ident">element</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">6</span>)),
-                <span class="ident">num_bits</span>: <span class="number">6</span>,
+        <span class="comment">// Element larger than `num_bits` but within K bits
+        </span>{
+            <span class="kw">let </span>circuit: MyCircuit&lt;pallas::Base&gt; = MyCircuit {
+                element: Value::known(pallas::Base::from(<span class="number">1 </span>&lt;&lt; <span class="number">6</span>)),
+                num_bits: <span class="number">6</span>,
             };
-            <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver</span>::<span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="ident">::run</span>(<span class="number">11</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
+            <span class="kw">let </span>prover = MockProver::&lt;pallas::Base&gt;::run(<span class="number">11</span>, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
             <span class="macro">assert_eq!</span>(
-                <span class="ident">prover</span>.<span class="ident">verify</span>(),
-                <span class="prelude-val">Err</span>(<span class="macro">vec!</span>[<span class="ident">VerifyFailure::Lookup</span> {
-                    <span class="ident">lookup_index</span>: <span class="number">0</span>,
-                    <span class="ident">location</span>: <span class="ident">FailureLocation::InRegion</span> {
-                        <span class="ident">region</span>: (<span class="number">1</span>, <span class="string">&quot;Range check 6 bits&quot;</span>).<span class="ident">into</span>(),
-                        <span class="ident">offset</span>: <span class="number">1</span>,
+                prover.verify(),
+                <span class="prelude-val">Err</span>(<span class="macro">vec!</span>[VerifyFailure::Lookup {
+                    lookup_index: <span class="number">0</span>,
+                    location: FailureLocation::InRegion {
+                        region: (<span class="number">1</span>, <span class="string">&quot;Range check 6 bits&quot;</span>).into(),
+                        offset: <span class="number">1</span>,
                     },
                 }])
             );
         }
 
-        <span class="comment">// Element larger than K bits</span>
-        {
-            <span class="kw">let</span> <span class="ident">circuit</span>: <span class="ident">MyCircuit</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {
-                <span class="ident">element</span>: <span class="ident">Value::known</span>(<span class="ident">pallas::Base::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">K</span>)),
-                <span class="ident">num_bits</span>: <span class="number">6</span>,
+        <span class="comment">// Element larger than K bits
+        </span>{
+            <span class="kw">let </span>circuit: MyCircuit&lt;pallas::Base&gt; = MyCircuit {
+                element: Value::known(pallas::Base::from(<span class="number">1 </span>&lt;&lt; K)),
+                num_bits: <span class="number">6</span>,
             };
-            <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver</span>::<span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="ident">::run</span>(<span class="number">11</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
+            <span class="kw">let </span>prover = MockProver::&lt;pallas::Base&gt;::run(<span class="number">11</span>, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
             <span class="macro">assert_eq!</span>(
-                <span class="ident">prover</span>.<span class="ident">verify</span>(),
+                prover.verify(),
                 <span class="prelude-val">Err</span>(<span class="macro">vec!</span>[
-                    <span class="ident">VerifyFailure::Lookup</span> {
-                        <span class="ident">lookup_index</span>: <span class="number">0</span>,
-                        <span class="ident">location</span>: <span class="ident">FailureLocation::InRegion</span> {
-                            <span class="ident">region</span>: (<span class="number">1</span>, <span class="string">&quot;Range check 6 bits&quot;</span>).<span class="ident">into</span>(),
-                            <span class="ident">offset</span>: <span class="number">0</span>,
+                    VerifyFailure::Lookup {
+                        lookup_index: <span class="number">0</span>,
+                        location: FailureLocation::InRegion {
+                            region: (<span class="number">1</span>, <span class="string">&quot;Range check 6 bits&quot;</span>).into(),
+                            offset: <span class="number">0</span>,
                         },
                     },
-                    <span class="ident">VerifyFailure::Lookup</span> {
-                        <span class="ident">lookup_index</span>: <span class="number">0</span>,
-                        <span class="ident">location</span>: <span class="ident">FailureLocation::InRegion</span> {
-                            <span class="ident">region</span>: (<span class="number">1</span>, <span class="string">&quot;Range check 6 bits&quot;</span>).<span class="ident">into</span>(),
-                            <span class="ident">offset</span>: <span class="number">1</span>,
+                    VerifyFailure::Lookup {
+                        lookup_index: <span class="number">0</span>,
+                        location: FailureLocation::InRegion {
+                            region: (<span class="number">1</span>, <span class="string">&quot;Range check 6 bits&quot;</span>).into(),
+                            offset: <span class="number">1</span>,
                         },
                     },
                 ])
             );
         }
 
-        <span class="comment">// Element which is not within `num_bits`, but which has a shifted value within</span>
-        <span class="comment">// num_bits</span>
-        {
-            <span class="kw">let</span> <span class="ident">num_bits</span> <span class="op">=</span> <span class="number">6</span>;
-            <span class="kw">let</span> <span class="ident">shifted</span> <span class="op">=</span> <span class="ident">pallas::Base::from</span>((<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">num_bits</span>) <span class="op">-</span> <span class="number">1</span>);
-            <span class="comment">// Recall that shifted = element * 2^{K-s}</span>
-            <span class="comment">//          =&gt; element = shifted * 2^{s-K}</span>
-            <span class="kw">let</span> <span class="ident">element</span> <span class="op">=</span> <span class="ident">shifted</span>
-                <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="ident">K</span> <span class="kw">as</span> <span class="ident">u64</span> <span class="op">-</span> <span class="ident">num_bits</span>))
-                    .<span class="ident">invert</span>()
-                    .<span class="ident">unwrap</span>();
-            <span class="kw">let</span> <span class="ident">circuit</span>: <span class="ident">MyCircuit</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {
-                <span class="ident">element</span>: <span class="ident">Value::known</span>(<span class="ident">element</span>),
-                <span class="ident">num_bits</span>: <span class="ident">num_bits</span> <span class="kw">as</span> <span class="ident">usize</span>,
+        <span class="comment">// Element which is not within `num_bits`, but which has a shifted value within
+        // num_bits
+        </span>{
+            <span class="kw">let </span>num_bits = <span class="number">6</span>;
+            <span class="kw">let </span>shifted = pallas::Base::from((<span class="number">1 </span>&lt;&lt; num_bits) - <span class="number">1</span>);
+            <span class="comment">// Recall that shifted = element * 2^{K-s}
+            //          =&gt; element = shifted * 2^{s-K}
+            </span><span class="kw">let </span>element = shifted
+                * pallas::Base::from(<span class="number">1 </span>&lt;&lt; (K <span class="kw">as </span>u64 - num_bits))
+                    .invert()
+                    .unwrap();
+            <span class="kw">let </span>circuit: MyCircuit&lt;pallas::Base&gt; = MyCircuit {
+                element: Value::known(element),
+                num_bits: num_bits <span class="kw">as </span>usize,
             };
-            <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver</span>::<span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="ident">::run</span>(<span class="number">11</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
+            <span class="kw">let </span>prover = MockProver::&lt;pallas::Base&gt;::run(<span class="number">11</span>, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
             <span class="macro">assert_eq!</span>(
-                <span class="ident">prover</span>.<span class="ident">verify</span>(),
-                <span class="prelude-val">Err</span>(<span class="macro">vec!</span>[<span class="ident">VerifyFailure::Lookup</span> {
-                    <span class="ident">lookup_index</span>: <span class="number">0</span>,
-                    <span class="ident">location</span>: <span class="ident">FailureLocation::InRegion</span> {
-                        <span class="ident">region</span>: (<span class="number">1</span>, <span class="string">&quot;Range check 6 bits&quot;</span>).<span class="ident">into</span>(),
-                        <span class="ident">offset</span>: <span class="number">0</span>,
+                prover.verify(),
+                <span class="prelude-val">Err</span>(<span class="macro">vec!</span>[VerifyFailure::Lookup {
+                    lookup_index: <span class="number">0</span>,
+                    location: FailureLocation::InRegion {
+                        region: (<span class="number">1</span>, <span class="string">&quot;Range check 6 bits&quot;</span>).into(),
+                        offset: <span class="number">0</span>,
                     },
                 }])
             );
@@ -1320,5 +1314,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -203,90 +197,90 @@
 <span id="182">182</span>
 <span id="183">183</span>
 <span id="184">184</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::AssignedBits</span>;
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::MessageScheduleConfig</span>;
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">Region</span>, <span class="ident">Value</span>},
-    <span class="ident">pasta::pallas</span>,
-    <span class="ident">plonk::Error</span>,
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::AssignedBits;
+<span class="kw">use </span><span class="kw">super</span>::MessageScheduleConfig;
+<span class="kw">use </span>halo2_proofs::{
+    circuit::{Region, Value},
+    pasta::pallas,
+    plonk::Error,
 };
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident"><span class="kw">super</span>::BLOCK_SIZE</span>, <span class="ident">BlockWord</span>, <span class="ident">ROUNDS</span>};
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{<span class="kw">super</span>::BLOCK_SIZE, BlockWord, ROUNDS};
 
-<span class="comment">// Rows needed for each gate</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DECOMPOSE_0_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">2</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DECOMPOSE_1_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">2</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DECOMPOSE_2_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">3</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DECOMPOSE_3_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">2</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SIGMA_0_V1_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SIGMA_0_V2_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SIGMA_1_V1_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SIGMA_1_V2_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">4</span>;
+<span class="comment">// Rows needed for each gate
+</span><span class="kw">pub const </span>DECOMPOSE_0_ROWS: usize = <span class="number">2</span>;
+<span class="kw">pub const </span>DECOMPOSE_1_ROWS: usize = <span class="number">2</span>;
+<span class="kw">pub const </span>DECOMPOSE_2_ROWS: usize = <span class="number">3</span>;
+<span class="kw">pub const </span>DECOMPOSE_3_ROWS: usize = <span class="number">2</span>;
+<span class="kw">pub const </span>SIGMA_0_V1_ROWS: usize = <span class="number">4</span>;
+<span class="kw">pub const </span>SIGMA_0_V2_ROWS: usize = <span class="number">4</span>;
+<span class="kw">pub const </span>SIGMA_1_V1_ROWS: usize = <span class="number">4</span>;
+<span class="kw">pub const </span>SIGMA_1_V2_ROWS: usize = <span class="number">4</span>;
 
-<span class="comment">// Rows needed for each subregion</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SUBREGION_0_LEN</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span>; <span class="comment">// W_0</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SUBREGION_0_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">SUBREGION_0_LEN</span> <span class="op">*</span> <span class="ident">DECOMPOSE_0_ROWS</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SUBREGION_1_WORD</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">DECOMPOSE_1_ROWS</span> <span class="op">+</span> <span class="ident">SIGMA_0_V1_ROWS</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SUBREGION_1_LEN</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">13</span>; <span class="comment">// W_[1..14]</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SUBREGION_1_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">SUBREGION_1_LEN</span> <span class="op">*</span> <span class="ident">SUBREGION_1_WORD</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SUBREGION_2_WORD</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">DECOMPOSE_2_ROWS</span> <span class="op">+</span> <span class="ident">SIGMA_0_V2_ROWS</span> <span class="op">+</span> <span class="ident">SIGMA_1_V2_ROWS</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SUBREGION_2_LEN</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">35</span>; <span class="comment">// W_[14..49]</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SUBREGION_2_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">SUBREGION_2_LEN</span> <span class="op">*</span> <span class="ident">SUBREGION_2_WORD</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SUBREGION_3_WORD</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">DECOMPOSE_3_ROWS</span> <span class="op">+</span> <span class="ident">SIGMA_1_V1_ROWS</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SUBREGION_3_LEN</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">13</span>; <span class="comment">// W[49..62]</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SUBREGION_3_ROWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">SUBREGION_3_LEN</span> <span class="op">*</span> <span class="ident">SUBREGION_3_WORD</span>;
-<span class="comment">// pub const SUBREGION_4_LEN: usize = 2; // W_[62..64]</span>
-<span class="comment">// pub const SUBREGION_4_ROWS: usize = SUBREGION_4_LEN * DECOMPOSE_0_ROWS;</span>
+<span class="comment">// Rows needed for each subregion
+</span><span class="kw">pub const </span>SUBREGION_0_LEN: usize = <span class="number">1</span>; <span class="comment">// W_0
+</span><span class="kw">pub const </span>SUBREGION_0_ROWS: usize = SUBREGION_0_LEN * DECOMPOSE_0_ROWS;
+<span class="kw">pub const </span>SUBREGION_1_WORD: usize = DECOMPOSE_1_ROWS + SIGMA_0_V1_ROWS;
+<span class="kw">pub const </span>SUBREGION_1_LEN: usize = <span class="number">13</span>; <span class="comment">// W_[1..14]
+</span><span class="kw">pub const </span>SUBREGION_1_ROWS: usize = SUBREGION_1_LEN * SUBREGION_1_WORD;
+<span class="kw">pub const </span>SUBREGION_2_WORD: usize = DECOMPOSE_2_ROWS + SIGMA_0_V2_ROWS + SIGMA_1_V2_ROWS;
+<span class="kw">pub const </span>SUBREGION_2_LEN: usize = <span class="number">35</span>; <span class="comment">// W_[14..49]
+</span><span class="kw">pub const </span>SUBREGION_2_ROWS: usize = SUBREGION_2_LEN * SUBREGION_2_WORD;
+<span class="kw">pub const </span>SUBREGION_3_WORD: usize = DECOMPOSE_3_ROWS + SIGMA_1_V1_ROWS;
+<span class="kw">pub const </span>SUBREGION_3_LEN: usize = <span class="number">13</span>; <span class="comment">// W[49..62]
+</span><span class="kw">pub const </span>SUBREGION_3_ROWS: usize = SUBREGION_3_LEN * SUBREGION_3_WORD;
+<span class="comment">// pub const SUBREGION_4_LEN: usize = 2; // W_[62..64]
+// pub const SUBREGION_4_ROWS: usize = SUBREGION_4_LEN * DECOMPOSE_0_ROWS;
 
-<span class="doccomment">/// Returns row number of a word</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_word_row</span>(<span class="ident">word_idx</span>: <span class="ident">usize</span>) -&gt; <span class="ident">usize</span> {
-    <span class="macro">assert!</span>(<span class="ident">word_idx</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">63</span>);
-    <span class="kw">if</span> <span class="ident">word_idx</span> <span class="op">==</span> <span class="number">0</span> {
-        <span class="number">0</span>
-    } <span class="kw">else</span> <span class="kw">if</span> (<span class="number">1</span>..<span class="op">=</span><span class="number">13</span>).<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">word_idx</span>) {
-        <span class="ident">SUBREGION_0_ROWS</span> <span class="op">+</span> <span class="ident">SUBREGION_1_WORD</span> <span class="op">*</span> (<span class="ident">word_idx</span> <span class="op">-</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">usize</span>
-    } <span class="kw">else</span> <span class="kw">if</span> (<span class="number">14</span>..<span class="op">=</span><span class="number">48</span>).<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">word_idx</span>) {
-        <span class="ident">SUBREGION_0_ROWS</span> <span class="op">+</span> <span class="ident">SUBREGION_1_ROWS</span> <span class="op">+</span> <span class="ident">SUBREGION_2_WORD</span> <span class="op">*</span> (<span class="ident">word_idx</span> <span class="op">-</span> <span class="number">14</span>) <span class="op">+</span> <span class="number">1</span>
-    } <span class="kw">else</span> <span class="kw">if</span> (<span class="number">49</span>..<span class="op">=</span><span class="number">61</span>).<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">word_idx</span>) {
-        <span class="ident">SUBREGION_0_ROWS</span>
-            <span class="op">+</span> <span class="ident">SUBREGION_1_ROWS</span>
-            <span class="op">+</span> <span class="ident">SUBREGION_2_ROWS</span>
-            <span class="op">+</span> <span class="ident">SUBREGION_3_WORD</span> <span class="op">*</span> (<span class="ident">word_idx</span> <span class="op">-</span> <span class="number">49</span>) <span class="kw">as</span> <span class="ident">usize</span>
-    } <span class="kw">else</span> {
-        <span class="ident">SUBREGION_0_ROWS</span>
-            <span class="op">+</span> <span class="ident">SUBREGION_1_ROWS</span>
-            <span class="op">+</span> <span class="ident">SUBREGION_2_ROWS</span>
-            <span class="op">+</span> <span class="ident">SUBREGION_3_ROWS</span>
-            <span class="op">+</span> <span class="ident">DECOMPOSE_0_ROWS</span> <span class="op">*</span> (<span class="ident">word_idx</span> <span class="op">-</span> <span class="number">62</span>) <span class="kw">as</span> <span class="ident">usize</span>
+</span><span class="doccomment">/// Returns row number of a word
+</span><span class="kw">pub fn </span>get_word_row(word_idx: usize) -&gt; usize {
+    <span class="macro">assert!</span>(word_idx &lt;= <span class="number">63</span>);
+    <span class="kw">if </span>word_idx == <span class="number">0 </span>{
+        <span class="number">0
+    </span>} <span class="kw">else if </span>(<span class="number">1</span>..=<span class="number">13</span>).contains(<span class="kw-2">&amp;</span>word_idx) {
+        SUBREGION_0_ROWS + SUBREGION_1_WORD * (word_idx - <span class="number">1</span>) <span class="kw">as </span>usize
+    } <span class="kw">else if </span>(<span class="number">14</span>..=<span class="number">48</span>).contains(<span class="kw-2">&amp;</span>word_idx) {
+        SUBREGION_0_ROWS + SUBREGION_1_ROWS + SUBREGION_2_WORD * (word_idx - <span class="number">14</span>) + <span class="number">1
+    </span>} <span class="kw">else if </span>(<span class="number">49</span>..=<span class="number">61</span>).contains(<span class="kw-2">&amp;</span>word_idx) {
+        SUBREGION_0_ROWS
+            + SUBREGION_1_ROWS
+            + SUBREGION_2_ROWS
+            + SUBREGION_3_WORD * (word_idx - <span class="number">49</span>) <span class="kw">as </span>usize
+    } <span class="kw">else </span>{
+        SUBREGION_0_ROWS
+            + SUBREGION_1_ROWS
+            + SUBREGION_2_ROWS
+            + SUBREGION_3_ROWS
+            + DECOMPOSE_0_ROWS * (word_idx - <span class="number">62</span>) <span class="kw">as </span>usize
     }
 }
 
-<span class="doccomment">/// Test vector: &quot;abc&quot;</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">msg_schedule_test_input</span>() -&gt; [<span class="ident">BlockWord</span>; <span class="ident">BLOCK_SIZE</span>] {
+<span class="doccomment">/// Test vector: &quot;abc&quot;
+</span><span class="attribute">#[cfg(test)]</span>
+<span class="kw">pub fn </span>msg_schedule_test_input() -&gt; [BlockWord; BLOCK_SIZE] {
     [
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b01100001011000100110001110000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000000000</span>)),
-        <span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0b00000000000000000000000000011000</span>)),
+        BlockWord(Value::known(<span class="number">0b01100001011000100110001110000000</span>)),
+        BlockWord(Value::known(<span class="number">0b00000000000000000000000000000000</span>)),
+        BlockWord(Value::known(<span class="number">0b00000000000000000000000000000000</span>)),
+        BlockWord(Value::known(<span class="number">0b00000000000000000000000000000000</span>)),
+        BlockWord(Value::known(<span class="number">0b00000000000000000000000000000000</span>)),
+        BlockWord(Value::known(<span class="number">0b00000000000000000000000000000000</span>)),
+        BlockWord(Value::known(<span class="number">0b00000000000000000000000000000000</span>)),
+        BlockWord(Value::known(<span class="number">0b00000000000000000000000000000000</span>)),
+        BlockWord(Value::known(<span class="number">0b00000000000000000000000000000000</span>)),
+        BlockWord(Value::known(<span class="number">0b00000000000000000000000000000000</span>)),
+        BlockWord(Value::known(<span class="number">0b00000000000000000000000000000000</span>)),
+        BlockWord(Value::known(<span class="number">0b00000000000000000000000000000000</span>)),
+        BlockWord(Value::known(<span class="number">0b00000000000000000000000000000000</span>)),
+        BlockWord(Value::known(<span class="number">0b00000000000000000000000000000000</span>)),
+        BlockWord(Value::known(<span class="number">0b00000000000000000000000000000000</span>)),
+        BlockWord(Value::known(<span class="number">0b00000000000000000000000000011000</span>)),
     ]
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MSG_SCHEDULE_TEST_OUTPUT</span>: [<span class="ident">u32</span>; <span class="ident">ROUNDS</span>] <span class="op">=</span> [
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">pub const </span>MSG_SCHEDULE_TEST_OUTPUT: [u32; ROUNDS] = [
     <span class="number">0b01100001011000100110001110000000</span>,
     <span class="number">0b00000000000000000000000000000000</span>,
     <span class="number">0b00000000000000000000000000000000</span>,
@@ -353,40 +347,39 @@
     <span class="number">0b00010010101100011110110111101011</span>,
 ];
 
-<span class="kw">impl</span> <span class="ident">MessageScheduleConfig</span> {
-    <span class="comment">// Assign a word and its hi and lo halves</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assign_word_and_halves</span>(
+<span class="kw">impl </span>MessageScheduleConfig {
+    <span class="comment">// Assign a word and its hi and lo halves
+    </span><span class="kw">pub fn </span>assign_word_and_halves(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">word</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-        <span class="ident">word_idx</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span>, (<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>)), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Rename these here for ease of matching the gates to the specification.</span>
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">a_4</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">1</span>];
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        word: Value&lt;u32&gt;,
+        word_idx: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(AssignedBits&lt;<span class="number">32</span>&gt;, (AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;)), Error&gt; {
+        <span class="comment">// Rename these here for ease of matching the gates to the specification.
+        </span><span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
+        <span class="kw">let </span>a_4 = <span class="self">self</span>.extras[<span class="number">1</span>];
 
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_word_row</span>(<span class="ident">word_idx</span>);
+        <span class="kw">let </span>row = get_word_row(word_idx);
 
-        <span class="kw">let</span> <span class="ident">w_lo</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">w_lo_val</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident">word</span> <span class="kw">as</span> <span class="ident">u16</span>);
-            <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span><span class="ident">::assign</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;W_{}_lo&quot;</span>, <span class="ident">word_idx</span>), <span class="ident">a_3</span>, <span class="ident">row</span>, <span class="ident">w_lo_val</span>)<span class="question-mark">?</span>
-        };
-        <span class="kw">let</span> <span class="ident">w_hi</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">w_hi_val</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> (<span class="ident">word</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="number">16</span>) <span class="kw">as</span> <span class="ident">u16</span>);
-            <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span><span class="ident">::assign</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;W_{}_hi&quot;</span>, <span class="ident">word_idx</span>), <span class="ident">a_4</span>, <span class="ident">row</span>, <span class="ident">w_hi_val</span>)<span class="question-mark">?</span>
-        };
+        <span class="kw">let </span>w_lo = {
+            <span class="kw">let </span>w_lo_val = word.map(|word| word <span class="kw">as </span>u16);
+            AssignedBits::&lt;<span class="number">16</span>&gt;::assign(region, || <span class="macro">format!</span>(<span class="string">&quot;W_{}_lo&quot;</span>, word_idx), a_3, row, w_lo_val)<span class="question-mark">?
+        </span>};
+        <span class="kw">let </span>w_hi = {
+            <span class="kw">let </span>w_hi_val = word.map(|word| (word &gt;&gt; <span class="number">16</span>) <span class="kw">as </span>u16);
+            AssignedBits::&lt;<span class="number">16</span>&gt;::assign(region, || <span class="macro">format!</span>(<span class="string">&quot;W_{}_hi&quot;</span>, word_idx), a_4, row, w_hi_val)<span class="question-mark">?
+        </span>};
 
-        <span class="kw">let</span> <span class="ident">word</span> <span class="op">=</span> <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span><span class="ident">::assign</span>(
-            <span class="ident">region</span>,
-            <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;W_{}&quot;</span>, <span class="ident">word_idx</span>),
-            <span class="self">self</span>.<span class="ident">message_schedule</span>,
-            <span class="ident">row</span>,
-            <span class="ident">word</span>,
+        <span class="kw">let </span>word = AssignedBits::&lt;<span class="number">32</span>&gt;::assign(
+            region,
+            || <span class="macro">format!</span>(<span class="string">&quot;W_{}&quot;</span>, word_idx),
+            <span class="self">self</span>.message_schedule,
+            row,
+            word,
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>((<span class="ident">word</span>, (<span class="ident">w_lo</span>, <span class="ident">w_hi</span>)))
+        <span class="prelude-val">Ok</span>((word, (w_lo, w_hi)))
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

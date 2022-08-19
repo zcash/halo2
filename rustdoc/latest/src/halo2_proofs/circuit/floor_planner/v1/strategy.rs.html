@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -284,271 +278,270 @@
 <span id="263">263</span>
 <span id="264">264</span>
 <span id="265">265</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">cmp</span>,
-    <span class="ident">collections</span>::{<span class="ident">BTreeSet</span>, <span class="ident">HashMap</span>},
-    <span class="ident">ops::Range</span>,
+</pre><pre class="rust"><code><span class="kw">use </span>std::{
+    cmp,
+    collections::{BTreeSet, HashMap},
+    ops::Range,
 };
 
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">RegionColumn</span>, <span class="ident">RegionShape</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">circuit::RegionStart</span>, <span class="ident">plonk::Any</span>};
+<span class="kw">use super</span>::{RegionColumn, RegionShape};
+<span class="kw">use crate</span>::{circuit::RegionStart, plonk::Any};
 
-<span class="doccomment">/// A region allocated within a column.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
-<span class="kw">struct</span> <span class="ident">AllocatedRegion</span> {
-    <span class="comment">// The starting position of the region.</span>
-    <span class="ident">start</span>: <span class="ident">usize</span>,
-    <span class="comment">// The length of the region.</span>
-    <span class="ident">length</span>: <span class="ident">usize</span>,
+<span class="doccomment">/// A region allocated within a column.
+</span><span class="attribute">#[derive(Clone, Default, Debug, PartialEq, Eq)]</span>
+<span class="kw">struct </span>AllocatedRegion {
+    <span class="comment">// The starting position of the region.
+    </span>start: usize,
+    <span class="comment">// The length of the region.
+    </span>length: usize,
 }
 
-<span class="kw">impl</span> <span class="ident">Ord</span> <span class="kw">for</span> <span class="ident">AllocatedRegion</span> {
-    <span class="kw">fn</span> <span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="ident">cmp::Ordering</span> {
-        <span class="self">self</span>.<span class="ident">start</span>.<span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="ident">other</span>.<span class="ident">start</span>)
+<span class="kw">impl </span>Ord <span class="kw">for </span>AllocatedRegion {
+    <span class="kw">fn </span>cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; cmp::Ordering {
+        <span class="self">self</span>.start.cmp(<span class="kw-2">&amp;</span>other.start)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">PartialOrd</span> <span class="kw">for</span> <span class="ident">AllocatedRegion</span> {
-    <span class="kw">fn</span> <span class="ident">partial_cmp</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">cmp::Ordering</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">cmp</span>(<span class="ident">other</span>))
+<span class="kw">impl </span>PartialOrd <span class="kw">for </span>AllocatedRegion {
+    <span class="kw">fn </span>partial_cmp(<span class="kw-2">&amp;</span><span class="self">self</span>, other: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;cmp::Ordering&gt; {
+        <span class="prelude-val">Some</span>(<span class="self">self</span>.cmp(other))
     }
 }
 
-<span class="doccomment">/// An area of empty space within a column.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">EmptySpace</span> {
-    <span class="comment">// The starting position (inclusive) of the empty space.</span>
-    <span class="ident">start</span>: <span class="ident">usize</span>,
-    <span class="comment">// The ending position (exclusive) of the empty space, or `None` if unbounded.</span>
-    <span class="ident">end</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+<span class="doccomment">/// An area of empty space within a column.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>EmptySpace {
+    <span class="comment">// The starting position (inclusive) of the empty space.
+    </span>start: usize,
+    <span class="comment">// The ending position (exclusive) of the empty space, or `None` if unbounded.
+    </span>end: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">EmptySpace</span> {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">range</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">end</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">end</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">start</span>..<span class="ident">end</span>)
+<span class="kw">impl </span>EmptySpace {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>range(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Range&lt;usize&gt;&gt; {
+        <span class="self">self</span>.end.map(|end| <span class="self">self</span>.start..end)
     }
 }
 
-<span class="doccomment">/// Allocated rows within a column.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This is a set of [a_start, a_end) pairs representing disjoint allocated intervals.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Allocations</span>(<span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">AllocatedRegion</span><span class="op">&gt;</span>);
+<span class="doccomment">/// Allocated rows within a column.
+///
+/// This is a set of [a_start, a_end) pairs representing disjoint allocated intervals.
+</span><span class="attribute">#[derive(Clone, Default, Debug)]</span>
+<span class="kw">pub struct </span>Allocations(BTreeSet&lt;AllocatedRegion&gt;);
 
-<span class="kw">impl</span> <span class="ident">Allocations</span> {
-    <span class="doccomment">/// Returns the row that forms the unbounded unallocated interval [row, None).</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">unbounded_interval_start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="self">self</span>.<span class="number">0</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">last</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>.<span class="ident">start</span> <span class="op">+</span> <span class="ident">r</span>.<span class="ident">length</span>)
-            .<span class="ident">unwrap_or</span>(<span class="number">0</span>)
+<span class="kw">impl </span>Allocations {
+    <span class="doccomment">/// Returns the row that forms the unbounded unallocated interval [row, None).
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>unbounded_interval_start(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.<span class="number">0
+            </span>.iter()
+            .last()
+            .map(|r| r.start + r.length)
+            .unwrap_or(<span class="number">0</span>)
     }
 
-    <span class="doccomment">/// Return all the *unallocated* nonempty intervals intersecting [start, end).</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// `end = None` represents an unbounded end.</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">free_intervals</span>(
+    <span class="doccomment">/// Return all the *unallocated* nonempty intervals intersecting [start, end).
+    ///
+    /// `end = None` represents an unbounded end.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>free_intervals(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">start</span>: <span class="ident">usize</span>,
-        <span class="ident">end</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">EmptySpace</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;_</span> {
-        <span class="self">self</span>.<span class="number">0</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="prelude-val">Some</span>)
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="prelude-val">None</span>))
-            .<span class="ident">scan</span>(<span class="ident">start</span>, <span class="kw">move</span> <span class="op">|</span><span class="ident">row</span>, <span class="ident">region</span><span class="op">|</span> {
-                <span class="prelude-val">Some</span>(<span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">region</span>) <span class="op">=</span> <span class="ident">region</span> {
-                    <span class="kw">if</span> <span class="ident">end</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">end</span><span class="op">|</span> <span class="ident">region</span>.<span class="ident">start</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">end</span>).<span class="ident">unwrap_or</span>(<span class="bool-val">false</span>) {
-                        <span class="prelude-val">None</span>
-                    } <span class="kw">else</span> {
-                        <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw-2">*</span><span class="ident">row</span> <span class="op">&lt;</span> <span class="ident">region</span>.<span class="ident">start</span> {
-                            <span class="prelude-val">Some</span>(<span class="ident">EmptySpace</span> {
-                                <span class="ident">start</span>: <span class="kw-2">*</span><span class="ident">row</span>,
-                                <span class="ident">end</span>: <span class="prelude-val">Some</span>(<span class="ident">region</span>.<span class="ident">start</span>),
+        start: usize,
+        end: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = EmptySpace&gt; + <span class="lifetime">&#39;_ </span>{
+        <span class="self">self</span>.<span class="number">0
+            </span>.iter()
+            .map(<span class="prelude-val">Some</span>)
+            .chain(<span class="prelude-val">Some</span>(<span class="prelude-val">None</span>))
+            .scan(start, <span class="kw">move </span>|row, region| {
+                <span class="prelude-val">Some</span>(<span class="kw">if let </span><span class="prelude-val">Some</span>(region) = region {
+                    <span class="kw">if </span>end.map(|end| region.start &gt;= end).unwrap_or(<span class="bool-val">false</span>) {
+                        <span class="prelude-val">None
+                    </span>} <span class="kw">else </span>{
+                        <span class="kw">let </span>ret = <span class="kw">if </span><span class="kw-2">*</span>row &lt; region.start {
+                            <span class="prelude-val">Some</span>(EmptySpace {
+                                start: <span class="kw-2">*</span>row,
+                                end: <span class="prelude-val">Some</span>(region.start),
                             })
-                        } <span class="kw">else</span> {
-                            <span class="prelude-val">None</span>
-                        };
+                        } <span class="kw">else </span>{
+                            <span class="prelude-val">None
+                        </span>};
 
-                        <span class="kw-2">*</span><span class="ident">row</span> <span class="op">=</span> <span class="ident">cmp::max</span>(<span class="kw-2">*</span><span class="ident">row</span>, <span class="ident">region</span>.<span class="ident">start</span> <span class="op">+</span> <span class="ident">region</span>.<span class="ident">length</span>);
+                        <span class="kw-2">*</span>row = cmp::max(<span class="kw-2">*</span>row, region.start + region.length);
 
-                        <span class="ident">ret</span>
+                        ret
                     }
-                } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">end</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">end</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">row</span> <span class="op">&lt;</span> <span class="ident">end</span>).<span class="ident">unwrap_or</span>(<span class="bool-val">true</span>) {
-                    <span class="prelude-val">Some</span>(<span class="ident">EmptySpace</span> { <span class="ident">start</span>: <span class="kw-2">*</span><span class="ident">row</span>, <span class="ident">end</span> })
-                } <span class="kw">else</span> {
-                    <span class="prelude-val">None</span>
-                })
+                } <span class="kw">else if </span>end.map(|end| <span class="kw-2">*</span>row &lt; end).unwrap_or(<span class="bool-val">true</span>) {
+                    <span class="prelude-val">Some</span>(EmptySpace { start: <span class="kw-2">*</span>row, end })
+                } <span class="kw">else </span>{
+                    <span class="prelude-val">None
+                </span>})
             })
-            .<span class="ident">flatten</span>()
+            .flatten()
     }
 }
 
-<span class="doccomment">/// Allocated rows within a circuit.</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">CircuitAllocations</span> <span class="op">=</span> <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">RegionColumn</span>, <span class="ident">Allocations</span><span class="op">&gt;</span>;
+<span class="doccomment">/// Allocated rows within a circuit.
+</span><span class="kw">pub type </span>CircuitAllocations = HashMap&lt;RegionColumn, Allocations&gt;;
 
-<span class="doccomment">/// - `start` is the current start row of the region (not of this column).</span>
-<span class="doccomment">/// - `slack` is the maximum number of rows the start could be moved down, taking into</span>
-<span class="doccomment">///   account prior columns.</span>
-<span class="kw">fn</span> <span class="ident">first_fit_region</span>(
-    <span class="ident">column_allocations</span>: <span class="kw-2">&amp;mut</span> <span class="ident">CircuitAllocations</span>,
-    <span class="ident">region_columns</span>: <span class="kw-2">&amp;</span>[<span class="ident">RegionColumn</span>],
-    <span class="ident">region_length</span>: <span class="ident">usize</span>,
-    <span class="ident">start</span>: <span class="ident">usize</span>,
-    <span class="ident">slack</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> (<span class="ident">c</span>, <span class="ident">remaining_columns</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">region_columns</span>.<span class="ident">split_first</span>() {
-        <span class="prelude-val">Some</span>(<span class="ident">cols</span>) =&gt; <span class="ident">cols</span>,
-        <span class="prelude-val">None</span> =&gt; <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">start</span>),
+<span class="doccomment">/// - `start` is the current start row of the region (not of this column).
+/// - `slack` is the maximum number of rows the start could be moved down, taking into
+///   account prior columns.
+</span><span class="kw">fn </span>first_fit_region(
+    column_allocations: <span class="kw-2">&amp;mut </span>CircuitAllocations,
+    region_columns: <span class="kw-2">&amp;</span>[RegionColumn],
+    region_length: usize,
+    start: usize,
+    slack: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+    <span class="kw">let </span>(c, remaining_columns) = <span class="kw">match </span>region_columns.split_first() {
+        <span class="prelude-val">Some</span>(cols) =&gt; cols,
+        <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Some</span>(start),
     };
-    <span class="kw">let</span> <span class="ident">end</span> <span class="op">=</span> <span class="ident">slack</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">slack</span><span class="op">|</span> <span class="ident">start</span> <span class="op">+</span> <span class="ident">region_length</span> <span class="op">+</span> <span class="ident">slack</span>);
+    <span class="kw">let </span>end = slack.map(|slack| start + region_length + slack);
 
-    <span class="comment">// Iterate over the unallocated non-empty intervals in c that intersect [start, end).</span>
-    <span class="kw">for</span> <span class="ident">space</span> <span class="kw">in</span> <span class="ident">column_allocations</span>
-        .<span class="ident">entry</span>(<span class="kw-2">*</span><span class="ident">c</span>)
-        .<span class="ident">or_default</span>()
-        .<span class="ident">clone</span>()
-        .<span class="ident">free_intervals</span>(<span class="ident">start</span>, <span class="ident">end</span>)
+    <span class="comment">// Iterate over the unallocated non-empty intervals in c that intersect [start, end).
+    </span><span class="kw">for </span>space <span class="kw">in </span>column_allocations
+        .entry(<span class="kw-2">*</span>c)
+        .or_default()
+        .clone()
+        .free_intervals(start, end)
     {
-        <span class="comment">// Do we have enough room for this column of the region in this interval?</span>
-        <span class="kw">let</span> <span class="ident">s_slack</span> <span class="op">=</span> <span class="ident">space</span>
-            .<span class="ident">end</span>
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">end</span><span class="op">|</span> (<span class="ident">end</span> <span class="kw">as</span> <span class="ident">isize</span> <span class="op">-</span> <span class="ident">space</span>.<span class="ident">start</span> <span class="kw">as</span> <span class="ident">isize</span>) <span class="op">-</span> <span class="ident">region_length</span> <span class="kw">as</span> <span class="ident">isize</span>);
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">slack</span>, <span class="ident">s_slack</span>)) <span class="op">=</span> <span class="ident">slack</span>.<span class="ident">zip</span>(<span class="ident">s_slack</span>) {
-            <span class="macro">assert!</span>(<span class="ident">s_slack</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">slack</span> <span class="kw">as</span> <span class="ident">isize</span>);
+        <span class="comment">// Do we have enough room for this column of the region in this interval?
+        </span><span class="kw">let </span>s_slack = space
+            .end
+            .map(|end| (end <span class="kw">as </span>isize - space.start <span class="kw">as </span>isize) - region_length <span class="kw">as </span>isize);
+        <span class="kw">if let </span><span class="prelude-val">Some</span>((slack, s_slack)) = slack.zip(s_slack) {
+            <span class="macro">assert!</span>(s_slack &lt;= slack <span class="kw">as </span>isize);
         }
-        <span class="kw">if</span> <span class="ident">s_slack</span>.<span class="ident">unwrap_or</span>(<span class="number">0</span>) <span class="op">&gt;</span><span class="op">=</span> <span class="number">0</span> {
-            <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">first_fit_region</span>(
-                <span class="ident">column_allocations</span>,
-                <span class="ident">remaining_columns</span>,
-                <span class="ident">region_length</span>,
-                <span class="ident">space</span>.<span class="ident">start</span>,
-                <span class="ident">s_slack</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">s</span> <span class="kw">as</span> <span class="ident">usize</span>),
+        <span class="kw">if </span>s_slack.unwrap_or(<span class="number">0</span>) &gt;= <span class="number">0 </span>{
+            <span class="kw">let </span>row = first_fit_region(
+                column_allocations,
+                remaining_columns,
+                region_length,
+                space.start,
+                s_slack.map(|s| s <span class="kw">as </span>usize),
             );
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">row</span>) <span class="op">=</span> <span class="ident">row</span> {
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">end</span>) <span class="op">=</span> <span class="ident">end</span> {
-                    <span class="macro">assert!</span>(<span class="ident">row</span> <span class="op">+</span> <span class="ident">region_length</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">end</span>);
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(row) = row {
+                <span class="kw">if let </span><span class="prelude-val">Some</span>(end) = end {
+                    <span class="macro">assert!</span>(row + region_length &lt;= end);
                 }
-                <span class="ident">column_allocations</span>
-                    .<span class="ident">get_mut</span>(<span class="ident">c</span>)
-                    .<span class="ident">unwrap</span>()
-                    .<span class="number">0</span>
-                    .<span class="ident">insert</span>(<span class="ident">AllocatedRegion</span> {
-                        <span class="ident">start</span>: <span class="ident">row</span>,
-                        <span class="ident">length</span>: <span class="ident">region_length</span>,
+                column_allocations
+                    .get_mut(c)
+                    .unwrap()
+                    .<span class="number">0
+                    </span>.insert(AllocatedRegion {
+                        start: row,
+                        length: region_length,
                     });
-                <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">row</span>);
+                <span class="kw">return </span><span class="prelude-val">Some</span>(row);
             }
         }
     }
 
-    <span class="comment">// No placement worked; the caller will need to try other possibilities.</span>
-    <span class="prelude-val">None</span>
-}
+    <span class="comment">// No placement worked; the caller will need to try other possibilities.
+    </span><span class="prelude-val">None
+</span>}
 
-<span class="doccomment">/// Positions the regions starting at the earliest row for which none of the columns are</span>
-<span class="doccomment">/// in use, taking into account gaps between earlier regions.</span>
-<span class="kw">fn</span> <span class="ident">slot_in</span>(
-    <span class="ident">region_shapes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RegionShape</span><span class="op">&gt;</span>,
-) -&gt; (<span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">RegionStart</span>, <span class="ident">RegionShape</span>)<span class="op">&gt;</span>, <span class="ident">CircuitAllocations</span>) {
-    <span class="comment">// Tracks the empty regions for each column.</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">column_allocations</span>: <span class="ident">CircuitAllocations</span> <span class="op">=</span> <span class="ident">Default::default</span>();
+<span class="doccomment">/// Positions the regions starting at the earliest row for which none of the columns are
+/// in use, taking into account gaps between earlier regions.
+</span><span class="kw">fn </span>slot_in(
+    region_shapes: Vec&lt;RegionShape&gt;,
+) -&gt; (Vec&lt;(RegionStart, RegionShape)&gt;, CircuitAllocations) {
+    <span class="comment">// Tracks the empty regions for each column.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>column_allocations: CircuitAllocations = Default::default();
 
-    <span class="kw">let</span> <span class="ident">regions</span> <span class="op">=</span> <span class="ident">region_shapes</span>
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">region</span><span class="op">|</span> {
-            <span class="comment">// Sort the region&#39;s columns to ensure determinism.</span>
-            <span class="comment">// - An unstable sort is fine, because region.columns() returns a set.</span>
-            <span class="comment">// - The sort order relies on Column&#39;s Ord implementation!</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">region_columns</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">columns</span>().<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">collect</span>();
-            <span class="ident">region_columns</span>.<span class="ident">sort_unstable</span>();
+    <span class="kw">let </span>regions = region_shapes
+        .into_iter()
+        .map(|region| {
+            <span class="comment">// Sort the region&#39;s columns to ensure determinism.
+            // - An unstable sort is fine, because region.columns() returns a set.
+            // - The sort order relies on Column&#39;s Ord implementation!
+            </span><span class="kw">let </span><span class="kw-2">mut </span>region_columns: Vec&lt;<span class="kw">_</span>&gt; = region.columns().iter().cloned().collect();
+            region_columns.sort_unstable();
 
-            <span class="kw">let</span> <span class="ident">region_start</span> <span class="op">=</span> <span class="ident">first_fit_region</span>(
-                <span class="kw-2">&amp;mut</span> <span class="ident">column_allocations</span>,
-                <span class="kw-2">&amp;</span><span class="ident">region_columns</span>,
-                <span class="ident">region</span>.<span class="ident">row_count</span>(),
+            <span class="kw">let </span>region_start = first_fit_region(
+                <span class="kw-2">&amp;mut </span>column_allocations,
+                <span class="kw-2">&amp;</span>region_columns,
+                region.row_count(),
                 <span class="number">0</span>,
                 <span class="prelude-val">None</span>,
             )
-            .<span class="ident">expect</span>(<span class="string">&quot;We can always fit a region somewhere&quot;</span>);
+            .expect(<span class="string">&quot;We can always fit a region somewhere&quot;</span>);
 
-            (<span class="ident">region_start</span>.<span class="ident">into</span>(), <span class="ident">region</span>)
+            (region_start.into(), region)
         })
-        .<span class="ident">collect</span>();
+        .collect();
 
-    <span class="comment">// Return the column allocations for potential further processing.</span>
-    (<span class="ident">regions</span>, <span class="ident">column_allocations</span>)
+    <span class="comment">// Return the column allocations for potential further processing.
+    </span>(regions, column_allocations)
 }
 
-<span class="doccomment">/// Sorts the regions by advice area and then lays them out with the [`slot_in`] strategy.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">slot_in_biggest_advice_first</span>(
-    <span class="ident">region_shapes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RegionShape</span><span class="op">&gt;</span>,
-) -&gt; (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RegionStart</span><span class="op">&gt;</span>, <span class="ident">CircuitAllocations</span>) {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sorted_regions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">region_shapes</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>();
-    <span class="ident">sorted_regions</span>.<span class="ident">sort_unstable_by_key</span>(<span class="op">|</span><span class="ident">shape</span><span class="op">|</span> {
-        <span class="comment">// Count the number of advice columns</span>
-        <span class="kw">let</span> <span class="ident">advice_cols</span> <span class="op">=</span> <span class="ident">shape</span>
-            .<span class="ident">columns</span>()
-            .<span class="ident">iter</span>()
-            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">c</span> {
-                <span class="ident">RegionColumn::Column</span>(<span class="ident">c</span>) =&gt; <span class="macro">matches!</span>(<span class="ident">c</span>.<span class="ident">column_type</span>(), <span class="ident">Any::Advice</span>),
-                <span class="kw">_</span> =&gt; <span class="bool-val">false</span>,
+<span class="doccomment">/// Sorts the regions by advice area and then lays them out with the [`slot_in`] strategy.
+</span><span class="kw">pub fn </span>slot_in_biggest_advice_first(
+    region_shapes: Vec&lt;RegionShape&gt;,
+) -&gt; (Vec&lt;RegionStart&gt;, CircuitAllocations) {
+    <span class="kw">let </span><span class="kw-2">mut </span>sorted_regions: Vec&lt;<span class="kw">_</span>&gt; = region_shapes.into_iter().collect();
+    sorted_regions.sort_unstable_by_key(|shape| {
+        <span class="comment">// Count the number of advice columns
+        </span><span class="kw">let </span>advice_cols = shape
+            .columns()
+            .iter()
+            .filter(|c| <span class="kw">match </span>c {
+                RegionColumn::Column(c) =&gt; <span class="macro">matches!</span>(c.column_type(), Any::Advice),
+                <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
             })
-            .<span class="ident">count</span>();
-        <span class="comment">// Sort by advice area (since this has the most contention).</span>
-        <span class="ident">advice_cols</span> <span class="op">*</span> <span class="ident">shape</span>.<span class="ident">row_count</span>()
+            .count();
+        <span class="comment">// Sort by advice area (since this has the most contention).
+        </span>advice_cols * shape.row_count()
     });
-    <span class="ident">sorted_regions</span>.<span class="ident">reverse</span>();
+    sorted_regions.reverse();
 
-    <span class="comment">// Lay out the sorted regions.</span>
-    <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">regions</span>, <span class="ident">column_allocations</span>) <span class="op">=</span> <span class="ident">slot_in</span>(<span class="ident">sorted_regions</span>);
+    <span class="comment">// Lay out the sorted regions.
+    </span><span class="kw">let </span>(<span class="kw-2">mut </span>regions, column_allocations) = slot_in(sorted_regions);
 
-    <span class="comment">// Un-sort the regions so they match the original indexing.</span>
-    <span class="ident">regions</span>.<span class="ident">sort_unstable_by_key</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">region</span>)<span class="op">|</span> <span class="ident">region</span>.<span class="ident">region_index</span>().<span class="number">0</span>);
-    <span class="kw">let</span> <span class="ident">regions</span> <span class="op">=</span> <span class="ident">regions</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">start</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">start</span>).<span class="ident">collect</span>();
+    <span class="comment">// Un-sort the regions so they match the original indexing.
+    </span>regions.sort_unstable_by_key(|(<span class="kw">_</span>, region)| region.region_index().<span class="number">0</span>);
+    <span class="kw">let </span>regions = regions.into_iter().map(|(start, <span class="kw">_</span>)| start).collect();
 
-    (<span class="ident">regions</span>, <span class="ident">column_allocations</span>)
+    (regions, column_allocations)
 }
 
-<span class="attribute">#[<span class="ident">test</span>]</span>
-<span class="kw">fn</span> <span class="ident">test_slot_in</span>() {
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::plonk::Column</span>;
+<span class="attribute">#[test]</span>
+<span class="kw">fn </span>test_slot_in() {
+    <span class="kw">use </span><span class="kw">crate</span>::plonk::Column;
 
-    <span class="kw">let</span> <span class="ident">regions</span> <span class="op">=</span> <span class="macro">vec!</span>[
-        <span class="ident">RegionShape</span> {
-            <span class="ident">region_index</span>: <span class="number">0</span>.<span class="ident">into</span>(),
-            <span class="ident">columns</span>: <span class="macro">vec!</span>[<span class="ident">Column::new</span>(<span class="number">0</span>, <span class="ident">Any::Advice</span>), <span class="ident">Column::new</span>(<span class="number">1</span>, <span class="ident">Any::Advice</span>)]
-                .<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>.<span class="ident">into</span>())
-                .<span class="ident">collect</span>(),
-            <span class="ident">row_count</span>: <span class="number">15</span>,
+    <span class="kw">let </span>regions = <span class="macro">vec!</span>[
+        RegionShape {
+            region_index: <span class="number">0</span>.into(),
+            columns: <span class="macro">vec!</span>[Column::new(<span class="number">0</span>, Any::Advice), Column::new(<span class="number">1</span>, Any::Advice)]
+                .into_iter()
+                .map(|a| a.into())
+                .collect(),
+            row_count: <span class="number">15</span>,
         },
-        <span class="ident">RegionShape</span> {
-            <span class="ident">region_index</span>: <span class="number">1</span>.<span class="ident">into</span>(),
-            <span class="ident">columns</span>: <span class="macro">vec!</span>[<span class="ident">Column::new</span>(<span class="number">2</span>, <span class="ident">Any::Advice</span>)]
-                .<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>.<span class="ident">into</span>())
-                .<span class="ident">collect</span>(),
-            <span class="ident">row_count</span>: <span class="number">10</span>,
+        RegionShape {
+            region_index: <span class="number">1</span>.into(),
+            columns: <span class="macro">vec!</span>[Column::new(<span class="number">2</span>, Any::Advice)]
+                .into_iter()
+                .map(|a| a.into())
+                .collect(),
+            row_count: <span class="number">10</span>,
         },
-        <span class="ident">RegionShape</span> {
-            <span class="ident">region_index</span>: <span class="number">2</span>.<span class="ident">into</span>(),
-            <span class="ident">columns</span>: <span class="macro">vec!</span>[<span class="ident">Column::new</span>(<span class="number">2</span>, <span class="ident">Any::Advice</span>), <span class="ident">Column::new</span>(<span class="number">0</span>, <span class="ident">Any::Advice</span>)]
-                .<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">a</span>.<span class="ident">into</span>())
-                .<span class="ident">collect</span>(),
-            <span class="ident">row_count</span>: <span class="number">10</span>,
+        RegionShape {
+            region_index: <span class="number">2</span>.into(),
+            columns: <span class="macro">vec!</span>[Column::new(<span class="number">2</span>, Any::Advice), Column::new(<span class="number">0</span>, Any::Advice)]
+                .into_iter()
+                .map(|a| a.into())
+                .collect(),
+            row_count: <span class="number">10</span>,
         },
     ];
     <span class="macro">assert_eq!</span>(
-        <span class="ident">slot_in</span>(<span class="ident">regions</span>)
-            .<span class="number">0</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">i</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">i</span>)
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>(),
-        <span class="macro">vec!</span>[<span class="number">0</span>.<span class="ident">into</span>(), <span class="number">0</span>.<span class="ident">into</span>(), <span class="number">15</span>.<span class="ident">into</span>()]
+        slot_in(regions)
+            .<span class="number">0
+            </span>.into_iter()
+            .map(|(i, <span class="kw">_</span>)| i)
+            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
+        <span class="macro">vec!</span>[<span class="number">0</span>.into(), <span class="number">0</span>.into(), <span class="number">15</span>.into()]
     );
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

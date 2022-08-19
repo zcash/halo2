@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -301,288 +295,287 @@
 <span id="280">280</span>
 <span id="281">281</span>
 <span id="282">282</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Constants required for the ECC chip.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Constants required for the ECC chip.
 
-<span class="kw">use</span> <span class="ident">arrayvec::ArrayVec</span>;
-<span class="kw">use</span> <span class="ident">group</span>::{
-    <span class="ident">ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeField</span>},
-    <span class="ident">Curve</span>,
+</span><span class="kw">use </span>arrayvec::ArrayVec;
+<span class="kw">use </span>group::{
+    ff::{Field, PrimeField},
+    Curve,
 };
-<span class="kw">use</span> <span class="ident">halo2_proofs::arithmetic::lagrange_interpolate</span>;
-<span class="kw">use</span> <span class="ident">pasta_curves</span>::{
-    <span class="ident">arithmetic</span>::{<span class="ident">CurveAffine</span>, <span class="ident">FieldExt</span>},
-    <span class="ident">pallas</span>,
+<span class="kw">use </span>halo2_proofs::arithmetic::lagrange_interpolate;
+<span class="kw">use </span>pasta_curves::{
+    arithmetic::{CurveAffine, FieldExt},
+    pallas,
 };
 
-<span class="doccomment">/// Window size for fixed-base scalar multiplication</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">FIXED_BASE_WINDOW_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">3</span>;
+<span class="doccomment">/// Window size for fixed-base scalar multiplication
+</span><span class="kw">pub const </span>FIXED_BASE_WINDOW_SIZE: usize = <span class="number">3</span>;
 
-<span class="doccomment">/// $2^{`FIXED_BASE_WINDOW_SIZE`}$</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">H</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">FIXED_BASE_WINDOW_SIZE</span>;
+<span class="doccomment">/// $2^{`FIXED_BASE_WINDOW_SIZE`}$
+</span><span class="kw">pub const </span>H: usize = <span class="number">1 </span>&lt;&lt; FIXED_BASE_WINDOW_SIZE;
 
-<span class="doccomment">/// Number of windows for a full-width scalar</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NUM_WINDOWS</span>: <span class="ident">usize</span> <span class="op">=</span>
-    (<span class="ident">pallas::Scalar::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">+</span> <span class="ident">FIXED_BASE_WINDOW_SIZE</span> <span class="op">-</span> <span class="number">1</span>) <span class="op">/</span> <span class="ident">FIXED_BASE_WINDOW_SIZE</span>;
+<span class="doccomment">/// Number of windows for a full-width scalar
+</span><span class="kw">pub const </span>NUM_WINDOWS: usize =
+    (pallas::Scalar::NUM_BITS <span class="kw">as </span>usize + FIXED_BASE_WINDOW_SIZE - <span class="number">1</span>) / FIXED_BASE_WINDOW_SIZE;
 
-<span class="doccomment">/// Number of windows for a short signed scalar</span>
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NUM_WINDOWS_SHORT</span>: <span class="ident">usize</span> <span class="op">=</span>
-    (<span class="ident">L_SCALAR_SHORT</span> <span class="op">+</span> <span class="ident">FIXED_BASE_WINDOW_SIZE</span> <span class="op">-</span> <span class="number">1</span>) <span class="op">/</span> <span class="ident">FIXED_BASE_WINDOW_SIZE</span>;
+<span class="doccomment">/// Number of windows for a short signed scalar
+</span><span class="kw">pub const </span>NUM_WINDOWS_SHORT: usize =
+    (L_SCALAR_SHORT + FIXED_BASE_WINDOW_SIZE - <span class="number">1</span>) / FIXED_BASE_WINDOW_SIZE;
 
-<span class="doccomment">/// $\ell_\mathsf{value}$</span>
-<span class="doccomment">/// Number of bits in an unsigned short scalar.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">L_SCALAR_SHORT</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">64</span>;
+<span class="doccomment">/// $\ell_\mathsf{value}$
+/// Number of bits in an unsigned short scalar.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>L_SCALAR_SHORT: usize = <span class="number">64</span>;
 
-<span class="doccomment">/// The Pallas scalar field modulus is $q = 2^{254} + \mathsf{t_q}$.</span>
-<span class="doccomment">/// &lt;https://github.com/zcash/pasta&gt;</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">T_Q</span>: <span class="ident">u128</span> <span class="op">=</span> <span class="number">45560315531506369815346746415080538113</span>;
+<span class="doccomment">/// The Pallas scalar field modulus is $q = 2^{254} + \mathsf{t_q}$.
+/// &lt;https://github.com/zcash/pasta&gt;
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>T_Q: u128 = <span class="number">45560315531506369815346746415080538113</span>;
 
-<span class="doccomment">/// The Pallas base field modulus is $p = 2^{254} + \mathsf{t_p}$.</span>
-<span class="doccomment">/// &lt;https://github.com/zcash/pasta&gt;</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">T_P</span>: <span class="ident">u128</span> <span class="op">=</span> <span class="number">45560315531419706090280762371685220353</span>;
+<span class="doccomment">/// The Pallas base field modulus is $p = 2^{254} + \mathsf{t_p}$.
+/// &lt;https://github.com/zcash/pasta&gt;
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>T_P: u128 = <span class="number">45560315531419706090280762371685220353</span>;
 
-<span class="doccomment">/// For each fixed base, we calculate its scalar multiples in three-bit windows.</span>
-<span class="doccomment">/// Each window will have $2^3 = 8$ points. The tables are computed as described in</span>
-<span class="doccomment">/// [the Halo 2 book](https://zcash.github.io/halo2/design/gadgets/ecc/fixed-base-scalar-mul.html#load-fixed-base).</span>
-<span class="kw">fn</span> <span class="ident">compute_window_table</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>(<span class="ident">base</span>: <span class="ident">C</span>, <span class="ident">num_windows</span>: <span class="ident">usize</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span>[<span class="ident">C</span>; <span class="ident">H</span>]<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">window_table</span>: <span class="ident">Vec</span><span class="op">&lt;</span>[<span class="ident">C</span>; <span class="ident">H</span>]<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec::with_capacity</span>(<span class="ident">num_windows</span>);
+<span class="doccomment">/// For each fixed base, we calculate its scalar multiples in three-bit windows.
+/// Each window will have $2^3 = 8$ points. The tables are computed as described in
+/// [the Halo 2 book](https://zcash.github.io/halo2/design/gadgets/ecc/fixed-base-scalar-mul.html#load-fixed-base).
+</span><span class="kw">fn </span>compute_window_table&lt;C: CurveAffine&gt;(base: C, num_windows: usize) -&gt; Vec&lt;[C; H]&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>window_table: Vec&lt;[C; H]&gt; = Vec::with_capacity(num_windows);
 
-    <span class="comment">// Generate window table entries for all windows but the last.</span>
-    <span class="comment">// For these first `num_windows - 1` windows, we compute the multiple [(k+2)*(2^3)^w]B.</span>
-    <span class="comment">// Here, w ranges from [0..`num_windows - 1`)</span>
-    <span class="kw">for</span> <span class="ident">w</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="ident">num_windows</span> <span class="op">-</span> <span class="number">1</span>) {
-        <span class="ident">window_table</span>.<span class="ident">push</span>(
-            (<span class="number">0</span>..<span class="ident">H</span>)
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">k</span><span class="op">|</span> {
-                    <span class="comment">// scalar = (k+2)*(8^w)</span>
-                    <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">C::Scalar::from</span>(<span class="ident">k</span> <span class="kw">as</span> <span class="ident">u64</span> <span class="op">+</span> <span class="number">2</span>)
-                        <span class="op">*</span> <span class="ident">C::Scalar::from</span>(<span class="ident">H</span> <span class="kw">as</span> <span class="ident">u64</span>).<span class="ident">pow</span>(<span class="kw-2">&amp;</span>[<span class="ident">w</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
-                    (<span class="ident">base</span> <span class="op">*</span> <span class="ident">scalar</span>).<span class="ident">to_affine</span>()
+    <span class="comment">// Generate window table entries for all windows but the last.
+    // For these first `num_windows - 1` windows, we compute the multiple [(k+2)*(2^3)^w]B.
+    // Here, w ranges from [0..`num_windows - 1`)
+    </span><span class="kw">for </span>w <span class="kw">in </span><span class="number">0</span>..(num_windows - <span class="number">1</span>) {
+        window_table.push(
+            (<span class="number">0</span>..H)
+                .map(|k| {
+                    <span class="comment">// scalar = (k+2)*(8^w)
+                    </span><span class="kw">let </span>scalar = C::Scalar::from(k <span class="kw">as </span>u64 + <span class="number">2</span>)
+                        * C::Scalar::from(H <span class="kw">as </span>u64).pow(<span class="kw-2">&amp;</span>[w <span class="kw">as </span>u64, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
+                    (base * scalar).to_affine()
                 })
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">ArrayVec</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">H</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-                .<span class="ident">into_inner</span>()
-                .<span class="ident">unwrap</span>(),
+                .collect::&lt;ArrayVec&lt;C, H&gt;&gt;()
+                .into_inner()
+                .unwrap(),
         );
     }
 
-    <span class="comment">// Generate window table entries for the last window, w = `num_windows - 1`.</span>
-    <span class="comment">// For the last window, we compute [k * (2^3)^w - sum]B, where sum is defined</span>
-    <span class="comment">// as sum = \sum_{j = 0}^{`num_windows - 2`} 2^{3j+1}</span>
-    <span class="kw">let</span> <span class="ident">sum</span> <span class="op">=</span> (<span class="number">0</span>..(<span class="ident">num_windows</span> <span class="op">-</span> <span class="number">1</span>)).<span class="ident">fold</span>(<span class="ident">C::Scalar::zero</span>(), <span class="op">|</span><span class="ident">acc</span>, <span class="ident">j</span><span class="op">|</span> {
-        <span class="ident">acc</span> <span class="op">+</span> <span class="ident">C::Scalar::from</span>(<span class="number">2</span>).<span class="ident">pow</span>(<span class="kw-2">&amp;</span>[<span class="ident">FIXED_BASE_WINDOW_SIZE</span> <span class="kw">as</span> <span class="ident">u64</span> <span class="op">*</span> <span class="ident">j</span> <span class="kw">as</span> <span class="ident">u64</span> <span class="op">+</span> <span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>])
+    <span class="comment">// Generate window table entries for the last window, w = `num_windows - 1`.
+    // For the last window, we compute [k * (2^3)^w - sum]B, where sum is defined
+    // as sum = \sum_{j = 0}^{`num_windows - 2`} 2^{3j+1}
+    </span><span class="kw">let </span>sum = (<span class="number">0</span>..(num_windows - <span class="number">1</span>)).fold(C::Scalar::zero(), |acc, j| {
+        acc + C::Scalar::from(<span class="number">2</span>).pow(<span class="kw-2">&amp;</span>[FIXED_BASE_WINDOW_SIZE <span class="kw">as </span>u64 * j <span class="kw">as </span>u64 + <span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>])
     });
-    <span class="ident">window_table</span>.<span class="ident">push</span>(
-        (<span class="number">0</span>..<span class="ident">H</span>)
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">k</span><span class="op">|</span> {
-                <span class="comment">// scalar = k * (2^3)^w - sum, where w = `num_windows - 1`</span>
-                <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">C::Scalar::from</span>(<span class="ident">k</span> <span class="kw">as</span> <span class="ident">u64</span>)
-                    <span class="op">*</span> <span class="ident">C::Scalar::from</span>(<span class="ident">H</span> <span class="kw">as</span> <span class="ident">u64</span>).<span class="ident">pow</span>(<span class="kw-2">&amp;</span>[(<span class="ident">num_windows</span> <span class="op">-</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">u64</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>])
-                    <span class="op">-</span> <span class="ident">sum</span>;
-                (<span class="ident">base</span> <span class="op">*</span> <span class="ident">scalar</span>).<span class="ident">to_affine</span>()
+    window_table.push(
+        (<span class="number">0</span>..H)
+            .map(|k| {
+                <span class="comment">// scalar = k * (2^3)^w - sum, where w = `num_windows - 1`
+                </span><span class="kw">let </span>scalar = C::Scalar::from(k <span class="kw">as </span>u64)
+                    * C::Scalar::from(H <span class="kw">as </span>u64).pow(<span class="kw-2">&amp;</span>[(num_windows - <span class="number">1</span>) <span class="kw">as </span>u64, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>])
+                    - sum;
+                (base * scalar).to_affine()
             })
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">ArrayVec</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">H</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-            .<span class="ident">into_inner</span>()
-            .<span class="ident">unwrap</span>(),
+            .collect::&lt;ArrayVec&lt;C, H&gt;&gt;()
+            .into_inner()
+            .unwrap(),
     );
 
-    <span class="ident">window_table</span>
+    window_table
 }
 
-<span class="doccomment">/// For each window, we interpolate the $x$-coordinate.</span>
-<span class="doccomment">/// Here, we pre-compute and store the coefficients of the interpolation polynomial.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compute_lagrange_coeffs</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>(<span class="ident">base</span>: <span class="ident">C</span>, <span class="ident">num_windows</span>: <span class="ident">usize</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span>[<span class="ident">C::Base</span>; <span class="ident">H</span>]<span class="op">&gt;</span> {
-    <span class="comment">// We are interpolating over the 3-bit window, k \in [0..8)</span>
-    <span class="kw">let</span> <span class="ident">points</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">H</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="ident">C::Base::from</span>(<span class="ident">i</span> <span class="kw">as</span> <span class="ident">u64</span>)).<span class="ident">collect</span>();
+<span class="doccomment">/// For each window, we interpolate the $x$-coordinate.
+/// Here, we pre-compute and store the coefficients of the interpolation polynomial.
+</span><span class="kw">pub fn </span>compute_lagrange_coeffs&lt;C: CurveAffine&gt;(base: C, num_windows: usize) -&gt; Vec&lt;[C::Base; H]&gt; {
+    <span class="comment">// We are interpolating over the 3-bit window, k \in [0..8)
+    </span><span class="kw">let </span>points: Vec&lt;<span class="kw">_</span>&gt; = (<span class="number">0</span>..H).map(|i| C::Base::from(i <span class="kw">as </span>u64)).collect();
 
-    <span class="kw">let</span> <span class="ident">window_table</span> <span class="op">=</span> <span class="ident">compute_window_table</span>(<span class="ident">base</span>, <span class="ident">num_windows</span>);
+    <span class="kw">let </span>window_table = compute_window_table(base, num_windows);
 
-    <span class="ident">window_table</span>
-        .<span class="ident">iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">window_points</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">x_window_points</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">window_points</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">point</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">point</span>.<span class="ident">coordinates</span>().<span class="ident">unwrap</span>().<span class="ident">x</span>())
-                .<span class="ident">collect</span>();
-            <span class="ident">lagrange_interpolate</span>(<span class="kw-2">&amp;</span><span class="ident">points</span>, <span class="kw-2">&amp;</span><span class="ident">x_window_points</span>)
-                .<span class="ident">into_iter</span>()
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">ArrayVec</span><span class="op">&lt;</span><span class="ident">C::Base</span>, <span class="ident">H</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-                .<span class="ident">into_inner</span>()
-                .<span class="ident">unwrap</span>()
+    window_table
+        .iter()
+        .map(|window_points| {
+            <span class="kw">let </span>x_window_points: Vec&lt;<span class="kw">_</span>&gt; = window_points
+                .iter()
+                .map(|point| <span class="kw-2">*</span>point.coordinates().unwrap().x())
+                .collect();
+            lagrange_interpolate(<span class="kw-2">&amp;</span>points, <span class="kw-2">&amp;</span>x_window_points)
+                .into_iter()
+                .collect::&lt;ArrayVec&lt;C::Base, H&gt;&gt;()
+                .into_inner()
+                .unwrap()
         })
-        .<span class="ident">collect</span>()
+        .collect()
 }
 
-<span class="doccomment">/// For each window, $z$ is a field element such that for each point $(x, y)$ in the window:</span>
-<span class="doccomment">/// - $z + y = u^2$ (some square in the field); and</span>
-<span class="doccomment">/// - $z - y$ is not a square.</span>
-<span class="doccomment">/// If successful, return a vector of `(z: u64, us: [C::Base; H])` for each window.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This function was used to generate the `z`s and `u`s for the Orchard fixed</span>
-<span class="doccomment">/// bases. The outputs of this function have been stored as constants, and it</span>
-<span class="doccomment">/// is not called anywhere in this codebase. However, we keep this function here</span>
-<span class="doccomment">/// as a utility for those who wish to use it with different parameters.</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">find_zs_and_us</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>(
-    <span class="ident">base</span>: <span class="ident">C</span>,
-    <span class="ident">num_windows</span>: <span class="ident">usize</span>,
-) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">u64</span>, [<span class="ident">C::Base</span>; <span class="ident">H</span>])<span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="comment">// Closure to find z and u&#39;s for one window</span>
-    <span class="kw">let</span> <span class="ident">find_z_and_us</span> <span class="op">=</span> <span class="op">|</span><span class="ident">window_points</span>: <span class="kw-2">&amp;</span>[<span class="ident">C</span>]<span class="op">|</span> {
-        <span class="macro">assert_eq!</span>(<span class="ident">H</span>, <span class="ident">window_points</span>.<span class="ident">len</span>());
+<span class="doccomment">/// For each window, $z$ is a field element such that for each point $(x, y)$ in the window:
+/// - $z + y = u^2$ (some square in the field); and
+/// - $z - y$ is not a square.
+/// If successful, return a vector of `(z: u64, us: [C::Base; H])` for each window.
+///
+/// This function was used to generate the `z`s and `u`s for the Orchard fixed
+/// bases. The outputs of this function have been stored as constants, and it
+/// is not called anywhere in this codebase. However, we keep this function here
+/// as a utility for those who wish to use it with different parameters.
+</span><span class="kw">pub fn </span>find_zs_and_us&lt;C: CurveAffine&gt;(
+    base: C,
+    num_windows: usize,
+) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;(u64, [C::Base; H])&gt;&gt; {
+    <span class="comment">// Closure to find z and u&#39;s for one window
+    </span><span class="kw">let </span>find_z_and_us = |window_points: <span class="kw-2">&amp;</span>[C]| {
+        <span class="macro">assert_eq!</span>(H, window_points.len());
 
-        <span class="kw">let</span> <span class="ident">ys</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">window_points</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">point</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">point</span>.<span class="ident">coordinates</span>().<span class="ident">unwrap</span>().<span class="ident">y</span>())
-            .<span class="ident">collect</span>();
-        (<span class="number">0</span>..(<span class="number">1000</span> <span class="op">*</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="number">2</span> <span class="op">*</span> <span class="ident">H</span>)))).<span class="ident">find_map</span>(<span class="op">|</span><span class="ident">z</span><span class="op">|</span> {
-            <span class="ident">ys</span>.<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="kw-2">&amp;</span><span class="ident">y</span><span class="op">|</span> {
-                    <span class="kw">if</span> (<span class="op">-</span><span class="ident">y</span> <span class="op">+</span> <span class="ident">C::Base::from</span>(<span class="ident">z</span>)).<span class="ident">sqrt</span>().<span class="ident">is_none</span>().<span class="ident">into</span>() {
-                        (<span class="ident">y</span> <span class="op">+</span> <span class="ident">C::Base::from</span>(<span class="ident">z</span>)).<span class="ident">sqrt</span>().<span class="ident">into</span>()
-                    } <span class="kw">else</span> {
-                        <span class="prelude-val">None</span>
-                    }
+        <span class="kw">let </span>ys: Vec&lt;<span class="kw">_</span>&gt; = window_points
+            .iter()
+            .map(|point| <span class="kw-2">*</span>point.coordinates().unwrap().y())
+            .collect();
+        (<span class="number">0</span>..(<span class="number">1000 </span>* (<span class="number">1 </span>&lt;&lt; (<span class="number">2 </span>* H)))).find_map(|z| {
+            ys.iter()
+                .map(|<span class="kw-2">&amp;</span>y| {
+                    <span class="kw">if </span>(-y + C::Base::from(z)).sqrt().is_none().into() {
+                        (y + C::Base::from(z)).sqrt().into()
+                    } <span class="kw">else </span>{
+                        <span class="prelude-val">None
+                    </span>}
                 })
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ArrayVec</span><span class="op">&lt;</span><span class="ident">C::Base</span>, <span class="ident">H</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">us</span><span class="op">|</span> (<span class="ident">z</span>, <span class="ident">us</span>.<span class="ident">into_inner</span>().<span class="ident">unwrap</span>()))
+                .collect::&lt;<span class="prelude-ty">Option</span>&lt;ArrayVec&lt;C::Base, H&gt;&gt;&gt;()
+                .map(|us| (z, us.into_inner().unwrap()))
         })
     };
 
-    <span class="kw">let</span> <span class="ident">window_table</span> <span class="op">=</span> <span class="ident">compute_window_table</span>(<span class="ident">base</span>, <span class="ident">num_windows</span>);
-    <span class="ident">window_table</span>
-        .<span class="ident">iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">window_points</span><span class="op">|</span> <span class="ident">find_z_and_us</span>(<span class="ident">window_points</span>))
-        .<span class="ident">collect</span>()
+    <span class="kw">let </span>window_table = compute_window_table(base, num_windows);
+    window_table
+        .iter()
+        .map(|window_points| find_z_and_us(window_points))
+        .collect()
 }
 
-<span class="doccomment">/// Test that the z-values and u-values satisfy the conditions:</span>
-<span class="doccomment">///      1. z + y = u^2,</span>
-<span class="doccomment">///      2. z - y is not a square</span>
-<span class="doccomment">/// for the y-coordinate of each fixed-base multiple in each window.</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;test-dependencies&quot;</span>))]</span>
-<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;test-dependencies&quot;</span>)))]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test_zs_and_us</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>(<span class="ident">base</span>: <span class="ident">C</span>, <span class="ident">z</span>: <span class="kw-2">&amp;</span>[<span class="ident">u64</span>], <span class="ident">u</span>: <span class="kw-2">&amp;</span>[[[<span class="ident">u8</span>; <span class="number">32</span>]; <span class="ident">H</span>]], <span class="ident">num_windows</span>: <span class="ident">usize</span>) {
-    <span class="kw">let</span> <span class="ident">window_table</span> <span class="op">=</span> <span class="ident">compute_window_table</span>(<span class="ident">base</span>, <span class="ident">num_windows</span>);
+<span class="doccomment">/// Test that the z-values and u-values satisfy the conditions:
+///      1. z + y = u^2,
+///      2. z - y is not a square
+/// for the y-coordinate of each fixed-base multiple in each window.
+</span><span class="attribute">#[cfg(any(test, feature = <span class="string">&quot;test-dependencies&quot;</span>))]</span>
+<span class="attribute">#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;test-dependencies&quot;</span>)))]</span>
+<span class="kw">pub fn </span>test_zs_and_us&lt;C: CurveAffine&gt;(base: C, z: <span class="kw-2">&amp;</span>[u64], u: <span class="kw-2">&amp;</span>[[[u8; <span class="number">32</span>]; H]], num_windows: usize) {
+    <span class="kw">let </span>window_table = compute_window_table(base, num_windows);
 
-    <span class="kw">for</span> ((<span class="ident">u</span>, <span class="ident">z</span>), <span class="ident">window_points</span>) <span class="kw">in</span> <span class="ident">u</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">z</span>.<span class="ident">iter</span>()).<span class="ident">zip</span>(<span class="ident">window_table</span>) {
-        <span class="kw">for</span> (<span class="ident">u</span>, <span class="ident">point</span>) <span class="kw">in</span> <span class="ident">u</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">window_points</span>.<span class="ident">iter</span>()) {
-            <span class="kw">let</span> <span class="ident">y</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">point</span>.<span class="ident">coordinates</span>().<span class="ident">unwrap</span>().<span class="ident">y</span>();
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">u_repr</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">C::Base</span> <span class="kw">as</span> <span class="ident">PrimeField</span><span class="op">&gt;</span><span class="ident">::Repr::default</span>();
-            <span class="ident">u_repr</span>.<span class="ident">as_mut</span>().<span class="ident">copy_from_slice</span>(<span class="ident">u</span>);
-            <span class="kw">let</span> <span class="ident">u</span> <span class="op">=</span> <span class="ident">C::Base::from_repr</span>(<span class="ident">u_repr</span>).<span class="ident">unwrap</span>();
-            <span class="macro">assert_eq!</span>(<span class="ident">C::Base::from</span>(<span class="kw-2">*</span><span class="ident">z</span>) <span class="op">+</span> <span class="ident">y</span>, <span class="ident">u</span> <span class="op">*</span> <span class="ident">u</span>); <span class="comment">// allow either square root</span>
-            <span class="macro">assert!</span>(<span class="ident">bool::from</span>((<span class="ident">C::Base::from</span>(<span class="kw-2">*</span><span class="ident">z</span>) <span class="op">-</span> <span class="ident">y</span>).<span class="ident">sqrt</span>().<span class="ident">is_none</span>()));
+    <span class="kw">for </span>((u, z), window_points) <span class="kw">in </span>u.iter().zip(z.iter()).zip(window_table) {
+        <span class="kw">for </span>(u, point) <span class="kw">in </span>u.iter().zip(window_points.iter()) {
+            <span class="kw">let </span>y = <span class="kw-2">*</span>point.coordinates().unwrap().y();
+            <span class="kw">let </span><span class="kw-2">mut </span>u_repr = &lt;C::Base <span class="kw">as </span>PrimeField&gt;::Repr::default();
+            u_repr.as_mut().copy_from_slice(u);
+            <span class="kw">let </span>u = C::Base::from_repr(u_repr).unwrap();
+            <span class="macro">assert_eq!</span>(C::Base::from(<span class="kw-2">*</span>z) + y, u * u); <span class="comment">// allow either square root
+            </span><span class="macro">assert!</span>(bool::from((C::Base::from(<span class="kw-2">*</span>z) - y).sqrt().is_none()));
         }
     }
 }
 
-<span class="doccomment">/// Test that Lagrange interpolation coefficients reproduce the correct x-coordinate</span>
-<span class="doccomment">/// for each fixed-base multiple in each window.</span>
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;test-dependencies&quot;</span>))]</span>
-<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">docsrs</span>, <span class="ident">doc</span>(<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;test-dependencies&quot;</span>)))]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test_lagrange_coeffs</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>(<span class="ident">base</span>: <span class="ident">C</span>, <span class="ident">num_windows</span>: <span class="ident">usize</span>) {
-    <span class="doccomment">/// Evaluate y = f(x) given the coefficients of f(x)</span>
-    <span class="kw">fn</span> <span class="ident">evaluate</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>(<span class="ident">x</span>: <span class="ident">u8</span>, <span class="ident">coeffs</span>: <span class="kw-2">&amp;</span>[<span class="ident">C::Base</span>]) -&gt; <span class="ident">C::Base</span> {
-        <span class="kw">let</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">C::Base::from</span>(<span class="ident">x</span> <span class="kw">as</span> <span class="ident">u64</span>);
-        <span class="ident">coeffs</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">rev</span>()
-            .<span class="ident">cloned</span>()
-            .<span class="ident">reduce</span>(<span class="op">|</span><span class="ident">acc</span>, <span class="ident">coeff</span><span class="op">|</span> <span class="ident">acc</span> <span class="op">*</span> <span class="ident">x</span> <span class="op">+</span> <span class="ident">coeff</span>)
-            .<span class="ident">unwrap_or_else</span>(<span class="ident">C::Base::zero</span>)
+<span class="doccomment">/// Test that Lagrange interpolation coefficients reproduce the correct x-coordinate
+/// for each fixed-base multiple in each window.
+</span><span class="attribute">#[cfg(any(test, feature = <span class="string">&quot;test-dependencies&quot;</span>))]</span>
+<span class="attribute">#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;test-dependencies&quot;</span>)))]</span>
+<span class="kw">pub fn </span>test_lagrange_coeffs&lt;C: CurveAffine&gt;(base: C, num_windows: usize) {
+    <span class="doccomment">/// Evaluate y = f(x) given the coefficients of f(x)
+    </span><span class="kw">fn </span>evaluate&lt;C: CurveAffine&gt;(x: u8, coeffs: <span class="kw-2">&amp;</span>[C::Base]) -&gt; C::Base {
+        <span class="kw">let </span>x = C::Base::from(x <span class="kw">as </span>u64);
+        coeffs
+            .iter()
+            .rev()
+            .cloned()
+            .reduce(|acc, coeff| acc * x + coeff)
+            .unwrap_or_else(C::Base::zero)
     }
 
-    <span class="kw">let</span> <span class="ident">lagrange_coeffs</span> <span class="op">=</span> <span class="ident">compute_lagrange_coeffs</span>(<span class="ident">base</span>, <span class="ident">num_windows</span>);
+    <span class="kw">let </span>lagrange_coeffs = compute_lagrange_coeffs(base, num_windows);
 
-    <span class="comment">// Check first 84 windows, i.e. `k_0, k_1, ..., k_83`</span>
-    <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">coeffs</span>) <span class="kw">in</span> <span class="ident">lagrange_coeffs</span>[<span class="number">0</span>..(<span class="ident">num_windows</span> <span class="op">-</span> <span class="number">1</span>)].<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-        <span class="comment">// Test each three-bit chunk in this window.</span>
-        <span class="kw">for</span> <span class="ident">bits</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="ident">H</span> <span class="kw">as</span> <span class="ident">u8</span>) {
+    <span class="comment">// Check first 84 windows, i.e. `k_0, k_1, ..., k_83`
+    </span><span class="kw">for </span>(idx, coeffs) <span class="kw">in </span>lagrange_coeffs[<span class="number">0</span>..(num_windows - <span class="number">1</span>)].iter().enumerate() {
+        <span class="comment">// Test each three-bit chunk in this window.
+        </span><span class="kw">for </span>bits <span class="kw">in </span><span class="number">0</span>..(H <span class="kw">as </span>u8) {
             {
-                <span class="comment">// Interpolate the x-coordinate using this window&#39;s coefficients</span>
-                <span class="kw">let</span> <span class="ident">interpolated_x</span> <span class="op">=</span> <span class="ident">evaluate</span>::<span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>(<span class="ident">bits</span>, <span class="ident">coeffs</span>);
+                <span class="comment">// Interpolate the x-coordinate using this window&#39;s coefficients
+                </span><span class="kw">let </span>interpolated_x = evaluate::&lt;C&gt;(bits, coeffs);
 
-                <span class="comment">// Compute the actual x-coordinate of the multiple [(k+2)*(8^w)]B.</span>
-                <span class="kw">let</span> <span class="ident">point</span> <span class="op">=</span> <span class="ident">base</span>
-                    <span class="op">*</span> <span class="ident">C::Scalar::from</span>(<span class="ident">bits</span> <span class="kw">as</span> <span class="ident">u64</span> <span class="op">+</span> <span class="number">2</span>)
-                    <span class="op">*</span> <span class="ident">C::Scalar::from</span>(<span class="ident">H</span> <span class="kw">as</span> <span class="ident">u64</span>).<span class="ident">pow</span>(<span class="kw-2">&amp;</span>[<span class="ident">idx</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
-                <span class="kw">let</span> <span class="ident">x</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">point</span>.<span class="ident">to_affine</span>().<span class="ident">coordinates</span>().<span class="ident">unwrap</span>().<span class="ident">x</span>();
+                <span class="comment">// Compute the actual x-coordinate of the multiple [(k+2)*(8^w)]B.
+                </span><span class="kw">let </span>point = base
+                    * C::Scalar::from(bits <span class="kw">as </span>u64 + <span class="number">2</span>)
+                    * C::Scalar::from(H <span class="kw">as </span>u64).pow(<span class="kw-2">&amp;</span>[idx <span class="kw">as </span>u64, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
+                <span class="kw">let </span>x = <span class="kw-2">*</span>point.to_affine().coordinates().unwrap().x();
 
-                <span class="comment">// Check that the interpolated x-coordinate matches the actual one.</span>
-                <span class="macro">assert_eq!</span>(<span class="ident">x</span>, <span class="ident">interpolated_x</span>);
+                <span class="comment">// Check that the interpolated x-coordinate matches the actual one.
+                </span><span class="macro">assert_eq!</span>(x, interpolated_x);
             }
         }
     }
 
-    <span class="comment">// Check last window.</span>
-    <span class="kw">for</span> <span class="ident">bits</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="ident">H</span> <span class="kw">as</span> <span class="ident">u8</span>) {
-        <span class="comment">// Interpolate the x-coordinate using the last window&#39;s coefficients</span>
-        <span class="kw">let</span> <span class="ident">interpolated_x</span> <span class="op">=</span> <span class="ident">evaluate</span>::<span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>(<span class="ident">bits</span>, <span class="kw-2">&amp;</span><span class="ident">lagrange_coeffs</span>[<span class="ident">num_windows</span> <span class="op">-</span> <span class="number">1</span>]);
+    <span class="comment">// Check last window.
+    </span><span class="kw">for </span>bits <span class="kw">in </span><span class="number">0</span>..(H <span class="kw">as </span>u8) {
+        <span class="comment">// Interpolate the x-coordinate using the last window&#39;s coefficients
+        </span><span class="kw">let </span>interpolated_x = evaluate::&lt;C&gt;(bits, <span class="kw-2">&amp;</span>lagrange_coeffs[num_windows - <span class="number">1</span>]);
 
-        <span class="comment">// Compute the actual x-coordinate of the multiple [k * (8^84) - offset]B,</span>
-        <span class="comment">// where offset = \sum_{j = 0}^{83} 2^{3j+1}</span>
-        <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> (<span class="number">0</span>..(<span class="ident">num_windows</span> <span class="op">-</span> <span class="number">1</span>)).<span class="ident">fold</span>(<span class="ident">C::Scalar::zero</span>(), <span class="op">|</span><span class="ident">acc</span>, <span class="ident">w</span><span class="op">|</span> {
-            <span class="ident">acc</span> <span class="op">+</span> <span class="ident">C::Scalar::from</span>(<span class="number">2</span>).<span class="ident">pow</span>(<span class="kw-2">&amp;</span>[<span class="ident">FIXED_BASE_WINDOW_SIZE</span> <span class="kw">as</span> <span class="ident">u64</span> <span class="op">*</span> <span class="ident">w</span> <span class="kw">as</span> <span class="ident">u64</span> <span class="op">+</span> <span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>])
+        <span class="comment">// Compute the actual x-coordinate of the multiple [k * (8^84) - offset]B,
+        // where offset = \sum_{j = 0}^{83} 2^{3j+1}
+        </span><span class="kw">let </span>offset = (<span class="number">0</span>..(num_windows - <span class="number">1</span>)).fold(C::Scalar::zero(), |acc, w| {
+            acc + C::Scalar::from(<span class="number">2</span>).pow(<span class="kw-2">&amp;</span>[FIXED_BASE_WINDOW_SIZE <span class="kw">as </span>u64 * w <span class="kw">as </span>u64 + <span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>])
         });
-        <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">C::Scalar::from</span>(<span class="ident">bits</span> <span class="kw">as</span> <span class="ident">u64</span>)
-            <span class="op">*</span> <span class="ident">C::Scalar::from</span>(<span class="ident">H</span> <span class="kw">as</span> <span class="ident">u64</span>).<span class="ident">pow</span>(<span class="kw-2">&amp;</span>[(<span class="ident">num_windows</span> <span class="op">-</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">u64</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>])
-            <span class="op">-</span> <span class="ident">offset</span>;
-        <span class="kw">let</span> <span class="ident">point</span> <span class="op">=</span> <span class="ident">base</span> <span class="op">*</span> <span class="ident">scalar</span>;
-        <span class="kw">let</span> <span class="ident">x</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">point</span>.<span class="ident">to_affine</span>().<span class="ident">coordinates</span>().<span class="ident">unwrap</span>().<span class="ident">x</span>();
+        <span class="kw">let </span>scalar = C::Scalar::from(bits <span class="kw">as </span>u64)
+            * C::Scalar::from(H <span class="kw">as </span>u64).pow(<span class="kw-2">&amp;</span>[(num_windows - <span class="number">1</span>) <span class="kw">as </span>u64, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>])
+            - offset;
+        <span class="kw">let </span>point = base * scalar;
+        <span class="kw">let </span>x = <span class="kw-2">*</span>point.to_affine().coordinates().unwrap().x();
 
-        <span class="comment">// Check that the interpolated x-coordinate matches the actual one.</span>
-        <span class="macro">assert_eq!</span>(<span class="ident">x</span>, <span class="ident">interpolated_x</span>);
+        <span class="comment">// Check that the interpolated x-coordinate matches the actual one.
+        </span><span class="macro">assert_eq!</span>(x, interpolated_x);
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">group</span>::{<span class="ident">ff::Field</span>, <span class="ident">Curve</span>, <span class="ident">Group</span>};
-    <span class="kw">use</span> <span class="ident">pasta_curves</span>::{
-        <span class="ident">arithmetic</span>::{<span class="ident">CurveAffine</span>, <span class="ident">FieldExt</span>},
-        <span class="ident">pallas</span>,
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">mod </span>tests {
+    <span class="kw">use </span>group::{ff::Field, Curve, Group};
+    <span class="kw">use </span>pasta_curves::{
+        arithmetic::{CurveAffine, FieldExt},
+        pallas,
     };
-    <span class="kw">use</span> <span class="ident">proptest::prelude</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span>proptest::prelude::<span class="kw-2">*</span>;
 
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">compute_window_table</span>, <span class="ident">find_zs_and_us</span>, <span class="ident">test_lagrange_coeffs</span>, <span class="ident">H</span>, <span class="ident">NUM_WINDOWS</span>};
+    <span class="kw">use super</span>::{compute_window_table, find_zs_and_us, test_lagrange_coeffs, H, NUM_WINDOWS};
 
     <span class="macro">prop_compose!</span> {
-        <span class="doccomment">/// Generate an arbitrary Pallas point.</span>
-        <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">arb_point</span>()(<span class="ident">bytes</span> <span class="kw">in</span> <span class="ident">prop::array::uniform32</span>(<span class="number">0u8</span>..)) -&gt; <span class="ident">pallas::Point</span> {
-            <span class="comment">// Instead of rejecting out-of-range bytes, let&#39;s reduce them.</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> [<span class="number">0</span>; <span class="number">64</span>];
-            <span class="ident">buf</span>[..<span class="number">32</span>].<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">bytes</span>);
-            <span class="kw">let</span> <span class="ident">scalar</span> <span class="op">=</span> <span class="ident">pallas::Scalar::from_bytes_wide</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>);
-            <span class="ident">pallas::Point::generator</span>() <span class="op">*</span> <span class="ident">scalar</span>
+        <span class="doccomment">/// Generate an arbitrary Pallas point.
+        </span><span class="kw">pub fn </span>arb_point()(bytes <span class="kw">in </span>prop::array::uniform32(<span class="number">0u8</span>..)) -&gt; pallas::Point {
+            <span class="comment">// Instead of rejecting out-of-range bytes, let&#39;s reduce them.
+            </span><span class="kw">let </span><span class="kw-2">mut </span>buf = [<span class="number">0</span>; <span class="number">64</span>];
+            buf[..<span class="number">32</span>].copy_from_slice(<span class="kw-2">&amp;</span>bytes);
+            <span class="kw">let </span>scalar = pallas::Scalar::from_bytes_wide(<span class="kw-2">&amp;</span>buf);
+            pallas::Point::generator() * scalar
         }
     }
 
     <span class="macro">proptest!</span> {
-        <span class="attribute">#[<span class="ident">test</span>]</span>
-        <span class="kw">fn</span> <span class="ident">lagrange_coeffs</span>(
-            <span class="ident">base</span> <span class="kw">in</span> <span class="ident">arb_point</span>(),
+        <span class="attribute">#[test]</span>
+        <span class="kw">fn </span>lagrange_coeffs(
+            base <span class="kw">in </span>arb_point(),
         ) {
-            <span class="ident">test_lagrange_coeffs</span>(<span class="ident">base</span>.<span class="ident">to_affine</span>(), <span class="ident">NUM_WINDOWS</span>);
+            test_lagrange_coeffs(base.to_affine(), NUM_WINDOWS);
         }
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">zs_and_us</span>() {
-        <span class="kw">let</span> <span class="ident">base</span> <span class="op">=</span> <span class="ident">pallas::Point::random</span>(<span class="ident">rand::rngs::OsRng</span>);
-        <span class="kw">let</span> (<span class="ident">z</span>, <span class="ident">u</span>): (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span>[<span class="ident">pallas::Base</span>; <span class="ident">H</span>]<span class="op">&gt;</span>) <span class="op">=</span>
-            <span class="ident">find_zs_and_us</span>(<span class="ident">base</span>.<span class="ident">to_affine</span>(), <span class="ident">NUM_WINDOWS</span>)
-                .<span class="ident">unwrap</span>()
-                .<span class="ident">into_iter</span>()
-                .<span class="ident">unzip</span>();
-        <span class="kw">let</span> <span class="ident">window_table</span> <span class="op">=</span> <span class="ident">compute_window_table</span>(<span class="ident">base</span>.<span class="ident">to_affine</span>(), <span class="ident">NUM_WINDOWS</span>);
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>zs_and_us() {
+        <span class="kw">let </span>base = pallas::Point::random(rand::rngs::OsRng);
+        <span class="kw">let </span>(z, u): (Vec&lt;u64&gt;, Vec&lt;[pallas::Base; H]&gt;) =
+            find_zs_and_us(base.to_affine(), NUM_WINDOWS)
+                .unwrap()
+                .into_iter()
+                .unzip();
+        <span class="kw">let </span>window_table = compute_window_table(base.to_affine(), NUM_WINDOWS);
 
-        <span class="kw">for</span> ((<span class="ident">u</span>, <span class="ident">z</span>), <span class="ident">window_points</span>) <span class="kw">in</span> <span class="ident">u</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">z</span>.<span class="ident">iter</span>()).<span class="ident">zip</span>(<span class="ident">window_table</span>) {
-            <span class="kw">for</span> (<span class="ident">u</span>, <span class="ident">point</span>) <span class="kw">in</span> <span class="ident">u</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">window_points</span>.<span class="ident">iter</span>()) {
-                <span class="kw">let</span> <span class="ident">y</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">point</span>.<span class="ident">coordinates</span>().<span class="ident">unwrap</span>().<span class="ident">y</span>();
-                <span class="macro">assert_eq!</span>(<span class="ident">pallas::Base::from</span>(<span class="kw-2">*</span><span class="ident">z</span>) <span class="op">+</span> <span class="ident">y</span>, <span class="ident">u</span> <span class="op">*</span> <span class="ident">u</span>); <span class="comment">// allow either square root</span>
-                <span class="macro">assert!</span>(<span class="ident">bool::from</span>((<span class="ident">pallas::Base::from</span>(<span class="kw-2">*</span><span class="ident">z</span>) <span class="op">-</span> <span class="ident">y</span>).<span class="ident">sqrt</span>().<span class="ident">is_none</span>()));
+        <span class="kw">for </span>((u, z), window_points) <span class="kw">in </span>u.iter().zip(z.iter()).zip(window_table) {
+            <span class="kw">for </span>(u, point) <span class="kw">in </span>u.iter().zip(window_points.iter()) {
+                <span class="kw">let </span>y = <span class="kw-2">*</span>point.coordinates().unwrap().y();
+                <span class="macro">assert_eq!</span>(pallas::Base::from(<span class="kw-2">*</span>z) + y, u * u); <span class="comment">// allow either square root
+                </span><span class="macro">assert!</span>(bool::from((pallas::Base::from(<span class="kw-2">*</span>z) - y).sqrt().is_none()));
             }
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

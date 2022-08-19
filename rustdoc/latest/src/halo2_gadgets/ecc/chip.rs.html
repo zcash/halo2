@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -633,620 +627,619 @@
 <span id="612">612</span>
 <span id="613">613</span>
 <span id="614">614</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Chip implementations for the ECC gadgets.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Chip implementations for the ECC gadgets.
 
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">BaseFitsInScalarInstructions</span>, <span class="ident">EccInstructions</span>, <span class="ident">FixedPoints</span>};
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">sinsemilla::primitives</span> <span class="kw">as</span> <span class="ident">sinsemilla</span>,
-    <span class="ident">utilities</span>::{<span class="ident">lookup_range_check::LookupRangeCheckConfig</span>, <span class="ident">UtilitiesInstructions</span>},
+</span><span class="kw">use super</span>::{BaseFitsInScalarInstructions, EccInstructions, FixedPoints};
+<span class="kw">use crate</span>::{
+    sinsemilla::primitives <span class="kw">as </span>sinsemilla,
+    utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
 };
-<span class="kw">use</span> <span class="ident">arrayvec::ArrayVec</span>;
+<span class="kw">use </span>arrayvec::ArrayVec;
 
-<span class="kw">use</span> <span class="ident">ff::PrimeField</span>;
-<span class="kw">use</span> <span class="ident">group::prime::PrimeCurveAffine</span>;
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Chip</span>, <span class="ident">Layouter</span>, <span class="ident">Value</span>},
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Assigned</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>},
+<span class="kw">use </span>ff::PrimeField;
+<span class="kw">use </span>group::prime::PrimeCurveAffine;
+<span class="kw">use </span>halo2_proofs::{
+    circuit::{AssignedCell, Chip, Layouter, Value},
+    plonk::{Advice, Assigned, Column, ConstraintSystem, Error, Fixed},
 };
-<span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::CurveAffine</span>, <span class="ident">pallas</span>};
+<span class="kw">use </span>pasta_curves::{arithmetic::CurveAffine, pallas};
 
-<span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
+<span class="kw">use </span>std::convert::TryInto;
 
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod</span> <span class="ident">add</span>;
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod</span> <span class="ident">add_incomplete</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">constants</span>;
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod</span> <span class="ident">mul</span>;
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod</span> <span class="ident">mul_fixed</span>;
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod</span> <span class="ident">witness_point</span>;
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod </span>add;
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod </span>add_incomplete;
+<span class="kw">pub mod </span>constants;
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod </span>mul;
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod </span>mul_fixed;
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">mod </span>witness_point;
 
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">constants</span>::<span class="kw-2">*</span>;
+<span class="kw">pub use </span>constants::<span class="kw-2">*</span>;
 
-<span class="comment">// Exposed for Sinsemilla.</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use</span> <span class="ident">mul::incomplete::DoubleAndAdd</span>;
+<span class="comment">// Exposed for Sinsemilla.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">use </span>mul::incomplete::DoubleAndAdd;
 
-<span class="doccomment">/// A curve point represented in affine (x, y) coordinates, or the</span>
-<span class="doccomment">/// identity represented as (0, 0).</span>
-<span class="doccomment">/// Each coordinate is assigned to a cell.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EccPoint</span> {
-    <span class="doccomment">/// x-coordinate</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Stored as an `Assigned&lt;F&gt;` to enable batching inversions.</span>
-    <span class="ident">x</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// y-coordinate</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Stored as an `Assigned&lt;F&gt;` to enable batching inversions.</span>
-    <span class="ident">y</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A curve point represented in affine (x, y) coordinates, or the
+/// identity represented as (0, 0).
+/// Each coordinate is assigned to a cell.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>EccPoint {
+    <span class="doccomment">/// x-coordinate
+    ///
+    /// Stored as an `Assigned&lt;F&gt;` to enable batching inversions.
+    </span>x: AssignedCell&lt;Assigned&lt;pallas::Base&gt;, pallas::Base&gt;,
+    <span class="doccomment">/// y-coordinate
+    ///
+    /// Stored as an `Assigned&lt;F&gt;` to enable batching inversions.
+    </span>y: AssignedCell&lt;Assigned&lt;pallas::Base&gt;, pallas::Base&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">EccPoint</span> {
-    <span class="doccomment">/// Constructs a point from its coordinates, without checking they are on the curve.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This is an internal API that we only use where we know we have a valid curve point</span>
-    <span class="doccomment">/// (specifically inside Sinsemilla).</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">from_coordinates_unchecked</span>(
-        <span class="ident">x</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">y</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="ident">EccPoint</span> { <span class="ident">x</span>, <span class="ident">y</span> }
+<span class="kw">impl </span>EccPoint {
+    <span class="doccomment">/// Constructs a point from its coordinates, without checking they are on the curve.
+    ///
+    /// This is an internal API that we only use where we know we have a valid curve point
+    /// (specifically inside Sinsemilla).
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>from_coordinates_unchecked(
+        x: AssignedCell&lt;Assigned&lt;pallas::Base&gt;, pallas::Base&gt;,
+        y: AssignedCell&lt;Assigned&lt;pallas::Base&gt;, pallas::Base&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        EccPoint { x, y }
     }
 
-    <span class="doccomment">/// Returns the value of this curve point, if known.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">point</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">x</span>.<span class="ident">value</span>().<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">y</span>.<span class="ident">value</span>()).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">x</span>, <span class="ident">y</span>)<span class="op">|</span> {
-            <span class="kw">if</span> <span class="ident">x</span>.<span class="ident">is_zero_vartime</span>() <span class="op">&amp;&amp;</span> <span class="ident">y</span>.<span class="ident">is_zero_vartime</span>() {
-                <span class="ident">pallas::Affine::identity</span>()
-            } <span class="kw">else</span> {
-                <span class="ident">pallas::Affine::from_xy</span>(<span class="ident">x</span>.<span class="ident">evaluate</span>(), <span class="ident">y</span>.<span class="ident">evaluate</span>()).<span class="ident">unwrap</span>()
+    <span class="doccomment">/// Returns the value of this curve point, if known.
+    </span><span class="kw">pub fn </span>point(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;pallas::Affine&gt; {
+        <span class="self">self</span>.x.value().zip(<span class="self">self</span>.y.value()).map(|(x, y)| {
+            <span class="kw">if </span>x.is_zero_vartime() &amp;&amp; y.is_zero_vartime() {
+                pallas::Affine::identity()
+            } <span class="kw">else </span>{
+                pallas::Affine::from_xy(x.evaluate(), y.evaluate()).unwrap()
             }
         })
     }
-    <span class="doccomment">/// The cell containing the affine short-Weierstrass x-coordinate,</span>
-    <span class="doccomment">/// or 0 for the zero point.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">x</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">x</span>.<span class="ident">clone</span>().<span class="ident">evaluate</span>()
+    <span class="doccomment">/// The cell containing the affine short-Weierstrass x-coordinate,
+    /// or 0 for the zero point.
+    </span><span class="kw">pub fn </span>x(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AssignedCell&lt;pallas::Base, pallas::Base&gt; {
+        <span class="self">self</span>.x.clone().evaluate()
     }
-    <span class="doccomment">/// The cell containing the affine short-Weierstrass y-coordinate,</span>
-    <span class="doccomment">/// or 0 for the zero point.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">y</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">y</span>.<span class="ident">clone</span>().<span class="ident">evaluate</span>()
+    <span class="doccomment">/// The cell containing the affine short-Weierstrass y-coordinate,
+    /// or 0 for the zero point.
+    </span><span class="kw">pub fn </span>y(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AssignedCell&lt;pallas::Base, pallas::Base&gt; {
+        <span class="self">self</span>.y.clone().evaluate()
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-    <span class="kw">fn</span> <span class="ident">is_identity</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">x</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">is_zero_vartime</span>())
+    <span class="attribute">#[cfg(test)]</span>
+    <span class="kw">fn </span>is_identity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;bool&gt; {
+        <span class="self">self</span>.x.value().map(|x| x.is_zero_vartime())
     }
 }
 
-<span class="doccomment">/// A non-identity point represented in affine (x, y) coordinates.</span>
-<span class="doccomment">/// Each coordinate is assigned to a cell.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NonIdentityEccPoint</span> {
-    <span class="doccomment">/// x-coordinate</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Stored as an `Assigned&lt;F&gt;` to enable batching inversions.</span>
-    <span class="ident">x</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// y-coordinate</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Stored as an `Assigned&lt;F&gt;` to enable batching inversions.</span>
-    <span class="ident">y</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A non-identity point represented in affine (x, y) coordinates.
+/// Each coordinate is assigned to a cell.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>NonIdentityEccPoint {
+    <span class="doccomment">/// x-coordinate
+    ///
+    /// Stored as an `Assigned&lt;F&gt;` to enable batching inversions.
+    </span>x: AssignedCell&lt;Assigned&lt;pallas::Base&gt;, pallas::Base&gt;,
+    <span class="doccomment">/// y-coordinate
+    ///
+    /// Stored as an `Assigned&lt;F&gt;` to enable batching inversions.
+    </span>y: AssignedCell&lt;Assigned&lt;pallas::Base&gt;, pallas::Base&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">NonIdentityEccPoint</span> {
-    <span class="doccomment">/// Constructs a point from its coordinates, without checking they are on the curve.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// This is an internal API that we only use where we know we have a valid non-identity</span>
-    <span class="doccomment">/// curve point (specifically inside Sinsemilla).</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">from_coordinates_unchecked</span>(
-        <span class="ident">x</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">y</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="ident">NonIdentityEccPoint</span> { <span class="ident">x</span>, <span class="ident">y</span> }
+<span class="kw">impl </span>NonIdentityEccPoint {
+    <span class="doccomment">/// Constructs a point from its coordinates, without checking they are on the curve.
+    ///
+    /// This is an internal API that we only use where we know we have a valid non-identity
+    /// curve point (specifically inside Sinsemilla).
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>from_coordinates_unchecked(
+        x: AssignedCell&lt;Assigned&lt;pallas::Base&gt;, pallas::Base&gt;,
+        y: AssignedCell&lt;Assigned&lt;pallas::Base&gt;, pallas::Base&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        NonIdentityEccPoint { x, y }
     }
 
-    <span class="doccomment">/// Returns the value of this curve point, if known.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">point</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">x</span>.<span class="ident">value</span>().<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">y</span>.<span class="ident">value</span>()).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">x</span>, <span class="ident">y</span>)<span class="op">|</span> {
-            <span class="macro">assert!</span>(<span class="op">!</span><span class="ident">x</span>.<span class="ident">is_zero_vartime</span>() <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="ident">y</span>.<span class="ident">is_zero_vartime</span>());
-            <span class="ident">pallas::Affine::from_xy</span>(<span class="ident">x</span>.<span class="ident">evaluate</span>(), <span class="ident">y</span>.<span class="ident">evaluate</span>()).<span class="ident">unwrap</span>()
+    <span class="doccomment">/// Returns the value of this curve point, if known.
+    </span><span class="kw">pub fn </span>point(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;pallas::Affine&gt; {
+        <span class="self">self</span>.x.value().zip(<span class="self">self</span>.y.value()).map(|(x, y)| {
+            <span class="macro">assert!</span>(!x.is_zero_vartime() &amp;&amp; !y.is_zero_vartime());
+            pallas::Affine::from_xy(x.evaluate(), y.evaluate()).unwrap()
         })
     }
-    <span class="doccomment">/// The cell containing the affine short-Weierstrass x-coordinate.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">x</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">x</span>.<span class="ident">clone</span>().<span class="ident">evaluate</span>()
+    <span class="doccomment">/// The cell containing the affine short-Weierstrass x-coordinate.
+    </span><span class="kw">pub fn </span>x(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AssignedCell&lt;pallas::Base, pallas::Base&gt; {
+        <span class="self">self</span>.x.clone().evaluate()
     }
-    <span class="doccomment">/// The cell containing the affine short-Weierstrass y-coordinate.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">y</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">y</span>.<span class="ident">clone</span>().<span class="ident">evaluate</span>()
+    <span class="doccomment">/// The cell containing the affine short-Weierstrass y-coordinate.
+    </span><span class="kw">pub fn </span>y(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AssignedCell&lt;pallas::Base, pallas::Base&gt; {
+        <span class="self">self</span>.y.clone().evaluate()
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">NonIdentityEccPoint</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EccPoint</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">non_id_point</span>: <span class="ident">NonIdentityEccPoint</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">x</span>: <span class="ident">non_id_point</span>.<span class="ident">x</span>,
-            <span class="ident">y</span>: <span class="ident">non_id_point</span>.<span class="ident">y</span>,
+<span class="kw">impl </span>From&lt;NonIdentityEccPoint&gt; <span class="kw">for </span>EccPoint {
+    <span class="kw">fn </span>from(non_id_point: NonIdentityEccPoint) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            x: non_id_point.x,
+            y: non_id_point.y,
         }
     }
 }
 
-<span class="doccomment">/// Configuration for [`EccChip`].</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EccConfig</span><span class="op">&lt;</span><span class="ident">FixedPoints</span>: <span class="ident"><span class="kw">super</span>::FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Advice columns needed by instructions in the ECC chip.</span>
-    <span class="kw">pub</span> <span class="ident">advices</span>: [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>; <span class="number">10</span>],
+<span class="doccomment">/// Configuration for [`EccChip`].
+</span><span class="attribute">#[derive(Clone, Debug, Eq, PartialEq)]</span>
+<span class="attribute">#[allow(non_snake_case)]</span>
+<span class="kw">pub struct </span>EccConfig&lt;FixedPoints: <span class="kw">super</span>::FixedPoints&lt;pallas::Affine&gt;&gt; {
+    <span class="doccomment">/// Advice columns needed by instructions in the ECC chip.
+    </span><span class="kw">pub </span>advices: [Column&lt;Advice&gt;; <span class="number">10</span>],
 
-    <span class="doccomment">/// Incomplete addition</span>
-    <span class="ident">add_incomplete</span>: <span class="ident">add_incomplete::Config</span>,
+    <span class="doccomment">/// Incomplete addition
+    </span>add_incomplete: add_incomplete::Config,
 
-    <span class="doccomment">/// Complete addition</span>
-    <span class="ident">add</span>: <span class="ident">add::Config</span>,
+    <span class="doccomment">/// Complete addition
+    </span>add: add::Config,
 
-    <span class="doccomment">/// Variable-base scalar multiplication</span>
-    <span class="ident">mul</span>: <span class="ident">mul::Config</span>,
+    <span class="doccomment">/// Variable-base scalar multiplication
+    </span>mul: mul::Config,
 
-    <span class="doccomment">/// Fixed-base full-width scalar multiplication</span>
-    <span class="ident">mul_fixed_full</span>: <span class="ident">mul_fixed::full_width::Config</span><span class="op">&lt;</span><span class="ident">FixedPoints</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Fixed-base signed short scalar multiplication</span>
-    <span class="ident">mul_fixed_short</span>: <span class="ident">mul_fixed::short::Config</span><span class="op">&lt;</span><span class="ident">FixedPoints</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Fixed-base mul using a base field element as a scalar</span>
-    <span class="ident">mul_fixed_base_field</span>: <span class="ident">mul_fixed::base_field_elem::Config</span><span class="op">&lt;</span><span class="ident">FixedPoints</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Fixed-base full-width scalar multiplication
+    </span>mul_fixed_full: mul_fixed::full_width::Config&lt;FixedPoints&gt;,
+    <span class="doccomment">/// Fixed-base signed short scalar multiplication
+    </span>mul_fixed_short: mul_fixed::short::Config&lt;FixedPoints&gt;,
+    <span class="doccomment">/// Fixed-base mul using a base field element as a scalar
+    </span>mul_fixed_base_field: mul_fixed::base_field_elem::Config&lt;FixedPoints&gt;,
 
-    <span class="doccomment">/// Witness point</span>
-    <span class="ident">witness_point</span>: <span class="ident">witness_point::Config</span>,
+    <span class="doccomment">/// Witness point
+    </span>witness_point: witness_point::Config,
 
-    <span class="doccomment">/// Lookup range check using 10-bit lookup table</span>
-    <span class="kw">pub</span> <span class="ident">lookup_config</span>: <span class="ident">LookupRangeCheckConfig</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, { <span class="ident">sinsemilla::K</span> }<span class="op">&gt;</span>,
+    <span class="doccomment">/// Lookup range check using 10-bit lookup table
+    </span><span class="kw">pub </span>lookup_config: LookupRangeCheckConfig&lt;pallas::Base, { sinsemilla::K }&gt;,
 }
 
-<span class="doccomment">/// A trait representing the kind of scalar used with a particular `FixedPoint`.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This trait exists because of limitations around const generics.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">FixedScalarKind</span> {
-    <span class="doccomment">/// The number of windows that this scalar kind requires.</span>
-    <span class="kw">const</span> <span class="ident">NUM_WINDOWS</span>: <span class="ident">usize</span>;
+<span class="doccomment">/// A trait representing the kind of scalar used with a particular `FixedPoint`.
+///
+/// This trait exists because of limitations around const generics.
+</span><span class="kw">pub trait </span>FixedScalarKind {
+    <span class="doccomment">/// The number of windows that this scalar kind requires.
+    </span><span class="kw">const </span>NUM_WINDOWS: usize;
 }
 
-<span class="doccomment">/// Type marker representing a full-width scalar for use in fixed-base scalar</span>
-<span class="doccomment">/// multiplication.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">FullScalar</span> {}
-<span class="kw">impl</span> <span class="ident">FixedScalarKind</span> <span class="kw">for</span> <span class="ident">FullScalar</span> {
-    <span class="kw">const</span> <span class="ident">NUM_WINDOWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">NUM_WINDOWS</span>;
+<span class="doccomment">/// Type marker representing a full-width scalar for use in fixed-base scalar
+/// multiplication.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub enum </span>FullScalar {}
+<span class="kw">impl </span>FixedScalarKind <span class="kw">for </span>FullScalar {
+    <span class="kw">const </span>NUM_WINDOWS: usize = NUM_WINDOWS;
 }
 
-<span class="doccomment">/// Type marker representing a signed 64-bit scalar for use in fixed-base scalar</span>
-<span class="doccomment">/// multiplication.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ShortScalar</span> {}
-<span class="kw">impl</span> <span class="ident">FixedScalarKind</span> <span class="kw">for</span> <span class="ident">ShortScalar</span> {
-    <span class="kw">const</span> <span class="ident">NUM_WINDOWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">NUM_WINDOWS_SHORT</span>;
+<span class="doccomment">/// Type marker representing a signed 64-bit scalar for use in fixed-base scalar
+/// multiplication.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub enum </span>ShortScalar {}
+<span class="kw">impl </span>FixedScalarKind <span class="kw">for </span>ShortScalar {
+    <span class="kw">const </span>NUM_WINDOWS: usize = NUM_WINDOWS_SHORT;
 }
 
-<span class="doccomment">/// Type marker representing a base field element being used as a scalar in fixed-base</span>
-<span class="doccomment">/// scalar multiplication.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">BaseFieldElem</span> {}
-<span class="kw">impl</span> <span class="ident">FixedScalarKind</span> <span class="kw">for</span> <span class="ident">BaseFieldElem</span> {
-    <span class="kw">const</span> <span class="ident">NUM_WINDOWS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">NUM_WINDOWS</span>;
+<span class="doccomment">/// Type marker representing a base field element being used as a scalar in fixed-base
+/// scalar multiplication.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub enum </span>BaseFieldElem {}
+<span class="kw">impl </span>FixedScalarKind <span class="kw">for </span>BaseFieldElem {
+    <span class="kw">const </span>NUM_WINDOWS: usize = NUM_WINDOWS;
 }
 
-<span class="doccomment">/// Returns information about a fixed point that is required by [`EccChip`].</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// For each window required by `Self::FixedScalarKind`, $z$ is a field element such that for</span>
-<span class="doccomment">/// each point $(x, y)$ in the window:</span>
-<span class="doccomment">/// - $z + y = u^2$ (some square in the field); and</span>
-<span class="doccomment">/// - $z - y$ is not a square.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// TODO: When associated consts can be used as const generics, introduce a</span>
-<span class="doccomment">/// `const NUM_WINDOWS: usize` associated const, and return `NUM_WINDOWS`-sized</span>
-<span class="doccomment">/// arrays instead of `Vec`s.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>: <span class="ident">std::fmt::Debug</span> <span class="op">+</span> <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Clone</span> {
-    <span class="doccomment">/// The kind of scalar that this fixed point can be multiplied by.</span>
-    <span class="kw">type</span> <span class="ident">FixedScalarKind</span>: <span class="ident">FixedScalarKind</span>;
+<span class="doccomment">/// Returns information about a fixed point that is required by [`EccChip`].
+///
+/// For each window required by `Self::FixedScalarKind`, $z$ is a field element such that for
+/// each point $(x, y)$ in the window:
+/// - $z + y = u^2$ (some square in the field); and
+/// - $z - y$ is not a square.
+///
+/// TODO: When associated consts can be used as const generics, introduce a
+/// `const NUM_WINDOWS: usize` associated const, and return `NUM_WINDOWS`-sized
+/// arrays instead of `Vec`s.
+</span><span class="kw">pub trait </span>FixedPoint&lt;C: CurveAffine&gt;: std::fmt::Debug + Eq + Clone {
+    <span class="doccomment">/// The kind of scalar that this fixed point can be multiplied by.
+    </span><span class="kw">type </span>FixedScalarKind: FixedScalarKind;
 
-    <span class="doccomment">/// Returns the generator for this fixed point.</span>
-    <span class="kw">fn</span> <span class="ident">generator</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">C</span>;
+    <span class="doccomment">/// Returns the generator for this fixed point.
+    </span><span class="kw">fn </span>generator(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; C;
 
-    <span class="doccomment">/// Returns the $u$ values for this fixed point.</span>
-    <span class="kw">fn</span> <span class="ident">u</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span>[<span class="op">&lt;</span><span class="ident">C::Base</span> <span class="kw">as</span> <span class="ident">PrimeField</span><span class="op">&gt;</span><span class="ident">::Repr</span>; <span class="ident">H</span>]<span class="op">&gt;</span>;
+    <span class="doccomment">/// Returns the $u$ values for this fixed point.
+    </span><span class="kw">fn </span>u(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;[&lt;C::Base <span class="kw">as </span>PrimeField&gt;::Repr; H]&gt;;
 
-    <span class="doccomment">/// Returns the $z$ value for this fixed point.</span>
-    <span class="kw">fn</span> <span class="ident">z</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// Returns the $z$ value for this fixed point.
+    </span><span class="kw">fn </span>z(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u64&gt;;
 
-    <span class="doccomment">/// Returns the Lagrange coefficients for this fixed point.</span>
-    <span class="kw">fn</span> <span class="ident">lagrange_coeffs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span>[<span class="ident">C::Base</span>; <span class="ident">H</span>]<span class="op">&gt;</span> {
-        <span class="ident">compute_lagrange_coeffs</span>(<span class="self">self</span>.<span class="ident">generator</span>(), <span class="ident"><span class="self">Self</span>::FixedScalarKind::NUM_WINDOWS</span>)
+    <span class="doccomment">/// Returns the Lagrange coefficients for this fixed point.
+    </span><span class="kw">fn </span>lagrange_coeffs(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;[C::Base; H]&gt; {
+        compute_lagrange_coeffs(<span class="self">self</span>.generator(), <span class="self">Self</span>::FixedScalarKind::NUM_WINDOWS)
     }
 }
 
-<span class="doccomment">/// An [`EccInstructions`] chip that uses 10 advice columns.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EccChip</span><span class="op">&lt;</span><span class="ident">FixedPoints</span>: <span class="ident"><span class="kw">super</span>::FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="ident">config</span>: <span class="ident">EccConfig</span><span class="op">&lt;</span><span class="ident">FixedPoints</span><span class="op">&gt;</span>,
+<span class="doccomment">/// An [`EccInstructions`] chip that uses 10 advice columns.
+</span><span class="attribute">#[derive(Clone, Debug, Eq, PartialEq)]</span>
+<span class="kw">pub struct </span>EccChip&lt;FixedPoints: <span class="kw">super</span>::FixedPoints&lt;pallas::Affine&gt;&gt; {
+    config: EccConfig&lt;FixedPoints&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">FixedPoints</span>: <span class="ident"><span class="kw">super</span>::FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EccChip</span><span class="op">&lt;</span><span class="ident">FixedPoints</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">EccConfig</span><span class="op">&lt;</span><span class="ident">FixedPoints</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">Loaded</span> <span class="op">=</span> ();
+<span class="kw">impl</span>&lt;FixedPoints: <span class="kw">super</span>::FixedPoints&lt;pallas::Affine&gt;&gt; Chip&lt;pallas::Base&gt; <span class="kw">for </span>EccChip&lt;FixedPoints&gt; {
+    <span class="kw">type </span>Config = EccConfig&lt;FixedPoints&gt;;
+    <span class="kw">type </span>Loaded = ();
 
-    <span class="kw">fn</span> <span class="ident">config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Config</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span>
+    <span class="kw">fn </span>config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Config {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.config
     }
 
-    <span class="kw">fn</span> <span class="ident">loaded</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Loaded</span> {
+    <span class="kw">fn </span>loaded(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Loaded {
         <span class="kw-2">&amp;</span>()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Fixed</span>: <span class="ident"><span class="kw">super</span>::FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">UtilitiesInstructions</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">EccChip</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;Fixed: <span class="kw">super</span>::FixedPoints&lt;pallas::Affine&gt;&gt; UtilitiesInstructions&lt;pallas::Base&gt;
+    <span class="kw">for </span>EccChip&lt;Fixed&gt;
 {
-    <span class="kw">type</span> <span class="ident">Var</span> <span class="op">=</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Var = AssignedCell&lt;pallas::Base, pallas::Base&gt;;
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">FixedPoints</span>: <span class="ident"><span class="kw">super</span>::FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">EccChip</span><span class="op">&lt;</span><span class="ident">FixedPoints</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Reconstructs this chip from the given config.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">construct</span>(<span class="ident">config</span>: <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Config</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">config</span> }
+<span class="kw">impl</span>&lt;FixedPoints: <span class="kw">super</span>::FixedPoints&lt;pallas::Affine&gt;&gt; EccChip&lt;FixedPoints&gt; {
+    <span class="doccomment">/// Reconstructs this chip from the given config.
+    </span><span class="kw">pub fn </span>construct(config: &lt;<span class="self">Self </span><span class="kw">as </span>Chip&lt;pallas::Base&gt;&gt;::Config) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ config }
     }
 
-    <span class="doccomment">/// # Side effects</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// All columns in `advices` will be equality-enabled.</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure</span>(
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">advices</span>: [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>; <span class="number">10</span>],
-        <span class="ident">lagrange_coeffs</span>: [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>; <span class="number">8</span>],
-        <span class="ident">range_check</span>: <span class="ident">LookupRangeCheckConfig</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, { <span class="ident">sinsemilla::K</span> }<span class="op">&gt;</span>,
-    ) -&gt; <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Config</span> {
-        <span class="comment">// Create witness point gate</span>
-        <span class="kw">let</span> <span class="ident">witness_point</span> <span class="op">=</span> <span class="ident">witness_point::Config::configure</span>(<span class="ident">meta</span>, <span class="ident">advices</span>[<span class="number">0</span>], <span class="ident">advices</span>[<span class="number">1</span>]);
-        <span class="comment">// Create incomplete point addition gate</span>
-        <span class="kw">let</span> <span class="ident">add_incomplete</span> <span class="op">=</span>
-            <span class="ident">add_incomplete::Config::configure</span>(<span class="ident">meta</span>, <span class="ident">advices</span>[<span class="number">0</span>], <span class="ident">advices</span>[<span class="number">1</span>], <span class="ident">advices</span>[<span class="number">2</span>], <span class="ident">advices</span>[<span class="number">3</span>]);
+    <span class="doccomment">/// # Side effects
+    ///
+    /// All columns in `advices` will be equality-enabled.
+    </span><span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="kw">pub fn </span>configure(
+        meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;,
+        advices: [Column&lt;Advice&gt;; <span class="number">10</span>],
+        lagrange_coeffs: [Column&lt;Fixed&gt;; <span class="number">8</span>],
+        range_check: LookupRangeCheckConfig&lt;pallas::Base, { sinsemilla::K }&gt;,
+    ) -&gt; &lt;<span class="self">Self </span><span class="kw">as </span>Chip&lt;pallas::Base&gt;&gt;::Config {
+        <span class="comment">// Create witness point gate
+        </span><span class="kw">let </span>witness_point = witness_point::Config::configure(meta, advices[<span class="number">0</span>], advices[<span class="number">1</span>]);
+        <span class="comment">// Create incomplete point addition gate
+        </span><span class="kw">let </span>add_incomplete =
+            add_incomplete::Config::configure(meta, advices[<span class="number">0</span>], advices[<span class="number">1</span>], advices[<span class="number">2</span>], advices[<span class="number">3</span>]);
 
-        <span class="comment">// Create complete point addition gate</span>
-        <span class="kw">let</span> <span class="ident">add</span> <span class="op">=</span> <span class="ident">add::Config::configure</span>(
-            <span class="ident">meta</span>, <span class="ident">advices</span>[<span class="number">0</span>], <span class="ident">advices</span>[<span class="number">1</span>], <span class="ident">advices</span>[<span class="number">2</span>], <span class="ident">advices</span>[<span class="number">3</span>], <span class="ident">advices</span>[<span class="number">4</span>], <span class="ident">advices</span>[<span class="number">5</span>],
-            <span class="ident">advices</span>[<span class="number">6</span>], <span class="ident">advices</span>[<span class="number">7</span>], <span class="ident">advices</span>[<span class="number">8</span>],
+        <span class="comment">// Create complete point addition gate
+        </span><span class="kw">let </span>add = add::Config::configure(
+            meta, advices[<span class="number">0</span>], advices[<span class="number">1</span>], advices[<span class="number">2</span>], advices[<span class="number">3</span>], advices[<span class="number">4</span>], advices[<span class="number">5</span>],
+            advices[<span class="number">6</span>], advices[<span class="number">7</span>], advices[<span class="number">8</span>],
         );
 
-        <span class="comment">// Create variable-base scalar mul gates</span>
-        <span class="kw">let</span> <span class="ident">mul</span> <span class="op">=</span> <span class="ident">mul::Config::configure</span>(<span class="ident">meta</span>, <span class="ident">add</span>, <span class="ident">range_check</span>, <span class="ident">advices</span>);
+        <span class="comment">// Create variable-base scalar mul gates
+        </span><span class="kw">let </span>mul = mul::Config::configure(meta, add, range_check, advices);
 
-        <span class="comment">// Create config that is shared across short, base-field, and full-width</span>
-        <span class="comment">// fixed-base scalar mul.</span>
-        <span class="kw">let</span> <span class="ident">mul_fixed</span> <span class="op">=</span> <span class="ident">mul_fixed::Config</span>::<span class="op">&lt;</span><span class="ident">FixedPoints</span><span class="op">&gt;</span><span class="ident">::configure</span>(
-            <span class="ident">meta</span>,
-            <span class="ident">lagrange_coeffs</span>,
-            <span class="ident">advices</span>[<span class="number">4</span>],
-            <span class="ident">advices</span>[<span class="number">5</span>],
-            <span class="ident">add</span>,
-            <span class="ident">add_incomplete</span>,
+        <span class="comment">// Create config that is shared across short, base-field, and full-width
+        // fixed-base scalar mul.
+        </span><span class="kw">let </span>mul_fixed = mul_fixed::Config::&lt;FixedPoints&gt;::configure(
+            meta,
+            lagrange_coeffs,
+            advices[<span class="number">4</span>],
+            advices[<span class="number">5</span>],
+            add,
+            add_incomplete,
         );
 
-        <span class="comment">// Create gate that is only used in full-width fixed-base scalar mul.</span>
-        <span class="kw">let</span> <span class="ident">mul_fixed_full</span> <span class="op">=</span>
-            <span class="ident">mul_fixed::full_width::Config</span>::<span class="op">&lt;</span><span class="ident">FixedPoints</span><span class="op">&gt;</span><span class="ident">::configure</span>(<span class="ident">meta</span>, <span class="ident">mul_fixed</span>.<span class="ident">clone</span>());
+        <span class="comment">// Create gate that is only used in full-width fixed-base scalar mul.
+        </span><span class="kw">let </span>mul_fixed_full =
+            mul_fixed::full_width::Config::&lt;FixedPoints&gt;::configure(meta, mul_fixed.clone());
 
-        <span class="comment">// Create gate that is only used in short fixed-base scalar mul.</span>
-        <span class="kw">let</span> <span class="ident">mul_fixed_short</span> <span class="op">=</span>
-            <span class="ident">mul_fixed::short::Config</span>::<span class="op">&lt;</span><span class="ident">FixedPoints</span><span class="op">&gt;</span><span class="ident">::configure</span>(<span class="ident">meta</span>, <span class="ident">mul_fixed</span>.<span class="ident">clone</span>());
+        <span class="comment">// Create gate that is only used in short fixed-base scalar mul.
+        </span><span class="kw">let </span>mul_fixed_short =
+            mul_fixed::short::Config::&lt;FixedPoints&gt;::configure(meta, mul_fixed.clone());
 
-        <span class="comment">// Create gate that is only used in fixed-base mul using a base field element.</span>
-        <span class="kw">let</span> <span class="ident">mul_fixed_base_field</span> <span class="op">=</span> <span class="ident">mul_fixed::base_field_elem::Config</span>::<span class="op">&lt;</span><span class="ident">FixedPoints</span><span class="op">&gt;</span><span class="ident">::configure</span>(
-            <span class="ident">meta</span>,
-            <span class="ident">advices</span>[<span class="number">6</span>..<span class="number">9</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">range_check</span>,
-            <span class="ident">mul_fixed</span>,
+        <span class="comment">// Create gate that is only used in fixed-base mul using a base field element.
+        </span><span class="kw">let </span>mul_fixed_base_field = mul_fixed::base_field_elem::Config::&lt;FixedPoints&gt;::configure(
+            meta,
+            advices[<span class="number">6</span>..<span class="number">9</span>].try_into().unwrap(),
+            range_check,
+            mul_fixed,
         );
 
-        <span class="ident">EccConfig</span> {
-            <span class="ident">advices</span>,
-            <span class="ident">add_incomplete</span>,
-            <span class="ident">add</span>,
-            <span class="ident">mul</span>,
-            <span class="ident">mul_fixed_full</span>,
-            <span class="ident">mul_fixed_short</span>,
-            <span class="ident">mul_fixed_base_field</span>,
-            <span class="ident">witness_point</span>,
-            <span class="ident">lookup_config</span>: <span class="ident">range_check</span>,
+        EccConfig {
+            advices,
+            add_incomplete,
+            add,
+            mul,
+            mul_fixed_full,
+            mul_fixed_short,
+            mul_fixed_base_field,
+            witness_point,
+            lookup_config: range_check,
         }
     }
 }
 
-<span class="doccomment">/// A full-width scalar used for fixed-base scalar multiplication.</span>
-<span class="doccomment">/// This is decomposed into 85 3-bit windows in little-endian order,</span>
-<span class="doccomment">/// i.e. `windows` = [k_0, k_1, ..., k_84] (for a 255-bit scalar)</span>
-<span class="doccomment">/// where `scalar = k_0 + k_1 * (2^3) + ... + k_84 * (2^3)^84` and</span>
-<span class="doccomment">/// each `k_i` is in the range [0..2^3).</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EccScalarFixed</span> {
-    <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Scalar</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The circuit-assigned windows representing this scalar, or `None` if the scalar has</span>
-    <span class="doccomment">/// not been used yet.</span>
-    <span class="ident">windows</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ArrayVec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>, { <span class="ident">NUM_WINDOWS</span> }<span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A full-width scalar used for fixed-base scalar multiplication.
+/// This is decomposed into 85 3-bit windows in little-endian order,
+/// i.e. `windows` = [k_0, k_1, ..., k_84] (for a 255-bit scalar)
+/// where `scalar = k_0 + k_1 * (2^3) + ... + k_84 * (2^3)^84` and
+/// each `k_i` is in the range [0..2^3).
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>EccScalarFixed {
+    value: Value&lt;pallas::Scalar&gt;,
+    <span class="doccomment">/// The circuit-assigned windows representing this scalar, or `None` if the scalar has
+    /// not been used yet.
+    </span>windows: <span class="prelude-ty">Option</span>&lt;ArrayVec&lt;AssignedCell&lt;pallas::Base, pallas::Base&gt;, { NUM_WINDOWS }&gt;&gt;,
 }
 
-<span class="comment">// TODO: Make V a `u64`</span>
-<span class="kw">type</span> <span class="ident">MagnitudeCell</span> <span class="op">=</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>;
-<span class="comment">// TODO: Make V an enum Sign { Positive, Negative }</span>
-<span class="kw">type</span> <span class="ident">SignCell</span> <span class="op">=</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>;
-<span class="kw">type</span> <span class="ident">MagnitudeSign</span> <span class="op">=</span> (<span class="ident">MagnitudeCell</span>, <span class="ident">SignCell</span>);
+<span class="comment">// TODO: Make V a `u64`
+</span><span class="kw">type </span>MagnitudeCell = AssignedCell&lt;pallas::Base, pallas::Base&gt;;
+<span class="comment">// TODO: Make V an enum Sign { Positive, Negative }
+</span><span class="kw">type </span>SignCell = AssignedCell&lt;pallas::Base, pallas::Base&gt;;
+<span class="kw">type </span>MagnitudeSign = (MagnitudeCell, SignCell);
 
-<span class="doccomment">/// A signed short scalar used for fixed-base scalar multiplication.</span>
-<span class="doccomment">/// A short scalar must have magnitude in the range [0..2^64), with</span>
-<span class="doccomment">/// a sign of either 1 or -1.</span>
-<span class="doccomment">/// This is decomposed into 3-bit windows in little-endian order</span>
-<span class="doccomment">/// using a running sum `z`, where z_{i+1} = (z_i - a_i) / (2^3)</span>
-<span class="doccomment">/// for element α = a_0 + (2^3) a_1 + ... + (2^{3(n-1)}) a_{n-1}.</span>
-<span class="doccomment">/// Each `a_i` is in the range [0..2^3).</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// `windows` = [k_0, k_1, ..., k_21] (for a 64-bit magnitude)</span>
-<span class="doccomment">/// where `scalar = k_0 + k_1 * (2^3) + ... + k_84 * (2^3)^84` and</span>
-<span class="doccomment">/// each `k_i` is in the range [0..2^3).</span>
-<span class="doccomment">/// k_21 must be a single bit, i.e. 0 or 1.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EccScalarFixedShort</span> {
-    <span class="ident">magnitude</span>: <span class="ident">MagnitudeCell</span>,
-    <span class="ident">sign</span>: <span class="ident">SignCell</span>,
-    <span class="doccomment">/// The circuit-assigned running sum constraining this signed short scalar, or `None`</span>
-    <span class="doccomment">/// if the scalar has not been used yet.</span>
-    <span class="ident">running_sum</span>:
-        <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ArrayVec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>, { <span class="ident">NUM_WINDOWS_SHORT</span> <span class="op">+</span> <span class="number">1</span> }<span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A signed short scalar used for fixed-base scalar multiplication.
+/// A short scalar must have magnitude in the range [0..2^64), with
+/// a sign of either 1 or -1.
+/// This is decomposed into 3-bit windows in little-endian order
+/// using a running sum `z`, where z_{i+1} = (z_i - a_i) / (2^3)
+/// for element α = a_0 + (2^3) a_1 + ... + (2^{3(n-1)}) a_{n-1}.
+/// Each `a_i` is in the range [0..2^3).
+///
+/// `windows` = [k_0, k_1, ..., k_21] (for a 64-bit magnitude)
+/// where `scalar = k_0 + k_1 * (2^3) + ... + k_84 * (2^3)^84` and
+/// each `k_i` is in the range [0..2^3).
+/// k_21 must be a single bit, i.e. 0 or 1.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>EccScalarFixedShort {
+    magnitude: MagnitudeCell,
+    sign: SignCell,
+    <span class="doccomment">/// The circuit-assigned running sum constraining this signed short scalar, or `None`
+    /// if the scalar has not been used yet.
+    </span>running_sum:
+        <span class="prelude-ty">Option</span>&lt;ArrayVec&lt;AssignedCell&lt;pallas::Base, pallas::Base&gt;, { NUM_WINDOWS_SHORT + <span class="number">1 </span>}&gt;&gt;,
 }
 
-<span class="doccomment">/// A base field element used for fixed-base scalar multiplication.</span>
-<span class="doccomment">/// This is decomposed into 3-bit windows in little-endian order</span>
-<span class="doccomment">/// using a running sum `z`, where z_{i+1} = (z_i - a_i) / (2^3)</span>
-<span class="doccomment">/// for element α = a_0 + (2^3) a_1 + ... + (2^{3(n-1)}) a_{n-1}.</span>
-<span class="doccomment">/// Each `a_i` is in the range [0..2^3).</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// `running_sum` = [z_0, ..., z_85], where we expect z_85 = 0.</span>
-<span class="doccomment">/// Since z_0 is initialized as the scalar α, we store it as</span>
-<span class="doccomment">/// `base_field_elem`.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">struct</span> <span class="ident">EccBaseFieldElemFixed</span> {
-    <span class="ident">base_field_elem</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-    <span class="ident">running_sum</span>: <span class="ident">ArrayVec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>, { <span class="ident">NUM_WINDOWS</span> <span class="op">+</span> <span class="number">1</span> }<span class="op">&gt;</span>,
+<span class="doccomment">/// A base field element used for fixed-base scalar multiplication.
+/// This is decomposed into 3-bit windows in little-endian order
+/// using a running sum `z`, where z_{i+1} = (z_i - a_i) / (2^3)
+/// for element α = a_0 + (2^3) a_1 + ... + (2^{3(n-1)}) a_{n-1}.
+/// Each `a_i` is in the range [0..2^3).
+///
+/// `running_sum` = [z_0, ..., z_85], where we expect z_85 = 0.
+/// Since z_0 is initialized as the scalar α, we store it as
+/// `base_field_elem`.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">struct </span>EccBaseFieldElemFixed {
+    base_field_elem: AssignedCell&lt;pallas::Base, pallas::Base&gt;,
+    running_sum: ArrayVec&lt;AssignedCell&lt;pallas::Base, pallas::Base&gt;, { NUM_WINDOWS + <span class="number">1 </span>}&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">EccBaseFieldElemFixed</span> {
-    <span class="kw">fn</span> <span class="ident">base_field_elem</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">base_field_elem</span>.<span class="ident">clone</span>()
+<span class="kw">impl </span>EccBaseFieldElemFixed {
+    <span class="kw">fn </span>base_field_elem(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AssignedCell&lt;pallas::Base, pallas::Base&gt; {
+        <span class="self">self</span>.base_field_elem.clone()
     }
 }
 
-<span class="doccomment">/// An enumeration of the possible types of scalars used in variable-base</span>
-<span class="doccomment">/// multiplication.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ScalarVar</span> {
-    <span class="doccomment">/// An element of the elliptic curve&#39;s base field, that is used as a scalar</span>
-    <span class="doccomment">/// in variable-base scalar mul.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// It is not true in general that a scalar field element fits in a curve&#39;s</span>
-    <span class="doccomment">/// base field, and in particular it is untrue for the Pallas curve, whose</span>
-    <span class="doccomment">/// scalar field `Fq` is larger than its base field `Fp`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// However, the only use of variable-base scalar mul in the Orchard protocol</span>
-    <span class="doccomment">/// is in deriving diversified addresses `[ivk] g_d`,  and `ivk` is guaranteed</span>
-    <span class="doccomment">/// to be in the base field of the curve. (See non-normative notes in</span>
-    <span class="doccomment">/// [4.2.3 Orchard Key Components][orchardkeycomponents].)</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [orchardkeycomponents]: https://zips.z.cash/protocol/protocol.pdf#orchardkeycomponents</span>
-    <span class="ident">BaseFieldElem</span>(<span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>),
-    <span class="doccomment">/// A full-width scalar. This is unimplemented for halo2_gadgets v0.1.0.</span>
-    <span class="ident">FullWidth</span>,
+<span class="doccomment">/// An enumeration of the possible types of scalars used in variable-base
+/// multiplication.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub enum </span>ScalarVar {
+    <span class="doccomment">/// An element of the elliptic curve&#39;s base field, that is used as a scalar
+    /// in variable-base scalar mul.
+    ///
+    /// It is not true in general that a scalar field element fits in a curve&#39;s
+    /// base field, and in particular it is untrue for the Pallas curve, whose
+    /// scalar field `Fq` is larger than its base field `Fp`.
+    ///
+    /// However, the only use of variable-base scalar mul in the Orchard protocol
+    /// is in deriving diversified addresses `[ivk] g_d`,  and `ivk` is guaranteed
+    /// to be in the base field of the curve. (See non-normative notes in
+    /// [4.2.3 Orchard Key Components][orchardkeycomponents].)
+    ///
+    /// [orchardkeycomponents]: https://zips.z.cash/protocol/protocol.pdf#orchardkeycomponents
+    </span>BaseFieldElem(AssignedCell&lt;pallas::Base, pallas::Base&gt;),
+    <span class="doccomment">/// A full-width scalar. This is unimplemented for halo2_gadgets v0.1.0.
+    </span>FullWidth,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Fixed</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EccChip</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="op">&lt;</span><span class="ident">Fixed</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Base</span>:
-        <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">FixedScalarKind</span> <span class="op">=</span> <span class="ident">BaseFieldElem</span><span class="op">&gt;</span>,
-    <span class="op">&lt;</span><span class="ident">Fixed</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::FullScalar</span>:
-        <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">FixedScalarKind</span> <span class="op">=</span> <span class="ident">FullScalar</span><span class="op">&gt;</span>,
-    <span class="op">&lt;</span><span class="ident">Fixed</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::ShortScalar</span>:
-        <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">FixedScalarKind</span> <span class="op">=</span> <span class="ident">ShortScalar</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;Fixed: FixedPoints&lt;pallas::Affine&gt;&gt; EccInstructions&lt;pallas::Affine&gt; <span class="kw">for </span>EccChip&lt;Fixed&gt;
+<span class="kw">where
+    </span>&lt;Fixed <span class="kw">as </span>FixedPoints&lt;pallas::Affine&gt;&gt;::Base:
+        FixedPoint&lt;pallas::Affine, FixedScalarKind = BaseFieldElem&gt;,
+    &lt;Fixed <span class="kw">as </span>FixedPoints&lt;pallas::Affine&gt;&gt;::FullScalar:
+        FixedPoint&lt;pallas::Affine, FixedScalarKind = FullScalar&gt;,
+    &lt;Fixed <span class="kw">as </span>FixedPoints&lt;pallas::Affine&gt;&gt;::ShortScalar:
+        FixedPoint&lt;pallas::Affine, FixedScalarKind = ShortScalar&gt;,
 {
-    <span class="kw">type</span> <span class="ident">ScalarFixed</span> <span class="op">=</span> <span class="ident">EccScalarFixed</span>;
-    <span class="kw">type</span> <span class="ident">ScalarFixedShort</span> <span class="op">=</span> <span class="ident">EccScalarFixedShort</span>;
-    <span class="kw">type</span> <span class="ident">ScalarVar</span> <span class="op">=</span> <span class="ident">ScalarVar</span>;
-    <span class="kw">type</span> <span class="ident">Point</span> <span class="op">=</span> <span class="ident">EccPoint</span>;
-    <span class="kw">type</span> <span class="ident">NonIdentityPoint</span> <span class="op">=</span> <span class="ident">NonIdentityEccPoint</span>;
-    <span class="kw">type</span> <span class="ident">X</span> <span class="op">=</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">FixedPoints</span> <span class="op">=</span> <span class="ident">Fixed</span>;
+    <span class="kw">type </span>ScalarFixed = EccScalarFixed;
+    <span class="kw">type </span>ScalarFixedShort = EccScalarFixedShort;
+    <span class="kw">type </span>ScalarVar = ScalarVar;
+    <span class="kw">type </span>Point = EccPoint;
+    <span class="kw">type </span>NonIdentityPoint = NonIdentityEccPoint;
+    <span class="kw">type </span>X = AssignedCell&lt;pallas::Base, pallas::Base&gt;;
+    <span class="kw">type </span>FixedPoints = Fixed;
 
-    <span class="kw">fn</span> <span class="ident">constrain_equal</span>(
+    <span class="kw">fn </span>constrain_equal(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">a</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Point</span>,
-        <span class="ident">b</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Point</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;constrain equal&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                <span class="comment">// Constrain x-coordinates</span>
-                <span class="ident">region</span>.<span class="ident">constrain_equal</span>(<span class="ident">a</span>.<span class="ident">x</span>().<span class="ident">cell</span>(), <span class="ident">b</span>.<span class="ident">x</span>().<span class="ident">cell</span>())<span class="question-mark">?</span>;
-                <span class="comment">// Constrain x-coordinates</span>
-                <span class="ident">region</span>.<span class="ident">constrain_equal</span>(<span class="ident">a</span>.<span class="ident">y</span>().<span class="ident">cell</span>(), <span class="ident">b</span>.<span class="ident">y</span>().<span class="ident">cell</span>())
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        a: <span class="kw-2">&amp;</span><span class="self">Self</span>::Point,
+        b: <span class="kw-2">&amp;</span><span class="self">Self</span>::Point,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        layouter.assign_region(
+            || <span class="string">&quot;constrain equal&quot;</span>,
+            |<span class="kw-2">mut </span>region| {
+                <span class="comment">// Constrain x-coordinates
+                </span>region.constrain_equal(a.x().cell(), b.x().cell())<span class="question-mark">?</span>;
+                <span class="comment">// Constrain x-coordinates
+                </span>region.constrain_equal(a.y().cell(), b.y().cell())
             },
         )
     }
 
-    <span class="kw">fn</span> <span class="ident">witness_point</span>(
+    <span class="kw">fn </span>witness_point(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">witness_point</span>;
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;witness point&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> <span class="ident">config</span>.<span class="ident">point</span>(<span class="ident">value</span>, <span class="number">0</span>, <span class="kw-2">&amp;mut</span> <span class="ident">region</span>),
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        value: Value&lt;pallas::Affine&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Point, Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().witness_point;
+        layouter.assign_region(
+            || <span class="string">&quot;witness point&quot;</span>,
+            |<span class="kw-2">mut </span>region| config.point(value, <span class="number">0</span>, <span class="kw-2">&amp;mut </span>region),
         )
     }
 
-    <span class="kw">fn</span> <span class="ident">witness_point_non_id</span>(
+    <span class="kw">fn </span>witness_point_non_id(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">witness_point</span>;
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;witness non-identity point&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> <span class="ident">config</span>.<span class="ident">point_non_id</span>(<span class="ident">value</span>, <span class="number">0</span>, <span class="kw-2">&amp;mut</span> <span class="ident">region</span>),
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        value: Value&lt;pallas::Affine&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::NonIdentityPoint, Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().witness_point;
+        layouter.assign_region(
+            || <span class="string">&quot;witness non-identity point&quot;</span>,
+            |<span class="kw-2">mut </span>region| config.point_non_id(value, <span class="number">0</span>, <span class="kw-2">&amp;mut </span>region),
         )
     }
 
-    <span class="kw">fn</span> <span class="ident">witness_scalar_var</span>(
+    <span class="kw">fn </span>witness_scalar_var(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">_layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">_value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Scalar</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ScalarVar</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// This is unimplemented for halo2_gadgets v0.1.0.</span>
-        <span class="macro">todo!</span>()
+        _layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        _value: Value&lt;pallas::Scalar&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::ScalarVar, Error&gt; {
+        <span class="comment">// This is unimplemented for halo2_gadgets v0.1.0.
+        </span><span class="macro">todo!</span>()
     }
 
-    <span class="kw">fn</span> <span class="ident">witness_scalar_fixed</span>(
+    <span class="kw">fn </span>witness_scalar_fixed(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">_layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Scalar</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ScalarFixed</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">EccScalarFixed</span> {
-            <span class="ident">value</span>,
-            <span class="comment">// This chip uses lazy witnessing.</span>
-            <span class="ident">windows</span>: <span class="prelude-val">None</span>,
+        _layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        value: Value&lt;pallas::Scalar&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::ScalarFixed, Error&gt; {
+        <span class="prelude-val">Ok</span>(EccScalarFixed {
+            value,
+            <span class="comment">// This chip uses lazy witnessing.
+            </span>windows: <span class="prelude-val">None</span>,
         })
     }
 
-    <span class="kw">fn</span> <span class="ident">scalar_fixed_from_signed_short</span>(
+    <span class="kw">fn </span>scalar_fixed_from_signed_short(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">_layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        (<span class="ident">magnitude</span>, <span class="ident">sign</span>): <span class="ident">MagnitudeSign</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ScalarFixedShort</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">EccScalarFixedShort</span> {
-            <span class="ident">magnitude</span>,
-            <span class="ident">sign</span>,
-            <span class="comment">// This chip uses lazy constraining.</span>
-            <span class="ident">running_sum</span>: <span class="prelude-val">None</span>,
+        _layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        (magnitude, sign): MagnitudeSign,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::ScalarFixedShort, Error&gt; {
+        <span class="prelude-val">Ok</span>(EccScalarFixedShort {
+            magnitude,
+            sign,
+            <span class="comment">// This chip uses lazy constraining.
+            </span>running_sum: <span class="prelude-val">None</span>,
         })
     }
 
-    <span class="kw">fn</span> <span class="ident">extract_p</span><span class="op">&lt;</span><span class="ident">Point</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(<span class="ident">point</span>: <span class="kw-2">&amp;</span><span class="ident">Point</span>) -&gt; <span class="ident"><span class="self">Self</span>::X</span> {
-        <span class="kw">let</span> <span class="ident">point</span>: <span class="ident">EccPoint</span> <span class="op">=</span> (<span class="ident">point</span>.<span class="ident">clone</span>()).<span class="ident">into</span>();
-        <span class="ident">point</span>.<span class="ident">x</span>()
+    <span class="kw">fn </span>extract_p&lt;Point: Into&lt;<span class="self">Self</span>::Point&gt; + Clone&gt;(point: <span class="kw-2">&amp;</span>Point) -&gt; <span class="self">Self</span>::X {
+        <span class="kw">let </span>point: EccPoint = (point.clone()).into();
+        point.x()
     }
 
-    <span class="kw">fn</span> <span class="ident">add_incomplete</span>(
+    <span class="kw">fn </span>add_incomplete(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">a</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>,
-        <span class="ident">b</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">add_incomplete</span>;
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;incomplete point addition&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> <span class="ident">config</span>.<span class="ident">assign_region</span>(<span class="ident">a</span>, <span class="ident">b</span>, <span class="number">0</span>, <span class="kw-2">&amp;mut</span> <span class="ident">region</span>),
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        a: <span class="kw-2">&amp;</span><span class="self">Self</span>::NonIdentityPoint,
+        b: <span class="kw-2">&amp;</span><span class="self">Self</span>::NonIdentityPoint,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::NonIdentityPoint, Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().add_incomplete;
+        layouter.assign_region(
+            || <span class="string">&quot;incomplete point addition&quot;</span>,
+            |<span class="kw-2">mut </span>region| config.assign_region(a, b, <span class="number">0</span>, <span class="kw-2">&amp;mut </span>region),
         )
     }
 
-    <span class="kw">fn</span> <span class="ident">add</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>, <span class="ident">B</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span>(
+    <span class="kw">fn </span>add&lt;A: Into&lt;<span class="self">Self</span>::Point&gt; + Clone, B: Into&lt;<span class="self">Self</span>::Point&gt; + Clone&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">a</span>: <span class="kw-2">&amp;</span><span class="ident">A</span>,
-        <span class="ident">b</span>: <span class="kw-2">&amp;</span><span class="ident">B</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">add</span>;
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;complete point addition&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                <span class="ident">config</span>.<span class="ident">assign_region</span>(<span class="kw-2">&amp;</span>(<span class="ident">a</span>.<span class="ident">clone</span>()).<span class="ident">into</span>(), <span class="kw-2">&amp;</span>(<span class="ident">b</span>.<span class="ident">clone</span>()).<span class="ident">into</span>(), <span class="number">0</span>, <span class="kw-2">&amp;mut</span> <span class="ident">region</span>)
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        a: <span class="kw-2">&amp;</span>A,
+        b: <span class="kw-2">&amp;</span>B,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Point, Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().add;
+        layouter.assign_region(
+            || <span class="string">&quot;complete point addition&quot;</span>,
+            |<span class="kw-2">mut </span>region| {
+                config.assign_region(<span class="kw-2">&amp;</span>(a.clone()).into(), <span class="kw-2">&amp;</span>(b.clone()).into(), <span class="number">0</span>, <span class="kw-2">&amp;mut </span>region)
             },
         )
     }
 
-    <span class="kw">fn</span> <span class="ident">mul</span>(
+    <span class="kw">fn </span>mul(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">scalar</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ScalarVar</span>,
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident"><span class="self">Self</span>::ScalarVar</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">mul</span>;
-        <span class="kw">match</span> <span class="ident">scalar</span> {
-            <span class="ident">ScalarVar::BaseFieldElem</span>(<span class="ident">scalar</span>) =&gt; <span class="ident">config</span>.<span class="ident">assign</span>(
-                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;variable-base scalar mul&quot;</span>),
-                <span class="ident">scalar</span>.<span class="ident">clone</span>(),
-                <span class="ident">base</span>,
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        scalar: <span class="kw-2">&amp;</span><span class="self">Self</span>::ScalarVar,
+        base: <span class="kw-2">&amp;</span><span class="self">Self</span>::NonIdentityPoint,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::Point, <span class="self">Self</span>::ScalarVar), Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().mul;
+        <span class="kw">match </span>scalar {
+            ScalarVar::BaseFieldElem(scalar) =&gt; config.assign(
+                layouter.namespace(|| <span class="string">&quot;variable-base scalar mul&quot;</span>),
+                scalar.clone(),
+                base,
             ),
-            <span class="ident">ScalarVar::FullWidth</span> =&gt; {
+            ScalarVar::FullWidth =&gt; {
                 <span class="macro">todo!</span>()
             }
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">mul_fixed</span>(
+    <span class="kw">fn </span>mul_fixed(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">scalar</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ScalarFixed</span>,
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::FullScalar</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident"><span class="self">Self</span>::ScalarFixed</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">mul_fixed_full</span>.<span class="ident">clone</span>();
-        <span class="ident">config</span>.<span class="ident">assign</span>(
-            <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;fixed-base mul of {:?}&quot;</span>, <span class="ident">base</span>)),
-            <span class="ident">scalar</span>,
-            <span class="ident">base</span>,
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        scalar: <span class="kw-2">&amp;</span><span class="self">Self</span>::ScalarFixed,
+        base: <span class="kw-2">&amp;</span>&lt;<span class="self">Self</span>::FixedPoints <span class="kw">as </span>FixedPoints&lt;pallas::Affine&gt;&gt;::FullScalar,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::Point, <span class="self">Self</span>::ScalarFixed), Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().mul_fixed_full.clone();
+        config.assign(
+            layouter.namespace(|| <span class="macro">format!</span>(<span class="string">&quot;fixed-base mul of {:?}&quot;</span>, base)),
+            scalar,
+            base,
         )
     }
 
-    <span class="kw">fn</span> <span class="ident">mul_fixed_short</span>(
+    <span class="kw">fn </span>mul_fixed_short(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">scalar</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::ScalarFixedShort</span>,
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::ShortScalar</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident"><span class="self">Self</span>::ScalarFixedShort</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">mul_fixed_short</span>.<span class="ident">clone</span>();
-        <span class="ident">config</span>.<span class="ident">assign</span>(
-            <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;short fixed-base mul of {:?}&quot;</span>, <span class="ident">base</span>)),
-            <span class="ident">scalar</span>,
-            <span class="ident">base</span>,
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        scalar: <span class="kw-2">&amp;</span><span class="self">Self</span>::ScalarFixedShort,
+        base: <span class="kw-2">&amp;</span>&lt;<span class="self">Self</span>::FixedPoints <span class="kw">as </span>FixedPoints&lt;pallas::Affine&gt;&gt;::ShortScalar,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::Point, <span class="self">Self</span>::ScalarFixedShort), Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().mul_fixed_short.clone();
+        config.assign(
+            layouter.namespace(|| <span class="macro">format!</span>(<span class="string">&quot;short fixed-base mul of {:?}&quot;</span>, base)),
+            scalar,
+            base,
         )
     }
 
-    <span class="kw">fn</span> <span class="ident">mul_fixed_base_field_elem</span>(
+    <span class="kw">fn </span>mul_fixed_base_field_elem(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">base_field_elem</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::FixedPoints</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Base</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Point</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">mul_fixed_base_field</span>.<span class="ident">clone</span>();
-        <span class="ident">config</span>.<span class="ident">assign</span>(
-            <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;base-field elem fixed-base mul of {:?}&quot;</span>, <span class="ident">base</span>)),
-            <span class="ident">base_field_elem</span>,
-            <span class="ident">base</span>,
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        base_field_elem: AssignedCell&lt;pallas::Base, pallas::Base&gt;,
+        base: <span class="kw-2">&amp;</span>&lt;<span class="self">Self</span>::FixedPoints <span class="kw">as </span>FixedPoints&lt;pallas::Affine&gt;&gt;::Base,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Point, Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().mul_fixed_base_field.clone();
+        config.assign(
+            layouter.namespace(|| <span class="macro">format!</span>(<span class="string">&quot;base-field elem fixed-base mul of {:?}&quot;</span>, base)),
+            base_field_elem,
+            base,
         )
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Fixed</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">BaseFitsInScalarInstructions</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">EccChip</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="op">&lt;</span><span class="ident">Fixed</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Base</span>:
-        <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">FixedScalarKind</span> <span class="op">=</span> <span class="ident">BaseFieldElem</span><span class="op">&gt;</span>,
-    <span class="op">&lt;</span><span class="ident">Fixed</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::FullScalar</span>:
-        <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">FixedScalarKind</span> <span class="op">=</span> <span class="ident">FullScalar</span><span class="op">&gt;</span>,
-    <span class="op">&lt;</span><span class="ident">Fixed</span> <span class="kw">as</span> <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::ShortScalar</span>:
-        <span class="ident">FixedPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">FixedScalarKind</span> <span class="op">=</span> <span class="ident">ShortScalar</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;Fixed: FixedPoints&lt;pallas::Affine&gt;&gt; BaseFitsInScalarInstructions&lt;pallas::Affine&gt;
+    <span class="kw">for </span>EccChip&lt;Fixed&gt;
+<span class="kw">where
+    </span>&lt;Fixed <span class="kw">as </span>FixedPoints&lt;pallas::Affine&gt;&gt;::Base:
+        FixedPoint&lt;pallas::Affine, FixedScalarKind = BaseFieldElem&gt;,
+    &lt;Fixed <span class="kw">as </span>FixedPoints&lt;pallas::Affine&gt;&gt;::FullScalar:
+        FixedPoint&lt;pallas::Affine, FixedScalarKind = FullScalar&gt;,
+    &lt;Fixed <span class="kw">as </span>FixedPoints&lt;pallas::Affine&gt;&gt;::ShortScalar:
+        FixedPoint&lt;pallas::Affine, FixedScalarKind = ShortScalar&gt;,
 {
-    <span class="kw">fn</span> <span class="ident">scalar_var_from_base</span>(
+    <span class="kw">fn </span>scalar_var_from_base(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">_layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">base</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Var</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::ScalarVar</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">ScalarVar::BaseFieldElem</span>(<span class="ident">base</span>.<span class="ident">clone</span>()))
+        _layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        base: <span class="kw-2">&amp;</span><span class="self">Self</span>::Var,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::ScalarVar, Error&gt; {
+        <span class="prelude-val">Ok</span>(ScalarVar::BaseFieldElem(base.clone()))
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

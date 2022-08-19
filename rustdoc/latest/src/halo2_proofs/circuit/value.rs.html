@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -717,704 +711,703 @@
 <span id="696">696</span>
 <span id="697">697</span>
 <span id="698">698</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::borrow::Borrow</span>;
-<span class="kw">use</span> <span class="ident">std::ops</span>::{<span class="ident">Add</span>, <span class="ident">Mul</span>, <span class="ident">Neg</span>, <span class="ident">Sub</span>};
+</pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Borrow;
+<span class="kw">use </span>std::ops::{Add, Mul, Neg, Sub};
 
-<span class="kw">use</span> <span class="ident">group::ff::Field</span>;
+<span class="kw">use </span>group::ff::Field;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::plonk</span>::{<span class="ident">Assigned</span>, <span class="ident">Error</span>};
+<span class="kw">use </span><span class="kw">crate</span>::plonk::{Assigned, Error};
 
-<span class="doccomment">/// A value that might exist within a circuit.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// This behaves like `Option&lt;V&gt;` but differs in two key ways:</span>
-<span class="doccomment">/// - It does not expose the enum cases, or provide an `Option::unwrap` equivalent. This</span>
-<span class="doccomment">///   helps to ensure that unwitnessed values correctly propagate.</span>
-<span class="doccomment">/// - It provides pass-through implementations of common traits such as `Add` and `Mul`,</span>
-<span class="doccomment">///   for improved usability.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="ident">inner</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A value that might exist within a circuit.
+///
+/// This behaves like `Option&lt;V&gt;` but differs in two key ways:
+/// - It does not expose the enum cases, or provide an `Option::unwrap` equivalent. This
+///   helps to ensure that unwitnessed values correctly propagate.
+/// - It provides pass-through implementations of common traits such as `Add` and `Mul`,
+///   for improved usability.
+</span><span class="attribute">#[derive(Clone, Copy, Debug)]</span>
+<span class="kw">pub struct </span>Value&lt;V&gt; {
+    inner: <span class="prelude-ty">Option</span>&lt;V&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident"><span class="self">Self</span>::unknown</span>()
-    }
-}
-
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Constructs an unwitnessed value.</span>
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">unknown</span>() -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">inner</span>: <span class="prelude-val">None</span> }
-    }
-
-    <span class="doccomment">/// Constructs a known value.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Examples</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// use halo2_proofs::circuit::Value;</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// let v = Value::known(37);</span>
-    <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">known</span>(<span class="ident">value</span>: <span class="ident">V</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">inner</span>: <span class="prelude-val">Some</span>(<span class="ident">value</span>) }
-    }
-
-    <span class="doccomment">/// Obtains the inner value for assigning into the circuit.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Returns `Error::Synthesis` if this is [`Value::unknown()`].</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">assign</span>(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">ok_or</span>(<span class="ident">Error::Synthesis</span>)
-    }
-
-    <span class="doccomment">/// Converts from `&amp;Value&lt;V&gt;` to `Value&lt;&amp;V&gt;`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_ref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">V</span><span class="op">&gt;</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">as_ref</span>(),
-        }
-    }
-
-    <span class="doccomment">/// Converts from `&amp;mut Value&lt;V&gt;` to `Value&lt;&amp;mut V&gt;`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_mut</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="ident">V</span><span class="op">&gt;</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">as_mut</span>(),
-        }
-    }
-
-    <span class="doccomment">/// Enforces an assertion on the contained value, if known.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The assertion is ignored if `self` is [`Value::unknown()`]. Do not try to enforce</span>
-    <span class="doccomment">/// circuit constraints with this method!</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Panics</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Panics if `f` returns `false`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assert_if_known</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FnOnce</span>(<span class="kw-2">&amp;</span><span class="ident">V</span>) -&gt; <span class="ident">bool</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="ident">F</span>) {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">value</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">as_ref</span>() {
-            <span class="macro">assert!</span>(<span class="ident">f</span>(<span class="ident">value</span>));
-        }
-    }
-
-    <span class="doccomment">/// Checks the contained value for an error condition, if known.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The error check is ignored if `self` is [`Value::unknown()`]. Do not try to</span>
-    <span class="doccomment">/// enforce circuit constraints with this method!</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">error_if_known_and</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FnOnce</span>(<span class="kw-2">&amp;</span><span class="ident">V</span>) -&gt; <span class="ident">bool</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="ident">F</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">as_ref</span>() {
-            <span class="prelude-val">Some</span>(<span class="ident">value</span>) <span class="kw">if</span> <span class="ident">f</span>(<span class="ident">value</span>) =&gt; <span class="prelude-val">Err</span>(<span class="ident">Error::Synthesis</span>),
-            <span class="kw">_</span> =&gt; <span class="prelude-val">Ok</span>(()),
-        }
-    }
-
-    <span class="doccomment">/// Maps a `Value&lt;V&gt;` to `Value&lt;W&gt;` by applying a function to the contained value.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">map</span><span class="op">&lt;</span><span class="ident">W</span>, <span class="ident">F</span>: <span class="ident">FnOnce</span>(<span class="ident">V</span>) -&gt; <span class="ident">W</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">f</span>: <span class="ident">F</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">W</span><span class="op">&gt;</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">map</span>(<span class="ident">f</span>),
-        }
-    }
-
-    <span class="doccomment">/// Returns [`Value::unknown()`] if the value is [`Value::unknown()`], otherwise calls</span>
-    <span class="doccomment">/// `f` with the wrapped value and returns the result.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">and_then</span><span class="op">&lt;</span><span class="ident">W</span>, <span class="ident">F</span>: <span class="ident">FnOnce</span>(<span class="ident">V</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">W</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">f</span>: <span class="ident">F</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">W</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">inner</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">v</span>) =&gt; <span class="ident">f</span>(<span class="ident">v</span>),
-            <span class="prelude-val">None</span> =&gt; <span class="ident">Value::unknown</span>(),
-        }
-    }
-
-    <span class="doccomment">/// Zips `self` with another `Value`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If `self` is `Value::known(s)` and `other` is `Value::known(o)`, this method</span>
-    <span class="doccomment">/// returns `Value::known((s, o))`. Otherwise, [`Value::unknown()`] is returned.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">zip</span><span class="op">&lt;</span><span class="ident">W</span><span class="op">&gt;</span>(<span class="self">self</span>, <span class="ident">other</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">W</span><span class="op">&gt;</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>(<span class="ident">V</span>, <span class="ident">W</span>)<span class="op">&gt;</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">other</span>.<span class="ident">inner</span>),
-        }
+<span class="kw">impl</span>&lt;V&gt; Default <span class="kw">for </span>Value&lt;V&gt; {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::unknown()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">W</span><span class="op">&gt;</span> <span class="ident">Value</span><span class="op">&lt;</span>(<span class="ident">V</span>, <span class="ident">W</span>)<span class="op">&gt;</span> {
-    <span class="doccomment">/// Unzips a value containing a tuple of two values.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If `self` is `Value::known((a, b)), this method returns</span>
-    <span class="doccomment">/// `(Value::known(a), Value::known(b))`. Otherwise,</span>
-    <span class="doccomment">/// `(Value::unknown(), Value::unknown())` is returned.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">unzip</span>(<span class="self">self</span>) -&gt; (<span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">W</span><span class="op">&gt;</span>) {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">inner</span> {
-            <span class="prelude-val">Some</span>((<span class="ident">a</span>, <span class="ident">b</span>)) =&gt; (<span class="ident">Value::known</span>(<span class="ident">a</span>), <span class="ident">Value::known</span>(<span class="ident">b</span>)),
-            <span class="prelude-val">None</span> =&gt; (<span class="ident">Value::unknown</span>(), <span class="ident">Value::unknown</span>()),
+<span class="kw">impl</span>&lt;V&gt; Value&lt;V&gt; {
+    <span class="doccomment">/// Constructs an unwitnessed value.
+    </span><span class="kw">pub const fn </span>unknown() -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ inner: <span class="prelude-val">None </span>}
+    }
+
+    <span class="doccomment">/// Constructs a known value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use halo2_proofs::circuit::Value;
+    ///
+    /// let v = Value::known(37);
+    /// ```
+    </span><span class="kw">pub const fn </span>known(value: V) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ inner: <span class="prelude-val">Some</span>(value) }
+    }
+
+    <span class="doccomment">/// Obtains the inner value for assigning into the circuit.
+    ///
+    /// Returns `Error::Synthesis` if this is [`Value::unknown()`].
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>assign(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;V, Error&gt; {
+        <span class="self">self</span>.inner.ok_or(Error::Synthesis)
+    }
+
+    <span class="doccomment">/// Converts from `&amp;Value&lt;V&gt;` to `Value&lt;&amp;V&gt;`.
+    </span><span class="kw">pub fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;<span class="kw-2">&amp;</span>V&gt; {
+        Value {
+            inner: <span class="self">self</span>.inner.as_ref(),
+        }
+    }
+
+    <span class="doccomment">/// Converts from `&amp;mut Value&lt;V&gt;` to `Value&lt;&amp;mut V&gt;`.
+    </span><span class="kw">pub fn </span>as_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Value&lt;<span class="kw-2">&amp;mut </span>V&gt; {
+        Value {
+            inner: <span class="self">self</span>.inner.as_mut(),
+        }
+    }
+
+    <span class="doccomment">/// Enforces an assertion on the contained value, if known.
+    ///
+    /// The assertion is ignored if `self` is [`Value::unknown()`]. Do not try to enforce
+    /// circuit constraints with this method!
+    ///
+    /// # Panics
+    ///
+    /// Panics if `f` returns `false`.
+    </span><span class="kw">pub fn </span>assert_if_known&lt;F: FnOnce(<span class="kw-2">&amp;</span>V) -&gt; bool&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, f: F) {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = <span class="self">self</span>.inner.as_ref() {
+            <span class="macro">assert!</span>(f(value));
+        }
+    }
+
+    <span class="doccomment">/// Checks the contained value for an error condition, if known.
+    ///
+    /// The error check is ignored if `self` is [`Value::unknown()`]. Do not try to
+    /// enforce circuit constraints with this method!
+    </span><span class="kw">pub fn </span>error_if_known_and&lt;F: FnOnce(<span class="kw-2">&amp;</span>V) -&gt; bool&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, f: F) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">match </span><span class="self">self</span>.inner.as_ref() {
+            <span class="prelude-val">Some</span>(value) <span class="kw">if </span>f(value) =&gt; <span class="prelude-val">Err</span>(Error::Synthesis),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(()),
+        }
+    }
+
+    <span class="doccomment">/// Maps a `Value&lt;V&gt;` to `Value&lt;W&gt;` by applying a function to the contained value.
+    </span><span class="kw">pub fn </span>map&lt;W, F: FnOnce(V) -&gt; W&gt;(<span class="self">self</span>, f: F) -&gt; Value&lt;W&gt; {
+        Value {
+            inner: <span class="self">self</span>.inner.map(f),
+        }
+    }
+
+    <span class="doccomment">/// Returns [`Value::unknown()`] if the value is [`Value::unknown()`], otherwise calls
+    /// `f` with the wrapped value and returns the result.
+    </span><span class="kw">pub fn </span>and_then&lt;W, F: FnOnce(V) -&gt; Value&lt;W&gt;&gt;(<span class="self">self</span>, f: F) -&gt; Value&lt;W&gt; {
+        <span class="kw">match </span><span class="self">self</span>.inner {
+            <span class="prelude-val">Some</span>(v) =&gt; f(v),
+            <span class="prelude-val">None </span>=&gt; Value::unknown(),
+        }
+    }
+
+    <span class="doccomment">/// Zips `self` with another `Value`.
+    ///
+    /// If `self` is `Value::known(s)` and `other` is `Value::known(o)`, this method
+    /// returns `Value::known((s, o))`. Otherwise, [`Value::unknown()`] is returned.
+    </span><span class="kw">pub fn </span>zip&lt;W&gt;(<span class="self">self</span>, other: Value&lt;W&gt;) -&gt; Value&lt;(V, W)&gt; {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(other.inner),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Maps a `Value&lt;&amp;V&gt;` to a `Value&lt;V&gt;` by copying the contents of the value.</span>
-    <span class="attribute">#[<span class="ident">must_use</span> <span class="op">=</span> <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">copied</span>(<span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">Copy</span>,
+<span class="kw">impl</span>&lt;V, W&gt; Value&lt;(V, W)&gt; {
+    <span class="doccomment">/// Unzips a value containing a tuple of two values.
+    ///
+    /// If `self` is `Value::known((a, b)), this method returns
+    /// `(Value::known(a), Value::known(b))`. Otherwise,
+    /// `(Value::unknown(), Value::unknown())` is returned.
+    </span><span class="kw">pub fn </span>unzip(<span class="self">self</span>) -&gt; (Value&lt;V&gt;, Value&lt;W&gt;) {
+        <span class="kw">match </span><span class="self">self</span>.inner {
+            <span class="prelude-val">Some</span>((a, b)) =&gt; (Value::known(a), Value::known(b)),
+            <span class="prelude-val">None </span>=&gt; (Value::unknown(), Value::unknown()),
+        }
+    }
+}
+
+<span class="kw">impl</span>&lt;V&gt; Value&lt;<span class="kw-2">&amp;</span>V&gt; {
+    <span class="doccomment">/// Maps a `Value&lt;&amp;V&gt;` to a `Value&lt;V&gt;` by copying the contents of the value.
+    </span><span class="attribute">#[must_use = <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]</span>
+    <span class="kw">pub fn </span>copied(<span class="self">self</span>) -&gt; Value&lt;V&gt;
+    <span class="kw">where
+        </span>V: Copy,
     {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">copied</span>(),
+        Value {
+            inner: <span class="self">self</span>.inner.copied(),
         }
     }
 
-    <span class="doccomment">/// Maps a `Value&lt;&amp;V&gt;` to a `Value&lt;V&gt;` by cloning the contents of the value.</span>
-    <span class="attribute">#[<span class="ident">must_use</span> <span class="op">=</span> <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cloned</span>(<span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">Clone</span>,
+    <span class="doccomment">/// Maps a `Value&lt;&amp;V&gt;` to a `Value&lt;V&gt;` by cloning the contents of the value.
+    </span><span class="attribute">#[must_use = <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]</span>
+    <span class="kw">pub fn </span>cloned(<span class="self">self</span>) -&gt; Value&lt;V&gt;
+    <span class="kw">where
+        </span>V: Clone,
     {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">cloned</span>(),
+        Value {
+            inner: <span class="self">self</span>.inner.cloned(),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;mut</span> <span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Maps a `Value&lt;&amp;mut V&gt;` to a `Value&lt;V&gt;` by copying the contents of the value.</span>
-    <span class="attribute">#[<span class="ident">must_use</span> <span class="op">=</span> <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">copied</span>(<span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">Copy</span>,
+<span class="kw">impl</span>&lt;V&gt; Value&lt;<span class="kw-2">&amp;mut </span>V&gt; {
+    <span class="doccomment">/// Maps a `Value&lt;&amp;mut V&gt;` to a `Value&lt;V&gt;` by copying the contents of the value.
+    </span><span class="attribute">#[must_use = <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]</span>
+    <span class="kw">pub fn </span>copied(<span class="self">self</span>) -&gt; Value&lt;V&gt;
+    <span class="kw">where
+        </span>V: Copy,
     {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">copied</span>(),
+        Value {
+            inner: <span class="self">self</span>.inner.copied(),
         }
     }
 
-    <span class="doccomment">/// Maps a `Value&lt;&amp;mut V&gt;` to a `Value&lt;V&gt;` by cloning the contents of the value.</span>
-    <span class="attribute">#[<span class="ident">must_use</span> <span class="op">=</span> <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cloned</span>(<span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">Clone</span>,
+    <span class="doccomment">/// Maps a `Value&lt;&amp;mut V&gt;` to a `Value&lt;V&gt;` by cloning the contents of the value.
+    </span><span class="attribute">#[must_use = <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]</span>
+    <span class="kw">pub fn </span>cloned(<span class="self">self</span>) -&gt; Value&lt;V&gt;
+    <span class="kw">where
+        </span>V: Clone,
     {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">cloned</span>(),
+        Value {
+            inner: <span class="self">self</span>.inner.cloned(),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>: <span class="ident">Copy</span>, <span class="kw">const</span> <span class="ident">LEN</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">V</span>; <span class="ident">LEN</span>]<span class="op">&gt;</span> {
-    <span class="doccomment">/// Transposes a `Value&lt;[V; LEN]&gt;` into a `[Value&lt;V&gt;; LEN]`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [`Value::unknown()`] will be mapped to `[Value::unknown(); LEN]`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">transpose_array</span>(<span class="self">self</span>) -&gt; [<span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>; <span class="ident">LEN</span>] {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ret</span> <span class="op">=</span> [<span class="ident">Value::unknown</span>(); <span class="ident">LEN</span>];
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">arr</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">inner</span> {
-            <span class="kw">for</span> (<span class="ident">entry</span>, <span class="ident">value</span>) <span class="kw">in</span> <span class="ident">ret</span>.<span class="ident">iter_mut</span>().<span class="ident">zip</span>(<span class="ident">arr</span>) {
-                <span class="kw-2">*</span><span class="ident">entry</span> <span class="op">=</span> <span class="ident">Value::known</span>(<span class="ident">value</span>);
+<span class="kw">impl</span>&lt;V: Copy, <span class="kw">const </span>LEN: usize&gt; Value&lt;[V; LEN]&gt; {
+    <span class="doccomment">/// Transposes a `Value&lt;[V; LEN]&gt;` into a `[Value&lt;V&gt;; LEN]`.
+    ///
+    /// [`Value::unknown()`] will be mapped to `[Value::unknown(); LEN]`.
+    </span><span class="kw">pub fn </span>transpose_array(<span class="self">self</span>) -&gt; [Value&lt;V&gt;; LEN] {
+        <span class="kw">let </span><span class="kw-2">mut </span>ret = [Value::unknown(); LEN];
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(arr) = <span class="self">self</span>.inner {
+            <span class="kw">for </span>(entry, value) <span class="kw">in </span>ret.iter_mut().zip(arr) {
+                <span class="kw-2">*</span>entry = Value::known(value);
             }
         }
-        <span class="ident">ret</span>
+        ret
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">I</span><span class="op">&gt;</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">V</span><span class="op">&gt;</span>,
-    <span class="ident">I::IntoIter</span>: <span class="ident">ExactSizeIterator</span>,
+<span class="kw">impl</span>&lt;V, I&gt; Value&lt;I&gt;
+<span class="kw">where
+    </span>I: IntoIterator&lt;Item = V&gt;,
+    I::IntoIter: ExactSizeIterator,
 {
-    <span class="doccomment">/// Transposes a `Value&lt;impl IntoIterator&lt;Item = V&gt;&gt;` into a `Vec&lt;Value&lt;V&gt;&gt;`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [`Value::unknown()`] will be mapped to `vec![Value::unknown(); length]`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Panics</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Panics if `self` is `Value::known(values)` and `values.len() != length`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">transpose_vec</span>(<span class="self">self</span>, <span class="ident">length</span>: <span class="ident">usize</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">inner</span> {
-            <span class="prelude-val">Some</span>(<span class="ident">values</span>) =&gt; {
-                <span class="kw">let</span> <span class="ident">values</span> <span class="op">=</span> <span class="ident">values</span>.<span class="ident">into_iter</span>();
-                <span class="macro">assert_eq!</span>(<span class="ident">values</span>.<span class="ident">len</span>(), <span class="ident">length</span>);
-                <span class="ident">values</span>.<span class="ident">map</span>(<span class="ident">Value::known</span>).<span class="ident">collect</span>()
+    <span class="doccomment">/// Transposes a `Value&lt;impl IntoIterator&lt;Item = V&gt;&gt;` into a `Vec&lt;Value&lt;V&gt;&gt;`.
+    ///
+    /// [`Value::unknown()`] will be mapped to `vec![Value::unknown(); length]`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self` is `Value::known(values)` and `values.len() != length`.
+    </span><span class="kw">pub fn </span>transpose_vec(<span class="self">self</span>, length: usize) -&gt; Vec&lt;Value&lt;V&gt;&gt; {
+        <span class="kw">match </span><span class="self">self</span>.inner {
+            <span class="prelude-val">Some</span>(values) =&gt; {
+                <span class="kw">let </span>values = values.into_iter();
+                <span class="macro">assert_eq!</span>(values.len(), length);
+                values.map(Value::known).collect()
             }
-            <span class="prelude-val">None</span> =&gt; (<span class="number">0</span>..<span class="ident">length</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Value::unknown</span>()).<span class="ident">collect</span>(),
+            <span class="prelude-val">None </span>=&gt; (<span class="number">0</span>..length).map(|<span class="kw">_</span>| Value::unknown()).collect(),
         }
     }
 }
 
-<span class="comment">//</span>
-<span class="comment">// FromIterator</span>
-<span class="comment">//</span>
+<span class="comment">//
+// FromIterator
+//
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">V</span>: <span class="ident">FromIterator</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">FromIterator</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Takes each element in the [`Iterator`]: if it is [`Value::unknown()`], no further</span>
-    <span class="doccomment">/// elements are taken, and the [`Value::unknown()`] is returned. Should no</span>
-    <span class="doccomment">/// [`Value::unknown()`] occur, a container of type `V` containing the values of each</span>
-    <span class="doccomment">/// [`Value`] is returned.</span>
-    <span class="kw">fn</span> <span class="ident">from_iter</span><span class="op">&lt;</span><span class="ident">I</span>: <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">A</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">I</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">inner</span>: <span class="ident">iter</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">inner</span>).<span class="ident">collect</span>(),
+</span><span class="kw">impl</span>&lt;A, V: FromIterator&lt;A&gt;&gt; FromIterator&lt;Value&lt;A&gt;&gt; <span class="kw">for </span>Value&lt;V&gt; {
+    <span class="doccomment">/// Takes each element in the [`Iterator`]: if it is [`Value::unknown()`], no further
+    /// elements are taken, and the [`Value::unknown()`] is returned. Should no
+    /// [`Value::unknown()`] occur, a container of type `V` containing the values of each
+    /// [`Value`] is returned.
+    </span><span class="kw">fn </span>from_iter&lt;I: IntoIterator&lt;Item = Value&lt;A&gt;&gt;&gt;(iter: I) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            inner: iter.into_iter().map(|v| v.inner).collect(),
         }
     }
 }
 
-<span class="comment">//</span>
-<span class="comment">// Neg</span>
-<span class="comment">//</span>
+<span class="comment">//
+// Neg
+//
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>: <span class="ident">Neg</span><span class="op">&gt;</span> <span class="ident">Neg</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V::Output</span><span class="op">&gt;</span>;
+</span><span class="kw">impl</span>&lt;V: Neg&gt; Neg <span class="kw">for </span>Value&lt;V&gt; {
+    <span class="kw">type </span>Output = Value&lt;V::Output&gt;;
 
-    <span class="kw">fn</span> <span class="ident">neg</span>(<span class="self">self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="op">-</span><span class="ident">v</span>),
+    <span class="kw">fn </span>neg(<span class="self">self</span>) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.map(|v| -v),
         }
     }
 }
 
-<span class="comment">//</span>
-<span class="comment">// Add</span>
-<span class="comment">//</span>
+<span class="comment">//
+// Add
+//
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Add</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">V</span>: <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+</span><span class="kw">impl</span>&lt;V, O&gt; Add <span class="kw">for </span>Value&lt;V&gt;
+<span class="kw">where
+    </span>V: Add&lt;Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="self">Self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(rhs.inner).map(|(a, b)| a + b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Add</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span>: <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, O&gt; Add <span class="kw">for </span><span class="kw-2">&amp;</span>Value&lt;V&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V: Add&lt;Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="self">Self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>
-                .<span class="ident">inner</span>
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>.<span class="ident">as_ref</span>())
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self
+                </span>.inner
+                .as_ref()
+                .zip(rhs.inner.as_ref())
+                .map(|(a, b)| a + b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="ident">V</span>: <span class="ident">Add</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, O&gt; Add&lt;Value&lt;<span class="kw-2">&amp;</span>V&gt;&gt; <span class="kw">for </span>Value&lt;V&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; V: Add&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V, Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">V</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: Value&lt;<span class="kw-2">&amp;</span>V&gt;) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(rhs.inner).map(|(a, b)| a + b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span>: <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, O&gt; Add&lt;Value&lt;V&gt;&gt; <span class="kw">for </span>Value&lt;<span class="kw-2">&amp;</span>V&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V: Add&lt;V, Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: Value&lt;V&gt;) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(rhs.inner).map(|(a, b)| a + b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="ident">V</span>: <span class="ident">Add</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, O&gt; Add&lt;<span class="kw-2">&amp;</span>Value&lt;V&gt;&gt; <span class="kw">for </span>Value&lt;V&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; V: Add&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V, Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="self">self</span> <span class="op">+</span> <span class="ident">rhs</span>.<span class="ident">as_ref</span>()
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
+        <span class="self">self </span>+ rhs.as_ref()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span>: <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, O&gt; Add&lt;Value&lt;V&gt;&gt; <span class="kw">for </span><span class="kw-2">&amp;</span>Value&lt;V&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V: Add&lt;V, Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="self">self</span>.<span class="ident">as_ref</span>() <span class="op">+</span> <span class="ident">rhs</span>
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: Value&lt;V&gt;) -&gt; <span class="self">Self</span>::Output {
+        <span class="self">self</span>.as_ref() + rhs
     }
 }
 
-<span class="comment">//</span>
-<span class="comment">// Sub</span>
-<span class="comment">//</span>
+<span class="comment">//
+// Sub
+//
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Sub</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">V</span>: <span class="ident">Sub</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+</span><span class="kw">impl</span>&lt;V, O&gt; Sub <span class="kw">for </span>Value&lt;V&gt;
+<span class="kw">where
+    </span>V: Sub&lt;Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="self">Self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">-</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(rhs.inner).map(|(a, b)| a - b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Sub</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span>: <span class="ident">Sub</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, O&gt; Sub <span class="kw">for </span><span class="kw-2">&amp;</span>Value&lt;V&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V: Sub&lt;Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="self">Self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>
-                .<span class="ident">inner</span>
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>.<span class="ident">as_ref</span>())
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">-</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self
+                </span>.inner
+                .as_ref()
+                .zip(rhs.inner.as_ref())
+                .map(|(a, b)| a - b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Sub</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="ident">V</span>: <span class="ident">Sub</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, O&gt; Sub&lt;Value&lt;<span class="kw-2">&amp;</span>V&gt;&gt; <span class="kw">for </span>Value&lt;V&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; V: Sub&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V, Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">V</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">-</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: Value&lt;<span class="kw-2">&amp;</span>V&gt;) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(rhs.inner).map(|(a, b)| a - b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Sub</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span>: <span class="ident">Sub</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, O&gt; Sub&lt;Value&lt;V&gt;&gt; <span class="kw">for </span>Value&lt;<span class="kw-2">&amp;</span>V&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V: Sub&lt;V, Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">-</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: Value&lt;V&gt;) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(rhs.inner).map(|(a, b)| a - b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Sub</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="ident">V</span>: <span class="ident">Sub</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, O&gt; Sub&lt;<span class="kw-2">&amp;</span>Value&lt;V&gt;&gt; <span class="kw">for </span>Value&lt;V&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; V: Sub&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V, Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="self">self</span> <span class="op">-</span> <span class="ident">rhs</span>.<span class="ident">as_ref</span>()
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
+        <span class="self">self </span>- rhs.as_ref()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Sub</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span>: <span class="ident">Sub</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, O&gt; Sub&lt;Value&lt;V&gt;&gt; <span class="kw">for </span><span class="kw-2">&amp;</span>Value&lt;V&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V: Sub&lt;V, Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="self">self</span>.<span class="ident">as_ref</span>() <span class="op">-</span> <span class="ident">rhs</span>
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: Value&lt;V&gt;) -&gt; <span class="self">Self</span>::Output {
+        <span class="self">self</span>.as_ref() - rhs
     }
 }
 
-<span class="comment">//</span>
-<span class="comment">// Mul</span>
-<span class="comment">//</span>
+<span class="comment">//
+// Mul
+//
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Mul</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">V</span>: <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+</span><span class="kw">impl</span>&lt;V, O&gt; Mul <span class="kw">for </span>Value&lt;V&gt;
+<span class="kw">where
+    </span>V: Mul&lt;Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="self">Self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(rhs.inner).map(|(a, b)| a * b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Mul</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span>: <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, O&gt; Mul <span class="kw">for </span><span class="kw-2">&amp;</span>Value&lt;V&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V: Mul&lt;Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="self">Self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>
-                .<span class="ident">inner</span>
-                .<span class="ident">as_ref</span>()
-                .<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>.<span class="ident">as_ref</span>())
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self
+                </span>.inner
+                .as_ref()
+                .zip(rhs.inner.as_ref())
+                .map(|(a, b)| a * b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="ident">V</span>: <span class="ident">Mul</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, O&gt; Mul&lt;Value&lt;<span class="kw-2">&amp;</span>V&gt;&gt; <span class="kw">for </span>Value&lt;V&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; V: Mul&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V, Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">V</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: Value&lt;<span class="kw-2">&amp;</span>V&gt;) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(rhs.inner).map(|(a, b)| a * b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span>: <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, O&gt; Mul&lt;Value&lt;V&gt;&gt; <span class="kw">for </span>Value&lt;<span class="kw-2">&amp;</span>V&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V: Mul&lt;V, Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: Value&lt;V&gt;) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(rhs.inner).map(|(a, b)| a * b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="ident">V</span>: <span class="ident">Mul</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, O&gt; Mul&lt;<span class="kw-2">&amp;</span>Value&lt;V&gt;&gt; <span class="kw">for </span>Value&lt;V&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; V: Mul&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V, Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="self">self</span> <span class="op">*</span> <span class="ident">rhs</span>.<span class="ident">as_ref</span>()
+    <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: <span class="kw-2">&amp;</span><span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
+        <span class="self">self </span>* rhs.as_ref()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">O</span><span class="op">&gt;</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span>: <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">O</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V, O&gt; Mul&lt;Value&lt;V&gt;&gt; <span class="kw">for </span><span class="kw-2">&amp;</span>Value&lt;V&gt;
+<span class="kw">where
+    for</span>&lt;<span class="lifetime">&#39;v</span>&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V: Mul&lt;V, Output = O&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">O</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>Output = Value&lt;O&gt;;
 
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="self">self</span>.<span class="ident">as_ref</span>() <span class="op">*</span> <span class="ident">rhs</span>
+    <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: Value&lt;V&gt;) -&gt; <span class="self">Self</span>::Output {
+        <span class="self">self</span>.as_ref() * rhs
     }
 }
 
-<span class="comment">//</span>
-<span class="comment">// Assigned&lt;Field&gt;</span>
-<span class="comment">//</span>
+<span class="comment">//
+// Assigned&lt;Field&gt;
+//
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">inner</span>: <span class="ident">value</span>.<span class="ident">inner</span>.<span class="ident">map</span>(<span class="ident">Assigned::from</span>),
+</span><span class="kw">impl</span>&lt;F: Field&gt; From&lt;Value&lt;F&gt;&gt; <span class="kw">for </span>Value&lt;Assigned&lt;F&gt;&gt; {
+    <span class="kw">fn </span>from(value: Value&lt;F&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            inner: value.inner.map(Assigned::from),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; Add&lt;Value&lt;F&gt;&gt; <span class="kw">for </span>Value&lt;Assigned&lt;F&gt;&gt; {
+    <span class="kw">type </span>Output = Value&lt;Assigned&lt;F&gt;&gt;;
 
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: Value&lt;F&gt;) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(rhs.inner).map(|(a, b)| a + b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; Add&lt;F&gt; <span class="kw">for </span>Value&lt;Assigned&lt;F&gt;&gt; {
+    <span class="kw">type </span>Output = Value&lt;Assigned&lt;F&gt;&gt;;
 
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="self">self</span> <span class="op">+</span> <span class="ident">Value::known</span>(<span class="ident">rhs</span>)
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: F) -&gt; <span class="self">Self</span>::Output {
+        <span class="self">self </span>+ Value::known(rhs)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; Add&lt;Value&lt;F&gt;&gt; <span class="kw">for </span>Value&lt;<span class="kw-2">&amp;</span>Assigned&lt;F&gt;&gt; {
+    <span class="kw">type </span>Output = Value&lt;Assigned&lt;F&gt;&gt;;
 
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: Value&lt;F&gt;) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(rhs.inner).map(|(a, b)| a + b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Add</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; Add&lt;F&gt; <span class="kw">for </span>Value&lt;<span class="kw-2">&amp;</span>Assigned&lt;F&gt;&gt; {
+    <span class="kw">type </span>Output = Value&lt;Assigned&lt;F&gt;&gt;;
 
-    <span class="kw">fn</span> <span class="ident">add</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="self">self</span> <span class="op">+</span> <span class="ident">Value::known</span>(<span class="ident">rhs</span>)
+    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: F) -&gt; <span class="self">Self</span>::Output {
+        <span class="self">self </span>+ Value::known(rhs)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Sub</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; Sub&lt;Value&lt;F&gt;&gt; <span class="kw">for </span>Value&lt;Assigned&lt;F&gt;&gt; {
+    <span class="kw">type </span>Output = Value&lt;Assigned&lt;F&gt;&gt;;
 
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">-</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: Value&lt;F&gt;) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(rhs.inner).map(|(a, b)| a - b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Sub</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; Sub&lt;F&gt; <span class="kw">for </span>Value&lt;Assigned&lt;F&gt;&gt; {
+    <span class="kw">type </span>Output = Value&lt;Assigned&lt;F&gt;&gt;;
 
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="self">self</span> <span class="op">-</span> <span class="ident">Value::known</span>(<span class="ident">rhs</span>)
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: F) -&gt; <span class="self">Self</span>::Output {
+        <span class="self">self </span>- Value::known(rhs)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Sub</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; Sub&lt;Value&lt;F&gt;&gt; <span class="kw">for </span>Value&lt;<span class="kw-2">&amp;</span>Assigned&lt;F&gt;&gt; {
+    <span class="kw">type </span>Output = Value&lt;Assigned&lt;F&gt;&gt;;
 
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">-</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: Value&lt;F&gt;) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(rhs.inner).map(|(a, b)| a - b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Sub</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; Sub&lt;F&gt; <span class="kw">for </span>Value&lt;<span class="kw-2">&amp;</span>Assigned&lt;F&gt;&gt; {
+    <span class="kw">type </span>Output = Value&lt;Assigned&lt;F&gt;&gt;;
 
-    <span class="kw">fn</span> <span class="ident">sub</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="self">self</span> <span class="op">-</span> <span class="ident">Value::known</span>(<span class="ident">rhs</span>)
+    <span class="kw">fn </span>sub(<span class="self">self</span>, rhs: F) -&gt; <span class="self">Self</span>::Output {
+        <span class="self">self </span>- Value::known(rhs)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; Mul&lt;Value&lt;F&gt;&gt; <span class="kw">for </span>Value&lt;Assigned&lt;F&gt;&gt; {
+    <span class="kw">type </span>Output = Value&lt;Assigned&lt;F&gt;&gt;;
 
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: Value&lt;F&gt;) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(rhs.inner).map(|(a, b)| a * b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; Mul&lt;F&gt; <span class="kw">for </span>Value&lt;Assigned&lt;F&gt;&gt; {
+    <span class="kw">type </span>Output = Value&lt;Assigned&lt;F&gt;&gt;;
 
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="self">self</span> <span class="op">*</span> <span class="ident">Value::known</span>(<span class="ident">rhs</span>)
+    <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: F) -&gt; <span class="self">Self</span>::Output {
+        <span class="self">self </span>* Value::known(rhs)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; Mul&lt;Value&lt;F&gt;&gt; <span class="kw">for </span>Value&lt;<span class="kw-2">&amp;</span>Assigned&lt;F&gt;&gt; {
+    <span class="kw">type </span>Output = Value&lt;Assigned&lt;F&gt;&gt;;
 
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">zip</span>(<span class="ident">rhs</span>.<span class="ident">inner</span>).<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a</span>, <span class="ident">b</span>)<span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>),
+    <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: Value&lt;F&gt;) -&gt; <span class="self">Self</span>::Output {
+        Value {
+            inner: <span class="self">self</span>.inner.zip(rhs.inner).map(|(a, b)| a * b),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="kw">impl</span>&lt;F: Field&gt; Mul&lt;F&gt; <span class="kw">for </span>Value&lt;<span class="kw-2">&amp;</span>Assigned&lt;F&gt;&gt; {
+    <span class="kw">type </span>Output = Value&lt;Assigned&lt;F&gt;&gt;;
 
-    <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">F</span>) -&gt; <span class="ident"><span class="self">Self</span>::Output</span> {
-        <span class="self">self</span> <span class="op">*</span> <span class="ident">Value::known</span>(<span class="ident">rhs</span>)
+    <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: F) -&gt; <span class="self">Self</span>::Output {
+        <span class="self">self </span>* Value::known(rhs)
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Returns the field element corresponding to this value.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">to_field</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="kw">for</span><span class="op">&lt;</span><span class="lifetime">&#39;v</span><span class="op">&gt;</span> <span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;v</span> <span class="ident">V</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;V&gt; Value&lt;V&gt; {
+    <span class="doccomment">/// Returns the field element corresponding to this value.
+    </span><span class="kw">pub fn </span>to_field&lt;F: Field&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;Assigned&lt;F&gt;&gt;
+    <span class="kw">where
+        for</span>&lt;<span class="lifetime">&#39;v</span>&gt; Assigned&lt;F&gt;: From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>V&gt;,
     {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">into</span>()),
+        Value {
+            inner: <span class="self">self</span>.inner.as_ref().map(|v| v.into()),
         }
     }
 
-    <span class="doccomment">/// Returns the field element corresponding to this value.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">into_field</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Returns the field element corresponding to this value.
+    </span><span class="kw">pub fn </span>into_field&lt;F: Field&gt;(<span class="self">self</span>) -&gt; Value&lt;Assigned&lt;F&gt;&gt;
+    <span class="kw">where
+        </span>V: Into&lt;Assigned&lt;F&gt;&gt;,
     {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">into</span>()),
+        Value {
+            inner: <span class="self">self</span>.inner.map(|v| v.into()),
         }
     }
 
-    <span class="doccomment">/// Doubles this field element.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Examples</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If you have a `Value&lt;F: Field&gt;`, convert it to `Value&lt;Assigned&lt;F&gt;&gt;` first:</span>
-    <span class="doccomment">/// ```</span>
-    <span class="doccomment">/// # use pasta_curves::pallas::Base as F;</span>
-    <span class="doccomment">/// use halo2_proofs::{circuit::Value, plonk::Assigned};</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// let v = Value::known(F::from(2));</span>
-    <span class="doccomment">/// let v: Value&lt;Assigned&lt;F&gt;&gt; = v.into();</span>
-    <span class="doccomment">/// v.double();</span>
-    <span class="doccomment">/// ```</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">double</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Doubles this field element.
+    ///
+    /// # Examples
+    ///
+    /// If you have a `Value&lt;F: Field&gt;`, convert it to `Value&lt;Assigned&lt;F&gt;&gt;` first:
+    /// ```
+    /// # use pasta_curves::pallas::Base as F;
+    /// use halo2_proofs::{circuit::Value, plonk::Assigned};
+    ///
+    /// let v = Value::known(F::from(2));
+    /// let v: Value&lt;Assigned&lt;F&gt;&gt; = v.into();
+    /// v.double();
+    /// ```
+    </span><span class="kw">pub fn </span>double&lt;F: Field&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;Assigned&lt;F&gt;&gt;
+    <span class="kw">where
+        </span>V: Borrow&lt;Assigned&lt;F&gt;&gt;,
     {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">borrow</span>().<span class="ident">double</span>()),
+        Value {
+            inner: <span class="self">self</span>.inner.as_ref().map(|v| v.borrow().double()),
         }
     }
 
-    <span class="doccomment">/// Squares this field element.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">square</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Squares this field element.
+    </span><span class="kw">pub fn </span>square&lt;F: Field&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;Assigned&lt;F&gt;&gt;
+    <span class="kw">where
+        </span>V: Borrow&lt;Assigned&lt;F&gt;&gt;,
     {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">borrow</span>().<span class="ident">square</span>()),
+        Value {
+            inner: <span class="self">self</span>.inner.as_ref().map(|v| v.borrow().square()),
         }
     }
 
-    <span class="doccomment">/// Cubes this field element.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">cube</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Cubes this field element.
+    </span><span class="kw">pub fn </span>cube&lt;F: Field&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;Assigned&lt;F&gt;&gt;
+    <span class="kw">where
+        </span>V: Borrow&lt;Assigned&lt;F&gt;&gt;,
     {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">borrow</span>().<span class="ident">cube</span>()),
+        Value {
+            inner: <span class="self">self</span>.inner.as_ref().map(|v| v.borrow().cube()),
         }
     }
 
-    <span class="doccomment">/// Inverts this assigned value (taking the inverse of zero to be zero).</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">invert</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">Borrow</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Inverts this assigned value (taking the inverse of zero to be zero).
+    </span><span class="kw">pub fn </span>invert&lt;F: Field&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;Assigned&lt;F&gt;&gt;
+    <span class="kw">where
+        </span>V: Borrow&lt;Assigned&lt;F&gt;&gt;,
     {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">as_ref</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">borrow</span>().<span class="ident">invert</span>()),
+        Value {
+            inner: <span class="self">self</span>.inner.as_ref().map(|v| v.borrow().invert()),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Evaluates this value directly, performing an unbatched inversion if necessary.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// If the denominator is zero, the returned value is zero.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">evaluate</span>(<span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="ident">Value</span> {
-            <span class="ident">inner</span>: <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="ident">evaluate</span>()),
+<span class="kw">impl</span>&lt;F: Field&gt; Value&lt;Assigned&lt;F&gt;&gt; {
+    <span class="doccomment">/// Evaluates this value directly, performing an unbatched inversion if necessary.
+    ///
+    /// If the denominator is zero, the returned value is zero.
+    </span><span class="kw">pub fn </span>evaluate(<span class="self">self</span>) -&gt; Value&lt;F&gt; {
+        Value {
+            inner: <span class="self">self</span>.inner.map(|v| v.evaluate()),
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

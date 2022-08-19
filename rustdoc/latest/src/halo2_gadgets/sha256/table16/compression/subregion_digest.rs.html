@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -121,108 +115,107 @@
 <span id="100">100</span>
 <span id="101">101</span>
 <span id="102">102</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident"><span class="kw">super</span>::DIGEST_SIZE</span>, <span class="ident">BlockWord</span>, <span class="ident">RoundWordDense</span>};
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">compression_util</span>::<span class="kw-2">*</span>, <span class="ident">CompressionConfig</span>, <span class="ident">State</span>};
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">Region</span>, <span class="ident">Value</span>},
-    <span class="ident">pasta::pallas</span>,
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">Error</span>},
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{<span class="kw">super</span>::DIGEST_SIZE, BlockWord, RoundWordDense};
+<span class="kw">use super</span>::{compression_util::<span class="kw-2">*</span>, CompressionConfig, State};
+<span class="kw">use </span>halo2_proofs::{
+    circuit::{Region, Value},
+    pasta::pallas,
+    plonk::{Advice, Column, Error},
 };
 
-<span class="kw">impl</span> <span class="ident">CompressionConfig</span> {
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::many_single_char_names</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assign_digest</span>(
+<span class="kw">impl </span>CompressionConfig {
+    <span class="attribute">#[allow(clippy::many_single_char_names)]</span>
+    <span class="kw">pub fn </span>assign_digest(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">state</span>: <span class="ident">State</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>[<span class="ident">BlockWord</span>; <span class="ident">DIGEST_SIZE</span>], <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">a_4</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">1</span>];
-        <span class="kw">let</span> <span class="ident">a_5</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">message_schedule</span>;
-        <span class="kw">let</span> <span class="ident">a_6</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">2</span>];
-        <span class="kw">let</span> <span class="ident">a_7</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">3</span>];
-        <span class="kw">let</span> <span class="ident">a_8</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">4</span>];
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        state: State,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;[BlockWord; DIGEST_SIZE], Error&gt; {
+        <span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
+        <span class="kw">let </span>a_4 = <span class="self">self</span>.extras[<span class="number">1</span>];
+        <span class="kw">let </span>a_5 = <span class="self">self</span>.message_schedule;
+        <span class="kw">let </span>a_6 = <span class="self">self</span>.extras[<span class="number">2</span>];
+        <span class="kw">let </span>a_7 = <span class="self">self</span>.extras[<span class="number">3</span>];
+        <span class="kw">let </span>a_8 = <span class="self">self</span>.extras[<span class="number">4</span>];
 
-        <span class="kw">let</span> (<span class="ident">a</span>, <span class="ident">b</span>, <span class="ident">c</span>, <span class="ident">d</span>, <span class="ident">e</span>, <span class="ident">f</span>, <span class="ident">g</span>, <span class="ident">h</span>) <span class="op">=</span> <span class="ident">match_state</span>(<span class="ident">state</span>);
+        <span class="kw">let </span>(a, b, c, d, e, f, g, h) = match_state(state);
 
-        <span class="kw">let</span> <span class="ident">abcd_row</span> <span class="op">=</span> <span class="number">0</span>;
-        <span class="self">self</span>.<span class="ident">s_digest</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">abcd_row</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">efgh_row</span> <span class="op">=</span> <span class="ident">abcd_row</span> <span class="op">+</span> <span class="number">2</span>;
-        <span class="self">self</span>.<span class="ident">s_digest</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">efgh_row</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>abcd_row = <span class="number">0</span>;
+        <span class="self">self</span>.s_digest.enable(region, abcd_row)<span class="question-mark">?</span>;
+        <span class="kw">let </span>efgh_row = abcd_row + <span class="number">2</span>;
+        <span class="self">self</span>.s_digest.enable(region, efgh_row)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign digest for A, B, C, D</span>
-        <span class="ident">a</span>.<span class="ident">dense_halves</span>
-            .<span class="number">0</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;a_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_3</span>, <span class="ident">abcd_row</span>)<span class="question-mark">?</span>;
-        <span class="ident">a</span>.<span class="ident">dense_halves</span>
-            .<span class="number">1</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;a_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">abcd_row</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">a</span>.<span class="ident">dense_halves</span>.<span class="ident">value</span>();
-        <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;a&quot;</span>,
-            <span class="ident">a_5</span>,
-            <span class="ident">abcd_row</span>,
-            <span class="op">|</span><span class="op">|</span> <span class="ident">a</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">a</span> <span class="kw">as</span> <span class="ident">u64</span>)),
+        <span class="comment">// Assign digest for A, B, C, D
+        </span>a.dense_halves
+            .<span class="number">0
+            </span>.copy_advice(|| <span class="string">&quot;a_lo&quot;</span>, region, a_3, abcd_row)<span class="question-mark">?</span>;
+        a.dense_halves
+            .<span class="number">1
+            </span>.copy_advice(|| <span class="string">&quot;a_hi&quot;</span>, region, a_4, abcd_row)<span class="question-mark">?</span>;
+        <span class="kw">let </span>a = a.dense_halves.value();
+        region.assign_advice(
+            || <span class="string">&quot;a&quot;</span>,
+            a_5,
+            abcd_row,
+            || a.map(|a| pallas::Base::from(a <span class="kw">as </span>u64)),
         )<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_digest_word</span>(<span class="ident">region</span>, <span class="ident">abcd_row</span>, <span class="ident">a_6</span>, <span class="ident">a_7</span>, <span class="ident">a_8</span>, <span class="ident">b</span>.<span class="ident">dense_halves</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_digest_word</span>(<span class="ident">region</span>, <span class="ident">abcd_row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">a_3</span>, <span class="ident">a_4</span>, <span class="ident">a_5</span>, <span class="ident">c</span>.<span class="ident">dense_halves</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">d</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_digest_word</span>(<span class="ident">region</span>, <span class="ident">abcd_row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">a_6</span>, <span class="ident">a_7</span>, <span class="ident">a_8</span>, <span class="ident">d</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>b = <span class="self">self</span>.assign_digest_word(region, abcd_row, a_6, a_7, a_8, b.dense_halves)<span class="question-mark">?</span>;
+        <span class="kw">let </span>c = <span class="self">self</span>.assign_digest_word(region, abcd_row + <span class="number">1</span>, a_3, a_4, a_5, c.dense_halves)<span class="question-mark">?</span>;
+        <span class="kw">let </span>d = <span class="self">self</span>.assign_digest_word(region, abcd_row + <span class="number">1</span>, a_6, a_7, a_8, d)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign digest for E, F, G, H</span>
-        <span class="ident">e</span>.<span class="ident">dense_halves</span>
-            .<span class="number">0</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;e_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_3</span>, <span class="ident">efgh_row</span>)<span class="question-mark">?</span>;
-        <span class="ident">e</span>.<span class="ident">dense_halves</span>
-            .<span class="number">1</span>
-            .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;e_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_4</span>, <span class="ident">efgh_row</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">e</span> <span class="op">=</span> <span class="ident">e</span>.<span class="ident">dense_halves</span>.<span class="ident">value</span>();
-        <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;e&quot;</span>,
-            <span class="ident">a_5</span>,
-            <span class="ident">efgh_row</span>,
-            <span class="op">|</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">e</span> <span class="kw">as</span> <span class="ident">u64</span>)),
+        <span class="comment">// Assign digest for E, F, G, H
+        </span>e.dense_halves
+            .<span class="number">0
+            </span>.copy_advice(|| <span class="string">&quot;e_lo&quot;</span>, region, a_3, efgh_row)<span class="question-mark">?</span>;
+        e.dense_halves
+            .<span class="number">1
+            </span>.copy_advice(|| <span class="string">&quot;e_hi&quot;</span>, region, a_4, efgh_row)<span class="question-mark">?</span>;
+        <span class="kw">let </span>e = e.dense_halves.value();
+        region.assign_advice(
+            || <span class="string">&quot;e&quot;</span>,
+            a_5,
+            efgh_row,
+            || e.map(|e| pallas::Base::from(e <span class="kw">as </span>u64)),
         )<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">f</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_digest_word</span>(<span class="ident">region</span>, <span class="ident">efgh_row</span>, <span class="ident">a_6</span>, <span class="ident">a_7</span>, <span class="ident">a_8</span>, <span class="ident">f</span>.<span class="ident">dense_halves</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">g</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_digest_word</span>(<span class="ident">region</span>, <span class="ident">efgh_row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">a_3</span>, <span class="ident">a_4</span>, <span class="ident">a_5</span>, <span class="ident">g</span>.<span class="ident">dense_halves</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">h</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_digest_word</span>(<span class="ident">region</span>, <span class="ident">efgh_row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">a_6</span>, <span class="ident">a_7</span>, <span class="ident">a_8</span>, <span class="ident">h</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>f = <span class="self">self</span>.assign_digest_word(region, efgh_row, a_6, a_7, a_8, f.dense_halves)<span class="question-mark">?</span>;
+        <span class="kw">let </span>g = <span class="self">self</span>.assign_digest_word(region, efgh_row + <span class="number">1</span>, a_3, a_4, a_5, g.dense_halves)<span class="question-mark">?</span>;
+        <span class="kw">let </span>h = <span class="self">self</span>.assign_digest_word(region, efgh_row + <span class="number">1</span>, a_6, a_7, a_8, h)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>([
-            <span class="ident">BlockWord</span>(<span class="ident">a</span>),
-            <span class="ident">BlockWord</span>(<span class="ident">b</span>),
-            <span class="ident">BlockWord</span>(<span class="ident">c</span>),
-            <span class="ident">BlockWord</span>(<span class="ident">d</span>),
-            <span class="ident">BlockWord</span>(<span class="ident">e</span>),
-            <span class="ident">BlockWord</span>(<span class="ident">f</span>),
-            <span class="ident">BlockWord</span>(<span class="ident">g</span>),
-            <span class="ident">BlockWord</span>(<span class="ident">h</span>),
+            BlockWord(a),
+            BlockWord(b),
+            BlockWord(c),
+            BlockWord(d),
+            BlockWord(e),
+            BlockWord(f),
+            BlockWord(g),
+            BlockWord(h),
         ])
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_digest_word</span>(
+    <span class="kw">fn </span>assign_digest_word(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-        <span class="ident">lo_col</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">hi_col</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">word_col</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">dense_halves</span>: <span class="ident">RoundWordDense</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident">dense_halves</span>.<span class="number">0</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;lo&quot;</span>, <span class="ident">region</span>, <span class="ident">lo_col</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
-        <span class="ident">dense_halves</span>.<span class="number">1</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;hi&quot;</span>, <span class="ident">region</span>, <span class="ident">hi_col</span>, <span class="ident">row</span>)<span class="question-mark">?</span>;
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        row: usize,
+        lo_col: Column&lt;Advice&gt;,
+        hi_col: Column&lt;Advice&gt;,
+        word_col: Column&lt;Advice&gt;,
+        dense_halves: RoundWordDense,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Value&lt;u32&gt;, Error&gt; {
+        dense_halves.<span class="number">0</span>.copy_advice(|| <span class="string">&quot;lo&quot;</span>, region, lo_col, row)<span class="question-mark">?</span>;
+        dense_halves.<span class="number">1</span>.copy_advice(|| <span class="string">&quot;hi&quot;</span>, region, hi_col, row)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">val</span> <span class="op">=</span> <span class="ident">dense_halves</span>.<span class="ident">value</span>();
-        <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;word&quot;</span>,
-            <span class="ident">word_col</span>,
-            <span class="ident">row</span>,
-            <span class="op">|</span><span class="op">|</span> <span class="ident">val</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">val</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">val</span> <span class="kw">as</span> <span class="ident">u64</span>)),
+        <span class="kw">let </span>val = dense_halves.value();
+        region.assign_advice(
+            || <span class="string">&quot;word&quot;</span>,
+            word_col,
+            row,
+            || val.map(|val| pallas::Base::from(val <span class="kw">as </span>u64)),
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">val</span>)
+        <span class="prelude-val">Ok</span>(val)
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

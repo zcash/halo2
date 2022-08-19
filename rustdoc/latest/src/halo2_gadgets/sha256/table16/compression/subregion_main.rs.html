@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -145,132 +139,131 @@
 <span id="124">124</span>
 <span id="125">125</span>
 <span id="126">126</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">AssignedBits</span>, <span class="ident">RoundWord</span>, <span class="ident">RoundWordA</span>, <span class="ident">RoundWordE</span>, <span class="ident">StateWord</span>, <span class="ident">ROUND_CONSTANTS</span>};
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">compression_util</span>::<span class="kw-2">*</span>, <span class="ident">CompressionConfig</span>, <span class="ident">State</span>};
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{<span class="ident">circuit::Region</span>, <span class="ident">pasta::pallas</span>, <span class="ident">plonk::Error</span>};
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{AssignedBits, RoundWord, RoundWordA, RoundWordE, StateWord, ROUND_CONSTANTS};
+<span class="kw">use super</span>::{compression_util::<span class="kw-2">*</span>, CompressionConfig, State};
+<span class="kw">use </span>halo2_proofs::{circuit::Region, pasta::pallas, plonk::Error};
 
-<span class="kw">impl</span> <span class="ident">CompressionConfig</span> {
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::many_single_char_names</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">assign_round</span>(
+<span class="kw">impl </span>CompressionConfig {
+    <span class="attribute">#[allow(clippy::many_single_char_names)]</span>
+    <span class="kw">pub fn </span>assign_round(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">round_idx</span>: <span class="ident">MainRoundIdx</span>,
-        <span class="ident">state</span>: <span class="ident">State</span>,
-        <span class="ident">schedule_word</span>: <span class="kw-2">&amp;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>),
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">State</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">a_4</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">1</span>];
-        <span class="kw">let</span> <span class="ident">a_7</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">3</span>];
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        round_idx: MainRoundIdx,
+        state: State,
+        schedule_word: <span class="kw-2">&amp;</span>(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;),
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;State, Error&gt; {
+        <span class="kw">let </span>a_3 = <span class="self">self</span>.extras[<span class="number">0</span>];
+        <span class="kw">let </span>a_4 = <span class="self">self</span>.extras[<span class="number">1</span>];
+        <span class="kw">let </span>a_7 = <span class="self">self</span>.extras[<span class="number">3</span>];
 
-        <span class="kw">let</span> (<span class="ident">a</span>, <span class="ident">b</span>, <span class="ident">c</span>, <span class="ident">d</span>, <span class="ident">e</span>, <span class="ident">f</span>, <span class="ident">g</span>, <span class="ident">h</span>) <span class="op">=</span> <span class="ident">match_state</span>(<span class="ident">state</span>);
+        <span class="kw">let </span>(a, b, c, d, e, f, g, h) = match_state(state);
 
-        <span class="comment">// s_upper_sigma_1(E)</span>
-        <span class="kw">let</span> <span class="ident">sigma_1</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_upper_sigma_1</span>(<span class="ident">region</span>, <span class="ident">round_idx</span>, <span class="ident">e</span>.<span class="ident">pieces</span>.<span class="ident">clone</span>().<span class="ident">unwrap</span>())<span class="question-mark">?</span>;
+        <span class="comment">// s_upper_sigma_1(E)
+        </span><span class="kw">let </span>sigma_1 = <span class="self">self</span>.assign_upper_sigma_1(region, round_idx, e.pieces.clone().unwrap())<span class="question-mark">?</span>;
 
-        <span class="comment">// Ch(E, F, G)</span>
-        <span class="kw">let</span> <span class="ident">ch</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_ch</span>(
-            <span class="ident">region</span>,
-            <span class="ident">round_idx</span>,
-            <span class="ident">e</span>.<span class="ident">spread_halves</span>.<span class="ident">clone</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">f</span>.<span class="ident">spread_halves</span>.<span class="ident">clone</span>(),
+        <span class="comment">// Ch(E, F, G)
+        </span><span class="kw">let </span>ch = <span class="self">self</span>.assign_ch(
+            region,
+            round_idx,
+            e.spread_halves.clone().unwrap(),
+            f.spread_halves.clone(),
         )<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">ch_neg</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_ch_neg</span>(
-            <span class="ident">region</span>,
-            <span class="ident">round_idx</span>,
-            <span class="ident">e</span>.<span class="ident">spread_halves</span>.<span class="ident">clone</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">g</span>.<span class="ident">spread_halves</span>.<span class="ident">clone</span>(),
-        )<span class="question-mark">?</span>;
-
-        <span class="comment">// s_upper_sigma_0(A)</span>
-        <span class="kw">let</span> <span class="ident">sigma_0</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_upper_sigma_0</span>(<span class="ident">region</span>, <span class="ident">round_idx</span>, <span class="ident">a</span>.<span class="ident">pieces</span>.<span class="ident">clone</span>().<span class="ident">unwrap</span>())<span class="question-mark">?</span>;
-
-        <span class="comment">// Maj(A, B, C)</span>
-        <span class="kw">let</span> <span class="ident">maj</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_maj</span>(
-            <span class="ident">region</span>,
-            <span class="ident">round_idx</span>,
-            <span class="ident">a</span>.<span class="ident">spread_halves</span>.<span class="ident">clone</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">b</span>.<span class="ident">spread_halves</span>.<span class="ident">clone</span>(),
-            <span class="ident">c</span>.<span class="ident">spread_halves</span>.<span class="ident">clone</span>(),
+        <span class="kw">let </span>ch_neg = <span class="self">self</span>.assign_ch_neg(
+            region,
+            round_idx,
+            e.spread_halves.clone().unwrap(),
+            g.spread_halves.clone(),
         )<span class="question-mark">?</span>;
 
-        <span class="comment">// H&#39; = H + Ch(E, F, G) + s_upper_sigma_1(E) + K + W</span>
-        <span class="kw">let</span> <span class="ident">h_prime</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_h_prime</span>(
-            <span class="ident">region</span>,
-            <span class="ident">round_idx</span>,
-            <span class="ident">h</span>,
-            <span class="ident">ch</span>,
-            <span class="ident">ch_neg</span>,
-            <span class="ident">sigma_1</span>,
-            <span class="ident">ROUND_CONSTANTS</span>[<span class="ident">round_idx</span>.<span class="ident">as_usize</span>()],
-            <span class="ident">schedule_word</span>,
+        <span class="comment">// s_upper_sigma_0(A)
+        </span><span class="kw">let </span>sigma_0 = <span class="self">self</span>.assign_upper_sigma_0(region, round_idx, a.pieces.clone().unwrap())<span class="question-mark">?</span>;
+
+        <span class="comment">// Maj(A, B, C)
+        </span><span class="kw">let </span>maj = <span class="self">self</span>.assign_maj(
+            region,
+            round_idx,
+            a.spread_halves.clone().unwrap(),
+            b.spread_halves.clone(),
+            c.spread_halves.clone(),
         )<span class="question-mark">?</span>;
 
-        <span class="comment">// E_new = H&#39; + D</span>
-        <span class="kw">let</span> <span class="ident">e_new_dense</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_e_new</span>(<span class="ident">region</span>, <span class="ident">round_idx</span>, <span class="kw-2">&amp;</span><span class="ident">d</span>, <span class="kw-2">&amp;</span><span class="ident">h_prime</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">e_new_val</span> <span class="op">=</span> <span class="ident">e_new_dense</span>.<span class="ident">value</span>();
+        <span class="comment">// H&#39; = H + Ch(E, F, G) + s_upper_sigma_1(E) + K + W
+        </span><span class="kw">let </span>h_prime = <span class="self">self</span>.assign_h_prime(
+            region,
+            round_idx,
+            h,
+            ch,
+            ch_neg,
+            sigma_1,
+            ROUND_CONSTANTS[round_idx.as_usize()],
+            schedule_word,
+        )<span class="question-mark">?</span>;
 
-        <span class="comment">// A_new = H&#39; + Maj(A, B, C) + sigma_0(A)</span>
-        <span class="kw">let</span> <span class="ident">a_new_dense</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_a_new</span>(<span class="ident">region</span>, <span class="ident">round_idx</span>, <span class="ident">maj</span>, <span class="ident">sigma_0</span>, <span class="ident">h_prime</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">a_new_val</span> <span class="op">=</span> <span class="ident">a_new_dense</span>.<span class="ident">value</span>();
+        <span class="comment">// E_new = H&#39; + D
+        </span><span class="kw">let </span>e_new_dense = <span class="self">self</span>.assign_e_new(region, round_idx, <span class="kw-2">&amp;</span>d, <span class="kw-2">&amp;</span>h_prime)<span class="question-mark">?</span>;
+        <span class="kw">let </span>e_new_val = e_new_dense.value();
 
-        <span class="kw">if</span> <span class="ident">round_idx</span> <span class="op">&lt;</span> <span class="number">63</span>.<span class="ident">into</span>() {
-            <span class="comment">// Assign and copy A_new</span>
-            <span class="kw">let</span> <span class="ident">a_new_row</span> <span class="op">=</span> <span class="ident">get_decompose_a_row</span>((<span class="ident">round_idx</span> <span class="op">+</span> <span class="number">1</span>).<span class="ident">into</span>());
-            <span class="ident">a_new_dense</span>
-                .<span class="number">0</span>
-                .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;a_new_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_7</span>, <span class="ident">a_new_row</span>)<span class="question-mark">?</span>;
-            <span class="ident">a_new_dense</span>
-                .<span class="number">1</span>
-                .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;a_new_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_7</span>, <span class="ident">a_new_row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="comment">// A_new = H&#39; + Maj(A, B, C) + sigma_0(A)
+        </span><span class="kw">let </span>a_new_dense = <span class="self">self</span>.assign_a_new(region, round_idx, maj, sigma_0, h_prime)<span class="question-mark">?</span>;
+        <span class="kw">let </span>a_new_val = a_new_dense.value();
 
-            <span class="comment">// Assign and copy E_new</span>
-            <span class="kw">let</span> <span class="ident">e_new_row</span> <span class="op">=</span> <span class="ident">get_decompose_e_row</span>((<span class="ident">round_idx</span> <span class="op">+</span> <span class="number">1</span>).<span class="ident">into</span>());
-            <span class="ident">e_new_dense</span>
-                .<span class="number">0</span>
-                .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;e_new_lo&quot;</span>, <span class="ident">region</span>, <span class="ident">a_7</span>, <span class="ident">e_new_row</span>)<span class="question-mark">?</span>;
-            <span class="ident">e_new_dense</span>
-                .<span class="number">1</span>
-                .<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;e_new_hi&quot;</span>, <span class="ident">region</span>, <span class="ident">a_7</span>, <span class="ident">e_new_row</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>;
+        <span class="kw">if </span>round_idx &lt; <span class="number">63</span>.into() {
+            <span class="comment">// Assign and copy A_new
+            </span><span class="kw">let </span>a_new_row = get_decompose_a_row((round_idx + <span class="number">1</span>).into());
+            a_new_dense
+                .<span class="number">0
+                </span>.copy_advice(|| <span class="string">&quot;a_new_lo&quot;</span>, region, a_7, a_new_row)<span class="question-mark">?</span>;
+            a_new_dense
+                .<span class="number">1
+                </span>.copy_advice(|| <span class="string">&quot;a_new_hi&quot;</span>, region, a_7, a_new_row + <span class="number">1</span>)<span class="question-mark">?</span>;
 
-            <span class="comment">// Decompose A into (2, 11, 9, 10)-bit chunks</span>
-            <span class="kw">let</span> <span class="ident">a_new</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_a</span>(<span class="ident">region</span>, (<span class="ident">round_idx</span> <span class="op">+</span> <span class="number">1</span>).<span class="ident">into</span>(), <span class="ident">a_new_val</span>)<span class="question-mark">?</span>;
+            <span class="comment">// Assign and copy E_new
+            </span><span class="kw">let </span>e_new_row = get_decompose_e_row((round_idx + <span class="number">1</span>).into());
+            e_new_dense
+                .<span class="number">0
+                </span>.copy_advice(|| <span class="string">&quot;e_new_lo&quot;</span>, region, a_7, e_new_row)<span class="question-mark">?</span>;
+            e_new_dense
+                .<span class="number">1
+                </span>.copy_advice(|| <span class="string">&quot;e_new_hi&quot;</span>, region, a_7, e_new_row + <span class="number">1</span>)<span class="question-mark">?</span>;
 
-            <span class="comment">// Decompose E into (6, 5, 14, 7)-bit chunks</span>
-            <span class="kw">let</span> <span class="ident">e_new</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_e</span>(<span class="ident">region</span>, (<span class="ident">round_idx</span> <span class="op">+</span> <span class="number">1</span>).<span class="ident">into</span>(), <span class="ident">e_new_val</span>)<span class="question-mark">?</span>;
+            <span class="comment">// Decompose A into (2, 11, 9, 10)-bit chunks
+            </span><span class="kw">let </span>a_new = <span class="self">self</span>.decompose_a(region, (round_idx + <span class="number">1</span>).into(), a_new_val)<span class="question-mark">?</span>;
 
-            <span class="prelude-val">Ok</span>(<span class="ident">State::new</span>(
-                <span class="ident">StateWord::A</span>(<span class="ident">a_new</span>),
-                <span class="ident">StateWord::B</span>(<span class="ident">RoundWord::new</span>(<span class="ident">a</span>.<span class="ident">dense_halves</span>, <span class="ident">a</span>.<span class="ident">spread_halves</span>.<span class="ident">unwrap</span>())),
-                <span class="ident">StateWord::C</span>(<span class="ident">b</span>),
-                <span class="ident">StateWord::D</span>(<span class="ident">c</span>.<span class="ident">dense_halves</span>),
-                <span class="ident">StateWord::E</span>(<span class="ident">e_new</span>),
-                <span class="ident">StateWord::F</span>(<span class="ident">RoundWord::new</span>(<span class="ident">e</span>.<span class="ident">dense_halves</span>, <span class="ident">e</span>.<span class="ident">spread_halves</span>.<span class="ident">unwrap</span>())),
-                <span class="ident">StateWord::G</span>(<span class="ident">f</span>),
-                <span class="ident">StateWord::H</span>(<span class="ident">g</span>.<span class="ident">dense_halves</span>),
+            <span class="comment">// Decompose E into (6, 5, 14, 7)-bit chunks
+            </span><span class="kw">let </span>e_new = <span class="self">self</span>.decompose_e(region, (round_idx + <span class="number">1</span>).into(), e_new_val)<span class="question-mark">?</span>;
+
+            <span class="prelude-val">Ok</span>(State::new(
+                StateWord::A(a_new),
+                StateWord::B(RoundWord::new(a.dense_halves, a.spread_halves.unwrap())),
+                StateWord::C(b),
+                StateWord::D(c.dense_halves),
+                StateWord::E(e_new),
+                StateWord::F(RoundWord::new(e.dense_halves, e.spread_halves.unwrap())),
+                StateWord::G(f),
+                StateWord::H(g.dense_halves),
             ))
-        } <span class="kw">else</span> {
-            <span class="kw">let</span> <span class="ident">abcd_row</span> <span class="op">=</span> <span class="ident">get_digest_abcd_row</span>();
-            <span class="kw">let</span> <span class="ident">efgh_row</span> <span class="op">=</span> <span class="ident">get_digest_efgh_row</span>();
+        } <span class="kw">else </span>{
+            <span class="kw">let </span>abcd_row = get_digest_abcd_row();
+            <span class="kw">let </span>efgh_row = get_digest_efgh_row();
 
-            <span class="kw">let</span> <span class="ident">a_final</span> <span class="op">=</span>
-                <span class="self">self</span>.<span class="ident">assign_word_halves_dense</span>(<span class="ident">region</span>, <span class="ident">abcd_row</span>, <span class="ident">a_3</span>, <span class="ident">abcd_row</span>, <span class="ident">a_4</span>, <span class="ident">a_new_val</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>a_final =
+                <span class="self">self</span>.assign_word_halves_dense(region, abcd_row, a_3, abcd_row, a_4, a_new_val)<span class="question-mark">?</span>;
 
-            <span class="kw">let</span> <span class="ident">e_final</span> <span class="op">=</span>
-                <span class="self">self</span>.<span class="ident">assign_word_halves_dense</span>(<span class="ident">region</span>, <span class="ident">efgh_row</span>, <span class="ident">a_3</span>, <span class="ident">efgh_row</span>, <span class="ident">a_4</span>, <span class="ident">e_new_val</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>e_final =
+                <span class="self">self</span>.assign_word_halves_dense(region, efgh_row, a_3, efgh_row, a_4, e_new_val)<span class="question-mark">?</span>;
 
-            <span class="prelude-val">Ok</span>(<span class="ident">State::new</span>(
-                <span class="ident">StateWord::A</span>(<span class="ident">RoundWordA::new_dense</span>(<span class="ident">a_final</span>)),
-                <span class="ident">StateWord::B</span>(<span class="ident">RoundWord::new</span>(<span class="ident">a</span>.<span class="ident">dense_halves</span>, <span class="ident">a</span>.<span class="ident">spread_halves</span>.<span class="ident">unwrap</span>())),
-                <span class="ident">StateWord::C</span>(<span class="ident">b</span>),
-                <span class="ident">StateWord::D</span>(<span class="ident">c</span>.<span class="ident">dense_halves</span>),
-                <span class="ident">StateWord::E</span>(<span class="ident">RoundWordE::new_dense</span>(<span class="ident">e_final</span>)),
-                <span class="ident">StateWord::F</span>(<span class="ident">RoundWord::new</span>(<span class="ident">e</span>.<span class="ident">dense_halves</span>, <span class="ident">e</span>.<span class="ident">spread_halves</span>.<span class="ident">unwrap</span>())),
-                <span class="ident">StateWord::G</span>(<span class="ident">f</span>),
-                <span class="ident">StateWord::H</span>(<span class="ident">g</span>.<span class="ident">dense_halves</span>),
+            <span class="prelude-val">Ok</span>(State::new(
+                StateWord::A(RoundWordA::new_dense(a_final)),
+                StateWord::B(RoundWord::new(a.dense_halves, a.spread_halves.unwrap())),
+                StateWord::C(b),
+                StateWord::D(c.dense_halves),
+                StateWord::E(RoundWordE::new_dense(e_final)),
+                StateWord::F(RoundWord::new(e.dense_halves, e.spread_halves.unwrap())),
+                StateWord::G(f),
+                StateWord::H(g.dense_halves),
             ))
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

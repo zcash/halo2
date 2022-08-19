@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -523,323 +517,323 @@
 <span id="502">502</span>
 <span id="503">503</span>
 <span id="504">504</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ff::Field</span>;
-<span class="kw">use</span> <span class="ident">plotters</span>::{
-    <span class="ident">coord::Shift</span>,
-    <span class="ident">prelude</span>::{<span class="ident">DrawingArea</span>, <span class="ident">DrawingAreaErrorKind</span>, <span class="ident">DrawingBackend</span>},
+</pre><pre class="rust"><code><span class="kw">use </span>ff::Field;
+<span class="kw">use </span>plotters::{
+    coord::Shift,
+    prelude::{DrawingArea, DrawingAreaErrorKind, DrawingBackend},
 };
-<span class="kw">use</span> <span class="ident">std::cmp</span>;
-<span class="kw">use</span> <span class="ident">std::collections::HashSet</span>;
-<span class="kw">use</span> <span class="ident">std::ops::Range</span>;
+<span class="kw">use </span>std::cmp;
+<span class="kw">use </span>std::collections::HashSet;
+<span class="kw">use </span>std::ops::Range;
 
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">layouter::RegionColumn</span>, <span class="ident">Value</span>},
-    <span class="ident">plonk</span>::{
-        <span class="ident">Advice</span>, <span class="ident">Any</span>, <span class="ident">Assigned</span>, <span class="ident">Assignment</span>, <span class="ident">Circuit</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Fixed</span>,
-        <span class="ident">FloorPlanner</span>, <span class="ident">Instance</span>, <span class="ident">Selector</span>,
+<span class="kw">use crate</span>::{
+    circuit::{layouter::RegionColumn, Value},
+    plonk::{
+        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
+        FloorPlanner, Instance, Selector,
     },
 };
 
-<span class="doccomment">/// Graphical renderer for circuit layouts.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Cells that have been assigned to by the circuit will be shaded. If any cells are</span>
-<span class="doccomment">/// assigned to more than once (which is usually a mistake), they will be shaded darker</span>
-<span class="doccomment">/// than the surrounding cells.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// # Examples</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// ```ignore</span>
-<span class="doccomment">/// use halo2_proofs::dev::CircuitLayout;</span>
-<span class="doccomment">/// use plotters::prelude::*;</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// let drawing_area = BitMapBackend::new(&quot;example-circuit-layout.png&quot;, (1024, 768))</span>
-<span class="doccomment">///     .into_drawing_area();</span>
-<span class="doccomment">/// drawing_area.fill(&amp;WHITE).unwrap();</span>
-<span class="doccomment">/// let drawing_area = drawing_area</span>
-<span class="doccomment">///     .titled(&quot;Example Circuit Layout&quot;, (&quot;sans-serif&quot;, 60))</span>
-<span class="doccomment">///     .unwrap();</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// let circuit = MyCircuit::default();</span>
-<span class="doccomment">/// let k = 5; // Suitable size for MyCircuit</span>
-<span class="doccomment">/// CircuitLayout::default().render(k, &amp;circuit, &amp;drawing_area).unwrap();</span>
-<span class="doccomment">/// ```</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CircuitLayout</span> {
-    <span class="ident">hide_labels</span>: <span class="ident">bool</span>,
-    <span class="ident">mark_equality_cells</span>: <span class="ident">bool</span>,
-    <span class="ident">show_equality_constraints</span>: <span class="ident">bool</span>,
-    <span class="ident">view_width</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">view_height</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Graphical renderer for circuit layouts.
+///
+/// Cells that have been assigned to by the circuit will be shaded. If any cells are
+/// assigned to more than once (which is usually a mistake), they will be shaded darker
+/// than the surrounding cells.
+///
+/// # Examples
+///
+/// ```ignore
+/// use halo2_proofs::dev::CircuitLayout;
+/// use plotters::prelude::*;
+///
+/// let drawing_area = BitMapBackend::new(&quot;example-circuit-layout.png&quot;, (1024, 768))
+///     .into_drawing_area();
+/// drawing_area.fill(&amp;WHITE).unwrap();
+/// let drawing_area = drawing_area
+///     .titled(&quot;Example Circuit Layout&quot;, (&quot;sans-serif&quot;, 60))
+///     .unwrap();
+///
+/// let circuit = MyCircuit::default();
+/// let k = 5; // Suitable size for MyCircuit
+/// CircuitLayout::default().render(k, &amp;circuit, &amp;drawing_area).unwrap();
+/// ```
+</span><span class="attribute">#[derive(Debug, Default)]</span>
+<span class="kw">pub struct </span>CircuitLayout {
+    hide_labels: bool,
+    mark_equality_cells: bool,
+    show_equality_constraints: bool,
+    view_width: <span class="prelude-ty">Option</span>&lt;Range&lt;usize&gt;&gt;,
+    view_height: <span class="prelude-ty">Option</span>&lt;Range&lt;usize&gt;&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">CircuitLayout</span> {
-    <span class="doccomment">/// Sets the visibility of region labels.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The default is to show labels.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">show_labels</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">show</span>: <span class="ident">bool</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">hide_labels</span> <span class="op">=</span> <span class="op">!</span><span class="ident">show</span>;
-        <span class="self">self</span>
-    }
+<span class="kw">impl </span>CircuitLayout {
+    <span class="doccomment">/// Sets the visibility of region labels.
+    ///
+    /// The default is to show labels.
+    </span><span class="kw">pub fn </span>show_labels(<span class="kw-2">mut </span><span class="self">self</span>, show: bool) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.hide_labels = !show;
+        <span class="self">self
+    </span>}
 
-    <span class="doccomment">/// Marks cells involved in equality constraints, in red.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The default is to not mark these cells.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">mark_equality_cells</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">show</span>: <span class="ident">bool</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">mark_equality_cells</span> <span class="op">=</span> <span class="ident">show</span>;
-        <span class="self">self</span>
-    }
+    <span class="doccomment">/// Marks cells involved in equality constraints, in red.
+    ///
+    /// The default is to not mark these cells.
+    </span><span class="kw">pub fn </span>mark_equality_cells(<span class="kw-2">mut </span><span class="self">self</span>, show: bool) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.mark_equality_cells = show;
+        <span class="self">self
+    </span>}
 
-    <span class="doccomment">/// Draws red lines between equality-constrained cells.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The default is to not show these, as they can get _very_ messy.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">show_equality_constraints</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">show</span>: <span class="ident">bool</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">show_equality_constraints</span> <span class="op">=</span> <span class="ident">show</span>;
-        <span class="self">self</span>
-    }
+    <span class="doccomment">/// Draws red lines between equality-constrained cells.
+    ///
+    /// The default is to not show these, as they can get _very_ messy.
+    </span><span class="kw">pub fn </span>show_equality_constraints(<span class="kw-2">mut </span><span class="self">self</span>, show: bool) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.show_equality_constraints = show;
+        <span class="self">self
+    </span>}
 
-    <span class="doccomment">/// Sets the view width for this layout, as a number of columns.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">view_width</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">width</span>: <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">view_width</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">width</span>);
-        <span class="self">self</span>
-    }
+    <span class="doccomment">/// Sets the view width for this layout, as a number of columns.
+    </span><span class="kw">pub fn </span>view_width(<span class="kw-2">mut </span><span class="self">self</span>, width: Range&lt;usize&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.view_width = <span class="prelude-val">Some</span>(width);
+        <span class="self">self
+    </span>}
 
-    <span class="doccomment">/// Sets the view height for this layout, as a number of rows.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">view_height</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">height</span>: <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">self</span>.<span class="ident">view_height</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">height</span>);
-        <span class="self">self</span>
-    }
+    <span class="doccomment">/// Sets the view height for this layout, as a number of rows.
+    </span><span class="kw">pub fn </span>view_height(<span class="kw-2">mut </span><span class="self">self</span>, height: Range&lt;usize&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.view_height = <span class="prelude-val">Some</span>(height);
+        <span class="self">self
+    </span>}
 
-    <span class="doccomment">/// Renders the given circuit on the given drawing area.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">render</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span>, <span class="ident">ConcreteCircuit</span>: <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">DB</span>: <span class="ident">DrawingBackend</span><span class="op">&gt;</span>(
+    <span class="doccomment">/// Renders the given circuit on the given drawing area.
+    </span><span class="kw">pub fn </span>render&lt;F: Field, ConcreteCircuit: Circuit&lt;F&gt;, DB: DrawingBackend&gt;(
         <span class="self">self</span>,
-        <span class="ident">k</span>: <span class="ident">u32</span>,
-        <span class="ident">circuit</span>: <span class="kw-2">&amp;</span><span class="ident">ConcreteCircuit</span>,
-        <span class="ident">drawing_area</span>: <span class="kw-2">&amp;</span><span class="ident">DrawingArea</span><span class="op">&lt;</span><span class="ident">DB</span>, <span class="ident">Shift</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">DrawingAreaErrorKind</span><span class="op">&lt;</span><span class="ident">DB::ErrorType</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">use</span> <span class="ident">plotters::coord::types::RangedCoordusize</span>;
-        <span class="kw">use</span> <span class="ident">plotters::prelude</span>::<span class="kw-2">*</span>;
+        k: u32,
+        circuit: <span class="kw-2">&amp;</span>ConcreteCircuit,
+        drawing_area: <span class="kw-2">&amp;</span>DrawingArea&lt;DB, Shift&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), DrawingAreaErrorKind&lt;DB::ErrorType&gt;&gt; {
+        <span class="kw">use </span>plotters::coord::types::RangedCoordusize;
+        <span class="kw">use </span>plotters::prelude::<span class="kw-2">*</span>;
 
-        <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">k</span>;
-        <span class="comment">// Collect the layout details.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cs</span> <span class="op">=</span> <span class="ident">ConstraintSystem::default</span>();
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">ConcreteCircuit::configure</span>(<span class="kw-2">&amp;mut</span> <span class="ident">cs</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">layout</span> <span class="op">=</span> <span class="ident">Layout::new</span>(<span class="ident">k</span>, <span class="ident">n</span>, <span class="ident">cs</span>.<span class="ident">num_selectors</span>);
-        <span class="ident">ConcreteCircuit::FloorPlanner::synthesize</span>(
-            <span class="kw-2">&amp;mut</span> <span class="ident">layout</span>,
-            <span class="ident">circuit</span>,
-            <span class="ident">config</span>,
-            <span class="ident">cs</span>.<span class="ident">constants</span>.<span class="ident">clone</span>(),
+        <span class="kw">let </span>n = <span class="number">1 </span>&lt;&lt; k;
+        <span class="comment">// Collect the layout details.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>cs = ConstraintSystem::default();
+        <span class="kw">let </span>config = ConcreteCircuit::configure(<span class="kw-2">&amp;mut </span>cs);
+        <span class="kw">let </span><span class="kw-2">mut </span>layout = Layout::new(k, n, cs.num_selectors);
+        ConcreteCircuit::FloorPlanner::synthesize(
+            <span class="kw-2">&amp;mut </span>layout,
+            circuit,
+            config,
+            cs.constants.clone(),
         )
-        .<span class="ident">unwrap</span>();
-        <span class="kw">let</span> (<span class="ident">cs</span>, <span class="ident">selector_polys</span>) <span class="op">=</span> <span class="ident">cs</span>.<span class="ident">compress_selectors</span>(<span class="ident">layout</span>.<span class="ident">selectors</span>);
-        <span class="kw">let</span> <span class="ident">non_selector_fixed_columns</span> <span class="op">=</span> <span class="ident">cs</span>.<span class="ident">num_fixed_columns</span> <span class="op">-</span> <span class="ident">selector_polys</span>.<span class="ident">len</span>();
+        .unwrap();
+        <span class="kw">let </span>(cs, selector_polys) = cs.compress_selectors(layout.selectors);
+        <span class="kw">let </span>non_selector_fixed_columns = cs.num_fixed_columns - selector_polys.len();
 
-        <span class="comment">// Figure out what order to render the columns in.</span>
-        <span class="comment">// TODO: For now, just render them in the order they were configured.</span>
-        <span class="kw">let</span> <span class="ident">total_columns</span> <span class="op">=</span> <span class="ident">cs</span>.<span class="ident">num_instance_columns</span> <span class="op">+</span> <span class="ident">cs</span>.<span class="ident">num_advice_columns</span> <span class="op">+</span> <span class="ident">cs</span>.<span class="ident">num_fixed_columns</span>;
-        <span class="kw">let</span> <span class="ident">column_index</span> <span class="op">=</span> <span class="op">|</span><span class="ident">cs</span>: <span class="kw-2">&amp;</span><span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">column</span>: <span class="ident">RegionColumn</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">column</span> {
-                <span class="ident">RegionColumn::Column</span>(<span class="ident">col</span>) =&gt; <span class="ident">col</span>,
-                <span class="ident">RegionColumn::Selector</span>(<span class="ident">selector</span>) =&gt; <span class="ident">cs</span>.<span class="ident">selector_map</span>[<span class="ident">selector</span>.<span class="number">0</span>].<span class="ident">into</span>(),
+        <span class="comment">// Figure out what order to render the columns in.
+        // TODO: For now, just render them in the order they were configured.
+        </span><span class="kw">let </span>total_columns = cs.num_instance_columns + cs.num_advice_columns + cs.num_fixed_columns;
+        <span class="kw">let </span>column_index = |cs: <span class="kw-2">&amp;</span>ConstraintSystem&lt;F&gt;, column: RegionColumn| {
+            <span class="kw">let </span>column: Column&lt;Any&gt; = <span class="kw">match </span>column {
+                RegionColumn::Column(col) =&gt; col,
+                RegionColumn::Selector(selector) =&gt; cs.selector_map[selector.<span class="number">0</span>].into(),
             };
-            <span class="ident">column</span>.<span class="ident">index</span>()
-                <span class="op">+</span> <span class="kw">match</span> <span class="ident">column</span>.<span class="ident">column_type</span>() {
-                    <span class="ident">Any::Instance</span> =&gt; <span class="number">0</span>,
-                    <span class="ident">Any::Advice</span> =&gt; <span class="ident">cs</span>.<span class="ident">num_instance_columns</span>,
-                    <span class="ident">Any::Fixed</span> =&gt; <span class="ident">cs</span>.<span class="ident">num_instance_columns</span> <span class="op">+</span> <span class="ident">cs</span>.<span class="ident">num_advice_columns</span>,
+            column.index()
+                + <span class="kw">match </span>column.column_type() {
+                    Any::Instance =&gt; <span class="number">0</span>,
+                    Any::Advice =&gt; cs.num_instance_columns,
+                    Any::Fixed =&gt; cs.num_instance_columns + cs.num_advice_columns,
                 }
         };
 
-        <span class="kw">let</span> <span class="ident">view_width</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">view_width</span>.<span class="ident">unwrap_or</span>(<span class="number">0</span>..<span class="ident">total_columns</span>);
-        <span class="kw">let</span> <span class="ident">view_height</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">view_height</span>.<span class="ident">unwrap_or</span>(<span class="number">0</span>..<span class="ident">n</span>);
-        <span class="kw">let</span> <span class="ident">view_bottom</span> <span class="op">=</span> <span class="ident">view_height</span>.<span class="ident">end</span>;
+        <span class="kw">let </span>view_width = <span class="self">self</span>.view_width.unwrap_or(<span class="number">0</span>..total_columns);
+        <span class="kw">let </span>view_height = <span class="self">self</span>.view_height.unwrap_or(<span class="number">0</span>..n);
+        <span class="kw">let </span>view_bottom = view_height.end;
 
-        <span class="comment">// Prepare the grid layout. We render a red background for advice columns, white for</span>
-        <span class="comment">// instance columns, and blue for fixed columns (with a darker blue for selectors).</span>
-        <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span>
-            <span class="ident">drawing_area</span>.<span class="ident">apply_coord_spec</span>(<span class="ident">Cartesian2d</span>::<span class="op">&lt;</span><span class="ident">RangedCoordusize</span>, <span class="ident">RangedCoordusize</span><span class="op">&gt;</span><span class="ident">::new</span>(
-                <span class="ident">view_width</span>,
-                <span class="ident">view_height</span>,
-                <span class="ident">drawing_area</span>.<span class="ident">get_pixel_range</span>(),
+        <span class="comment">// Prepare the grid layout. We render a red background for advice columns, white for
+        // instance columns, and blue for fixed columns (with a darker blue for selectors).
+        </span><span class="kw">let </span>root =
+            drawing_area.apply_coord_spec(Cartesian2d::&lt;RangedCoordusize, RangedCoordusize&gt;::new(
+                view_width,
+                view_height,
+                drawing_area.get_pixel_range(),
             ));
-        <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="ident">Rectangle::new</span>(
-            [(<span class="number">0</span>, <span class="number">0</span>), (<span class="ident">total_columns</span>, <span class="ident">view_bottom</span>)],
-            <span class="ident">ShapeStyle::from</span>(<span class="kw-2">&amp;</span><span class="ident">WHITE</span>).<span class="ident">filled</span>(),
+        root.draw(<span class="kw-2">&amp;</span>Rectangle::new(
+            [(<span class="number">0</span>, <span class="number">0</span>), (total_columns, view_bottom)],
+            ShapeStyle::from(<span class="kw-2">&amp;</span>WHITE).filled(),
         ))<span class="question-mark">?</span>;
-        <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="ident">Rectangle::new</span>(
+        root.draw(<span class="kw-2">&amp;</span>Rectangle::new(
             [
-                (<span class="ident">cs</span>.<span class="ident">num_instance_columns</span>, <span class="number">0</span>),
-                (<span class="ident">cs</span>.<span class="ident">num_instance_columns</span> <span class="op">+</span> <span class="ident">cs</span>.<span class="ident">num_advice_columns</span>, <span class="ident">view_bottom</span>),
+                (cs.num_instance_columns, <span class="number">0</span>),
+                (cs.num_instance_columns + cs.num_advice_columns, view_bottom),
             ],
-            <span class="ident">ShapeStyle::from</span>(<span class="kw-2">&amp;</span><span class="ident">RED</span>.<span class="ident">mix</span>(<span class="number">0.2</span>)).<span class="ident">filled</span>(),
+            ShapeStyle::from(<span class="kw-2">&amp;</span>RED.mix(<span class="number">0.2</span>)).filled(),
         ))<span class="question-mark">?</span>;
-        <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="ident">Rectangle::new</span>(
+        root.draw(<span class="kw-2">&amp;</span>Rectangle::new(
             [
-                (<span class="ident">cs</span>.<span class="ident">num_instance_columns</span> <span class="op">+</span> <span class="ident">cs</span>.<span class="ident">num_advice_columns</span>, <span class="number">0</span>),
-                (<span class="ident">total_columns</span>, <span class="ident">view_bottom</span>),
+                (cs.num_instance_columns + cs.num_advice_columns, <span class="number">0</span>),
+                (total_columns, view_bottom),
             ],
-            <span class="ident">ShapeStyle::from</span>(<span class="kw-2">&amp;</span><span class="ident">BLUE</span>.<span class="ident">mix</span>(<span class="number">0.2</span>)).<span class="ident">filled</span>(),
+            ShapeStyle::from(<span class="kw-2">&amp;</span>BLUE.mix(<span class="number">0.2</span>)).filled(),
         ))<span class="question-mark">?</span>;
         {
-            <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="ident">Rectangle::new</span>(
+            root.draw(<span class="kw-2">&amp;</span>Rectangle::new(
                 [
                     (
-                        <span class="ident">cs</span>.<span class="ident">num_instance_columns</span>
-                            <span class="op">+</span> <span class="ident">cs</span>.<span class="ident">num_advice_columns</span>
-                            <span class="op">+</span> <span class="ident">non_selector_fixed_columns</span>,
+                        cs.num_instance_columns
+                            + cs.num_advice_columns
+                            + non_selector_fixed_columns,
                         <span class="number">0</span>,
                     ),
-                    (<span class="ident">total_columns</span>, <span class="ident">view_bottom</span>),
+                    (total_columns, view_bottom),
                 ],
-                <span class="ident">ShapeStyle::from</span>(<span class="kw-2">&amp;</span><span class="ident">BLUE</span>.<span class="ident">mix</span>(<span class="number">0.1</span>)).<span class="ident">filled</span>(),
+                ShapeStyle::from(<span class="kw-2">&amp;</span>BLUE.mix(<span class="number">0.1</span>)).filled(),
             ))<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// Mark the unusable rows of the circuit.</span>
-        <span class="kw">let</span> <span class="ident">usable_rows</span> <span class="op">=</span> <span class="ident">n</span> <span class="op">-</span> (<span class="ident">cs</span>.<span class="ident">blinding_factors</span>() <span class="op">+</span> <span class="number">1</span>);
-        <span class="kw">if</span> <span class="ident">view_bottom</span> <span class="op">&gt;</span> <span class="ident">usable_rows</span> {
-            <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="ident">Rectangle::new</span>(
-                [(<span class="number">0</span>, <span class="ident">usable_rows</span>), (<span class="ident">total_columns</span>, <span class="ident">view_bottom</span>)],
-                <span class="ident">ShapeStyle::from</span>(<span class="kw-2">&amp;</span><span class="ident">RED</span>.<span class="ident">mix</span>(<span class="number">0.4</span>)).<span class="ident">filled</span>(),
+        <span class="comment">// Mark the unusable rows of the circuit.
+        </span><span class="kw">let </span>usable_rows = n - (cs.blinding_factors() + <span class="number">1</span>);
+        <span class="kw">if </span>view_bottom &gt; usable_rows {
+            root.draw(<span class="kw-2">&amp;</span>Rectangle::new(
+                [(<span class="number">0</span>, usable_rows), (total_columns, view_bottom)],
+                ShapeStyle::from(<span class="kw-2">&amp;</span>RED.mix(<span class="number">0.4</span>)).filled(),
             ))<span class="question-mark">?</span>;
         }
 
-        <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="ident">Rectangle::new</span>(
-            [(<span class="number">0</span>, <span class="number">0</span>), (<span class="ident">total_columns</span>, <span class="ident">view_bottom</span>)],
-            <span class="kw-2">&amp;</span><span class="ident">BLACK</span>,
+        root.draw(<span class="kw-2">&amp;</span>Rectangle::new(
+            [(<span class="number">0</span>, <span class="number">0</span>), (total_columns, view_bottom)],
+            <span class="kw-2">&amp;</span>BLACK,
         ))<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">draw_region</span> <span class="op">=</span> <span class="op">|</span><span class="ident">root</span>: <span class="kw-2">&amp;</span><span class="ident">DrawingArea</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span>, <span class="ident">top_left</span>, <span class="ident">bottom_right</span><span class="op">|</span> {
-            <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="ident">Rectangle::new</span>(
-                [<span class="ident">top_left</span>, <span class="ident">bottom_right</span>],
-                <span class="ident">ShapeStyle::from</span>(<span class="kw-2">&amp;</span><span class="ident">WHITE</span>).<span class="ident">filled</span>(),
+        <span class="kw">let </span>draw_region = |root: <span class="kw-2">&amp;</span>DrawingArea&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;, top_left, bottom_right| {
+            root.draw(<span class="kw-2">&amp;</span>Rectangle::new(
+                [top_left, bottom_right],
+                ShapeStyle::from(<span class="kw-2">&amp;</span>WHITE).filled(),
             ))<span class="question-mark">?</span>;
-            <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="ident">Rectangle::new</span>(
-                [<span class="ident">top_left</span>, <span class="ident">bottom_right</span>],
-                <span class="ident">ShapeStyle::from</span>(<span class="kw-2">&amp;</span><span class="ident">RED</span>.<span class="ident">mix</span>(<span class="number">0.2</span>)).<span class="ident">filled</span>(),
+            root.draw(<span class="kw-2">&amp;</span>Rectangle::new(
+                [top_left, bottom_right],
+                ShapeStyle::from(<span class="kw-2">&amp;</span>RED.mix(<span class="number">0.2</span>)).filled(),
             ))<span class="question-mark">?</span>;
-            <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="ident">Rectangle::new</span>(
-                [<span class="ident">top_left</span>, <span class="ident">bottom_right</span>],
-                <span class="ident">ShapeStyle::from</span>(<span class="kw-2">&amp;</span><span class="ident">GREEN</span>.<span class="ident">mix</span>(<span class="number">0.2</span>)).<span class="ident">filled</span>(),
+            root.draw(<span class="kw-2">&amp;</span>Rectangle::new(
+                [top_left, bottom_right],
+                ShapeStyle::from(<span class="kw-2">&amp;</span>GREEN.mix(<span class="number">0.2</span>)).filled(),
             ))<span class="question-mark">?</span>;
-            <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="ident">Rectangle::new</span>([<span class="ident">top_left</span>, <span class="ident">bottom_right</span>], <span class="kw-2">&amp;</span><span class="ident">BLACK</span>))<span class="question-mark">?</span>;
+            root.draw(<span class="kw-2">&amp;</span>Rectangle::new([top_left, bottom_right], <span class="kw-2">&amp;</span>BLACK))<span class="question-mark">?</span>;
             <span class="prelude-val">Ok</span>(())
         };
 
-        <span class="kw">let</span> <span class="ident">draw_cell</span> <span class="op">=</span> <span class="op">|</span><span class="ident">root</span>: <span class="kw-2">&amp;</span><span class="ident">DrawingArea</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span>, <span class="ident">column</span>, <span class="ident">row</span><span class="op">|</span> {
-            <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="ident">Rectangle::new</span>(
-                [(<span class="ident">column</span>, <span class="ident">row</span>), (<span class="ident">column</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)],
-                <span class="ident">ShapeStyle::from</span>(<span class="kw-2">&amp;</span><span class="ident">BLACK</span>.<span class="ident">mix</span>(<span class="number">0.1</span>)).<span class="ident">filled</span>(),
+        <span class="kw">let </span>draw_cell = |root: <span class="kw-2">&amp;</span>DrawingArea&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;, column, row| {
+            root.draw(<span class="kw-2">&amp;</span>Rectangle::new(
+                [(column, row), (column + <span class="number">1</span>, row + <span class="number">1</span>)],
+                ShapeStyle::from(<span class="kw-2">&amp;</span>BLACK.mix(<span class="number">0.1</span>)).filled(),
             ))
         };
 
-        <span class="comment">// Render the regions!</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">labels</span> <span class="op">=</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">hide_labels</span> { <span class="prelude-val">None</span> } <span class="kw">else</span> { <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]) };
-        <span class="kw">for</span> <span class="ident">region</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">layout</span>.<span class="ident">regions</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">offset</span>) <span class="op">=</span> <span class="ident">region</span>.<span class="ident">offset</span> {
-                <span class="comment">// Sort the region&#39;s columns according to the defined ordering.</span>
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">columns</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">columns</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">collect</span>();
-                <span class="ident">columns</span>.<span class="ident">sort_unstable_by_key</span>(<span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="ident">column_index</span>(<span class="kw-2">&amp;</span><span class="ident">cs</span>, <span class="kw-2">*</span><span class="ident">a</span>));
+        <span class="comment">// Render the regions!
+        </span><span class="kw">let </span><span class="kw-2">mut </span>labels = <span class="kw">if </span><span class="self">self</span>.hide_labels { <span class="prelude-val">None </span>} <span class="kw">else </span>{ <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]) };
+        <span class="kw">for </span>region <span class="kw">in </span><span class="kw-2">&amp;</span>layout.regions {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(offset) = region.offset {
+                <span class="comment">// Sort the region&#39;s columns according to the defined ordering.
+                </span><span class="kw">let </span><span class="kw-2">mut </span>columns: Vec&lt;<span class="kw">_</span>&gt; = region.columns.iter().cloned().collect();
+                columns.sort_unstable_by_key(|a| column_index(<span class="kw-2">&amp;</span>cs, <span class="kw-2">*</span>a));
 
-                <span class="comment">// Render contiguous parts of the same region as a single box.</span>
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">width</span> <span class="op">=</span> <span class="prelude-val">None</span>;
-                <span class="kw">for</span> <span class="ident">column</span> <span class="kw">in</span> <span class="ident">columns</span> {
-                    <span class="kw">let</span> <span class="ident">column</span> <span class="op">=</span> <span class="ident">column_index</span>(<span class="kw-2">&amp;</span><span class="ident">cs</span>, <span class="ident">column</span>);
-                    <span class="kw">match</span> <span class="ident">width</span> {
-                        <span class="prelude-val">Some</span>((<span class="ident">start</span>, <span class="ident">end</span>)) <span class="kw">if</span> <span class="ident">end</span> <span class="op">==</span> <span class="ident">column</span> =&gt; <span class="ident">width</span> <span class="op">=</span> <span class="prelude-val">Some</span>((<span class="ident">start</span>, <span class="ident">end</span> <span class="op">+</span> <span class="number">1</span>)),
-                        <span class="prelude-val">Some</span>((<span class="ident">start</span>, <span class="ident">end</span>)) =&gt; {
-                            <span class="ident">draw_region</span>(<span class="kw-2">&amp;</span><span class="ident">root</span>, (<span class="ident">start</span>, <span class="ident">offset</span>), (<span class="ident">end</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="ident">region</span>.<span class="ident">rows</span>))<span class="question-mark">?</span>;
-                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">labels</span>) <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">labels</span> {
-                                <span class="ident">labels</span>.<span class="ident">push</span>((<span class="ident">region</span>.<span class="ident">name</span>.<span class="ident">clone</span>(), (<span class="ident">start</span>, <span class="ident">offset</span>)));
+                <span class="comment">// Render contiguous parts of the same region as a single box.
+                </span><span class="kw">let </span><span class="kw-2">mut </span>width = <span class="prelude-val">None</span>;
+                <span class="kw">for </span>column <span class="kw">in </span>columns {
+                    <span class="kw">let </span>column = column_index(<span class="kw-2">&amp;</span>cs, column);
+                    <span class="kw">match </span>width {
+                        <span class="prelude-val">Some</span>((start, end)) <span class="kw">if </span>end == column =&gt; width = <span class="prelude-val">Some</span>((start, end + <span class="number">1</span>)),
+                        <span class="prelude-val">Some</span>((start, end)) =&gt; {
+                            draw_region(<span class="kw-2">&amp;</span>root, (start, offset), (end, offset + region.rows))<span class="question-mark">?</span>;
+                            <span class="kw">if let </span><span class="prelude-val">Some</span>(labels) = <span class="kw-2">&amp;mut </span>labels {
+                                labels.push((region.name.clone(), (start, offset)));
                             }
-                            <span class="ident">width</span> <span class="op">=</span> <span class="prelude-val">Some</span>((<span class="ident">column</span>, <span class="ident">column</span> <span class="op">+</span> <span class="number">1</span>));
+                            width = <span class="prelude-val">Some</span>((column, column + <span class="number">1</span>));
                         }
-                        <span class="prelude-val">None</span> =&gt; <span class="ident">width</span> <span class="op">=</span> <span class="prelude-val">Some</span>((<span class="ident">column</span>, <span class="ident">column</span> <span class="op">+</span> <span class="number">1</span>)),
+                        <span class="prelude-val">None </span>=&gt; width = <span class="prelude-val">Some</span>((column, column + <span class="number">1</span>)),
                     }
                 }
 
-                <span class="comment">// Render the last part of the region.</span>
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">start</span>, <span class="ident">end</span>)) <span class="op">=</span> <span class="ident">width</span> {
-                    <span class="ident">draw_region</span>(<span class="kw-2">&amp;</span><span class="ident">root</span>, (<span class="ident">start</span>, <span class="ident">offset</span>), (<span class="ident">end</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="ident">region</span>.<span class="ident">rows</span>))<span class="question-mark">?</span>;
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">labels</span>) <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="ident">labels</span> {
-                        <span class="ident">labels</span>.<span class="ident">push</span>((<span class="ident">region</span>.<span class="ident">name</span>.<span class="ident">clone</span>(), (<span class="ident">start</span>, <span class="ident">offset</span>)));
+                <span class="comment">// Render the last part of the region.
+                </span><span class="kw">if let </span><span class="prelude-val">Some</span>((start, end)) = width {
+                    draw_region(<span class="kw-2">&amp;</span>root, (start, offset), (end, offset + region.rows))<span class="question-mark">?</span>;
+                    <span class="kw">if let </span><span class="prelude-val">Some</span>(labels) = <span class="kw-2">&amp;mut </span>labels {
+                        labels.push((region.name.clone(), (start, offset)));
                     }
                 }
             }
         }
 
-        <span class="comment">// Darken the cells of the region that have been assigned to.</span>
-        <span class="kw">for</span> <span class="ident">region</span> <span class="kw">in</span> <span class="ident">layout</span>.<span class="ident">regions</span> {
-            <span class="kw">for</span> (<span class="ident">column</span>, <span class="ident">row</span>) <span class="kw">in</span> <span class="ident">region</span>.<span class="ident">cells</span> {
-                <span class="ident">draw_cell</span>(<span class="kw-2">&amp;</span><span class="ident">root</span>, <span class="ident">column_index</span>(<span class="kw-2">&amp;</span><span class="ident">cs</span>, <span class="ident">column</span>), <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Darken the cells of the region that have been assigned to.
+        </span><span class="kw">for </span>region <span class="kw">in </span>layout.regions {
+            <span class="kw">for </span>(column, row) <span class="kw">in </span>region.cells {
+                draw_cell(<span class="kw-2">&amp;</span>root, column_index(<span class="kw-2">&amp;</span>cs, column), row)<span class="question-mark">?</span>;
             }
         }
 
-        <span class="comment">// Darken any loose cells that have been assigned to.</span>
-        <span class="kw">for</span> (<span class="ident">column</span>, <span class="ident">row</span>) <span class="kw">in</span> <span class="ident">layout</span>.<span class="ident">loose_cells</span> {
-            <span class="ident">draw_cell</span>(<span class="kw-2">&amp;</span><span class="ident">root</span>, <span class="ident">column_index</span>(<span class="kw-2">&amp;</span><span class="ident">cs</span>, <span class="ident">column</span>), <span class="ident">row</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Darken any loose cells that have been assigned to.
+        </span><span class="kw">for </span>(column, row) <span class="kw">in </span>layout.loose_cells {
+            draw_cell(<span class="kw-2">&amp;</span>root, column_index(<span class="kw-2">&amp;</span>cs, column), row)<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// Mark equality-constrained cells.</span>
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">mark_equality_cells</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cells</span> <span class="op">=</span> <span class="ident">HashSet::new</span>();
-            <span class="kw">for</span> (<span class="ident">l_col</span>, <span class="ident">l_row</span>, <span class="ident">r_col</span>, <span class="ident">r_row</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">layout</span>.<span class="ident">equality</span> {
-                <span class="kw">let</span> <span class="ident">l_col</span> <span class="op">=</span> <span class="ident">column_index</span>(<span class="kw-2">&amp;</span><span class="ident">cs</span>, (<span class="kw-2">*</span><span class="ident">l_col</span>).<span class="ident">into</span>());
-                <span class="kw">let</span> <span class="ident">r_col</span> <span class="op">=</span> <span class="ident">column_index</span>(<span class="kw-2">&amp;</span><span class="ident">cs</span>, (<span class="kw-2">*</span><span class="ident">r_col</span>).<span class="ident">into</span>());
+        <span class="comment">// Mark equality-constrained cells.
+        </span><span class="kw">if </span><span class="self">self</span>.mark_equality_cells {
+            <span class="kw">let </span><span class="kw-2">mut </span>cells = HashSet::new();
+            <span class="kw">for </span>(l_col, l_row, r_col, r_row) <span class="kw">in </span><span class="kw-2">&amp;</span>layout.equality {
+                <span class="kw">let </span>l_col = column_index(<span class="kw-2">&amp;</span>cs, (<span class="kw-2">*</span>l_col).into());
+                <span class="kw">let </span>r_col = column_index(<span class="kw-2">&amp;</span>cs, (<span class="kw-2">*</span>r_col).into());
 
-                <span class="comment">// Deduplicate cells.</span>
-                <span class="ident">cells</span>.<span class="ident">insert</span>((<span class="ident">l_col</span>, <span class="kw-2">*</span><span class="ident">l_row</span>));
-                <span class="ident">cells</span>.<span class="ident">insert</span>((<span class="ident">r_col</span>, <span class="kw-2">*</span><span class="ident">r_row</span>));
+                <span class="comment">// Deduplicate cells.
+                </span>cells.insert((l_col, <span class="kw-2">*</span>l_row));
+                cells.insert((r_col, <span class="kw-2">*</span>r_row));
             }
 
-            <span class="kw">for</span> (<span class="ident">col</span>, <span class="ident">row</span>) <span class="kw">in</span> <span class="ident">cells</span> {
-                <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="ident">Rectangle::new</span>(
-                    [(<span class="ident">col</span>, <span class="ident">row</span>), (<span class="ident">col</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>)],
-                    <span class="ident">ShapeStyle::from</span>(<span class="kw-2">&amp;</span><span class="ident">RED</span>.<span class="ident">mix</span>(<span class="number">0.5</span>)).<span class="ident">filled</span>(),
+            <span class="kw">for </span>(col, row) <span class="kw">in </span>cells {
+                root.draw(<span class="kw-2">&amp;</span>Rectangle::new(
+                    [(col, row), (col + <span class="number">1</span>, row + <span class="number">1</span>)],
+                    ShapeStyle::from(<span class="kw-2">&amp;</span>RED.mix(<span class="number">0.5</span>)).filled(),
                 ))<span class="question-mark">?</span>;
             }
         }
 
-        <span class="comment">// Draw lines between equality-constrained cells.</span>
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">show_equality_constraints</span> {
-            <span class="kw">for</span> (<span class="ident">l_col</span>, <span class="ident">l_row</span>, <span class="ident">r_col</span>, <span class="ident">r_row</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">layout</span>.<span class="ident">equality</span> {
-                <span class="kw">let</span> <span class="ident">l_col</span> <span class="op">=</span> <span class="ident">column_index</span>(<span class="kw-2">&amp;</span><span class="ident">cs</span>, (<span class="kw-2">*</span><span class="ident">l_col</span>).<span class="ident">into</span>());
-                <span class="kw">let</span> <span class="ident">r_col</span> <span class="op">=</span> <span class="ident">column_index</span>(<span class="kw-2">&amp;</span><span class="ident">cs</span>, (<span class="kw-2">*</span><span class="ident">r_col</span>).<span class="ident">into</span>());
-                <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="ident">PathElement::new</span>(
-                    [(<span class="ident">l_col</span>, <span class="kw-2">*</span><span class="ident">l_row</span>), (<span class="ident">r_col</span>, <span class="kw-2">*</span><span class="ident">r_row</span>)],
-                    <span class="ident">ShapeStyle::from</span>(<span class="kw-2">&amp;</span><span class="ident">RED</span>),
+        <span class="comment">// Draw lines between equality-constrained cells.
+        </span><span class="kw">if </span><span class="self">self</span>.show_equality_constraints {
+            <span class="kw">for </span>(l_col, l_row, r_col, r_row) <span class="kw">in </span><span class="kw-2">&amp;</span>layout.equality {
+                <span class="kw">let </span>l_col = column_index(<span class="kw-2">&amp;</span>cs, (<span class="kw-2">*</span>l_col).into());
+                <span class="kw">let </span>r_col = column_index(<span class="kw-2">&amp;</span>cs, (<span class="kw-2">*</span>r_col).into());
+                root.draw(<span class="kw-2">&amp;</span>PathElement::new(
+                    [(l_col, <span class="kw-2">*</span>l_row), (r_col, <span class="kw-2">*</span>r_row)],
+                    ShapeStyle::from(<span class="kw-2">&amp;</span>RED),
                 ))<span class="question-mark">?</span>;
             }
         }
 
-        <span class="comment">// Add a line showing the total used rows.</span>
-        <span class="ident">root</span>.<span class="ident">draw</span>(<span class="kw-2">&amp;</span><span class="ident">PathElement::new</span>(
-            [(<span class="number">0</span>, <span class="ident">layout</span>.<span class="ident">total_rows</span>), (<span class="ident">total_columns</span>, <span class="ident">layout</span>.<span class="ident">total_rows</span>)],
-            <span class="ident">ShapeStyle::from</span>(<span class="kw-2">&amp;</span><span class="ident">BLACK</span>),
+        <span class="comment">// Add a line showing the total used rows.
+        </span>root.draw(<span class="kw-2">&amp;</span>PathElement::new(
+            [(<span class="number">0</span>, layout.total_rows), (total_columns, layout.total_rows)],
+            ShapeStyle::from(<span class="kw-2">&amp;</span>BLACK),
         ))<span class="question-mark">?</span>;
 
-        <span class="comment">// Render labels last, on top of everything else.</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">labels</span>) <span class="op">=</span> <span class="ident">labels</span> {
-            <span class="kw">for</span> (<span class="ident">label</span>, <span class="ident">top_left</span>) <span class="kw">in</span> <span class="ident">labels</span> {
-                <span class="ident">root</span>.<span class="ident">draw</span>(
-                    <span class="kw-2">&amp;</span>(<span class="ident">EmptyElement::at</span>(<span class="ident">top_left</span>)
-                        <span class="op">+</span> <span class="ident">Text::new</span>(<span class="ident">label</span>, (<span class="number">10</span>, <span class="number">10</span>), (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">15.0</span>).<span class="ident">into_font</span>())),
+        <span class="comment">// Render labels last, on top of everything else.
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(labels) = labels {
+            <span class="kw">for </span>(label, top_left) <span class="kw">in </span>labels {
+                root.draw(
+                    <span class="kw-2">&amp;</span>(EmptyElement::at(top_left)
+                        + Text::new(label, (<span class="number">10</span>, <span class="number">10</span>), (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">15.0</span>).into_font())),
                 )<span class="question-mark">?</span>;
             }
-            <span class="ident">root</span>.<span class="ident">draw</span>(
-                <span class="kw-2">&amp;</span>(<span class="ident">EmptyElement::at</span>((<span class="number">0</span>, <span class="ident">layout</span>.<span class="ident">total_rows</span>))
-                    <span class="op">+</span> <span class="ident">Text::new</span>(
-                        <span class="macro">format!</span>(<span class="string">&quot;{} used rows&quot;</span>, <span class="ident">layout</span>.<span class="ident">total_rows</span>),
+            root.draw(
+                <span class="kw-2">&amp;</span>(EmptyElement::at((<span class="number">0</span>, layout.total_rows))
+                    + Text::new(
+                        <span class="macro">format!</span>(<span class="string">&quot;{} used rows&quot;</span>, layout.total_rows),
                         (<span class="number">10</span>, <span class="number">10</span>),
-                        (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">15.0</span>).<span class="ident">into_font</span>(),
+                        (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">15.0</span>).into_font(),
                     )),
             )<span class="question-mark">?</span>;
-            <span class="ident">root</span>.<span class="ident">draw</span>(
-                <span class="kw-2">&amp;</span>(<span class="ident">EmptyElement::at</span>((<span class="number">0</span>, <span class="ident">usable_rows</span>))
-                    <span class="op">+</span> <span class="ident">Text::new</span>(
-                        <span class="macro">format!</span>(<span class="string">&quot;{} usable rows&quot;</span>, <span class="ident">usable_rows</span>),
+            root.draw(
+                <span class="kw-2">&amp;</span>(EmptyElement::at((<span class="number">0</span>, usable_rows))
+                    + Text::new(
+                        <span class="macro">format!</span>(<span class="string">&quot;{} usable rows&quot;</span>, usable_rows),
                         (<span class="number">10</span>, <span class="number">10</span>),
-                        (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">15.0</span>).<span class="ident">into_font</span>(),
+                        (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">15.0</span>).into_font(),
                     )),
             )<span class="question-mark">?</span>;
         }
@@ -847,186 +841,185 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">struct</span> <span class="ident">Region</span> {
-    <span class="doccomment">/// The name of the region. Not required to be unique.</span>
-    <span class="ident">name</span>: <span class="ident">String</span>,
-    <span class="doccomment">/// The columns used by this region.</span>
-    <span class="ident">columns</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">RegionColumn</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The row that this region starts on, if known.</span>
-    <span class="ident">offset</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The number of rows that this region takes up.</span>
-    <span class="ident">rows</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// The cells assigned in this region. We store this as a `Vec` so that if any cells</span>
-    <span class="doccomment">/// are double-assigned, they will be visibly darker.</span>
-    <span class="ident">cells</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">RegionColumn</span>, <span class="ident">usize</span>)<span class="op">&gt;</span>,
+<span class="attribute">#[derive(Debug)]</span>
+<span class="kw">struct </span>Region {
+    <span class="doccomment">/// The name of the region. Not required to be unique.
+    </span>name: String,
+    <span class="doccomment">/// The columns used by this region.
+    </span>columns: HashSet&lt;RegionColumn&gt;,
+    <span class="doccomment">/// The row that this region starts on, if known.
+    </span>offset: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+    <span class="doccomment">/// The number of rows that this region takes up.
+    </span>rows: usize,
+    <span class="doccomment">/// The cells assigned in this region. We store this as a `Vec` so that if any cells
+    /// are double-assigned, they will be visibly darker.
+    </span>cells: Vec&lt;(RegionColumn, usize)&gt;,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>)]</span>
-<span class="kw">struct</span> <span class="ident">Layout</span> {
-    <span class="ident">k</span>: <span class="ident">u32</span>,
-    <span class="ident">regions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Region</span><span class="op">&gt;</span>,
-    <span class="ident">current_region</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
-    <span class="ident">total_rows</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// Any cells assigned outside of a region. We store this as a `Vec` so that if any</span>
-    <span class="doccomment">/// cells are double-assigned, they will be visibly darker.</span>
-    <span class="ident">loose_cells</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">RegionColumn</span>, <span class="ident">usize</span>)<span class="op">&gt;</span>,
-    <span class="doccomment">/// Pairs of cells between which we have equality constraints.</span>
-    <span class="ident">equality</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>, <span class="ident">usize</span>, <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>, <span class="ident">usize</span>)<span class="op">&gt;</span>,
-    <span class="doccomment">/// Selector assignments used for optimization pass</span>
-    <span class="ident">selectors</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Default)]</span>
+<span class="kw">struct </span>Layout {
+    k: u32,
+    regions: Vec&lt;Region&gt;,
+    current_region: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+    total_rows: usize,
+    <span class="doccomment">/// Any cells assigned outside of a region. We store this as a `Vec` so that if any
+    /// cells are double-assigned, they will be visibly darker.
+    </span>loose_cells: Vec&lt;(RegionColumn, usize)&gt;,
+    <span class="doccomment">/// Pairs of cells between which we have equality constraints.
+    </span>equality: Vec&lt;(Column&lt;Any&gt;, usize, Column&lt;Any&gt;, usize)&gt;,
+    <span class="doccomment">/// Selector assignments used for optimization pass
+    </span>selectors: Vec&lt;Vec&lt;bool&gt;&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Layout</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">k</span>: <span class="ident">u32</span>, <span class="ident">n</span>: <span class="ident">usize</span>, <span class="ident">num_selectors</span>: <span class="ident">usize</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Layout</span> {
-            <span class="ident">k</span>,
-            <span class="ident">regions</span>: <span class="macro">vec!</span>[],
-            <span class="ident">current_region</span>: <span class="prelude-val">None</span>,
-            <span class="ident">total_rows</span>: <span class="number">0</span>,
-            <span class="doccomment">/// Any cells assigned outside of a region. We store this as a `Vec` so that if any</span>
-            <span class="doccomment">/// cells are double-assigned, they will be visibly darker.</span>
-            <span class="ident">loose_cells</span>: <span class="macro">vec!</span>[],
-            <span class="doccomment">/// Pairs of cells between which we have equality constraints.</span>
-            <span class="ident">equality</span>: <span class="macro">vec!</span>[],
-            <span class="doccomment">/// Selector assignments used for optimization pass</span>
-            <span class="ident">selectors</span>: <span class="macro">vec!</span>[<span class="macro">vec!</span>[<span class="bool-val">false</span>; <span class="ident">n</span>]; <span class="ident">num_selectors</span>],
+<span class="kw">impl </span>Layout {
+    <span class="kw">fn </span>new(k: u32, n: usize, num_selectors: usize) -&gt; <span class="self">Self </span>{
+        Layout {
+            k,
+            regions: <span class="macro">vec!</span>[],
+            current_region: <span class="prelude-val">None</span>,
+            total_rows: <span class="number">0</span>,
+            <span class="doccomment">/// Any cells assigned outside of a region. We store this as a `Vec` so that if any
+            /// cells are double-assigned, they will be visibly darker.
+            </span>loose_cells: <span class="macro">vec!</span>[],
+            <span class="doccomment">/// Pairs of cells between which we have equality constraints.
+            </span>equality: <span class="macro">vec!</span>[],
+            <span class="doccomment">/// Selector assignments used for optimization pass
+            </span>selectors: <span class="macro">vec!</span>[<span class="macro">vec!</span>[<span class="bool-val">false</span>; n]; num_selectors],
         }
     }
 
-    <span class="kw">fn</span> <span class="ident">update</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">column</span>: <span class="ident">RegionColumn</span>, <span class="ident">row</span>: <span class="ident">usize</span>) {
-        <span class="self">self</span>.<span class="ident">total_rows</span> <span class="op">=</span> <span class="ident">cmp::max</span>(<span class="self">self</span>.<span class="ident">total_rows</span>, <span class="ident">row</span> <span class="op">+</span> <span class="number">1</span>);
+    <span class="kw">fn </span>update(<span class="kw-2">&amp;mut </span><span class="self">self</span>, column: RegionColumn, row: usize) {
+        <span class="self">self</span>.total_rows = cmp::max(<span class="self">self</span>.total_rows, row + <span class="number">1</span>);
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">region</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">current_region</span> {
-            <span class="kw">let</span> <span class="ident">region</span> <span class="op">=</span> <span class="kw-2">&amp;mut</span> <span class="self">self</span>.<span class="ident">regions</span>[<span class="ident">region</span>];
-            <span class="ident">region</span>.<span class="ident">columns</span>.<span class="ident">insert</span>(<span class="ident">column</span>);
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(region) = <span class="self">self</span>.current_region {
+            <span class="kw">let </span>region = <span class="kw-2">&amp;mut </span><span class="self">self</span>.regions[region];
+            region.columns.insert(column);
 
-            <span class="comment">// The region offset is the earliest row assigned to.</span>
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">offset</span>.<span class="ident">unwrap_or</span>(<span class="ident">row</span>);
-            <span class="kw">if</span> <span class="ident">row</span> <span class="op">&lt;</span> <span class="ident">offset</span> {
-                <span class="comment">// The first row assigned was not at offset 0 within the region.</span>
-                <span class="ident">region</span>.<span class="ident">rows</span> <span class="op">+</span><span class="op">=</span> <span class="ident">offset</span> <span class="op">-</span> <span class="ident">row</span>;
-                <span class="ident">offset</span> <span class="op">=</span> <span class="ident">row</span>;
+            <span class="comment">// The region offset is the earliest row assigned to.
+            </span><span class="kw">let </span><span class="kw-2">mut </span>offset = region.offset.unwrap_or(row);
+            <span class="kw">if </span>row &lt; offset {
+                <span class="comment">// The first row assigned was not at offset 0 within the region.
+                </span>region.rows += offset - row;
+                offset = row;
             }
-            <span class="comment">// The number of rows in this region is the gap between the earliest and</span>
-            <span class="comment">// latest rows assigned.</span>
-            <span class="ident">region</span>.<span class="ident">rows</span> <span class="op">=</span> <span class="ident">cmp::max</span>(<span class="ident">region</span>.<span class="ident">rows</span>, <span class="ident">row</span> <span class="op">-</span> <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>);
-            <span class="ident">region</span>.<span class="ident">offset</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">offset</span>);
+            <span class="comment">// The number of rows in this region is the gap between the earliest and
+            // latest rows assigned.
+            </span>region.rows = cmp::max(region.rows, row - offset + <span class="number">1</span>);
+            region.offset = <span class="prelude-val">Some</span>(offset);
 
-            <span class="ident">region</span>.<span class="ident">cells</span>.<span class="ident">push</span>((<span class="ident">column</span>, <span class="ident">row</span>));
-        } <span class="kw">else</span> {
-            <span class="self">self</span>.<span class="ident">loose_cells</span>.<span class="ident">push</span>((<span class="ident">column</span>, <span class="ident">row</span>));
+            region.cells.push((column, row));
+        } <span class="kw">else </span>{
+            <span class="self">self</span>.loose_cells.push((column, row));
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Assignment</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Layout</span> {
-    <span class="kw">fn</span> <span class="ident">enter_region</span><span class="op">&lt;</span><span class="ident">NR</span>, <span class="ident">N</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="ident">name_fn</span>: <span class="ident">N</span>)
-    <span class="kw">where</span>
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">NR</span>,
+<span class="kw">impl</span>&lt;F: Field&gt; Assignment&lt;F&gt; <span class="kw">for </span>Layout {
+    <span class="kw">fn </span>enter_region&lt;NR, N&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name_fn: N)
+    <span class="kw">where
+        </span>NR: Into&lt;String&gt;,
+        N: FnOnce() -&gt; NR,
     {
-        <span class="macro">assert!</span>(<span class="self">self</span>.<span class="ident">current_region</span>.<span class="ident">is_none</span>());
-        <span class="self">self</span>.<span class="ident">current_region</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">regions</span>.<span class="ident">len</span>());
-        <span class="self">self</span>.<span class="ident">regions</span>.<span class="ident">push</span>(<span class="ident">Region</span> {
-            <span class="ident">name</span>: <span class="ident">name_fn</span>().<span class="ident">into</span>(),
-            <span class="ident">columns</span>: <span class="ident">HashSet::default</span>(),
-            <span class="ident">offset</span>: <span class="prelude-val">None</span>,
-            <span class="ident">rows</span>: <span class="number">0</span>,
-            <span class="ident">cells</span>: <span class="macro">vec!</span>[],
+        <span class="macro">assert!</span>(<span class="self">self</span>.current_region.is_none());
+        <span class="self">self</span>.current_region = <span class="prelude-val">Some</span>(<span class="self">self</span>.regions.len());
+        <span class="self">self</span>.regions.push(Region {
+            name: name_fn().into(),
+            columns: HashSet::default(),
+            offset: <span class="prelude-val">None</span>,
+            rows: <span class="number">0</span>,
+            cells: <span class="macro">vec!</span>[],
         })
     }
 
-    <span class="kw">fn</span> <span class="ident">exit_region</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>) {
-        <span class="macro">assert!</span>(<span class="self">self</span>.<span class="ident">current_region</span>.<span class="ident">is_some</span>());
-        <span class="self">self</span>.<span class="ident">current_region</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+    <span class="kw">fn </span>exit_region(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="macro">assert!</span>(<span class="self">self</span>.current_region.is_some());
+        <span class="self">self</span>.current_region = <span class="prelude-val">None</span>;
     }
 
-    <span class="kw">fn</span> <span class="ident">enable_selector</span><span class="op">&lt;</span><span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="kw">_</span>: <span class="ident">A</span>, <span class="ident">selector</span>: <span class="kw-2">&amp;</span><span class="ident">Selector</span>, <span class="ident">row</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">fn </span>enable_selector&lt;A, AR&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: A, selector: <span class="kw-2">&amp;</span>Selector, row: usize) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+    <span class="kw">where
+        </span>A: FnOnce() -&gt; AR,
+        AR: Into&lt;String&gt;,
     {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">cell</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">selectors</span>[<span class="ident">selector</span>.<span class="number">0</span>].<span class="ident">get_mut</span>(<span class="ident">row</span>) {
-            <span class="kw-2">*</span><span class="ident">cell</span> <span class="op">=</span> <span class="bool-val">true</span>;
-        } <span class="kw">else</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::not_enough_rows_available</span>(<span class="self">self</span>.<span class="ident">k</span>));
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(cell) = <span class="self">self</span>.selectors[selector.<span class="number">0</span>].get_mut(row) {
+            <span class="kw-2">*</span>cell = <span class="bool-val">true</span>;
+        } <span class="kw">else </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::not_enough_rows_available(<span class="self">self</span>.k));
         }
 
-        <span class="self">self</span>.<span class="ident">update</span>((<span class="kw-2">*</span><span class="ident">selector</span>).<span class="ident">into</span>(), <span class="ident">row</span>);
+        <span class="self">self</span>.update((<span class="kw-2">*</span>selector).into(), row);
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">query_instance</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="kw">_</span>: <span class="ident">usize</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">Value::unknown</span>())
+    <span class="kw">fn </span>query_instance(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: Column&lt;Instance&gt;, <span class="kw">_</span>: usize) -&gt; <span class="prelude-ty">Result</span>&lt;Value&lt;F&gt;, Error&gt; {
+        <span class="prelude-val">Ok</span>(Value::unknown())
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_advice</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">VR</span>, <span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="kw">_</span>: <span class="ident">A</span>,
-        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-        <span class="kw">_</span>: <span class="ident">V</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span>,
-        <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">fn </span>assign_advice&lt;V, VR, A, AR&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw">_</span>: A,
+        column: Column&lt;Advice&gt;,
+        row: usize,
+        <span class="kw">_</span>: V,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+    <span class="kw">where
+        </span>V: FnOnce() -&gt; Value&lt;VR&gt;,
+        VR: Into&lt;Assigned&lt;F&gt;&gt;,
+        A: FnOnce() -&gt; AR,
+        AR: Into&lt;String&gt;,
     {
-        <span class="self">self</span>.<span class="ident">update</span>(<span class="ident">Column</span>::<span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="ident">::from</span>(<span class="ident">column</span>).<span class="ident">into</span>(), <span class="ident">row</span>);
+        <span class="self">self</span>.update(Column::&lt;Any&gt;::from(column).into(), row);
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">assign_fixed</span><span class="op">&lt;</span><span class="ident">V</span>, <span class="ident">VR</span>, <span class="ident">A</span>, <span class="ident">AR</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="kw">_</span>: <span class="ident">A</span>,
-        <span class="ident">column</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-        <span class="kw">_</span>: <span class="ident">V</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">V</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">VR</span><span class="op">&gt;</span>,
-        <span class="ident">VR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-        <span class="ident">A</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">AR</span>,
-        <span class="ident">AR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+    <span class="kw">fn </span>assign_fixed&lt;V, VR, A, AR&gt;(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw">_</span>: A,
+        column: Column&lt;Fixed&gt;,
+        row: usize,
+        <span class="kw">_</span>: V,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+    <span class="kw">where
+        </span>V: FnOnce() -&gt; Value&lt;VR&gt;,
+        VR: Into&lt;Assigned&lt;F&gt;&gt;,
+        A: FnOnce() -&gt; AR,
+        AR: Into&lt;String&gt;,
     {
-        <span class="self">self</span>.<span class="ident">update</span>(<span class="ident">Column</span>::<span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="ident">::from</span>(<span class="ident">column</span>).<span class="ident">into</span>(), <span class="ident">row</span>);
+        <span class="self">self</span>.update(Column::&lt;Any&gt;::from(column).into(), row);
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">copy</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="ident">l_col</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>,
-        <span class="ident">l_row</span>: <span class="ident">usize</span>,
-        <span class="ident">r_col</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>,
-        <span class="ident">r_row</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident"><span class="kw">crate</span>::plonk::Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">equality</span>.<span class="ident">push</span>((<span class="ident">l_col</span>, <span class="ident">l_row</span>, <span class="ident">r_col</span>, <span class="ident">r_row</span>));
+    <span class="kw">fn </span>copy(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        l_col: Column&lt;Any&gt;,
+        l_row: usize,
+        r_col: Column&lt;Any&gt;,
+        r_row: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw">crate</span>::plonk::Error&gt; {
+        <span class="self">self</span>.equality.push((l_col, l_row, r_col, r_row));
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">fill_from_row</span>(
-        <span class="kw-2">&amp;mut</span> <span class="self">self</span>,
-        <span class="kw">_</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
-        <span class="kw">_</span>: <span class="ident">usize</span>,
-        <span class="kw">_</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Assigned</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn </span>fill_from_row(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw">_</span>: Column&lt;Fixed&gt;,
+        <span class="kw">_</span>: usize,
+        <span class="kw">_</span>: Value&lt;Assigned&lt;F&gt;&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">push_namespace</span><span class="op">&lt;</span><span class="ident">NR</span>, <span class="ident">N</span><span class="op">&gt;</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="kw">_</span>: <span class="ident">N</span>)
-    <span class="kw">where</span>
-        <span class="ident">NR</span>: <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-        <span class="ident">N</span>: <span class="ident">FnOnce</span>() -&gt; <span class="ident">NR</span>,
+    <span class="kw">fn </span>push_namespace&lt;NR, N&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: N)
+    <span class="kw">where
+        </span>NR: Into&lt;String&gt;,
+        N: FnOnce() -&gt; NR,
     {
-        <span class="comment">// Do nothing; we don&#39;t care about namespaces in this context.</span>
-    }
+        <span class="comment">// Do nothing; we don&#39;t care about namespaces in this context.
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">pop_namespace</span>(<span class="kw-2">&amp;mut</span> <span class="self">self</span>, <span class="kw">_</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>) {
-        <span class="comment">// Do nothing; we don&#39;t care about namespaces in this context.</span>
-    }
+    <span class="kw">fn </span>pop_namespace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;String&gt;) {
+        <span class="comment">// Do nothing; we don&#39;t care about namespaces in this context.
+    </span>}
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

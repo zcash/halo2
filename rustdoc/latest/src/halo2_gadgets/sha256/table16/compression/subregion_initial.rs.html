@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -175,162 +169,161 @@
 <span id="154">154</span>
 <span id="155">155</span>
 <span id="156">156</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{<span class="ident">RoundWord</span>, <span class="ident">StateWord</span>, <span class="ident">STATE</span>};
-<span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">compression_util</span>::<span class="kw-2">*</span>, <span class="ident">CompressionConfig</span>, <span class="ident">State</span>};
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">Region</span>, <span class="ident">Value</span>},
-    <span class="ident">pasta::pallas</span>,
-    <span class="ident">plonk::Error</span>,
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{RoundWord, StateWord, STATE};
+<span class="kw">use super</span>::{compression_util::<span class="kw-2">*</span>, CompressionConfig, State};
+<span class="kw">use </span>halo2_proofs::{
+    circuit::{Region, Value},
+    pasta::pallas,
+    plonk::Error,
 };
 
-<span class="kw">impl</span> <span class="ident">CompressionConfig</span> {
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::many_single_char_names</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">initialize_iv</span>(
+<span class="kw">impl </span>CompressionConfig {
+    <span class="attribute">#[allow(clippy::many_single_char_names)]</span>
+    <span class="kw">pub fn </span>initialize_iv(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">iv</span>: [<span class="ident">u32</span>; <span class="ident">STATE</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">State</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">a_7</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">3</span>];
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        iv: [u32; STATE],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;State, Error&gt; {
+        <span class="kw">let </span>a_7 = <span class="self">self</span>.extras[<span class="number">3</span>];
 
-        <span class="comment">// Decompose E into (6, 5, 14, 7)-bit chunks</span>
-        <span class="kw">let</span> <span class="ident">e</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_e</span>(<span class="ident">region</span>, <span class="ident">RoundIdx::Init</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">4</span>]))<span class="question-mark">?</span>;
+        <span class="comment">// Decompose E into (6, 5, 14, 7)-bit chunks
+        </span><span class="kw">let </span>e = <span class="self">self</span>.decompose_e(region, RoundIdx::Init, Value::known(iv[<span class="number">4</span>]))<span class="question-mark">?</span>;
 
-        <span class="comment">// Decompose F, G</span>
-        <span class="kw">let</span> <span class="ident">f</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_f</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">5</span>]))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">g</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_g</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">6</span>]))<span class="question-mark">?</span>;
+        <span class="comment">// Decompose F, G
+        </span><span class="kw">let </span>f = <span class="self">self</span>.decompose_f(region, InitialRound, Value::known(iv[<span class="number">5</span>]))<span class="question-mark">?</span>;
+        <span class="kw">let </span>g = <span class="self">self</span>.decompose_g(region, InitialRound, Value::known(iv[<span class="number">6</span>]))<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign H</span>
-        <span class="kw">let</span> <span class="ident">h_row</span> <span class="op">=</span> <span class="ident">get_h_row</span>(<span class="ident">RoundIdx::Init</span>);
-        <span class="kw">let</span> <span class="ident">h</span> <span class="op">=</span>
-            <span class="self">self</span>.<span class="ident">assign_word_halves_dense</span>(<span class="ident">region</span>, <span class="ident">h_row</span>, <span class="ident">a_7</span>, <span class="ident">h_row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">a_7</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">7</span>]))<span class="question-mark">?</span>;
+        <span class="comment">// Assign H
+        </span><span class="kw">let </span>h_row = get_h_row(RoundIdx::Init);
+        <span class="kw">let </span>h =
+            <span class="self">self</span>.assign_word_halves_dense(region, h_row, a_7, h_row + <span class="number">1</span>, a_7, Value::known(iv[<span class="number">7</span>]))<span class="question-mark">?</span>;
 
-        <span class="comment">// Decompose A into (2, 11, 9, 10)-bit chunks</span>
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_a</span>(<span class="ident">region</span>, <span class="ident">RoundIdx::Init</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">0</span>]))<span class="question-mark">?</span>;
+        <span class="comment">// Decompose A into (2, 11, 9, 10)-bit chunks
+        </span><span class="kw">let </span>a = <span class="self">self</span>.decompose_a(region, RoundIdx::Init, Value::known(iv[<span class="number">0</span>]))<span class="question-mark">?</span>;
 
-        <span class="comment">// Decompose B, C</span>
-        <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_b</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">1</span>]))<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_c</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">2</span>]))<span class="question-mark">?</span>;
+        <span class="comment">// Decompose B, C
+        </span><span class="kw">let </span>b = <span class="self">self</span>.decompose_b(region, InitialRound, Value::known(iv[<span class="number">1</span>]))<span class="question-mark">?</span>;
+        <span class="kw">let </span>c = <span class="self">self</span>.decompose_c(region, InitialRound, Value::known(iv[<span class="number">2</span>]))<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign D</span>
-        <span class="kw">let</span> <span class="ident">d_row</span> <span class="op">=</span> <span class="ident">get_d_row</span>(<span class="ident">RoundIdx::Init</span>);
-        <span class="kw">let</span> <span class="ident">d</span> <span class="op">=</span>
-            <span class="self">self</span>.<span class="ident">assign_word_halves_dense</span>(<span class="ident">region</span>, <span class="ident">d_row</span>, <span class="ident">a_7</span>, <span class="ident">d_row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">a_7</span>, <span class="ident">Value::known</span>(<span class="ident">iv</span>[<span class="number">3</span>]))<span class="question-mark">?</span>;
+        <span class="comment">// Assign D
+        </span><span class="kw">let </span>d_row = get_d_row(RoundIdx::Init);
+        <span class="kw">let </span>d =
+            <span class="self">self</span>.assign_word_halves_dense(region, d_row, a_7, d_row + <span class="number">1</span>, a_7, Value::known(iv[<span class="number">3</span>]))<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">State::new</span>(
-            <span class="ident">StateWord::A</span>(<span class="ident">a</span>),
-            <span class="ident">StateWord::B</span>(<span class="ident">b</span>),
-            <span class="ident">StateWord::C</span>(<span class="ident">c</span>),
-            <span class="ident">StateWord::D</span>(<span class="ident">d</span>),
-            <span class="ident">StateWord::E</span>(<span class="ident">e</span>),
-            <span class="ident">StateWord::F</span>(<span class="ident">f</span>),
-            <span class="ident">StateWord::G</span>(<span class="ident">g</span>),
-            <span class="ident">StateWord::H</span>(<span class="ident">h</span>),
+        <span class="prelude-val">Ok</span>(State::new(
+            StateWord::A(a),
+            StateWord::B(b),
+            StateWord::C(c),
+            StateWord::D(d),
+            StateWord::E(e),
+            StateWord::F(f),
+            StateWord::G(g),
+            StateWord::H(h),
         ))
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::many_single_char_names</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">initialize_state</span>(
+    <span class="attribute">#[allow(clippy::many_single_char_names)]</span>
+    <span class="kw">pub fn </span>initialize_state(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">state</span>: <span class="ident">State</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">State</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">a_7</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extras</span>[<span class="number">3</span>];
-        <span class="kw">let</span> (<span class="ident">a</span>, <span class="ident">b</span>, <span class="ident">c</span>, <span class="ident">d</span>, <span class="ident">e</span>, <span class="ident">f</span>, <span class="ident">g</span>, <span class="ident">h</span>) <span class="op">=</span> <span class="ident">match_state</span>(<span class="ident">state</span>);
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        state: State,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;State, Error&gt; {
+        <span class="kw">let </span>a_7 = <span class="self">self</span>.extras[<span class="number">3</span>];
+        <span class="kw">let </span>(a, b, c, d, e, f, g, h) = match_state(state);
 
-        <span class="comment">// Decompose E into (6, 5, 14, 7)-bit chunks</span>
-        <span class="kw">let</span> <span class="ident">e</span> <span class="op">=</span> <span class="ident">e</span>.<span class="ident">dense_halves</span>.<span class="ident">value</span>();
-        <span class="kw">let</span> <span class="ident">e</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_e</span>(<span class="ident">region</span>, <span class="ident">RoundIdx::Init</span>, <span class="ident">e</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Decompose E into (6, 5, 14, 7)-bit chunks
+        </span><span class="kw">let </span>e = e.dense_halves.value();
+        <span class="kw">let </span>e = <span class="self">self</span>.decompose_e(region, RoundIdx::Init, e)<span class="question-mark">?</span>;
 
-        <span class="comment">// Decompose F, G</span>
-        <span class="kw">let</span> <span class="ident">f</span> <span class="op">=</span> <span class="ident">f</span>.<span class="ident">dense_halves</span>.<span class="ident">value</span>();
-        <span class="kw">let</span> <span class="ident">f</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_f</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="ident">f</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">g</span> <span class="op">=</span> <span class="ident">g</span>.<span class="ident">dense_halves</span>.<span class="ident">value</span>();
-        <span class="kw">let</span> <span class="ident">g</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_g</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="ident">g</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Decompose F, G
+        </span><span class="kw">let </span>f = f.dense_halves.value();
+        <span class="kw">let </span>f = <span class="self">self</span>.decompose_f(region, InitialRound, f)<span class="question-mark">?</span>;
+        <span class="kw">let </span>g = g.dense_halves.value();
+        <span class="kw">let </span>g = <span class="self">self</span>.decompose_g(region, InitialRound, g)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign H</span>
-        <span class="kw">let</span> <span class="ident">h</span> <span class="op">=</span> <span class="ident">h</span>.<span class="ident">value</span>();
-        <span class="kw">let</span> <span class="ident">h_row</span> <span class="op">=</span> <span class="ident">get_h_row</span>(<span class="ident">RoundIdx::Init</span>);
-        <span class="kw">let</span> <span class="ident">h</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_word_halves_dense</span>(<span class="ident">region</span>, <span class="ident">h_row</span>, <span class="ident">a_7</span>, <span class="ident">h_row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">a_7</span>, <span class="ident">h</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign H
+        </span><span class="kw">let </span>h = h.value();
+        <span class="kw">let </span>h_row = get_h_row(RoundIdx::Init);
+        <span class="kw">let </span>h = <span class="self">self</span>.assign_word_halves_dense(region, h_row, a_7, h_row + <span class="number">1</span>, a_7, h)<span class="question-mark">?</span>;
 
-        <span class="comment">// Decompose A into (2, 11, 9, 10)-bit chunks</span>
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">a</span>.<span class="ident">dense_halves</span>.<span class="ident">value</span>();
-        <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_a</span>(<span class="ident">region</span>, <span class="ident">RoundIdx::Init</span>, <span class="ident">a</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Decompose A into (2, 11, 9, 10)-bit chunks
+        </span><span class="kw">let </span>a = a.dense_halves.value();
+        <span class="kw">let </span>a = <span class="self">self</span>.decompose_a(region, RoundIdx::Init, a)<span class="question-mark">?</span>;
 
-        <span class="comment">// Decompose B, C</span>
-        <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">b</span>.<span class="ident">dense_halves</span>.<span class="ident">value</span>();
-        <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_b</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="ident">b</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="ident">c</span>.<span class="ident">dense_halves</span>.<span class="ident">value</span>();
-        <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">decompose_c</span>(<span class="ident">region</span>, <span class="ident">InitialRound</span>, <span class="ident">c</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Decompose B, C
+        </span><span class="kw">let </span>b = b.dense_halves.value();
+        <span class="kw">let </span>b = <span class="self">self</span>.decompose_b(region, InitialRound, b)<span class="question-mark">?</span>;
+        <span class="kw">let </span>c = c.dense_halves.value();
+        <span class="kw">let </span>c = <span class="self">self</span>.decompose_c(region, InitialRound, c)<span class="question-mark">?</span>;
 
-        <span class="comment">// Assign D</span>
-        <span class="kw">let</span> <span class="ident">d</span> <span class="op">=</span> <span class="ident">d</span>.<span class="ident">value</span>();
-        <span class="kw">let</span> <span class="ident">d_row</span> <span class="op">=</span> <span class="ident">get_d_row</span>(<span class="ident">RoundIdx::Init</span>);
-        <span class="kw">let</span> <span class="ident">d</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_word_halves_dense</span>(<span class="ident">region</span>, <span class="ident">d_row</span>, <span class="ident">a_7</span>, <span class="ident">d_row</span> <span class="op">+</span> <span class="number">1</span>, <span class="ident">a_7</span>, <span class="ident">d</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign D
+        </span><span class="kw">let </span>d = d.value();
+        <span class="kw">let </span>d_row = get_d_row(RoundIdx::Init);
+        <span class="kw">let </span>d = <span class="self">self</span>.assign_word_halves_dense(region, d_row, a_7, d_row + <span class="number">1</span>, a_7, d)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">State::new</span>(
-            <span class="ident">StateWord::A</span>(<span class="ident">a</span>),
-            <span class="ident">StateWord::B</span>(<span class="ident">b</span>),
-            <span class="ident">StateWord::C</span>(<span class="ident">c</span>),
-            <span class="ident">StateWord::D</span>(<span class="ident">d</span>),
-            <span class="ident">StateWord::E</span>(<span class="ident">e</span>),
-            <span class="ident">StateWord::F</span>(<span class="ident">f</span>),
-            <span class="ident">StateWord::G</span>(<span class="ident">g</span>),
-            <span class="ident">StateWord::H</span>(<span class="ident">h</span>),
+        <span class="prelude-val">Ok</span>(State::new(
+            StateWord::A(a),
+            StateWord::B(b),
+            StateWord::C(c),
+            StateWord::D(d),
+            StateWord::E(e),
+            StateWord::F(f),
+            StateWord::G(g),
+            StateWord::H(h),
         ))
     }
 
-    <span class="kw">fn</span> <span class="ident">decompose_b</span>(
+    <span class="kw">fn </span>decompose_b(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">round_idx</span>: <span class="ident">InitialRound</span>,
-        <span class="ident">b_val</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RoundWord</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_decompose_b_row</span>(<span class="ident">round_idx</span>);
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        round_idx: InitialRound,
+        b_val: Value&lt;u32&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RoundWord, Error&gt; {
+        <span class="kw">let </span>row = get_decompose_b_row(round_idx);
 
-        <span class="kw">let</span> (<span class="ident">dense_halves</span>, <span class="ident">spread_halves</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_word_halves</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">b_val</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">decompose_abcd</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">b_val</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">RoundWord::new</span>(<span class="ident">dense_halves</span>, <span class="ident">spread_halves</span>))
+        <span class="kw">let </span>(dense_halves, spread_halves) = <span class="self">self</span>.assign_word_halves(region, row, b_val)<span class="question-mark">?</span>;
+        <span class="self">self</span>.decompose_abcd(region, row, b_val)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(RoundWord::new(dense_halves, spread_halves))
     }
 
-    <span class="kw">fn</span> <span class="ident">decompose_c</span>(
+    <span class="kw">fn </span>decompose_c(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">round_idx</span>: <span class="ident">InitialRound</span>,
-        <span class="ident">c_val</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RoundWord</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_decompose_c_row</span>(<span class="ident">round_idx</span>);
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        round_idx: InitialRound,
+        c_val: Value&lt;u32&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RoundWord, Error&gt; {
+        <span class="kw">let </span>row = get_decompose_c_row(round_idx);
 
-        <span class="kw">let</span> (<span class="ident">dense_halves</span>, <span class="ident">spread_halves</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_word_halves</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">c_val</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">decompose_abcd</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">c_val</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">RoundWord::new</span>(<span class="ident">dense_halves</span>, <span class="ident">spread_halves</span>))
+        <span class="kw">let </span>(dense_halves, spread_halves) = <span class="self">self</span>.assign_word_halves(region, row, c_val)<span class="question-mark">?</span>;
+        <span class="self">self</span>.decompose_abcd(region, row, c_val)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(RoundWord::new(dense_halves, spread_halves))
     }
 
-    <span class="kw">fn</span> <span class="ident">decompose_f</span>(
+    <span class="kw">fn </span>decompose_f(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">round_idx</span>: <span class="ident">InitialRound</span>,
-        <span class="ident">f_val</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RoundWord</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_decompose_f_row</span>(<span class="ident">round_idx</span>);
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        round_idx: InitialRound,
+        f_val: Value&lt;u32&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RoundWord, Error&gt; {
+        <span class="kw">let </span>row = get_decompose_f_row(round_idx);
 
-        <span class="kw">let</span> (<span class="ident">dense_halves</span>, <span class="ident">spread_halves</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_word_halves</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">f_val</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">decompose_efgh</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">f_val</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">RoundWord::new</span>(<span class="ident">dense_halves</span>, <span class="ident">spread_halves</span>))
+        <span class="kw">let </span>(dense_halves, spread_halves) = <span class="self">self</span>.assign_word_halves(region, row, f_val)<span class="question-mark">?</span>;
+        <span class="self">self</span>.decompose_efgh(region, row, f_val)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(RoundWord::new(dense_halves, spread_halves))
     }
 
-    <span class="kw">fn</span> <span class="ident">decompose_g</span>(
+    <span class="kw">fn </span>decompose_g(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">round_idx</span>: <span class="ident">InitialRound</span>,
-        <span class="ident">g_val</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RoundWord</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">row</span> <span class="op">=</span> <span class="ident">get_decompose_g_row</span>(<span class="ident">round_idx</span>);
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        round_idx: InitialRound,
+        g_val: Value&lt;u32&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RoundWord, Error&gt; {
+        <span class="kw">let </span>row = get_decompose_g_row(round_idx);
 
-        <span class="kw">let</span> (<span class="ident">dense_halves</span>, <span class="ident">spread_halves</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_word_halves</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">g_val</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">decompose_efgh</span>(<span class="ident">region</span>, <span class="ident">row</span>, <span class="ident">g_val</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">RoundWord::new</span>(<span class="ident">dense_halves</span>, <span class="ident">spread_halves</span>))
+        <span class="kw">let </span>(dense_halves, spread_halves) = <span class="self">self</span>.assign_word_halves(region, row, g_val)<span class="question-mark">?</span>;
+        <span class="self">self</span>.decompose_efgh(region, row, g_val)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(RoundWord::new(dense_halves, spread_halves))
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

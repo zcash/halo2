@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_gadgets/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../halo2_gadgets/index.html"><img class="rust-logo" src="../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -774,761 +768,760 @@
 <span id="753">753</span>
 <span id="754">754</span>
 <span id="755">755</span>
-</pre><pre class="rust"><code><span class="doccomment">//! The [Sinsemilla] hash function.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! [Sinsemilla]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash</span>
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">ecc</span>::{<span class="self">self</span>, <span class="ident">EccInstructions</span>, <span class="ident">FixedPoints</span>},
-    <span class="ident">utilities</span>::{<span class="ident">FieldValue</span>, <span class="ident">RangeConstrained</span>, <span class="ident">Var</span>},
+</pre><pre class="rust"><code><span class="doccomment">//! The [Sinsemilla] hash function.
+//!
+//! [Sinsemilla]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
+</span><span class="kw">use crate</span>::{
+    ecc::{<span class="self">self</span>, EccInstructions, FixedPoints},
+    utilities::{FieldValue, RangeConstrained, Var},
 };
-<span class="kw">use</span> <span class="ident">group::ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeField</span>};
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">Value</span>},
-    <span class="ident">plonk::Error</span>,
+<span class="kw">use </span>group::ff::{Field, PrimeField};
+<span class="kw">use </span>halo2_proofs::{
+    circuit::{Layouter, Value},
+    plonk::Error,
 };
-<span class="kw">use</span> <span class="ident">pasta_curves::arithmetic::CurveAffine</span>;
-<span class="kw">use</span> <span class="ident">std::fmt::Debug</span>;
+<span class="kw">use </span>pasta_curves::arithmetic::CurveAffine;
+<span class="kw">use </span>std::fmt::Debug;
 
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">chip</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">merkle</span>;
-<span class="kw">mod</span> <span class="ident">message</span>;
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">primitives</span>;
+<span class="kw">pub mod </span>chip;
+<span class="kw">pub mod </span>merkle;
+<span class="kw">mod </span>message;
+<span class="kw">pub mod </span>primitives;
 
-<span class="doccomment">/// The set of circuit instructions required to use the [`Sinsemilla`](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html) gadget.</span>
-<span class="doccomment">/// This trait is bounded on two constant parameters: `K`, the number of bits</span>
-<span class="doccomment">/// in each word accepted by the Sinsemilla hash, and `MAX_WORDS`, the maximum</span>
-<span class="doccomment">/// number of words that a single hash instance can process.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// A variable in the circuit.</span>
-    <span class="kw">type</span> <span class="ident">CellValue</span>: <span class="ident">Var</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>;
+<span class="doccomment">/// The set of circuit instructions required to use the [`Sinsemilla`](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html) gadget.
+/// This trait is bounded on two constant parameters: `K`, the number of bits
+/// in each word accepted by the Sinsemilla hash, and `MAX_WORDS`, the maximum
+/// number of words that a single hash instance can process.
+</span><span class="kw">pub trait </span>SinsemillaInstructions&lt;C: CurveAffine, <span class="kw">const </span>K: usize, <span class="kw">const </span>MAX_WORDS: usize&gt; {
+    <span class="doccomment">/// A variable in the circuit.
+    </span><span class="kw">type </span>CellValue: Var&lt;C::Base&gt;;
 
-    <span class="doccomment">/// A message composed of [`Self::MessagePiece`]s.</span>
-    <span class="kw">type</span> <span class="ident">Message</span>: <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::MessagePiece</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// A message composed of [`Self::MessagePiece`]s.
+    </span><span class="kw">type </span>Message: From&lt;Vec&lt;<span class="self">Self</span>::MessagePiece&gt;&gt;;
 
-    <span class="doccomment">/// A piece in a message containing a number of `K`-bit words.</span>
-    <span class="doccomment">/// A [`Self::MessagePiece`] fits in a single base field element,</span>
-    <span class="doccomment">/// which means it can only contain up to `N` words, where</span>
-    <span class="doccomment">/// `N*K &lt;= C::Base::CAPACITY`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// For example, in the case `K = 10`, `CAPACITY = 254`, we can fit</span>
-    <span class="doccomment">/// up to `N = 25` words in a single base field element.</span>
-    <span class="kw">type</span> <span class="ident">MessagePiece</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span>;
+    <span class="doccomment">/// A piece in a message containing a number of `K`-bit words.
+    /// A [`Self::MessagePiece`] fits in a single base field element,
+    /// which means it can only contain up to `N` words, where
+    /// `N*K &lt;= C::Base::CAPACITY`.
+    ///
+    /// For example, in the case `K = 10`, `CAPACITY = 254`, we can fit
+    /// up to `N = 25` words in a single base field element.
+    </span><span class="kw">type </span>MessagePiece: Clone + Debug;
 
-    <span class="doccomment">/// A cumulative sum `z` is used to decompose a Sinsemilla message. It</span>
-    <span class="doccomment">/// produces intermediate values for each word in the message, such</span>
-    <span class="doccomment">/// that `z_next` = (`z_cur` - `word_next`) / `2^K`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// These intermediate values are useful for range checks on subsets</span>
-    <span class="doccomment">/// of the Sinsemilla message. Sinsemilla messages in the Orchard</span>
-    <span class="doccomment">/// protocol are composed of field elements, and we need to check</span>
-    <span class="doccomment">/// the canonicity of the field element encodings in certain cases.</span>
-    <span class="kw">type</span> <span class="ident">RunningSum</span>;
+    <span class="doccomment">/// A cumulative sum `z` is used to decompose a Sinsemilla message. It
+    /// produces intermediate values for each word in the message, such
+    /// that `z_next` = (`z_cur` - `word_next`) / `2^K`.
+    ///
+    /// These intermediate values are useful for range checks on subsets
+    /// of the Sinsemilla message. Sinsemilla messages in the Orchard
+    /// protocol are composed of field elements, and we need to check
+    /// the canonicity of the field element encodings in certain cases.
+    </span><span class="kw">type </span>RunningSum;
 
-    <span class="doccomment">/// The x-coordinate of a point output of [`Self::hash_to_point`].</span>
-    <span class="kw">type</span> <span class="ident">X</span>;
-    <span class="doccomment">/// A point output of [`Self::hash_to_point`].</span>
-    <span class="kw">type</span> <span class="ident">NonIdentityPoint</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span>;
-    <span class="doccomment">/// A type enumerating the fixed points used in `CommitDomains`.</span>
-    <span class="kw">type</span> <span class="ident">FixedPoints</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// The x-coordinate of a point output of [`Self::hash_to_point`].
+    </span><span class="kw">type </span>X;
+    <span class="doccomment">/// A point output of [`Self::hash_to_point`].
+    </span><span class="kw">type </span>NonIdentityPoint: Clone + Debug;
+    <span class="doccomment">/// A type enumerating the fixed points used in `CommitDomains`.
+    </span><span class="kw">type </span>FixedPoints: FixedPoints&lt;C&gt;;
 
-    <span class="doccomment">/// HashDomains used in this instruction.</span>
-    <span class="kw">type</span> <span class="ident">HashDomains</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>;
-    <span class="doccomment">/// CommitDomains used in this instruction.</span>
-    <span class="kw">type</span> <span class="ident">CommitDomains</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident"><span class="self">Self</span>::FixedPoints</span>, <span class="ident"><span class="self">Self</span>::HashDomains</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// HashDomains used in this instruction.
+    </span><span class="kw">type </span>HashDomains: HashDomains&lt;C&gt;;
+    <span class="doccomment">/// CommitDomains used in this instruction.
+    </span><span class="kw">type </span>CommitDomains: CommitDomains&lt;C, <span class="self">Self</span>::FixedPoints, <span class="self">Self</span>::HashDomains&gt;;
 
-    <span class="doccomment">/// Witness a message piece given a field element. Returns a [`Self::MessagePiece`]</span>
-    <span class="doccomment">/// encoding the given message.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Panics</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Panics if `num_words` exceed the maximum number of `K`-bit words that</span>
-    <span class="doccomment">/// can fit into a single base field element.</span>
-    <span class="kw">fn</span> <span class="ident">witness_message_piece</span>(
+    <span class="doccomment">/// Witness a message piece given a field element. Returns a [`Self::MessagePiece`]
+    /// encoding the given message.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `num_words` exceed the maximum number of `K`-bit words that
+    /// can fit into a single base field element.
+    </span><span class="kw">fn </span>witness_message_piece(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">value</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">num_words</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::MessagePiece</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        value: Value&lt;C::Base&gt;,
+        num_words: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::MessagePiece, Error&gt;;
 
-    <span class="doccomment">/// Hashes a message to an ECC curve point.</span>
-    <span class="doccomment">/// This returns both the resulting point, as well as the message</span>
-    <span class="doccomment">/// decomposition in the form of intermediate values in a cumulative</span>
-    <span class="doccomment">/// sum.</span>
-    <span class="doccomment">///</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">fn</span> <span class="ident">hash_to_point</span>(
+    <span class="doccomment">/// Hashes a message to an ECC curve point.
+    /// This returns both the resulting point, as well as the message
+    /// decomposition in the form of intermediate values in a cumulative
+    /// sum.
+    ///
+    </span><span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="kw">fn </span>hash_to_point(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">Q</span>: <span class="ident">C</span>,
-        <span class="ident">message</span>: <span class="ident"><span class="self">Self</span>::Message</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::RunningSum</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span>;
+        layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        Q: C,
+        message: <span class="self">Self</span>::Message,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::NonIdentityPoint, Vec&lt;<span class="self">Self</span>::RunningSum&gt;), Error&gt;;
 
-    <span class="doccomment">/// Extracts the x-coordinate of the output of a Sinsemilla hash.</span>
-    <span class="kw">fn</span> <span class="ident">extract</span>(<span class="ident">point</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>) -&gt; <span class="ident"><span class="self">Self</span>::X</span>;
+    <span class="doccomment">/// Extracts the x-coordinate of the output of a Sinsemilla hash.
+    </span><span class="kw">fn </span>extract(point: <span class="kw-2">&amp;</span><span class="self">Self</span>::NonIdentityPoint) -&gt; <span class="self">Self</span>::X;
 }
 
-<span class="doccomment">/// A message to be hashed.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// Composed of [`MessagePiece`]s with bitlength some multiple of `K`.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// [`MessagePiece`]: SinsemillaInstructions::MessagePiece</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Message</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">SinsemillaChip</span>, <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">SinsemillaChip</span>: <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span>,
+<span class="doccomment">/// A message to be hashed.
+///
+/// Composed of [`MessagePiece`]s with bitlength some multiple of `K`.
+///
+/// [`MessagePiece`]: SinsemillaInstructions::MessagePiece
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>Message&lt;C: CurveAffine, SinsemillaChip, <span class="kw">const </span>K: usize, <span class="kw">const </span>MAX_WORDS: usize&gt;
+<span class="kw">where
+    </span>SinsemillaChip: SinsemillaInstructions&lt;C, K, MAX_WORDS&gt; + Clone + Debug + Eq,
 {
-    <span class="ident">chip</span>: <span class="ident">SinsemillaChip</span>,
-    <span class="ident">inner</span>: <span class="ident">SinsemillaChip::Message</span>,
+    chip: SinsemillaChip,
+    inner: SinsemillaChip::Message,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">SinsemillaChip</span>, <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-    <span class="ident">Message</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">SinsemillaChip</span>: <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span>,
+<span class="kw">impl</span>&lt;C: CurveAffine, SinsemillaChip, <span class="kw">const </span>K: usize, <span class="kw">const </span>MAX_WORDS: usize&gt;
+    Message&lt;C, SinsemillaChip, K, MAX_WORDS&gt;
+<span class="kw">where
+    </span>SinsemillaChip: SinsemillaInstructions&lt;C, K, MAX_WORDS&gt; + Clone + Debug + Eq,
 {
-    <span class="kw">fn</span> <span class="ident">from_bitstring</span>(
-        <span class="ident">chip</span>: <span class="ident">SinsemillaChip</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">bitstring</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Message must be composed of `K`-bit words.</span>
-        <span class="macro">assert_eq!</span>(<span class="ident">bitstring</span>.<span class="ident">len</span>() <span class="op">%</span> <span class="ident">K</span>, <span class="number">0</span>);
+    <span class="kw">fn </span>from_bitstring(
+        chip: SinsemillaChip,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        bitstring: Vec&lt;Value&lt;bool&gt;&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="comment">// Message must be composed of `K`-bit words.
+        </span><span class="macro">assert_eq!</span>(bitstring.len() % K, <span class="number">0</span>);
 
-        <span class="comment">// Message must have at most `MAX_WORDS` words.</span>
-        <span class="macro">assert!</span>(<span class="ident">bitstring</span>.<span class="ident">len</span>() <span class="op">/</span> <span class="ident">K</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">MAX_WORDS</span>);
+        <span class="comment">// Message must have at most `MAX_WORDS` words.
+        </span><span class="macro">assert!</span>(bitstring.len() / K &lt;= MAX_WORDS);
 
-        <span class="comment">// Each message piece must have at most `floor(C::CAPACITY / K)` words.</span>
-        <span class="kw">let</span> <span class="ident">piece_num_words</span> <span class="op">=</span> <span class="ident">C::Base::CAPACITY</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">/</span> <span class="ident">K</span>;
-        <span class="kw">let</span> <span class="ident">pieces</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">bitstring</span>
-            .<span class="ident">chunks</span>(<span class="ident">piece_num_words</span> <span class="op">*</span> <span class="ident">K</span>)
-            .<span class="ident">enumerate</span>()
-            .<span class="ident">map</span>(
-                <span class="op">|</span>(<span class="ident">i</span>, <span class="ident">piece</span>)<span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">MessagePiece</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-                    <span class="ident">MessagePiece::from_bitstring</span>(
-                        <span class="ident">chip</span>.<span class="ident">clone</span>(),
-                        <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;message piece {}&quot;</span>, <span class="ident">i</span>)),
-                        <span class="ident">piece</span>,
+        <span class="comment">// Each message piece must have at most `floor(C::CAPACITY / K)` words.
+        </span><span class="kw">let </span>piece_num_words = C::Base::CAPACITY <span class="kw">as </span>usize / K;
+        <span class="kw">let </span>pieces: <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt; = bitstring
+            .chunks(piece_num_words * K)
+            .enumerate()
+            .map(
+                |(i, piece)| -&gt; <span class="prelude-ty">Result</span>&lt;MessagePiece&lt;C, SinsemillaChip, K, MAX_WORDS&gt;, Error&gt; {
+                    MessagePiece::from_bitstring(
+                        chip.clone(),
+                        layouter.namespace(|| <span class="macro">format!</span>(<span class="string">&quot;message piece {}&quot;</span>, i)),
+                        piece,
                     )
                 },
             )
-            .<span class="ident">collect</span>();
+            .collect();
 
-        <span class="ident">pieces</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">pieces</span><span class="op">|</span> <span class="ident"><span class="self">Self</span>::from_pieces</span>(<span class="ident">chip</span>, <span class="ident">pieces</span>))
+        pieces.map(|pieces| <span class="self">Self</span>::from_pieces(chip, pieces))
     }
 
-    <span class="doccomment">/// Constructs a message from a vector of [`MessagePiece`]s.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [`MessagePiece`]: SinsemillaInstructions::MessagePiece</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_pieces</span>(
-        <span class="ident">chip</span>: <span class="ident">SinsemillaChip</span>,
-        <span class="ident">pieces</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MessagePiece</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">chip</span>,
-            <span class="ident">inner</span>: <span class="ident">pieces</span>
-                .<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">piece</span><span class="op">|</span> <span class="ident">piece</span>.<span class="ident">inner</span>)
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-                .<span class="ident">into</span>(),
+    <span class="doccomment">/// Constructs a message from a vector of [`MessagePiece`]s.
+    ///
+    /// [`MessagePiece`]: SinsemillaInstructions::MessagePiece
+    </span><span class="kw">pub fn </span>from_pieces(
+        chip: SinsemillaChip,
+        pieces: Vec&lt;MessagePiece&lt;C, SinsemillaChip, K, MAX_WORDS&gt;&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            chip,
+            inner: pieces
+                .into_iter()
+                .map(|piece| piece.inner)
+                .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+                .into(),
         }
     }
 }
 
-<span class="doccomment">/// A message piece with a bitlength of some multiple of `K`.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MessagePiece</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">SinsemillaChip</span>, <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">SinsemillaChip</span>: <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span>,
+<span class="doccomment">/// A message piece with a bitlength of some multiple of `K`.
+</span><span class="attribute">#[derive(Copy, Clone, Debug)]</span>
+<span class="kw">pub struct </span>MessagePiece&lt;C: CurveAffine, SinsemillaChip, <span class="kw">const </span>K: usize, <span class="kw">const </span>MAX_WORDS: usize&gt;
+<span class="kw">where
+    </span>SinsemillaChip: SinsemillaInstructions&lt;C, K, MAX_WORDS&gt; + Clone + Debug + Eq,
 {
-    <span class="ident">chip</span>: <span class="ident">SinsemillaChip</span>,
-    <span class="ident">inner</span>: <span class="ident">SinsemillaChip::MessagePiece</span>,
+    chip: SinsemillaChip,
+    inner: SinsemillaChip::MessagePiece,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">SinsemillaChip</span>, <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-    <span class="ident">MessagePiece</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">SinsemillaChip</span>: <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span>,
+<span class="kw">impl</span>&lt;C: CurveAffine, SinsemillaChip, <span class="kw">const </span>K: usize, <span class="kw">const </span>MAX_WORDS: usize&gt;
+    MessagePiece&lt;C, SinsemillaChip, K, MAX_WORDS&gt;
+<span class="kw">where
+    </span>SinsemillaChip: SinsemillaInstructions&lt;C, K, MAX_WORDS&gt; + Clone + Debug + Eq,
 {
-    <span class="doccomment">/// Returns the inner MessagePiece contained in this gadget.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">inner</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">SinsemillaChip::MessagePiece</span> {
-        <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">clone</span>()
+    <span class="doccomment">/// Returns the inner MessagePiece contained in this gadget.
+    </span><span class="kw">pub fn </span>inner(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SinsemillaChip::MessagePiece {
+        <span class="self">self</span>.inner.clone()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">SinsemillaChip</span>, <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-    <span class="ident">MessagePiece</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">SinsemillaChip</span>: <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span>,
+<span class="kw">impl</span>&lt;C: CurveAffine, SinsemillaChip, <span class="kw">const </span>K: usize, <span class="kw">const </span>MAX_WORDS: usize&gt;
+    MessagePiece&lt;C, SinsemillaChip, K, MAX_WORDS&gt;
+<span class="kw">where
+    </span>SinsemillaChip: SinsemillaInstructions&lt;C, K, MAX_WORDS&gt; + Clone + Debug + Eq,
 {
-    <span class="kw">fn</span> <span class="ident">from_bitstring</span>(
-        <span class="ident">chip</span>: <span class="ident">SinsemillaChip</span>,
-        <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">bitstring</span>: <span class="kw-2">&amp;</span>[<span class="ident">Value</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Message must be composed of `K`-bit words.</span>
-        <span class="macro">assert_eq!</span>(<span class="ident">bitstring</span>.<span class="ident">len</span>() <span class="op">%</span> <span class="ident">K</span>, <span class="number">0</span>);
-        <span class="kw">let</span> <span class="ident">num_words</span> <span class="op">=</span> <span class="ident">bitstring</span>.<span class="ident">len</span>() <span class="op">/</span> <span class="ident">K</span>;
+    <span class="kw">fn </span>from_bitstring(
+        chip: SinsemillaChip,
+        layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        bitstring: <span class="kw-2">&amp;</span>[Value&lt;bool&gt;],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="comment">// Message must be composed of `K`-bit words.
+        </span><span class="macro">assert_eq!</span>(bitstring.len() % K, <span class="number">0</span>);
+        <span class="kw">let </span>num_words = bitstring.len() / K;
 
-        <span class="comment">// Each message piece must have at most `floor(C::Base::CAPACITY / K)` words.</span>
-        <span class="comment">// This ensures that the all-ones bitstring is canonical in the field.</span>
-        <span class="kw">let</span> <span class="ident">piece_max_num_words</span> <span class="op">=</span> <span class="ident">C::Base::CAPACITY</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">/</span> <span class="ident">K</span>;
-        <span class="macro">assert!</span>(<span class="ident">num_words</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">piece_max_num_words</span> <span class="kw">as</span> <span class="ident">usize</span>);
+        <span class="comment">// Each message piece must have at most `floor(C::Base::CAPACITY / K)` words.
+        // This ensures that the all-ones bitstring is canonical in the field.
+        </span><span class="kw">let </span>piece_max_num_words = C::Base::CAPACITY <span class="kw">as </span>usize / K;
+        <span class="macro">assert!</span>(num_words &lt;= piece_max_num_words <span class="kw">as </span>usize);
 
-        <span class="comment">// Closure to parse a bitstring (little-endian) into a base field element.</span>
-        <span class="kw">let</span> <span class="ident">to_base_field</span> <span class="op">=</span> <span class="op">|</span><span class="ident">bits</span>: <span class="kw-2">&amp;</span>[<span class="ident">Value</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>]<span class="op">|</span> -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">bits</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">bits</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">collect</span>();
-            <span class="ident">bits</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">bits</span><span class="op">|</span> {
-                <span class="ident">bits</span>.<span class="ident">into_iter</span>().<span class="ident">rev</span>().<span class="ident">fold</span>(<span class="ident">C::Base::zero</span>(), <span class="op">|</span><span class="ident">acc</span>, <span class="ident">bit</span><span class="op">|</span> {
-                    <span class="kw">if</span> <span class="ident">bit</span> {
-                        <span class="ident">acc</span>.<span class="ident">double</span>() <span class="op">+</span> <span class="ident">C::Base::one</span>()
-                    } <span class="kw">else</span> {
-                        <span class="ident">acc</span>.<span class="ident">double</span>()
+        <span class="comment">// Closure to parse a bitstring (little-endian) into a base field element.
+        </span><span class="kw">let </span>to_base_field = |bits: <span class="kw-2">&amp;</span>[Value&lt;bool&gt;]| -&gt; Value&lt;C::Base&gt; {
+            <span class="kw">let </span>bits: Value&lt;Vec&lt;bool&gt;&gt; = bits.iter().cloned().collect();
+            bits.map(|bits| {
+                bits.into_iter().rev().fold(C::Base::zero(), |acc, bit| {
+                    <span class="kw">if </span>bit {
+                        acc.double() + C::Base::one()
+                    } <span class="kw">else </span>{
+                        acc.double()
                     }
                 })
             })
         };
 
-        <span class="kw">let</span> <span class="ident">piece_value</span> <span class="op">=</span> <span class="ident">to_base_field</span>(<span class="ident">bitstring</span>);
-        <span class="ident"><span class="self">Self</span>::from_field_elem</span>(<span class="ident">chip</span>, <span class="ident">layouter</span>, <span class="ident">piece_value</span>, <span class="ident">num_words</span>)
+        <span class="kw">let </span>piece_value = to_base_field(bitstring);
+        <span class="self">Self</span>::from_field_elem(chip, layouter, piece_value, num_words)
     }
 
-    <span class="doccomment">/// Constructs a MessagePiece from a field element.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_field_elem</span>(
-        <span class="ident">chip</span>: <span class="ident">SinsemillaChip</span>,
-        <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">field_elem</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">num_words</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">chip</span>.<span class="ident">witness_message_piece</span>(<span class="ident">layouter</span>, <span class="ident">field_elem</span>, <span class="ident">num_words</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span> { <span class="ident">chip</span>, <span class="ident">inner</span> })
+    <span class="doccomment">/// Constructs a MessagePiece from a field element.
+    </span><span class="kw">pub fn </span>from_field_elem(
+        chip: SinsemillaChip,
+        layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        field_elem: Value&lt;C::Base&gt;,
+        num_words: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>inner = chip.witness_message_piece(layouter, field_elem, num_words)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ chip, inner })
     }
 
-    <span class="doccomment">/// Constructs a `MessagePiece` by concatenating a sequence of [`RangeConstrained`]</span>
-    <span class="doccomment">/// subpiece values.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The `MessagePiece` is assigned to the circuit, but not constrained in any way.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Panics</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Panics if the total number of bits across the subpieces is not a multiple of the</span>
-    <span class="doccomment">/// word size, or if the required bitshift for any subpiece is greater than 63 bits.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">from_subpieces</span>(
-        <span class="ident">chip</span>: <span class="ident">SinsemillaChip</span>,
-        <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">subpieces</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">RangeConstrained</span><span class="op">&lt;</span><span class="ident">C::Base</span>, <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> (<span class="ident">field_elem</span>, <span class="ident">total_bits</span>) <span class="op">=</span> <span class="ident">subpieces</span>.<span class="ident">into_iter</span>().<span class="ident">fold</span>(
-            (<span class="ident">Value::known</span>(<span class="ident">C::Base::zero</span>()), <span class="number">0</span>),
-            <span class="op">|</span>(<span class="ident">acc</span>, <span class="ident">bits</span>), <span class="ident">subpiece</span><span class="op">|</span> {
-                <span class="macro">assert!</span>(<span class="ident">bits</span> <span class="op">&lt;</span> <span class="number">64</span>);
-                <span class="kw">let</span> <span class="ident">subpiece_shifted</span> <span class="op">=</span> <span class="ident">subpiece</span>
-                    .<span class="ident">inner</span>()
-                    .<span class="ident">value</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">C::Base::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">bits</span>) <span class="op">*</span> <span class="ident">v</span>);
-                (<span class="ident">acc</span> <span class="op">+</span> <span class="ident">subpiece_shifted</span>, <span class="ident">bits</span> <span class="op">+</span> <span class="ident">subpiece</span>.<span class="ident">num_bits</span>())
+    <span class="doccomment">/// Constructs a `MessagePiece` by concatenating a sequence of [`RangeConstrained`]
+    /// subpiece values.
+    ///
+    /// The `MessagePiece` is assigned to the circuit, but not constrained in any way.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the total number of bits across the subpieces is not a multiple of the
+    /// word size, or if the required bitshift for any subpiece is greater than 63 bits.
+    </span><span class="kw">pub fn </span>from_subpieces(
+        chip: SinsemillaChip,
+        layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        subpieces: <span class="kw">impl </span>IntoIterator&lt;Item = RangeConstrained&lt;C::Base, Value&lt;C::Base&gt;&gt;&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>(field_elem, total_bits) = subpieces.into_iter().fold(
+            (Value::known(C::Base::zero()), <span class="number">0</span>),
+            |(acc, bits), subpiece| {
+                <span class="macro">assert!</span>(bits &lt; <span class="number">64</span>);
+                <span class="kw">let </span>subpiece_shifted = subpiece
+                    .inner()
+                    .value()
+                    .map(|v| C::Base::from(<span class="number">1 </span>&lt;&lt; bits) * v);
+                (acc + subpiece_shifted, bits + subpiece.num_bits())
             },
         );
 
-        <span class="comment">// Message must be composed of `K`-bit words.</span>
-        <span class="macro">assert_eq!</span>(<span class="ident">total_bits</span> <span class="op">%</span> <span class="ident">K</span>, <span class="number">0</span>);
-        <span class="kw">let</span> <span class="ident">num_words</span> <span class="op">=</span> <span class="ident">total_bits</span> <span class="op">/</span> <span class="ident">K</span>;
+        <span class="comment">// Message must be composed of `K`-bit words.
+        </span><span class="macro">assert_eq!</span>(total_bits % K, <span class="number">0</span>);
+        <span class="kw">let </span>num_words = total_bits / K;
 
-        <span class="ident"><span class="self">Self</span>::from_field_elem</span>(<span class="ident">chip</span>, <span class="ident">layouter</span>, <span class="ident">field_elem</span>, <span class="ident">num_words</span>)
+        <span class="self">Self</span>::from_field_elem(chip, layouter, field_elem, num_words)
     }
 }
 
-<span class="doccomment">/// A domain in which $\mathsf{SinsemillaHashToPoint}$ and $\mathsf{SinsemillaHash}$ can</span>
-<span class="doccomment">/// be used.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HashDomain</span><span class="op">&lt;</span>
-    <span class="ident">C</span>: <span class="ident">CurveAffine</span>,
-    <span class="ident">SinsemillaChip</span>,
-    <span class="ident">EccChip</span>,
-    <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>,
-    <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span>,
-<span class="op">&gt;</span> <span class="kw">where</span>
-    <span class="ident">SinsemillaChip</span>: <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span>,
-    <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span>
-            <span class="ident">C</span>,
-            <span class="ident">NonIdentityPoint</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::NonIdentityPoint</span>,
-            <span class="ident">FixedPoints</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::FixedPoints</span>,
-        <span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>
-        <span class="op">+</span> <span class="ident">Debug</span>
-        <span class="op">+</span> <span class="ident">Eq</span>,
+<span class="doccomment">/// A domain in which $\mathsf{SinsemillaHashToPoint}$ and $\mathsf{SinsemillaHash}$ can
+/// be used.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="attribute">#[allow(non_snake_case)]</span>
+<span class="kw">pub struct </span>HashDomain&lt;
+    C: CurveAffine,
+    SinsemillaChip,
+    EccChip,
+    <span class="kw">const </span>K: usize,
+    <span class="kw">const </span>MAX_WORDS: usize,
+&gt; <span class="kw">where
+    </span>SinsemillaChip: SinsemillaInstructions&lt;C, K, MAX_WORDS&gt; + Clone + Debug + Eq,
+    EccChip: EccInstructions&lt;
+            C,
+            NonIdentityPoint = &lt;SinsemillaChip <span class="kw">as </span>SinsemillaInstructions&lt;C, K, MAX_WORDS&gt;&gt;::NonIdentityPoint,
+            FixedPoints = &lt;SinsemillaChip <span class="kw">as </span>SinsemillaInstructions&lt;C, K, MAX_WORDS&gt;&gt;::FixedPoints,
+        &gt; + Clone
+        + Debug
+        + Eq,
 {
-    <span class="ident">sinsemilla_chip</span>: <span class="ident">SinsemillaChip</span>,
-    <span class="ident">ecc_chip</span>: <span class="ident">EccChip</span>,
-    <span class="ident">Q</span>: <span class="ident">C</span>,
+    sinsemilla_chip: SinsemillaChip,
+    ecc_chip: EccChip,
+    Q: C,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">EccChip</span>, <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-    <span class="ident">HashDomain</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">EccChip</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">SinsemillaChip</span>: <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span>,
-    <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span>
-            <span class="ident">C</span>,
-            <span class="ident">NonIdentityPoint</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::NonIdentityPoint</span>,
-            <span class="ident">FixedPoints</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::FixedPoints</span>,
-        <span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>
-        <span class="op">+</span> <span class="ident">Debug</span>
-        <span class="op">+</span> <span class="ident">Eq</span>,
+<span class="kw">impl</span>&lt;C: CurveAffine, SinsemillaChip, EccChip, <span class="kw">const </span>K: usize, <span class="kw">const </span>MAX_WORDS: usize&gt;
+    HashDomain&lt;C, SinsemillaChip, EccChip, K, MAX_WORDS&gt;
+<span class="kw">where
+    </span>SinsemillaChip: SinsemillaInstructions&lt;C, K, MAX_WORDS&gt; + Clone + Debug + Eq,
+    EccChip: EccInstructions&lt;
+            C,
+            NonIdentityPoint = &lt;SinsemillaChip <span class="kw">as </span>SinsemillaInstructions&lt;C, K, MAX_WORDS&gt;&gt;::NonIdentityPoint,
+            FixedPoints = &lt;SinsemillaChip <span class="kw">as </span>SinsemillaInstructions&lt;C, K, MAX_WORDS&gt;&gt;::FixedPoints,
+        &gt; + Clone
+        + Debug
+        + Eq,
 {
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="doccomment">/// Constructs a new `HashDomain` for the given domain.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">sinsemilla_chip</span>: <span class="ident">SinsemillaChip</span>,
-        <span class="ident">ecc_chip</span>: <span class="ident">EccChip</span>,
-        <span class="ident">domain</span>: <span class="kw-2">&amp;</span><span class="ident">SinsemillaChip::HashDomains</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="ident">HashDomain</span> {
-            <span class="ident">sinsemilla_chip</span>,
-            <span class="ident">ecc_chip</span>,
-            <span class="ident">Q</span>: <span class="ident">domain</span>.<span class="ident">Q</span>(),
+    <span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="doccomment">/// Constructs a new `HashDomain` for the given domain.
+    </span><span class="kw">pub fn </span>new(
+        sinsemilla_chip: SinsemillaChip,
+        ecc_chip: EccChip,
+        domain: <span class="kw-2">&amp;</span>SinsemillaChip::HashDomains,
+    ) -&gt; <span class="self">Self </span>{
+        HashDomain {
+            sinsemilla_chip,
+            ecc_chip,
+            Q: domain.Q(),
         }
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="doccomment">/// $\mathsf{SinsemillaHashToPoint}$ from [§ 5.4.1.9][concretesinsemillahash].</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [concretesinsemillahash]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">hash_to_point</span>(
+    <span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="doccomment">/// $\mathsf{SinsemillaHashToPoint}$ from [§ 5.4.1.9][concretesinsemillahash].
+    ///
+    /// [concretesinsemillahash]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
+    </span><span class="kw">pub fn </span>hash_to_point(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">message</span>: <span class="ident">Message</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">ecc::NonIdentityPoint</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SinsemillaChip::RunningSum</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">sinsemilla_chip</span>, <span class="ident">message</span>.<span class="ident">chip</span>);
-        <span class="self">self</span>.<span class="ident">sinsemilla_chip</span>
-            .<span class="ident">hash_to_point</span>(<span class="ident">layouter</span>, <span class="self">self</span>.<span class="ident">Q</span>, <span class="ident">message</span>.<span class="ident">inner</span>)
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">point</span>, <span class="ident">zs</span>)<span class="op">|</span> (<span class="ident">ecc::NonIdentityPoint::from_inner</span>(<span class="self">self</span>.<span class="ident">ecc_chip</span>.<span class="ident">clone</span>(), <span class="ident">point</span>), <span class="ident">zs</span>))
+        layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        message: Message&lt;C, SinsemillaChip, K, MAX_WORDS&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(ecc::NonIdentityPoint&lt;C, EccChip&gt;, Vec&lt;SinsemillaChip::RunningSum&gt;), Error&gt; {
+        <span class="macro">assert_eq!</span>(<span class="self">self</span>.sinsemilla_chip, message.chip);
+        <span class="self">self</span>.sinsemilla_chip
+            .hash_to_point(layouter, <span class="self">self</span>.Q, message.inner)
+            .map(|(point, zs)| (ecc::NonIdentityPoint::from_inner(<span class="self">self</span>.ecc_chip.clone(), point), zs))
     }
 
-    <span class="doccomment">/// $\mathsf{SinsemillaHash}$ from [§ 5.4.1.9][concretesinsemillahash].</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [concretesinsemillahash]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">hash</span>(
+    <span class="doccomment">/// $\mathsf{SinsemillaHash}$ from [§ 5.4.1.9][concretesinsemillahash].
+    ///
+    /// [concretesinsemillahash]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
+    </span><span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="kw">pub fn </span>hash(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">message</span>: <span class="ident">Message</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">ecc::X</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SinsemillaChip::RunningSum</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">sinsemilla_chip</span>, <span class="ident">message</span>.<span class="ident">chip</span>);
-        <span class="kw">let</span> (<span class="ident">p</span>, <span class="ident">zs</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">hash_to_point</span>(<span class="ident">layouter</span>, <span class="ident">message</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>((<span class="ident">p</span>.<span class="ident">extract_p</span>(), <span class="ident">zs</span>))
+        layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        message: Message&lt;C, SinsemillaChip, K, MAX_WORDS&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(ecc::X&lt;C, EccChip&gt;, Vec&lt;SinsemillaChip::RunningSum&gt;), Error&gt; {
+        <span class="macro">assert_eq!</span>(<span class="self">self</span>.sinsemilla_chip, message.chip);
+        <span class="kw">let </span>(p, zs) = <span class="self">self</span>.hash_to_point(layouter, message)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>((p.extract_p(), zs))
     }
 }
 
-<span class="doccomment">/// Trait allowing circuit&#39;s Sinsemilla CommitDomains to be enumerated.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">F</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">H</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>:
-    <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span>
+<span class="doccomment">/// Trait allowing circuit&#39;s Sinsemilla CommitDomains to be enumerated.
+</span><span class="kw">pub trait </span>CommitDomains&lt;C: CurveAffine, F: FixedPoints&lt;C&gt;, H: HashDomains&lt;C&gt;&gt;:
+    Clone + Debug
 {
-    <span class="doccomment">/// Returns the fixed point corresponding to the R constant used for</span>
-    <span class="doccomment">/// randomization in this CommitDomain.</span>
-    <span class="kw">fn</span> <span class="ident">r</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">F::FullScalar</span>;
+    <span class="doccomment">/// Returns the fixed point corresponding to the R constant used for
+    /// randomization in this CommitDomain.
+    </span><span class="kw">fn </span>r(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; F::FullScalar;
 
-    <span class="doccomment">/// Returns the HashDomain contained in this CommitDomain</span>
-    <span class="kw">fn</span> <span class="ident">hash_domain</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">H</span>;
+    <span class="doccomment">/// Returns the HashDomain contained in this CommitDomain
+    </span><span class="kw">fn </span>hash_domain(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; H;
 }
 
-<span class="doccomment">/// Trait allowing circuit&#39;s Sinsemilla HashDomains to be enumerated.</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> {
-    <span class="doccomment">/// Returns the `Q` constant for this domain.</span>
-    <span class="kw">fn</span> <span class="ident">Q</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">C</span>;
+<span class="doccomment">/// Trait allowing circuit&#39;s Sinsemilla HashDomains to be enumerated.
+</span><span class="attribute">#[allow(non_snake_case)]</span>
+<span class="kw">pub trait </span>HashDomains&lt;C: CurveAffine&gt;: Clone + Debug {
+    <span class="doccomment">/// Returns the `Q` constant for this domain.
+    </span><span class="kw">fn </span>Q(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; C;
 }
 
-<span class="doccomment">/// Gadget representing a domain in which $\mathsf{SinsemillaCommit}$ and</span>
-<span class="doccomment">/// $\mathsf{SinsemillaShortCommit}$ can be used.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">CommitDomain</span><span class="op">&lt;</span>
-    <span class="ident">C</span>: <span class="ident">CurveAffine</span>,
-    <span class="ident">SinsemillaChip</span>,
-    <span class="ident">EccChip</span>,
-    <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>,
-    <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span>,
-<span class="op">&gt;</span> <span class="kw">where</span>
-    <span class="ident">SinsemillaChip</span>: <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span>,
-    <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span>
-            <span class="ident">C</span>,
-            <span class="ident">NonIdentityPoint</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::NonIdentityPoint</span>,
-            <span class="ident">FixedPoints</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::FixedPoints</span>,
-        <span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>
-        <span class="op">+</span> <span class="ident">Debug</span>
-        <span class="op">+</span> <span class="ident">Eq</span>,
+<span class="doccomment">/// Gadget representing a domain in which $\mathsf{SinsemillaCommit}$ and
+/// $\mathsf{SinsemillaShortCommit}$ can be used.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="attribute">#[allow(non_snake_case)]</span>
+<span class="kw">pub struct </span>CommitDomain&lt;
+    C: CurveAffine,
+    SinsemillaChip,
+    EccChip,
+    <span class="kw">const </span>K: usize,
+    <span class="kw">const </span>MAX_WORDS: usize,
+&gt; <span class="kw">where
+    </span>SinsemillaChip: SinsemillaInstructions&lt;C, K, MAX_WORDS&gt; + Clone + Debug + Eq,
+    EccChip: EccInstructions&lt;
+            C,
+            NonIdentityPoint = &lt;SinsemillaChip <span class="kw">as </span>SinsemillaInstructions&lt;C, K, MAX_WORDS&gt;&gt;::NonIdentityPoint,
+            FixedPoints = &lt;SinsemillaChip <span class="kw">as </span>SinsemillaInstructions&lt;C, K, MAX_WORDS&gt;&gt;::FixedPoints,
+        &gt; + Clone
+        + Debug
+        + Eq,
 {
-    <span class="ident">M</span>: <span class="ident">HashDomain</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">EccChip</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>,
-    <span class="ident">R</span>: <span class="ident">ecc::FixedPoint</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
+    M: HashDomain&lt;C, SinsemillaChip, EccChip, K, MAX_WORDS&gt;,
+    R: ecc::FixedPoint&lt;C, EccChip&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">EccChip</span>, <span class="kw">const</span> <span class="ident">K</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">MAX_WORDS</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-    <span class="ident">CommitDomain</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">EccChip</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">SinsemillaChip</span>: <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Debug</span> <span class="op">+</span> <span class="ident">Eq</span>,
-    <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span>
-            <span class="ident">C</span>,
-            <span class="ident">NonIdentityPoint</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::NonIdentityPoint</span>,
-            <span class="ident">FixedPoints</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">SinsemillaChip</span> <span class="kw">as</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::FixedPoints</span>,
-        <span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>
-        <span class="op">+</span> <span class="ident">Debug</span>
-        <span class="op">+</span> <span class="ident">Eq</span>,
+<span class="kw">impl</span>&lt;C: CurveAffine, SinsemillaChip, EccChip, <span class="kw">const </span>K: usize, <span class="kw">const </span>MAX_WORDS: usize&gt;
+    CommitDomain&lt;C, SinsemillaChip, EccChip, K, MAX_WORDS&gt;
+<span class="kw">where
+    </span>SinsemillaChip: SinsemillaInstructions&lt;C, K, MAX_WORDS&gt; + Clone + Debug + Eq,
+    EccChip: EccInstructions&lt;
+            C,
+            NonIdentityPoint = &lt;SinsemillaChip <span class="kw">as </span>SinsemillaInstructions&lt;C, K, MAX_WORDS&gt;&gt;::NonIdentityPoint,
+            FixedPoints = &lt;SinsemillaChip <span class="kw">as </span>SinsemillaInstructions&lt;C, K, MAX_WORDS&gt;&gt;::FixedPoints,
+        &gt; + Clone
+        + Debug
+        + Eq,
 {
-    <span class="doccomment">/// Constructs a new `CommitDomain` for the given domain.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">sinsemilla_chip</span>: <span class="ident">SinsemillaChip</span>,
-        <span class="ident">ecc_chip</span>: <span class="ident">EccChip</span>,
-        <span class="comment">// TODO: Instead of using SinsemilllaChip::CommitDomains, just use something that implements a CommitDomains trait</span>
-        <span class="ident">domain</span>: <span class="kw-2">&amp;</span><span class="ident">SinsemillaChip::CommitDomains</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="ident">CommitDomain</span> {
-            <span class="ident">M</span>: <span class="ident">HashDomain::new</span>(<span class="ident">sinsemilla_chip</span>, <span class="ident">ecc_chip</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="ident">domain</span>.<span class="ident">hash_domain</span>()),
-            <span class="ident">R</span>: <span class="ident">ecc::FixedPoint::from_inner</span>(<span class="ident">ecc_chip</span>, <span class="ident">domain</span>.<span class="ident">r</span>()),
+    <span class="doccomment">/// Constructs a new `CommitDomain` for the given domain.
+    </span><span class="kw">pub fn </span>new(
+        sinsemilla_chip: SinsemillaChip,
+        ecc_chip: EccChip,
+        <span class="comment">// TODO: Instead of using SinsemilllaChip::CommitDomains, just use something that implements a CommitDomains trait
+        </span>domain: <span class="kw-2">&amp;</span>SinsemillaChip::CommitDomains,
+    ) -&gt; <span class="self">Self </span>{
+        CommitDomain {
+            M: HashDomain::new(sinsemilla_chip, ecc_chip.clone(), <span class="kw-2">&amp;</span>domain.hash_domain()),
+            R: ecc::FixedPoint::from_inner(ecc_chip, domain.r()),
         }
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="doccomment">/// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">commit</span>(
+    <span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="doccomment">/// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
+    ///
+    /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
+    </span><span class="kw">pub fn </span>commit(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">message</span>: <span class="ident">Message</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>,
-        <span class="ident">r</span>: <span class="ident">ecc::ScalarFixed</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        message: Message&lt;C, SinsemillaChip, K, MAX_WORDS&gt;,
+        r: ecc::ScalarFixed&lt;C, EccChip&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;
         (
-            <span class="ident">ecc::Point</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
-            <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SinsemillaChip::RunningSum</span><span class="op">&gt;</span>,
+            ecc::Point&lt;C, EccChip&gt;,
+            Vec&lt;SinsemillaChip::RunningSum&gt;,
         ),
-        <span class="ident">Error</span>,
-    <span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">M</span>.<span class="ident">sinsemilla_chip</span>, <span class="ident">message</span>.<span class="ident">chip</span>);
-        <span class="kw">let</span> (<span class="ident">blind</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">R</span>.<span class="ident">mul</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;[r] R&quot;</span>), <span class="ident">r</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> (<span class="ident">p</span>, <span class="ident">zs</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">M</span>.<span class="ident">hash_to_point</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;M&quot;</span>), <span class="ident">message</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">commitment</span> <span class="op">=</span> <span class="ident">p</span>.<span class="ident">add</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;M + [r] R&quot;</span>), <span class="kw-2">&amp;</span><span class="ident">blind</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>((<span class="ident">commitment</span>, <span class="ident">zs</span>))
+        Error,
+    &gt; {
+        <span class="macro">assert_eq!</span>(<span class="self">self</span>.M.sinsemilla_chip, message.chip);
+        <span class="kw">let </span>(blind, <span class="kw">_</span>) = <span class="self">self</span>.R.mul(layouter.namespace(|| <span class="string">&quot;[r] R&quot;</span>), r)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(p, zs) = <span class="self">self</span>.M.hash_to_point(layouter.namespace(|| <span class="string">&quot;M&quot;</span>), message)<span class="question-mark">?</span>;
+        <span class="kw">let </span>commitment = p.add(layouter.namespace(|| <span class="string">&quot;M + [r] R&quot;</span>), <span class="kw-2">&amp;</span>blind)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>((commitment, zs))
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="doccomment">/// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">short_commit</span>(
+    <span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="doccomment">/// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
+    ///
+    /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
+    </span><span class="kw">pub fn </span>short_commit(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">C::Base</span><span class="op">&gt;</span>,
-        <span class="ident">message</span>: <span class="ident">Message</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">SinsemillaChip</span>, <span class="ident">K</span>, <span class="ident">MAX_WORDS</span><span class="op">&gt;</span>,
-        <span class="ident">r</span>: <span class="ident">ecc::ScalarFixed</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">ecc::X</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SinsemillaChip::RunningSum</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">M</span>.<span class="ident">sinsemilla_chip</span>, <span class="ident">message</span>.<span class="ident">chip</span>);
-        <span class="kw">let</span> (<span class="ident">p</span>, <span class="ident">zs</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">commit</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;commit&quot;</span>), <span class="ident">message</span>, <span class="ident">r</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>((<span class="ident">p</span>.<span class="ident">extract_p</span>(), <span class="ident">zs</span>))
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
+        message: Message&lt;C, SinsemillaChip, K, MAX_WORDS&gt;,
+        r: ecc::ScalarFixed&lt;C, EccChip&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(ecc::X&lt;C, EccChip&gt;, Vec&lt;SinsemillaChip::RunningSum&gt;), Error&gt; {
+        <span class="macro">assert_eq!</span>(<span class="self">self</span>.M.sinsemilla_chip, message.chip);
+        <span class="kw">let </span>(p, zs) = <span class="self">self</span>.commit(layouter.namespace(|| <span class="string">&quot;commit&quot;</span>), message, r)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>((p.extract_p(), zs))
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-        <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">SimpleFloorPlanner</span>, <span class="ident">Value</span>},
-        <span class="ident">dev::MockProver</span>,
-        <span class="ident">plonk</span>::{<span class="ident">Circuit</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>},
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>tests {
+    <span class="kw">use </span>halo2_proofs::{
+        circuit::{Layouter, SimpleFloorPlanner, Value},
+        dev::MockProver,
+        plonk::{Circuit, ConstraintSystem, Error},
     };
-    <span class="kw">use</span> <span class="ident">rand::rngs::OsRng</span>;
+    <span class="kw">use </span>rand::rngs::OsRng;
 
-    <span class="kw">use</span> <span class="kw">super</span>::{
-        <span class="ident">chip</span>::{<span class="ident">SinsemillaChip</span>, <span class="ident">SinsemillaConfig</span>},
-        <span class="ident">CommitDomain</span>, <span class="ident">CommitDomains</span>, <span class="ident">HashDomain</span>, <span class="ident">HashDomains</span>, <span class="ident">Message</span>, <span class="ident">MessagePiece</span>,
+    <span class="kw">use super</span>::{
+        chip::{SinsemillaChip, SinsemillaConfig},
+        CommitDomain, CommitDomains, HashDomain, HashDomains, Message, MessagePiece,
     };
 
-    <span class="kw">use</span> <span class="kw">crate</span>::{
-        <span class="ident">ecc::ScalarFixed</span>,
-        <span class="ident">sinsemilla::primitives</span>::{<span class="self">self</span> <span class="kw">as</span> <span class="ident">sinsemilla</span>, <span class="ident">K</span>},
+    <span class="kw">use crate</span>::{
+        ecc::ScalarFixed,
+        sinsemilla::primitives::{<span class="self">self </span><span class="kw">as </span>sinsemilla, K},
         {
-            <span class="ident">ecc</span>::{
-                <span class="ident">chip</span>::{<span class="ident">find_zs_and_us</span>, <span class="ident">EccChip</span>, <span class="ident">EccConfig</span>, <span class="ident">H</span>, <span class="ident">NUM_WINDOWS</span>},
-                <span class="ident">tests</span>::{<span class="ident">FullWidth</span>, <span class="ident">TestFixedBases</span>},
-                <span class="ident">NonIdentityPoint</span>,
+            ecc::{
+                chip::{find_zs_and_us, EccChip, EccConfig, H, NUM_WINDOWS},
+                tests::{FullWidth, TestFixedBases},
+                NonIdentityPoint,
             },
-            <span class="ident">utilities::lookup_range_check::LookupRangeCheckConfig</span>,
+            utilities::lookup_range_check::LookupRangeCheckConfig,
         },
     };
 
-    <span class="kw">use</span> <span class="ident">group</span>::{<span class="ident">ff::Field</span>, <span class="ident">Curve</span>};
-    <span class="kw">use</span> <span class="ident">lazy_static::lazy_static</span>;
-    <span class="kw">use</span> <span class="ident">pasta_curves::pallas</span>;
+    <span class="kw">use </span>group::{ff::Field, Curve};
+    <span class="kw">use </span>lazy_static::lazy_static;
+    <span class="kw">use </span>pasta_curves::pallas;
 
-    <span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
+    <span class="kw">use </span>std::convert::TryInto;
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const</span> <span class="ident">PERSONALIZATION</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;MerkleCRH&quot;</span>;
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>PERSONALIZATION: <span class="kw-2">&amp;</span>str = <span class="string">&quot;MerkleCRH&quot;</span>;
 
     <span class="macro">lazy_static!</span> {
-        <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">COMMIT_DOMAIN</span>: <span class="ident">sinsemilla::CommitDomain</span> <span class="op">=</span>
-            <span class="ident">sinsemilla::CommitDomain::new</span>(<span class="ident">PERSONALIZATION</span>);
-        <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">Q</span>: <span class="ident">pallas::Affine</span> <span class="op">=</span> <span class="ident">COMMIT_DOMAIN</span>.<span class="ident">Q</span>().<span class="ident">to_affine</span>();
-        <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">R</span>: <span class="ident">pallas::Affine</span> <span class="op">=</span> <span class="ident">COMMIT_DOMAIN</span>.<span class="ident">R</span>().<span class="ident">to_affine</span>();
-        <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">R_ZS_AND_US</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">u64</span>, [<span class="ident">pallas::Base</span>; <span class="ident">H</span>])<span class="op">&gt;</span> <span class="op">=</span>
-            <span class="ident">find_zs_and_us</span>(<span class="kw-2">*</span><span class="ident">R</span>, <span class="ident">NUM_WINDOWS</span>).<span class="ident">unwrap</span>();
+        <span class="kw">static </span><span class="kw-2">ref </span>COMMIT_DOMAIN: sinsemilla::CommitDomain =
+            sinsemilla::CommitDomain::new(PERSONALIZATION);
+        <span class="kw">static </span><span class="kw-2">ref </span>Q: pallas::Affine = COMMIT_DOMAIN.Q().to_affine();
+        <span class="kw">static </span><span class="kw-2">ref </span>R: pallas::Affine = COMMIT_DOMAIN.R().to_affine();
+        <span class="kw">static </span><span class="kw-2">ref </span>R_ZS_AND_US: Vec&lt;(u64, [pallas::Base; H])&gt; =
+            find_zs_and_us(<span class="kw-2">*</span>R, NUM_WINDOWS).unwrap();
     }
 
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">TestHashDomain</span>;
-    <span class="kw">impl</span> <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TestHashDomain</span> {
-        <span class="kw">fn</span> <span class="ident">Q</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">pallas::Affine</span> {
-            <span class="kw-2">*</span><span class="ident">Q</span>
+    <span class="attribute">#[derive(Debug, Clone, Eq, PartialEq)]</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>TestHashDomain;
+    <span class="kw">impl </span>HashDomains&lt;pallas::Affine&gt; <span class="kw">for </span>TestHashDomain {
+        <span class="kw">fn </span>Q(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; pallas::Affine {
+            <span class="kw-2">*</span>Q
         }
     }
 
-    <span class="comment">// This test does not make use of the CommitDomain.</span>
-    <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">TestCommitDomain</span>;
-    <span class="kw">impl</span> <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">TestFixedBases</span>, <span class="ident">TestHashDomain</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TestCommitDomain</span> {
-        <span class="kw">fn</span> <span class="ident">r</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">FullWidth</span> {
-            <span class="ident">FullWidth::from_parts</span>(<span class="kw-2">*</span><span class="ident">R</span>, <span class="kw-2">&amp;</span><span class="ident">R_ZS_AND_US</span>)
+    <span class="comment">// This test does not make use of the CommitDomain.
+    </span><span class="attribute">#[derive(Debug, Clone, Eq, PartialEq)]</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>TestCommitDomain;
+    <span class="kw">impl </span>CommitDomains&lt;pallas::Affine, TestFixedBases, TestHashDomain&gt; <span class="kw">for </span>TestCommitDomain {
+        <span class="kw">fn </span>r(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; FullWidth {
+            FullWidth::from_parts(<span class="kw-2">*</span>R, <span class="kw-2">&amp;</span>R_ZS_AND_US)
         }
 
-        <span class="kw">fn</span> <span class="ident">hash_domain</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">TestHashDomain</span> {
-            <span class="ident">TestHashDomain</span>
+        <span class="kw">fn </span>hash_domain(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; TestHashDomain {
+            TestHashDomain
         }
     }
 
-    <span class="kw">struct</span> <span class="ident">MyCircuit</span> {}
+    <span class="kw">struct </span>MyCircuit {}
 
-    <span class="kw">impl</span> <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyCircuit</span> {
-        <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-        <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> (
-            <span class="ident">EccConfig</span><span class="op">&lt;</span><span class="ident">TestFixedBases</span><span class="op">&gt;</span>,
-            <span class="ident">SinsemillaConfig</span><span class="op">&lt;</span><span class="ident">TestHashDomain</span>, <span class="ident">TestCommitDomain</span>, <span class="ident">TestFixedBases</span><span class="op">&gt;</span>,
-            <span class="ident">SinsemillaConfig</span><span class="op">&lt;</span><span class="ident">TestHashDomain</span>, <span class="ident">TestCommitDomain</span>, <span class="ident">TestFixedBases</span><span class="op">&gt;</span>,
+    <span class="kw">impl </span>Circuit&lt;pallas::Base&gt; <span class="kw">for </span>MyCircuit {
+        <span class="attribute">#[allow(clippy::type_complexity)]</span>
+        <span class="kw">type </span>Config = (
+            EccConfig&lt;TestFixedBases&gt;,
+            SinsemillaConfig&lt;TestHashDomain, TestCommitDomain, TestFixedBases&gt;,
+            SinsemillaConfig&lt;TestHashDomain, TestCommitDomain, TestFixedBases&gt;,
         );
-        <span class="kw">type</span> <span class="ident">FloorPlanner</span> <span class="op">=</span> <span class="ident">SimpleFloorPlanner</span>;
+        <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
 
-        <span class="kw">fn</span> <span class="ident">without_witnesses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-            <span class="ident">MyCircuit</span> {}
+        <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+            MyCircuit {}
         }
 
-        <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-        <span class="kw">fn</span> <span class="ident">configure</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Config</span> {
-            <span class="kw">let</span> <span class="ident">advices</span> <span class="op">=</span> [
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">advice_column</span>(),
+        <span class="attribute">#[allow(non_snake_case)]</span>
+        <span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) -&gt; <span class="self">Self</span>::Config {
+            <span class="kw">let </span>advices = [
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
             ];
 
-            <span class="comment">// Shared fixed column for loading constants</span>
-            <span class="kw">let</span> <span class="ident">constants</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">fixed_column</span>();
-            <span class="ident">meta</span>.<span class="ident">enable_constant</span>(<span class="ident">constants</span>);
+            <span class="comment">// Shared fixed column for loading constants
+            </span><span class="kw">let </span>constants = meta.fixed_column();
+            meta.enable_constant(constants);
 
-            <span class="kw">let</span> <span class="ident">table_idx</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">lookup_table_column</span>();
-            <span class="kw">let</span> <span class="ident">lagrange_coeffs</span> <span class="op">=</span> [
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
+            <span class="kw">let </span>table_idx = meta.lookup_table_column();
+            <span class="kw">let </span>lagrange_coeffs = [
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
             ];
 
-            <span class="comment">// Fixed columns for the Sinsemilla generator lookup table</span>
-            <span class="kw">let</span> <span class="ident">lookup</span> <span class="op">=</span> (
-                <span class="ident">table_idx</span>,
-                <span class="ident">meta</span>.<span class="ident">lookup_table_column</span>(),
-                <span class="ident">meta</span>.<span class="ident">lookup_table_column</span>(),
+            <span class="comment">// Fixed columns for the Sinsemilla generator lookup table
+            </span><span class="kw">let </span>lookup = (
+                table_idx,
+                meta.lookup_table_column(),
+                meta.lookup_table_column(),
             );
 
-            <span class="kw">let</span> <span class="ident">range_check</span> <span class="op">=</span> <span class="ident">LookupRangeCheckConfig::configure</span>(<span class="ident">meta</span>, <span class="ident">advices</span>[<span class="number">9</span>], <span class="ident">table_idx</span>);
+            <span class="kw">let </span>range_check = LookupRangeCheckConfig::configure(meta, advices[<span class="number">9</span>], table_idx);
 
-            <span class="kw">let</span> <span class="ident">ecc_config</span> <span class="op">=</span>
-                <span class="ident">EccChip</span>::<span class="op">&lt;</span><span class="ident">TestFixedBases</span><span class="op">&gt;</span><span class="ident">::configure</span>(<span class="ident">meta</span>, <span class="ident">advices</span>, <span class="ident">lagrange_coeffs</span>, <span class="ident">range_check</span>);
+            <span class="kw">let </span>ecc_config =
+                EccChip::&lt;TestFixedBases&gt;::configure(meta, advices, lagrange_coeffs, range_check);
 
-            <span class="kw">let</span> <span class="ident">config1</span> <span class="op">=</span> <span class="ident">SinsemillaChip::configure</span>(
-                <span class="ident">meta</span>,
-                <span class="ident">advices</span>[..<span class="number">5</span>].<span class="ident">try_into</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">advices</span>[<span class="number">2</span>],
-                <span class="ident">lagrange_coeffs</span>[<span class="number">0</span>],
-                <span class="ident">lookup</span>,
-                <span class="ident">range_check</span>,
+            <span class="kw">let </span>config1 = SinsemillaChip::configure(
+                meta,
+                advices[..<span class="number">5</span>].try_into().unwrap(),
+                advices[<span class="number">2</span>],
+                lagrange_coeffs[<span class="number">0</span>],
+                lookup,
+                range_check,
             );
-            <span class="kw">let</span> <span class="ident">config2</span> <span class="op">=</span> <span class="ident">SinsemillaChip::configure</span>(
-                <span class="ident">meta</span>,
-                <span class="ident">advices</span>[<span class="number">5</span>..].<span class="ident">try_into</span>().<span class="ident">unwrap</span>(),
-                <span class="ident">advices</span>[<span class="number">7</span>],
-                <span class="ident">lagrange_coeffs</span>[<span class="number">1</span>],
-                <span class="ident">lookup</span>,
-                <span class="ident">range_check</span>,
+            <span class="kw">let </span>config2 = SinsemillaChip::configure(
+                meta,
+                advices[<span class="number">5</span>..].try_into().unwrap(),
+                advices[<span class="number">7</span>],
+                lagrange_coeffs[<span class="number">1</span>],
+                lookup,
+                range_check,
             );
-            (<span class="ident">ecc_config</span>, <span class="ident">config1</span>, <span class="ident">config2</span>)
+            (ecc_config, config1, config2)
         }
 
-        <span class="kw">fn</span> <span class="ident">synthesize</span>(
+        <span class="kw">fn </span>synthesize(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
-            <span class="ident">config</span>: <span class="ident"><span class="self">Self</span>::Config</span>,
-            <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">OsRng</span>;
+            config: <span class="self">Self</span>::Config,
+            <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+            <span class="kw">let </span>rng = OsRng;
 
-            <span class="kw">let</span> <span class="ident">ecc_chip</span> <span class="op">=</span> <span class="ident">EccChip::construct</span>(<span class="ident">config</span>.<span class="number">0</span>);
+            <span class="kw">let </span>ecc_chip = EccChip::construct(config.<span class="number">0</span>);
 
-            <span class="comment">// The two `SinsemillaChip`s share the same lookup table.</span>
-            <span class="ident">SinsemillaChip</span>::<span class="op">&lt;</span><span class="ident">TestHashDomain</span>, <span class="ident">TestCommitDomain</span>, <span class="ident">TestFixedBases</span><span class="op">&gt;</span><span class="ident">::load</span>(
-                <span class="ident">config</span>.<span class="number">1</span>.<span class="ident">clone</span>(),
-                <span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>,
+            <span class="comment">// The two `SinsemillaChip`s share the same lookup table.
+            </span>SinsemillaChip::&lt;TestHashDomain, TestCommitDomain, TestFixedBases&gt;::load(
+                config.<span class="number">1</span>.clone(),
+                <span class="kw-2">&amp;mut </span>layouter,
             )<span class="question-mark">?</span>;
 
-            <span class="comment">// This MerkleCRH example is purely for illustrative purposes.</span>
-            <span class="comment">// It is not an implementation of the Orchard protocol spec.</span>
-            {
-                <span class="kw">let</span> <span class="ident">chip1</span> <span class="op">=</span> <span class="ident">SinsemillaChip::construct</span>(<span class="ident">config</span>.<span class="number">1</span>);
+            <span class="comment">// This MerkleCRH example is purely for illustrative purposes.
+            // It is not an implementation of the Orchard protocol spec.
+            </span>{
+                <span class="kw">let </span>chip1 = SinsemillaChip::construct(config.<span class="number">1</span>);
 
-                <span class="kw">let</span> <span class="ident">merkle_crh</span> <span class="op">=</span> <span class="ident">HashDomain::new</span>(<span class="ident">chip1</span>.<span class="ident">clone</span>(), <span class="ident">ecc_chip</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="ident">TestHashDomain</span>);
+                <span class="kw">let </span>merkle_crh = HashDomain::new(chip1.clone(), ecc_chip.clone(), <span class="kw-2">&amp;</span>TestHashDomain);
 
-                <span class="comment">// Layer 31, l = MERKLE_DEPTH - 1 - layer = 0</span>
-                <span class="kw">let</span> <span class="ident">l_bitstring</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">Value::known</span>(<span class="bool-val">false</span>); <span class="ident">K</span>];
-                <span class="kw">let</span> <span class="ident">l</span> <span class="op">=</span> <span class="ident">MessagePiece::from_bitstring</span>(
-                    <span class="ident">chip1</span>.<span class="ident">clone</span>(),
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;l&quot;</span>),
-                    <span class="kw-2">&amp;</span><span class="ident">l_bitstring</span>,
+                <span class="comment">// Layer 31, l = MERKLE_DEPTH - 1 - layer = 0
+                </span><span class="kw">let </span>l_bitstring = <span class="macro">vec!</span>[Value::known(<span class="bool-val">false</span>); K];
+                <span class="kw">let </span>l = MessagePiece::from_bitstring(
+                    chip1.clone(),
+                    layouter.namespace(|| <span class="string">&quot;l&quot;</span>),
+                    <span class="kw-2">&amp;</span>l_bitstring,
                 )<span class="question-mark">?</span>;
 
-                <span class="comment">// Left leaf</span>
-                <span class="kw">let</span> <span class="ident">left_bitstring</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="number">250</span>)
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">rand::random</span>::<span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>()))
-                    .<span class="ident">collect</span>();
-                <span class="kw">let</span> <span class="ident">left</span> <span class="op">=</span> <span class="ident">MessagePiece::from_bitstring</span>(
-                    <span class="ident">chip1</span>.<span class="ident">clone</span>(),
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;left&quot;</span>),
-                    <span class="kw-2">&amp;</span><span class="ident">left_bitstring</span>,
+                <span class="comment">// Left leaf
+                </span><span class="kw">let </span>left_bitstring: Vec&lt;Value&lt;bool&gt;&gt; = (<span class="number">0</span>..<span class="number">250</span>)
+                    .map(|<span class="kw">_</span>| Value::known(rand::random::&lt;bool&gt;()))
+                    .collect();
+                <span class="kw">let </span>left = MessagePiece::from_bitstring(
+                    chip1.clone(),
+                    layouter.namespace(|| <span class="string">&quot;left&quot;</span>),
+                    <span class="kw-2">&amp;</span>left_bitstring,
                 )<span class="question-mark">?</span>;
 
-                <span class="comment">// Right leaf</span>
-                <span class="kw">let</span> <span class="ident">right_bitstring</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="number">250</span>)
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">rand::random</span>::<span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>()))
-                    .<span class="ident">collect</span>();
-                <span class="kw">let</span> <span class="ident">right</span> <span class="op">=</span> <span class="ident">MessagePiece::from_bitstring</span>(
-                    <span class="ident">chip1</span>.<span class="ident">clone</span>(),
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;right&quot;</span>),
-                    <span class="kw-2">&amp;</span><span class="ident">right_bitstring</span>,
+                <span class="comment">// Right leaf
+                </span><span class="kw">let </span>right_bitstring: Vec&lt;Value&lt;bool&gt;&gt; = (<span class="number">0</span>..<span class="number">250</span>)
+                    .map(|<span class="kw">_</span>| Value::known(rand::random::&lt;bool&gt;()))
+                    .collect();
+                <span class="kw">let </span>right = MessagePiece::from_bitstring(
+                    chip1.clone(),
+                    layouter.namespace(|| <span class="string">&quot;right&quot;</span>),
+                    <span class="kw-2">&amp;</span>right_bitstring,
                 )<span class="question-mark">?</span>;
 
-                <span class="kw">let</span> <span class="ident">l_bitstring</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">l_bitstring</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>();
-                <span class="kw">let</span> <span class="ident">left_bitstring</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">left_bitstring</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>();
-                <span class="kw">let</span> <span class="ident">right_bitstring</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">right_bitstring</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>();
+                <span class="kw">let </span>l_bitstring: Value&lt;Vec&lt;bool&gt;&gt; = l_bitstring.into_iter().collect();
+                <span class="kw">let </span>left_bitstring: Value&lt;Vec&lt;bool&gt;&gt; = left_bitstring.into_iter().collect();
+                <span class="kw">let </span>right_bitstring: Value&lt;Vec&lt;bool&gt;&gt; = right_bitstring.into_iter().collect();
 
-                <span class="comment">// Witness expected parent</span>
-                <span class="kw">let</span> <span class="ident">expected_parent</span> <span class="op">=</span> {
-                    <span class="kw">let</span> <span class="ident">expected_parent</span> <span class="op">=</span> <span class="ident">l_bitstring</span>.<span class="ident">zip</span>(<span class="ident">left_bitstring</span>.<span class="ident">zip</span>(<span class="ident">right_bitstring</span>)).<span class="ident">map</span>(
-                        <span class="op">|</span>(<span class="ident">l</span>, (<span class="ident">left</span>, <span class="ident">right</span>))<span class="op">|</span> {
-                            <span class="kw">let</span> <span class="ident">merkle_crh</span> <span class="op">=</span> <span class="ident">sinsemilla::HashDomain::from_Q</span>((<span class="kw-2">*</span><span class="ident">Q</span>).<span class="ident">into</span>());
-                            <span class="kw">let</span> <span class="ident">point</span> <span class="op">=</span> <span class="ident">merkle_crh</span>
-                                .<span class="ident">hash_to_point</span>(
-                                    <span class="ident">l</span>.<span class="ident">into_iter</span>()
-                                        .<span class="ident">chain</span>(<span class="ident">left</span>.<span class="ident">into_iter</span>())
-                                        .<span class="ident">chain</span>(<span class="ident">right</span>.<span class="ident">into_iter</span>()),
+                <span class="comment">// Witness expected parent
+                </span><span class="kw">let </span>expected_parent = {
+                    <span class="kw">let </span>expected_parent = l_bitstring.zip(left_bitstring.zip(right_bitstring)).map(
+                        |(l, (left, right))| {
+                            <span class="kw">let </span>merkle_crh = sinsemilla::HashDomain::from_Q((<span class="kw-2">*</span>Q).into());
+                            <span class="kw">let </span>point = merkle_crh
+                                .hash_to_point(
+                                    l.into_iter()
+                                        .chain(left.into_iter())
+                                        .chain(right.into_iter()),
                                 )
-                                .<span class="ident">unwrap</span>();
-                            <span class="ident">point</span>.<span class="ident">to_affine</span>()
+                                .unwrap();
+                            point.to_affine()
                         },
                     );
 
-                    <span class="ident">NonIdentityPoint::new</span>(
-                        <span class="ident">ecc_chip</span>.<span class="ident">clone</span>(),
-                        <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;Witness expected parent&quot;</span>),
-                        <span class="ident">expected_parent</span>,
-                    )<span class="question-mark">?</span>
-                };
+                    NonIdentityPoint::new(
+                        ecc_chip.clone(),
+                        layouter.namespace(|| <span class="string">&quot;Witness expected parent&quot;</span>),
+                        expected_parent,
+                    )<span class="question-mark">?
+                </span>};
 
-                <span class="comment">// Parent</span>
-                <span class="kw">let</span> (<span class="ident">parent</span>, <span class="kw">_</span>) <span class="op">=</span> {
-                    <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="ident">Message::from_pieces</span>(<span class="ident">chip1</span>, <span class="macro">vec!</span>[<span class="ident">l</span>, <span class="ident">left</span>, <span class="ident">right</span>]);
-                    <span class="ident">merkle_crh</span>.<span class="ident">hash_to_point</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;parent&quot;</span>), <span class="ident">message</span>)<span class="question-mark">?</span>
-                };
+                <span class="comment">// Parent
+                </span><span class="kw">let </span>(parent, <span class="kw">_</span>) = {
+                    <span class="kw">let </span>message = Message::from_pieces(chip1, <span class="macro">vec!</span>[l, left, right]);
+                    merkle_crh.hash_to_point(layouter.namespace(|| <span class="string">&quot;parent&quot;</span>), message)<span class="question-mark">?
+                </span>};
 
-                <span class="ident">parent</span>.<span class="ident">constrain_equal</span>(
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;parent == expected parent&quot;</span>),
-                    <span class="kw-2">&amp;</span><span class="ident">expected_parent</span>,
+                parent.constrain_equal(
+                    layouter.namespace(|| <span class="string">&quot;parent == expected parent&quot;</span>),
+                    <span class="kw-2">&amp;</span>expected_parent,
                 )<span class="question-mark">?</span>;
             }
 
             {
-                <span class="kw">let</span> <span class="ident">chip2</span> <span class="op">=</span> <span class="ident">SinsemillaChip::construct</span>(<span class="ident">config</span>.<span class="number">2</span>);
+                <span class="kw">let </span>chip2 = SinsemillaChip::construct(config.<span class="number">2</span>);
 
-                <span class="kw">let</span> <span class="ident">test_commit</span> <span class="op">=</span>
-                    <span class="ident">CommitDomain::new</span>(<span class="ident">chip2</span>.<span class="ident">clone</span>(), <span class="ident">ecc_chip</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="ident">TestCommitDomain</span>);
-                <span class="kw">let</span> <span class="ident">r_val</span> <span class="op">=</span> <span class="ident">pallas::Scalar::random</span>(<span class="ident">rng</span>);
-                <span class="kw">let</span> <span class="ident">message</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="number">500</span>)
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">rand::random</span>::<span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span>()))
-                    .<span class="ident">collect</span>();
+                <span class="kw">let </span>test_commit =
+                    CommitDomain::new(chip2.clone(), ecc_chip.clone(), <span class="kw-2">&amp;</span>TestCommitDomain);
+                <span class="kw">let </span>r_val = pallas::Scalar::random(rng);
+                <span class="kw">let </span>message: Vec&lt;Value&lt;bool&gt;&gt; = (<span class="number">0</span>..<span class="number">500</span>)
+                    .map(|<span class="kw">_</span>| Value::known(rand::random::&lt;bool&gt;()))
+                    .collect();
 
-                <span class="kw">let</span> (<span class="ident">result</span>, <span class="kw">_</span>) <span class="op">=</span> {
-                    <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">ScalarFixed::new</span>(
-                        <span class="ident">ecc_chip</span>.<span class="ident">clone</span>(),
-                        <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;r&quot;</span>),
-                        <span class="ident">Value::known</span>(<span class="ident">r_val</span>),
+                <span class="kw">let </span>(result, <span class="kw">_</span>) = {
+                    <span class="kw">let </span>r = ScalarFixed::new(
+                        ecc_chip.clone(),
+                        layouter.namespace(|| <span class="string">&quot;r&quot;</span>),
+                        Value::known(r_val),
                     )<span class="question-mark">?</span>;
-                    <span class="kw">let</span> <span class="ident">message</span> <span class="op">=</span> <span class="ident">Message::from_bitstring</span>(
-                        <span class="ident">chip2</span>,
-                        <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;witness message&quot;</span>),
-                        <span class="ident">message</span>.<span class="ident">clone</span>(),
+                    <span class="kw">let </span>message = Message::from_bitstring(
+                        chip2,
+                        layouter.namespace(|| <span class="string">&quot;witness message&quot;</span>),
+                        message.clone(),
                     )<span class="question-mark">?</span>;
-                    <span class="ident">test_commit</span>.<span class="ident">commit</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;commit&quot;</span>), <span class="ident">message</span>, <span class="ident">r</span>)<span class="question-mark">?</span>
-                };
+                    test_commit.commit(layouter.namespace(|| <span class="string">&quot;commit&quot;</span>), message, r)<span class="question-mark">?
+                </span>};
 
-                <span class="comment">// Witness expected result.</span>
-                <span class="kw">let</span> <span class="ident">expected_result</span> <span class="op">=</span> {
-                    <span class="kw">let</span> <span class="ident">message</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">message</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>();
-                    <span class="kw">let</span> <span class="ident">expected_result</span> <span class="op">=</span> <span class="ident">message</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">message</span><span class="op">|</span> {
-                        <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="ident">sinsemilla::CommitDomain::new</span>(<span class="ident">PERSONALIZATION</span>);
-                        <span class="kw">let</span> <span class="ident">point</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">commit</span>(<span class="ident">message</span>.<span class="ident">into_iter</span>(), <span class="kw-2">&amp;</span><span class="ident">r_val</span>).<span class="ident">unwrap</span>();
-                        <span class="ident">point</span>.<span class="ident">to_affine</span>()
+                <span class="comment">// Witness expected result.
+                </span><span class="kw">let </span>expected_result = {
+                    <span class="kw">let </span>message: Value&lt;Vec&lt;bool&gt;&gt; = message.into_iter().collect();
+                    <span class="kw">let </span>expected_result = message.map(|message| {
+                        <span class="kw">let </span>domain = sinsemilla::CommitDomain::new(PERSONALIZATION);
+                        <span class="kw">let </span>point = domain.commit(message.into_iter(), <span class="kw-2">&amp;</span>r_val).unwrap();
+                        point.to_affine()
                     });
 
-                    <span class="ident">NonIdentityPoint::new</span>(
-                        <span class="ident">ecc_chip</span>,
-                        <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;Witness expected result&quot;</span>),
-                        <span class="ident">expected_result</span>,
-                    )<span class="question-mark">?</span>
-                };
+                    NonIdentityPoint::new(
+                        ecc_chip,
+                        layouter.namespace(|| <span class="string">&quot;Witness expected result&quot;</span>),
+                        expected_result,
+                    )<span class="question-mark">?
+                </span>};
 
-                <span class="ident">result</span>.<span class="ident">constrain_equal</span>(
-                    <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;result == expected result&quot;</span>),
-                    <span class="kw-2">&amp;</span><span class="ident">expected_result</span>,
+                result.constrain_equal(
+                    layouter.namespace(|| <span class="string">&quot;result == expected result&quot;</span>),
+                    <span class="kw-2">&amp;</span>expected_result,
                 )
             }
         }
     }
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">sinsemilla_chip</span>() {
-        <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="number">11</span>;
-        <span class="kw">let</span> <span class="ident">circuit</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {};
-        <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver::run</span>(<span class="ident">k</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()))
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>sinsemilla_chip() {
+        <span class="kw">let </span>k = <span class="number">11</span>;
+        <span class="kw">let </span>circuit = MyCircuit {};
+        <span class="kw">let </span>prover = MockProver::run(k, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+        <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()))
     }
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;dev-graph&quot;</span>)]</span>
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">print_sinsemilla_chip</span>() {
-        <span class="kw">use</span> <span class="ident">plotters::prelude</span>::<span class="kw-2">*</span>;
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]</span>
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>print_sinsemilla_chip() {
+        <span class="kw">use </span>plotters::prelude::<span class="kw-2">*</span>;
 
-        <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span>
-            <span class="ident">BitMapBackend::new</span>(<span class="string">&quot;sinsemilla-hash-layout.png&quot;</span>, (<span class="number">1024</span>, <span class="number">7680</span>)).<span class="ident">into_drawing_area</span>();
-        <span class="ident">root</span>.<span class="ident">fill</span>(<span class="kw-2">&amp;</span><span class="ident">WHITE</span>).<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">root</span> <span class="op">=</span> <span class="ident">root</span>.<span class="ident">titled</span>(<span class="string">&quot;SinsemillaHash&quot;</span>, (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">60</span>)).<span class="ident">unwrap</span>();
+        <span class="kw">let </span>root =
+            BitMapBackend::new(<span class="string">&quot;sinsemilla-hash-layout.png&quot;</span>, (<span class="number">1024</span>, <span class="number">7680</span>)).into_drawing_area();
+        root.fill(<span class="kw-2">&amp;</span>WHITE).unwrap();
+        <span class="kw">let </span>root = root.titled(<span class="string">&quot;SinsemillaHash&quot;</span>, (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">60</span>)).unwrap();
 
-        <span class="kw">let</span> <span class="ident">circuit</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {};
-        <span class="ident">halo2_proofs::dev::CircuitLayout::default</span>()
-            .<span class="ident">render</span>(<span class="number">11</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="kw-2">&amp;</span><span class="ident">root</span>)
-            .<span class="ident">unwrap</span>();
+        <span class="kw">let </span>circuit = MyCircuit {};
+        halo2_proofs::dev::CircuitLayout::default()
+            .render(<span class="number">11</span>, <span class="kw-2">&amp;</span>circuit, <span class="kw-2">&amp;</span>root)
+            .unwrap();
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

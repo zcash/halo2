@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -687,674 +681,673 @@
 <span id="666">666</span>
 <span id="667">667</span>
 <span id="668">668</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{
-    <span class="ident">circuit::Expression</span>, <span class="ident">ChallengeBeta</span>, <span class="ident">ChallengeGamma</span>, <span class="ident">ChallengeTheta</span>, <span class="ident">ChallengeX</span>, <span class="ident">Error</span>,
-    <span class="ident">ProvingKey</span>,
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{
+    circuit::Expression, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error,
+    ProvingKey,
 };
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::Argument</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">arithmetic</span>::{<span class="ident">eval_polynomial</span>, <span class="ident">parallelize</span>, <span class="ident">CurveAffine</span>, <span class="ident">FieldExt</span>},
-    <span class="ident">poly</span>::{
+<span class="kw">use </span><span class="kw">super</span>::Argument;
+<span class="kw">use crate</span>::{
+    arithmetic::{eval_polynomial, parallelize, CurveAffine, FieldExt},
+    poly::{
         <span class="self">self</span>,
-        <span class="ident">commitment</span>::{<span class="ident">Blind</span>, <span class="ident">Params</span>},
-        <span class="ident">multiopen::ProverQuery</span>,
-        <span class="ident">Coeff</span>, <span class="ident">EvaluationDomain</span>, <span class="ident">ExtendedLagrangeCoeff</span>, <span class="ident">LagrangeCoeff</span>, <span class="ident">Polynomial</span>, <span class="ident">Rotation</span>,
+        commitment::{Blind, Params},
+        multiopen::ProverQuery,
+        Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
     },
-    <span class="ident">transcript</span>::{<span class="ident">EncodedChallenge</span>, <span class="ident">TranscriptWrite</span>},
+    transcript::{EncodedChallenge, TranscriptWrite},
 };
-<span class="kw">use</span> <span class="ident">group</span>::{
-    <span class="ident">ff</span>::{<span class="ident">BatchInvert</span>, <span class="ident">Field</span>},
-    <span class="ident">Curve</span>,
+<span class="kw">use </span>group::{
+    ff::{BatchInvert, Field},
+    Curve,
 };
-<span class="kw">use</span> <span class="ident">rand_core::RngCore</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">collections::BTreeMap</span>,
-    <span class="ident">iter</span>,
-    <span class="ident">ops</span>::{<span class="ident">Mul</span>, <span class="ident">MulAssign</span>},
+<span class="kw">use </span>rand_core::RngCore;
+<span class="kw">use </span>std::{
+    collections::BTreeMap,
+    iter,
+    ops::{Mul, MulAssign},
 };
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">struct</span> <span class="ident">Permuted</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">Ev</span><span class="op">&gt;</span> {
-    <span class="ident">unpermuted_input_expressions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">unpermuted_input_cosets</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">poly::Ast</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">permuted_input_expression</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>,
-    <span class="ident">permuted_input_poly</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">Coeff</span><span class="op">&gt;</span>,
-    <span class="ident">permuted_input_coset</span>: <span class="ident">poly::AstLeaf</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
-    <span class="ident">permuted_input_blind</span>: <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
-    <span class="ident">unpermuted_table_expressions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">unpermuted_table_cosets</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">poly::Ast</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">permuted_table_expression</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>,
-    <span class="ident">permuted_table_poly</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">Coeff</span><span class="op">&gt;</span>,
-    <span class="ident">permuted_table_coset</span>: <span class="ident">poly::AstLeaf</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
-    <span class="ident">permuted_table_blind</span>: <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">struct </span>Permuted&lt;C: CurveAffine, Ev&gt; {
+    unpermuted_input_expressions: Vec&lt;Polynomial&lt;C::Scalar, LagrangeCoeff&gt;&gt;,
+    unpermuted_input_cosets: Vec&lt;poly::Ast&lt;Ev, C::Scalar, ExtendedLagrangeCoeff&gt;&gt;,
+    permuted_input_expression: Polynomial&lt;C::Scalar, LagrangeCoeff&gt;,
+    permuted_input_poly: Polynomial&lt;C::Scalar, Coeff&gt;,
+    permuted_input_coset: poly::AstLeaf&lt;Ev, ExtendedLagrangeCoeff&gt;,
+    permuted_input_blind: Blind&lt;C::Scalar&gt;,
+    unpermuted_table_expressions: Vec&lt;Polynomial&lt;C::Scalar, LagrangeCoeff&gt;&gt;,
+    unpermuted_table_cosets: Vec&lt;poly::Ast&lt;Ev, C::Scalar, ExtendedLagrangeCoeff&gt;&gt;,
+    permuted_table_expression: Polynomial&lt;C::Scalar, LagrangeCoeff&gt;,
+    permuted_table_poly: Polynomial&lt;C::Scalar, Coeff&gt;,
+    permuted_table_coset: poly::AstLeaf&lt;Ev, ExtendedLagrangeCoeff&gt;,
+    permuted_table_blind: Blind&lt;C::Scalar&gt;,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">struct</span> <span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">Ev</span><span class="op">&gt;</span> {
-    <span class="ident">permuted</span>: <span class="ident">Permuted</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">Ev</span><span class="op">&gt;</span>,
-    <span class="ident">product_poly</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">Coeff</span><span class="op">&gt;</span>,
-    <span class="ident">product_coset</span>: <span class="ident">poly::AstLeaf</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
-    <span class="ident">product_blind</span>: <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">struct </span>Committed&lt;C: CurveAffine, Ev&gt; {
+    permuted: Permuted&lt;C, Ev&gt;,
+    product_poly: Polynomial&lt;C::Scalar, Coeff&gt;,
+    product_coset: poly::AstLeaf&lt;Ev, ExtendedLagrangeCoeff&gt;,
+    product_blind: Blind&lt;C::Scalar&gt;,
 }
 
-<span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">struct</span> <span class="ident">Constructed</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">permuted_input_poly</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">Coeff</span><span class="op">&gt;</span>,
-    <span class="ident">permuted_input_blind</span>: <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
-    <span class="ident">permuted_table_poly</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">Coeff</span><span class="op">&gt;</span>,
-    <span class="ident">permuted_table_blind</span>: <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
-    <span class="ident">product_poly</span>: <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">Coeff</span><span class="op">&gt;</span>,
-    <span class="ident">product_blind</span>: <span class="ident">Blind</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
+<span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">struct </span>Constructed&lt;C: CurveAffine&gt; {
+    permuted_input_poly: Polynomial&lt;C::Scalar, Coeff&gt;,
+    permuted_input_blind: Blind&lt;C::Scalar&gt;,
+    permuted_table_poly: Polynomial&lt;C::Scalar, Coeff&gt;,
+    permuted_table_blind: Blind&lt;C::Scalar&gt;,
+    product_poly: Polynomial&lt;C::Scalar, Coeff&gt;,
+    product_blind: Blind&lt;C::Scalar&gt;,
 }
 
-<span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">struct</span> <span class="ident">Evaluated</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">constructed</span>: <span class="ident">Constructed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
+<span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">struct </span>Evaluated&lt;C: CurveAffine&gt; {
+    constructed: Constructed&lt;C&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Argument</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Given a Lookup with input expressions [A_0, A_1, ..., A_{m-1}] and table expressions</span>
-    <span class="doccomment">/// [S_0, S_1, ..., S_{m-1}], this method</span>
-    <span class="doccomment">/// - constructs A_compressed = \theta^{m-1} A_0 + theta^{m-2} A_1 + ... + \theta A_{m-2} + A_{m-1}</span>
-    <span class="doccomment">///   and S_compressed = \theta^{m-1} S_0 + theta^{m-2} S_1 + ... + \theta S_{m-2} + S_{m-1},</span>
-    <span class="doccomment">/// - permutes A_compressed and S_compressed using permute_expression_pair() helper,</span>
-    <span class="doccomment">///   obtaining A&#39; and S&#39;, and</span>
-    <span class="doccomment">/// - constructs Permuted&lt;C&gt; struct using permuted_input_value = A&#39;, and</span>
-    <span class="doccomment">///   permuted_table_expression = S&#39;.</span>
-    <span class="doccomment">/// The Permuted&lt;C&gt; struct is used to update the Lookup, and is then returned.</span>
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">commit_permuted</span><span class="op">&lt;</span>
+<span class="kw">impl</span>&lt;F: FieldExt&gt; Argument&lt;F&gt; {
+    <span class="doccomment">/// Given a Lookup with input expressions [A_0, A_1, ..., A_{m-1}] and table expressions
+    /// [S_0, S_1, ..., S_{m-1}], this method
+    /// - constructs A_compressed = \theta^{m-1} A_0 + theta^{m-2} A_1 + ... + \theta A_{m-2} + A_{m-1}
+    ///   and S_compressed = \theta^{m-1} S_0 + theta^{m-2} S_1 + ... + \theta S_{m-2} + S_{m-1},
+    /// - permutes A_compressed and S_compressed using permute_expression_pair() helper,
+    ///   obtaining A&#39; and S&#39;, and
+    /// - constructs Permuted&lt;C&gt; struct using permuted_input_value = A&#39;, and
+    ///   permuted_table_expression = S&#39;.
+    /// The Permuted&lt;C&gt; struct is used to update the Lookup, and is then returned.
+    </span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>commit_permuted&lt;
         <span class="lifetime">&#39;a</span>,
-        <span class="ident">C</span>,
-        <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">Ev</span>: <span class="ident">Copy</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span>,
-        <span class="ident">Ec</span>: <span class="ident">Copy</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span>,
-        <span class="ident">R</span>: <span class="ident">RngCore</span>,
-        <span class="ident">T</span>: <span class="ident">TranscriptWrite</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>,
-    <span class="op">&gt;</span>(
+        C,
+        E: EncodedChallenge&lt;C&gt;,
+        Ev: Copy + Send + Sync,
+        Ec: Copy + Send + Sync,
+        R: RngCore,
+        T: TranscriptWrite&lt;C, E&gt;,
+    &gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">pk</span>: <span class="kw-2">&amp;</span><span class="ident">ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">domain</span>: <span class="kw-2">&amp;</span><span class="ident">EvaluationDomain</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
-        <span class="ident">value_evaluator</span>: <span class="kw-2">&amp;</span><span class="ident">poly::Evaluator</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">C::Scalar</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>,
-        <span class="ident">coset_evaluator</span>: <span class="kw-2">&amp;mut</span> <span class="ident">poly::Evaluator</span><span class="op">&lt;</span><span class="ident">Ec</span>, <span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
-        <span class="ident">theta</span>: <span class="ident">ChallengeTheta</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">advice_values</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">poly::AstLeaf</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>],
-        <span class="ident">fixed_values</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">poly::AstLeaf</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>],
-        <span class="ident">instance_values</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">poly::AstLeaf</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>],
-        <span class="ident">advice_cosets</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">poly::AstLeaf</span><span class="op">&lt;</span><span class="ident">Ec</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>],
-        <span class="ident">fixed_cosets</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">poly::AstLeaf</span><span class="op">&lt;</span><span class="ident">Ec</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>],
-        <span class="ident">instance_cosets</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> [<span class="ident">poly::AstLeaf</span><span class="op">&lt;</span><span class="ident">Ec</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>],
-        <span class="kw-2">mut</span> <span class="ident">rng</span>: <span class="ident">R</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Permuted</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">Ec</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&lt;</span><span class="ident">ScalarExt</span> <span class="op">=</span> <span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">C::Curve</span>: <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">C::Curve</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">MulAssign</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+        pk: <span class="kw-2">&amp;</span>ProvingKey&lt;C&gt;,
+        params: <span class="kw-2">&amp;</span>Params&lt;C&gt;,
+        domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;C::Scalar&gt;,
+        value_evaluator: <span class="kw-2">&amp;</span>poly::Evaluator&lt;Ev, C::Scalar, LagrangeCoeff&gt;,
+        coset_evaluator: <span class="kw-2">&amp;mut </span>poly::Evaluator&lt;Ec, C::Scalar, ExtendedLagrangeCoeff&gt;,
+        theta: ChallengeTheta&lt;C&gt;,
+        advice_values: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[poly::AstLeaf&lt;Ev, LagrangeCoeff&gt;],
+        fixed_values: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[poly::AstLeaf&lt;Ev, LagrangeCoeff&gt;],
+        instance_values: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[poly::AstLeaf&lt;Ev, LagrangeCoeff&gt;],
+        advice_cosets: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[poly::AstLeaf&lt;Ec, ExtendedLagrangeCoeff&gt;],
+        fixed_cosets: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[poly::AstLeaf&lt;Ec, ExtendedLagrangeCoeff&gt;],
+        instance_cosets: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[poly::AstLeaf&lt;Ec, ExtendedLagrangeCoeff&gt;],
+        <span class="kw-2">mut </span>rng: R,
+        transcript: <span class="kw-2">&amp;mut </span>T,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Permuted&lt;C, Ec&gt;, Error&gt;
+    <span class="kw">where
+        </span>C: CurveAffine&lt;ScalarExt = F&gt;,
+        C::Curve: Mul&lt;F, Output = C::Curve&gt; + MulAssign&lt;F&gt;,
     {
-        <span class="comment">// Closure to get values of expressions and compress them</span>
-        <span class="kw">let</span> <span class="ident">compress_expressions</span> <span class="op">=</span> <span class="op">|</span><span class="ident">expressions</span>: <span class="kw-2">&amp;</span>[<span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>]<span class="op">|</span> {
-            <span class="comment">// Values of input expressions involved in the lookup</span>
-            <span class="kw">let</span> <span class="ident">unpermuted_expressions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">expressions</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">expression</span><span class="op">|</span> {
-                    <span class="ident">expression</span>.<span class="ident">evaluate</span>(
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">scalar</span><span class="op">|</span> <span class="ident">poly::Ast::ConstantTerm</span>(<span class="ident">scalar</span>),
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
-                            <span class="ident">fixed_values</span>[<span class="ident">query</span>.<span class="ident">column_index</span>]
-                                .<span class="ident">with_rotation</span>(<span class="ident">query</span>.<span class="ident">rotation</span>)
-                                .<span class="ident">into</span>()
+        <span class="comment">// Closure to get values of expressions and compress them
+        </span><span class="kw">let </span>compress_expressions = |expressions: <span class="kw-2">&amp;</span>[Expression&lt;C::Scalar&gt;]| {
+            <span class="comment">// Values of input expressions involved in the lookup
+            </span><span class="kw">let </span>unpermuted_expressions: Vec&lt;<span class="kw">_</span>&gt; = expressions
+                .iter()
+                .map(|expression| {
+                    expression.evaluate(
+                        <span class="kw-2">&amp;</span>|scalar| poly::Ast::ConstantTerm(scalar),
+                        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
+                        <span class="kw-2">&amp;</span>|query| {
+                            fixed_values[query.column_index]
+                                .with_rotation(query.rotation)
+                                .into()
                         },
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
-                            <span class="ident">advice_values</span>[<span class="ident">query</span>.<span class="ident">column_index</span>]
-                                .<span class="ident">with_rotation</span>(<span class="ident">query</span>.<span class="ident">rotation</span>)
-                                .<span class="ident">into</span>()
+                        <span class="kw-2">&amp;</span>|query| {
+                            advice_values[query.column_index]
+                                .with_rotation(query.rotation)
+                                .into()
                         },
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
-                            <span class="ident">instance_values</span>[<span class="ident">query</span>.<span class="ident">column_index</span>]
-                                .<span class="ident">with_rotation</span>(<span class="ident">query</span>.<span class="ident">rotation</span>)
-                                .<span class="ident">into</span>()
+                        <span class="kw-2">&amp;</span>|query| {
+                            instance_values[query.column_index]
+                                .with_rotation(query.rotation)
+                                .into()
                         },
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="op">-</span><span class="ident">a</span>,
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>,
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>,
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">scalar</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">scalar</span>,
+                        <span class="kw-2">&amp;</span>|a| -a,
+                        <span class="kw-2">&amp;</span>|a, b| a + b,
+                        <span class="kw-2">&amp;</span>|a, b| a * b,
+                        <span class="kw-2">&amp;</span>|a, scalar| a * scalar,
                     )
                 })
-                .<span class="ident">collect</span>();
+                .collect();
 
-            <span class="kw">let</span> <span class="ident">unpermuted_cosets</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">expressions</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">expression</span><span class="op">|</span> {
-                    <span class="ident">expression</span>.<span class="ident">evaluate</span>(
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">scalar</span><span class="op">|</span> <span class="ident">poly::Ast::ConstantTerm</span>(<span class="ident">scalar</span>),
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
-                            <span class="ident">fixed_cosets</span>[<span class="ident">query</span>.<span class="ident">column_index</span>]
-                                .<span class="ident">with_rotation</span>(<span class="ident">query</span>.<span class="ident">rotation</span>)
-                                .<span class="ident">into</span>()
+            <span class="kw">let </span>unpermuted_cosets: Vec&lt;<span class="kw">_</span>&gt; = expressions
+                .iter()
+                .map(|expression| {
+                    expression.evaluate(
+                        <span class="kw-2">&amp;</span>|scalar| poly::Ast::ConstantTerm(scalar),
+                        <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
+                        <span class="kw-2">&amp;</span>|query| {
+                            fixed_cosets[query.column_index]
+                                .with_rotation(query.rotation)
+                                .into()
                         },
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
-                            <span class="ident">advice_cosets</span>[<span class="ident">query</span>.<span class="ident">column_index</span>]
-                                .<span class="ident">with_rotation</span>(<span class="ident">query</span>.<span class="ident">rotation</span>)
-                                .<span class="ident">into</span>()
+                        <span class="kw-2">&amp;</span>|query| {
+                            advice_cosets[query.column_index]
+                                .with_rotation(query.rotation)
+                                .into()
                         },
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> {
-                            <span class="ident">instance_cosets</span>[<span class="ident">query</span>.<span class="ident">column_index</span>]
-                                .<span class="ident">with_rotation</span>(<span class="ident">query</span>.<span class="ident">rotation</span>)
-                                .<span class="ident">into</span>()
+                        <span class="kw-2">&amp;</span>|query| {
+                            instance_cosets[query.column_index]
+                                .with_rotation(query.rotation)
+                                .into()
                         },
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="op">-</span><span class="ident">a</span>,
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>,
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>,
-                        <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">scalar</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="ident">scalar</span>,
+                        <span class="kw-2">&amp;</span>|a| -a,
+                        <span class="kw-2">&amp;</span>|a, b| a + b,
+                        <span class="kw-2">&amp;</span>|a, b| a * b,
+                        <span class="kw-2">&amp;</span>|a, scalar| a * scalar,
                     )
                 })
-                .<span class="ident">collect</span>();
+                .collect();
 
-            <span class="comment">// Compressed version of expressions</span>
-            <span class="kw">let</span> <span class="ident">compressed_expression</span> <span class="op">=</span> <span class="ident">unpermuted_expressions</span>.<span class="ident">iter</span>().<span class="ident">fold</span>(
-                <span class="ident">poly::Ast::ConstantTerm</span>(<span class="ident">C::Scalar::zero</span>()),
-                <span class="op">|</span><span class="ident">acc</span>, <span class="ident">expression</span><span class="op">|</span> <span class="kw-2">&amp;</span>(<span class="ident">acc</span> <span class="op">*</span> <span class="kw-2">*</span><span class="ident">theta</span>) <span class="op">+</span> <span class="ident">expression</span>,
+            <span class="comment">// Compressed version of expressions
+            </span><span class="kw">let </span>compressed_expression = unpermuted_expressions.iter().fold(
+                poly::Ast::ConstantTerm(C::Scalar::zero()),
+                |acc, expression| <span class="kw-2">&amp;</span>(acc * <span class="kw-2">*</span>theta) + expression,
             );
 
             (
-                <span class="ident">unpermuted_expressions</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">ast</span><span class="op">|</span> <span class="ident">value_evaluator</span>.<span class="ident">evaluate</span>(<span class="ident">ast</span>, <span class="ident">domain</span>))
-                    .<span class="ident">collect</span>(),
-                <span class="ident">unpermuted_cosets</span>,
-                <span class="ident">value_evaluator</span>.<span class="ident">evaluate</span>(<span class="kw-2">&amp;</span><span class="ident">compressed_expression</span>, <span class="ident">domain</span>),
+                unpermuted_expressions
+                    .iter()
+                    .map(|ast| value_evaluator.evaluate(ast, domain))
+                    .collect(),
+                unpermuted_cosets,
+                value_evaluator.evaluate(<span class="kw-2">&amp;</span>compressed_expression, domain),
             )
         };
 
-        <span class="comment">// Get values of input expressions involved in the lookup and compress them</span>
-        <span class="kw">let</span> (<span class="ident">unpermuted_input_expressions</span>, <span class="ident">unpermuted_input_cosets</span>, <span class="ident">compressed_input_expression</span>) <span class="op">=</span>
-            <span class="ident">compress_expressions</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">input_expressions</span>);
+        <span class="comment">// Get values of input expressions involved in the lookup and compress them
+        </span><span class="kw">let </span>(unpermuted_input_expressions, unpermuted_input_cosets, compressed_input_expression) =
+            compress_expressions(<span class="kw-2">&amp;</span><span class="self">self</span>.input_expressions);
 
-        <span class="comment">// Get values of table expressions involved in the lookup and compress them</span>
-        <span class="kw">let</span> (<span class="ident">unpermuted_table_expressions</span>, <span class="ident">unpermuted_table_cosets</span>, <span class="ident">compressed_table_expression</span>) <span class="op">=</span>
-            <span class="ident">compress_expressions</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">table_expressions</span>);
+        <span class="comment">// Get values of table expressions involved in the lookup and compress them
+        </span><span class="kw">let </span>(unpermuted_table_expressions, unpermuted_table_cosets, compressed_table_expression) =
+            compress_expressions(<span class="kw-2">&amp;</span><span class="self">self</span>.table_expressions);
 
-        <span class="comment">// Permute compressed (InputExpression, TableExpression) pair</span>
-        <span class="kw">let</span> (<span class="ident">permuted_input_expression</span>, <span class="ident">permuted_table_expression</span>) <span class="op">=</span> <span class="ident">permute_expression_pair</span>::<span class="op">&lt;</span><span class="ident">C</span>, <span class="kw">_</span><span class="op">&gt;</span>(
-            <span class="ident">pk</span>,
-            <span class="ident">params</span>,
-            <span class="ident">domain</span>,
-            <span class="kw-2">&amp;mut</span> <span class="ident">rng</span>,
-            <span class="kw-2">&amp;</span><span class="ident">compressed_input_expression</span>,
-            <span class="kw-2">&amp;</span><span class="ident">compressed_table_expression</span>,
+        <span class="comment">// Permute compressed (InputExpression, TableExpression) pair
+        </span><span class="kw">let </span>(permuted_input_expression, permuted_table_expression) = permute_expression_pair::&lt;C, <span class="kw">_</span>&gt;(
+            pk,
+            params,
+            domain,
+            <span class="kw-2">&amp;mut </span>rng,
+            <span class="kw-2">&amp;</span>compressed_input_expression,
+            <span class="kw-2">&amp;</span>compressed_table_expression,
         )<span class="question-mark">?</span>;
 
-        <span class="comment">// Closure to construct commitment to vector of values</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">commit_values</span> <span class="op">=</span> <span class="op">|</span><span class="ident">values</span>: <span class="kw-2">&amp;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">lagrange_to_coeff</span>(<span class="ident">values</span>.<span class="ident">clone</span>());
-            <span class="kw">let</span> <span class="ident">blind</span> <span class="op">=</span> <span class="ident">Blind</span>(<span class="ident">C::Scalar::random</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>));
-            <span class="kw">let</span> <span class="ident">commitment</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">commit_lagrange</span>(<span class="ident">values</span>, <span class="ident">blind</span>).<span class="ident">to_affine</span>();
-            (<span class="ident">poly</span>, <span class="ident">blind</span>, <span class="ident">commitment</span>)
+        <span class="comment">// Closure to construct commitment to vector of values
+        </span><span class="kw">let </span><span class="kw-2">mut </span>commit_values = |values: <span class="kw-2">&amp;</span>Polynomial&lt;C::Scalar, LagrangeCoeff&gt;| {
+            <span class="kw">let </span>poly = pk.vk.domain.lagrange_to_coeff(values.clone());
+            <span class="kw">let </span>blind = Blind(C::Scalar::random(<span class="kw-2">&amp;mut </span>rng));
+            <span class="kw">let </span>commitment = params.commit_lagrange(values, blind).to_affine();
+            (poly, blind, commitment)
         };
 
-        <span class="comment">// Commit to permuted input expression</span>
-        <span class="kw">let</span> (<span class="ident">permuted_input_poly</span>, <span class="ident">permuted_input_blind</span>, <span class="ident">permuted_input_commitment</span>) <span class="op">=</span>
-            <span class="ident">commit_values</span>(<span class="kw-2">&amp;</span><span class="ident">permuted_input_expression</span>);
+        <span class="comment">// Commit to permuted input expression
+        </span><span class="kw">let </span>(permuted_input_poly, permuted_input_blind, permuted_input_commitment) =
+            commit_values(<span class="kw-2">&amp;</span>permuted_input_expression);
 
-        <span class="comment">// Commit to permuted table expression</span>
-        <span class="kw">let</span> (<span class="ident">permuted_table_poly</span>, <span class="ident">permuted_table_blind</span>, <span class="ident">permuted_table_commitment</span>) <span class="op">=</span>
-            <span class="ident">commit_values</span>(<span class="kw-2">&amp;</span><span class="ident">permuted_table_expression</span>);
+        <span class="comment">// Commit to permuted table expression
+        </span><span class="kw">let </span>(permuted_table_poly, permuted_table_blind, permuted_table_commitment) =
+            commit_values(<span class="kw-2">&amp;</span>permuted_table_expression);
 
-        <span class="comment">// Hash permuted input commitment</span>
-        <span class="ident">transcript</span>.<span class="ident">write_point</span>(<span class="ident">permuted_input_commitment</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Hash permuted input commitment
+        </span>transcript.write_point(permuted_input_commitment)<span class="question-mark">?</span>;
 
-        <span class="comment">// Hash permuted table commitment</span>
-        <span class="ident">transcript</span>.<span class="ident">write_point</span>(<span class="ident">permuted_table_commitment</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Hash permuted table commitment
+        </span>transcript.write_point(permuted_table_commitment)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">permuted_input_coset</span> <span class="op">=</span> <span class="ident">coset_evaluator</span>
-            .<span class="ident">register_poly</span>(<span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">permuted_input_poly</span>.<span class="ident">clone</span>()));
-        <span class="kw">let</span> <span class="ident">permuted_table_coset</span> <span class="op">=</span> <span class="ident">coset_evaluator</span>
-            .<span class="ident">register_poly</span>(<span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">permuted_table_poly</span>.<span class="ident">clone</span>()));
+        <span class="kw">let </span>permuted_input_coset = coset_evaluator
+            .register_poly(pk.vk.domain.coeff_to_extended(permuted_input_poly.clone()));
+        <span class="kw">let </span>permuted_table_coset = coset_evaluator
+            .register_poly(pk.vk.domain.coeff_to_extended(permuted_table_poly.clone()));
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Permuted</span> {
-            <span class="ident">unpermuted_input_expressions</span>,
-            <span class="ident">unpermuted_input_cosets</span>,
-            <span class="ident">permuted_input_expression</span>,
-            <span class="ident">permuted_input_poly</span>,
-            <span class="ident">permuted_input_coset</span>,
-            <span class="ident">permuted_input_blind</span>,
-            <span class="ident">unpermuted_table_expressions</span>,
-            <span class="ident">unpermuted_table_cosets</span>,
-            <span class="ident">permuted_table_expression</span>,
-            <span class="ident">permuted_table_poly</span>,
-            <span class="ident">permuted_table_coset</span>,
-            <span class="ident">permuted_table_blind</span>,
+        <span class="prelude-val">Ok</span>(Permuted {
+            unpermuted_input_expressions,
+            unpermuted_input_cosets,
+            permuted_input_expression,
+            permuted_input_poly,
+            permuted_input_coset,
+            permuted_input_blind,
+            unpermuted_table_expressions,
+            unpermuted_table_cosets,
+            permuted_table_expression,
+            permuted_table_poly,
+            permuted_table_coset,
+            permuted_table_blind,
         })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">Ev</span>: <span class="ident">Copy</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span> <span class="ident">Permuted</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">Ev</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Given a Lookup with input expressions, table expressions, and the permuted</span>
-    <span class="doccomment">/// input expression and permuted table expression, this method constructs the</span>
-    <span class="doccomment">/// grand product polynomial over the lookup. The grand product polynomial</span>
-    <span class="doccomment">/// is used to populate the Product&lt;C&gt; struct. The Product&lt;C&gt; struct is</span>
-    <span class="doccomment">/// added to the Lookup and finally returned by the method.</span>
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">commit_product</span><span class="op">&lt;</span>
-        <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">R</span>: <span class="ident">RngCore</span>,
-        <span class="ident">T</span>: <span class="ident">TranscriptWrite</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>,
-    <span class="op">&gt;</span>(
+<span class="kw">impl</span>&lt;C: CurveAffine, Ev: Copy + Send + Sync&gt; Permuted&lt;C, Ev&gt; {
+    <span class="doccomment">/// Given a Lookup with input expressions, table expressions, and the permuted
+    /// input expression and permuted table expression, this method constructs the
+    /// grand product polynomial over the lookup. The grand product polynomial
+    /// is used to populate the Product&lt;C&gt; struct. The Product&lt;C&gt; struct is
+    /// added to the Lookup and finally returned by the method.
+    </span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>commit_product&lt;
+        E: EncodedChallenge&lt;C&gt;,
+        R: RngCore,
+        T: TranscriptWrite&lt;C, E&gt;,
+    &gt;(
         <span class="self">self</span>,
-        <span class="ident">pk</span>: <span class="kw-2">&amp;</span><span class="ident">ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">theta</span>: <span class="ident">ChallengeTheta</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">beta</span>: <span class="ident">ChallengeBeta</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">gamma</span>: <span class="ident">ChallengeGamma</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">evaluator</span>: <span class="kw-2">&amp;mut</span> <span class="ident">poly::Evaluator</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
-        <span class="kw-2">mut</span> <span class="ident">rng</span>: <span class="ident">R</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">Ev</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">blinding_factors</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">blinding_factors</span>();
-        <span class="comment">// Goal is to compute the products of fractions</span>
-        <span class="comment">//</span>
-        <span class="comment">// Numerator: (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)</span>
-        <span class="comment">//            * (\theta^{m-1} s_0(\omega^i) + \theta^{m-2} s_1(\omega^i) + ... + \theta s_{m-2}(\omega^i) + s_{m-1}(\omega^i) + \gamma)</span>
-        <span class="comment">// Denominator: (a&#39;(\omega^i) + \beta) (s&#39;(\omega^i) + \gamma)</span>
-        <span class="comment">//</span>
-        <span class="comment">// where a_j(X) is the jth input expression in this lookup,</span>
-        <span class="comment">// where a&#39;(X) is the compression of the permuted input expressions,</span>
-        <span class="comment">// s_j(X) is the jth table expression in this lookup,</span>
-        <span class="comment">// s&#39;(X) is the compression of the permuted table expressions,</span>
-        <span class="comment">// and i is the ith row of the expression.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">lookup_product</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">C::Scalar::zero</span>(); <span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>];
-        <span class="comment">// Denominator uses the permuted input expression and permuted table expression</span>
-        <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="ident">lookup_product</span>, <span class="op">|</span><span class="ident">lookup_product</span>, <span class="ident">start</span><span class="op">|</span> {
-            <span class="kw">for</span> ((<span class="ident">lookup_product</span>, <span class="ident">permuted_input_value</span>), <span class="ident">permuted_table_value</span>) <span class="kw">in</span> <span class="ident">lookup_product</span>
-                .<span class="ident">iter_mut</span>()
-                .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">permuted_input_expression</span>[<span class="ident">start</span>..].<span class="ident">iter</span>())
-                .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">permuted_table_expression</span>[<span class="ident">start</span>..].<span class="ident">iter</span>())
+        pk: <span class="kw-2">&amp;</span>ProvingKey&lt;C&gt;,
+        params: <span class="kw-2">&amp;</span>Params&lt;C&gt;,
+        theta: ChallengeTheta&lt;C&gt;,
+        beta: ChallengeBeta&lt;C&gt;,
+        gamma: ChallengeGamma&lt;C&gt;,
+        evaluator: <span class="kw-2">&amp;mut </span>poly::Evaluator&lt;Ev, C::Scalar, ExtendedLagrangeCoeff&gt;,
+        <span class="kw-2">mut </span>rng: R,
+        transcript: <span class="kw-2">&amp;mut </span>T,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Committed&lt;C, Ev&gt;, Error&gt; {
+        <span class="kw">let </span>blinding_factors = pk.vk.cs.blinding_factors();
+        <span class="comment">// Goal is to compute the products of fractions
+        //
+        // Numerator: (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
+        //            * (\theta^{m-1} s_0(\omega^i) + \theta^{m-2} s_1(\omega^i) + ... + \theta s_{m-2}(\omega^i) + s_{m-1}(\omega^i) + \gamma)
+        // Denominator: (a&#39;(\omega^i) + \beta) (s&#39;(\omega^i) + \gamma)
+        //
+        // where a_j(X) is the jth input expression in this lookup,
+        // where a&#39;(X) is the compression of the permuted input expressions,
+        // s_j(X) is the jth table expression in this lookup,
+        // s&#39;(X) is the compression of the permuted table expressions,
+        // and i is the ith row of the expression.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>lookup_product = <span class="macro">vec!</span>[C::Scalar::zero(); params.n <span class="kw">as </span>usize];
+        <span class="comment">// Denominator uses the permuted input expression and permuted table expression
+        </span>parallelize(<span class="kw-2">&amp;mut </span>lookup_product, |lookup_product, start| {
+            <span class="kw">for </span>((lookup_product, permuted_input_value), permuted_table_value) <span class="kw">in </span>lookup_product
+                .iter_mut()
+                .zip(<span class="self">self</span>.permuted_input_expression[start..].iter())
+                .zip(<span class="self">self</span>.permuted_table_expression[start..].iter())
             {
-                <span class="kw-2">*</span><span class="ident">lookup_product</span> <span class="op">=</span> (<span class="kw-2">*</span><span class="ident">beta</span> <span class="op">+</span> <span class="ident">permuted_input_value</span>) <span class="op">*</span> <span class="kw-2">&amp;</span>(<span class="kw-2">*</span><span class="ident">gamma</span> <span class="op">+</span> <span class="ident">permuted_table_value</span>);
+                <span class="kw-2">*</span>lookup_product = (<span class="kw-2">*</span>beta + permuted_input_value) * <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>gamma + permuted_table_value);
             }
         });
 
-        <span class="comment">// Batch invert to obtain the denominators for the lookup product</span>
-        <span class="comment">// polynomials</span>
-        <span class="ident">lookup_product</span>.<span class="ident">iter_mut</span>().<span class="ident">batch_invert</span>();
+        <span class="comment">// Batch invert to obtain the denominators for the lookup product
+        // polynomials
+        </span>lookup_product.iter_mut().batch_invert();
 
-        <span class="comment">// Finish the computation of the entire fraction by computing the numerators</span>
-        <span class="comment">// (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)</span>
-        <span class="comment">// * (\theta^{m-1} s_0(\omega^i) + \theta^{m-2} s_1(\omega^i) + ... + \theta s_{m-2}(\omega^i) + s_{m-1}(\omega^i) + \gamma)</span>
-        <span class="ident">parallelize</span>(<span class="kw-2">&amp;mut</span> <span class="ident">lookup_product</span>, <span class="op">|</span><span class="ident">product</span>, <span class="ident">start</span><span class="op">|</span> {
-            <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">product</span>) <span class="kw">in</span> <span class="ident">product</span>.<span class="ident">iter_mut</span>().<span class="ident">enumerate</span>() {
-                <span class="kw">let</span> <span class="ident">i</span> <span class="op">=</span> <span class="ident">i</span> <span class="op">+</span> <span class="ident">start</span>;
+        <span class="comment">// Finish the computation of the entire fraction by computing the numerators
+        // (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
+        // * (\theta^{m-1} s_0(\omega^i) + \theta^{m-2} s_1(\omega^i) + ... + \theta s_{m-2}(\omega^i) + s_{m-1}(\omega^i) + \gamma)
+        </span>parallelize(<span class="kw-2">&amp;mut </span>lookup_product, |product, start| {
+            <span class="kw">for </span>(i, product) <span class="kw">in </span>product.iter_mut().enumerate() {
+                <span class="kw">let </span>i = i + start;
 
-                <span class="comment">// Compress unpermuted input expressions</span>
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">input_term</span> <span class="op">=</span> <span class="ident">C::Scalar::zero</span>();
-                <span class="kw">for</span> <span class="ident">unpermuted_input_expression</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">unpermuted_input_expressions</span>.<span class="ident">iter</span>() {
-                    <span class="ident">input_term</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">theta</span>;
-                    <span class="ident">input_term</span> <span class="op">+</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">unpermuted_input_expression</span>[<span class="ident">i</span>];
+                <span class="comment">// Compress unpermuted input expressions
+                </span><span class="kw">let </span><span class="kw-2">mut </span>input_term = C::Scalar::zero();
+                <span class="kw">for </span>unpermuted_input_expression <span class="kw">in </span><span class="self">self</span>.unpermuted_input_expressions.iter() {
+                    input_term <span class="kw-2">*</span>= <span class="kw-2">&amp;*</span>theta;
+                    input_term += <span class="kw-2">&amp;</span>unpermuted_input_expression[i];
                 }
 
-                <span class="comment">// Compress unpermuted table expressions</span>
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">table_term</span> <span class="op">=</span> <span class="ident">C::Scalar::zero</span>();
-                <span class="kw">for</span> <span class="ident">unpermuted_table_expression</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">unpermuted_table_expressions</span>.<span class="ident">iter</span>() {
-                    <span class="ident">table_term</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">theta</span>;
-                    <span class="ident">table_term</span> <span class="op">+</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">unpermuted_table_expression</span>[<span class="ident">i</span>];
+                <span class="comment">// Compress unpermuted table expressions
+                </span><span class="kw">let </span><span class="kw-2">mut </span>table_term = C::Scalar::zero();
+                <span class="kw">for </span>unpermuted_table_expression <span class="kw">in </span><span class="self">self</span>.unpermuted_table_expressions.iter() {
+                    table_term <span class="kw-2">*</span>= <span class="kw-2">&amp;*</span>theta;
+                    table_term += <span class="kw-2">&amp;</span>unpermuted_table_expression[i];
                 }
 
-                <span class="kw-2">*</span><span class="ident">product</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span>(<span class="ident">input_term</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">beta</span>);
-                <span class="kw-2">*</span><span class="ident">product</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span>(<span class="ident">table_term</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">gamma</span>);
+                <span class="kw-2">*</span>product <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>(input_term + <span class="kw-2">&amp;*</span>beta);
+                <span class="kw-2">*</span>product <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>(table_term + <span class="kw-2">&amp;*</span>gamma);
             }
         });
 
-        <span class="comment">// The product vector is a vector of products of fractions of the form</span>
-        <span class="comment">//</span>
-        <span class="comment">// Numerator: (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)</span>
-        <span class="comment">//            * (\theta^{m-1} s_0(\omega^i) + \theta^{m-2} s_1(\omega^i) + ... + \theta s_{m-2}(\omega^i) + s_{m-1}(\omega^i) + \gamma)</span>
-        <span class="comment">// Denominator: (a&#39;(\omega^i) + \beta) (s&#39;(\omega^i) + \gamma)</span>
-        <span class="comment">//</span>
-        <span class="comment">// where there are m input expressions and m table expressions,</span>
-        <span class="comment">// a_j(\omega^i) is the jth input expression in this lookup,</span>
-        <span class="comment">// a&#39;j(\omega^i) is the permuted input expression,</span>
-        <span class="comment">// s_j(\omega^i) is the jth table expression in this lookup,</span>
-        <span class="comment">// s&#39;(\omega^i) is the permuted table expression,</span>
-        <span class="comment">// and i is the ith row of the expression.</span>
+        <span class="comment">// The product vector is a vector of products of fractions of the form
+        //
+        // Numerator: (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
+        //            * (\theta^{m-1} s_0(\omega^i) + \theta^{m-2} s_1(\omega^i) + ... + \theta s_{m-2}(\omega^i) + s_{m-1}(\omega^i) + \gamma)
+        // Denominator: (a&#39;(\omega^i) + \beta) (s&#39;(\omega^i) + \gamma)
+        //
+        // where there are m input expressions and m table expressions,
+        // a_j(\omega^i) is the jth input expression in this lookup,
+        // a&#39;j(\omega^i) is the permuted input expression,
+        // s_j(\omega^i) is the jth table expression in this lookup,
+        // s&#39;(\omega^i) is the permuted table expression,
+        // and i is the ith row of the expression.
 
-        <span class="comment">// Compute the evaluations of the lookup product polynomial</span>
-        <span class="comment">// over our domain, starting with z[0] = 1</span>
-        <span class="kw">let</span> <span class="ident">z</span> <span class="op">=</span> <span class="ident">iter::once</span>(<span class="ident">C::Scalar::one</span>())
-            .<span class="ident">chain</span>(<span class="ident">lookup_product</span>)
-            .<span class="ident">scan</span>(<span class="ident">C::Scalar::one</span>(), <span class="op">|</span><span class="ident">state</span>, <span class="ident">cur</span><span class="op">|</span> {
-                <span class="kw-2">*</span><span class="ident">state</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">cur</span>;
-                <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">state</span>)
+        // Compute the evaluations of the lookup product polynomial
+        // over our domain, starting with z[0] = 1
+        </span><span class="kw">let </span>z = iter::once(C::Scalar::one())
+            .chain(lookup_product)
+            .scan(C::Scalar::one(), |state, cur| {
+                <span class="kw-2">*</span>state <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>cur;
+                <span class="prelude-val">Some</span>(<span class="kw-2">*</span>state)
             })
-            <span class="comment">// Take all rows including the &quot;last&quot; row which should</span>
-            <span class="comment">// be a boolean (and ideally 1, else soundness is broken)</span>
-            .<span class="ident">take</span>(<span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">-</span> <span class="ident">blinding_factors</span>)
-            <span class="comment">// Chain random blinding factors.</span>
-            .<span class="ident">chain</span>((<span class="number">0</span>..<span class="ident">blinding_factors</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">C::Scalar::random</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>)))
-            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-        <span class="macro">assert_eq!</span>(<span class="ident">z</span>.<span class="ident">len</span>(), <span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>);
-        <span class="kw">let</span> <span class="ident">z</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">lagrange_from_vec</span>(<span class="ident">z</span>);
+            <span class="comment">// Take all rows including the &quot;last&quot; row which should
+            // be a boolean (and ideally 1, else soundness is broken)
+            </span>.take(params.n <span class="kw">as </span>usize - blinding_factors)
+            <span class="comment">// Chain random blinding factors.
+            </span>.chain((<span class="number">0</span>..blinding_factors).map(|<span class="kw">_</span>| C::Scalar::random(<span class="kw-2">&amp;mut </span>rng)))
+            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+        <span class="macro">assert_eq!</span>(z.len(), params.n <span class="kw">as </span>usize);
+        <span class="kw">let </span>z = pk.vk.domain.lagrange_from_vec(z);
 
-        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;sanity-checks&quot;</span>)]</span>
-        <span class="comment">// This test works only with intermediate representations in this method.</span>
-        <span class="comment">// It can be used for debugging purposes.</span>
-        {
-            <span class="comment">// While in Lagrange basis, check that product is correctly constructed</span>
-            <span class="kw">let</span> <span class="ident">u</span> <span class="op">=</span> (<span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>) <span class="op">-</span> (<span class="ident">blinding_factors</span> <span class="op">+</span> <span class="number">1</span>);
+        <span class="attribute">#[cfg(feature = <span class="string">&quot;sanity-checks&quot;</span>)]</span>
+        <span class="comment">// This test works only with intermediate representations in this method.
+        // It can be used for debugging purposes.
+        </span>{
+            <span class="comment">// While in Lagrange basis, check that product is correctly constructed
+            </span><span class="kw">let </span>u = (params.n <span class="kw">as </span>usize) - (blinding_factors + <span class="number">1</span>);
 
-            <span class="comment">// l_0(X) * (1 - z(X)) = 0</span>
-            <span class="macro">assert_eq!</span>(<span class="ident">z</span>[<span class="number">0</span>], <span class="ident">C::Scalar::one</span>());
+            <span class="comment">// l_0(X) * (1 - z(X)) = 0
+            </span><span class="macro">assert_eq!</span>(z[<span class="number">0</span>], C::Scalar::one());
 
-            <span class="comment">// z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)</span>
-            <span class="comment">// - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)</span>
-            <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">u</span> {
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">left</span> <span class="op">=</span> <span class="ident">z</span>[<span class="ident">i</span> <span class="op">+</span> <span class="number">1</span>];
-                <span class="kw">let</span> <span class="ident">permuted_input_value</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">permuted_input_expression</span>[<span class="ident">i</span>];
+            <span class="comment">// z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)
+            // - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
+            </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..u {
+                <span class="kw">let </span><span class="kw-2">mut </span>left = z[i + <span class="number">1</span>];
+                <span class="kw">let </span>permuted_input_value = <span class="kw-2">&amp;</span><span class="self">self</span>.permuted_input_expression[i];
 
-                <span class="kw">let</span> <span class="ident">permuted_table_value</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">permuted_table_expression</span>[<span class="ident">i</span>];
+                <span class="kw">let </span>permuted_table_value = <span class="kw-2">&amp;</span><span class="self">self</span>.permuted_table_expression[i];
 
-                <span class="ident">left</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span>(<span class="kw-2">*</span><span class="ident">beta</span> <span class="op">+</span> <span class="ident">permuted_input_value</span>);
-                <span class="ident">left</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span>(<span class="kw-2">*</span><span class="ident">gamma</span> <span class="op">+</span> <span class="ident">permuted_table_value</span>);
+                left <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>beta + permuted_input_value);
+                left <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>gamma + permuted_table_value);
 
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">right</span> <span class="op">=</span> <span class="ident">z</span>[<span class="ident">i</span>];
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">input_term</span> <span class="op">=</span> <span class="self">self</span>
-                    .<span class="ident">unpermuted_input_expressions</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">fold</span>(<span class="ident">C::Scalar::zero</span>(), <span class="op">|</span><span class="ident">acc</span>, <span class="ident">input</span><span class="op">|</span> <span class="ident">acc</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">theta</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">input</span>[<span class="ident">i</span>]);
+                <span class="kw">let </span><span class="kw-2">mut </span>right = z[i];
+                <span class="kw">let </span><span class="kw-2">mut </span>input_term = <span class="self">self
+                    </span>.unpermuted_input_expressions
+                    .iter()
+                    .fold(C::Scalar::zero(), |acc, input| acc * <span class="kw-2">&amp;*</span>theta + <span class="kw-2">&amp;</span>input[i]);
 
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">table_term</span> <span class="op">=</span> <span class="self">self</span>
-                    .<span class="ident">unpermuted_table_expressions</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">fold</span>(<span class="ident">C::Scalar::zero</span>(), <span class="op">|</span><span class="ident">acc</span>, <span class="ident">table</span><span class="op">|</span> <span class="ident">acc</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">theta</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">table</span>[<span class="ident">i</span>]);
+                <span class="kw">let </span><span class="kw-2">mut </span>table_term = <span class="self">self
+                    </span>.unpermuted_table_expressions
+                    .iter()
+                    .fold(C::Scalar::zero(), |acc, table| acc * <span class="kw-2">&amp;*</span>theta + <span class="kw-2">&amp;</span>table[i]);
 
-                <span class="ident">input_term</span> <span class="op">+</span><span class="op">=</span> <span class="kw-2">&amp;</span>(<span class="kw-2">*</span><span class="ident">beta</span>);
-                <span class="ident">table_term</span> <span class="op">+</span><span class="op">=</span> <span class="kw-2">&amp;</span>(<span class="kw-2">*</span><span class="ident">gamma</span>);
-                <span class="ident">right</span> <span class="kw-2">*</span><span class="op">=</span> <span class="kw-2">&amp;</span>(<span class="ident">input_term</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">table_term</span>);
+                input_term += <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>beta);
+                table_term += <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>gamma);
+                right <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>(input_term * <span class="kw-2">&amp;</span>table_term);
 
-                <span class="macro">assert_eq!</span>(<span class="ident">left</span>, <span class="ident">right</span>);
+                <span class="macro">assert_eq!</span>(left, right);
             }
 
-            <span class="comment">// l_last(X) * (z(X)^2 - z(X)) = 0</span>
-            <span class="comment">// Assertion will fail only when soundness is broken, in which</span>
-            <span class="comment">// case this z[u] value will be zero. (bad!)</span>
-            <span class="macro">assert_eq!</span>(<span class="ident">z</span>[<span class="ident">u</span>], <span class="ident">C::Scalar::one</span>());
+            <span class="comment">// l_last(X) * (z(X)^2 - z(X)) = 0
+            // Assertion will fail only when soundness is broken, in which
+            // case this z[u] value will be zero. (bad!)
+            </span><span class="macro">assert_eq!</span>(z[u], C::Scalar::one());
         }
 
-        <span class="kw">let</span> <span class="ident">product_blind</span> <span class="op">=</span> <span class="ident">Blind</span>(<span class="ident">C::Scalar::random</span>(<span class="ident">rng</span>));
-        <span class="kw">let</span> <span class="ident">product_commitment</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">commit_lagrange</span>(<span class="kw-2">&amp;</span><span class="ident">z</span>, <span class="ident">product_blind</span>).<span class="ident">to_affine</span>();
-        <span class="kw">let</span> <span class="ident">z</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">lagrange_to_coeff</span>(<span class="ident">z</span>);
-        <span class="kw">let</span> <span class="ident">product_coset</span> <span class="op">=</span> <span class="ident">evaluator</span>.<span class="ident">register_poly</span>(<span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">coeff_to_extended</span>(<span class="ident">z</span>.<span class="ident">clone</span>()));
+        <span class="kw">let </span>product_blind = Blind(C::Scalar::random(rng));
+        <span class="kw">let </span>product_commitment = params.commit_lagrange(<span class="kw-2">&amp;</span>z, product_blind).to_affine();
+        <span class="kw">let </span>z = pk.vk.domain.lagrange_to_coeff(z);
+        <span class="kw">let </span>product_coset = evaluator.register_poly(pk.vk.domain.coeff_to_extended(z.clone()));
 
-        <span class="comment">// Hash product commitment</span>
-        <span class="ident">transcript</span>.<span class="ident">write_point</span>(<span class="ident">product_commitment</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Hash product commitment
+        </span>transcript.write_point(product_commitment)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Committed</span>::<span class="op">&lt;</span><span class="ident">C</span>, <span class="kw">_</span><span class="op">&gt;</span> {
-            <span class="ident">permuted</span>: <span class="self">self</span>,
-            <span class="ident">product_poly</span>: <span class="ident">z</span>,
-            <span class="ident">product_coset</span>,
-            <span class="ident">product_blind</span>,
+        <span class="prelude-val">Ok</span>(Committed::&lt;C, <span class="kw">_</span>&gt; {
+            permuted: <span class="self">self</span>,
+            product_poly: z,
+            product_coset,
+            product_blind,
         })
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">Ev</span>: <span class="ident">Copy</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> <span class="op">+</span> <span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">Committed</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">Ev</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Given a Lookup with input expressions, table expressions, permuted input</span>
-    <span class="doccomment">/// expression, permuted table expression, and grand product polynomial, this</span>
-    <span class="doccomment">/// method constructs constraints that must hold between these values.</span>
-    <span class="doccomment">/// This method returns the constraints as a vector of ASTs for polynomials in</span>
-    <span class="doccomment">/// the extended evaluation domain.</span>
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">construct</span>(
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, C: CurveAffine, Ev: Copy + Send + Sync + <span class="lifetime">&#39;a</span>&gt; Committed&lt;C, Ev&gt; {
+    <span class="doccomment">/// Given a Lookup with input expressions, table expressions, permuted input
+    /// expression, permuted table expression, and grand product polynomial, this
+    /// method constructs constraints that must hold between these values.
+    /// This method returns the constraints as a vector of ASTs for polynomials in
+    /// the extended evaluation domain.
+    </span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>construct(
         <span class="self">self</span>,
-        <span class="ident">theta</span>: <span class="ident">ChallengeTheta</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">beta</span>: <span class="ident">ChallengeBeta</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">gamma</span>: <span class="ident">ChallengeGamma</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">l0</span>: <span class="ident">poly::AstLeaf</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
-        <span class="ident">l_blind</span>: <span class="ident">poly::AstLeaf</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
-        <span class="ident">l_last</span>: <span class="ident">poly::AstLeaf</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span>,
+        theta: ChallengeTheta&lt;C&gt;,
+        beta: ChallengeBeta&lt;C&gt;,
+        gamma: ChallengeGamma&lt;C&gt;,
+        l0: poly::AstLeaf&lt;Ev, ExtendedLagrangeCoeff&gt;,
+        l_blind: poly::AstLeaf&lt;Ev, ExtendedLagrangeCoeff&gt;,
+        l_last: poly::AstLeaf&lt;Ev, ExtendedLagrangeCoeff&gt;,
     ) -&gt; (
-        <span class="ident">Constructed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">poly::Ast</span><span class="op">&lt;</span><span class="ident">Ev</span>, <span class="ident">C::Scalar</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="lifetime">&#39;a</span>,
+        Constructed&lt;C&gt;,
+        <span class="kw">impl </span>Iterator&lt;Item = poly::Ast&lt;Ev, C::Scalar, ExtendedLagrangeCoeff&gt;&gt; + <span class="lifetime">&#39;a</span>,
     ) {
-        <span class="kw">let</span> <span class="ident">permuted</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">permuted</span>;
+        <span class="kw">let </span>permuted = <span class="self">self</span>.permuted;
 
-        <span class="kw">let</span> <span class="ident">active_rows</span> <span class="op">=</span> <span class="ident">poly::Ast::one</span>() <span class="op">-</span> (<span class="ident">poly::Ast::from</span>(<span class="ident">l_last</span>) <span class="op">+</span> <span class="ident">l_blind</span>);
-        <span class="kw">let</span> <span class="ident">beta</span> <span class="op">=</span> <span class="ident">poly::Ast::ConstantTerm</span>(<span class="kw-2">*</span><span class="ident">beta</span>);
-        <span class="kw">let</span> <span class="ident">gamma</span> <span class="op">=</span> <span class="ident">poly::Ast::ConstantTerm</span>(<span class="kw-2">*</span><span class="ident">gamma</span>);
+        <span class="kw">let </span>active_rows = poly::Ast::one() - (poly::Ast::from(l_last) + l_blind);
+        <span class="kw">let </span>beta = poly::Ast::ConstantTerm(<span class="kw-2">*</span>beta);
+        <span class="kw">let </span>gamma = poly::Ast::ConstantTerm(<span class="kw-2">*</span>gamma);
 
-        <span class="kw">let</span> <span class="ident">expressions</span> <span class="op">=</span> <span class="ident">iter::empty</span>()
-            <span class="comment">// l_0(X) * (1 - z(X)) = 0</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="ident">poly::Ast::one</span>() <span class="op">-</span> <span class="self">self</span>.<span class="ident">product_coset</span>) <span class="op">*</span> <span class="ident">l0</span>))
-            <span class="comment">// l_last(X) * (z(X)^2 - z(X)) = 0</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(
-                (<span class="ident">poly::Ast::from</span>(<span class="self">self</span>.<span class="ident">product_coset</span>) <span class="op">*</span> <span class="self">self</span>.<span class="ident">product_coset</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">product_coset</span>)
-                    <span class="op">*</span> <span class="ident">l_last</span>,
+        <span class="kw">let </span>expressions = iter::empty()
+            <span class="comment">// l_0(X) * (1 - z(X)) = 0
+            </span>.chain(<span class="prelude-val">Some</span>((poly::Ast::one() - <span class="self">self</span>.product_coset) * l0))
+            <span class="comment">// l_last(X) * (z(X)^2 - z(X)) = 0
+            </span>.chain(<span class="prelude-val">Some</span>(
+                (poly::Ast::from(<span class="self">self</span>.product_coset) * <span class="self">self</span>.product_coset - <span class="self">self</span>.product_coset)
+                    * l_last,
             ))
-            <span class="comment">// (1 - (l_last(X) + l_blind(X))) * (</span>
-            <span class="comment">//   z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)</span>
-            <span class="comment">//   - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)</span>
-            <span class="comment">// ) = 0</span>
-            .<span class="ident">chain</span>({
-                <span class="comment">// z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)</span>
-                <span class="kw">let</span> <span class="ident">left</span>: <span class="ident">poly::Ast</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">poly::Ast</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">C::Scalar</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="ident">::from</span>(
-                    <span class="self">self</span>.<span class="ident">product_coset</span>.<span class="ident">with_rotation</span>(<span class="ident">Rotation::next</span>()),
-                ) <span class="op">*</span> (<span class="ident">poly::Ast::from</span>(<span class="ident">permuted</span>.<span class="ident">permuted_input_coset</span>)
-                    <span class="op">+</span> <span class="ident">beta</span>.<span class="ident">clone</span>())
-                    <span class="op">*</span> (<span class="ident">poly::Ast::from</span>(<span class="ident">permuted</span>.<span class="ident">permuted_table_coset</span>) <span class="op">+</span> <span class="ident">gamma</span>.<span class="ident">clone</span>());
+            <span class="comment">// (1 - (l_last(X) + l_blind(X))) * (
+            //   z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)
+            //   - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
+            // ) = 0
+            </span>.chain({
+                <span class="comment">// z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)
+                </span><span class="kw">let </span>left: poly::Ast&lt;<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt; = poly::Ast::&lt;<span class="kw">_</span>, C::Scalar, <span class="kw">_</span>&gt;::from(
+                    <span class="self">self</span>.product_coset.with_rotation(Rotation::next()),
+                ) * (poly::Ast::from(permuted.permuted_input_coset)
+                    + beta.clone())
+                    * (poly::Ast::from(permuted.permuted_table_coset) + gamma.clone());
 
-                <span class="comment">//  z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)</span>
-                <span class="kw">let</span> <span class="ident">compress_cosets</span> <span class="op">=</span> <span class="op">|</span><span class="ident">cosets</span>: <span class="kw-2">&amp;</span>[<span class="ident">poly::Ast</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span>]<span class="op">|</span> {
-                    <span class="ident">cosets</span>.<span class="ident">iter</span>().<span class="ident">fold</span>(
-                        <span class="ident">poly::Ast</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">ExtendedLagrangeCoeff</span><span class="op">&gt;</span><span class="ident">::ConstantTerm</span>(<span class="ident">C::Scalar::zero</span>()),
-                        <span class="op">|</span><span class="ident">acc</span>, <span class="ident">eval</span><span class="op">|</span> <span class="ident">acc</span> <span class="op">*</span> <span class="ident">poly::Ast::ConstantTerm</span>(<span class="kw-2">*</span><span class="ident">theta</span>) <span class="op">+</span> <span class="ident">eval</span>.<span class="ident">clone</span>(),
+                <span class="comment">//  z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
+                </span><span class="kw">let </span>compress_cosets = |cosets: <span class="kw-2">&amp;</span>[poly::Ast&lt;<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;]| {
+                    cosets.iter().fold(
+                        poly::Ast::&lt;<span class="kw">_</span>, <span class="kw">_</span>, ExtendedLagrangeCoeff&gt;::ConstantTerm(C::Scalar::zero()),
+                        |acc, eval| acc * poly::Ast::ConstantTerm(<span class="kw-2">*</span>theta) + eval.clone(),
                     )
                 };
-                <span class="kw">let</span> <span class="ident">right</span>: <span class="ident">poly::Ast</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">poly::Ast::from</span>(<span class="self">self</span>.<span class="ident">product_coset</span>)
-                    <span class="op">*</span> (<span class="ident">compress_cosets</span>(<span class="kw-2">&amp;</span><span class="ident">permuted</span>.<span class="ident">unpermuted_input_cosets</span>) <span class="op">+</span> <span class="ident">beta</span>)
-                    <span class="op">*</span> (<span class="ident">compress_cosets</span>(<span class="kw-2">&amp;</span><span class="ident">permuted</span>.<span class="ident">unpermuted_table_cosets</span>) <span class="op">+</span> <span class="ident">gamma</span>);
+                <span class="kw">let </span>right: poly::Ast&lt;<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt; = poly::Ast::from(<span class="self">self</span>.product_coset)
+                    * (compress_cosets(<span class="kw-2">&amp;</span>permuted.unpermuted_input_cosets) + beta)
+                    * (compress_cosets(<span class="kw-2">&amp;</span>permuted.unpermuted_table_cosets) + gamma);
 
-                <span class="prelude-val">Some</span>((<span class="ident">left</span> <span class="op">-</span> <span class="ident">right</span>) <span class="op">*</span> <span class="ident">active_rows</span>.<span class="ident">clone</span>())
+                <span class="prelude-val">Some</span>((left - right) * active_rows.clone())
             })
-            <span class="comment">// Check that the first values in the permuted input expression and permuted</span>
-            <span class="comment">// fixed expression are the same.</span>
-            <span class="comment">// l_0(X) * (a&#39;(X) - s&#39;(X)) = 0</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(
-                (<span class="ident">poly::Ast::from</span>(<span class="ident">permuted</span>.<span class="ident">permuted_input_coset</span>) <span class="op">-</span> <span class="ident">permuted</span>.<span class="ident">permuted_table_coset</span>)
-                    <span class="op">*</span> <span class="ident">l0</span>,
+            <span class="comment">// Check that the first values in the permuted input expression and permuted
+            // fixed expression are the same.
+            // l_0(X) * (a&#39;(X) - s&#39;(X)) = 0
+            </span>.chain(<span class="prelude-val">Some</span>(
+                (poly::Ast::from(permuted.permuted_input_coset) - permuted.permuted_table_coset)
+                    * l0,
             ))
-            <span class="comment">// Check that each value in the permuted lookup input expression is either</span>
-            <span class="comment">// equal to the value above it, or the value at the same index in the</span>
-            <span class="comment">// permuted table expression.</span>
-            <span class="comment">// (1 - (l_last + l_blind)) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(
-                (<span class="ident">poly::Ast</span>::<span class="op">&lt;</span><span class="kw">_</span>, <span class="ident">C::Scalar</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="ident">::from</span>(<span class="ident">permuted</span>.<span class="ident">permuted_input_coset</span>)
-                    <span class="op">-</span> <span class="ident">permuted</span>.<span class="ident">permuted_table_coset</span>)
-                    <span class="op">*</span> (<span class="ident">poly::Ast::from</span>(<span class="ident">permuted</span>.<span class="ident">permuted_input_coset</span>)
-                        <span class="op">-</span> <span class="ident">permuted</span>
-                            .<span class="ident">permuted_input_coset</span>
-                            .<span class="ident">with_rotation</span>(<span class="ident">Rotation::prev</span>()))
-                    <span class="op">*</span> <span class="ident">active_rows</span>,
+            <span class="comment">// Check that each value in the permuted lookup input expression is either
+            // equal to the value above it, or the value at the same index in the
+            // permuted table expression.
+            // (1 - (l_last + l_blind)) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0
+            </span>.chain(<span class="prelude-val">Some</span>(
+                (poly::Ast::&lt;<span class="kw">_</span>, C::Scalar, <span class="kw">_</span>&gt;::from(permuted.permuted_input_coset)
+                    - permuted.permuted_table_coset)
+                    * (poly::Ast::from(permuted.permuted_input_coset)
+                        - permuted
+                            .permuted_input_coset
+                            .with_rotation(Rotation::prev()))
+                    * active_rows,
             ));
 
         (
-            <span class="ident">Constructed</span> {
-                <span class="ident">permuted_input_poly</span>: <span class="ident">permuted</span>.<span class="ident">permuted_input_poly</span>,
-                <span class="ident">permuted_input_blind</span>: <span class="ident">permuted</span>.<span class="ident">permuted_input_blind</span>,
-                <span class="ident">permuted_table_poly</span>: <span class="ident">permuted</span>.<span class="ident">permuted_table_poly</span>,
-                <span class="ident">permuted_table_blind</span>: <span class="ident">permuted</span>.<span class="ident">permuted_table_blind</span>,
-                <span class="ident">product_poly</span>: <span class="self">self</span>.<span class="ident">product_poly</span>,
-                <span class="ident">product_blind</span>: <span class="self">self</span>.<span class="ident">product_blind</span>,
+            Constructed {
+                permuted_input_poly: permuted.permuted_input_poly,
+                permuted_input_blind: permuted.permuted_input_blind,
+                permuted_table_poly: permuted.permuted_table_poly,
+                permuted_table_blind: permuted.permuted_table_blind,
+                product_poly: <span class="self">self</span>.product_poly,
+                product_blind: <span class="self">self</span>.product_blind,
             },
-            <span class="ident">expressions</span>,
+            expressions,
         )
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Constructed</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">evaluate</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">T</span>: <span class="ident">TranscriptWrite</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; Constructed&lt;C&gt; {
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>evaluate&lt;E: EncodedChallenge&lt;C&gt;, T: TranscriptWrite&lt;C, E&gt;&gt;(
         <span class="self">self</span>,
-        <span class="ident">pk</span>: <span class="kw-2">&amp;</span><span class="ident">ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Evaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">domain</span>;
-        <span class="kw">let</span> <span class="ident">x_inv</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">rotate_omega</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">Rotation::prev</span>());
-        <span class="kw">let</span> <span class="ident">x_next</span> <span class="op">=</span> <span class="ident">domain</span>.<span class="ident">rotate_omega</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">Rotation::next</span>());
+        pk: <span class="kw-2">&amp;</span>ProvingKey&lt;C&gt;,
+        x: ChallengeX&lt;C&gt;,
+        transcript: <span class="kw-2">&amp;mut </span>T,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Evaluated&lt;C&gt;, Error&gt; {
+        <span class="kw">let </span>domain = <span class="kw-2">&amp;</span>pk.vk.domain;
+        <span class="kw">let </span>x_inv = domain.rotate_omega(<span class="kw-2">*</span>x, Rotation::prev());
+        <span class="kw">let </span>x_next = domain.rotate_omega(<span class="kw-2">*</span>x, Rotation::next());
 
-        <span class="kw">let</span> <span class="ident">product_eval</span> <span class="op">=</span> <span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">product_poly</span>, <span class="kw-2">*</span><span class="ident">x</span>);
-        <span class="kw">let</span> <span class="ident">product_next_eval</span> <span class="op">=</span> <span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">product_poly</span>, <span class="ident">x_next</span>);
-        <span class="kw">let</span> <span class="ident">permuted_input_eval</span> <span class="op">=</span> <span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">permuted_input_poly</span>, <span class="kw-2">*</span><span class="ident">x</span>);
-        <span class="kw">let</span> <span class="ident">permuted_input_inv_eval</span> <span class="op">=</span> <span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">permuted_input_poly</span>, <span class="ident">x_inv</span>);
-        <span class="kw">let</span> <span class="ident">permuted_table_eval</span> <span class="op">=</span> <span class="ident">eval_polynomial</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">permuted_table_poly</span>, <span class="kw-2">*</span><span class="ident">x</span>);
+        <span class="kw">let </span>product_eval = eval_polynomial(<span class="kw-2">&amp;</span><span class="self">self</span>.product_poly, <span class="kw-2">*</span>x);
+        <span class="kw">let </span>product_next_eval = eval_polynomial(<span class="kw-2">&amp;</span><span class="self">self</span>.product_poly, x_next);
+        <span class="kw">let </span>permuted_input_eval = eval_polynomial(<span class="kw-2">&amp;</span><span class="self">self</span>.permuted_input_poly, <span class="kw-2">*</span>x);
+        <span class="kw">let </span>permuted_input_inv_eval = eval_polynomial(<span class="kw-2">&amp;</span><span class="self">self</span>.permuted_input_poly, x_inv);
+        <span class="kw">let </span>permuted_table_eval = eval_polynomial(<span class="kw-2">&amp;</span><span class="self">self</span>.permuted_table_poly, <span class="kw-2">*</span>x);
 
-        <span class="comment">// Hash each advice evaluation</span>
-        <span class="kw">for</span> <span class="ident">eval</span> <span class="kw">in</span> <span class="ident">iter::empty</span>()
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">product_eval</span>))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">product_next_eval</span>))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">permuted_input_eval</span>))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">permuted_input_inv_eval</span>))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">permuted_table_eval</span>))
+        <span class="comment">// Hash each advice evaluation
+        </span><span class="kw">for </span>eval <span class="kw">in </span>iter::empty()
+            .chain(<span class="prelude-val">Some</span>(product_eval))
+            .chain(<span class="prelude-val">Some</span>(product_next_eval))
+            .chain(<span class="prelude-val">Some</span>(permuted_input_eval))
+            .chain(<span class="prelude-val">Some</span>(permuted_input_inv_eval))
+            .chain(<span class="prelude-val">Some</span>(permuted_table_eval))
         {
-            <span class="ident">transcript</span>.<span class="ident">write_scalar</span>(<span class="ident">eval</span>)<span class="question-mark">?</span>;
+            transcript.write_scalar(eval)<span class="question-mark">?</span>;
         }
 
-        <span class="prelude-val">Ok</span>(<span class="ident">Evaluated</span> { <span class="ident">constructed</span>: <span class="self">self</span> })
+        <span class="prelude-val">Ok</span>(Evaluated { constructed: <span class="self">self </span>})
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">Evaluated</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">in</span> <span class="ident"><span class="kw">crate</span>::plonk</span>) <span class="kw">fn</span> <span class="ident">open</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(
-        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="self">self</span>,
-        <span class="ident">pk</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-        <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">ProverQuery</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> {
-        <span class="kw">let</span> <span class="ident">x_inv</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">rotate_omega</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">Rotation::prev</span>());
-        <span class="kw">let</span> <span class="ident">x_next</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">rotate_omega</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">Rotation::next</span>());
+<span class="kw">impl</span>&lt;C: CurveAffine&gt; Evaluated&lt;C&gt; {
+    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>open&lt;<span class="lifetime">&#39;a</span>&gt;(
+        <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>,
+        pk: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ProvingKey&lt;C&gt;,
+        x: ChallengeX&lt;C&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = ProverQuery&lt;<span class="lifetime">&#39;a</span>, C&gt;&gt; + Clone {
+        <span class="kw">let </span>x_inv = pk.vk.domain.rotate_omega(<span class="kw-2">*</span>x, Rotation::prev());
+        <span class="kw">let </span>x_next = pk.vk.domain.rotate_omega(<span class="kw-2">*</span>x, Rotation::next());
 
-        <span class="ident">iter::empty</span>()
-            <span class="comment">// Open lookup product commitments at x</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">ProverQuery</span> {
-                <span class="ident">point</span>: <span class="kw-2">*</span><span class="ident">x</span>,
-                <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">constructed</span>.<span class="ident">product_poly</span>,
-                <span class="ident">blind</span>: <span class="self">self</span>.<span class="ident">constructed</span>.<span class="ident">product_blind</span>,
+        iter::empty()
+            <span class="comment">// Open lookup product commitments at x
+            </span>.chain(<span class="prelude-val">Some</span>(ProverQuery {
+                point: <span class="kw-2">*</span>x,
+                poly: <span class="kw-2">&amp;</span><span class="self">self</span>.constructed.product_poly,
+                blind: <span class="self">self</span>.constructed.product_blind,
             }))
-            <span class="comment">// Open lookup input commitments at x</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">ProverQuery</span> {
-                <span class="ident">point</span>: <span class="kw-2">*</span><span class="ident">x</span>,
-                <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">constructed</span>.<span class="ident">permuted_input_poly</span>,
-                <span class="ident">blind</span>: <span class="self">self</span>.<span class="ident">constructed</span>.<span class="ident">permuted_input_blind</span>,
+            <span class="comment">// Open lookup input commitments at x
+            </span>.chain(<span class="prelude-val">Some</span>(ProverQuery {
+                point: <span class="kw-2">*</span>x,
+                poly: <span class="kw-2">&amp;</span><span class="self">self</span>.constructed.permuted_input_poly,
+                blind: <span class="self">self</span>.constructed.permuted_input_blind,
             }))
-            <span class="comment">// Open lookup table commitments at x</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">ProverQuery</span> {
-                <span class="ident">point</span>: <span class="kw-2">*</span><span class="ident">x</span>,
-                <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">constructed</span>.<span class="ident">permuted_table_poly</span>,
-                <span class="ident">blind</span>: <span class="self">self</span>.<span class="ident">constructed</span>.<span class="ident">permuted_table_blind</span>,
+            <span class="comment">// Open lookup table commitments at x
+            </span>.chain(<span class="prelude-val">Some</span>(ProverQuery {
+                point: <span class="kw-2">*</span>x,
+                poly: <span class="kw-2">&amp;</span><span class="self">self</span>.constructed.permuted_table_poly,
+                blind: <span class="self">self</span>.constructed.permuted_table_blind,
             }))
-            <span class="comment">// Open lookup input commitments at x_inv</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">ProverQuery</span> {
-                <span class="ident">point</span>: <span class="ident">x_inv</span>,
-                <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">constructed</span>.<span class="ident">permuted_input_poly</span>,
-                <span class="ident">blind</span>: <span class="self">self</span>.<span class="ident">constructed</span>.<span class="ident">permuted_input_blind</span>,
+            <span class="comment">// Open lookup input commitments at x_inv
+            </span>.chain(<span class="prelude-val">Some</span>(ProverQuery {
+                point: x_inv,
+                poly: <span class="kw-2">&amp;</span><span class="self">self</span>.constructed.permuted_input_poly,
+                blind: <span class="self">self</span>.constructed.permuted_input_blind,
             }))
-            <span class="comment">// Open lookup product commitments at x_next</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>(<span class="ident">ProverQuery</span> {
-                <span class="ident">point</span>: <span class="ident">x_next</span>,
-                <span class="ident">poly</span>: <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">constructed</span>.<span class="ident">product_poly</span>,
-                <span class="ident">blind</span>: <span class="self">self</span>.<span class="ident">constructed</span>.<span class="ident">product_blind</span>,
+            <span class="comment">// Open lookup product commitments at x_next
+            </span>.chain(<span class="prelude-val">Some</span>(ProverQuery {
+                point: x_next,
+                poly: <span class="kw-2">&amp;</span><span class="self">self</span>.constructed.product_poly,
+                blind: <span class="self">self</span>.constructed.product_blind,
             }))
     }
 }
 
-<span class="kw">type</span> <span class="ident">ExpressionPair</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>, <span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>);
+<span class="kw">type </span>ExpressionPair&lt;F&gt; = (Polynomial&lt;F, LagrangeCoeff&gt;, Polynomial&lt;F, LagrangeCoeff&gt;);
 
-<span class="doccomment">/// Given a vector of input values A and a vector of table values S,</span>
-<span class="doccomment">/// this method permutes A and S to produce A&#39; and S&#39;, such that:</span>
-<span class="doccomment">/// - like values in A&#39; are vertically adjacent to each other; and</span>
-<span class="doccomment">/// - the first row in a sequence of like values in A&#39; is the row</span>
-<span class="doccomment">///   that has the corresponding value in S&#39;.</span>
-<span class="doccomment">/// This method returns (A&#39;, S&#39;) if no errors are encountered.</span>
-<span class="kw">fn</span> <span class="ident">permute_expression_pair</span><span class="op">&lt;</span><span class="ident">C</span>: <span class="ident">CurveAffine</span>, <span class="ident">R</span>: <span class="ident">RngCore</span><span class="op">&gt;</span>(
-    <span class="ident">pk</span>: <span class="kw-2">&amp;</span><span class="ident">ProvingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="ident">domain</span>: <span class="kw-2">&amp;</span><span class="ident">EvaluationDomain</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>,
-    <span class="kw-2">mut</span> <span class="ident">rng</span>: <span class="ident">R</span>,
-    <span class="ident">input_expression</span>: <span class="kw-2">&amp;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>,
-    <span class="ident">table_expression</span>: <span class="kw-2">&amp;</span><span class="ident">Polynomial</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">LagrangeCoeff</span><span class="op">&gt;</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ExpressionPair</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">blinding_factors</span> <span class="op">=</span> <span class="ident">pk</span>.<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">blinding_factors</span>();
-    <span class="kw">let</span> <span class="ident">usable_rows</span> <span class="op">=</span> <span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">-</span> (<span class="ident">blinding_factors</span> <span class="op">+</span> <span class="number">1</span>);
+<span class="doccomment">/// Given a vector of input values A and a vector of table values S,
+/// this method permutes A and S to produce A&#39; and S&#39;, such that:
+/// - like values in A&#39; are vertically adjacent to each other; and
+/// - the first row in a sequence of like values in A&#39; is the row
+///   that has the corresponding value in S&#39;.
+/// This method returns (A&#39;, S&#39;) if no errors are encountered.
+</span><span class="kw">fn </span>permute_expression_pair&lt;C: CurveAffine, R: RngCore&gt;(
+    pk: <span class="kw-2">&amp;</span>ProvingKey&lt;C&gt;,
+    params: <span class="kw-2">&amp;</span>Params&lt;C&gt;,
+    domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;C::Scalar&gt;,
+    <span class="kw-2">mut </span>rng: R,
+    input_expression: <span class="kw-2">&amp;</span>Polynomial&lt;C::Scalar, LagrangeCoeff&gt;,
+    table_expression: <span class="kw-2">&amp;</span>Polynomial&lt;C::Scalar, LagrangeCoeff&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;ExpressionPair&lt;C::Scalar&gt;, Error&gt; {
+    <span class="kw">let </span>blinding_factors = pk.vk.cs.blinding_factors();
+    <span class="kw">let </span>usable_rows = params.n <span class="kw">as </span>usize - (blinding_factors + <span class="number">1</span>);
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">permuted_input_expression</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">C::Scalar</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">input_expression</span>.<span class="ident">to_vec</span>();
-    <span class="ident">permuted_input_expression</span>.<span class="ident">truncate</span>(<span class="ident">usable_rows</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>permuted_input_expression: Vec&lt;C::Scalar&gt; = input_expression.to_vec();
+    permuted_input_expression.truncate(usable_rows);
 
-    <span class="comment">// Sort input lookup expression values</span>
-    <span class="ident">permuted_input_expression</span>.<span class="ident">sort</span>();
+    <span class="comment">// Sort input lookup expression values
+    </span>permuted_input_expression.sort();
 
-    <span class="comment">// A BTreeMap of each unique element in the table expression and its count</span>
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">leftover_table_map</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">C::Scalar</span>, <span class="ident">u32</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">table_expression</span>
-        .<span class="ident">iter</span>()
-        .<span class="ident">take</span>(<span class="ident">usable_rows</span>)
-        .<span class="ident">fold</span>(<span class="ident">BTreeMap::new</span>(), <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">acc</span>, <span class="ident">coeff</span><span class="op">|</span> {
-            <span class="kw-2">*</span><span class="ident">acc</span>.<span class="ident">entry</span>(<span class="kw-2">*</span><span class="ident">coeff</span>).<span class="ident">or_insert</span>(<span class="number">0</span>) <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
-            <span class="ident">acc</span>
+    <span class="comment">// A BTreeMap of each unique element in the table expression and its count
+    </span><span class="kw">let </span><span class="kw-2">mut </span>leftover_table_map: BTreeMap&lt;C::Scalar, u32&gt; = table_expression
+        .iter()
+        .take(usable_rows)
+        .fold(BTreeMap::new(), |<span class="kw-2">mut </span>acc, coeff| {
+            <span class="kw-2">*</span>acc.entry(<span class="kw-2">*</span>coeff).or_insert(<span class="number">0</span>) += <span class="number">1</span>;
+            acc
         });
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">permuted_table_coeffs</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">C::Scalar::zero</span>(); <span class="ident">usable_rows</span>];
+    <span class="kw">let </span><span class="kw-2">mut </span>permuted_table_coeffs = <span class="macro">vec!</span>[C::Scalar::zero(); usable_rows];
 
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">repeated_input_rows</span> <span class="op">=</span> <span class="ident">permuted_input_expression</span>
-        .<span class="ident">iter</span>()
-        .<span class="ident">zip</span>(<span class="ident">permuted_table_coeffs</span>.<span class="ident">iter_mut</span>())
-        .<span class="ident">enumerate</span>()
-        .<span class="ident">filter_map</span>(<span class="op">|</span>(<span class="ident">row</span>, (<span class="ident">input_value</span>, <span class="ident">table_value</span>))<span class="op">|</span> {
-            <span class="comment">// If this is the first occurrence of `input_value` in the input expression</span>
-            <span class="kw">if</span> <span class="ident">row</span> <span class="op">==</span> <span class="number">0</span> <span class="op">|</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">input_value</span> <span class="op">!</span><span class="op">=</span> <span class="ident">permuted_input_expression</span>[<span class="ident">row</span> <span class="op">-</span> <span class="number">1</span>] {
-                <span class="kw-2">*</span><span class="ident">table_value</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">input_value</span>;
-                <span class="comment">// Remove one instance of input_value from leftover_table_map</span>
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">count</span>) <span class="op">=</span> <span class="ident">leftover_table_map</span>.<span class="ident">get_mut</span>(<span class="ident">input_value</span>) {
-                    <span class="macro">assert!</span>(<span class="kw-2">*</span><span class="ident">count</span> <span class="op">&gt;</span> <span class="number">0</span>);
-                    <span class="kw-2">*</span><span class="ident">count</span> <span class="op">-</span><span class="op">=</span> <span class="number">1</span>;
-                    <span class="prelude-val">None</span>
-                } <span class="kw">else</span> {
-                    <span class="comment">// Return error if input_value not found</span>
-                    <span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(<span class="ident">Error::ConstraintSystemFailure</span>))
+    <span class="kw">let </span><span class="kw-2">mut </span>repeated_input_rows = permuted_input_expression
+        .iter()
+        .zip(permuted_table_coeffs.iter_mut())
+        .enumerate()
+        .filter_map(|(row, (input_value, table_value))| {
+            <span class="comment">// If this is the first occurrence of `input_value` in the input expression
+            </span><span class="kw">if </span>row == <span class="number">0 </span>|| <span class="kw-2">*</span>input_value != permuted_input_expression[row - <span class="number">1</span>] {
+                <span class="kw-2">*</span>table_value = <span class="kw-2">*</span>input_value;
+                <span class="comment">// Remove one instance of input_value from leftover_table_map
+                </span><span class="kw">if let </span><span class="prelude-val">Some</span>(count) = leftover_table_map.get_mut(input_value) {
+                    <span class="macro">assert!</span>(<span class="kw-2">*</span>count &gt; <span class="number">0</span>);
+                    <span class="kw-2">*</span>count -= <span class="number">1</span>;
+                    <span class="prelude-val">None
+                </span>} <span class="kw">else </span>{
+                    <span class="comment">// Return error if input_value not found
+                    </span><span class="prelude-val">Some</span>(<span class="prelude-val">Err</span>(Error::ConstraintSystemFailure))
                 }
-            <span class="comment">// If input value is repeated</span>
-            } <span class="kw">else</span> {
-                <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(<span class="ident">row</span>))
+            <span class="comment">// If input value is repeated
+            </span>} <span class="kw">else </span>{
+                <span class="prelude-val">Some</span>(<span class="prelude-val">Ok</span>(row))
             }
         })
-        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
-    <span class="comment">// Populate permuted table at unfilled rows with leftover table elements</span>
-    <span class="kw">for</span> (<span class="ident">coeff</span>, <span class="ident">count</span>) <span class="kw">in</span> <span class="ident">leftover_table_map</span>.<span class="ident">iter</span>() {
-        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="kw-2">*</span><span class="ident">count</span> {
-            <span class="ident">permuted_table_coeffs</span>[<span class="ident">repeated_input_rows</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>() <span class="kw">as</span> <span class="ident">usize</span>] <span class="op">=</span> <span class="kw-2">*</span><span class="ident">coeff</span>;
+    <span class="comment">// Populate permuted table at unfilled rows with leftover table elements
+    </span><span class="kw">for </span>(coeff, count) <span class="kw">in </span>leftover_table_map.iter() {
+        <span class="kw">for _ in </span><span class="number">0</span>..<span class="kw-2">*</span>count {
+            permuted_table_coeffs[repeated_input_rows.pop().unwrap() <span class="kw">as </span>usize] = <span class="kw-2">*</span>coeff;
         }
     }
-    <span class="macro">assert!</span>(<span class="ident">repeated_input_rows</span>.<span class="ident">is_empty</span>());
+    <span class="macro">assert!</span>(repeated_input_rows.is_empty());
 
-    <span class="ident">permuted_input_expression</span>
-        .<span class="ident">extend</span>((<span class="number">0</span>..(<span class="ident">blinding_factors</span> <span class="op">+</span> <span class="number">1</span>)).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">C::Scalar::random</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>)));
-    <span class="ident">permuted_table_coeffs</span>.<span class="ident">extend</span>((<span class="number">0</span>..(<span class="ident">blinding_factors</span> <span class="op">+</span> <span class="number">1</span>)).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">C::Scalar::random</span>(<span class="kw-2">&amp;mut</span> <span class="ident">rng</span>)));
-    <span class="macro">assert_eq!</span>(<span class="ident">permuted_input_expression</span>.<span class="ident">len</span>(), <span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>);
-    <span class="macro">assert_eq!</span>(<span class="ident">permuted_table_coeffs</span>.<span class="ident">len</span>(), <span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>);
+    permuted_input_expression
+        .extend((<span class="number">0</span>..(blinding_factors + <span class="number">1</span>)).map(|<span class="kw">_</span>| C::Scalar::random(<span class="kw-2">&amp;mut </span>rng)));
+    permuted_table_coeffs.extend((<span class="number">0</span>..(blinding_factors + <span class="number">1</span>)).map(|<span class="kw">_</span>| C::Scalar::random(<span class="kw-2">&amp;mut </span>rng)));
+    <span class="macro">assert_eq!</span>(permuted_input_expression.len(), params.n <span class="kw">as </span>usize);
+    <span class="macro">assert_eq!</span>(permuted_table_coeffs.len(), params.n <span class="kw">as </span>usize);
 
-    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;sanity-checks&quot;</span>)]</span>
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;sanity-checks&quot;</span>)]</span>
     {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">last</span> <span class="op">=</span> <span class="prelude-val">None</span>;
-        <span class="kw">for</span> (<span class="ident">a</span>, <span class="ident">b</span>) <span class="kw">in</span> <span class="ident">permuted_input_expression</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">zip</span>(<span class="ident">permuted_table_coeffs</span>.<span class="ident">iter</span>())
-            .<span class="ident">take</span>(<span class="ident">usable_rows</span>)
+        <span class="kw">let </span><span class="kw-2">mut </span>last = <span class="prelude-val">None</span>;
+        <span class="kw">for </span>(a, b) <span class="kw">in </span>permuted_input_expression
+            .iter()
+            .zip(permuted_table_coeffs.iter())
+            .take(usable_rows)
         {
-            <span class="kw">if</span> <span class="kw-2">*</span><span class="ident">a</span> <span class="op">!</span><span class="op">=</span> <span class="kw-2">*</span><span class="ident">b</span> {
-                <span class="macro">assert_eq!</span>(<span class="kw-2">*</span><span class="ident">a</span>, <span class="ident">last</span>.<span class="ident">unwrap</span>());
+            <span class="kw">if </span><span class="kw-2">*</span>a != <span class="kw-2">*</span>b {
+                <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>a, last.unwrap());
             }
-            <span class="ident">last</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">a</span>);
+            last = <span class="prelude-val">Some</span>(<span class="kw-2">*</span>a);
         }
     }
 
     <span class="prelude-val">Ok</span>((
-        <span class="ident">domain</span>.<span class="ident">lagrange_from_vec</span>(<span class="ident">permuted_input_expression</span>),
-        <span class="ident">domain</span>.<span class="ident">lagrange_from_vec</span>(<span class="ident">permuted_table_coeffs</span>),
+        domain.lagrange_from_vec(permuted_input_expression),
+        domain.lagrange_from_vec(permuted_table_coeffs),
     ))
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

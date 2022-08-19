@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -467,248 +461,248 @@
 <span id="446">446</span>
 <span id="447">447</span>
 <span id="448">448</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">util</span>::<span class="kw-2">*</span>, <span class="ident">AssignedBits</span>};
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">arithmetic::FieldExt</span>,
-    <span class="ident">circuit</span>::{<span class="ident">Chip</span>, <span class="ident">Layouter</span>, <span class="ident">Region</span>, <span class="ident">Value</span>},
-    <span class="ident">pasta::pallas</span>,
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">TableColumn</span>},
-    <span class="ident">poly::Rotation</span>,
+</pre><pre class="rust"><code><span class="kw">use super</span>::{util::<span class="kw-2">*</span>, AssignedBits};
+<span class="kw">use </span>halo2_proofs::{
+    arithmetic::FieldExt,
+    circuit::{Chip, Layouter, Region, Value},
+    pasta::pallas,
+    plonk::{Advice, Column, ConstraintSystem, Error, TableColumn},
+    poly::Rotation,
 };
-<span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
-<span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
+<span class="kw">use </span>std::convert::TryInto;
+<span class="kw">use </span>std::marker::PhantomData;
 
-<span class="kw">const</span> <span class="ident">BITS_7</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">7</span>;
-<span class="kw">const</span> <span class="ident">BITS_10</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">10</span>;
-<span class="kw">const</span> <span class="ident">BITS_11</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">11</span>;
-<span class="kw">const</span> <span class="ident">BITS_13</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">13</span>;
-<span class="kw">const</span> <span class="ident">BITS_14</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">14</span>;
+<span class="kw">const </span>BITS_7: usize = <span class="number">1 </span>&lt;&lt; <span class="number">7</span>;
+<span class="kw">const </span>BITS_10: usize = <span class="number">1 </span>&lt;&lt; <span class="number">10</span>;
+<span class="kw">const </span>BITS_11: usize = <span class="number">1 </span>&lt;&lt; <span class="number">11</span>;
+<span class="kw">const </span>BITS_13: usize = <span class="number">1 </span>&lt;&lt; <span class="number">13</span>;
+<span class="kw">const </span>BITS_14: usize = <span class="number">1 </span>&lt;&lt; <span class="number">14</span>;
 
-<span class="doccomment">/// An input word into a lookup, containing (tag, dense, spread)</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">SpreadWord</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">DENSE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">SPREAD</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="ident">tag</span>: <span class="ident">u8</span>,
-    <span class="kw">pub</span> <span class="ident">dense</span>: [<span class="ident">bool</span>; <span class="ident">DENSE</span>],
-    <span class="kw">pub</span> <span class="ident">spread</span>: [<span class="ident">bool</span>; <span class="ident">SPREAD</span>],
+<span class="doccomment">/// An input word into a lookup, containing (tag, dense, spread)
+</span><span class="attribute">#[derive(Copy, Clone, Debug)]</span>
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadWord&lt;<span class="kw">const </span>DENSE: usize, <span class="kw">const </span>SPREAD: usize&gt; {
+    <span class="kw">pub </span>tag: u8,
+    <span class="kw">pub </span>dense: [bool; DENSE],
+    <span class="kw">pub </span>spread: [bool; SPREAD],
 }
 
-<span class="doccomment">/// Helper function that returns tag of 16-bit input</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_tag</span>(<span class="ident">input</span>: <span class="ident">u16</span>) -&gt; <span class="ident">u8</span> {
-    <span class="kw">let</span> <span class="ident">input</span> <span class="op">=</span> <span class="ident">input</span> <span class="kw">as</span> <span class="ident">usize</span>;
-    <span class="kw">if</span> <span class="ident">input</span> <span class="op">&lt;</span> <span class="ident">BITS_7</span> {
-        <span class="number">0</span>
-    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">input</span> <span class="op">&lt;</span> <span class="ident">BITS_10</span> {
-        <span class="number">1</span>
-    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">input</span> <span class="op">&lt;</span> <span class="ident">BITS_11</span> {
-        <span class="number">2</span>
-    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">input</span> <span class="op">&lt;</span> <span class="ident">BITS_13</span> {
-        <span class="number">3</span>
-    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">input</span> <span class="op">&lt;</span> <span class="ident">BITS_14</span> {
-        <span class="number">4</span>
-    } <span class="kw">else</span> {
-        <span class="number">5</span>
-    }
+<span class="doccomment">/// Helper function that returns tag of 16-bit input
+</span><span class="kw">pub fn </span>get_tag(input: u16) -&gt; u8 {
+    <span class="kw">let </span>input = input <span class="kw">as </span>usize;
+    <span class="kw">if </span>input &lt; BITS_7 {
+        <span class="number">0
+    </span>} <span class="kw">else if </span>input &lt; BITS_10 {
+        <span class="number">1
+    </span>} <span class="kw">else if </span>input &lt; BITS_11 {
+        <span class="number">2
+    </span>} <span class="kw">else if </span>input &lt; BITS_13 {
+        <span class="number">3
+    </span>} <span class="kw">else if </span>input &lt; BITS_14 {
+        <span class="number">4
+    </span>} <span class="kw">else </span>{
+        <span class="number">5
+    </span>}
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">DENSE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">SPREAD</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">SpreadWord</span><span class="op">&lt;</span><span class="ident">DENSE</span>, <span class="ident">SPREAD</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">dense</span>: [<span class="ident">bool</span>; <span class="ident">DENSE</span>]) -&gt; <span class="self">Self</span> {
-        <span class="macro">assert!</span>(<span class="ident">DENSE</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">16</span>);
-        <span class="ident">SpreadWord</span> {
-            <span class="ident">tag</span>: <span class="ident">get_tag</span>(<span class="ident">lebs2ip</span>(<span class="kw-2">&amp;</span><span class="ident">dense</span>) <span class="kw">as</span> <span class="ident">u16</span>),
-            <span class="ident">dense</span>,
-            <span class="ident">spread</span>: <span class="ident">spread_bits</span>(<span class="ident">dense</span>),
+<span class="kw">impl</span>&lt;<span class="kw">const </span>DENSE: usize, <span class="kw">const </span>SPREAD: usize&gt; SpreadWord&lt;DENSE, SPREAD&gt; {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>new(dense: [bool; DENSE]) -&gt; <span class="self">Self </span>{
+        <span class="macro">assert!</span>(DENSE &lt;= <span class="number">16</span>);
+        SpreadWord {
+            tag: get_tag(lebs2ip(<span class="kw-2">&amp;</span>dense) <span class="kw">as </span>u16),
+            dense,
+            spread: spread_bits(dense),
         }
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">try_new</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">TryInto</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">DENSE</span>]<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">std::fmt::Debug</span><span class="op">&gt;</span>(<span class="ident">dense</span>: <span class="ident">T</span>) -&gt; <span class="self">Self</span>
-    <span class="kw">where</span>
-        <span class="op">&lt;</span><span class="ident">T</span> <span class="kw">as</span> <span class="ident">TryInto</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">DENSE</span>]<span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Error</span>: <span class="ident">std::fmt::Debug</span>,
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>try_new&lt;T: TryInto&lt;[bool; DENSE]&gt; + std::fmt::Debug&gt;(dense: T) -&gt; <span class="self">Self
+    </span><span class="kw">where
+        </span>&lt;T <span class="kw">as </span>TryInto&lt;[bool; DENSE]&gt;&gt;::Error: std::fmt::Debug,
     {
-        <span class="macro">assert!</span>(<span class="ident">DENSE</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">16</span>);
-        <span class="kw">let</span> <span class="ident">dense</span>: [<span class="ident">bool</span>; <span class="ident">DENSE</span>] <span class="op">=</span> <span class="ident">dense</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>();
-        <span class="ident">SpreadWord</span> {
-            <span class="ident">tag</span>: <span class="ident">get_tag</span>(<span class="ident">lebs2ip</span>(<span class="kw-2">&amp;</span><span class="ident">dense</span>) <span class="kw">as</span> <span class="ident">u16</span>),
-            <span class="ident">dense</span>,
-            <span class="ident">spread</span>: <span class="ident">spread_bits</span>(<span class="ident">dense</span>),
+        <span class="macro">assert!</span>(DENSE &lt;= <span class="number">16</span>);
+        <span class="kw">let </span>dense: [bool; DENSE] = dense.try_into().unwrap();
+        SpreadWord {
+            tag: get_tag(lebs2ip(<span class="kw-2">&amp;</span>dense) <span class="kw">as </span>u16),
+            dense,
+            spread: spread_bits(dense),
         }
     }
 }
 
-<span class="doccomment">/// A variable stored in advice columns corresponding to a row of [`SpreadTableConfig`].</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">SpreadVar</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">DENSE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">SPREAD</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="ident">tag</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">dense</span>: <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="ident">DENSE</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">spread</span>: <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="ident">SPREAD</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A variable stored in advice columns corresponding to a row of [`SpreadTableConfig`].
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadVar&lt;<span class="kw">const </span>DENSE: usize, <span class="kw">const </span>SPREAD: usize&gt; {
+    <span class="kw">pub </span>tag: Value&lt;u8&gt;,
+    <span class="kw">pub </span>dense: AssignedBits&lt;DENSE&gt;,
+    <span class="kw">pub </span>spread: AssignedBits&lt;SPREAD&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="kw">const</span> <span class="ident">DENSE</span>: <span class="ident">usize</span>, <span class="kw">const</span> <span class="ident">SPREAD</span>: <span class="ident">usize</span><span class="op">&gt;</span> <span class="ident">SpreadVar</span><span class="op">&lt;</span><span class="ident">DENSE</span>, <span class="ident">SPREAD</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">with_lookup</span>(
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">cols</span>: <span class="kw-2">&amp;</span><span class="ident">SpreadInputs</span>,
-        <span class="ident">row</span>: <span class="ident">usize</span>,
-        <span class="ident">word</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">SpreadWord</span><span class="op">&lt;</span><span class="ident">DENSE</span>, <span class="ident">SPREAD</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">tag</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident">word</span>.<span class="ident">tag</span>);
-        <span class="kw">let</span> <span class="ident">dense_val</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident">word</span>.<span class="ident">dense</span>);
-        <span class="kw">let</span> <span class="ident">spread_val</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident">word</span>.<span class="ident">spread</span>);
+<span class="kw">impl</span>&lt;<span class="kw">const </span>DENSE: usize, <span class="kw">const </span>SPREAD: usize&gt; SpreadVar&lt;DENSE, SPREAD&gt; {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>with_lookup(
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        cols: <span class="kw-2">&amp;</span>SpreadInputs,
+        row: usize,
+        word: Value&lt;SpreadWord&lt;DENSE, SPREAD&gt;&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>tag = word.map(|word| word.tag);
+        <span class="kw">let </span>dense_val = word.map(|word| word.dense);
+        <span class="kw">let </span>spread_val = word.map(|word| word.spread);
 
-        <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;tag&quot;</span>,
-            <span class="ident">cols</span>.<span class="ident">tag</span>,
-            <span class="ident">row</span>,
-            <span class="op">|</span><span class="op">|</span> <span class="ident">tag</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">tag</span><span class="op">|</span> <span class="ident">pallas::Base::from</span>(<span class="ident">tag</span> <span class="kw">as</span> <span class="ident">u64</span>)),
+        region.assign_advice(
+            || <span class="string">&quot;tag&quot;</span>,
+            cols.tag,
+            row,
+            || tag.map(|tag| pallas::Base::from(tag <span class="kw">as </span>u64)),
         )<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">dense</span> <span class="op">=</span>
-            <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="ident">DENSE</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;dense&quot;</span>, <span class="ident">cols</span>.<span class="ident">dense</span>, <span class="ident">row</span>, <span class="ident">dense_val</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>dense =
+            AssignedBits::&lt;DENSE&gt;::assign_bits(region, || <span class="string">&quot;dense&quot;</span>, cols.dense, row, dense_val)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">spread</span> <span class="op">=</span>
-            <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="ident">SPREAD</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(<span class="ident">region</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread&quot;</span>, <span class="ident">cols</span>.<span class="ident">spread</span>, <span class="ident">row</span>, <span class="ident">spread_val</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>spread =
+            AssignedBits::&lt;SPREAD&gt;::assign_bits(region, || <span class="string">&quot;spread&quot;</span>, cols.spread, row, spread_val)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">SpreadVar</span> { <span class="ident">tag</span>, <span class="ident">dense</span>, <span class="ident">spread</span> })
+        <span class="prelude-val">Ok</span>(SpreadVar { tag, dense, spread })
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">without_lookup</span>(
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">dense_col</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">dense_row</span>: <span class="ident">usize</span>,
-        <span class="ident">spread_col</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">spread_row</span>: <span class="ident">usize</span>,
-        <span class="ident">word</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">SpreadWord</span><span class="op">&lt;</span><span class="ident">DENSE</span>, <span class="ident">SPREAD</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">tag</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident">word</span>.<span class="ident">tag</span>);
-        <span class="kw">let</span> <span class="ident">dense_val</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident">word</span>.<span class="ident">dense</span>);
-        <span class="kw">let</span> <span class="ident">spread_val</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident">word</span>.<span class="ident">spread</span>);
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>without_lookup(
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+        dense_col: Column&lt;Advice&gt;,
+        dense_row: usize,
+        spread_col: Column&lt;Advice&gt;,
+        spread_row: usize,
+        word: Value&lt;SpreadWord&lt;DENSE, SPREAD&gt;&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span>tag = word.map(|word| word.tag);
+        <span class="kw">let </span>dense_val = word.map(|word| word.dense);
+        <span class="kw">let </span>spread_val = word.map(|word| word.spread);
 
-        <span class="kw">let</span> <span class="ident">dense</span> <span class="op">=</span> <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="ident">DENSE</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(
-            <span class="ident">region</span>,
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;dense&quot;</span>,
-            <span class="ident">dense_col</span>,
-            <span class="ident">dense_row</span>,
-            <span class="ident">dense_val</span>,
+        <span class="kw">let </span>dense = AssignedBits::&lt;DENSE&gt;::assign_bits(
+            region,
+            || <span class="string">&quot;dense&quot;</span>,
+            dense_col,
+            dense_row,
+            dense_val,
         )<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">spread</span> <span class="op">=</span> <span class="ident">AssignedBits</span>::<span class="op">&lt;</span><span class="ident">SPREAD</span><span class="op">&gt;</span><span class="ident">::assign_bits</span>(
-            <span class="ident">region</span>,
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread&quot;</span>,
-            <span class="ident">spread_col</span>,
-            <span class="ident">spread_row</span>,
-            <span class="ident">spread_val</span>,
+        <span class="kw">let </span>spread = AssignedBits::&lt;SPREAD&gt;::assign_bits(
+            region,
+            || <span class="string">&quot;spread&quot;</span>,
+            spread_col,
+            spread_row,
+            spread_val,
         )<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(<span class="ident">SpreadVar</span> { <span class="ident">tag</span>, <span class="ident">dense</span>, <span class="ident">spread</span> })
+        <span class="prelude-val">Ok</span>(SpreadVar { tag, dense, spread })
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">SpreadInputs</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">tag</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">dense</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">spread</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadInputs {
+    <span class="kw">pub</span>(<span class="kw">super</span>) tag: Column&lt;Advice&gt;,
+    <span class="kw">pub</span>(<span class="kw">super</span>) dense: Column&lt;Advice&gt;,
+    <span class="kw">pub</span>(<span class="kw">super</span>) spread: Column&lt;Advice&gt;,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">SpreadTable</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">tag</span>: <span class="ident">TableColumn</span>,
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">dense</span>: <span class="ident">TableColumn</span>,
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">spread</span>: <span class="ident">TableColumn</span>,
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadTable {
+    <span class="kw">pub</span>(<span class="kw">super</span>) tag: TableColumn,
+    <span class="kw">pub</span>(<span class="kw">super</span>) dense: TableColumn,
+    <span class="kw">pub</span>(<span class="kw">super</span>) spread: TableColumn,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">SpreadTableConfig</span> {
-    <span class="kw">pub</span> <span class="ident">input</span>: <span class="ident">SpreadInputs</span>,
-    <span class="kw">pub</span> <span class="ident">table</span>: <span class="ident">SpreadTable</span>,
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadTableConfig {
+    <span class="kw">pub </span>input: SpreadInputs,
+    <span class="kw">pub </span>table: SpreadTable,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">SpreadTableChip</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> {
-    <span class="ident">config</span>: <span class="ident">SpreadTableConfig</span>,
-    <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadTableChip&lt;F: FieldExt&gt; {
+    config: SpreadTableConfig,
+    _marker: PhantomData&lt;F&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">SpreadTableChip</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">SpreadTableConfig</span>;
-    <span class="kw">type</span> <span class="ident">Loaded</span> <span class="op">=</span> ();
+<span class="kw">impl</span>&lt;F: FieldExt&gt; Chip&lt;F&gt; <span class="kw">for </span>SpreadTableChip&lt;F&gt; {
+    <span class="kw">type </span>Config = SpreadTableConfig;
+    <span class="kw">type </span>Loaded = ();
 
-    <span class="kw">fn</span> <span class="ident">config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Config</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span>
+    <span class="kw">fn </span>config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Config {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.config
     }
 
-    <span class="kw">fn</span> <span class="ident">loaded</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Loaded</span> {
+    <span class="kw">fn </span>loaded(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Loaded {
         <span class="kw-2">&amp;</span>()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">SpreadTableChip</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure</span>(
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">input_tag</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">input_dense</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">input_spread</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Config</span> {
-        <span class="kw">let</span> <span class="ident">table_tag</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">lookup_table_column</span>();
-        <span class="kw">let</span> <span class="ident">table_dense</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">lookup_table_column</span>();
-        <span class="kw">let</span> <span class="ident">table_spread</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">lookup_table_column</span>();
+<span class="kw">impl</span>&lt;F: FieldExt&gt; SpreadTableChip&lt;F&gt; {
+    <span class="kw">pub fn </span>configure(
+        meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;F&gt;,
+        input_tag: Column&lt;Advice&gt;,
+        input_dense: Column&lt;Advice&gt;,
+        input_spread: Column&lt;Advice&gt;,
+    ) -&gt; &lt;<span class="self">Self </span><span class="kw">as </span>Chip&lt;F&gt;&gt;::Config {
+        <span class="kw">let </span>table_tag = meta.lookup_table_column();
+        <span class="kw">let </span>table_dense = meta.lookup_table_column();
+        <span class="kw">let </span>table_spread = meta.lookup_table_column();
 
-        <span class="ident">meta</span>.<span class="ident">lookup</span>(<span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">tag_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">input_tag</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">dense_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">input_dense</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">input_spread</span>, <span class="ident">Rotation::cur</span>());
+        meta.lookup(|meta| {
+            <span class="kw">let </span>tag_cur = meta.query_advice(input_tag, Rotation::cur());
+            <span class="kw">let </span>dense_cur = meta.query_advice(input_dense, Rotation::cur());
+            <span class="kw">let </span>spread_cur = meta.query_advice(input_spread, Rotation::cur());
 
             <span class="macro">vec!</span>[
-                (<span class="ident">tag_cur</span>, <span class="ident">table_tag</span>),
-                (<span class="ident">dense_cur</span>, <span class="ident">table_dense</span>),
-                (<span class="ident">spread_cur</span>, <span class="ident">table_spread</span>),
+                (tag_cur, table_tag),
+                (dense_cur, table_dense),
+                (spread_cur, table_spread),
             ]
         });
 
-        <span class="ident">SpreadTableConfig</span> {
-            <span class="ident">input</span>: <span class="ident">SpreadInputs</span> {
-                <span class="ident">tag</span>: <span class="ident">input_tag</span>,
-                <span class="ident">dense</span>: <span class="ident">input_dense</span>,
-                <span class="ident">spread</span>: <span class="ident">input_spread</span>,
+        SpreadTableConfig {
+            input: SpreadInputs {
+                tag: input_tag,
+                dense: input_dense,
+                spread: input_spread,
             },
-            <span class="ident">table</span>: <span class="ident">SpreadTable</span> {
-                <span class="ident">tag</span>: <span class="ident">table_tag</span>,
-                <span class="ident">dense</span>: <span class="ident">table_dense</span>,
-                <span class="ident">spread</span>: <span class="ident">table_spread</span>,
+            table: SpreadTable {
+                tag: table_tag,
+                dense: table_dense,
+                spread: table_spread,
             },
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load</span>(
-        <span class="ident">config</span>: <span class="ident">SpreadTableConfig</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Loaded</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident">layouter</span>.<span class="ident">assign_table</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread table&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">table</span><span class="op">|</span> {
-                <span class="comment">// We generate the row values lazily (we only need them during keygen).</span>
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rows</span> <span class="op">=</span> <span class="ident">SpreadTableConfig::generate</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>();
+    <span class="kw">pub fn </span>load(
+        config: SpreadTableConfig,
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;F&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;&lt;<span class="self">Self </span><span class="kw">as </span>Chip&lt;F&gt;&gt;::Loaded, Error&gt; {
+        layouter.assign_table(
+            || <span class="string">&quot;spread table&quot;</span>,
+            |<span class="kw-2">mut </span>table| {
+                <span class="comment">// We generate the row values lazily (we only need them during keygen).
+                </span><span class="kw">let </span><span class="kw-2">mut </span>rows = SpreadTableConfig::generate::&lt;F&gt;();
 
-                <span class="kw">for</span> <span class="ident">index</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">16</span>) {
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">row</span> <span class="op">=</span> <span class="prelude-val">None</span>;
-                    <span class="ident">table</span>.<span class="ident">assign_cell</span>(
-                        <span class="op">|</span><span class="op">|</span> <span class="string">&quot;tag&quot;</span>,
-                        <span class="ident">config</span>.<span class="ident">table</span>.<span class="ident">tag</span>,
-                        <span class="ident">index</span>,
-                        <span class="op">|</span><span class="op">|</span> {
-                            <span class="ident">row</span> <span class="op">=</span> <span class="ident">rows</span>.<span class="ident">next</span>();
-                            <span class="ident">Value::known</span>(<span class="ident">row</span>.<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">tag</span>, <span class="kw">_</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">tag</span>).<span class="ident">unwrap</span>())
+                <span class="kw">for </span>index <span class="kw">in </span><span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; <span class="number">16</span>) {
+                    <span class="kw">let </span><span class="kw-2">mut </span>row = <span class="prelude-val">None</span>;
+                    table.assign_cell(
+                        || <span class="string">&quot;tag&quot;</span>,
+                        config.table.tag,
+                        index,
+                        || {
+                            row = rows.next();
+                            Value::known(row.map(|(tag, <span class="kw">_</span>, <span class="kw">_</span>)| tag).unwrap())
                         },
                     )<span class="question-mark">?</span>;
-                    <span class="ident">table</span>.<span class="ident">assign_cell</span>(
-                        <span class="op">|</span><span class="op">|</span> <span class="string">&quot;dense&quot;</span>,
-                        <span class="ident">config</span>.<span class="ident">table</span>.<span class="ident">dense</span>,
-                        <span class="ident">index</span>,
-                        <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">row</span>.<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">dense</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">dense</span>).<span class="ident">unwrap</span>()),
+                    table.assign_cell(
+                        || <span class="string">&quot;dense&quot;</span>,
+                        config.table.dense,
+                        index,
+                        || Value::known(row.map(|(<span class="kw">_</span>, dense, <span class="kw">_</span>)| dense).unwrap()),
                     )<span class="question-mark">?</span>;
-                    <span class="ident">table</span>.<span class="ident">assign_cell</span>(
-                        <span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread&quot;</span>,
-                        <span class="ident">config</span>.<span class="ident">table</span>.<span class="ident">spread</span>,
-                        <span class="ident">index</span>,
-                        <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">row</span>.<span class="ident">map</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">spread</span>)<span class="op">|</span> <span class="ident">spread</span>).<span class="ident">unwrap</span>()),
+                    table.assign_cell(
+                        || <span class="string">&quot;spread&quot;</span>,
+                        config.table.spread,
+                        index,
+                        || Value::known(row.map(|(<span class="kw">_</span>, <span class="kw">_</span>, spread)| spread).unwrap()),
                     )<span class="question-mark">?</span>;
                 }
 
@@ -718,185 +712,185 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">SpreadTableConfig</span> {
-    <span class="kw">fn</span> <span class="ident">generate</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>() -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="ident">F</span>, <span class="ident">F</span>, <span class="ident">F</span>)<span class="op">&gt;</span> {
-        (<span class="number">1</span>..<span class="op">=</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">16</span>)).<span class="ident">scan</span>(
-            (<span class="ident">F::zero</span>(), <span class="ident">F::zero</span>(), <span class="ident">F::zero</span>()),
-            <span class="op">|</span>(<span class="ident">tag</span>, <span class="ident">dense</span>, <span class="ident">spread</span>), <span class="ident">i</span><span class="op">|</span> {
-                <span class="comment">// We computed this table row in the previous iteration.</span>
-                <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> (<span class="kw-2">*</span><span class="ident">tag</span>, <span class="kw-2">*</span><span class="ident">dense</span>, <span class="kw-2">*</span><span class="ident">spread</span>);
+<span class="kw">impl </span>SpreadTableConfig {
+    <span class="kw">fn </span>generate&lt;F: FieldExt&gt;() -&gt; <span class="kw">impl </span>Iterator&lt;Item = (F, F, F)&gt; {
+        (<span class="number">1</span>..=(<span class="number">1 </span>&lt;&lt; <span class="number">16</span>)).scan(
+            (F::zero(), F::zero(), F::zero()),
+            |(tag, dense, spread), i| {
+                <span class="comment">// We computed this table row in the previous iteration.
+                </span><span class="kw">let </span>res = (<span class="kw-2">*</span>tag, <span class="kw-2">*</span>dense, <span class="kw-2">*</span>spread);
 
-                <span class="comment">// i holds the zero-indexed row number for the next table row.</span>
-                <span class="kw">match</span> <span class="ident">i</span> {
-                    <span class="ident">BITS_7</span> <span class="op">|</span> <span class="ident">BITS_10</span> <span class="op">|</span> <span class="ident">BITS_11</span> <span class="op">|</span> <span class="ident">BITS_13</span> <span class="op">|</span> <span class="ident">BITS_14</span> =&gt; <span class="kw-2">*</span><span class="ident">tag</span> <span class="op">+</span><span class="op">=</span> <span class="ident">F::one</span>(),
-                    <span class="kw">_</span> =&gt; (),
+                <span class="comment">// i holds the zero-indexed row number for the next table row.
+                </span><span class="kw">match </span>i {
+                    BITS_7 | BITS_10 | BITS_11 | BITS_13 | BITS_14 =&gt; <span class="kw-2">*</span>tag += F::one(),
+                    <span class="kw">_ </span>=&gt; (),
                 }
-                <span class="kw-2">*</span><span class="ident">dense</span> <span class="op">+</span><span class="op">=</span> <span class="ident">F::one</span>();
-                <span class="kw">if</span> <span class="ident">i</span> <span class="op">&amp;</span> <span class="number">1</span> <span class="op">==</span> <span class="number">0</span> {
-                    <span class="comment">// On even-numbered rows we recompute the spread.</span>
-                    <span class="kw-2">*</span><span class="ident">spread</span> <span class="op">=</span> <span class="ident">F::zero</span>();
-                    <span class="kw">for</span> <span class="ident">b</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">16</span> {
-                        <span class="kw">if</span> (<span class="ident">i</span> <span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">b</span>) <span class="op">&amp;</span> <span class="number">1</span> <span class="op">!</span><span class="op">=</span> <span class="number">0</span> {
-                            <span class="kw-2">*</span><span class="ident">spread</span> <span class="op">+</span><span class="op">=</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> (<span class="number">2</span> <span class="op">*</span> <span class="ident">b</span>));
+                <span class="kw-2">*</span>dense += F::one();
+                <span class="kw">if </span>i &amp; <span class="number">1 </span>== <span class="number">0 </span>{
+                    <span class="comment">// On even-numbered rows we recompute the spread.
+                    </span><span class="kw-2">*</span>spread = F::zero();
+                    <span class="kw">for </span>b <span class="kw">in </span><span class="number">0</span>..<span class="number">16 </span>{
+                        <span class="kw">if </span>(i &gt;&gt; b) &amp; <span class="number">1 </span>!= <span class="number">0 </span>{
+                            <span class="kw-2">*</span>spread += F::from(<span class="number">1 </span>&lt;&lt; (<span class="number">2 </span>* b));
                         }
                     }
-                } <span class="kw">else</span> {
-                    <span class="comment">// On odd-numbered rows we add one.</span>
-                    <span class="kw-2">*</span><span class="ident">spread</span> <span class="op">+</span><span class="op">=</span> <span class="ident">F::one</span>();
+                } <span class="kw">else </span>{
+                    <span class="comment">// On odd-numbered rows we add one.
+                    </span><span class="kw-2">*</span>spread += F::one();
                 }
 
-                <span class="prelude-val">Some</span>(<span class="ident">res</span>)
+                <span class="prelude-val">Some</span>(res)
             },
         )
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">get_tag</span>, <span class="ident">SpreadTableChip</span>, <span class="ident">SpreadTableConfig</span>};
-    <span class="kw">use</span> <span class="ident">rand::Rng</span>;
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::{get_tag, SpreadTableChip, SpreadTableConfig};
+    <span class="kw">use </span>rand::Rng;
 
-    <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-        <span class="ident">arithmetic::FieldExt</span>,
-        <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">SimpleFloorPlanner</span>, <span class="ident">Value</span>},
-        <span class="ident">dev::MockProver</span>,
-        <span class="ident">pasta::Fp</span>,
-        <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Circuit</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>},
+    <span class="kw">use </span>halo2_proofs::{
+        arithmetic::FieldExt,
+        circuit::{Layouter, SimpleFloorPlanner, Value},
+        dev::MockProver,
+        pasta::Fp,
+        plonk::{Advice, Circuit, Column, ConstraintSystem, Error},
     };
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">lookup_table</span>() {
-        <span class="doccomment">/// This represents an advice column at a certain row in the ConstraintSystem</span>
-        <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-        <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Variable</span>(<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>, <span class="ident">usize</span>);
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>lookup_table() {
+        <span class="doccomment">/// This represents an advice column at a certain row in the ConstraintSystem
+        </span><span class="attribute">#[derive(Copy, Clone, Debug)]</span>
+        <span class="kw">pub struct </span>Variable(Column&lt;Advice&gt;, usize);
 
-        <span class="kw">struct</span> <span class="ident">MyCircuit</span> {}
+        <span class="kw">struct </span>MyCircuit {}
 
-        <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyCircuit</span> {
-            <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">SpreadTableConfig</span>;
-            <span class="kw">type</span> <span class="ident">FloorPlanner</span> <span class="op">=</span> <span class="ident">SimpleFloorPlanner</span>;
+        <span class="kw">impl</span>&lt;F: FieldExt&gt; Circuit&lt;F&gt; <span class="kw">for </span>MyCircuit {
+            <span class="kw">type </span>Config = SpreadTableConfig;
+            <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
 
-            <span class="kw">fn</span> <span class="ident">without_witnesses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-                <span class="ident">MyCircuit</span> {}
+            <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+                MyCircuit {}
             }
 
-            <span class="kw">fn</span> <span class="ident">configure</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Config</span> {
-                <span class="kw">let</span> <span class="ident">input_tag</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>();
-                <span class="kw">let</span> <span class="ident">input_dense</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>();
-                <span class="kw">let</span> <span class="ident">input_spread</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>();
+            <span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;F&gt;) -&gt; <span class="self">Self</span>::Config {
+                <span class="kw">let </span>input_tag = meta.advice_column();
+                <span class="kw">let </span>input_dense = meta.advice_column();
+                <span class="kw">let </span>input_spread = meta.advice_column();
 
-                <span class="ident">SpreadTableChip::configure</span>(<span class="ident">meta</span>, <span class="ident">input_tag</span>, <span class="ident">input_dense</span>, <span class="ident">input_spread</span>)
+                SpreadTableChip::configure(meta, input_tag, input_dense, input_spread)
             }
 
-            <span class="kw">fn</span> <span class="ident">synthesize</span>(
+            <span class="kw">fn </span>synthesize(
                 <span class="kw-2">&amp;</span><span class="self">self</span>,
-                <span class="ident">config</span>: <span class="ident"><span class="self">Self</span>::Config</span>,
-                <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-            ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-                <span class="ident">SpreadTableChip::load</span>(<span class="ident">config</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>)<span class="question-mark">?</span>;
+                config: <span class="self">Self</span>::Config,
+                <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;F&gt;,
+            ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+                SpreadTableChip::load(config.clone(), <span class="kw-2">&amp;mut </span>layouter)<span class="question-mark">?</span>;
 
-                <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread_test&quot;</span>,
-                    <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">gate</span><span class="op">|</span> {
-                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">row</span> <span class="op">=</span> <span class="number">0</span>;
-                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">add_row</span> <span class="op">=</span> <span class="op">|</span><span class="ident">tag</span>, <span class="ident">dense</span>, <span class="ident">spread</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-                            <span class="ident">gate</span>.<span class="ident">assign_advice</span>(
-                                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;tag&quot;</span>,
-                                <span class="ident">config</span>.<span class="ident">input</span>.<span class="ident">tag</span>,
-                                <span class="ident">row</span>,
-                                <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">tag</span>),
+                layouter.assign_region(
+                    || <span class="string">&quot;spread_test&quot;</span>,
+                    |<span class="kw-2">mut </span>gate| {
+                        <span class="kw">let </span><span class="kw-2">mut </span>row = <span class="number">0</span>;
+                        <span class="kw">let </span><span class="kw-2">mut </span>add_row = |tag, dense, spread| -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+                            gate.assign_advice(
+                                || <span class="string">&quot;tag&quot;</span>,
+                                config.input.tag,
+                                row,
+                                || Value::known(tag),
                             )<span class="question-mark">?</span>;
-                            <span class="ident">gate</span>.<span class="ident">assign_advice</span>(
-                                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;dense&quot;</span>,
-                                <span class="ident">config</span>.<span class="ident">input</span>.<span class="ident">dense</span>,
-                                <span class="ident">row</span>,
-                                <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">dense</span>),
+                            gate.assign_advice(
+                                || <span class="string">&quot;dense&quot;</span>,
+                                config.input.dense,
+                                row,
+                                || Value::known(dense),
                             )<span class="question-mark">?</span>;
-                            <span class="ident">gate</span>.<span class="ident">assign_advice</span>(
-                                <span class="op">|</span><span class="op">|</span> <span class="string">&quot;spread&quot;</span>,
-                                <span class="ident">config</span>.<span class="ident">input</span>.<span class="ident">spread</span>,
-                                <span class="ident">row</span>,
-                                <span class="op">|</span><span class="op">|</span> <span class="ident">Value::known</span>(<span class="ident">spread</span>),
+                            gate.assign_advice(
+                                || <span class="string">&quot;spread&quot;</span>,
+                                config.input.spread,
+                                row,
+                                || Value::known(spread),
                             )<span class="question-mark">?</span>;
-                            <span class="ident">row</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
+                            row += <span class="number">1</span>;
                             <span class="prelude-val">Ok</span>(())
                         };
 
-                        <span class="comment">// Test the first few small values.</span>
-                        <span class="ident">add_row</span>(<span class="ident">F::zero</span>(), <span class="ident">F::from</span>(<span class="number">0b000</span>), <span class="ident">F::from</span>(<span class="number">0b000000</span>))<span class="question-mark">?</span>;
-                        <span class="ident">add_row</span>(<span class="ident">F::zero</span>(), <span class="ident">F::from</span>(<span class="number">0b001</span>), <span class="ident">F::from</span>(<span class="number">0b000001</span>))<span class="question-mark">?</span>;
-                        <span class="ident">add_row</span>(<span class="ident">F::zero</span>(), <span class="ident">F::from</span>(<span class="number">0b010</span>), <span class="ident">F::from</span>(<span class="number">0b000100</span>))<span class="question-mark">?</span>;
-                        <span class="ident">add_row</span>(<span class="ident">F::zero</span>(), <span class="ident">F::from</span>(<span class="number">0b011</span>), <span class="ident">F::from</span>(<span class="number">0b000101</span>))<span class="question-mark">?</span>;
-                        <span class="ident">add_row</span>(<span class="ident">F::zero</span>(), <span class="ident">F::from</span>(<span class="number">0b100</span>), <span class="ident">F::from</span>(<span class="number">0b010000</span>))<span class="question-mark">?</span>;
-                        <span class="ident">add_row</span>(<span class="ident">F::zero</span>(), <span class="ident">F::from</span>(<span class="number">0b101</span>), <span class="ident">F::from</span>(<span class="number">0b010001</span>))<span class="question-mark">?</span>;
+                        <span class="comment">// Test the first few small values.
+                        </span>add_row(F::zero(), F::from(<span class="number">0b000</span>), F::from(<span class="number">0b000000</span>))<span class="question-mark">?</span>;
+                        add_row(F::zero(), F::from(<span class="number">0b001</span>), F::from(<span class="number">0b000001</span>))<span class="question-mark">?</span>;
+                        add_row(F::zero(), F::from(<span class="number">0b010</span>), F::from(<span class="number">0b000100</span>))<span class="question-mark">?</span>;
+                        add_row(F::zero(), F::from(<span class="number">0b011</span>), F::from(<span class="number">0b000101</span>))<span class="question-mark">?</span>;
+                        add_row(F::zero(), F::from(<span class="number">0b100</span>), F::from(<span class="number">0b010000</span>))<span class="question-mark">?</span>;
+                        add_row(F::zero(), F::from(<span class="number">0b101</span>), F::from(<span class="number">0b010001</span>))<span class="question-mark">?</span>;
 
-                        <span class="comment">// Test the tag boundaries:</span>
-                        <span class="comment">// 7-bit</span>
-                        <span class="ident">add_row</span>(<span class="ident">F::zero</span>(), <span class="ident">F::from</span>(<span class="number">0b1111111</span>), <span class="ident">F::from</span>(<span class="number">0b01010101010101</span>))<span class="question-mark">?</span>;
-                        <span class="ident">add_row</span>(<span class="ident">F::one</span>(), <span class="ident">F::from</span>(<span class="number">0b10000000</span>), <span class="ident">F::from</span>(<span class="number">0b0100000000000000</span>))<span class="question-mark">?</span>;
-                        <span class="comment">// - 10-bit</span>
-                        <span class="ident">add_row</span>(
-                            <span class="ident">F::one</span>(),
-                            <span class="ident">F::from</span>(<span class="number">0b1111111111</span>),
-                            <span class="ident">F::from</span>(<span class="number">0b01010101010101010101</span>),
+                        <span class="comment">// Test the tag boundaries:
+                        // 7-bit
+                        </span>add_row(F::zero(), F::from(<span class="number">0b1111111</span>), F::from(<span class="number">0b01010101010101</span>))<span class="question-mark">?</span>;
+                        add_row(F::one(), F::from(<span class="number">0b10000000</span>), F::from(<span class="number">0b0100000000000000</span>))<span class="question-mark">?</span>;
+                        <span class="comment">// - 10-bit
+                        </span>add_row(
+                            F::one(),
+                            F::from(<span class="number">0b1111111111</span>),
+                            F::from(<span class="number">0b01010101010101010101</span>),
                         )<span class="question-mark">?</span>;
-                        <span class="ident">add_row</span>(
-                            <span class="ident">F::from</span>(<span class="number">2</span>),
-                            <span class="ident">F::from</span>(<span class="number">0b10000000000</span>),
-                            <span class="ident">F::from</span>(<span class="number">0b0100000000000000000000</span>),
+                        add_row(
+                            F::from(<span class="number">2</span>),
+                            F::from(<span class="number">0b10000000000</span>),
+                            F::from(<span class="number">0b0100000000000000000000</span>),
                         )<span class="question-mark">?</span>;
-                        <span class="comment">// - 11-bit</span>
-                        <span class="ident">add_row</span>(
-                            <span class="ident">F::from</span>(<span class="number">2</span>),
-                            <span class="ident">F::from</span>(<span class="number">0b11111111111</span>),
-                            <span class="ident">F::from</span>(<span class="number">0b0101010101010101010101</span>),
+                        <span class="comment">// - 11-bit
+                        </span>add_row(
+                            F::from(<span class="number">2</span>),
+                            F::from(<span class="number">0b11111111111</span>),
+                            F::from(<span class="number">0b0101010101010101010101</span>),
                         )<span class="question-mark">?</span>;
-                        <span class="ident">add_row</span>(
-                            <span class="ident">F::from</span>(<span class="number">3</span>),
-                            <span class="ident">F::from</span>(<span class="number">0b100000000000</span>),
-                            <span class="ident">F::from</span>(<span class="number">0b010000000000000000000000</span>),
+                        add_row(
+                            F::from(<span class="number">3</span>),
+                            F::from(<span class="number">0b100000000000</span>),
+                            F::from(<span class="number">0b010000000000000000000000</span>),
                         )<span class="question-mark">?</span>;
-                        <span class="comment">// - 13-bit</span>
-                        <span class="ident">add_row</span>(
-                            <span class="ident">F::from</span>(<span class="number">3</span>),
-                            <span class="ident">F::from</span>(<span class="number">0b1111111111111</span>),
-                            <span class="ident">F::from</span>(<span class="number">0b01010101010101010101010101</span>),
+                        <span class="comment">// - 13-bit
+                        </span>add_row(
+                            F::from(<span class="number">3</span>),
+                            F::from(<span class="number">0b1111111111111</span>),
+                            F::from(<span class="number">0b01010101010101010101010101</span>),
                         )<span class="question-mark">?</span>;
-                        <span class="ident">add_row</span>(
-                            <span class="ident">F::from</span>(<span class="number">4</span>),
-                            <span class="ident">F::from</span>(<span class="number">0b10000000000000</span>),
-                            <span class="ident">F::from</span>(<span class="number">0b0100000000000000000000000000</span>),
+                        add_row(
+                            F::from(<span class="number">4</span>),
+                            F::from(<span class="number">0b10000000000000</span>),
+                            F::from(<span class="number">0b0100000000000000000000000000</span>),
                         )<span class="question-mark">?</span>;
-                        <span class="comment">// - 14-bit</span>
-                        <span class="ident">add_row</span>(
-                            <span class="ident">F::from</span>(<span class="number">4</span>),
-                            <span class="ident">F::from</span>(<span class="number">0b11111111111111</span>),
-                            <span class="ident">F::from</span>(<span class="number">0b0101010101010101010101010101</span>),
+                        <span class="comment">// - 14-bit
+                        </span>add_row(
+                            F::from(<span class="number">4</span>),
+                            F::from(<span class="number">0b11111111111111</span>),
+                            F::from(<span class="number">0b0101010101010101010101010101</span>),
                         )<span class="question-mark">?</span>;
-                        <span class="ident">add_row</span>(
-                            <span class="ident">F::from</span>(<span class="number">5</span>),
-                            <span class="ident">F::from</span>(<span class="number">0b100000000000000</span>),
-                            <span class="ident">F::from</span>(<span class="number">0b010000000000000000000000000000</span>),
+                        add_row(
+                            F::from(<span class="number">5</span>),
+                            F::from(<span class="number">0b100000000000000</span>),
+                            F::from(<span class="number">0b010000000000000000000000000000</span>),
                         )<span class="question-mark">?</span>;
 
-                        <span class="comment">// Test random lookup values</span>
-                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">rand::thread_rng</span>();
+                        <span class="comment">// Test random lookup values
+                        </span><span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
 
-                        <span class="kw">fn</span> <span class="ident">interleave_u16_with_zeros</span>(<span class="ident">word</span>: <span class="ident">u16</span>) -&gt; <span class="ident">u32</span> {
-                            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">word</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">into</span>();
-                            <span class="ident">word</span> <span class="op">=</span> (<span class="ident">word</span> <span class="op">^</span> (<span class="ident">word</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">8</span>)) <span class="op">&amp;</span> <span class="number">0x00ff00ff</span>;
-                            <span class="ident">word</span> <span class="op">=</span> (<span class="ident">word</span> <span class="op">^</span> (<span class="ident">word</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">4</span>)) <span class="op">&amp;</span> <span class="number">0x0f0f0f0f</span>;
-                            <span class="ident">word</span> <span class="op">=</span> (<span class="ident">word</span> <span class="op">^</span> (<span class="ident">word</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">2</span>)) <span class="op">&amp;</span> <span class="number">0x33333333</span>;
-                            <span class="ident">word</span> <span class="op">=</span> (<span class="ident">word</span> <span class="op">^</span> (<span class="ident">word</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">1</span>)) <span class="op">&amp;</span> <span class="number">0x55555555</span>;
-                            <span class="ident">word</span>
+                        <span class="kw">fn </span>interleave_u16_with_zeros(word: u16) -&gt; u32 {
+                            <span class="kw">let </span><span class="kw-2">mut </span>word: u32 = word.into();
+                            word = (word ^ (word &lt;&lt; <span class="number">8</span>)) &amp; <span class="number">0x00ff00ff</span>;
+                            word = (word ^ (word &lt;&lt; <span class="number">4</span>)) &amp; <span class="number">0x0f0f0f0f</span>;
+                            word = (word ^ (word &lt;&lt; <span class="number">2</span>)) &amp; <span class="number">0x33333333</span>;
+                            word = (word ^ (word &lt;&lt; <span class="number">1</span>)) &amp; <span class="number">0x55555555</span>;
+                            word
                         }
 
-                        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">10</span> {
-                            <span class="kw">let</span> <span class="ident">word</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="ident">rng</span>.<span class="ident">gen</span>();
-                            <span class="ident">add_row</span>(
-                                <span class="ident">F::from</span>(<span class="ident">u64::from</span>(<span class="ident">get_tag</span>(<span class="ident">word</span>))),
-                                <span class="ident">F::from</span>(<span class="ident">u64::from</span>(<span class="ident">word</span>)),
-                                <span class="ident">F::from</span>(<span class="ident">u64::from</span>(<span class="ident">interleave_u16_with_zeros</span>(<span class="ident">word</span>))),
+                        <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">10 </span>{
+                            <span class="kw">let </span>word: u16 = rng.gen();
+                            add_row(
+                                F::from(u64::from(get_tag(word))),
+                                F::from(u64::from(word)),
+                                F::from(u64::from(interleave_u16_with_zeros(word))),
                             )<span class="question-mark">?</span>;
                         }
 
@@ -906,15 +900,14 @@
             }
         }
 
-        <span class="kw">let</span> <span class="ident">circuit</span>: <span class="ident">MyCircuit</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {};
+        <span class="kw">let </span>circuit: MyCircuit = MyCircuit {};
 
-        <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">MockProver</span>::<span class="op">&lt;</span><span class="ident">Fp</span><span class="op">&gt;</span><span class="ident">::run</span>(<span class="number">17</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]) {
-            <span class="prelude-val">Ok</span>(<span class="ident">prover</span>) =&gt; <span class="ident">prover</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">e</span>) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>),
+        <span class="kw">let </span>prover = <span class="kw">match </span>MockProver::&lt;Fp&gt;::run(<span class="number">17</span>, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]) {
+            <span class="prelude-val">Ok</span>(prover) =&gt; prover,
+            <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;{:?}&quot;</span>, e),
         };
-        <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()));
+        <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()));
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

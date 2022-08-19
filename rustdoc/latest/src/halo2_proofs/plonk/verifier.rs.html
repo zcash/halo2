@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -367,354 +361,353 @@
 <span id="346">346</span>
 <span id="347">347</span>
 <span id="348">348</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">ff::Field</span>;
-<span class="kw">use</span> <span class="ident">group::Curve</span>;
-<span class="kw">use</span> <span class="ident">rand_core::RngCore</span>;
-<span class="kw">use</span> <span class="ident">std::iter</span>;
+</pre><pre class="rust"><code><span class="kw">use </span>ff::Field;
+<span class="kw">use </span>group::Curve;
+<span class="kw">use </span>rand_core::RngCore;
+<span class="kw">use </span>std::iter;
 
-<span class="kw">use</span> <span class="kw">super</span>::{
-    <span class="ident">vanishing</span>, <span class="ident">ChallengeBeta</span>, <span class="ident">ChallengeGamma</span>, <span class="ident">ChallengeTheta</span>, <span class="ident">ChallengeX</span>, <span class="ident">ChallengeY</span>, <span class="ident">Error</span>,
-    <span class="ident">VerifyingKey</span>,
+<span class="kw">use super</span>::{
+    vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
+    VerifyingKey,
 };
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::arithmetic</span>::{<span class="ident">CurveAffine</span>, <span class="ident">FieldExt</span>};
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::poly</span>::{
-    <span class="ident">commitment</span>::{<span class="ident">Blind</span>, <span class="ident">Guard</span>, <span class="ident">Params</span>, <span class="ident">MSM</span>},
-    <span class="ident">multiopen</span>::{<span class="self">self</span>, <span class="ident">VerifierQuery</span>},
+<span class="kw">use </span><span class="kw">crate</span>::arithmetic::{CurveAffine, FieldExt};
+<span class="kw">use </span><span class="kw">crate</span>::poly::{
+    commitment::{Blind, Guard, Params, MSM},
+    multiopen::{<span class="self">self</span>, VerifierQuery},
 };
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::transcript</span>::{<span class="ident">read_n_points</span>, <span class="ident">read_n_scalars</span>, <span class="ident">EncodedChallenge</span>, <span class="ident">TranscriptRead</span>};
+<span class="kw">use </span><span class="kw">crate</span>::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;batch&quot;</span>)]</span>
-<span class="kw">mod</span> <span class="ident">batch</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;batch&quot;</span>)]</span>
-<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">batch::BatchVerifier</span>;
+<span class="attribute">#[cfg(feature = <span class="string">&quot;batch&quot;</span>)]</span>
+<span class="kw">mod </span>batch;
+<span class="attribute">#[cfg(feature = <span class="string">&quot;batch&quot;</span>)]</span>
+<span class="kw">pub use </span>batch::BatchVerifier;
 
-<span class="doccomment">/// Trait representing a strategy for verifying Halo 2 proofs.</span>
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">VerificationStrategy</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The output type of this verification strategy after processing a proof.</span>
-    <span class="kw">type</span> <span class="ident">Output</span>;
+<span class="doccomment">/// Trait representing a strategy for verifying Halo 2 proofs.
+</span><span class="kw">pub trait </span>VerificationStrategy&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; {
+    <span class="doccomment">/// The output type of this verification strategy after processing a proof.
+    </span><span class="kw">type </span>Output;
 
-    <span class="doccomment">/// Obtains an MSM from the verifier strategy and yields back the strategy&#39;s</span>
-    <span class="doccomment">/// output.</span>
-    <span class="kw">fn</span> <span class="ident">process</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+    <span class="doccomment">/// Obtains an MSM from the verifier strategy and yields back the strategy&#39;s
+    /// output.
+    </span><span class="kw">fn </span>process&lt;E: EncodedChallenge&lt;C&gt;&gt;(
         <span class="self">self</span>,
-        <span class="ident">f</span>: <span class="kw">impl</span> <span class="ident">FnOnce</span>(<span class="ident">MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Guard</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Output</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
+        f: <span class="kw">impl </span>FnOnce(MSM&lt;<span class="lifetime">&#39;params</span>, C&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Guard&lt;<span class="lifetime">&#39;params</span>, C, E&gt;, Error&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Output, Error&gt;;
 }
 
-<span class="doccomment">/// A verifier that checks a single proof at a time.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SingleVerifier</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> {
-    <span class="ident">msm</span>: <span class="ident">MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A verifier that checks a single proof at a time.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>SingleVerifier&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; {
+    msm: MSM&lt;<span class="lifetime">&#39;params</span>, C&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">SingleVerifier</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Constructs a new single proof verifier.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params</span> <span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">SingleVerifier</span> {
-            <span class="ident">msm</span>: <span class="ident">MSM::new</span>(<span class="ident">params</span>),
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; SingleVerifier&lt;<span class="lifetime">&#39;params</span>, C&gt; {
+    <span class="doccomment">/// Constructs a new single proof verifier.
+    </span><span class="kw">pub fn </span>new(params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>Params&lt;C&gt;) -&gt; <span class="self">Self </span>{
+        SingleVerifier {
+            msm: MSM::new(params),
         }
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>: <span class="ident">CurveAffine</span><span class="op">&gt;</span> <span class="ident">VerificationStrategy</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">SingleVerifier</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> ();
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; VerificationStrategy&lt;<span class="lifetime">&#39;params</span>, C&gt; <span class="kw">for </span>SingleVerifier&lt;<span class="lifetime">&#39;params</span>, C&gt; {
+    <span class="kw">type </span>Output = ();
 
-    <span class="kw">fn</span> <span class="ident">process</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span><span class="op">&gt;</span>(
+    <span class="kw">fn </span>process&lt;E: EncodedChallenge&lt;C&gt;&gt;(
         <span class="self">self</span>,
-        <span class="ident">f</span>: <span class="kw">impl</span> <span class="ident">FnOnce</span>(<span class="ident">MSM</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span>) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Guard</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::Output</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">guard</span> <span class="op">=</span> <span class="ident">f</span>(<span class="self">self</span>.<span class="ident">msm</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">msm</span> <span class="op">=</span> <span class="ident">guard</span>.<span class="ident">use_challenges</span>();
-        <span class="kw">if</span> <span class="ident">msm</span>.<span class="ident">eval</span>() {
+        f: <span class="kw">impl </span>FnOnce(MSM&lt;<span class="lifetime">&#39;params</span>, C&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Guard&lt;<span class="lifetime">&#39;params</span>, C, E&gt;, Error&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::Output, Error&gt; {
+        <span class="kw">let </span>guard = f(<span class="self">self</span>.msm)<span class="question-mark">?</span>;
+        <span class="kw">let </span>msm = guard.use_challenges();
+        <span class="kw">if </span>msm.eval() {
             <span class="prelude-val">Ok</span>(())
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">Error::ConstraintSystemFailure</span>)
+        } <span class="kw">else </span>{
+            <span class="prelude-val">Err</span>(Error::ConstraintSystemFailure)
         }
     }
 }
 
-<span class="doccomment">/// Returns a boolean indicating whether or not the proof is valid</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_proof</span><span class="op">&lt;</span>
+<span class="doccomment">/// Returns a boolean indicating whether or not the proof is valid
+</span><span class="kw">pub fn </span>verify_proof&lt;
     <span class="lifetime">&#39;params</span>,
-    <span class="ident">C</span>: <span class="ident">CurveAffine</span>,
-    <span class="ident">E</span>: <span class="ident">EncodedChallenge</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="ident">T</span>: <span class="ident">TranscriptRead</span><span class="op">&lt;</span><span class="ident">C</span>, <span class="ident">E</span><span class="op">&gt;</span>,
-    <span class="ident">V</span>: <span class="ident">VerificationStrategy</span><span class="op">&lt;</span><span class="lifetime">&#39;params</span>, <span class="ident">C</span><span class="op">&gt;</span>,
-<span class="op">&gt;</span>(
-    <span class="ident">params</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params</span> <span class="ident">Params</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="ident">vk</span>: <span class="kw-2">&amp;</span><span class="ident">VerifyingKey</span><span class="op">&lt;</span><span class="ident">C</span><span class="op">&gt;</span>,
-    <span class="ident">strategy</span>: <span class="ident">V</span>,
-    <span class="ident">instances</span>: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="ident">C::Scalar</span>]]],
-    <span class="ident">transcript</span>: <span class="kw-2">&amp;mut</span> <span class="ident">T</span>,
-) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">V::Output</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-    <span class="comment">// Check that instances matches the expected number of instance columns</span>
-    <span class="kw">for</span> <span class="ident">instances</span> <span class="kw">in</span> <span class="ident">instances</span>.<span class="ident">iter</span>() {
-        <span class="kw">if</span> <span class="ident">instances</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">num_instance_columns</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::InvalidInstances</span>);
+    C: CurveAffine,
+    E: EncodedChallenge&lt;C&gt;,
+    T: TranscriptRead&lt;C, E&gt;,
+    V: VerificationStrategy&lt;<span class="lifetime">&#39;params</span>, C&gt;,
+&gt;(
+    params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>Params&lt;C&gt;,
+    vk: <span class="kw-2">&amp;</span>VerifyingKey&lt;C&gt;,
+    strategy: V,
+    instances: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[C::Scalar]]],
+    transcript: <span class="kw-2">&amp;mut </span>T,
+) -&gt; <span class="prelude-ty">Result</span>&lt;V::Output, Error&gt; {
+    <span class="comment">// Check that instances matches the expected number of instance columns
+    </span><span class="kw">for </span>instances <span class="kw">in </span>instances.iter() {
+        <span class="kw">if </span>instances.len() != vk.cs.num_instance_columns {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidInstances);
         }
     }
 
-    <span class="kw">let</span> <span class="ident">instance_commitments</span> <span class="op">=</span> <span class="ident">instances</span>
-        .<span class="ident">iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">instance</span><span class="op">|</span> {
-            <span class="ident">instance</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">instance</span><span class="op">|</span> {
-                    <span class="kw">if</span> <span class="ident">instance</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">-</span> (<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">blinding_factors</span>() <span class="op">+</span> <span class="number">1</span>) {
-                        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error::InstanceTooLarge</span>);
+    <span class="kw">let </span>instance_commitments = instances
+        .iter()
+        .map(|instance| {
+            instance
+                .iter()
+                .map(|instance| {
+                    <span class="kw">if </span>instance.len() &gt; params.n <span class="kw">as </span>usize - (vk.cs.blinding_factors() + <span class="number">1</span>) {
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InstanceTooLarge);
                     }
-                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">to_vec</span>();
-                    <span class="ident">poly</span>.<span class="ident">resize</span>(<span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>, <span class="ident">C::Scalar::zero</span>());
-                    <span class="kw">let</span> <span class="ident">poly</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">lagrange_from_vec</span>(<span class="ident">poly</span>);
+                    <span class="kw">let </span><span class="kw-2">mut </span>poly = instance.to_vec();
+                    poly.resize(params.n <span class="kw">as </span>usize, C::Scalar::zero());
+                    <span class="kw">let </span>poly = vk.domain.lagrange_from_vec(poly);
 
-                    <span class="prelude-val">Ok</span>(<span class="ident">params</span>.<span class="ident">commit_lagrange</span>(<span class="kw-2">&amp;</span><span class="ident">poly</span>, <span class="ident">Blind::default</span>()).<span class="ident">to_affine</span>())
+                    <span class="prelude-val">Ok</span>(params.commit_lagrange(<span class="kw-2">&amp;</span>poly, Blind::default()).to_affine())
                 })
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+                .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()
         })
-        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">num_proofs</span> <span class="op">=</span> <span class="ident">instance_commitments</span>.<span class="ident">len</span>();
+    <span class="kw">let </span>num_proofs = instance_commitments.len();
 
-    <span class="comment">// Hash verification key into transcript</span>
-    <span class="ident">vk</span>.<span class="ident">hash_into</span>(<span class="ident">transcript</span>)<span class="question-mark">?</span>;
+    <span class="comment">// Hash verification key into transcript
+    </span>vk.hash_into(transcript)<span class="question-mark">?</span>;
 
-    <span class="kw">for</span> <span class="ident">instance_commitments</span> <span class="kw">in</span> <span class="ident">instance_commitments</span>.<span class="ident">iter</span>() {
-        <span class="comment">// Hash the instance (external) commitments into the transcript</span>
-        <span class="kw">for</span> <span class="ident">commitment</span> <span class="kw">in</span> <span class="ident">instance_commitments</span> {
-            <span class="ident">transcript</span>.<span class="ident">common_point</span>(<span class="kw-2">*</span><span class="ident">commitment</span>)<span class="question-mark">?</span>
-        }
+    <span class="kw">for </span>instance_commitments <span class="kw">in </span>instance_commitments.iter() {
+        <span class="comment">// Hash the instance (external) commitments into the transcript
+        </span><span class="kw">for </span>commitment <span class="kw">in </span>instance_commitments {
+            transcript.common_point(<span class="kw-2">*</span>commitment)<span class="question-mark">?
+        </span>}
     }
 
-    <span class="kw">let</span> <span class="ident">advice_commitments</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">num_proofs</span>)
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> {
-            <span class="comment">// Hash the prover&#39;s advice commitments into the transcript</span>
-            <span class="ident">read_n_points</span>(<span class="ident">transcript</span>, <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">num_advice_columns</span>)
+    <span class="kw">let </span>advice_commitments = (<span class="number">0</span>..num_proofs)
+        .map(|<span class="kw">_</span>| -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt; {
+            <span class="comment">// Hash the prover&#39;s advice commitments into the transcript
+            </span>read_n_points(transcript, vk.cs.num_advice_columns)
         })
-        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
-    <span class="comment">// Sample theta challenge for keeping lookup columns linearly independent</span>
-    <span class="kw">let</span> <span class="ident">theta</span>: <span class="ident">ChallengeTheta</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge_scalar</span>();
+    <span class="comment">// Sample theta challenge for keeping lookup columns linearly independent
+    </span><span class="kw">let </span>theta: ChallengeTheta&lt;<span class="kw">_</span>&gt; = transcript.squeeze_challenge_scalar();
 
-    <span class="kw">let</span> <span class="ident">lookups_permuted</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">num_proofs</span>)
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> {
-            <span class="comment">// Hash each lookup permuted commitment</span>
-            <span class="ident">vk</span>.<span class="ident">cs</span>
-                .<span class="ident">lookups</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">argument</span><span class="op">|</span> <span class="ident">argument</span>.<span class="ident">read_permuted_commitments</span>(<span class="ident">transcript</span>))
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+    <span class="kw">let </span>lookups_permuted = (<span class="number">0</span>..num_proofs)
+        .map(|<span class="kw">_</span>| -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt; {
+            <span class="comment">// Hash each lookup permuted commitment
+            </span>vk.cs
+                .lookups
+                .iter()
+                .map(|argument| argument.read_permuted_commitments(transcript))
+                .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()
         })
-        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
-    <span class="comment">// Sample beta challenge</span>
-    <span class="kw">let</span> <span class="ident">beta</span>: <span class="ident">ChallengeBeta</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge_scalar</span>();
+    <span class="comment">// Sample beta challenge
+    </span><span class="kw">let </span>beta: ChallengeBeta&lt;<span class="kw">_</span>&gt; = transcript.squeeze_challenge_scalar();
 
-    <span class="comment">// Sample gamma challenge</span>
-    <span class="kw">let</span> <span class="ident">gamma</span>: <span class="ident">ChallengeGamma</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge_scalar</span>();
+    <span class="comment">// Sample gamma challenge
+    </span><span class="kw">let </span>gamma: ChallengeGamma&lt;<span class="kw">_</span>&gt; = transcript.squeeze_challenge_scalar();
 
-    <span class="kw">let</span> <span class="ident">permutations_committed</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">num_proofs</span>)
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-            <span class="comment">// Hash each permutation product commitment</span>
-            <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">permutation</span>.<span class="ident">read_product_commitments</span>(<span class="ident">vk</span>, <span class="ident">transcript</span>)
+    <span class="kw">let </span>permutations_committed = (<span class="number">0</span>..num_proofs)
+        .map(|<span class="kw">_</span>| {
+            <span class="comment">// Hash each permutation product commitment
+            </span>vk.cs.permutation.read_product_commitments(vk, transcript)
         })
-        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">lookups_committed</span> <span class="op">=</span> <span class="ident">lookups_permuted</span>
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">lookups</span><span class="op">|</span> {
-            <span class="comment">// Hash each lookup product commitment</span>
-            <span class="ident">lookups</span>
-                .<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">lookup</span><span class="op">|</span> <span class="ident">lookup</span>.<span class="ident">read_product_commitment</span>(<span class="ident">transcript</span>))
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+    <span class="kw">let </span>lookups_committed = lookups_permuted
+        .into_iter()
+        .map(|lookups| {
+            <span class="comment">// Hash each lookup product commitment
+            </span>lookups
+                .into_iter()
+                .map(|lookup| lookup.read_product_commitment(transcript))
+                .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()
         })
-        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">vanishing</span> <span class="op">=</span> <span class="ident">vanishing::Argument::read_commitments_before_y</span>(<span class="ident">transcript</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>vanishing = vanishing::Argument::read_commitments_before_y(transcript)<span class="question-mark">?</span>;
 
-    <span class="comment">// Sample y challenge, which keeps the gates linearly independent.</span>
-    <span class="kw">let</span> <span class="ident">y</span>: <span class="ident">ChallengeY</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge_scalar</span>();
+    <span class="comment">// Sample y challenge, which keeps the gates linearly independent.
+    </span><span class="kw">let </span>y: ChallengeY&lt;<span class="kw">_</span>&gt; = transcript.squeeze_challenge_scalar();
 
-    <span class="kw">let</span> <span class="ident">vanishing</span> <span class="op">=</span> <span class="ident">vanishing</span>.<span class="ident">read_commitments_after_y</span>(<span class="ident">vk</span>, <span class="ident">transcript</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>vanishing = vanishing.read_commitments_after_y(vk, transcript)<span class="question-mark">?</span>;
 
-    <span class="comment">// Sample x challenge, which is used to ensure the circuit is</span>
-    <span class="comment">// satisfied with high probability.</span>
-    <span class="kw">let</span> <span class="ident">x</span>: <span class="ident">ChallengeX</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">transcript</span>.<span class="ident">squeeze_challenge_scalar</span>();
-    <span class="kw">let</span> <span class="ident">instance_evals</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">num_proofs</span>)
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> { <span class="ident">read_n_scalars</span>(<span class="ident">transcript</span>, <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">instance_queries</span>.<span class="ident">len</span>()) })
-        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+    <span class="comment">// Sample x challenge, which is used to ensure the circuit is
+    // satisfied with high probability.
+    </span><span class="kw">let </span>x: ChallengeX&lt;<span class="kw">_</span>&gt; = transcript.squeeze_challenge_scalar();
+    <span class="kw">let </span>instance_evals = (<span class="number">0</span>..num_proofs)
+        .map(|<span class="kw">_</span>| -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt; { read_n_scalars(transcript, vk.cs.instance_queries.len()) })
+        .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">advice_evals</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">num_proofs</span>)
-        .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> { <span class="ident">read_n_scalars</span>(<span class="ident">transcript</span>, <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">advice_queries</span>.<span class="ident">len</span>()) })
-        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+    <span class="kw">let </span>advice_evals = (<span class="number">0</span>..num_proofs)
+        .map(|<span class="kw">_</span>| -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt; { read_n_scalars(transcript, vk.cs.advice_queries.len()) })
+        .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">fixed_evals</span> <span class="op">=</span> <span class="ident">read_n_scalars</span>(<span class="ident">transcript</span>, <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">fixed_queries</span>.<span class="ident">len</span>())<span class="question-mark">?</span>;
+    <span class="kw">let </span>fixed_evals = read_n_scalars(transcript, vk.cs.fixed_queries.len())<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">vanishing</span> <span class="op">=</span> <span class="ident">vanishing</span>.<span class="ident">evaluate_after_x</span>(<span class="ident">transcript</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>vanishing = vanishing.evaluate_after_x(transcript)<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">permutations_common</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">permutation</span>.<span class="ident">evaluate</span>(<span class="ident">transcript</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>permutations_common = vk.permutation.evaluate(transcript)<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">permutations_evaluated</span> <span class="op">=</span> <span class="ident">permutations_committed</span>
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">permutation</span><span class="op">|</span> <span class="ident">permutation</span>.<span class="ident">evaluate</span>(<span class="ident">transcript</span>))
-        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+    <span class="kw">let </span>permutations_evaluated = permutations_committed
+        .into_iter()
+        .map(|permutation| permutation.evaluate(transcript))
+        .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">lookups_evaluated</span> <span class="op">=</span> <span class="ident">lookups_committed</span>
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">lookups</span><span class="op">|</span> -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span> {
-            <span class="ident">lookups</span>
-                .<span class="ident">into_iter</span>()
-                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">lookup</span><span class="op">|</span> <span class="ident">lookup</span>.<span class="ident">evaluate</span>(<span class="ident">transcript</span>))
-                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+    <span class="kw">let </span>lookups_evaluated = lookups_committed
+        .into_iter()
+        .map(|lookups| -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt; {
+            lookups
+                .into_iter()
+                .map(|lookup| lookup.evaluate(transcript))
+                .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()
         })
-        .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span>, <span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
+        .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
-    <span class="comment">// This check ensures the circuit is satisfied so long as the polynomial</span>
-    <span class="comment">// commitments open to the correct values.</span>
-    <span class="kw">let</span> <span class="ident">vanishing</span> <span class="op">=</span> {
-        <span class="comment">// x^n</span>
-        <span class="kw">let</span> <span class="ident">xn</span> <span class="op">=</span> <span class="ident">x</span>.<span class="ident">pow</span>(<span class="kw-2">&amp;</span>[<span class="ident">params</span>.<span class="ident">n</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
+    <span class="comment">// This check ensures the circuit is satisfied so long as the polynomial
+    // commitments open to the correct values.
+    </span><span class="kw">let </span>vanishing = {
+        <span class="comment">// x^n
+        </span><span class="kw">let </span>xn = x.pow(<span class="kw-2">&amp;</span>[params.n <span class="kw">as </span>u64, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
 
-        <span class="kw">let</span> <span class="ident">blinding_factors</span> <span class="op">=</span> <span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">blinding_factors</span>();
-        <span class="kw">let</span> <span class="ident">l_evals</span> <span class="op">=</span> <span class="ident">vk</span>
-            .<span class="ident">domain</span>
-            .<span class="ident">l_i_range</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">xn</span>, (<span class="op">-</span>((<span class="ident">blinding_factors</span> <span class="op">+</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">i32</span>))..<span class="op">=</span><span class="number">0</span>);
-        <span class="macro">assert_eq!</span>(<span class="ident">l_evals</span>.<span class="ident">len</span>(), <span class="number">2</span> <span class="op">+</span> <span class="ident">blinding_factors</span>);
-        <span class="kw">let</span> <span class="ident">l_last</span> <span class="op">=</span> <span class="ident">l_evals</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">l_blind</span>: <span class="ident">C::Scalar</span> <span class="op">=</span> <span class="ident">l_evals</span>[<span class="number">1</span>..(<span class="number">1</span> <span class="op">+</span> <span class="ident">blinding_factors</span>)]
-            .<span class="ident">iter</span>()
-            .<span class="ident">fold</span>(<span class="ident">C::Scalar::zero</span>(), <span class="op">|</span><span class="ident">acc</span>, <span class="ident">eval</span><span class="op">|</span> <span class="ident">acc</span> <span class="op">+</span> <span class="ident">eval</span>);
-        <span class="kw">let</span> <span class="ident">l_0</span> <span class="op">=</span> <span class="ident">l_evals</span>[<span class="number">1</span> <span class="op">+</span> <span class="ident">blinding_factors</span>];
+        <span class="kw">let </span>blinding_factors = vk.cs.blinding_factors();
+        <span class="kw">let </span>l_evals = vk
+            .domain
+            .l_i_range(<span class="kw-2">*</span>x, xn, (-((blinding_factors + <span class="number">1</span>) <span class="kw">as </span>i32))..=<span class="number">0</span>);
+        <span class="macro">assert_eq!</span>(l_evals.len(), <span class="number">2 </span>+ blinding_factors);
+        <span class="kw">let </span>l_last = l_evals[<span class="number">0</span>];
+        <span class="kw">let </span>l_blind: C::Scalar = l_evals[<span class="number">1</span>..(<span class="number">1 </span>+ blinding_factors)]
+            .iter()
+            .fold(C::Scalar::zero(), |acc, eval| acc + eval);
+        <span class="kw">let </span>l_0 = l_evals[<span class="number">1 </span>+ blinding_factors];
 
-        <span class="comment">// Compute the expected value of h(x)</span>
-        <span class="kw">let</span> <span class="ident">expressions</span> <span class="op">=</span> <span class="ident">advice_evals</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">zip</span>(<span class="ident">instance_evals</span>.<span class="ident">iter</span>())
-            .<span class="ident">zip</span>(<span class="ident">permutations_evaluated</span>.<span class="ident">iter</span>())
-            .<span class="ident">zip</span>(<span class="ident">lookups_evaluated</span>.<span class="ident">iter</span>())
-            .<span class="ident">flat_map</span>(<span class="op">|</span>(((<span class="ident">advice_evals</span>, <span class="ident">instance_evals</span>), <span class="ident">permutation</span>), <span class="ident">lookups</span>)<span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">fixed_evals</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">fixed_evals</span>;
-                <span class="ident">std::iter::empty</span>()
-                    <span class="comment">// Evaluate the circuit using the custom gates provided</span>
-                    .<span class="ident">chain</span>(<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">gates</span>.<span class="ident">iter</span>().<span class="ident">flat_map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">gate</span><span class="op">|</span> {
-                        <span class="ident">gate</span>.<span class="ident">polynomials</span>().<span class="ident">iter</span>().<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">poly</span><span class="op">|</span> {
-                            <span class="ident">poly</span>.<span class="ident">evaluate</span>(
-                                <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">scalar</span><span class="op">|</span> <span class="ident">scalar</span>,
-                                <span class="kw-2">&amp;</span><span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
-                                <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> <span class="ident">fixed_evals</span>[<span class="ident">query</span>.<span class="ident">index</span>],
-                                <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> <span class="ident">advice_evals</span>[<span class="ident">query</span>.<span class="ident">index</span>],
-                                <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">query</span><span class="op">|</span> <span class="ident">instance_evals</span>[<span class="ident">query</span>.<span class="ident">index</span>],
-                                <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span><span class="op">|</span> <span class="op">-</span><span class="ident">a</span>,
-                                <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">b</span>,
-                                <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">b</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">b</span>,
-                                <span class="kw-2">&amp;</span><span class="op">|</span><span class="ident">a</span>, <span class="ident">scalar</span><span class="op">|</span> <span class="ident">a</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">scalar</span>,
+        <span class="comment">// Compute the expected value of h(x)
+        </span><span class="kw">let </span>expressions = advice_evals
+            .iter()
+            .zip(instance_evals.iter())
+            .zip(permutations_evaluated.iter())
+            .zip(lookups_evaluated.iter())
+            .flat_map(|(((advice_evals, instance_evals), permutation), lookups)| {
+                <span class="kw">let </span>fixed_evals = <span class="kw-2">&amp;</span>fixed_evals;
+                std::iter::empty()
+                    <span class="comment">// Evaluate the circuit using the custom gates provided
+                    </span>.chain(vk.cs.gates.iter().flat_map(<span class="kw">move </span>|gate| {
+                        gate.polynomials().iter().map(<span class="kw">move </span>|poly| {
+                            poly.evaluate(
+                                <span class="kw-2">&amp;</span>|scalar| scalar,
+                                <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="macro">panic!</span>(<span class="string">&quot;virtual selectors are removed during optimization&quot;</span>),
+                                <span class="kw-2">&amp;</span>|query| fixed_evals[query.index],
+                                <span class="kw-2">&amp;</span>|query| advice_evals[query.index],
+                                <span class="kw-2">&amp;</span>|query| instance_evals[query.index],
+                                <span class="kw-2">&amp;</span>|a| -a,
+                                <span class="kw-2">&amp;</span>|a, b| a + <span class="kw-2">&amp;</span>b,
+                                <span class="kw-2">&amp;</span>|a, b| a * <span class="kw-2">&amp;</span>b,
+                                <span class="kw-2">&amp;</span>|a, scalar| a * <span class="kw-2">&amp;</span>scalar,
                             )
                         })
                     }))
-                    .<span class="ident">chain</span>(<span class="ident">permutation</span>.<span class="ident">expressions</span>(
-                        <span class="ident">vk</span>,
-                        <span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">permutation</span>,
-                        <span class="kw-2">&amp;</span><span class="ident">permutations_common</span>,
-                        <span class="ident">advice_evals</span>,
-                        <span class="ident">fixed_evals</span>,
-                        <span class="ident">instance_evals</span>,
-                        <span class="ident">l_0</span>,
-                        <span class="ident">l_last</span>,
-                        <span class="ident">l_blind</span>,
-                        <span class="ident">beta</span>,
-                        <span class="ident">gamma</span>,
-                        <span class="ident">x</span>,
+                    .chain(permutation.expressions(
+                        vk,
+                        <span class="kw-2">&amp;</span>vk.cs.permutation,
+                        <span class="kw-2">&amp;</span>permutations_common,
+                        advice_evals,
+                        fixed_evals,
+                        instance_evals,
+                        l_0,
+                        l_last,
+                        l_blind,
+                        beta,
+                        gamma,
+                        x,
                     ))
-                    .<span class="ident">chain</span>(
-                        <span class="ident">lookups</span>
-                            .<span class="ident">iter</span>()
-                            .<span class="ident">zip</span>(<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">lookups</span>.<span class="ident">iter</span>())
-                            .<span class="ident">flat_map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">p</span>, <span class="ident">argument</span>)<span class="op">|</span> {
-                                <span class="ident">p</span>.<span class="ident">expressions</span>(
-                                    <span class="ident">l_0</span>,
-                                    <span class="ident">l_last</span>,
-                                    <span class="ident">l_blind</span>,
-                                    <span class="ident">argument</span>,
-                                    <span class="ident">theta</span>,
-                                    <span class="ident">beta</span>,
-                                    <span class="ident">gamma</span>,
-                                    <span class="ident">advice_evals</span>,
-                                    <span class="ident">fixed_evals</span>,
-                                    <span class="ident">instance_evals</span>,
+                    .chain(
+                        lookups
+                            .iter()
+                            .zip(vk.cs.lookups.iter())
+                            .flat_map(<span class="kw">move </span>|(p, argument)| {
+                                p.expressions(
+                                    l_0,
+                                    l_last,
+                                    l_blind,
+                                    argument,
+                                    theta,
+                                    beta,
+                                    gamma,
+                                    advice_evals,
+                                    fixed_evals,
+                                    instance_evals,
                                 )
                             })
-                            .<span class="ident">into_iter</span>(),
+                            .into_iter(),
                     )
             });
 
-        <span class="ident">vanishing</span>.<span class="ident">verify</span>(<span class="ident">params</span>, <span class="ident">expressions</span>, <span class="ident">y</span>, <span class="ident">xn</span>)
+        vanishing.verify(params, expressions, y, xn)
     };
 
-    <span class="kw">let</span> <span class="ident">queries</span> <span class="op">=</span> <span class="ident">instance_commitments</span>
-        .<span class="ident">iter</span>()
-        .<span class="ident">zip</span>(<span class="ident">instance_evals</span>.<span class="ident">iter</span>())
-        .<span class="ident">zip</span>(<span class="ident">advice_commitments</span>.<span class="ident">iter</span>())
-        .<span class="ident">zip</span>(<span class="ident">advice_evals</span>.<span class="ident">iter</span>())
-        .<span class="ident">zip</span>(<span class="ident">permutations_evaluated</span>.<span class="ident">iter</span>())
-        .<span class="ident">zip</span>(<span class="ident">lookups_evaluated</span>.<span class="ident">iter</span>())
-        .<span class="ident">flat_map</span>(
-            <span class="op">|</span>(
+    <span class="kw">let </span>queries = instance_commitments
+        .iter()
+        .zip(instance_evals.iter())
+        .zip(advice_commitments.iter())
+        .zip(advice_evals.iter())
+        .zip(permutations_evaluated.iter())
+        .zip(lookups_evaluated.iter())
+        .flat_map(
+            |(
                 (
-                    (((<span class="ident">instance_commitments</span>, <span class="ident">instance_evals</span>), <span class="ident">advice_commitments</span>), <span class="ident">advice_evals</span>),
-                    <span class="ident">permutation</span>,
+                    (((instance_commitments, instance_evals), advice_commitments), advice_evals),
+                    permutation,
                 ),
-                <span class="ident">lookups</span>,
-            )<span class="op">|</span> {
-                <span class="ident">iter::empty</span>()
-                    .<span class="ident">chain</span>(<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">instance_queries</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>().<span class="ident">map</span>(
-                        <span class="kw">move</span> <span class="op">|</span>(<span class="ident">query_index</span>, <span class="kw-2">&amp;</span>(<span class="ident">column</span>, <span class="ident">at</span>))<span class="op">|</span> {
-                            <span class="ident">VerifierQuery::new_commitment</span>(
-                                <span class="kw-2">&amp;</span><span class="ident">instance_commitments</span>[<span class="ident">column</span>.<span class="ident">index</span>()],
-                                <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">rotate_omega</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">at</span>),
-                                <span class="ident">instance_evals</span>[<span class="ident">query_index</span>],
+                lookups,
+            )| {
+                iter::empty()
+                    .chain(vk.cs.instance_queries.iter().enumerate().map(
+                        <span class="kw">move </span>|(query_index, <span class="kw-2">&amp;</span>(column, at))| {
+                            VerifierQuery::new_commitment(
+                                <span class="kw-2">&amp;</span>instance_commitments[column.index()],
+                                vk.domain.rotate_omega(<span class="kw-2">*</span>x, at),
+                                instance_evals[query_index],
                             )
                         },
                     ))
-                    .<span class="ident">chain</span>(<span class="ident">vk</span>.<span class="ident">cs</span>.<span class="ident">advice_queries</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>().<span class="ident">map</span>(
-                        <span class="kw">move</span> <span class="op">|</span>(<span class="ident">query_index</span>, <span class="kw-2">&amp;</span>(<span class="ident">column</span>, <span class="ident">at</span>))<span class="op">|</span> {
-                            <span class="ident">VerifierQuery::new_commitment</span>(
-                                <span class="kw-2">&amp;</span><span class="ident">advice_commitments</span>[<span class="ident">column</span>.<span class="ident">index</span>()],
-                                <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">rotate_omega</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">at</span>),
-                                <span class="ident">advice_evals</span>[<span class="ident">query_index</span>],
+                    .chain(vk.cs.advice_queries.iter().enumerate().map(
+                        <span class="kw">move </span>|(query_index, <span class="kw-2">&amp;</span>(column, at))| {
+                            VerifierQuery::new_commitment(
+                                <span class="kw-2">&amp;</span>advice_commitments[column.index()],
+                                vk.domain.rotate_omega(<span class="kw-2">*</span>x, at),
+                                advice_evals[query_index],
                             )
                         },
                     ))
-                    .<span class="ident">chain</span>(<span class="ident">permutation</span>.<span class="ident">queries</span>(<span class="ident">vk</span>, <span class="ident">x</span>))
-                    .<span class="ident">chain</span>(
-                        <span class="ident">lookups</span>
-                            .<span class="ident">iter</span>()
-                            .<span class="ident">flat_map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="ident">p</span>.<span class="ident">queries</span>(<span class="ident">vk</span>, <span class="ident">x</span>))
-                            .<span class="ident">into_iter</span>(),
+                    .chain(permutation.queries(vk, x))
+                    .chain(
+                        lookups
+                            .iter()
+                            .flat_map(<span class="kw">move </span>|p| p.queries(vk, x))
+                            .into_iter(),
                     )
             },
         )
-        .<span class="ident">chain</span>(
-            <span class="ident">vk</span>.<span class="ident">cs</span>
-                .<span class="ident">fixed_queries</span>
-                .<span class="ident">iter</span>()
-                .<span class="ident">enumerate</span>()
-                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">query_index</span>, <span class="kw-2">&amp;</span>(<span class="ident">column</span>, <span class="ident">at</span>))<span class="op">|</span> {
-                    <span class="ident">VerifierQuery::new_commitment</span>(
-                        <span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">fixed_commitments</span>[<span class="ident">column</span>.<span class="ident">index</span>()],
-                        <span class="ident">vk</span>.<span class="ident">domain</span>.<span class="ident">rotate_omega</span>(<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">at</span>),
-                        <span class="ident">fixed_evals</span>[<span class="ident">query_index</span>],
+        .chain(
+            vk.cs
+                .fixed_queries
+                .iter()
+                .enumerate()
+                .map(|(query_index, <span class="kw-2">&amp;</span>(column, at))| {
+                    VerifierQuery::new_commitment(
+                        <span class="kw-2">&amp;</span>vk.fixed_commitments[column.index()],
+                        vk.domain.rotate_omega(<span class="kw-2">*</span>x, at),
+                        fixed_evals[query_index],
                     )
                 }),
         )
-        .<span class="ident">chain</span>(<span class="ident">permutations_common</span>.<span class="ident">queries</span>(<span class="kw-2">&amp;</span><span class="ident">vk</span>.<span class="ident">permutation</span>, <span class="ident">x</span>))
-        .<span class="ident">chain</span>(<span class="ident">vanishing</span>.<span class="ident">queries</span>(<span class="ident">x</span>));
+        .chain(permutations_common.queries(<span class="kw-2">&amp;</span>vk.permutation, x))
+        .chain(vanishing.queries(x));
 
-    <span class="comment">// We are now convinced the circuit is satisfied so long as the</span>
-    <span class="comment">// polynomial commitments open to the correct values.</span>
-    <span class="ident">strategy</span>.<span class="ident">process</span>(<span class="op">|</span><span class="ident">msm</span><span class="op">|</span> {
-        <span class="ident">multiopen::verify_proof</span>(<span class="ident">params</span>, <span class="ident">transcript</span>, <span class="ident">queries</span>, <span class="ident">msm</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">Error::Opening</span>)
+    <span class="comment">// We are now convinced the circuit is satisfied so long as the
+    // polynomial commitments open to the correct values.
+    </span>strategy.process(|msm| {
+        multiopen::verify_proof(params, transcript, queries, msm).map_err(|<span class="kw">_</span>| Error::Opening)
     })
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

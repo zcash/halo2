@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -346,333 +340,332 @@
 <span id="325">325</span>
 <span id="326">326</span>
 <span id="327">327</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Chip implementations for the Sinsemilla gadgets.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Chip implementations for the Sinsemilla gadgets.
 
-<span class="kw">use</span> <span class="kw">super</span>::{
-    <span class="ident">message</span>::{<span class="ident">Message</span>, <span class="ident">MessagePiece</span>},
-    <span class="ident">primitives</span> <span class="kw">as</span> <span class="ident">sinsemilla</span>, <span class="ident">CommitDomains</span>, <span class="ident">HashDomains</span>, <span class="ident">SinsemillaInstructions</span>,
+</span><span class="kw">use super</span>::{
+    message::{Message, MessagePiece},
+    primitives <span class="kw">as </span>sinsemilla, CommitDomains, HashDomains, SinsemillaInstructions,
 };
-<span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">ecc</span>::{
-        <span class="ident">chip</span>::{<span class="ident">DoubleAndAdd</span>, <span class="ident">NonIdentityEccPoint</span>},
-        <span class="ident">FixedPoints</span>,
+<span class="kw">use crate</span>::{
+    ecc::{
+        chip::{DoubleAndAdd, NonIdentityEccPoint},
+        FixedPoints,
     },
-    <span class="ident">utilities::lookup_range_check::LookupRangeCheckConfig</span>,
+    utilities::lookup_range_check::LookupRangeCheckConfig,
 };
-<span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
+<span class="kw">use </span>std::marker::PhantomData;
 
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Chip</span>, <span class="ident">Layouter</span>, <span class="ident">Value</span>},
-    <span class="ident">plonk</span>::{
-        <span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Expression</span>, <span class="ident">Fixed</span>, <span class="ident">Selector</span>,
-        <span class="ident">TableColumn</span>, <span class="ident">VirtualCells</span>,
+<span class="kw">use </span>halo2_proofs::{
+    circuit::{AssignedCell, Chip, Layouter, Value},
+    plonk::{
+        Advice, Column, ConstraintSystem, Constraints, Error, Expression, Fixed, Selector,
+        TableColumn, VirtualCells,
     },
-    <span class="ident">poly::Rotation</span>,
+    poly::Rotation,
 };
-<span class="kw">use</span> <span class="ident">pasta_curves::pallas</span>;
+<span class="kw">use </span>pasta_curves::pallas;
 
-<span class="kw">mod</span> <span class="ident">generator_table</span>;
-<span class="kw">use</span> <span class="ident">generator_table::GeneratorTableConfig</span>;
+<span class="kw">mod </span>generator_table;
+<span class="kw">use </span>generator_table::GeneratorTableConfig;
 
-<span class="kw">mod</span> <span class="ident">hash_to_point</span>;
+<span class="kw">mod </span>hash_to_point;
 
-<span class="doccomment">/// Configuration for the Sinsemilla hash chip</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SinsemillaConfig</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">F</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">F</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Configuration for the Sinsemilla hash chip
+</span><span class="attribute">#[derive(Eq, PartialEq, Clone, Debug)]</span>
+<span class="kw">pub struct </span>SinsemillaConfig&lt;Hash, Commit, F&gt;
+<span class="kw">where
+    </span>Hash: HashDomains&lt;pallas::Affine&gt;,
+    F: FixedPoints&lt;pallas::Affine&gt;,
+    Commit: CommitDomains&lt;pallas::Affine, F, Hash&gt;,
 {
-    <span class="doccomment">/// Binary selector used in lookup argument and in the body of the Sinsemilla hash.</span>
-    <span class="ident">q_sinsemilla1</span>: <span class="ident">Selector</span>,
-    <span class="doccomment">/// Non-binary selector used in lookup argument and in the body of the Sinsemilla hash.</span>
-    <span class="ident">q_sinsemilla2</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// q_sinsemilla2 is used to define a synthetic selector,</span>
-    <span class="doccomment">///         q_sinsemilla3 = (q_sinsemilla2) ⋅ (q_sinsemilla2 - 1)</span>
-    <span class="doccomment">/// Simple selector used to constrain hash initialization to be consistent with</span>
-    <span class="doccomment">/// the y-coordinate of the domain $Q$.</span>
-    <span class="ident">q_sinsemilla4</span>: <span class="ident">Selector</span>,
-    <span class="doccomment">/// Fixed column used to load the y-coordinate of the domain $Q$.</span>
-    <span class="ident">fixed_y_q</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Logic specific to merged double-and-add.</span>
-    <span class="ident">double_and_add</span>: <span class="ident">DoubleAndAdd</span>,
-    <span class="doccomment">/// Advice column used to load the message.</span>
-    <span class="ident">bits</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Advice column used to witness message pieces. This may or may not be the same</span>
-    <span class="doccomment">/// column as `bits`.</span>
-    <span class="ident">witness_pieces</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// The lookup table where $(\mathsf{idx}, x_p, y_p)$ are loaded for the $2^K$</span>
-    <span class="doccomment">/// generators of the Sinsemilla hash.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">generator_table</span>: <span class="ident">GeneratorTableConfig</span>,
-    <span class="doccomment">/// An advice column configured to perform lookup range checks.</span>
-    <span class="ident">lookup_config</span>: <span class="ident">LookupRangeCheckConfig</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, { <span class="ident">sinsemilla::K</span> }<span class="op">&gt;</span>,
-    <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span>(<span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span>)<span class="op">&gt;</span>,
+    <span class="doccomment">/// Binary selector used in lookup argument and in the body of the Sinsemilla hash.
+    </span>q_sinsemilla1: Selector,
+    <span class="doccomment">/// Non-binary selector used in lookup argument and in the body of the Sinsemilla hash.
+    </span>q_sinsemilla2: Column&lt;Fixed&gt;,
+    <span class="doccomment">/// q_sinsemilla2 is used to define a synthetic selector,
+    ///         q_sinsemilla3 = (q_sinsemilla2) ⋅ (q_sinsemilla2 - 1)
+    /// Simple selector used to constrain hash initialization to be consistent with
+    /// the y-coordinate of the domain $Q$.
+    </span>q_sinsemilla4: Selector,
+    <span class="doccomment">/// Fixed column used to load the y-coordinate of the domain $Q$.
+    </span>fixed_y_q: Column&lt;Fixed&gt;,
+    <span class="doccomment">/// Logic specific to merged double-and-add.
+    </span>double_and_add: DoubleAndAdd,
+    <span class="doccomment">/// Advice column used to load the message.
+    </span>bits: Column&lt;Advice&gt;,
+    <span class="doccomment">/// Advice column used to witness message pieces. This may or may not be the same
+    /// column as `bits`.
+    </span>witness_pieces: Column&lt;Advice&gt;,
+    <span class="doccomment">/// The lookup table where $(\mathsf{idx}, x_p, y_p)$ are loaded for the $2^K$
+    /// generators of the Sinsemilla hash.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) generator_table: GeneratorTableConfig,
+    <span class="doccomment">/// An advice column configured to perform lookup range checks.
+    </span>lookup_config: LookupRangeCheckConfig&lt;pallas::Base, { sinsemilla::K }&gt;,
+    _marker: PhantomData&lt;(Hash, Commit, F)&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="ident">SinsemillaConfig</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">F</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">F</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;Hash, Commit, F&gt; SinsemillaConfig&lt;Hash, Commit, F&gt;
+<span class="kw">where
+    </span>Hash: HashDomains&lt;pallas::Affine&gt;,
+    F: FixedPoints&lt;pallas::Affine&gt;,
+    Commit: CommitDomains&lt;pallas::Affine, F, Hash&gt;,
 {
-    <span class="doccomment">/// Returns an array of all advice columns in this config, in arbitrary order.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">advices</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>; <span class="number">5</span>] {
+    <span class="doccomment">/// Returns an array of all advice columns in this config, in arbitrary order.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>advices(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; [Column&lt;Advice&gt;; <span class="number">5</span>] {
         [
-            <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>,
-            <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">x_p</span>,
-            <span class="self">self</span>.<span class="ident">bits</span>,
-            <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>,
-            <span class="self">self</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_2</span>,
+            <span class="self">self</span>.double_and_add.x_a,
+            <span class="self">self</span>.double_and_add.x_p,
+            <span class="self">self</span>.bits,
+            <span class="self">self</span>.double_and_add.lambda_1,
+            <span class="self">self</span>.double_and_add.lambda_2,
         ]
     }
 
-    <span class="doccomment">/// Returns the lookup range check config used in this config.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">lookup_config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">LookupRangeCheckConfig</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, { <span class="ident">sinsemilla::K</span> }<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">lookup_config</span>
+    <span class="doccomment">/// Returns the lookup range check config used in this config.
+    </span><span class="kw">pub fn </span>lookup_config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; LookupRangeCheckConfig&lt;pallas::Base, { sinsemilla::K }&gt; {
+        <span class="self">self</span>.lookup_config
     }
 
-    <span class="doccomment">/// Derives the expression `q_s3 = (q_s2) * (q_s2 - 1)`.</span>
-    <span class="kw">fn</span> <span class="ident">q_s3</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) -&gt; <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">one</span> <span class="op">=</span> <span class="ident">Expression::Constant</span>(<span class="ident">pallas::Base::one</span>());
-        <span class="kw">let</span> <span class="ident">q_s2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_fixed</span>(<span class="self">self</span>.<span class="ident">q_sinsemilla2</span>, <span class="ident">Rotation::cur</span>());
-        <span class="ident">q_s2</span>.<span class="ident">clone</span>() <span class="op">*</span> (<span class="ident">q_s2</span> <span class="op">-</span> <span class="ident">one</span>)
+    <span class="doccomment">/// Derives the expression `q_s3 = (q_s2) * (q_s2 - 1)`.
+    </span><span class="kw">fn </span>q_s3(<span class="kw-2">&amp;</span><span class="self">self</span>, meta: <span class="kw-2">&amp;mut </span>VirtualCells&lt;pallas::Base&gt;) -&gt; Expression&lt;pallas::Base&gt; {
+        <span class="kw">let </span>one = Expression::Constant(pallas::Base::one());
+        <span class="kw">let </span>q_s2 = meta.query_fixed(<span class="self">self</span>.q_sinsemilla2, Rotation::cur());
+        q_s2.clone() * (q_s2 - one)
     }
 }
 
-<span class="doccomment">/// A chip that implements 10-bit Sinsemilla using a lookup table and 5 advice columns.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// [Chip description](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html#plonk--halo-2-constraints).</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SinsemillaChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">Fixed</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Fixed</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">Fixed</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A chip that implements 10-bit Sinsemilla using a lookup table and 5 advice columns.
+///
+/// [Chip description](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html#plonk--halo-2-constraints).
+</span><span class="attribute">#[derive(Eq, PartialEq, Clone, Debug)]</span>
+<span class="kw">pub struct </span>SinsemillaChip&lt;Hash, Commit, Fixed&gt;
+<span class="kw">where
+    </span>Hash: HashDomains&lt;pallas::Affine&gt;,
+    Fixed: FixedPoints&lt;pallas::Affine&gt;,
+    Commit: CommitDomains&lt;pallas::Affine, Fixed, Hash&gt;,
 {
-    <span class="ident">config</span>: <span class="ident">SinsemillaConfig</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">Fixed</span><span class="op">&gt;</span>,
+    config: SinsemillaConfig&lt;Hash, Commit, Fixed&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">Fixed</span><span class="op">&gt;</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">SinsemillaChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">Fixed</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Fixed</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">Fixed</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;Hash, Commit, Fixed&gt; Chip&lt;pallas::Base&gt; <span class="kw">for </span>SinsemillaChip&lt;Hash, Commit, Fixed&gt;
+<span class="kw">where
+    </span>Hash: HashDomains&lt;pallas::Affine&gt;,
+    Fixed: FixedPoints&lt;pallas::Affine&gt;,
+    Commit: CommitDomains&lt;pallas::Affine, Fixed, Hash&gt;,
 {
-    <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">SinsemillaConfig</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">Fixed</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">Loaded</span> <span class="op">=</span> ();
+    <span class="kw">type </span>Config = SinsemillaConfig&lt;Hash, Commit, Fixed&gt;;
+    <span class="kw">type </span>Loaded = ();
 
-    <span class="kw">fn</span> <span class="ident">config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Config</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span>
+    <span class="kw">fn </span>config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Config {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.config
     }
 
-    <span class="kw">fn</span> <span class="ident">loaded</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::Loaded</span> {
+    <span class="kw">fn </span>loaded(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Loaded {
         <span class="kw-2">&amp;</span>()
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="ident">SinsemillaChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">F</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">F</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
+<span class="kw">impl</span>&lt;Hash, Commit, F&gt; SinsemillaChip&lt;Hash, Commit, F&gt;
+<span class="kw">where
+    </span>Hash: HashDomains&lt;pallas::Affine&gt;,
+    F: FixedPoints&lt;pallas::Affine&gt;,
+    Commit: CommitDomains&lt;pallas::Affine, F, Hash&gt;,
 {
-    <span class="doccomment">/// Reconstructs this chip from the given config.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">construct</span>(<span class="ident">config</span>: <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Config</span>) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">config</span> }
+    <span class="doccomment">/// Reconstructs this chip from the given config.
+    </span><span class="kw">pub fn </span>construct(config: &lt;<span class="self">Self </span><span class="kw">as </span>Chip&lt;pallas::Base&gt;&gt;::Config) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ config }
     }
 
-    <span class="doccomment">/// Loads the lookup table required by this chip into the circuit.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">load</span>(
-        <span class="ident">config</span>: <span class="ident">SinsemillaConfig</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Loaded</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Load the lookup table.</span>
-        <span class="ident">config</span>.<span class="ident">generator_table</span>.<span class="ident">load</span>(<span class="ident">layouter</span>)
+    <span class="doccomment">/// Loads the lookup table required by this chip into the circuit.
+    </span><span class="kw">pub fn </span>load(
+        config: SinsemillaConfig&lt;Hash, Commit, F&gt;,
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;&lt;<span class="self">Self </span><span class="kw">as </span>Chip&lt;pallas::Base&gt;&gt;::Loaded, Error&gt; {
+        <span class="comment">// Load the lookup table.
+        </span>config.generator_table.load(layouter)
     }
 
-    <span class="doccomment">/// # Side-effects</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// All columns in `advices` and will be equality-enabled.</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure</span>(
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">advices</span>: [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>; <span class="number">5</span>],
-        <span class="ident">witness_pieces</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">fixed_y_q</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Fixed</span><span class="op">&gt;</span>,
-        <span class="ident">lookup</span>: (<span class="ident">TableColumn</span>, <span class="ident">TableColumn</span>, <span class="ident">TableColumn</span>),
-        <span class="ident">range_check</span>: <span class="ident">LookupRangeCheckConfig</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, { <span class="ident">sinsemilla::K</span> }<span class="op">&gt;</span>,
-    ) -&gt; <span class="op">&lt;</span><span class="self">Self</span> <span class="kw">as</span> <span class="ident">Chip</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="ident">::Config</span> {
-        <span class="comment">// Enable equality on all advice columns</span>
-        <span class="kw">for</span> <span class="ident">advice</span> <span class="kw">in</span> <span class="ident">advices</span>.<span class="ident">iter</span>() {
-            <span class="ident">meta</span>.<span class="ident">enable_equality</span>(<span class="kw-2">*</span><span class="ident">advice</span>);
+    <span class="doccomment">/// # Side-effects
+    ///
+    /// All columns in `advices` and will be equality-enabled.
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="kw">pub fn </span>configure(
+        meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;,
+        advices: [Column&lt;Advice&gt;; <span class="number">5</span>],
+        witness_pieces: Column&lt;Advice&gt;,
+        fixed_y_q: Column&lt;Fixed&gt;,
+        lookup: (TableColumn, TableColumn, TableColumn),
+        range_check: LookupRangeCheckConfig&lt;pallas::Base, { sinsemilla::K }&gt;,
+    ) -&gt; &lt;<span class="self">Self </span><span class="kw">as </span>Chip&lt;pallas::Base&gt;&gt;::Config {
+        <span class="comment">// Enable equality on all advice columns
+        </span><span class="kw">for </span>advice <span class="kw">in </span>advices.iter() {
+            meta.enable_equality(<span class="kw-2">*</span>advice);
         }
 
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">SinsemillaConfig</span>::<span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> {
-            <span class="ident">q_sinsemilla1</span>: <span class="ident">meta</span>.<span class="ident">complex_selector</span>(),
-            <span class="ident">q_sinsemilla2</span>: <span class="ident">meta</span>.<span class="ident">fixed_column</span>(),
-            <span class="ident">q_sinsemilla4</span>: <span class="ident">meta</span>.<span class="ident">selector</span>(),
-            <span class="ident">fixed_y_q</span>,
-            <span class="ident">double_and_add</span>: <span class="ident">DoubleAndAdd</span> {
-                <span class="ident">x_a</span>: <span class="ident">advices</span>[<span class="number">0</span>],
-                <span class="ident">x_p</span>: <span class="ident">advices</span>[<span class="number">1</span>],
-                <span class="ident">lambda_1</span>: <span class="ident">advices</span>[<span class="number">3</span>],
-                <span class="ident">lambda_2</span>: <span class="ident">advices</span>[<span class="number">4</span>],
+        <span class="kw">let </span>config = SinsemillaConfig::&lt;Hash, Commit, F&gt; {
+            q_sinsemilla1: meta.complex_selector(),
+            q_sinsemilla2: meta.fixed_column(),
+            q_sinsemilla4: meta.selector(),
+            fixed_y_q,
+            double_and_add: DoubleAndAdd {
+                x_a: advices[<span class="number">0</span>],
+                x_p: advices[<span class="number">1</span>],
+                lambda_1: advices[<span class="number">3</span>],
+                lambda_2: advices[<span class="number">4</span>],
             },
-            <span class="ident">bits</span>: <span class="ident">advices</span>[<span class="number">2</span>],
-            <span class="ident">witness_pieces</span>,
-            <span class="ident">generator_table</span>: <span class="ident">GeneratorTableConfig</span> {
-                <span class="ident">table_idx</span>: <span class="ident">lookup</span>.<span class="number">0</span>,
-                <span class="ident">table_x</span>: <span class="ident">lookup</span>.<span class="number">1</span>,
-                <span class="ident">table_y</span>: <span class="ident">lookup</span>.<span class="number">2</span>,
+            bits: advices[<span class="number">2</span>],
+            witness_pieces,
+            generator_table: GeneratorTableConfig {
+                table_idx: lookup.<span class="number">0</span>,
+                table_x: lookup.<span class="number">1</span>,
+                table_y: lookup.<span class="number">2</span>,
             },
-            <span class="ident">lookup_config</span>: <span class="ident">range_check</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+            lookup_config: range_check,
+            _marker: PhantomData,
         };
 
-        <span class="comment">// Set up lookup argument</span>
-        <span class="ident">GeneratorTableConfig::configure</span>(<span class="ident">meta</span>, <span class="ident">config</span>.<span class="ident">clone</span>());
+        <span class="comment">// Set up lookup argument
+        </span>GeneratorTableConfig::configure(meta, config.clone());
 
-        <span class="kw">let</span> <span class="ident">two</span> <span class="op">=</span> <span class="ident">pallas::Base::from</span>(<span class="number">2</span>);
+        <span class="kw">let </span>two = pallas::Base::from(<span class="number">2</span>);
 
-        <span class="comment">// Closures for expressions that are derived multiple times</span>
-        <span class="comment">// x_r = lambda_1^2 - x_a - x_p</span>
-        <span class="kw">let</span> <span class="ident">x_r</span> <span class="op">=</span> <span class="op">|</span><span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">rotation</span><span class="op">|</span> {
-            <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_r</span>(<span class="ident">meta</span>, <span class="ident">rotation</span>)
+        <span class="comment">// Closures for expressions that are derived multiple times
+        // x_r = lambda_1^2 - x_a - x_p
+        </span><span class="kw">let </span>x_r = |meta: <span class="kw-2">&amp;mut </span>VirtualCells&lt;pallas::Base&gt;, rotation| {
+            config.double_and_add.x_r(meta, rotation)
         };
 
-        <span class="comment">// Y_A = (lambda_1 + lambda_2) * (x_a - x_r)</span>
-        <span class="kw">let</span> <span class="ident">Y_A</span> <span class="op">=</span> <span class="op">|</span><span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">VirtualCells</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>, <span class="ident">rotation</span><span class="op">|</span> {
-            <span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">Y_A</span>(<span class="ident">meta</span>, <span class="ident">rotation</span>)
+        <span class="comment">// Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
+        </span><span class="kw">let </span>Y_A = |meta: <span class="kw-2">&amp;mut </span>VirtualCells&lt;pallas::Base&gt;, rotation| {
+            config.double_and_add.Y_A(meta, rotation)
         };
 
-        <span class="comment">// Check that the initial x_A, x_P, lambda_1, lambda_2 are consistent with y_Q.</span>
-        <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;Initial y_Q&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q_s4</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">config</span>.<span class="ident">q_sinsemilla4</span>);
-            <span class="kw">let</span> <span class="ident">y_q</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_fixed</span>(<span class="ident">config</span>.<span class="ident">fixed_y_q</span>, <span class="ident">Rotation::cur</span>());
+        <span class="comment">// Check that the initial x_A, x_P, lambda_1, lambda_2 are consistent with y_Q.
+        // https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial
+        </span>meta.create_gate(<span class="string">&quot;Initial y_Q&quot;</span>, |meta| {
+            <span class="kw">let </span>q_s4 = meta.query_selector(config.q_sinsemilla4);
+            <span class="kw">let </span>y_q = meta.query_fixed(config.fixed_y_q, Rotation::cur());
 
-            <span class="comment">// Y_A = (lambda_1 + lambda_2) * (x_a - x_r)</span>
-            <span class="kw">let</span> <span class="ident">Y_A_cur</span> <span class="op">=</span> <span class="ident">Y_A</span>(<span class="ident">meta</span>, <span class="ident">Rotation::cur</span>());
+            <span class="comment">// Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
+            </span><span class="kw">let </span>Y_A_cur = Y_A(meta, Rotation::cur());
 
-            <span class="comment">// 2 * y_q - Y_{A,0} = 0</span>
-            <span class="kw">let</span> <span class="ident">init_y_q_check</span> <span class="op">=</span> <span class="ident">y_q</span> <span class="op">*</span> <span class="ident">two</span> <span class="op">-</span> <span class="ident">Y_A_cur</span>;
+            <span class="comment">// 2 * y_q - Y_{A,0} = 0
+            </span><span class="kw">let </span>init_y_q_check = y_q * two - Y_A_cur;
 
-            <span class="ident">Constraints::with_selector</span>(<span class="ident">q_s4</span>, <span class="prelude-val">Some</span>((<span class="string">&quot;init_y_q_check&quot;</span>, <span class="ident">init_y_q_check</span>)))
+            Constraints::with_selector(q_s4, <span class="prelude-val">Some</span>((<span class="string">&quot;init_y_q_check&quot;</span>, init_y_q_check)))
         });
 
-        <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;Sinsemilla gate&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q_s1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">config</span>.<span class="ident">q_sinsemilla1</span>);
-            <span class="kw">let</span> <span class="ident">q_s3</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">q_s3</span>(<span class="ident">meta</span>);
+        <span class="comment">// https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial
+        </span>meta.create_gate(<span class="string">&quot;Sinsemilla gate&quot;</span>, |meta| {
+            <span class="kw">let </span>q_s1 = meta.query_selector(config.q_sinsemilla1);
+            <span class="kw">let </span>q_s3 = config.q_s3(meta);
 
-            <span class="kw">let</span> <span class="ident">lambda_1_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_1</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">lambda_2_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">lambda_2</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">x_a_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">x_a_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">double_and_add</span>.<span class="ident">x_a</span>, <span class="ident">Rotation::next</span>());
+            <span class="kw">let </span>lambda_1_next = meta.query_advice(config.double_and_add.lambda_1, Rotation::next());
+            <span class="kw">let </span>lambda_2_cur = meta.query_advice(config.double_and_add.lambda_2, Rotation::cur());
+            <span class="kw">let </span>x_a_cur = meta.query_advice(config.double_and_add.x_a, Rotation::cur());
+            <span class="kw">let </span>x_a_next = meta.query_advice(config.double_and_add.x_a, Rotation::next());
 
-            <span class="comment">// x_r = lambda_1^2 - x_a_cur - x_p</span>
-            <span class="kw">let</span> <span class="ident">x_r</span> <span class="op">=</span> <span class="ident">x_r</span>(<span class="ident">meta</span>, <span class="ident">Rotation::cur</span>());
+            <span class="comment">// x_r = lambda_1^2 - x_a_cur - x_p
+            </span><span class="kw">let </span>x_r = x_r(meta, Rotation::cur());
 
-            <span class="comment">// Y_A = (lambda_1 + lambda_2) * (x_a - x_r)</span>
-            <span class="kw">let</span> <span class="ident">Y_A_cur</span> <span class="op">=</span> <span class="ident">Y_A</span>(<span class="ident">meta</span>, <span class="ident">Rotation::cur</span>());
+            <span class="comment">// Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
+            </span><span class="kw">let </span>Y_A_cur = Y_A(meta, Rotation::cur());
 
-            <span class="comment">// Y_A = (lambda_1 + lambda_2) * (x_a - x_r)</span>
-            <span class="kw">let</span> <span class="ident">Y_A_next</span> <span class="op">=</span> <span class="ident">Y_A</span>(<span class="ident">meta</span>, <span class="ident">Rotation::next</span>());
+            <span class="comment">// Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
+            </span><span class="kw">let </span>Y_A_next = Y_A(meta, Rotation::next());
 
-            <span class="comment">// lambda2^2 - (x_a_next + x_r + x_a_cur) = 0</span>
-            <span class="kw">let</span> <span class="ident">secant_line</span> <span class="op">=</span>
-                <span class="ident">lambda_2_cur</span>.<span class="ident">clone</span>().<span class="ident">square</span>() <span class="op">-</span> (<span class="ident">x_a_next</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="ident">x_r</span> <span class="op">+</span> <span class="ident">x_a_cur</span>.<span class="ident">clone</span>());
+            <span class="comment">// lambda2^2 - (x_a_next + x_r + x_a_cur) = 0
+            </span><span class="kw">let </span>secant_line =
+                lambda_2_cur.clone().square() - (x_a_next.clone() + x_r + x_a_cur.clone());
 
-            <span class="comment">// lhs - rhs = 0, where</span>
-            <span class="comment">//    - lhs = 4 * lambda_2_cur * (x_a_cur - x_a_next)</span>
-            <span class="comment">//    - rhs = (2 * Y_A_cur + (2 - q_s3) * Y_A_next + 2 * q_s3 * y_a_final)</span>
-            <span class="kw">let</span> <span class="ident">y_check</span> <span class="op">=</span> {
-                <span class="comment">// lhs = 4 * lambda_2_cur * (x_a_cur - x_a_next)</span>
-                <span class="kw">let</span> <span class="ident">lhs</span> <span class="op">=</span> <span class="ident">lambda_2_cur</span> <span class="op">*</span> <span class="ident">pallas::Base::from</span>(<span class="number">4</span>) <span class="op">*</span> (<span class="ident">x_a_cur</span> <span class="op">-</span> <span class="ident">x_a_next</span>);
+            <span class="comment">// lhs - rhs = 0, where
+            //    - lhs = 4 * lambda_2_cur * (x_a_cur - x_a_next)
+            //    - rhs = (2 * Y_A_cur + (2 - q_s3) * Y_A_next + 2 * q_s3 * y_a_final)
+            </span><span class="kw">let </span>y_check = {
+                <span class="comment">// lhs = 4 * lambda_2_cur * (x_a_cur - x_a_next)
+                </span><span class="kw">let </span>lhs = lambda_2_cur * pallas::Base::from(<span class="number">4</span>) * (x_a_cur - x_a_next);
 
-                <span class="comment">// rhs = 2 * Y_A_cur + (2 - q_s3) * Y_A_next + 2 * q_s3 * y_a_final</span>
-                <span class="kw">let</span> <span class="ident">rhs</span> <span class="op">=</span> {
-                    <span class="comment">// y_a_final is assigned to the lambda1 column on the next offset.</span>
-                    <span class="kw">let</span> <span class="ident">y_a_final</span> <span class="op">=</span> <span class="ident">lambda_1_next</span>;
+                <span class="comment">// rhs = 2 * Y_A_cur + (2 - q_s3) * Y_A_next + 2 * q_s3 * y_a_final
+                </span><span class="kw">let </span>rhs = {
+                    <span class="comment">// y_a_final is assigned to the lambda1 column on the next offset.
+                    </span><span class="kw">let </span>y_a_final = lambda_1_next;
 
-                    <span class="ident">Y_A_cur</span> <span class="op">*</span> <span class="ident">two</span>
-                        <span class="op">+</span> (<span class="ident">Expression::Constant</span>(<span class="ident">two</span>) <span class="op">-</span> <span class="ident">q_s3</span>.<span class="ident">clone</span>()) <span class="op">*</span> <span class="ident">Y_A_next</span>
-                        <span class="op">+</span> <span class="ident">q_s3</span> <span class="op">*</span> <span class="ident">two</span> <span class="op">*</span> <span class="ident">y_a_final</span>
+                    Y_A_cur * two
+                        + (Expression::Constant(two) - q_s3.clone()) * Y_A_next
+                        + q_s3 * two * y_a_final
                 };
-                <span class="ident">lhs</span> <span class="op">-</span> <span class="ident">rhs</span>
+                lhs - rhs
             };
 
-            <span class="ident">Constraints::with_selector</span>(<span class="ident">q_s1</span>, [(<span class="string">&quot;Secant line&quot;</span>, <span class="ident">secant_line</span>), (<span class="string">&quot;y check&quot;</span>, <span class="ident">y_check</span>)])
+            Constraints::with_selector(q_s1, [(<span class="string">&quot;Secant line&quot;</span>, secant_line), (<span class="string">&quot;y check&quot;</span>, y_check)])
         });
 
-        <span class="ident">config</span>
+        config
     }
 }
 
-<span class="comment">// Implement `SinsemillaInstructions` for `SinsemillaChip`</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span> <span class="ident">SinsemillaInstructions</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, { <span class="ident">sinsemilla::K</span> }, { <span class="ident">sinsemilla::C</span> }<span class="op">&gt;</span>
-    <span class="kw">for</span> <span class="ident">SinsemillaChip</span><span class="op">&lt;</span><span class="ident">Hash</span>, <span class="ident">Commit</span>, <span class="ident">F</span><span class="op">&gt;</span>
-<span class="kw">where</span>
-    <span class="ident">Hash</span>: <span class="ident">HashDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">F</span>: <span class="ident">FixedPoints</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span>,
-    <span class="ident">Commit</span>: <span class="ident">CommitDomains</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">F</span>, <span class="ident">Hash</span><span class="op">&gt;</span>,
+<span class="comment">// Implement `SinsemillaInstructions` for `SinsemillaChip`
+</span><span class="kw">impl</span>&lt;Hash, Commit, F&gt; SinsemillaInstructions&lt;pallas::Affine, { sinsemilla::K }, { sinsemilla::C }&gt;
+    <span class="kw">for </span>SinsemillaChip&lt;Hash, Commit, F&gt;
+<span class="kw">where
+    </span>Hash: HashDomains&lt;pallas::Affine&gt;,
+    F: FixedPoints&lt;pallas::Affine&gt;,
+    Commit: CommitDomains&lt;pallas::Affine, F, Hash&gt;,
 {
-    <span class="kw">type</span> <span class="ident">CellValue</span> <span class="op">=</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>CellValue = AssignedCell&lt;pallas::Base, pallas::Base&gt;;
 
-    <span class="kw">type</span> <span class="ident">Message</span> <span class="op">=</span> <span class="ident">Message</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, { <span class="ident">sinsemilla::K</span> }, { <span class="ident">sinsemilla::C</span> }<span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">MessagePiece</span> <span class="op">=</span> <span class="ident">MessagePiece</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, { <span class="ident">sinsemilla::K</span> }<span class="op">&gt;</span>;
+    <span class="kw">type </span>Message = Message&lt;pallas::Base, { sinsemilla::K }, { sinsemilla::C }&gt;;
+    <span class="kw">type </span>MessagePiece = MessagePiece&lt;pallas::Base, { sinsemilla::K }&gt;;
 
-    <span class="kw">type</span> <span class="ident">RunningSum</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::CellValue</span><span class="op">&gt;</span>;
+    <span class="kw">type </span>RunningSum = Vec&lt;<span class="self">Self</span>::CellValue&gt;;
 
-    <span class="kw">type</span> <span class="ident">X</span> <span class="op">=</span> <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>;
-    <span class="kw">type</span> <span class="ident">NonIdentityPoint</span> <span class="op">=</span> <span class="ident">NonIdentityEccPoint</span>;
-    <span class="kw">type</span> <span class="ident">FixedPoints</span> <span class="op">=</span> <span class="ident">F</span>;
+    <span class="kw">type </span>X = AssignedCell&lt;pallas::Base, pallas::Base&gt;;
+    <span class="kw">type </span>NonIdentityPoint = NonIdentityEccPoint;
+    <span class="kw">type </span>FixedPoints = F;
 
-    <span class="kw">type</span> <span class="ident">HashDomains</span> <span class="op">=</span> <span class="ident">Hash</span>;
-    <span class="kw">type</span> <span class="ident">CommitDomains</span> <span class="op">=</span> <span class="ident">Commit</span>;
+    <span class="kw">type </span>HashDomains = Hash;
+    <span class="kw">type </span>CommitDomains = Commit;
 
-    <span class="kw">fn</span> <span class="ident">witness_message_piece</span>(
+    <span class="kw">fn </span>witness_message_piece(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">field_elem</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">num_words</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::MessagePiece</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">config</span>().<span class="ident">clone</span>();
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        field_elem: Value&lt;pallas::Base&gt;,
+        num_words: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>::MessagePiece, Error&gt; {
+        <span class="kw">let </span>config = <span class="self">self</span>.config().clone();
 
-        <span class="kw">let</span> <span class="ident">cell</span> <span class="op">=</span> <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;witness message piece&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="string">&quot;witness message piece&quot;</span>,
-                    <span class="ident">config</span>.<span class="ident">witness_pieces</span>,
+        <span class="kw">let </span>cell = layouter.assign_region(
+            || <span class="string">&quot;witness message piece&quot;</span>,
+            |<span class="kw-2">mut </span>region| {
+                region.assign_advice(
+                    || <span class="string">&quot;witness message piece&quot;</span>,
+                    config.witness_pieces,
                     <span class="number">0</span>,
-                    <span class="op">|</span><span class="op">|</span> <span class="ident">field_elem</span>,
+                    || field_elem,
                 )
             },
         )<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">MessagePiece::new</span>(<span class="ident">cell</span>, <span class="ident">num_words</span>))
+        <span class="prelude-val">Ok</span>(MessagePiece::new(cell, num_words))
     }
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::type_complexity</span>)]</span>
-    <span class="kw">fn</span> <span class="ident">hash_to_point</span>(
+    <span class="attribute">#[allow(non_snake_case)]</span>
+    <span class="attribute">#[allow(clippy::type_complexity)]</span>
+    <span class="kw">fn </span>hash_to_point(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">Q</span>: <span class="ident">pallas::Affine</span>,
-        <span class="ident">message</span>: <span class="ident"><span class="self">Self</span>::Message</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident"><span class="self">Self</span>::RunningSum</span><span class="op">&gt;</span>), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;hash_to_point&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">hash_message</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">Q</span>, <span class="kw-2">&amp;</span><span class="ident">message</span>),
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        Q: pallas::Affine,
+        message: <span class="self">Self</span>::Message,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(<span class="self">Self</span>::NonIdentityPoint, Vec&lt;<span class="self">Self</span>::RunningSum&gt;), Error&gt; {
+        layouter.assign_region(
+            || <span class="string">&quot;hash_to_point&quot;</span>,
+            |<span class="kw-2">mut </span>region| <span class="self">self</span>.hash_message(<span class="kw-2">&amp;mut </span>region, Q, <span class="kw-2">&amp;</span>message),
         )
     }
 
-    <span class="kw">fn</span> <span class="ident">extract</span>(<span class="ident">point</span>: <span class="kw-2">&amp;</span><span class="ident"><span class="self">Self</span>::NonIdentityPoint</span>) -&gt; <span class="ident"><span class="self">Self</span>::X</span> {
-        <span class="ident">point</span>.<span class="ident">x</span>()
+    <span class="kw">fn </span>extract(point: <span class="kw-2">&amp;</span><span class="self">Self</span>::NonIdentityPoint) -&gt; <span class="self">Self</span>::X {
+        point.x()
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

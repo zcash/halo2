@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -415,402 +409,401 @@
 <span id="394">394</span>
 <span id="395">395</span>
 <span id="396">396</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span>::Gate</span>;
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">plonk::Expression</span>};
-<span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::Gate;
+<span class="kw">use </span>halo2_proofs::{arithmetic::FieldExt, plonk::Expression};
+<span class="kw">use </span>std::marker::PhantomData;
 
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ScheduleGate</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span>(<span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>);
+<span class="kw">pub struct </span>ScheduleGate&lt;F: FieldExt&gt;(PhantomData&lt;F&gt;);
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span><span class="op">&gt;</span> <span class="ident">ScheduleGate</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// s_word for W_16 to W_63</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">s_word</span>(
-        <span class="ident">s_word</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">sigma_0_lo</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">sigma_0_hi</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">sigma_1_lo</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">sigma_1_hi</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">w_minus_9_lo</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">w_minus_9_hi</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">w_minus_16_lo</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">w_minus_16_hi</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">word</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">carry</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">lo</span> <span class="op">=</span> <span class="ident">sigma_0_lo</span> <span class="op">+</span> <span class="ident">sigma_1_lo</span> <span class="op">+</span> <span class="ident">w_minus_9_lo</span> <span class="op">+</span> <span class="ident">w_minus_16_lo</span>;
-        <span class="kw">let</span> <span class="ident">hi</span> <span class="op">=</span> <span class="ident">sigma_0_hi</span> <span class="op">+</span> <span class="ident">sigma_1_hi</span> <span class="op">+</span> <span class="ident">w_minus_9_hi</span> <span class="op">+</span> <span class="ident">w_minus_16_hi</span>;
+<span class="kw">impl</span>&lt;F: FieldExt&gt; ScheduleGate&lt;F&gt; {
+    <span class="doccomment">/// s_word for W_16 to W_63
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="kw">pub fn </span>s_word(
+        s_word: Expression&lt;F&gt;,
+        sigma_0_lo: Expression&lt;F&gt;,
+        sigma_0_hi: Expression&lt;F&gt;,
+        sigma_1_lo: Expression&lt;F&gt;,
+        sigma_1_hi: Expression&lt;F&gt;,
+        w_minus_9_lo: Expression&lt;F&gt;,
+        w_minus_9_hi: Expression&lt;F&gt;,
+        w_minus_16_lo: Expression&lt;F&gt;,
+        w_minus_16_hi: Expression&lt;F&gt;,
+        word: Expression&lt;F&gt;,
+        carry: Expression&lt;F&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Expression&lt;F&gt;)&gt; {
+        <span class="kw">let </span>lo = sigma_0_lo + sigma_1_lo + w_minus_9_lo + w_minus_16_lo;
+        <span class="kw">let </span>hi = sigma_0_hi + sigma_1_hi + w_minus_9_hi + w_minus_16_hi;
 
-        <span class="kw">let</span> <span class="ident">word_check</span> <span class="op">=</span> <span class="ident">lo</span>
-            <span class="op">+</span> <span class="ident">hi</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">16</span>)
-            <span class="op">+</span> (<span class="ident">carry</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span>) <span class="op">*</span> (<span class="op">-</span><span class="ident">F::one</span>()))
-            <span class="op">+</span> (<span class="ident">word</span> <span class="op">*</span> (<span class="op">-</span><span class="ident">F::one</span>()));
-        <span class="kw">let</span> <span class="ident">carry_check</span> <span class="op">=</span> <span class="ident">Gate::range_check</span>(<span class="ident">carry</span>, <span class="number">0</span>, <span class="number">3</span>);
+        <span class="kw">let </span>word_check = lo
+            + hi * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">16</span>)
+            + (carry.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">32</span>) * (-F::one()))
+            + (word * (-F::one()));
+        <span class="kw">let </span>carry_check = Gate::range_check(carry, <span class="number">0</span>, <span class="number">3</span>);
 
-        [(<span class="string">&quot;word_check&quot;</span>, <span class="ident">word_check</span>), (<span class="string">&quot;carry_check&quot;</span>, <span class="ident">carry_check</span>)]
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">name</span>, <span class="ident">poly</span>)<span class="op">|</span> (<span class="ident">name</span>, <span class="ident">s_word</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">poly</span>))
+        [(<span class="string">&quot;word_check&quot;</span>, word_check), (<span class="string">&quot;carry_check&quot;</span>, carry_check)]
+            .into_iter()
+            .map(<span class="kw">move </span>|(name, poly)| (name, s_word.clone() * poly))
     }
 
-    <span class="doccomment">/// s_decompose_0 for all words</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">s_decompose_0</span>(
-        <span class="ident">s_decompose_0</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">lo</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">hi</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">word</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">check</span> <span class="op">=</span> <span class="ident">lo</span> <span class="op">+</span> <span class="ident">hi</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">16</span>) <span class="op">-</span> <span class="ident">word</span>;
-        <span class="prelude-val">Some</span>((<span class="string">&quot;s_decompose_0&quot;</span>, <span class="ident">s_decompose_0</span> <span class="op">*</span> <span class="ident">check</span>))
+    <span class="doccomment">/// s_decompose_0 for all words
+    </span><span class="kw">pub fn </span>s_decompose_0(
+        s_decompose_0: Expression&lt;F&gt;,
+        lo: Expression&lt;F&gt;,
+        hi: Expression&lt;F&gt;,
+        word: Expression&lt;F&gt;,
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Expression&lt;F&gt;)&gt; {
+        <span class="kw">let </span>check = lo + hi * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">16</span>) - word;
+        <span class="prelude-val">Some</span>((<span class="string">&quot;s_decompose_0&quot;</span>, s_decompose_0 * check))
     }
 
-    <span class="doccomment">/// s_decompose_1 for W_1 to W_13</span>
-    <span class="doccomment">/// (3, 4, 11, 14)-bit chunks</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">s_decompose_1</span>(
-        <span class="ident">s_decompose_1</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">a</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">c</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">tag_c</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">d</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">tag_d</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">word</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">decompose_check</span> <span class="op">=</span> <span class="ident">a</span>
-            <span class="op">+</span> <span class="ident">b</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">3</span>)
-            <span class="op">+</span> <span class="ident">c</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">7</span>)
-            <span class="op">+</span> <span class="ident">d</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">18</span>)
-            <span class="op">+</span> <span class="ident">word</span> <span class="op">*</span> (<span class="op">-</span><span class="ident">F::one</span>());
-        <span class="kw">let</span> <span class="ident">range_check_tag_c</span> <span class="op">=</span> <span class="ident">Gate::range_check</span>(<span class="ident">tag_c</span>, <span class="number">0</span>, <span class="number">2</span>);
-        <span class="kw">let</span> <span class="ident">range_check_tag_d</span> <span class="op">=</span> <span class="ident">Gate::range_check</span>(<span class="ident">tag_d</span>, <span class="number">0</span>, <span class="number">4</span>);
+    <span class="doccomment">/// s_decompose_1 for W_1 to W_13
+    /// (3, 4, 11, 14)-bit chunks
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="kw">pub fn </span>s_decompose_1(
+        s_decompose_1: Expression&lt;F&gt;,
+        a: Expression&lt;F&gt;,
+        b: Expression&lt;F&gt;,
+        c: Expression&lt;F&gt;,
+        tag_c: Expression&lt;F&gt;,
+        d: Expression&lt;F&gt;,
+        tag_d: Expression&lt;F&gt;,
+        word: Expression&lt;F&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Expression&lt;F&gt;)&gt; {
+        <span class="kw">let </span>decompose_check = a
+            + b * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">3</span>)
+            + c * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">7</span>)
+            + d * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">18</span>)
+            + word * (-F::one());
+        <span class="kw">let </span>range_check_tag_c = Gate::range_check(tag_c, <span class="number">0</span>, <span class="number">2</span>);
+        <span class="kw">let </span>range_check_tag_d = Gate::range_check(tag_d, <span class="number">0</span>, <span class="number">4</span>);
 
         [
-            (<span class="string">&quot;decompose_check&quot;</span>, <span class="ident">decompose_check</span>),
-            (<span class="string">&quot;range_check_tag_c&quot;</span>, <span class="ident">range_check_tag_c</span>),
-            (<span class="string">&quot;range_check_tag_d&quot;</span>, <span class="ident">range_check_tag_d</span>),
+            (<span class="string">&quot;decompose_check&quot;</span>, decompose_check),
+            (<span class="string">&quot;range_check_tag_c&quot;</span>, range_check_tag_c),
+            (<span class="string">&quot;range_check_tag_d&quot;</span>, range_check_tag_d),
         ]
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">name</span>, <span class="ident">poly</span>)<span class="op">|</span> (<span class="ident">name</span>, <span class="ident">s_decompose_1</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">poly</span>))
+        .into_iter()
+        .map(<span class="kw">move </span>|(name, poly)| (name, s_decompose_1.clone() * poly))
     }
 
-    <span class="doccomment">/// s_decompose_2 for W_14 to W_48</span>
-    <span class="doccomment">/// (3, 4, 3, 7, 1, 1, 13)-bit chunks</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::many_single_char_names</span>)]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">s_decompose_2</span>(
-        <span class="ident">s_decompose_2</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">a</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">c</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">d</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">tag_d</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">e</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">f</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">g</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">tag_g</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">word</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">decompose_check</span> <span class="op">=</span> <span class="ident">a</span>
-            <span class="op">+</span> <span class="ident">b</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">3</span>)
-            <span class="op">+</span> <span class="ident">c</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">7</span>)
-            <span class="op">+</span> <span class="ident">d</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">10</span>)
-            <span class="op">+</span> <span class="ident">e</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">17</span>)
-            <span class="op">+</span> <span class="ident">f</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">18</span>)
-            <span class="op">+</span> <span class="ident">g</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">19</span>)
-            <span class="op">+</span> <span class="ident">word</span> <span class="op">*</span> (<span class="op">-</span><span class="ident">F::one</span>());
-        <span class="kw">let</span> <span class="ident">range_check_tag_d</span> <span class="op">=</span> <span class="ident">Gate::range_check</span>(<span class="ident">tag_d</span>, <span class="number">0</span>, <span class="number">0</span>);
-        <span class="kw">let</span> <span class="ident">range_check_tag_g</span> <span class="op">=</span> <span class="ident">Gate::range_check</span>(<span class="ident">tag_g</span>, <span class="number">0</span>, <span class="number">3</span>);
+    <span class="doccomment">/// s_decompose_2 for W_14 to W_48
+    /// (3, 4, 3, 7, 1, 1, 13)-bit chunks
+    </span><span class="attribute">#[allow(clippy::many_single_char_names)]</span>
+    <span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="kw">pub fn </span>s_decompose_2(
+        s_decompose_2: Expression&lt;F&gt;,
+        a: Expression&lt;F&gt;,
+        b: Expression&lt;F&gt;,
+        c: Expression&lt;F&gt;,
+        d: Expression&lt;F&gt;,
+        tag_d: Expression&lt;F&gt;,
+        e: Expression&lt;F&gt;,
+        f: Expression&lt;F&gt;,
+        g: Expression&lt;F&gt;,
+        tag_g: Expression&lt;F&gt;,
+        word: Expression&lt;F&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Expression&lt;F&gt;)&gt; {
+        <span class="kw">let </span>decompose_check = a
+            + b * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">3</span>)
+            + c * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">7</span>)
+            + d * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">10</span>)
+            + e * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">17</span>)
+            + f * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">18</span>)
+            + g * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">19</span>)
+            + word * (-F::one());
+        <span class="kw">let </span>range_check_tag_d = Gate::range_check(tag_d, <span class="number">0</span>, <span class="number">0</span>);
+        <span class="kw">let </span>range_check_tag_g = Gate::range_check(tag_g, <span class="number">0</span>, <span class="number">3</span>);
 
         [
-            (<span class="string">&quot;decompose_check&quot;</span>, <span class="ident">decompose_check</span>),
-            (<span class="string">&quot;range_check_tag_g&quot;</span>, <span class="ident">range_check_tag_g</span>),
-            (<span class="string">&quot;range_check_tag_d&quot;</span>, <span class="ident">range_check_tag_d</span>),
+            (<span class="string">&quot;decompose_check&quot;</span>, decompose_check),
+            (<span class="string">&quot;range_check_tag_g&quot;</span>, range_check_tag_g),
+            (<span class="string">&quot;range_check_tag_d&quot;</span>, range_check_tag_d),
         ]
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">name</span>, <span class="ident">poly</span>)<span class="op">|</span> (<span class="ident">name</span>, <span class="ident">s_decompose_2</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">poly</span>))
+        .into_iter()
+        .map(<span class="kw">move </span>|(name, poly)| (name, s_decompose_2.clone() * poly))
     }
 
-    <span class="doccomment">/// s_decompose_3 for W_49 to W_61</span>
-    <span class="doccomment">/// (10, 7, 2, 13)-bit chunks</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">s_decompose_3</span>(
-        <span class="ident">s_decompose_3</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">a</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">tag_a</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">c</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">d</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">tag_d</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">word</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">decompose_check</span> <span class="op">=</span> <span class="ident">a</span>
-            <span class="op">+</span> <span class="ident">b</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">10</span>)
-            <span class="op">+</span> <span class="ident">c</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">17</span>)
-            <span class="op">+</span> <span class="ident">d</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">19</span>)
-            <span class="op">+</span> <span class="ident">word</span> <span class="op">*</span> (<span class="op">-</span><span class="ident">F::one</span>());
-        <span class="kw">let</span> <span class="ident">range_check_tag_a</span> <span class="op">=</span> <span class="ident">Gate::range_check</span>(<span class="ident">tag_a</span>, <span class="number">0</span>, <span class="number">1</span>);
-        <span class="kw">let</span> <span class="ident">range_check_tag_d</span> <span class="op">=</span> <span class="ident">Gate::range_check</span>(<span class="ident">tag_d</span>, <span class="number">0</span>, <span class="number">3</span>);
+    <span class="doccomment">/// s_decompose_3 for W_49 to W_61
+    /// (10, 7, 2, 13)-bit chunks
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="kw">pub fn </span>s_decompose_3(
+        s_decompose_3: Expression&lt;F&gt;,
+        a: Expression&lt;F&gt;,
+        tag_a: Expression&lt;F&gt;,
+        b: Expression&lt;F&gt;,
+        c: Expression&lt;F&gt;,
+        d: Expression&lt;F&gt;,
+        tag_d: Expression&lt;F&gt;,
+        word: Expression&lt;F&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Expression&lt;F&gt;)&gt; {
+        <span class="kw">let </span>decompose_check = a
+            + b * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">10</span>)
+            + c * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">17</span>)
+            + d * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">19</span>)
+            + word * (-F::one());
+        <span class="kw">let </span>range_check_tag_a = Gate::range_check(tag_a, <span class="number">0</span>, <span class="number">1</span>);
+        <span class="kw">let </span>range_check_tag_d = Gate::range_check(tag_d, <span class="number">0</span>, <span class="number">3</span>);
 
         [
-            (<span class="string">&quot;decompose_check&quot;</span>, <span class="ident">decompose_check</span>),
-            (<span class="string">&quot;range_check_tag_a&quot;</span>, <span class="ident">range_check_tag_a</span>),
-            (<span class="string">&quot;range_check_tag_d&quot;</span>, <span class="ident">range_check_tag_d</span>),
+            (<span class="string">&quot;decompose_check&quot;</span>, decompose_check),
+            (<span class="string">&quot;range_check_tag_a&quot;</span>, range_check_tag_a),
+            (<span class="string">&quot;range_check_tag_d&quot;</span>, range_check_tag_d),
         ]
-        .<span class="ident">into_iter</span>()
-        .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">name</span>, <span class="ident">poly</span>)<span class="op">|</span> (<span class="ident">name</span>, <span class="ident">s_decompose_3</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">poly</span>))
+        .into_iter()
+        .map(<span class="kw">move </span>|(name, poly)| (name, s_decompose_3.clone() * poly))
     }
 
-    <span class="doccomment">/// b_lo + 2^2 * b_mid = b, on W_[1..49]</span>
-    <span class="kw">fn</span> <span class="ident">check_b</span>(<span class="ident">b</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">b_lo</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">b_hi</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">expected_b</span> <span class="op">=</span> <span class="ident">b_lo</span> <span class="op">+</span> <span class="ident">b_hi</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">2</span>);
-        <span class="ident">expected_b</span> <span class="op">-</span> <span class="ident">b</span>
+    <span class="doccomment">/// b_lo + 2^2 * b_mid = b, on W_[1..49]
+    </span><span class="kw">fn </span>check_b(b: Expression&lt;F&gt;, b_lo: Expression&lt;F&gt;, b_hi: Expression&lt;F&gt;) -&gt; Expression&lt;F&gt; {
+        <span class="kw">let </span>expected_b = b_lo + b_hi * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">2</span>);
+        expected_b - b
     }
 
-    <span class="doccomment">/// sigma_0 v1 on W_1 to W_13</span>
-    <span class="doccomment">/// (3, 4, 11, 14)-bit chunks</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">s_lower_sigma_0</span>(
-        <span class="ident">s_lower_sigma_0</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r0_even</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r0_odd</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r1_even</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r1_odd</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">a</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_a</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b_lo</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_b_lo</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b_hi</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_b_hi</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_c</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_d</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">check_spread_and_range</span> <span class="op">=</span>
-            <span class="ident">Gate::two_bit_spread_and_range</span>(<span class="ident">b_lo</span>.<span class="ident">clone</span>(), <span class="ident">spread_b_lo</span>.<span class="ident">clone</span>())
-                .<span class="ident">chain</span>(<span class="ident">Gate::two_bit_spread_and_range</span>(
-                    <span class="ident">b_hi</span>.<span class="ident">clone</span>(),
-                    <span class="ident">spread_b_hi</span>.<span class="ident">clone</span>(),
+    <span class="doccomment">/// sigma_0 v1 on W_1 to W_13
+    /// (3, 4, 11, 14)-bit chunks
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="kw">pub fn </span>s_lower_sigma_0(
+        s_lower_sigma_0: Expression&lt;F&gt;,
+        spread_r0_even: Expression&lt;F&gt;,
+        spread_r0_odd: Expression&lt;F&gt;,
+        spread_r1_even: Expression&lt;F&gt;,
+        spread_r1_odd: Expression&lt;F&gt;,
+        a: Expression&lt;F&gt;,
+        spread_a: Expression&lt;F&gt;,
+        b: Expression&lt;F&gt;,
+        b_lo: Expression&lt;F&gt;,
+        spread_b_lo: Expression&lt;F&gt;,
+        b_hi: Expression&lt;F&gt;,
+        spread_b_hi: Expression&lt;F&gt;,
+        spread_c: Expression&lt;F&gt;,
+        spread_d: Expression&lt;F&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Expression&lt;F&gt;)&gt; {
+        <span class="kw">let </span>check_spread_and_range =
+            Gate::two_bit_spread_and_range(b_lo.clone(), spread_b_lo.clone())
+                .chain(Gate::two_bit_spread_and_range(
+                    b_hi.clone(),
+                    spread_b_hi.clone(),
                 ))
-                .<span class="ident">chain</span>(<span class="ident">Gate::three_bit_spread_and_range</span>(<span class="ident">a</span>, <span class="ident">spread_a</span>.<span class="ident">clone</span>()));
-        <span class="kw">let</span> <span class="ident">check_b</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::check_b</span>(<span class="ident">b</span>, <span class="ident">b_lo</span>, <span class="ident">b_hi</span>);
-        <span class="kw">let</span> <span class="ident">spread_witness</span> <span class="op">=</span> <span class="ident">spread_r0_even</span>
-            <span class="op">+</span> <span class="ident">spread_r0_odd</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">2</span>)
-            <span class="op">+</span> (<span class="ident">spread_r1_even</span> <span class="op">+</span> <span class="ident">spread_r1_odd</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">2</span>)) <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span>);
-        <span class="kw">let</span> <span class="ident">xor_0</span> <span class="op">=</span> <span class="ident">spread_b_lo</span>.<span class="ident">clone</span>()
-            <span class="op">+</span> <span class="ident">spread_b_hi</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">4</span>)
-            <span class="op">+</span> <span class="ident">spread_c</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">8</span>)
-            <span class="op">+</span> <span class="ident">spread_d</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">30</span>);
-        <span class="kw">let</span> <span class="ident">xor_1</span> <span class="op">=</span> <span class="ident">spread_c</span>.<span class="ident">clone</span>()
-            <span class="op">+</span> <span class="ident">spread_d</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">22</span>)
-            <span class="op">+</span> <span class="ident">spread_a</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">50</span>)
-            <span class="op">+</span> <span class="ident">spread_b_lo</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">56</span>)
-            <span class="op">+</span> <span class="ident">spread_b_hi</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">60</span>);
-        <span class="kw">let</span> <span class="ident">xor_2</span> <span class="op">=</span> <span class="ident">spread_d</span>
-            <span class="op">+</span> <span class="ident">spread_a</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">28</span>)
-            <span class="op">+</span> <span class="ident">spread_b_lo</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">34</span>)
-            <span class="op">+</span> <span class="ident">spread_b_hi</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">38</span>)
-            <span class="op">+</span> <span class="ident">spread_c</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">42</span>);
-        <span class="kw">let</span> <span class="ident">xor</span> <span class="op">=</span> <span class="ident">xor_0</span> <span class="op">+</span> <span class="ident">xor_1</span> <span class="op">+</span> <span class="ident">xor_2</span>;
+                .chain(Gate::three_bit_spread_and_range(a, spread_a.clone()));
+        <span class="kw">let </span>check_b = <span class="self">Self</span>::check_b(b, b_lo, b_hi);
+        <span class="kw">let </span>spread_witness = spread_r0_even
+            + spread_r0_odd * F::from(<span class="number">2</span>)
+            + (spread_r1_even + spread_r1_odd * F::from(<span class="number">2</span>)) * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">32</span>);
+        <span class="kw">let </span>xor_0 = spread_b_lo.clone()
+            + spread_b_hi.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">4</span>)
+            + spread_c.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">8</span>)
+            + spread_d.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">30</span>);
+        <span class="kw">let </span>xor_1 = spread_c.clone()
+            + spread_d.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">22</span>)
+            + spread_a.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">50</span>)
+            + spread_b_lo.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">56</span>)
+            + spread_b_hi.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">60</span>);
+        <span class="kw">let </span>xor_2 = spread_d
+            + spread_a * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">28</span>)
+            + spread_b_lo * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">34</span>)
+            + spread_b_hi * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">38</span>)
+            + spread_c * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">42</span>);
+        <span class="kw">let </span>xor = xor_0 + xor_1 + xor_2;
 
-        <span class="ident">check_spread_and_range</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;check_b&quot;</span>, <span class="ident">check_b</span>)))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;lower_sigma_0&quot;</span>, <span class="ident">spread_witness</span> <span class="op">-</span> <span class="ident">xor</span>)))
-            .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">name</span>, <span class="ident">poly</span>)<span class="op">|</span> (<span class="ident">name</span>, <span class="ident">s_lower_sigma_0</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">poly</span>))
+        check_spread_and_range
+            .chain(<span class="prelude-val">Some</span>((<span class="string">&quot;check_b&quot;</span>, check_b)))
+            .chain(<span class="prelude-val">Some</span>((<span class="string">&quot;lower_sigma_0&quot;</span>, spread_witness - xor)))
+            .map(<span class="kw">move </span>|(name, poly)| (name, s_lower_sigma_0.clone() * poly))
     }
 
-    <span class="doccomment">/// sigma_1 v1 on W_49 to W_61</span>
-    <span class="doccomment">/// (10, 7, 2, 13)-bit chunks</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">s_lower_sigma_1</span>(
-        <span class="ident">s_lower_sigma_1</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r0_even</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r0_odd</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r1_even</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r1_odd</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_a</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b_lo</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_b_lo</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b_mid</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_b_mid</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b_hi</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_b_hi</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">c</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_c</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_d</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">check_spread_and_range</span> <span class="op">=</span>
-            <span class="ident">Gate::two_bit_spread_and_range</span>(<span class="ident">b_lo</span>.<span class="ident">clone</span>(), <span class="ident">spread_b_lo</span>.<span class="ident">clone</span>())
-                .<span class="ident">chain</span>(<span class="ident">Gate::two_bit_spread_and_range</span>(
-                    <span class="ident">b_mid</span>.<span class="ident">clone</span>(),
-                    <span class="ident">spread_b_mid</span>.<span class="ident">clone</span>(),
+    <span class="doccomment">/// sigma_1 v1 on W_49 to W_61
+    /// (10, 7, 2, 13)-bit chunks
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="kw">pub fn </span>s_lower_sigma_1(
+        s_lower_sigma_1: Expression&lt;F&gt;,
+        spread_r0_even: Expression&lt;F&gt;,
+        spread_r0_odd: Expression&lt;F&gt;,
+        spread_r1_even: Expression&lt;F&gt;,
+        spread_r1_odd: Expression&lt;F&gt;,
+        spread_a: Expression&lt;F&gt;,
+        b: Expression&lt;F&gt;,
+        b_lo: Expression&lt;F&gt;,
+        spread_b_lo: Expression&lt;F&gt;,
+        b_mid: Expression&lt;F&gt;,
+        spread_b_mid: Expression&lt;F&gt;,
+        b_hi: Expression&lt;F&gt;,
+        spread_b_hi: Expression&lt;F&gt;,
+        c: Expression&lt;F&gt;,
+        spread_c: Expression&lt;F&gt;,
+        spread_d: Expression&lt;F&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Expression&lt;F&gt;)&gt; {
+        <span class="kw">let </span>check_spread_and_range =
+            Gate::two_bit_spread_and_range(b_lo.clone(), spread_b_lo.clone())
+                .chain(Gate::two_bit_spread_and_range(
+                    b_mid.clone(),
+                    spread_b_mid.clone(),
                 ))
-                .<span class="ident">chain</span>(<span class="ident">Gate::two_bit_spread_and_range</span>(<span class="ident">c</span>, <span class="ident">spread_c</span>.<span class="ident">clone</span>()))
-                .<span class="ident">chain</span>(<span class="ident">Gate::three_bit_spread_and_range</span>(
-                    <span class="ident">b_hi</span>.<span class="ident">clone</span>(),
-                    <span class="ident">spread_b_hi</span>.<span class="ident">clone</span>(),
+                .chain(Gate::two_bit_spread_and_range(c, spread_c.clone()))
+                .chain(Gate::three_bit_spread_and_range(
+                    b_hi.clone(),
+                    spread_b_hi.clone(),
                 ));
-        <span class="comment">// b_lo + 2^2 * b_mid + 2^4 * b_hi = b, on W_[49..62]</span>
-        <span class="kw">let</span> <span class="ident">check_b1</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">expected_b</span> <span class="op">=</span> <span class="ident">b_lo</span> <span class="op">+</span> <span class="ident">b_mid</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">2</span>) <span class="op">+</span> <span class="ident">b_hi</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">4</span>);
-            <span class="ident">expected_b</span> <span class="op">-</span> <span class="ident">b</span>
+        <span class="comment">// b_lo + 2^2 * b_mid + 2^4 * b_hi = b, on W_[49..62]
+        </span><span class="kw">let </span>check_b1 = {
+            <span class="kw">let </span>expected_b = b_lo + b_mid * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">2</span>) + b_hi * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">4</span>);
+            expected_b - b
         };
-        <span class="kw">let</span> <span class="ident">spread_witness</span> <span class="op">=</span> <span class="ident">spread_r0_even</span>
-            <span class="op">+</span> <span class="ident">spread_r0_odd</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">2</span>)
-            <span class="op">+</span> (<span class="ident">spread_r1_even</span> <span class="op">+</span> <span class="ident">spread_r1_odd</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">2</span>)) <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span>);
-        <span class="kw">let</span> <span class="ident">xor_0</span> <span class="op">=</span> <span class="ident">spread_b_lo</span>.<span class="ident">clone</span>()
-            <span class="op">+</span> <span class="ident">spread_b_mid</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">4</span>)
-            <span class="op">+</span> <span class="ident">spread_b_hi</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">8</span>)
-            <span class="op">+</span> <span class="ident">spread_c</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">14</span>)
-            <span class="op">+</span> <span class="ident">spread_d</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">18</span>);
-        <span class="kw">let</span> <span class="ident">xor_1</span> <span class="op">=</span> <span class="ident">spread_c</span>.<span class="ident">clone</span>()
-            <span class="op">+</span> <span class="ident">spread_d</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">4</span>)
-            <span class="op">+</span> <span class="ident">spread_a</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">30</span>)
-            <span class="op">+</span> <span class="ident">spread_b_lo</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">50</span>)
-            <span class="op">+</span> <span class="ident">spread_b_mid</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">54</span>)
-            <span class="op">+</span> <span class="ident">spread_b_hi</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">58</span>);
-        <span class="kw">let</span> <span class="ident">xor_2</span> <span class="op">=</span> <span class="ident">spread_d</span>
-            <span class="op">+</span> <span class="ident">spread_a</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">26</span>)
-            <span class="op">+</span> <span class="ident">spread_b_lo</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">46</span>)
-            <span class="op">+</span> <span class="ident">spread_b_mid</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">50</span>)
-            <span class="op">+</span> <span class="ident">spread_b_hi</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">54</span>)
-            <span class="op">+</span> <span class="ident">spread_c</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">60</span>);
-        <span class="kw">let</span> <span class="ident">xor</span> <span class="op">=</span> <span class="ident">xor_0</span> <span class="op">+</span> <span class="ident">xor_1</span> <span class="op">+</span> <span class="ident">xor_2</span>;
+        <span class="kw">let </span>spread_witness = spread_r0_even
+            + spread_r0_odd * F::from(<span class="number">2</span>)
+            + (spread_r1_even + spread_r1_odd * F::from(<span class="number">2</span>)) * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">32</span>);
+        <span class="kw">let </span>xor_0 = spread_b_lo.clone()
+            + spread_b_mid.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">4</span>)
+            + spread_b_hi.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">8</span>)
+            + spread_c.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">14</span>)
+            + spread_d.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">18</span>);
+        <span class="kw">let </span>xor_1 = spread_c.clone()
+            + spread_d.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">4</span>)
+            + spread_a.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">30</span>)
+            + spread_b_lo.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">50</span>)
+            + spread_b_mid.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">54</span>)
+            + spread_b_hi.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">58</span>);
+        <span class="kw">let </span>xor_2 = spread_d
+            + spread_a * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">26</span>)
+            + spread_b_lo * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">46</span>)
+            + spread_b_mid * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">50</span>)
+            + spread_b_hi * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">54</span>)
+            + spread_c * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">60</span>);
+        <span class="kw">let </span>xor = xor_0 + xor_1 + xor_2;
 
-        <span class="ident">check_spread_and_range</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;check_b1&quot;</span>, <span class="ident">check_b1</span>)))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;lower_sigma_1&quot;</span>, <span class="ident">spread_witness</span> <span class="op">-</span> <span class="ident">xor</span>)))
-            .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">name</span>, <span class="ident">poly</span>)<span class="op">|</span> (<span class="ident">name</span>, <span class="ident">s_lower_sigma_1</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">poly</span>))
+        check_spread_and_range
+            .chain(<span class="prelude-val">Some</span>((<span class="string">&quot;check_b1&quot;</span>, check_b1)))
+            .chain(<span class="prelude-val">Some</span>((<span class="string">&quot;lower_sigma_1&quot;</span>, spread_witness - xor)))
+            .map(<span class="kw">move </span>|(name, poly)| (name, s_lower_sigma_1.clone() * poly))
     }
 
-    <span class="doccomment">/// sigma_0 v2 on W_14 to W_48</span>
-    <span class="doccomment">/// (3, 4, 3, 7, 1, 1, 13)-bit chunks</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">s_lower_sigma_0_v2</span>(
-        <span class="ident">s_lower_sigma_0_v2</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r0_even</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r0_odd</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r1_even</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r1_odd</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">a</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_a</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b_lo</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_b_lo</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b_hi</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_b_hi</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">c</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_c</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_d</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_e</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_f</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_g</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">check_spread_and_range</span> <span class="op">=</span>
-            <span class="ident">Gate::two_bit_spread_and_range</span>(<span class="ident">b_lo</span>.<span class="ident">clone</span>(), <span class="ident">spread_b_lo</span>.<span class="ident">clone</span>())
-                .<span class="ident">chain</span>(<span class="ident">Gate::two_bit_spread_and_range</span>(
-                    <span class="ident">b_hi</span>.<span class="ident">clone</span>(),
-                    <span class="ident">spread_b_hi</span>.<span class="ident">clone</span>(),
+    <span class="doccomment">/// sigma_0 v2 on W_14 to W_48
+    /// (3, 4, 3, 7, 1, 1, 13)-bit chunks
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="kw">pub fn </span>s_lower_sigma_0_v2(
+        s_lower_sigma_0_v2: Expression&lt;F&gt;,
+        spread_r0_even: Expression&lt;F&gt;,
+        spread_r0_odd: Expression&lt;F&gt;,
+        spread_r1_even: Expression&lt;F&gt;,
+        spread_r1_odd: Expression&lt;F&gt;,
+        a: Expression&lt;F&gt;,
+        spread_a: Expression&lt;F&gt;,
+        b: Expression&lt;F&gt;,
+        b_lo: Expression&lt;F&gt;,
+        spread_b_lo: Expression&lt;F&gt;,
+        b_hi: Expression&lt;F&gt;,
+        spread_b_hi: Expression&lt;F&gt;,
+        c: Expression&lt;F&gt;,
+        spread_c: Expression&lt;F&gt;,
+        spread_d: Expression&lt;F&gt;,
+        spread_e: Expression&lt;F&gt;,
+        spread_f: Expression&lt;F&gt;,
+        spread_g: Expression&lt;F&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Expression&lt;F&gt;)&gt; {
+        <span class="kw">let </span>check_spread_and_range =
+            Gate::two_bit_spread_and_range(b_lo.clone(), spread_b_lo.clone())
+                .chain(Gate::two_bit_spread_and_range(
+                    b_hi.clone(),
+                    spread_b_hi.clone(),
                 ))
-                .<span class="ident">chain</span>(<span class="ident">Gate::three_bit_spread_and_range</span>(<span class="ident">a</span>, <span class="ident">spread_a</span>.<span class="ident">clone</span>()))
-                .<span class="ident">chain</span>(<span class="ident">Gate::three_bit_spread_and_range</span>(<span class="ident">c</span>, <span class="ident">spread_c</span>.<span class="ident">clone</span>()));
-        <span class="kw">let</span> <span class="ident">check_b</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::check_b</span>(<span class="ident">b</span>, <span class="ident">b_lo</span>, <span class="ident">b_hi</span>);
-        <span class="kw">let</span> <span class="ident">spread_witness</span> <span class="op">=</span> <span class="ident">spread_r0_even</span>
-            <span class="op">+</span> <span class="ident">spread_r0_odd</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">2</span>)
-            <span class="op">+</span> (<span class="ident">spread_r1_even</span> <span class="op">+</span> <span class="ident">spread_r1_odd</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">2</span>)) <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span>);
-        <span class="kw">let</span> <span class="ident">xor_0</span> <span class="op">=</span> <span class="ident">spread_b_lo</span>.<span class="ident">clone</span>()
-            <span class="op">+</span> <span class="ident">spread_b_hi</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">4</span>)
-            <span class="op">+</span> <span class="ident">spread_c</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">8</span>)
-            <span class="op">+</span> <span class="ident">spread_d</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">14</span>)
-            <span class="op">+</span> <span class="ident">spread_e</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">28</span>)
-            <span class="op">+</span> <span class="ident">spread_f</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">30</span>)
-            <span class="op">+</span> <span class="ident">spread_g</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span>);
-        <span class="kw">let</span> <span class="ident">xor_1</span> <span class="op">=</span> <span class="ident">spread_c</span>.<span class="ident">clone</span>()
-            <span class="op">+</span> <span class="ident">spread_d</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">6</span>)
-            <span class="op">+</span> <span class="ident">spread_e</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">20</span>)
-            <span class="op">+</span> <span class="ident">spread_f</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">22</span>)
-            <span class="op">+</span> <span class="ident">spread_g</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">24</span>)
-            <span class="op">+</span> <span class="ident">spread_a</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">50</span>)
-            <span class="op">+</span> <span class="ident">spread_b_lo</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">56</span>)
-            <span class="op">+</span> <span class="ident">spread_b_hi</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">60</span>);
-        <span class="kw">let</span> <span class="ident">xor_2</span> <span class="op">=</span> <span class="ident">spread_f</span>
-            <span class="op">+</span> <span class="ident">spread_g</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">2</span>)
-            <span class="op">+</span> <span class="ident">spread_a</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">28</span>)
-            <span class="op">+</span> <span class="ident">spread_b_lo</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">34</span>)
-            <span class="op">+</span> <span class="ident">spread_b_hi</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">38</span>)
-            <span class="op">+</span> <span class="ident">spread_c</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">42</span>)
-            <span class="op">+</span> <span class="ident">spread_d</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">48</span>)
-            <span class="op">+</span> <span class="ident">spread_e</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">62</span>);
-        <span class="kw">let</span> <span class="ident">xor</span> <span class="op">=</span> <span class="ident">xor_0</span> <span class="op">+</span> <span class="ident">xor_1</span> <span class="op">+</span> <span class="ident">xor_2</span>;
+                .chain(Gate::three_bit_spread_and_range(a, spread_a.clone()))
+                .chain(Gate::three_bit_spread_and_range(c, spread_c.clone()));
+        <span class="kw">let </span>check_b = <span class="self">Self</span>::check_b(b, b_lo, b_hi);
+        <span class="kw">let </span>spread_witness = spread_r0_even
+            + spread_r0_odd * F::from(<span class="number">2</span>)
+            + (spread_r1_even + spread_r1_odd * F::from(<span class="number">2</span>)) * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">32</span>);
+        <span class="kw">let </span>xor_0 = spread_b_lo.clone()
+            + spread_b_hi.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">4</span>)
+            + spread_c.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">8</span>)
+            + spread_d.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">14</span>)
+            + spread_e.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">28</span>)
+            + spread_f.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">30</span>)
+            + spread_g.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">32</span>);
+        <span class="kw">let </span>xor_1 = spread_c.clone()
+            + spread_d.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">6</span>)
+            + spread_e.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">20</span>)
+            + spread_f.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">22</span>)
+            + spread_g.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">24</span>)
+            + spread_a.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">50</span>)
+            + spread_b_lo.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">56</span>)
+            + spread_b_hi.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">60</span>);
+        <span class="kw">let </span>xor_2 = spread_f
+            + spread_g * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">2</span>)
+            + spread_a * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">28</span>)
+            + spread_b_lo * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">34</span>)
+            + spread_b_hi * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">38</span>)
+            + spread_c * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">42</span>)
+            + spread_d * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">48</span>)
+            + spread_e * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">62</span>);
+        <span class="kw">let </span>xor = xor_0 + xor_1 + xor_2;
 
-        <span class="ident">check_spread_and_range</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;check_b&quot;</span>, <span class="ident">check_b</span>)))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;lower_sigma_0_v2&quot;</span>, <span class="ident">spread_witness</span> <span class="op">-</span> <span class="ident">xor</span>)))
-            .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">name</span>, <span class="ident">poly</span>)<span class="op">|</span> (<span class="ident">name</span>, <span class="ident">s_lower_sigma_0_v2</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">poly</span>))
+        check_spread_and_range
+            .chain(<span class="prelude-val">Some</span>((<span class="string">&quot;check_b&quot;</span>, check_b)))
+            .chain(<span class="prelude-val">Some</span>((<span class="string">&quot;lower_sigma_0_v2&quot;</span>, spread_witness - xor)))
+            .map(<span class="kw">move </span>|(name, poly)| (name, s_lower_sigma_0_v2.clone() * poly))
     }
 
-    <span class="doccomment">/// sigma_1 v2 on W_14 to W_48</span>
-    <span class="doccomment">/// (3, 4, 3, 7, 1, 1, 13)-bit chunks</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">s_lower_sigma_1_v2</span>(
-        <span class="ident">s_lower_sigma_1_v2</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r0_even</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r0_odd</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r1_even</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_r1_odd</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">a</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_a</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b_lo</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_b_lo</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">b_hi</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_b_hi</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">c</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_c</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_d</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_e</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_f</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">spread_g</span>: <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="kw">impl</span> <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">check_spread_and_range</span> <span class="op">=</span>
-            <span class="ident">Gate::two_bit_spread_and_range</span>(<span class="ident">b_lo</span>.<span class="ident">clone</span>(), <span class="ident">spread_b_lo</span>.<span class="ident">clone</span>())
-                .<span class="ident">chain</span>(<span class="ident">Gate::two_bit_spread_and_range</span>(
-                    <span class="ident">b_hi</span>.<span class="ident">clone</span>(),
-                    <span class="ident">spread_b_hi</span>.<span class="ident">clone</span>(),
+    <span class="doccomment">/// sigma_1 v2 on W_14 to W_48
+    /// (3, 4, 3, 7, 1, 1, 13)-bit chunks
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="kw">pub fn </span>s_lower_sigma_1_v2(
+        s_lower_sigma_1_v2: Expression&lt;F&gt;,
+        spread_r0_even: Expression&lt;F&gt;,
+        spread_r0_odd: Expression&lt;F&gt;,
+        spread_r1_even: Expression&lt;F&gt;,
+        spread_r1_odd: Expression&lt;F&gt;,
+        a: Expression&lt;F&gt;,
+        spread_a: Expression&lt;F&gt;,
+        b: Expression&lt;F&gt;,
+        b_lo: Expression&lt;F&gt;,
+        spread_b_lo: Expression&lt;F&gt;,
+        b_hi: Expression&lt;F&gt;,
+        spread_b_hi: Expression&lt;F&gt;,
+        c: Expression&lt;F&gt;,
+        spread_c: Expression&lt;F&gt;,
+        spread_d: Expression&lt;F&gt;,
+        spread_e: Expression&lt;F&gt;,
+        spread_f: Expression&lt;F&gt;,
+        spread_g: Expression&lt;F&gt;,
+    ) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Expression&lt;F&gt;)&gt; {
+        <span class="kw">let </span>check_spread_and_range =
+            Gate::two_bit_spread_and_range(b_lo.clone(), spread_b_lo.clone())
+                .chain(Gate::two_bit_spread_and_range(
+                    b_hi.clone(),
+                    spread_b_hi.clone(),
                 ))
-                .<span class="ident">chain</span>(<span class="ident">Gate::three_bit_spread_and_range</span>(<span class="ident">a</span>, <span class="ident">spread_a</span>.<span class="ident">clone</span>()))
-                .<span class="ident">chain</span>(<span class="ident">Gate::three_bit_spread_and_range</span>(<span class="ident">c</span>, <span class="ident">spread_c</span>.<span class="ident">clone</span>()));
-        <span class="kw">let</span> <span class="ident">check_b</span> <span class="op">=</span> <span class="ident"><span class="self">Self</span>::check_b</span>(<span class="ident">b</span>, <span class="ident">b_lo</span>, <span class="ident">b_hi</span>);
-        <span class="kw">let</span> <span class="ident">spread_witness</span> <span class="op">=</span> <span class="ident">spread_r0_even</span>
-            <span class="op">+</span> <span class="ident">spread_r0_odd</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">2</span>)
-            <span class="op">+</span> (<span class="ident">spread_r1_even</span> <span class="op">+</span> <span class="ident">spread_r1_odd</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">2</span>)) <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span>);
-        <span class="kw">let</span> <span class="ident">xor_0</span> <span class="op">=</span> <span class="ident">spread_d</span>.<span class="ident">clone</span>()
-            <span class="op">+</span> <span class="ident">spread_e</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">14</span>)
-            <span class="op">+</span> <span class="ident">spread_f</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">16</span>)
-            <span class="op">+</span> <span class="ident">spread_g</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">18</span>);
-        <span class="kw">let</span> <span class="ident">xor_1</span> <span class="op">=</span> <span class="ident">spread_e</span>.<span class="ident">clone</span>()
-            <span class="op">+</span> <span class="ident">spread_f</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">2</span>)
-            <span class="op">+</span> <span class="ident">spread_g</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">4</span>)
-            <span class="op">+</span> <span class="ident">spread_a</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">30</span>)
-            <span class="op">+</span> <span class="ident">spread_b_lo</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">36</span>)
-            <span class="op">+</span> <span class="ident">spread_b_hi</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">40</span>)
-            <span class="op">+</span> <span class="ident">spread_c</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">44</span>)
-            <span class="op">+</span> <span class="ident">spread_d</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">50</span>);
-        <span class="kw">let</span> <span class="ident">xor_2</span> <span class="op">=</span> <span class="ident">spread_g</span>
-            <span class="op">+</span> <span class="ident">spread_a</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">26</span>)
-            <span class="op">+</span> <span class="ident">spread_b_lo</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span>)
-            <span class="op">+</span> <span class="ident">spread_b_hi</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">36</span>)
-            <span class="op">+</span> <span class="ident">spread_c</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">40</span>)
-            <span class="op">+</span> <span class="ident">spread_d</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">46</span>)
-            <span class="op">+</span> <span class="ident">spread_e</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">60</span>)
-            <span class="op">+</span> <span class="ident">spread_f</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">62</span>);
-        <span class="kw">let</span> <span class="ident">xor</span> <span class="op">=</span> <span class="ident">xor_0</span> <span class="op">+</span> <span class="ident">xor_1</span> <span class="op">+</span> <span class="ident">xor_2</span>;
+                .chain(Gate::three_bit_spread_and_range(a, spread_a.clone()))
+                .chain(Gate::three_bit_spread_and_range(c, spread_c.clone()));
+        <span class="kw">let </span>check_b = <span class="self">Self</span>::check_b(b, b_lo, b_hi);
+        <span class="kw">let </span>spread_witness = spread_r0_even
+            + spread_r0_odd * F::from(<span class="number">2</span>)
+            + (spread_r1_even + spread_r1_odd * F::from(<span class="number">2</span>)) * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">32</span>);
+        <span class="kw">let </span>xor_0 = spread_d.clone()
+            + spread_e.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">14</span>)
+            + spread_f.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">16</span>)
+            + spread_g.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">18</span>);
+        <span class="kw">let </span>xor_1 = spread_e.clone()
+            + spread_f.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">2</span>)
+            + spread_g.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">4</span>)
+            + spread_a.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">30</span>)
+            + spread_b_lo.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">36</span>)
+            + spread_b_hi.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">40</span>)
+            + spread_c.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">44</span>)
+            + spread_d.clone() * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">50</span>);
+        <span class="kw">let </span>xor_2 = spread_g
+            + spread_a * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">26</span>)
+            + spread_b_lo * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">32</span>)
+            + spread_b_hi * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">36</span>)
+            + spread_c * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">40</span>)
+            + spread_d * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">46</span>)
+            + spread_e * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">60</span>)
+            + spread_f * F::from(<span class="number">1 </span>&lt;&lt; <span class="number">62</span>);
+        <span class="kw">let </span>xor = xor_0 + xor_1 + xor_2;
 
-        <span class="ident">check_spread_and_range</span>
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;check_b&quot;</span>, <span class="ident">check_b</span>)))
-            .<span class="ident">chain</span>(<span class="prelude-val">Some</span>((<span class="string">&quot;lower_sigma_1_v2&quot;</span>, <span class="ident">spread_witness</span> <span class="op">-</span> <span class="ident">xor</span>)))
-            .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span>(<span class="ident">name</span>, <span class="ident">poly</span>)<span class="op">|</span> (<span class="ident">name</span>, <span class="ident">s_lower_sigma_1_v2</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">poly</span>))
+        check_spread_and_range
+            .chain(<span class="prelude-val">Some</span>((<span class="string">&quot;check_b&quot;</span>, check_b)))
+            .chain(<span class="prelude-val">Some</span>((<span class="string">&quot;lower_sigma_1_v2&quot;</span>, spread_witness - xor)))
+            .map(<span class="kw">move </span>|(name, poly)| (name, s_lower_sigma_1_v2.clone() * poly))
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -1024,995 +1018,995 @@
 <span id="1003">1003</span>
 <span id="1004">1004</span>
 <span id="1005">1005</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="kw">super</span>::{
-    <span class="ident"><span class="kw">super</span>::DIGEST_SIZE</span>,
-    <span class="ident">util</span>::{<span class="ident">i2lebsp</span>, <span class="ident">lebs2ip</span>},
-    <span class="ident">AssignedBits</span>, <span class="ident">BlockWord</span>, <span class="ident">SpreadInputs</span>, <span class="ident">SpreadVar</span>, <span class="ident">Table16Assignment</span>, <span class="ident">ROUNDS</span>, <span class="ident">STATE</span>,
+</pre><pre class="rust"><code><span class="kw">use super</span>::{
+    <span class="kw">super</span>::DIGEST_SIZE,
+    util::{i2lebsp, lebs2ip},
+    AssignedBits, BlockWord, SpreadInputs, SpreadVar, Table16Assignment, ROUNDS, STATE,
 };
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">Value</span>},
-    <span class="ident">pasta::pallas</span>,
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
-    <span class="ident">poly::Rotation</span>,
+<span class="kw">use </span>halo2_proofs::{
+    circuit::{Layouter, Value},
+    pasta::pallas,
+    plonk::{Advice, Column, ConstraintSystem, Error, Selector},
+    poly::Rotation,
 };
-<span class="kw">use</span> <span class="ident">std::convert::TryInto</span>;
-<span class="kw">use</span> <span class="ident">std::ops::Range</span>;
+<span class="kw">use </span>std::convert::TryInto;
+<span class="kw">use </span>std::ops::Range;
 
-<span class="kw">mod</span> <span class="ident">compression_gates</span>;
-<span class="kw">mod</span> <span class="ident">compression_util</span>;
-<span class="kw">mod</span> <span class="ident">subregion_digest</span>;
-<span class="kw">mod</span> <span class="ident">subregion_initial</span>;
-<span class="kw">mod</span> <span class="ident">subregion_main</span>;
+<span class="kw">mod </span>compression_gates;
+<span class="kw">mod </span>compression_util;
+<span class="kw">mod </span>subregion_digest;
+<span class="kw">mod </span>subregion_initial;
+<span class="kw">mod </span>subregion_main;
 
-<span class="kw">use</span> <span class="ident">compression_gates::CompressionGate</span>;
+<span class="kw">use </span>compression_gates::CompressionGate;
 
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">UpperSigmaVar</span><span class="op">&lt;</span>
-    <span class="kw">const</span> <span class="ident">A_LEN</span>: <span class="ident">usize</span>,
-    <span class="kw">const</span> <span class="ident">B_LEN</span>: <span class="ident">usize</span>,
-    <span class="kw">const</span> <span class="ident">C_LEN</span>: <span class="ident">usize</span>,
-    <span class="kw">const</span> <span class="ident">D_LEN</span>: <span class="ident">usize</span>,
-<span class="op">&gt;</span>
+<span class="kw">pub trait </span>UpperSigmaVar&lt;
+    <span class="kw">const </span>A_LEN: usize,
+    <span class="kw">const </span>B_LEN: usize,
+    <span class="kw">const </span>C_LEN: usize,
+    <span class="kw">const </span>D_LEN: usize,
+&gt;
 {
-    <span class="kw">fn</span> <span class="ident">spread_a</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">A_LEN</span>]<span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">spread_b</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">B_LEN</span>]<span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">spread_c</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">C_LEN</span>]<span class="op">&gt;</span>;
-    <span class="kw">fn</span> <span class="ident">spread_d</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="ident">D_LEN</span>]<span class="op">&gt;</span>;
+    <span class="kw">fn </span>spread_a(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; A_LEN]&gt;;
+    <span class="kw">fn </span>spread_b(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; B_LEN]&gt;;
+    <span class="kw">fn </span>spread_c(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; C_LEN]&gt;;
+    <span class="kw">fn </span>spread_d(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; D_LEN]&gt;;
 
-    <span class="kw">fn</span> <span class="ident">xor_upper_sigma</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">64</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">spread_a</span>()
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_b</span>())
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_c</span>())
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">spread_d</span>())
-            .<span class="ident">map</span>(<span class="op">|</span>(((<span class="ident">a</span>, <span class="ident">b</span>), <span class="ident">c</span>), <span class="ident">d</span>)<span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">xor_0</span> <span class="op">=</span> <span class="ident">b</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">chain</span>(<span class="ident">c</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">d</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">a</span>.<span class="ident">iter</span>())
-                    .<span class="ident">copied</span>()
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-                <span class="kw">let</span> <span class="ident">xor_1</span> <span class="op">=</span> <span class="ident">c</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">chain</span>(<span class="ident">d</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">a</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">b</span>.<span class="ident">iter</span>())
-                    .<span class="ident">copied</span>()
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
-                <span class="kw">let</span> <span class="ident">xor_2</span> <span class="op">=</span> <span class="ident">d</span>
-                    .<span class="ident">iter</span>()
-                    .<span class="ident">chain</span>(<span class="ident">a</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">b</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">c</span>.<span class="ident">iter</span>())
-                    .<span class="ident">copied</span>()
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+    <span class="kw">fn </span>xor_upper_sigma(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">64</span>]&gt; {
+        <span class="self">self</span>.spread_a()
+            .zip(<span class="self">self</span>.spread_b())
+            .zip(<span class="self">self</span>.spread_c())
+            .zip(<span class="self">self</span>.spread_d())
+            .map(|(((a, b), c), d)| {
+                <span class="kw">let </span>xor_0 = b
+                    .iter()
+                    .chain(c.iter())
+                    .chain(d.iter())
+                    .chain(a.iter())
+                    .copied()
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+                <span class="kw">let </span>xor_1 = c
+                    .iter()
+                    .chain(d.iter())
+                    .chain(a.iter())
+                    .chain(b.iter())
+                    .copied()
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+                <span class="kw">let </span>xor_2 = d
+                    .iter()
+                    .chain(a.iter())
+                    .chain(b.iter())
+                    .chain(c.iter())
+                    .copied()
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-                <span class="kw">let</span> <span class="ident">xor_0</span> <span class="op">=</span> <span class="ident">lebs2ip</span>::<span class="op">&lt;</span><span class="number">64</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">xor_0</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-                <span class="kw">let</span> <span class="ident">xor_1</span> <span class="op">=</span> <span class="ident">lebs2ip</span>::<span class="op">&lt;</span><span class="number">64</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">xor_1</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
-                <span class="kw">let</span> <span class="ident">xor_2</span> <span class="op">=</span> <span class="ident">lebs2ip</span>::<span class="op">&lt;</span><span class="number">64</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">xor_2</span>.<span class="ident">try_into</span>().<span class="ident">unwrap</span>());
+                <span class="kw">let </span>xor_0 = lebs2ip::&lt;<span class="number">64</span>&gt;(<span class="kw-2">&amp;</span>xor_0.try_into().unwrap());
+                <span class="kw">let </span>xor_1 = lebs2ip::&lt;<span class="number">64</span>&gt;(<span class="kw-2">&amp;</span>xor_1.try_into().unwrap());
+                <span class="kw">let </span>xor_2 = lebs2ip::&lt;<span class="number">64</span>&gt;(<span class="kw-2">&amp;</span>xor_2.try_into().unwrap());
 
-                <span class="ident">i2lebsp</span>(<span class="ident">xor_0</span> <span class="op">+</span> <span class="ident">xor_1</span> <span class="op">+</span> <span class="ident">xor_2</span>)
+                i2lebsp(xor_0 + xor_1 + xor_2)
             })
     }
 }
 
-<span class="doccomment">/// A variable that represents the `[A,B,C,D]` words of the SHA-256 internal state.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The structure of this variable is influenced by the following factors:</span>
-<span class="doccomment">/// - In `Σ_0(A)` we need `A` to be split into pieces `(a,b,c,d)` of lengths `(2,11,9,10)`</span>
-<span class="doccomment">///   bits respectively (counting from the little end), as well as their spread forms.</span>
-<span class="doccomment">/// - `Maj(A,B,C)` requires having the bits of each input in spread form. For `A` we can</span>
-<span class="doccomment">///   reuse the pieces from `Σ_0(A)`. Since `B` and `C` are assigned from `A` and `B`</span>
-<span class="doccomment">///   respectively in each round, we therefore also have the same pieces in earlier rows.</span>
-<span class="doccomment">///   We align the columns to make it efficient to copy-constrain these forms where they</span>
-<span class="doccomment">///   are needed.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AbcdVar</span> {
-    <span class="ident">a</span>: <span class="ident">SpreadVar</span><span class="op">&lt;</span><span class="number">2</span>, <span class="number">4</span><span class="op">&gt;</span>,
-    <span class="ident">b</span>: <span class="ident">SpreadVar</span><span class="op">&lt;</span><span class="number">11</span>, <span class="number">22</span><span class="op">&gt;</span>,
-    <span class="ident">c_lo</span>: <span class="ident">SpreadVar</span><span class="op">&lt;</span><span class="number">3</span>, <span class="number">6</span><span class="op">&gt;</span>,
-    <span class="ident">c_mid</span>: <span class="ident">SpreadVar</span><span class="op">&lt;</span><span class="number">3</span>, <span class="number">6</span><span class="op">&gt;</span>,
-    <span class="ident">c_hi</span>: <span class="ident">SpreadVar</span><span class="op">&lt;</span><span class="number">3</span>, <span class="number">6</span><span class="op">&gt;</span>,
-    <span class="ident">d</span>: <span class="ident">SpreadVar</span><span class="op">&lt;</span><span class="number">10</span>, <span class="number">20</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A variable that represents the `[A,B,C,D]` words of the SHA-256 internal state.
+///
+/// The structure of this variable is influenced by the following factors:
+/// - In `Σ_0(A)` we need `A` to be split into pieces `(a,b,c,d)` of lengths `(2,11,9,10)`
+///   bits respectively (counting from the little end), as well as their spread forms.
+/// - `Maj(A,B,C)` requires having the bits of each input in spread form. For `A` we can
+///   reuse the pieces from `Σ_0(A)`. Since `B` and `C` are assigned from `A` and `B`
+///   respectively in each round, we therefore also have the same pieces in earlier rows.
+///   We align the columns to make it efficient to copy-constrain these forms where they
+///   are needed.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>AbcdVar {
+    a: SpreadVar&lt;<span class="number">2</span>, <span class="number">4</span>&gt;,
+    b: SpreadVar&lt;<span class="number">11</span>, <span class="number">22</span>&gt;,
+    c_lo: SpreadVar&lt;<span class="number">3</span>, <span class="number">6</span>&gt;,
+    c_mid: SpreadVar&lt;<span class="number">3</span>, <span class="number">6</span>&gt;,
+    c_hi: SpreadVar&lt;<span class="number">3</span>, <span class="number">6</span>&gt;,
+    d: SpreadVar&lt;<span class="number">10</span>, <span class="number">20</span>&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">AbcdVar</span> {
-    <span class="kw">fn</span> <span class="ident">a_range</span>() -&gt; <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="number">0</span>..<span class="number">2</span>
-    }
+<span class="kw">impl </span>AbcdVar {
+    <span class="kw">fn </span>a_range() -&gt; Range&lt;usize&gt; {
+        <span class="number">0</span>..<span class="number">2
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">b_range</span>() -&gt; <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="number">2</span>..<span class="number">13</span>
-    }
+    <span class="kw">fn </span>b_range() -&gt; Range&lt;usize&gt; {
+        <span class="number">2</span>..<span class="number">13
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">c_lo_range</span>() -&gt; <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="number">13</span>..<span class="number">16</span>
-    }
+    <span class="kw">fn </span>c_lo_range() -&gt; Range&lt;usize&gt; {
+        <span class="number">13</span>..<span class="number">16
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">c_mid_range</span>() -&gt; <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="number">16</span>..<span class="number">19</span>
-    }
+    <span class="kw">fn </span>c_mid_range() -&gt; Range&lt;usize&gt; {
+        <span class="number">16</span>..<span class="number">19
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">c_hi_range</span>() -&gt; <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="number">19</span>..<span class="number">22</span>
-    }
+    <span class="kw">fn </span>c_hi_range() -&gt; Range&lt;usize&gt; {
+        <span class="number">19</span>..<span class="number">22
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">d_range</span>() -&gt; <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="number">22</span>..<span class="number">32</span>
-    }
+    <span class="kw">fn </span>d_range() -&gt; Range&lt;usize&gt; {
+        <span class="number">22</span>..<span class="number">32
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">pieces</span>(<span class="ident">val</span>: <span class="ident">u32</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">val</span>: [<span class="ident">bool</span>; <span class="number">32</span>] <span class="op">=</span> <span class="ident">i2lebsp</span>(<span class="ident">val</span>.<span class="ident">into</span>());
+    <span class="kw">fn </span>pieces(val: u32) -&gt; Vec&lt;Vec&lt;bool&gt;&gt; {
+        <span class="kw">let </span>val: [bool; <span class="number">32</span>] = i2lebsp(val.into());
         <span class="macro">vec!</span>[
-            <span class="ident">val</span>[<span class="ident"><span class="self">Self</span>::a_range</span>()].<span class="ident">to_vec</span>(),
-            <span class="ident">val</span>[<span class="ident"><span class="self">Self</span>::b_range</span>()].<span class="ident">to_vec</span>(),
-            <span class="ident">val</span>[<span class="ident"><span class="self">Self</span>::c_lo_range</span>()].<span class="ident">to_vec</span>(),
-            <span class="ident">val</span>[<span class="ident"><span class="self">Self</span>::c_mid_range</span>()].<span class="ident">to_vec</span>(),
-            <span class="ident">val</span>[<span class="ident"><span class="self">Self</span>::c_hi_range</span>()].<span class="ident">to_vec</span>(),
-            <span class="ident">val</span>[<span class="ident"><span class="self">Self</span>::d_range</span>()].<span class="ident">to_vec</span>(),
+            val[<span class="self">Self</span>::a_range()].to_vec(),
+            val[<span class="self">Self</span>::b_range()].to_vec(),
+            val[<span class="self">Self</span>::c_lo_range()].to_vec(),
+            val[<span class="self">Self</span>::c_mid_range()].to_vec(),
+            val[<span class="self">Self</span>::c_hi_range()].to_vec(),
+            val[<span class="self">Self</span>::d_range()].to_vec(),
         ]
     }
 }
 
-<span class="kw">impl</span> <span class="ident">UpperSigmaVar</span><span class="op">&lt;</span><span class="number">4</span>, <span class="number">22</span>, <span class="number">18</span>, <span class="number">20</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">AbcdVar</span> {
-    <span class="kw">fn</span> <span class="ident">spread_a</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">4</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">a</span>.<span class="ident">spread</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="number">0</span>)
+<span class="kw">impl </span>UpperSigmaVar&lt;<span class="number">4</span>, <span class="number">22</span>, <span class="number">18</span>, <span class="number">20</span>&gt; <span class="kw">for </span>AbcdVar {
+    <span class="kw">fn </span>spread_a(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">4</span>]&gt; {
+        <span class="self">self</span>.a.spread.value().map(|v| v.<span class="number">0</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_b</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">22</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">b</span>.<span class="ident">spread</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="number">0</span>)
+    <span class="kw">fn </span>spread_b(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">22</span>]&gt; {
+        <span class="self">self</span>.b.spread.value().map(|v| v.<span class="number">0</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_c</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">18</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">c_lo</span>
-            .<span class="ident">spread</span>
-            .<span class="ident">value</span>()
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">c_mid</span>.<span class="ident">spread</span>.<span class="ident">value</span>())
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">c_hi</span>.<span class="ident">spread</span>.<span class="ident">value</span>())
-            .<span class="ident">map</span>(<span class="op">|</span>((<span class="ident">c_lo</span>, <span class="ident">c_mid</span>), <span class="ident">c_hi</span>)<span class="op">|</span> {
-                <span class="ident">c_lo</span>.<span class="ident">iter</span>()
-                    .<span class="ident">chain</span>(<span class="ident">c_mid</span>.<span class="ident">iter</span>())
-                    .<span class="ident">chain</span>(<span class="ident">c_hi</span>.<span class="ident">iter</span>())
-                    .<span class="ident">copied</span>()
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-                    .<span class="ident">try_into</span>()
-                    .<span class="ident">unwrap</span>()
+    <span class="kw">fn </span>spread_c(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">18</span>]&gt; {
+        <span class="self">self</span>.c_lo
+            .spread
+            .value()
+            .zip(<span class="self">self</span>.c_mid.spread.value())
+            .zip(<span class="self">self</span>.c_hi.spread.value())
+            .map(|((c_lo, c_mid), c_hi)| {
+                c_lo.iter()
+                    .chain(c_mid.iter())
+                    .chain(c_hi.iter())
+                    .copied()
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+                    .try_into()
+                    .unwrap()
             })
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_d</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">20</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">d</span>.<span class="ident">spread</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="number">0</span>)
+    <span class="kw">fn </span>spread_d(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">20</span>]&gt; {
+        <span class="self">self</span>.d.spread.value().map(|v| v.<span class="number">0</span>)
     }
 }
 
-<span class="doccomment">/// A variable that represents the `[E,F,G,H]` words of the SHA-256 internal state.</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// The structure of this variable is influenced by the following factors:</span>
-<span class="doccomment">/// - In `Σ_1(E)` we need `E` to be split into pieces `(a,b,c,d)` of lengths `(6,5,14,7)`</span>
-<span class="doccomment">///   bits respectively (counting from the little end), as well as their spread forms.</span>
-<span class="doccomment">/// - `Ch(E,F,G)` requires having the bits of each input in spread form. For `E` we can</span>
-<span class="doccomment">///   reuse the pieces from `Σ_1(E)`. Since `F` and `G` are assigned from `E` and `F`</span>
-<span class="doccomment">///   respectively in each round, we therefore also have the same pieces in earlier rows.</span>
-<span class="doccomment">///   We align the columns to make it efficient to copy-constrain these forms where they</span>
-<span class="doccomment">///   are needed.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">EfghVar</span> {
-    <span class="ident">a_lo</span>: <span class="ident">SpreadVar</span><span class="op">&lt;</span><span class="number">3</span>, <span class="number">6</span><span class="op">&gt;</span>,
-    <span class="ident">a_hi</span>: <span class="ident">SpreadVar</span><span class="op">&lt;</span><span class="number">3</span>, <span class="number">6</span><span class="op">&gt;</span>,
-    <span class="ident">b_lo</span>: <span class="ident">SpreadVar</span><span class="op">&lt;</span><span class="number">2</span>, <span class="number">4</span><span class="op">&gt;</span>,
-    <span class="ident">b_hi</span>: <span class="ident">SpreadVar</span><span class="op">&lt;</span><span class="number">3</span>, <span class="number">6</span><span class="op">&gt;</span>,
-    <span class="ident">c</span>: <span class="ident">SpreadVar</span><span class="op">&lt;</span><span class="number">14</span>, <span class="number">28</span><span class="op">&gt;</span>,
-    <span class="ident">d</span>: <span class="ident">SpreadVar</span><span class="op">&lt;</span><span class="number">7</span>, <span class="number">14</span><span class="op">&gt;</span>,
+<span class="doccomment">/// A variable that represents the `[E,F,G,H]` words of the SHA-256 internal state.
+///
+/// The structure of this variable is influenced by the following factors:
+/// - In `Σ_1(E)` we need `E` to be split into pieces `(a,b,c,d)` of lengths `(6,5,14,7)`
+///   bits respectively (counting from the little end), as well as their spread forms.
+/// - `Ch(E,F,G)` requires having the bits of each input in spread form. For `E` we can
+///   reuse the pieces from `Σ_1(E)`. Since `F` and `G` are assigned from `E` and `F`
+///   respectively in each round, we therefore also have the same pieces in earlier rows.
+///   We align the columns to make it efficient to copy-constrain these forms where they
+///   are needed.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>EfghVar {
+    a_lo: SpreadVar&lt;<span class="number">3</span>, <span class="number">6</span>&gt;,
+    a_hi: SpreadVar&lt;<span class="number">3</span>, <span class="number">6</span>&gt;,
+    b_lo: SpreadVar&lt;<span class="number">2</span>, <span class="number">4</span>&gt;,
+    b_hi: SpreadVar&lt;<span class="number">3</span>, <span class="number">6</span>&gt;,
+    c: SpreadVar&lt;<span class="number">14</span>, <span class="number">28</span>&gt;,
+    d: SpreadVar&lt;<span class="number">7</span>, <span class="number">14</span>&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">EfghVar</span> {
-    <span class="kw">fn</span> <span class="ident">a_lo_range</span>() -&gt; <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="number">0</span>..<span class="number">3</span>
-    }
+<span class="kw">impl </span>EfghVar {
+    <span class="kw">fn </span>a_lo_range() -&gt; Range&lt;usize&gt; {
+        <span class="number">0</span>..<span class="number">3
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">a_hi_range</span>() -&gt; <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="number">3</span>..<span class="number">6</span>
-    }
+    <span class="kw">fn </span>a_hi_range() -&gt; Range&lt;usize&gt; {
+        <span class="number">3</span>..<span class="number">6
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">b_lo_range</span>() -&gt; <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="number">6</span>..<span class="number">8</span>
-    }
+    <span class="kw">fn </span>b_lo_range() -&gt; Range&lt;usize&gt; {
+        <span class="number">6</span>..<span class="number">8
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">b_hi_range</span>() -&gt; <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="number">8</span>..<span class="number">11</span>
-    }
+    <span class="kw">fn </span>b_hi_range() -&gt; Range&lt;usize&gt; {
+        <span class="number">8</span>..<span class="number">11
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">c_range</span>() -&gt; <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="number">11</span>..<span class="number">25</span>
-    }
+    <span class="kw">fn </span>c_range() -&gt; Range&lt;usize&gt; {
+        <span class="number">11</span>..<span class="number">25
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">d_range</span>() -&gt; <span class="ident">Range</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
-        <span class="number">25</span>..<span class="number">32</span>
-    }
+    <span class="kw">fn </span>d_range() -&gt; Range&lt;usize&gt; {
+        <span class="number">25</span>..<span class="number">32
+    </span>}
 
-    <span class="kw">fn</span> <span class="ident">pieces</span>(<span class="ident">val</span>: <span class="ident">u32</span>) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">val</span>: [<span class="ident">bool</span>; <span class="number">32</span>] <span class="op">=</span> <span class="ident">i2lebsp</span>(<span class="ident">val</span>.<span class="ident">into</span>());
+    <span class="kw">fn </span>pieces(val: u32) -&gt; Vec&lt;Vec&lt;bool&gt;&gt; {
+        <span class="kw">let </span>val: [bool; <span class="number">32</span>] = i2lebsp(val.into());
         <span class="macro">vec!</span>[
-            <span class="ident">val</span>[<span class="ident"><span class="self">Self</span>::a_lo_range</span>()].<span class="ident">to_vec</span>(),
-            <span class="ident">val</span>[<span class="ident"><span class="self">Self</span>::a_hi_range</span>()].<span class="ident">to_vec</span>(),
-            <span class="ident">val</span>[<span class="ident"><span class="self">Self</span>::b_lo_range</span>()].<span class="ident">to_vec</span>(),
-            <span class="ident">val</span>[<span class="ident"><span class="self">Self</span>::b_hi_range</span>()].<span class="ident">to_vec</span>(),
-            <span class="ident">val</span>[<span class="ident"><span class="self">Self</span>::c_range</span>()].<span class="ident">to_vec</span>(),
-            <span class="ident">val</span>[<span class="ident"><span class="self">Self</span>::d_range</span>()].<span class="ident">to_vec</span>(),
+            val[<span class="self">Self</span>::a_lo_range()].to_vec(),
+            val[<span class="self">Self</span>::a_hi_range()].to_vec(),
+            val[<span class="self">Self</span>::b_lo_range()].to_vec(),
+            val[<span class="self">Self</span>::b_hi_range()].to_vec(),
+            val[<span class="self">Self</span>::c_range()].to_vec(),
+            val[<span class="self">Self</span>::d_range()].to_vec(),
         ]
     }
 }
 
-<span class="kw">impl</span> <span class="ident">UpperSigmaVar</span><span class="op">&lt;</span><span class="number">12</span>, <span class="number">10</span>, <span class="number">28</span>, <span class="number">14</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">EfghVar</span> {
-    <span class="kw">fn</span> <span class="ident">spread_a</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">12</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">a_lo</span>
-            .<span class="ident">spread</span>
-            .<span class="ident">value</span>()
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">a_hi</span>.<span class="ident">spread</span>.<span class="ident">value</span>())
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">a_lo</span>, <span class="ident">a_hi</span>)<span class="op">|</span> {
-                <span class="ident">a_lo</span>.<span class="ident">iter</span>()
-                    .<span class="ident">chain</span>(<span class="ident">a_hi</span>.<span class="ident">iter</span>())
-                    .<span class="ident">copied</span>()
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-                    .<span class="ident">try_into</span>()
-                    .<span class="ident">unwrap</span>()
+<span class="kw">impl </span>UpperSigmaVar&lt;<span class="number">12</span>, <span class="number">10</span>, <span class="number">28</span>, <span class="number">14</span>&gt; <span class="kw">for </span>EfghVar {
+    <span class="kw">fn </span>spread_a(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">12</span>]&gt; {
+        <span class="self">self</span>.a_lo
+            .spread
+            .value()
+            .zip(<span class="self">self</span>.a_hi.spread.value())
+            .map(|(a_lo, a_hi)| {
+                a_lo.iter()
+                    .chain(a_hi.iter())
+                    .copied()
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+                    .try_into()
+                    .unwrap()
             })
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_b</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">10</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">b_lo</span>
-            .<span class="ident">spread</span>
-            .<span class="ident">value</span>()
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="ident">b_hi</span>.<span class="ident">spread</span>.<span class="ident">value</span>())
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">b_lo</span>, <span class="ident">b_hi</span>)<span class="op">|</span> {
-                <span class="ident">b_lo</span>.<span class="ident">iter</span>()
-                    .<span class="ident">chain</span>(<span class="ident">b_hi</span>.<span class="ident">iter</span>())
-                    .<span class="ident">copied</span>()
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-                    .<span class="ident">try_into</span>()
-                    .<span class="ident">unwrap</span>()
+    <span class="kw">fn </span>spread_b(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">10</span>]&gt; {
+        <span class="self">self</span>.b_lo
+            .spread
+            .value()
+            .zip(<span class="self">self</span>.b_hi.spread.value())
+            .map(|(b_lo, b_hi)| {
+                b_lo.iter()
+                    .chain(b_hi.iter())
+                    .copied()
+                    .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+                    .try_into()
+                    .unwrap()
             })
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_c</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">28</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">c</span>.<span class="ident">spread</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="number">0</span>)
+    <span class="kw">fn </span>spread_c(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">28</span>]&gt; {
+        <span class="self">self</span>.c.spread.value().map(|v| v.<span class="number">0</span>)
     }
 
-    <span class="kw">fn</span> <span class="ident">spread_d</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span>[<span class="ident">bool</span>; <span class="number">14</span>]<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">d</span>.<span class="ident">spread</span>.<span class="ident">value</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="ident">v</span>.<span class="number">0</span>)
-    }
-}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RoundWordDense</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>);
-
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RoundWordDense</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">halves</span>: (<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>)) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span>(<span class="ident">halves</span>.<span class="number">0</span>, <span class="ident">halves</span>.<span class="number">1</span>)
+    <span class="kw">fn </span>spread_d(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;[bool; <span class="number">14</span>]&gt; {
+        <span class="self">self</span>.d.spread.value().map(|v| v.<span class="number">0</span>)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">RoundWordDense</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">value</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>
-            .<span class="ident">value_u16</span>()
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="number">1</span>.<span class="ident">value_u16</span>())
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">lo</span>, <span class="ident">hi</span>)<span class="op">|</span> <span class="ident">lo</span> <span class="kw">as</span> <span class="ident">u32</span> <span class="op">+</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">16</span>) <span class="op">*</span> <span class="ident">hi</span> <span class="kw">as</span> <span class="ident">u32</span>)
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>RoundWordDense(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;);
+
+<span class="kw">impl </span>From&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;)&gt; <span class="kw">for </span>RoundWordDense {
+    <span class="kw">fn </span>from(halves: (AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;)) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(halves.<span class="number">0</span>, halves.<span class="number">1</span>)
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RoundWordSpread</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span>);
-
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">RoundWordSpread</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">halves</span>: (<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">32</span><span class="op">&gt;</span>)) -&gt; <span class="self">Self</span> {
-        <span class="self">Self</span>(<span class="ident">halves</span>.<span class="number">0</span>, <span class="ident">halves</span>.<span class="number">1</span>)
+<span class="kw">impl </span>RoundWordDense {
+    <span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;u32&gt; {
+        <span class="self">self</span>.<span class="number">0
+            </span>.value_u16()
+            .zip(<span class="self">self</span>.<span class="number">1</span>.value_u16())
+            .map(|(lo, hi)| lo <span class="kw">as </span>u32 + (<span class="number">1 </span>&lt;&lt; <span class="number">16</span>) * hi <span class="kw">as </span>u32)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">RoundWordSpread</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">value</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="number">0</span>
-            .<span class="ident">value_u32</span>()
-            .<span class="ident">zip</span>(<span class="self">self</span>.<span class="number">1</span>.<span class="ident">value_u32</span>())
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">lo</span>, <span class="ident">hi</span>)<span class="op">|</span> <span class="ident">lo</span> <span class="kw">as</span> <span class="ident">u64</span> <span class="op">+</span> (<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">32</span>) <span class="op">*</span> <span class="ident">hi</span> <span class="kw">as</span> <span class="ident">u64</span>)
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>RoundWordSpread(AssignedBits&lt;<span class="number">32</span>&gt;, AssignedBits&lt;<span class="number">32</span>&gt;);
+
+<span class="kw">impl </span>From&lt;(AssignedBits&lt;<span class="number">32</span>&gt;, AssignedBits&lt;<span class="number">32</span>&gt;)&gt; <span class="kw">for </span>RoundWordSpread {
+    <span class="kw">fn </span>from(halves: (AssignedBits&lt;<span class="number">32</span>&gt;, AssignedBits&lt;<span class="number">32</span>&gt;)) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>(halves.<span class="number">0</span>, halves.<span class="number">1</span>)
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RoundWordA</span> {
-    <span class="ident">pieces</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AbcdVar</span><span class="op">&gt;</span>,
-    <span class="ident">dense_halves</span>: <span class="ident">RoundWordDense</span>,
-    <span class="ident">spread_halves</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">RoundWordSpread</span><span class="op">&gt;</span>,
+<span class="kw">impl </span>RoundWordSpread {
+    <span class="kw">pub fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;u64&gt; {
+        <span class="self">self</span>.<span class="number">0
+            </span>.value_u32()
+            .zip(<span class="self">self</span>.<span class="number">1</span>.value_u32())
+            .map(|(lo, hi)| lo <span class="kw">as </span>u64 + (<span class="number">1 </span>&lt;&lt; <span class="number">32</span>) * hi <span class="kw">as </span>u64)
+    }
 }
 
-<span class="kw">impl</span> <span class="ident">RoundWordA</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">pieces</span>: <span class="ident">AbcdVar</span>,
-        <span class="ident">dense_halves</span>: <span class="ident">RoundWordDense</span>,
-        <span class="ident">spread_halves</span>: <span class="ident">RoundWordSpread</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="ident">RoundWordA</span> {
-            <span class="ident">pieces</span>: <span class="prelude-val">Some</span>(<span class="ident">pieces</span>),
-            <span class="ident">dense_halves</span>,
-            <span class="ident">spread_halves</span>: <span class="prelude-val">Some</span>(<span class="ident">spread_halves</span>),
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>RoundWordA {
+    pieces: <span class="prelude-ty">Option</span>&lt;AbcdVar&gt;,
+    dense_halves: RoundWordDense,
+    spread_halves: <span class="prelude-ty">Option</span>&lt;RoundWordSpread&gt;,
+}
+
+<span class="kw">impl </span>RoundWordA {
+    <span class="kw">pub fn </span>new(
+        pieces: AbcdVar,
+        dense_halves: RoundWordDense,
+        spread_halves: RoundWordSpread,
+    ) -&gt; <span class="self">Self </span>{
+        RoundWordA {
+            pieces: <span class="prelude-val">Some</span>(pieces),
+            dense_halves,
+            spread_halves: <span class="prelude-val">Some</span>(spread_halves),
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_dense</span>(<span class="ident">dense_halves</span>: <span class="ident">RoundWordDense</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">RoundWordA</span> {
-            <span class="ident">pieces</span>: <span class="prelude-val">None</span>,
-            <span class="ident">dense_halves</span>,
-            <span class="ident">spread_halves</span>: <span class="prelude-val">None</span>,
-        }
-    }
-}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RoundWordE</span> {
-    <span class="ident">pieces</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EfghVar</span><span class="op">&gt;</span>,
-    <span class="ident">dense_halves</span>: <span class="ident">RoundWordDense</span>,
-    <span class="ident">spread_halves</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">RoundWordSpread</span><span class="op">&gt;</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">RoundWordE</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">pieces</span>: <span class="ident">EfghVar</span>,
-        <span class="ident">dense_halves</span>: <span class="ident">RoundWordDense</span>,
-        <span class="ident">spread_halves</span>: <span class="ident">RoundWordSpread</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="ident">RoundWordE</span> {
-            <span class="ident">pieces</span>: <span class="prelude-val">Some</span>(<span class="ident">pieces</span>),
-            <span class="ident">dense_halves</span>,
-            <span class="ident">spread_halves</span>: <span class="prelude-val">Some</span>(<span class="ident">spread_halves</span>),
-        }
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_dense</span>(<span class="ident">dense_halves</span>: <span class="ident">RoundWordDense</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">RoundWordE</span> {
-            <span class="ident">pieces</span>: <span class="prelude-val">None</span>,
-            <span class="ident">dense_halves</span>,
-            <span class="ident">spread_halves</span>: <span class="prelude-val">None</span>,
+    <span class="kw">pub fn </span>new_dense(dense_halves: RoundWordDense) -&gt; <span class="self">Self </span>{
+        RoundWordA {
+            pieces: <span class="prelude-val">None</span>,
+            dense_halves,
+            spread_halves: <span class="prelude-val">None</span>,
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RoundWord</span> {
-    <span class="ident">dense_halves</span>: <span class="ident">RoundWordDense</span>,
-    <span class="ident">spread_halves</span>: <span class="ident">RoundWordSpread</span>,
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>RoundWordE {
+    pieces: <span class="prelude-ty">Option</span>&lt;EfghVar&gt;,
+    dense_halves: RoundWordDense,
+    spread_halves: <span class="prelude-ty">Option</span>&lt;RoundWordSpread&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">RoundWord</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">dense_halves</span>: <span class="ident">RoundWordDense</span>, <span class="ident">spread_halves</span>: <span class="ident">RoundWordSpread</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">RoundWord</span> {
-            <span class="ident">dense_halves</span>,
-            <span class="ident">spread_halves</span>,
+<span class="kw">impl </span>RoundWordE {
+    <span class="kw">pub fn </span>new(
+        pieces: EfghVar,
+        dense_halves: RoundWordDense,
+        spread_halves: RoundWordSpread,
+    ) -&gt; <span class="self">Self </span>{
+        RoundWordE {
+            pieces: <span class="prelude-val">Some</span>(pieces),
+            dense_halves,
+            spread_halves: <span class="prelude-val">Some</span>(spread_halves),
+        }
+    }
+
+    <span class="kw">pub fn </span>new_dense(dense_halves: RoundWordDense) -&gt; <span class="self">Self </span>{
+        RoundWordE {
+            pieces: <span class="prelude-val">None</span>,
+            dense_halves,
+            spread_halves: <span class="prelude-val">None</span>,
         }
     }
 }
 
-<span class="doccomment">/// The internal state for SHA-256.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">State</span> {
-    <span class="ident">a</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">StateWord</span><span class="op">&gt;</span>,
-    <span class="ident">b</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">StateWord</span><span class="op">&gt;</span>,
-    <span class="ident">c</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">StateWord</span><span class="op">&gt;</span>,
-    <span class="ident">d</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">StateWord</span><span class="op">&gt;</span>,
-    <span class="ident">e</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">StateWord</span><span class="op">&gt;</span>,
-    <span class="ident">f</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">StateWord</span><span class="op">&gt;</span>,
-    <span class="ident">g</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">StateWord</span><span class="op">&gt;</span>,
-    <span class="ident">h</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">StateWord</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>RoundWord {
+    dense_halves: RoundWordDense,
+    spread_halves: RoundWordSpread,
 }
 
-<span class="kw">impl</span> <span class="ident">State</span> {
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::many_single_char_names</span>)]</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">a</span>: <span class="ident">StateWord</span>,
-        <span class="ident">b</span>: <span class="ident">StateWord</span>,
-        <span class="ident">c</span>: <span class="ident">StateWord</span>,
-        <span class="ident">d</span>: <span class="ident">StateWord</span>,
-        <span class="ident">e</span>: <span class="ident">StateWord</span>,
-        <span class="ident">f</span>: <span class="ident">StateWord</span>,
-        <span class="ident">g</span>: <span class="ident">StateWord</span>,
-        <span class="ident">h</span>: <span class="ident">StateWord</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="ident">State</span> {
-            <span class="ident">a</span>: <span class="prelude-val">Some</span>(<span class="ident">a</span>),
-            <span class="ident">b</span>: <span class="prelude-val">Some</span>(<span class="ident">b</span>),
-            <span class="ident">c</span>: <span class="prelude-val">Some</span>(<span class="ident">c</span>),
-            <span class="ident">d</span>: <span class="prelude-val">Some</span>(<span class="ident">d</span>),
-            <span class="ident">e</span>: <span class="prelude-val">Some</span>(<span class="ident">e</span>),
-            <span class="ident">f</span>: <span class="prelude-val">Some</span>(<span class="ident">f</span>),
-            <span class="ident">g</span>: <span class="prelude-val">Some</span>(<span class="ident">g</span>),
-            <span class="ident">h</span>: <span class="prelude-val">Some</span>(<span class="ident">h</span>),
-        }
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">empty_state</span>() -&gt; <span class="self">Self</span> {
-        <span class="ident">State</span> {
-            <span class="ident">a</span>: <span class="prelude-val">None</span>,
-            <span class="ident">b</span>: <span class="prelude-val">None</span>,
-            <span class="ident">c</span>: <span class="prelude-val">None</span>,
-            <span class="ident">d</span>: <span class="prelude-val">None</span>,
-            <span class="ident">e</span>: <span class="prelude-val">None</span>,
-            <span class="ident">f</span>: <span class="prelude-val">None</span>,
-            <span class="ident">g</span>: <span class="prelude-val">None</span>,
-            <span class="ident">h</span>: <span class="prelude-val">None</span>,
+<span class="kw">impl </span>RoundWord {
+    <span class="kw">pub fn </span>new(dense_halves: RoundWordDense, spread_halves: RoundWordSpread) -&gt; <span class="self">Self </span>{
+        RoundWord {
+            dense_halves,
+            spread_halves,
         }
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">StateWord</span> {
-    <span class="ident">A</span>(<span class="ident">RoundWordA</span>),
-    <span class="ident">B</span>(<span class="ident">RoundWord</span>),
-    <span class="ident">C</span>(<span class="ident">RoundWord</span>),
-    <span class="ident">D</span>(<span class="ident">RoundWordDense</span>),
-    <span class="ident">E</span>(<span class="ident">RoundWordE</span>),
-    <span class="ident">F</span>(<span class="ident">RoundWord</span>),
-    <span class="ident">G</span>(<span class="ident">RoundWord</span>),
-    <span class="ident">H</span>(<span class="ident">RoundWordDense</span>),
+<span class="doccomment">/// The internal state for SHA-256.
+</span><span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub struct </span>State {
+    a: <span class="prelude-ty">Option</span>&lt;StateWord&gt;,
+    b: <span class="prelude-ty">Option</span>&lt;StateWord&gt;,
+    c: <span class="prelude-ty">Option</span>&lt;StateWord&gt;,
+    d: <span class="prelude-ty">Option</span>&lt;StateWord&gt;,
+    e: <span class="prelude-ty">Option</span>&lt;StateWord&gt;,
+    f: <span class="prelude-ty">Option</span>&lt;StateWord&gt;,
+    g: <span class="prelude-ty">Option</span>&lt;StateWord&gt;,
+    h: <span class="prelude-ty">Option</span>&lt;StateWord&gt;,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct</span> <span class="ident">CompressionConfig</span> {
-    <span class="ident">lookup</span>: <span class="ident">SpreadInputs</span>,
-    <span class="ident">message_schedule</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="ident">extras</span>: [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>; <span class="number">6</span>],
-
-    <span class="ident">s_ch</span>: <span class="ident">Selector</span>,
-    <span class="ident">s_ch_neg</span>: <span class="ident">Selector</span>,
-    <span class="ident">s_maj</span>: <span class="ident">Selector</span>,
-    <span class="ident">s_h_prime</span>: <span class="ident">Selector</span>,
-    <span class="ident">s_a_new</span>: <span class="ident">Selector</span>,
-    <span class="ident">s_e_new</span>: <span class="ident">Selector</span>,
-
-    <span class="ident">s_upper_sigma_0</span>: <span class="ident">Selector</span>,
-    <span class="ident">s_upper_sigma_1</span>: <span class="ident">Selector</span>,
-
-    <span class="comment">// Decomposition gate for AbcdVar</span>
-    <span class="ident">s_decompose_abcd</span>: <span class="ident">Selector</span>,
-    <span class="comment">// Decomposition gate for EfghVar</span>
-    <span class="ident">s_decompose_efgh</span>: <span class="ident">Selector</span>,
-
-    <span class="ident">s_digest</span>: <span class="ident">Selector</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">Table16Assignment</span> <span class="kw">for</span> <span class="ident">CompressionConfig</span> {}
-
-<span class="kw">impl</span> <span class="ident">CompressionConfig</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">configure</span>(
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">lookup</span>: <span class="ident">SpreadInputs</span>,
-        <span class="ident">message_schedule</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">extras</span>: [<span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>; <span class="number">6</span>],
-    ) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">s_ch</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
-        <span class="kw">let</span> <span class="ident">s_ch_neg</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
-        <span class="kw">let</span> <span class="ident">s_maj</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
-        <span class="kw">let</span> <span class="ident">s_h_prime</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
-        <span class="kw">let</span> <span class="ident">s_a_new</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
-        <span class="kw">let</span> <span class="ident">s_e_new</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
-
-        <span class="kw">let</span> <span class="ident">s_upper_sigma_0</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
-        <span class="kw">let</span> <span class="ident">s_upper_sigma_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
-
-        <span class="comment">// Decomposition gate for AbcdVar</span>
-        <span class="kw">let</span> <span class="ident">s_decompose_abcd</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
-        <span class="comment">// Decomposition gate for EfghVar</span>
-        <span class="kw">let</span> <span class="ident">s_decompose_efgh</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
-
-        <span class="kw">let</span> <span class="ident">s_digest</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
-
-        <span class="comment">// Rename these here for ease of matching the gates to the specification.</span>
-        <span class="kw">let</span> <span class="ident">a_0</span> <span class="op">=</span> <span class="ident">lookup</span>.<span class="ident">tag</span>;
-        <span class="kw">let</span> <span class="ident">a_1</span> <span class="op">=</span> <span class="ident">lookup</span>.<span class="ident">dense</span>;
-        <span class="kw">let</span> <span class="ident">a_2</span> <span class="op">=</span> <span class="ident">lookup</span>.<span class="ident">spread</span>;
-        <span class="kw">let</span> <span class="ident">a_3</span> <span class="op">=</span> <span class="ident">extras</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">a_4</span> <span class="op">=</span> <span class="ident">extras</span>[<span class="number">1</span>];
-        <span class="kw">let</span> <span class="ident">a_5</span> <span class="op">=</span> <span class="ident">message_schedule</span>;
-        <span class="kw">let</span> <span class="ident">a_6</span> <span class="op">=</span> <span class="ident">extras</span>[<span class="number">2</span>];
-        <span class="kw">let</span> <span class="ident">a_7</span> <span class="op">=</span> <span class="ident">extras</span>[<span class="number">3</span>];
-        <span class="kw">let</span> <span class="ident">a_8</span> <span class="op">=</span> <span class="ident">extras</span>[<span class="number">4</span>];
-        <span class="kw">let</span> <span class="ident">a_9</span> <span class="op">=</span> <span class="ident">extras</span>[<span class="number">5</span>];
-
-        <span class="comment">// Decompose `A,B,C,D` words into (2, 11, 9, 10)-bit chunks.</span>
-        <span class="comment">// `c` is split into (3, 3, 3)-bit c_lo, c_mid, c_hi.</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;decompose ABCD&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">s_decompose_abcd</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">s_decompose_abcd</span>);
-            <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::next</span>()); <span class="comment">// 2-bit chunk</span>
-            <span class="kw">let</span> <span class="ident">spread_a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">b</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_1</span>, <span class="ident">Rotation::cur</span>()); <span class="comment">// 11-bit chunk</span>
-            <span class="kw">let</span> <span class="ident">spread_b</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">tag_b</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_0</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">c_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::cur</span>()); <span class="comment">// 3-bit chunk</span>
-            <span class="kw">let</span> <span class="ident">spread_c_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">c_mid</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::cur</span>()); <span class="comment">// 3-bit chunk</span>
-            <span class="kw">let</span> <span class="ident">spread_c_mid</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_6</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">c_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::next</span>()); <span class="comment">// 3-bit chunk</span>
-            <span class="kw">let</span> <span class="ident">spread_c_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_6</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">d</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_1</span>, <span class="ident">Rotation::next</span>()); <span class="comment">// 7-bit chunk</span>
-            <span class="kw">let</span> <span class="ident">spread_d</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">tag_d</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_0</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">word_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_7</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_word_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_8</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">word_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_7</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">spread_word_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_8</span>, <span class="ident">Rotation::next</span>());
-
-            <span class="ident">CompressionGate::s_decompose_abcd</span>(
-                <span class="ident">s_decompose_abcd</span>,
-                <span class="ident">a</span>,
-                <span class="ident">spread_a</span>,
-                <span class="ident">b</span>,
-                <span class="ident">spread_b</span>,
-                <span class="ident">tag_b</span>,
-                <span class="ident">c_lo</span>,
-                <span class="ident">spread_c_lo</span>,
-                <span class="ident">c_mid</span>,
-                <span class="ident">spread_c_mid</span>,
-                <span class="ident">c_hi</span>,
-                <span class="ident">spread_c_hi</span>,
-                <span class="ident">d</span>,
-                <span class="ident">spread_d</span>,
-                <span class="ident">tag_d</span>,
-                <span class="ident">word_lo</span>,
-                <span class="ident">spread_word_lo</span>,
-                <span class="ident">word_hi</span>,
-                <span class="ident">spread_word_hi</span>,
-            )
-        });
-
-        <span class="comment">// Decompose `E,F,G,H` words into (6, 5, 14, 7)-bit chunks.</span>
-        <span class="comment">// `a` is split into (3, 3)-bit a_lo, a_hi</span>
-        <span class="comment">// `b` is split into (2, 3)-bit b_lo, b_hi</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;Decompose EFGH&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">s_decompose_efgh</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">s_decompose_efgh</span>);
-            <span class="kw">let</span> <span class="ident">a_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::next</span>()); <span class="comment">// 3-bit chunk</span>
-            <span class="kw">let</span> <span class="ident">spread_a_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">a_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::next</span>()); <span class="comment">// 3-bit chunk</span>
-            <span class="kw">let</span> <span class="ident">spread_a_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_6</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">b_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::cur</span>()); <span class="comment">// 2-bit chunk</span>
-            <span class="kw">let</span> <span class="ident">spread_b_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">b_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::cur</span>()); <span class="comment">// 3-bit chunk</span>
-            <span class="kw">let</span> <span class="ident">spread_b_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_6</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">c</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_1</span>, <span class="ident">Rotation::next</span>()); <span class="comment">// 14-bit chunk</span>
-            <span class="kw">let</span> <span class="ident">spread_c</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">tag_c</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_0</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">d</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_1</span>, <span class="ident">Rotation::cur</span>()); <span class="comment">// 7-bit chunk</span>
-            <span class="kw">let</span> <span class="ident">spread_d</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">tag_d</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_0</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">word_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_7</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_word_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_8</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">word_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_7</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">spread_word_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_8</span>, <span class="ident">Rotation::next</span>());
-
-            <span class="ident">CompressionGate::s_decompose_efgh</span>(
-                <span class="ident">s_decompose_efgh</span>,
-                <span class="ident">a_lo</span>,
-                <span class="ident">spread_a_lo</span>,
-                <span class="ident">a_hi</span>,
-                <span class="ident">spread_a_hi</span>,
-                <span class="ident">b_lo</span>,
-                <span class="ident">spread_b_lo</span>,
-                <span class="ident">b_hi</span>,
-                <span class="ident">spread_b_hi</span>,
-                <span class="ident">c</span>,
-                <span class="ident">spread_c</span>,
-                <span class="ident">tag_c</span>,
-                <span class="ident">d</span>,
-                <span class="ident">spread_d</span>,
-                <span class="ident">tag_d</span>,
-                <span class="ident">word_lo</span>,
-                <span class="ident">spread_word_lo</span>,
-                <span class="ident">word_hi</span>,
-                <span class="ident">spread_word_hi</span>,
-            )
-        });
-
-        <span class="comment">// s_upper_sigma_0 on abcd words</span>
-        <span class="comment">// (2, 11, 9, 10)-bit chunks</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;s_upper_sigma_0&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">s_upper_sigma_0</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">s_upper_sigma_0</span>);
-            <span class="kw">let</span> <span class="ident">spread_r0_even</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_r0_odd</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_r1_even</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">spread_r1_odd</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::cur</span>());
-
-            <span class="kw">let</span> <span class="ident">spread_a</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">spread_b</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_c_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_c_mid</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_c_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">spread_d</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::cur</span>());
-
-            <span class="ident">CompressionGate::s_upper_sigma_0</span>(
-                <span class="ident">s_upper_sigma_0</span>,
-                <span class="ident">spread_r0_even</span>,
-                <span class="ident">spread_r0_odd</span>,
-                <span class="ident">spread_r1_even</span>,
-                <span class="ident">spread_r1_odd</span>,
-                <span class="ident">spread_a</span>,
-                <span class="ident">spread_b</span>,
-                <span class="ident">spread_c_lo</span>,
-                <span class="ident">spread_c_mid</span>,
-                <span class="ident">spread_c_hi</span>,
-                <span class="ident">spread_d</span>,
-            )
-        });
-
-        <span class="comment">// s_upper_sigma_1 on efgh words</span>
-        <span class="comment">// (6, 5, 14, 7)-bit chunks</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;s_upper_sigma_1&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">s_upper_sigma_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">s_upper_sigma_1</span>);
-            <span class="kw">let</span> <span class="ident">spread_r0_even</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_r0_odd</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_r1_even</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">spread_r1_odd</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_a_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">spread_a_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">spread_b_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_b_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_c</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_d</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::cur</span>());
-
-            <span class="ident">CompressionGate::s_upper_sigma_1</span>(
-                <span class="ident">s_upper_sigma_1</span>,
-                <span class="ident">spread_r0_even</span>,
-                <span class="ident">spread_r0_odd</span>,
-                <span class="ident">spread_r1_even</span>,
-                <span class="ident">spread_r1_odd</span>,
-                <span class="ident">spread_a_lo</span>,
-                <span class="ident">spread_a_hi</span>,
-                <span class="ident">spread_b_lo</span>,
-                <span class="ident">spread_b_hi</span>,
-                <span class="ident">spread_c</span>,
-                <span class="ident">spread_d</span>,
-            )
-        });
-
-        <span class="comment">// s_ch on efgh words</span>
-        <span class="comment">// First part of choice gate on (E, F, G), E ∧ F</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;s_ch&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">s_ch</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">s_ch</span>);
-            <span class="kw">let</span> <span class="ident">spread_p0_even</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_p0_odd</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_p1_even</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">spread_p1_odd</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_e_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_e_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_f_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">spread_f_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::next</span>());
-
-            <span class="ident">CompressionGate::s_ch</span>(
-                <span class="ident">s_ch</span>,
-                <span class="ident">spread_p0_even</span>,
-                <span class="ident">spread_p0_odd</span>,
-                <span class="ident">spread_p1_even</span>,
-                <span class="ident">spread_p1_odd</span>,
-                <span class="ident">spread_e_lo</span>,
-                <span class="ident">spread_e_hi</span>,
-                <span class="ident">spread_f_lo</span>,
-                <span class="ident">spread_f_hi</span>,
-            )
-        });
-
-        <span class="comment">// s_ch_neg on efgh words</span>
-        <span class="comment">// Second part of Choice gate on (E, F, G), ¬E ∧ G</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;s_ch_neg&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">s_ch_neg</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">s_ch_neg</span>);
-            <span class="kw">let</span> <span class="ident">spread_q0_even</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_q0_odd</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_q1_even</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">spread_q1_odd</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_e_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_e_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_e_neg_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_e_neg_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_g_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">spread_g_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::next</span>());
-
-            <span class="ident">CompressionGate::s_ch_neg</span>(
-                <span class="ident">s_ch_neg</span>,
-                <span class="ident">spread_q0_even</span>,
-                <span class="ident">spread_q0_odd</span>,
-                <span class="ident">spread_q1_even</span>,
-                <span class="ident">spread_q1_odd</span>,
-                <span class="ident">spread_e_lo</span>,
-                <span class="ident">spread_e_hi</span>,
-                <span class="ident">spread_e_neg_lo</span>,
-                <span class="ident">spread_e_neg_hi</span>,
-                <span class="ident">spread_g_lo</span>,
-                <span class="ident">spread_g_hi</span>,
-            )
-        });
-
-        <span class="comment">// s_maj on abcd words</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;s_maj&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">s_maj</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">s_maj</span>);
-            <span class="kw">let</span> <span class="ident">spread_m0_even</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_m0_odd</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_m1_even</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_2</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">spread_m1_odd</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_a_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_a_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">spread_b_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_b_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">spread_c_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">spread_c_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::next</span>());
-
-            <span class="ident">CompressionGate::s_maj</span>(
-                <span class="ident">s_maj</span>,
-                <span class="ident">spread_m0_even</span>,
-                <span class="ident">spread_m0_odd</span>,
-                <span class="ident">spread_m1_even</span>,
-                <span class="ident">spread_m1_odd</span>,
-                <span class="ident">spread_a_lo</span>,
-                <span class="ident">spread_a_hi</span>,
-                <span class="ident">spread_b_lo</span>,
-                <span class="ident">spread_b_hi</span>,
-                <span class="ident">spread_c_lo</span>,
-                <span class="ident">spread_c_hi</span>,
-            )
-        });
-
-        <span class="comment">// s_h_prime to compute H&#39; = H + Ch(E, F, G) + s_upper_sigma_1(E) + K + W</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;s_h_prime&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">s_h_prime</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">s_h_prime</span>);
-            <span class="kw">let</span> <span class="ident">h_prime_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_7</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">h_prime_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_8</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">h_prime_carry</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_9</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">sigma_e_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">sigma_e_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">ch_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_1</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">ch_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_6</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">ch_neg_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">ch_neg_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">h_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_7</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">h_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_7</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">k_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_6</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">k_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_6</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">w_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_8</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">w_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_8</span>, <span class="ident">Rotation::cur</span>());
-
-            <span class="ident">CompressionGate::s_h_prime</span>(
-                <span class="ident">s_h_prime</span>,
-                <span class="ident">h_prime_lo</span>,
-                <span class="ident">h_prime_hi</span>,
-                <span class="ident">h_prime_carry</span>,
-                <span class="ident">sigma_e_lo</span>,
-                <span class="ident">sigma_e_hi</span>,
-                <span class="ident">ch_lo</span>,
-                <span class="ident">ch_hi</span>,
-                <span class="ident">ch_neg_lo</span>,
-                <span class="ident">ch_neg_hi</span>,
-                <span class="ident">h_lo</span>,
-                <span class="ident">h_hi</span>,
-                <span class="ident">k_lo</span>,
-                <span class="ident">k_hi</span>,
-                <span class="ident">w_lo</span>,
-                <span class="ident">w_hi</span>,
-            )
-        });
-
-        <span class="comment">// s_a_new</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;s_a_new&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">s_a_new</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">s_a_new</span>);
-            <span class="kw">let</span> <span class="ident">a_new_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_8</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">a_new_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_8</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">a_new_carry</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_9</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">sigma_a_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_6</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">sigma_a_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_6</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">maj_abc_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_1</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">maj_abc_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">h_prime_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_7</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">h_prime_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_8</span>, <span class="ident">Rotation::prev</span>());
-
-            <span class="ident">CompressionGate::s_a_new</span>(
-                <span class="ident">s_a_new</span>,
-                <span class="ident">a_new_lo</span>,
-                <span class="ident">a_new_hi</span>,
-                <span class="ident">a_new_carry</span>,
-                <span class="ident">sigma_a_lo</span>,
-                <span class="ident">sigma_a_hi</span>,
-                <span class="ident">maj_abc_lo</span>,
-                <span class="ident">maj_abc_hi</span>,
-                <span class="ident">h_prime_lo</span>,
-                <span class="ident">h_prime_hi</span>,
-            )
-        });
-
-        <span class="comment">// s_e_new</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;s_e_new&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">s_e_new</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">s_e_new</span>);
-            <span class="kw">let</span> <span class="ident">e_new_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_8</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">e_new_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_8</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">e_new_carry</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_9</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">d_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_7</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">d_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_7</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">h_prime_lo</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_7</span>, <span class="ident">Rotation::prev</span>());
-            <span class="kw">let</span> <span class="ident">h_prime_hi</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_8</span>, <span class="ident">Rotation::prev</span>());
-
-            <span class="ident">CompressionGate::s_e_new</span>(
-                <span class="ident">s_e_new</span>,
-                <span class="ident">e_new_lo</span>,
-                <span class="ident">e_new_hi</span>,
-                <span class="ident">e_new_carry</span>,
-                <span class="ident">d_lo</span>,
-                <span class="ident">d_hi</span>,
-                <span class="ident">h_prime_lo</span>,
-                <span class="ident">h_prime_hi</span>,
-            )
-        });
-
-        <span class="comment">// s_digest for final round</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;s_digest&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">s_digest</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">s_digest</span>);
-            <span class="kw">let</span> <span class="ident">lo_0</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">hi_0</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">word_0</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">lo_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_6</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">hi_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_7</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">word_1</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_8</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">lo_2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_3</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">hi_2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_4</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">word_2</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_5</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">lo_3</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_6</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">hi_3</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_7</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">word_3</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">a_8</span>, <span class="ident">Rotation::next</span>());
-
-            <span class="ident">CompressionGate::s_digest</span>(
-                <span class="ident">s_digest</span>, <span class="ident">lo_0</span>, <span class="ident">hi_0</span>, <span class="ident">word_0</span>, <span class="ident">lo_1</span>, <span class="ident">hi_1</span>, <span class="ident">word_1</span>, <span class="ident">lo_2</span>, <span class="ident">hi_2</span>, <span class="ident">word_2</span>, <span class="ident">lo_3</span>, <span class="ident">hi_3</span>,
-                <span class="ident">word_3</span>,
-            )
-        });
-
-        <span class="ident">CompressionConfig</span> {
-            <span class="ident">lookup</span>,
-            <span class="ident">message_schedule</span>,
-            <span class="ident">extras</span>,
-            <span class="ident">s_ch</span>,
-            <span class="ident">s_ch_neg</span>,
-            <span class="ident">s_maj</span>,
-            <span class="ident">s_h_prime</span>,
-            <span class="ident">s_a_new</span>,
-            <span class="ident">s_e_new</span>,
-            <span class="ident">s_upper_sigma_0</span>,
-            <span class="ident">s_upper_sigma_1</span>,
-            <span class="ident">s_decompose_abcd</span>,
-            <span class="ident">s_decompose_efgh</span>,
-            <span class="ident">s_digest</span>,
+<span class="kw">impl </span>State {
+    <span class="attribute">#[allow(clippy::many_single_char_names)]</span>
+    <span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="kw">pub fn </span>new(
+        a: StateWord,
+        b: StateWord,
+        c: StateWord,
+        d: StateWord,
+        e: StateWord,
+        f: StateWord,
+        g: StateWord,
+        h: StateWord,
+    ) -&gt; <span class="self">Self </span>{
+        State {
+            a: <span class="prelude-val">Some</span>(a),
+            b: <span class="prelude-val">Some</span>(b),
+            c: <span class="prelude-val">Some</span>(c),
+            d: <span class="prelude-val">Some</span>(d),
+            e: <span class="prelude-val">Some</span>(e),
+            f: <span class="prelude-val">Some</span>(f),
+            g: <span class="prelude-val">Some</span>(g),
+            h: <span class="prelude-val">Some</span>(h),
         }
     }
 
-    <span class="doccomment">/// Initialize compression with a constant Initialization Vector of 32-byte words.</span>
-    <span class="doccomment">/// Returns an initialized state.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">initialize_with_iv</span>(
+    <span class="kw">pub fn </span>empty_state() -&gt; <span class="self">Self </span>{
+        State {
+            a: <span class="prelude-val">None</span>,
+            b: <span class="prelude-val">None</span>,
+            c: <span class="prelude-val">None</span>,
+            d: <span class="prelude-val">None</span>,
+            e: <span class="prelude-val">None</span>,
+            f: <span class="prelude-val">None</span>,
+            g: <span class="prelude-val">None</span>,
+            h: <span class="prelude-val">None</span>,
+        }
+    }
+}
+
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub enum </span>StateWord {
+    A(RoundWordA),
+    B(RoundWord),
+    C(RoundWord),
+    D(RoundWordDense),
+    E(RoundWordE),
+    F(RoundWord),
+    G(RoundWord),
+    H(RoundWordDense),
+}
+
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>CompressionConfig {
+    lookup: SpreadInputs,
+    message_schedule: Column&lt;Advice&gt;,
+    extras: [Column&lt;Advice&gt;; <span class="number">6</span>],
+
+    s_ch: Selector,
+    s_ch_neg: Selector,
+    s_maj: Selector,
+    s_h_prime: Selector,
+    s_a_new: Selector,
+    s_e_new: Selector,
+
+    s_upper_sigma_0: Selector,
+    s_upper_sigma_1: Selector,
+
+    <span class="comment">// Decomposition gate for AbcdVar
+    </span>s_decompose_abcd: Selector,
+    <span class="comment">// Decomposition gate for EfghVar
+    </span>s_decompose_efgh: Selector,
+
+    s_digest: Selector,
+}
+
+<span class="kw">impl </span>Table16Assignment <span class="kw">for </span>CompressionConfig {}
+
+<span class="kw">impl </span>CompressionConfig {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>configure(
+        meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;,
+        lookup: SpreadInputs,
+        message_schedule: Column&lt;Advice&gt;,
+        extras: [Column&lt;Advice&gt;; <span class="number">6</span>],
+    ) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>s_ch = meta.selector();
+        <span class="kw">let </span>s_ch_neg = meta.selector();
+        <span class="kw">let </span>s_maj = meta.selector();
+        <span class="kw">let </span>s_h_prime = meta.selector();
+        <span class="kw">let </span>s_a_new = meta.selector();
+        <span class="kw">let </span>s_e_new = meta.selector();
+
+        <span class="kw">let </span>s_upper_sigma_0 = meta.selector();
+        <span class="kw">let </span>s_upper_sigma_1 = meta.selector();
+
+        <span class="comment">// Decomposition gate for AbcdVar
+        </span><span class="kw">let </span>s_decompose_abcd = meta.selector();
+        <span class="comment">// Decomposition gate for EfghVar
+        </span><span class="kw">let </span>s_decompose_efgh = meta.selector();
+
+        <span class="kw">let </span>s_digest = meta.selector();
+
+        <span class="comment">// Rename these here for ease of matching the gates to the specification.
+        </span><span class="kw">let </span>a_0 = lookup.tag;
+        <span class="kw">let </span>a_1 = lookup.dense;
+        <span class="kw">let </span>a_2 = lookup.spread;
+        <span class="kw">let </span>a_3 = extras[<span class="number">0</span>];
+        <span class="kw">let </span>a_4 = extras[<span class="number">1</span>];
+        <span class="kw">let </span>a_5 = message_schedule;
+        <span class="kw">let </span>a_6 = extras[<span class="number">2</span>];
+        <span class="kw">let </span>a_7 = extras[<span class="number">3</span>];
+        <span class="kw">let </span>a_8 = extras[<span class="number">4</span>];
+        <span class="kw">let </span>a_9 = extras[<span class="number">5</span>];
+
+        <span class="comment">// Decompose `A,B,C,D` words into (2, 11, 9, 10)-bit chunks.
+        // `c` is split into (3, 3, 3)-bit c_lo, c_mid, c_hi.
+        </span>meta.create_gate(<span class="string">&quot;decompose ABCD&quot;</span>, |meta| {
+            <span class="kw">let </span>s_decompose_abcd = meta.query_selector(s_decompose_abcd);
+            <span class="kw">let </span>a = meta.query_advice(a_3, Rotation::next()); <span class="comment">// 2-bit chunk
+            </span><span class="kw">let </span>spread_a = meta.query_advice(a_4, Rotation::next());
+            <span class="kw">let </span>b = meta.query_advice(a_1, Rotation::cur()); <span class="comment">// 11-bit chunk
+            </span><span class="kw">let </span>spread_b = meta.query_advice(a_2, Rotation::cur());
+            <span class="kw">let </span>tag_b = meta.query_advice(a_0, Rotation::cur());
+            <span class="kw">let </span>c_lo = meta.query_advice(a_3, Rotation::cur()); <span class="comment">// 3-bit chunk
+            </span><span class="kw">let </span>spread_c_lo = meta.query_advice(a_4, Rotation::cur());
+            <span class="kw">let </span>c_mid = meta.query_advice(a_5, Rotation::cur()); <span class="comment">// 3-bit chunk
+            </span><span class="kw">let </span>spread_c_mid = meta.query_advice(a_6, Rotation::cur());
+            <span class="kw">let </span>c_hi = meta.query_advice(a_5, Rotation::next()); <span class="comment">// 3-bit chunk
+            </span><span class="kw">let </span>spread_c_hi = meta.query_advice(a_6, Rotation::next());
+            <span class="kw">let </span>d = meta.query_advice(a_1, Rotation::next()); <span class="comment">// 7-bit chunk
+            </span><span class="kw">let </span>spread_d = meta.query_advice(a_2, Rotation::next());
+            <span class="kw">let </span>tag_d = meta.query_advice(a_0, Rotation::next());
+            <span class="kw">let </span>word_lo = meta.query_advice(a_7, Rotation::cur());
+            <span class="kw">let </span>spread_word_lo = meta.query_advice(a_8, Rotation::cur());
+            <span class="kw">let </span>word_hi = meta.query_advice(a_7, Rotation::next());
+            <span class="kw">let </span>spread_word_hi = meta.query_advice(a_8, Rotation::next());
+
+            CompressionGate::s_decompose_abcd(
+                s_decompose_abcd,
+                a,
+                spread_a,
+                b,
+                spread_b,
+                tag_b,
+                c_lo,
+                spread_c_lo,
+                c_mid,
+                spread_c_mid,
+                c_hi,
+                spread_c_hi,
+                d,
+                spread_d,
+                tag_d,
+                word_lo,
+                spread_word_lo,
+                word_hi,
+                spread_word_hi,
+            )
+        });
+
+        <span class="comment">// Decompose `E,F,G,H` words into (6, 5, 14, 7)-bit chunks.
+        // `a` is split into (3, 3)-bit a_lo, a_hi
+        // `b` is split into (2, 3)-bit b_lo, b_hi
+        </span>meta.create_gate(<span class="string">&quot;Decompose EFGH&quot;</span>, |meta| {
+            <span class="kw">let </span>s_decompose_efgh = meta.query_selector(s_decompose_efgh);
+            <span class="kw">let </span>a_lo = meta.query_advice(a_3, Rotation::next()); <span class="comment">// 3-bit chunk
+            </span><span class="kw">let </span>spread_a_lo = meta.query_advice(a_4, Rotation::next());
+            <span class="kw">let </span>a_hi = meta.query_advice(a_5, Rotation::next()); <span class="comment">// 3-bit chunk
+            </span><span class="kw">let </span>spread_a_hi = meta.query_advice(a_6, Rotation::next());
+            <span class="kw">let </span>b_lo = meta.query_advice(a_3, Rotation::cur()); <span class="comment">// 2-bit chunk
+            </span><span class="kw">let </span>spread_b_lo = meta.query_advice(a_4, Rotation::cur());
+            <span class="kw">let </span>b_hi = meta.query_advice(a_5, Rotation::cur()); <span class="comment">// 3-bit chunk
+            </span><span class="kw">let </span>spread_b_hi = meta.query_advice(a_6, Rotation::cur());
+            <span class="kw">let </span>c = meta.query_advice(a_1, Rotation::next()); <span class="comment">// 14-bit chunk
+            </span><span class="kw">let </span>spread_c = meta.query_advice(a_2, Rotation::next());
+            <span class="kw">let </span>tag_c = meta.query_advice(a_0, Rotation::next());
+            <span class="kw">let </span>d = meta.query_advice(a_1, Rotation::cur()); <span class="comment">// 7-bit chunk
+            </span><span class="kw">let </span>spread_d = meta.query_advice(a_2, Rotation::cur());
+            <span class="kw">let </span>tag_d = meta.query_advice(a_0, Rotation::cur());
+            <span class="kw">let </span>word_lo = meta.query_advice(a_7, Rotation::cur());
+            <span class="kw">let </span>spread_word_lo = meta.query_advice(a_8, Rotation::cur());
+            <span class="kw">let </span>word_hi = meta.query_advice(a_7, Rotation::next());
+            <span class="kw">let </span>spread_word_hi = meta.query_advice(a_8, Rotation::next());
+
+            CompressionGate::s_decompose_efgh(
+                s_decompose_efgh,
+                a_lo,
+                spread_a_lo,
+                a_hi,
+                spread_a_hi,
+                b_lo,
+                spread_b_lo,
+                b_hi,
+                spread_b_hi,
+                c,
+                spread_c,
+                tag_c,
+                d,
+                spread_d,
+                tag_d,
+                word_lo,
+                spread_word_lo,
+                word_hi,
+                spread_word_hi,
+            )
+        });
+
+        <span class="comment">// s_upper_sigma_0 on abcd words
+        // (2, 11, 9, 10)-bit chunks
+        </span>meta.create_gate(<span class="string">&quot;s_upper_sigma_0&quot;</span>, |meta| {
+            <span class="kw">let </span>s_upper_sigma_0 = meta.query_selector(s_upper_sigma_0);
+            <span class="kw">let </span>spread_r0_even = meta.query_advice(a_2, Rotation::prev());
+            <span class="kw">let </span>spread_r0_odd = meta.query_advice(a_2, Rotation::cur());
+            <span class="kw">let </span>spread_r1_even = meta.query_advice(a_2, Rotation::next());
+            <span class="kw">let </span>spread_r1_odd = meta.query_advice(a_3, Rotation::cur());
+
+            <span class="kw">let </span>spread_a = meta.query_advice(a_3, Rotation::next());
+            <span class="kw">let </span>spread_b = meta.query_advice(a_5, Rotation::cur());
+            <span class="kw">let </span>spread_c_lo = meta.query_advice(a_3, Rotation::prev());
+            <span class="kw">let </span>spread_c_mid = meta.query_advice(a_4, Rotation::prev());
+            <span class="kw">let </span>spread_c_hi = meta.query_advice(a_4, Rotation::next());
+            <span class="kw">let </span>spread_d = meta.query_advice(a_4, Rotation::cur());
+
+            CompressionGate::s_upper_sigma_0(
+                s_upper_sigma_0,
+                spread_r0_even,
+                spread_r0_odd,
+                spread_r1_even,
+                spread_r1_odd,
+                spread_a,
+                spread_b,
+                spread_c_lo,
+                spread_c_mid,
+                spread_c_hi,
+                spread_d,
+            )
+        });
+
+        <span class="comment">// s_upper_sigma_1 on efgh words
+        // (6, 5, 14, 7)-bit chunks
+        </span>meta.create_gate(<span class="string">&quot;s_upper_sigma_1&quot;</span>, |meta| {
+            <span class="kw">let </span>s_upper_sigma_1 = meta.query_selector(s_upper_sigma_1);
+            <span class="kw">let </span>spread_r0_even = meta.query_advice(a_2, Rotation::prev());
+            <span class="kw">let </span>spread_r0_odd = meta.query_advice(a_2, Rotation::cur());
+            <span class="kw">let </span>spread_r1_even = meta.query_advice(a_2, Rotation::next());
+            <span class="kw">let </span>spread_r1_odd = meta.query_advice(a_3, Rotation::cur());
+            <span class="kw">let </span>spread_a_lo = meta.query_advice(a_3, Rotation::next());
+            <span class="kw">let </span>spread_a_hi = meta.query_advice(a_4, Rotation::next());
+            <span class="kw">let </span>spread_b_lo = meta.query_advice(a_3, Rotation::prev());
+            <span class="kw">let </span>spread_b_hi = meta.query_advice(a_4, Rotation::prev());
+            <span class="kw">let </span>spread_c = meta.query_advice(a_5, Rotation::cur());
+            <span class="kw">let </span>spread_d = meta.query_advice(a_4, Rotation::cur());
+
+            CompressionGate::s_upper_sigma_1(
+                s_upper_sigma_1,
+                spread_r0_even,
+                spread_r0_odd,
+                spread_r1_even,
+                spread_r1_odd,
+                spread_a_lo,
+                spread_a_hi,
+                spread_b_lo,
+                spread_b_hi,
+                spread_c,
+                spread_d,
+            )
+        });
+
+        <span class="comment">// s_ch on efgh words
+        // First part of choice gate on (E, F, G), E ∧ F
+        </span>meta.create_gate(<span class="string">&quot;s_ch&quot;</span>, |meta| {
+            <span class="kw">let </span>s_ch = meta.query_selector(s_ch);
+            <span class="kw">let </span>spread_p0_even = meta.query_advice(a_2, Rotation::prev());
+            <span class="kw">let </span>spread_p0_odd = meta.query_advice(a_2, Rotation::cur());
+            <span class="kw">let </span>spread_p1_even = meta.query_advice(a_2, Rotation::next());
+            <span class="kw">let </span>spread_p1_odd = meta.query_advice(a_3, Rotation::cur());
+            <span class="kw">let </span>spread_e_lo = meta.query_advice(a_3, Rotation::prev());
+            <span class="kw">let </span>spread_e_hi = meta.query_advice(a_4, Rotation::prev());
+            <span class="kw">let </span>spread_f_lo = meta.query_advice(a_3, Rotation::next());
+            <span class="kw">let </span>spread_f_hi = meta.query_advice(a_4, Rotation::next());
+
+            CompressionGate::s_ch(
+                s_ch,
+                spread_p0_even,
+                spread_p0_odd,
+                spread_p1_even,
+                spread_p1_odd,
+                spread_e_lo,
+                spread_e_hi,
+                spread_f_lo,
+                spread_f_hi,
+            )
+        });
+
+        <span class="comment">// s_ch_neg on efgh words
+        // Second part of Choice gate on (E, F, G), ¬E ∧ G
+        </span>meta.create_gate(<span class="string">&quot;s_ch_neg&quot;</span>, |meta| {
+            <span class="kw">let </span>s_ch_neg = meta.query_selector(s_ch_neg);
+            <span class="kw">let </span>spread_q0_even = meta.query_advice(a_2, Rotation::prev());
+            <span class="kw">let </span>spread_q0_odd = meta.query_advice(a_2, Rotation::cur());
+            <span class="kw">let </span>spread_q1_even = meta.query_advice(a_2, Rotation::next());
+            <span class="kw">let </span>spread_q1_odd = meta.query_advice(a_3, Rotation::cur());
+            <span class="kw">let </span>spread_e_lo = meta.query_advice(a_5, Rotation::prev());
+            <span class="kw">let </span>spread_e_hi = meta.query_advice(a_5, Rotation::cur());
+            <span class="kw">let </span>spread_e_neg_lo = meta.query_advice(a_3, Rotation::prev());
+            <span class="kw">let </span>spread_e_neg_hi = meta.query_advice(a_4, Rotation::prev());
+            <span class="kw">let </span>spread_g_lo = meta.query_advice(a_3, Rotation::next());
+            <span class="kw">let </span>spread_g_hi = meta.query_advice(a_4, Rotation::next());
+
+            CompressionGate::s_ch_neg(
+                s_ch_neg,
+                spread_q0_even,
+                spread_q0_odd,
+                spread_q1_even,
+                spread_q1_odd,
+                spread_e_lo,
+                spread_e_hi,
+                spread_e_neg_lo,
+                spread_e_neg_hi,
+                spread_g_lo,
+                spread_g_hi,
+            )
+        });
+
+        <span class="comment">// s_maj on abcd words
+        </span>meta.create_gate(<span class="string">&quot;s_maj&quot;</span>, |meta| {
+            <span class="kw">let </span>s_maj = meta.query_selector(s_maj);
+            <span class="kw">let </span>spread_m0_even = meta.query_advice(a_2, Rotation::prev());
+            <span class="kw">let </span>spread_m0_odd = meta.query_advice(a_2, Rotation::cur());
+            <span class="kw">let </span>spread_m1_even = meta.query_advice(a_2, Rotation::next());
+            <span class="kw">let </span>spread_m1_odd = meta.query_advice(a_3, Rotation::cur());
+            <span class="kw">let </span>spread_a_lo = meta.query_advice(a_4, Rotation::prev());
+            <span class="kw">let </span>spread_a_hi = meta.query_advice(a_5, Rotation::prev());
+            <span class="kw">let </span>spread_b_lo = meta.query_advice(a_4, Rotation::cur());
+            <span class="kw">let </span>spread_b_hi = meta.query_advice(a_5, Rotation::cur());
+            <span class="kw">let </span>spread_c_lo = meta.query_advice(a_4, Rotation::next());
+            <span class="kw">let </span>spread_c_hi = meta.query_advice(a_5, Rotation::next());
+
+            CompressionGate::s_maj(
+                s_maj,
+                spread_m0_even,
+                spread_m0_odd,
+                spread_m1_even,
+                spread_m1_odd,
+                spread_a_lo,
+                spread_a_hi,
+                spread_b_lo,
+                spread_b_hi,
+                spread_c_lo,
+                spread_c_hi,
+            )
+        });
+
+        <span class="comment">// s_h_prime to compute H&#39; = H + Ch(E, F, G) + s_upper_sigma_1(E) + K + W
+        </span>meta.create_gate(<span class="string">&quot;s_h_prime&quot;</span>, |meta| {
+            <span class="kw">let </span>s_h_prime = meta.query_selector(s_h_prime);
+            <span class="kw">let </span>h_prime_lo = meta.query_advice(a_7, Rotation::next());
+            <span class="kw">let </span>h_prime_hi = meta.query_advice(a_8, Rotation::next());
+            <span class="kw">let </span>h_prime_carry = meta.query_advice(a_9, Rotation::next());
+            <span class="kw">let </span>sigma_e_lo = meta.query_advice(a_4, Rotation::cur());
+            <span class="kw">let </span>sigma_e_hi = meta.query_advice(a_5, Rotation::cur());
+            <span class="kw">let </span>ch_lo = meta.query_advice(a_1, Rotation::cur());
+            <span class="kw">let </span>ch_hi = meta.query_advice(a_6, Rotation::next());
+            <span class="kw">let </span>ch_neg_lo = meta.query_advice(a_5, Rotation::prev());
+            <span class="kw">let </span>ch_neg_hi = meta.query_advice(a_5, Rotation::next());
+            <span class="kw">let </span>h_lo = meta.query_advice(a_7, Rotation::prev());
+            <span class="kw">let </span>h_hi = meta.query_advice(a_7, Rotation::cur());
+            <span class="kw">let </span>k_lo = meta.query_advice(a_6, Rotation::prev());
+            <span class="kw">let </span>k_hi = meta.query_advice(a_6, Rotation::cur());
+            <span class="kw">let </span>w_lo = meta.query_advice(a_8, Rotation::prev());
+            <span class="kw">let </span>w_hi = meta.query_advice(a_8, Rotation::cur());
+
+            CompressionGate::s_h_prime(
+                s_h_prime,
+                h_prime_lo,
+                h_prime_hi,
+                h_prime_carry,
+                sigma_e_lo,
+                sigma_e_hi,
+                ch_lo,
+                ch_hi,
+                ch_neg_lo,
+                ch_neg_hi,
+                h_lo,
+                h_hi,
+                k_lo,
+                k_hi,
+                w_lo,
+                w_hi,
+            )
+        });
+
+        <span class="comment">// s_a_new
+        </span>meta.create_gate(<span class="string">&quot;s_a_new&quot;</span>, |meta| {
+            <span class="kw">let </span>s_a_new = meta.query_selector(s_a_new);
+            <span class="kw">let </span>a_new_lo = meta.query_advice(a_8, Rotation::cur());
+            <span class="kw">let </span>a_new_hi = meta.query_advice(a_8, Rotation::next());
+            <span class="kw">let </span>a_new_carry = meta.query_advice(a_9, Rotation::cur());
+            <span class="kw">let </span>sigma_a_lo = meta.query_advice(a_6, Rotation::cur());
+            <span class="kw">let </span>sigma_a_hi = meta.query_advice(a_6, Rotation::next());
+            <span class="kw">let </span>maj_abc_lo = meta.query_advice(a_1, Rotation::cur());
+            <span class="kw">let </span>maj_abc_hi = meta.query_advice(a_3, Rotation::prev());
+            <span class="kw">let </span>h_prime_lo = meta.query_advice(a_7, Rotation::prev());
+            <span class="kw">let </span>h_prime_hi = meta.query_advice(a_8, Rotation::prev());
+
+            CompressionGate::s_a_new(
+                s_a_new,
+                a_new_lo,
+                a_new_hi,
+                a_new_carry,
+                sigma_a_lo,
+                sigma_a_hi,
+                maj_abc_lo,
+                maj_abc_hi,
+                h_prime_lo,
+                h_prime_hi,
+            )
+        });
+
+        <span class="comment">// s_e_new
+        </span>meta.create_gate(<span class="string">&quot;s_e_new&quot;</span>, |meta| {
+            <span class="kw">let </span>s_e_new = meta.query_selector(s_e_new);
+            <span class="kw">let </span>e_new_lo = meta.query_advice(a_8, Rotation::cur());
+            <span class="kw">let </span>e_new_hi = meta.query_advice(a_8, Rotation::next());
+            <span class="kw">let </span>e_new_carry = meta.query_advice(a_9, Rotation::next());
+            <span class="kw">let </span>d_lo = meta.query_advice(a_7, Rotation::cur());
+            <span class="kw">let </span>d_hi = meta.query_advice(a_7, Rotation::next());
+            <span class="kw">let </span>h_prime_lo = meta.query_advice(a_7, Rotation::prev());
+            <span class="kw">let </span>h_prime_hi = meta.query_advice(a_8, Rotation::prev());
+
+            CompressionGate::s_e_new(
+                s_e_new,
+                e_new_lo,
+                e_new_hi,
+                e_new_carry,
+                d_lo,
+                d_hi,
+                h_prime_lo,
+                h_prime_hi,
+            )
+        });
+
+        <span class="comment">// s_digest for final round
+        </span>meta.create_gate(<span class="string">&quot;s_digest&quot;</span>, |meta| {
+            <span class="kw">let </span>s_digest = meta.query_selector(s_digest);
+            <span class="kw">let </span>lo_0 = meta.query_advice(a_3, Rotation::cur());
+            <span class="kw">let </span>hi_0 = meta.query_advice(a_4, Rotation::cur());
+            <span class="kw">let </span>word_0 = meta.query_advice(a_5, Rotation::cur());
+            <span class="kw">let </span>lo_1 = meta.query_advice(a_6, Rotation::cur());
+            <span class="kw">let </span>hi_1 = meta.query_advice(a_7, Rotation::cur());
+            <span class="kw">let </span>word_1 = meta.query_advice(a_8, Rotation::cur());
+            <span class="kw">let </span>lo_2 = meta.query_advice(a_3, Rotation::next());
+            <span class="kw">let </span>hi_2 = meta.query_advice(a_4, Rotation::next());
+            <span class="kw">let </span>word_2 = meta.query_advice(a_5, Rotation::next());
+            <span class="kw">let </span>lo_3 = meta.query_advice(a_6, Rotation::next());
+            <span class="kw">let </span>hi_3 = meta.query_advice(a_7, Rotation::next());
+            <span class="kw">let </span>word_3 = meta.query_advice(a_8, Rotation::next());
+
+            CompressionGate::s_digest(
+                s_digest, lo_0, hi_0, word_0, lo_1, hi_1, word_1, lo_2, hi_2, word_2, lo_3, hi_3,
+                word_3,
+            )
+        });
+
+        CompressionConfig {
+            lookup,
+            message_schedule,
+            extras,
+            s_ch,
+            s_ch_neg,
+            s_maj,
+            s_h_prime,
+            s_a_new,
+            s_e_new,
+            s_upper_sigma_0,
+            s_upper_sigma_1,
+            s_decompose_abcd,
+            s_decompose_efgh,
+            s_digest,
+        }
+    }
+
+    <span class="doccomment">/// Initialize compression with a constant Initialization Vector of 32-byte words.
+    /// Returns an initialized state.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>initialize_with_iv(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">init_state</span>: [<span class="ident">u32</span>; <span class="ident">STATE</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">State</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">new_state</span> <span class="op">=</span> <span class="ident">State::empty_state</span>();
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;initialize_with_iv&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                <span class="ident">new_state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">initialize_iv</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">init_state</span>)<span class="question-mark">?</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        init_state: [u32; STATE],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;State, Error&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>new_state = State::empty_state();
+        layouter.assign_region(
+            || <span class="string">&quot;initialize_with_iv&quot;</span>,
+            |<span class="kw-2">mut </span>region| {
+                new_state = <span class="self">self</span>.initialize_iv(<span class="kw-2">&amp;mut </span>region, init_state)<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(())
             },
         )<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">new_state</span>)
+        <span class="prelude-val">Ok</span>(new_state)
     }
 
-    <span class="doccomment">/// Initialize compression with some initialized state. This could be a state</span>
-    <span class="doccomment">/// output from a previous compression round.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">initialize_with_state</span>(
+    <span class="doccomment">/// Initialize compression with some initialized state. This could be a state
+    /// output from a previous compression round.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>initialize_with_state(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">init_state</span>: <span class="ident">State</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">State</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">new_state</span> <span class="op">=</span> <span class="ident">State::empty_state</span>();
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;initialize_with_state&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                <span class="ident">new_state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">initialize_state</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">init_state</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        init_state: State,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;State, Error&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>new_state = State::empty_state();
+        layouter.assign_region(
+            || <span class="string">&quot;initialize_with_state&quot;</span>,
+            |<span class="kw-2">mut </span>region| {
+                new_state = <span class="self">self</span>.initialize_state(<span class="kw-2">&amp;mut </span>region, init_state.clone())<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(())
             },
         )<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">new_state</span>)
+        <span class="prelude-val">Ok</span>(new_state)
     }
 
-    <span class="doccomment">/// Given an initialized state and a message schedule, perform 64 compression rounds.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">compress</span>(
+    <span class="doccomment">/// Given an initialized state and a message schedule, perform 64 compression rounds.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>compress(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">initialized_state</span>: <span class="ident">State</span>,
-        <span class="ident">w_halves</span>: [(<span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>, <span class="ident">AssignedBits</span><span class="op">&lt;</span><span class="number">16</span><span class="op">&gt;</span>); <span class="ident">ROUNDS</span>],
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">State</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">State::empty_state</span>();
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;compress&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                <span class="ident">state</span> <span class="op">=</span> <span class="ident">initialized_state</span>.<span class="ident">clone</span>();
-                <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">w_halves</span>) <span class="kw">in</span> <span class="ident">w_halves</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-                    <span class="ident">state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_round</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">idx</span>.<span class="ident">into</span>(), <span class="ident">state</span>.<span class="ident">clone</span>(), <span class="ident">w_halves</span>)<span class="question-mark">?</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        initialized_state: State,
+        w_halves: [(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;); ROUNDS],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;State, Error&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>state = State::empty_state();
+        layouter.assign_region(
+            || <span class="string">&quot;compress&quot;</span>,
+            |<span class="kw-2">mut </span>region| {
+                state = initialized_state.clone();
+                <span class="kw">for </span>(idx, w_halves) <span class="kw">in </span>w_halves.iter().enumerate() {
+                    state = <span class="self">self</span>.assign_round(<span class="kw-2">&amp;mut </span>region, idx.into(), state.clone(), w_halves)<span class="question-mark">?</span>;
                 }
                 <span class="prelude-val">Ok</span>(())
             },
         )<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">state</span>)
+        <span class="prelude-val">Ok</span>(state)
     }
 
-    <span class="doccomment">/// After the final round, convert the state into the final digest.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">digest</span>(
+    <span class="doccomment">/// After the final round, convert the state into the final digest.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>digest(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">layouter</span>: <span class="kw-2">&amp;mut</span> <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">state</span>: <span class="ident">State</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>[<span class="ident">BlockWord</span>; <span class="ident">DIGEST_SIZE</span>], <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">digest</span> <span class="op">=</span> [<span class="ident">BlockWord</span>(<span class="ident">Value::known</span>(<span class="number">0</span>)); <span class="ident">DIGEST_SIZE</span>];
-        <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-            <span class="op">|</span><span class="op">|</span> <span class="string">&quot;digest&quot;</span>,
-            <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                <span class="ident">digest</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">assign_digest</span>(<span class="kw-2">&amp;mut</span> <span class="ident">region</span>, <span class="ident">state</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
+        layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        state: State,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;[BlockWord; DIGEST_SIZE], Error&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>digest = [BlockWord(Value::known(<span class="number">0</span>)); DIGEST_SIZE];
+        layouter.assign_region(
+            || <span class="string">&quot;digest&quot;</span>,
+            |<span class="kw-2">mut </span>region| {
+                digest = <span class="self">self</span>.assign_digest(<span class="kw-2">&amp;mut </span>region, state.clone())<span class="question-mark">?</span>;
 
                 <span class="prelude-val">Ok</span>(())
             },
         )<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">digest</span>)
+        <span class="prelude-val">Ok</span>(digest)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident"><span class="kw">super</span>::<span class="kw">super</span></span>::{
-        <span class="ident"><span class="kw">super</span>::BLOCK_SIZE</span>, <span class="ident">msg_schedule_test_input</span>, <span class="ident">BlockWord</span>, <span class="ident">Table16Chip</span>, <span class="ident">Table16Config</span>, <span class="ident">IV</span>,
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">mod </span>tests {
+    <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{
+        <span class="kw">super</span>::BLOCK_SIZE, msg_schedule_test_input, BlockWord, Table16Chip, Table16Config, IV,
     };
-    <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-        <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">SimpleFloorPlanner</span>},
-        <span class="ident">dev::MockProver</span>,
-        <span class="ident">pasta::pallas</span>,
-        <span class="ident">plonk</span>::{<span class="ident">Circuit</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>},
+    <span class="kw">use </span>halo2_proofs::{
+        circuit::{Layouter, SimpleFloorPlanner},
+        dev::MockProver,
+        pasta::pallas,
+        plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">compress</span>() {
-        <span class="kw">struct</span> <span class="ident">MyCircuit</span> {}
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>compress() {
+        <span class="kw">struct </span>MyCircuit {}
 
-        <span class="kw">impl</span> <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyCircuit</span> {
-            <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">Table16Config</span>;
-            <span class="kw">type</span> <span class="ident">FloorPlanner</span> <span class="op">=</span> <span class="ident">SimpleFloorPlanner</span>;
+        <span class="kw">impl </span>Circuit&lt;pallas::Base&gt; <span class="kw">for </span>MyCircuit {
+            <span class="kw">type </span>Config = Table16Config;
+            <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
 
-            <span class="kw">fn</span> <span class="ident">without_witnesses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-                <span class="ident">MyCircuit</span> {}
+            <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+                MyCircuit {}
             }
 
-            <span class="kw">fn</span> <span class="ident">configure</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Config</span> {
-                <span class="ident">Table16Chip::configure</span>(<span class="ident">meta</span>)
+            <span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) -&gt; <span class="self">Self</span>::Config {
+                Table16Chip::configure(meta)
             }
 
-            <span class="kw">fn</span> <span class="ident">synthesize</span>(
+            <span class="kw">fn </span>synthesize(
                 <span class="kw-2">&amp;</span><span class="self">self</span>,
-                <span class="ident">config</span>: <span class="ident"><span class="self">Self</span>::Config</span>,
-                <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-            ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-                <span class="ident">Table16Chip::load</span>(<span class="ident">config</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>)<span class="question-mark">?</span>;
+                config: <span class="self">Self</span>::Config,
+                <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+            ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+                Table16Chip::load(config.clone(), <span class="kw-2">&amp;mut </span>layouter)<span class="question-mark">?</span>;
 
-                <span class="comment">// Test vector: &quot;abc&quot;</span>
-                <span class="kw">let</span> <span class="ident">input</span>: [<span class="ident">BlockWord</span>; <span class="ident">BLOCK_SIZE</span>] <span class="op">=</span> <span class="ident">msg_schedule_test_input</span>();
+                <span class="comment">// Test vector: &quot;abc&quot;
+                </span><span class="kw">let </span>input: [BlockWord; BLOCK_SIZE] = msg_schedule_test_input();
 
-                <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">w_halves</span>) <span class="op">=</span> <span class="ident">config</span>.<span class="ident">message_schedule</span>.<span class="ident">process</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">input</span>)<span class="question-mark">?</span>;
+                <span class="kw">let </span>(<span class="kw">_</span>, w_halves) = config.message_schedule.process(<span class="kw-2">&amp;mut </span>layouter, input)<span class="question-mark">?</span>;
 
-                <span class="kw">let</span> <span class="ident">compression</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">compression</span>.<span class="ident">clone</span>();
-                <span class="kw">let</span> <span class="ident">initial_state</span> <span class="op">=</span> <span class="ident">compression</span>.<span class="ident">initialize_with_iv</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">IV</span>)<span class="question-mark">?</span>;
+                <span class="kw">let </span>compression = config.compression.clone();
+                <span class="kw">let </span>initial_state = compression.initialize_with_iv(<span class="kw-2">&amp;mut </span>layouter, IV)<span class="question-mark">?</span>;
 
-                <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">config</span>
-                    .<span class="ident">compression</span>
-                    .<span class="ident">compress</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">initial_state</span>, <span class="ident">w_halves</span>)<span class="question-mark">?</span>;
+                <span class="kw">let </span>state = config
+                    .compression
+                    .compress(<span class="kw-2">&amp;mut </span>layouter, initial_state, w_halves)<span class="question-mark">?</span>;
 
-                <span class="kw">let</span> <span class="ident">digest</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">compression</span>.<span class="ident">digest</span>(<span class="kw-2">&amp;mut</span> <span class="ident">layouter</span>, <span class="ident">state</span>)<span class="question-mark">?</span>;
-                <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">digest_word</span>) <span class="kw">in</span> <span class="ident">digest</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-                    <span class="ident">digest_word</span>.<span class="number">0</span>.<span class="ident">assert_if_known</span>(<span class="op">|</span><span class="ident">digest_word</span><span class="op">|</span> {
-                        (<span class="kw-2">*</span><span class="ident">digest_word</span> <span class="kw">as</span> <span class="ident">u64</span> <span class="op">+</span> <span class="ident">IV</span>[<span class="ident">idx</span>] <span class="kw">as</span> <span class="ident">u64</span>) <span class="kw">as</span> <span class="ident">u32</span>
-                            <span class="op">==</span> <span class="ident"><span class="kw">super</span>::compression_util::COMPRESSION_OUTPUT</span>[<span class="ident">idx</span>]
+                <span class="kw">let </span>digest = config.compression.digest(<span class="kw-2">&amp;mut </span>layouter, state)<span class="question-mark">?</span>;
+                <span class="kw">for </span>(idx, digest_word) <span class="kw">in </span>digest.iter().enumerate() {
+                    digest_word.<span class="number">0</span>.assert_if_known(|digest_word| {
+                        (<span class="kw-2">*</span>digest_word <span class="kw">as </span>u64 + IV[idx] <span class="kw">as </span>u64) <span class="kw">as </span>u32
+                            == <span class="kw">super</span>::compression_util::COMPRESSION_OUTPUT[idx]
                     });
                 }
 
@@ -2020,15 +2014,14 @@
             }
         }
 
-        <span class="kw">let</span> <span class="ident">circuit</span>: <span class="ident">MyCircuit</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {};
+        <span class="kw">let </span>circuit: MyCircuit = MyCircuit {};
 
-        <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">MockProver</span>::<span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="ident">::run</span>(<span class="number">17</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]) {
-            <span class="prelude-val">Ok</span>(<span class="ident">prover</span>) =&gt; <span class="ident">prover</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">e</span>) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>),
+        <span class="kw">let </span>prover = <span class="kw">match </span>MockProver::&lt;pallas::Base&gt;::run(<span class="number">17</span>, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]) {
+            <span class="prelude-val">Ok</span>(prover) =&gt; prover,
+            <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;{:?}&quot;</span>, e),
         };
-        <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()));
+        <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()));
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

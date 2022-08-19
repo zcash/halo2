@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -194,181 +188,180 @@
 <span id="173">173</span>
 <span id="174">174</span>
 <span id="175">175</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Metadata about circuits.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Metadata about circuits.
 
-<span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::plonk</span>::{<span class="self">self</span>, <span class="ident">Any</span>};
-<span class="kw">use</span> <span class="ident">std::fmt</span>;
+</span><span class="kw">use </span><span class="kw">crate</span>::plonk::{<span class="self">self</span>, Any};
+<span class="kw">use </span>std::fmt;
 
-<span class="doccomment">/// Metadata about a column within a circuit.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Column</span> {
-    <span class="doccomment">/// The type of the column.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">column_type</span>: <span class="ident">Any</span>,
-    <span class="doccomment">/// The index of the column.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">index</span>: <span class="ident">usize</span>,
+<span class="doccomment">/// Metadata about a column within a circuit.
+</span><span class="attribute">#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]</span>
+<span class="kw">pub struct </span>Column {
+    <span class="doccomment">/// The type of the column.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) column_type: Any,
+    <span class="doccomment">/// The index of the column.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) index: usize,
 }
 
-<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">Column</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
-        <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Column(&#39;{:?}&#39;, {})&quot;</span>, <span class="self">self</span>.<span class="ident">column_type</span>, <span class="self">self</span>.<span class="ident">index</span>)
+<span class="kw">impl </span>fmt::Display <span class="kw">for </span>Column {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">&quot;Column(&#39;{:?}&#39;, {})&quot;</span>, <span class="self">self</span>.column_type, <span class="self">self</span>.index)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">Any</span>, <span class="ident">usize</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Column</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">column_type</span>, <span class="ident">index</span>): (<span class="ident">Any</span>, <span class="ident">usize</span>)) -&gt; <span class="self">Self</span> {
-        <span class="ident">Column</span> { <span class="ident">column_type</span>, <span class="ident">index</span> }
+<span class="kw">impl </span>From&lt;(Any, usize)&gt; <span class="kw">for </span>Column {
+    <span class="kw">fn </span>from((column_type, index): (Any, usize)) -&gt; <span class="self">Self </span>{
+        Column { column_type, index }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">plonk::Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Column</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">column</span>: <span class="ident">plonk::Column</span><span class="op">&lt;</span><span class="ident">Any</span><span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">Column</span> {
-            <span class="ident">column_type</span>: <span class="kw-2">*</span><span class="ident">column</span>.<span class="ident">column_type</span>(),
-            <span class="ident">index</span>: <span class="ident">column</span>.<span class="ident">index</span>(),
+<span class="kw">impl </span>From&lt;plonk::Column&lt;Any&gt;&gt; <span class="kw">for </span>Column {
+    <span class="kw">fn </span>from(column: plonk::Column&lt;Any&gt;) -&gt; <span class="self">Self </span>{
+        Column {
+            column_type: <span class="kw-2">*</span>column.column_type(),
+            index: column.index(),
         }
     }
 }
 
-<span class="doccomment">/// A &quot;virtual cell&quot; is a PLONK cell that has been queried at a particular relative offset</span>
-<span class="doccomment">/// within a custom gate.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VirtualCell</span> {
-    <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>,
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">column</span>: <span class="ident">Column</span>,
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">rotation</span>: <span class="ident">i32</span>,
+<span class="doccomment">/// A &quot;virtual cell&quot; is a PLONK cell that has been queried at a particular relative offset
+/// within a custom gate.
+</span><span class="attribute">#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]</span>
+<span class="kw">pub struct </span>VirtualCell {
+    name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
+    <span class="kw">pub</span>(<span class="kw">super</span>) column: Column,
+    <span class="kw">pub</span>(<span class="kw">super</span>) rotation: i32,
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">Column</span>, <span class="ident">i32</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">VirtualCell</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">column</span>, <span class="ident">rotation</span>): (<span class="ident">Column</span>, <span class="ident">i32</span>)) -&gt; <span class="self">Self</span> {
-        <span class="ident">VirtualCell</span> {
-            <span class="ident">name</span>: <span class="string">&quot;&quot;</span>,
-            <span class="ident">column</span>,
-            <span class="ident">rotation</span>,
+<span class="kw">impl </span>From&lt;(Column, i32)&gt; <span class="kw">for </span>VirtualCell {
+    <span class="kw">fn </span>from((column, rotation): (Column, i32)) -&gt; <span class="self">Self </span>{
+        VirtualCell {
+            name: <span class="string">&quot;&quot;</span>,
+            column,
+            rotation,
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Column</span>, <span class="ident">i32</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">VirtualCell</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">name</span>, <span class="ident">column</span>, <span class="ident">rotation</span>): (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">Column</span>, <span class="ident">i32</span>)) -&gt; <span class="self">Self</span> {
-        <span class="ident">VirtualCell</span> {
-            <span class="ident">name</span>,
-            <span class="ident">column</span>,
-            <span class="ident">rotation</span>,
+<span class="kw">impl </span>From&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Column, i32)&gt; <span class="kw">for </span>VirtualCell {
+    <span class="kw">fn </span>from((name, column, rotation): (<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Column, i32)) -&gt; <span class="self">Self </span>{
+        VirtualCell {
+            name,
+            column,
+            rotation,
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">plonk::VirtualCell</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">VirtualCell</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">c</span>: <span class="ident">plonk::VirtualCell</span>) -&gt; <span class="self">Self</span> {
-        <span class="ident">VirtualCell</span> {
-            <span class="ident">name</span>: <span class="string">&quot;&quot;</span>,
-            <span class="ident">column</span>: <span class="ident">c</span>.<span class="ident">column</span>.<span class="ident">into</span>(),
-            <span class="ident">rotation</span>: <span class="ident">c</span>.<span class="ident">rotation</span>.<span class="number">0</span>,
+<span class="kw">impl </span>From&lt;plonk::VirtualCell&gt; <span class="kw">for </span>VirtualCell {
+    <span class="kw">fn </span>from(c: plonk::VirtualCell) -&gt; <span class="self">Self </span>{
+        VirtualCell {
+            name: <span class="string">&quot;&quot;</span>,
+            column: c.column.into(),
+            rotation: c.rotation.<span class="number">0</span>,
         }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">VirtualCell</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
-        <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;{}@{}&quot;</span>, <span class="self">self</span>.<span class="ident">column</span>, <span class="self">self</span>.<span class="ident">rotation</span>)<span class="question-mark">?</span>;
-        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">name</span>.<span class="ident">is_empty</span>() {
-            <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;({})&quot;</span>, <span class="self">self</span>.<span class="ident">name</span>)<span class="question-mark">?</span>;
+<span class="kw">impl </span>fmt::Display <span class="kw">for </span>VirtualCell {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">&quot;{}@{}&quot;</span>, <span class="self">self</span>.column, <span class="self">self</span>.rotation)<span class="question-mark">?</span>;
+        <span class="kw">if </span>!<span class="self">self</span>.name.is_empty() {
+            <span class="macro">write!</span>(f, <span class="string">&quot;({})&quot;</span>, <span class="self">self</span>.name)<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="doccomment">/// Metadata about a configured gate within a circuit.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Gate</span> {
-    <span class="doccomment">/// The index of the active gate. These indices are assigned in the order in which</span>
-    <span class="doccomment">/// `ConstraintSystem::create_gate` is called during `Circuit::configure`.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">index</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// The name of the active gate. These are specified by the gate creator (such as</span>
-    <span class="doccomment">/// a chip implementation), and is not enforced to be unique.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>,
+<span class="doccomment">/// Metadata about a configured gate within a circuit.
+</span><span class="attribute">#[derive(Debug, PartialEq)]</span>
+<span class="kw">pub struct </span>Gate {
+    <span class="doccomment">/// The index of the active gate. These indices are assigned in the order in which
+    /// `ConstraintSystem::create_gate` is called during `Circuit::configure`.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) index: usize,
+    <span class="doccomment">/// The name of the active gate. These are specified by the gate creator (such as
+    /// a chip implementation), and is not enforced to be unique.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
 }
 
-<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">Gate</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
-        <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Gate {} (&#39;{}&#39;)&quot;</span>, <span class="self">self</span>.<span class="ident">index</span>, <span class="self">self</span>.<span class="ident">name</span>)
+<span class="kw">impl </span>fmt::Display <span class="kw">for </span>Gate {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">&quot;Gate {} (&#39;{}&#39;)&quot;</span>, <span class="self">self</span>.index, <span class="self">self</span>.name)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">usize</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Gate</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">index</span>, <span class="ident">name</span>): (<span class="ident">usize</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>)) -&gt; <span class="self">Self</span> {
-        <span class="ident">Gate</span> { <span class="ident">index</span>, <span class="ident">name</span> }
+<span class="kw">impl </span>From&lt;(usize, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str)&gt; <span class="kw">for </span>Gate {
+    <span class="kw">fn </span>from((index, name): (usize, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str)) -&gt; <span class="self">Self </span>{
+        Gate { index, name }
     }
 }
 
-<span class="doccomment">/// Metadata about a configured constraint within a circuit.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Constraint</span> {
-    <span class="doccomment">/// The gate containing the constraint.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">gate</span>: <span class="ident">Gate</span>,
-    <span class="doccomment">/// The index of the polynomial constraint within the gate. These indices correspond</span>
-    <span class="doccomment">/// to the order in which the constraints are returned from the closure passed to</span>
-    <span class="doccomment">/// `ConstraintSystem::create_gate` during `Circuit::configure`.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">index</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// The name of the constraint. This is specified by the gate creator (such as a chip</span>
-    <span class="doccomment">/// implementation), and is not enforced to be unique.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>,
+<span class="doccomment">/// Metadata about a configured constraint within a circuit.
+</span><span class="attribute">#[derive(Debug, PartialEq)]</span>
+<span class="kw">pub struct </span>Constraint {
+    <span class="doccomment">/// The gate containing the constraint.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) gate: Gate,
+    <span class="doccomment">/// The index of the polynomial constraint within the gate. These indices correspond
+    /// to the order in which the constraints are returned from the closure passed to
+    /// `ConstraintSystem::create_gate` during `Circuit::configure`.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) index: usize,
+    <span class="doccomment">/// The name of the constraint. This is specified by the gate creator (such as a chip
+    /// implementation), and is not enforced to be unique.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
 }
 
-<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">Constraint</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
+<span class="kw">impl </span>fmt::Display <span class="kw">for </span>Constraint {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
         <span class="macro">write!</span>(
-            <span class="ident">f</span>,
+            f,
             <span class="string">&quot;Constraint {}{} in gate {} (&#39;{}&#39;)&quot;</span>,
-            <span class="self">self</span>.<span class="ident">index</span>,
-            <span class="kw">if</span> <span class="self">self</span>.<span class="ident">name</span>.<span class="ident">is_empty</span>() {
-                <span class="ident">String::new</span>()
-            } <span class="kw">else</span> {
-                <span class="macro">format!</span>(<span class="string">&quot; (&#39;{}&#39;)&quot;</span>, <span class="self">self</span>.<span class="ident">name</span>)
+            <span class="self">self</span>.index,
+            <span class="kw">if </span><span class="self">self</span>.name.is_empty() {
+                String::new()
+            } <span class="kw">else </span>{
+                <span class="macro">format!</span>(<span class="string">&quot; (&#39;{}&#39;)&quot;</span>, <span class="self">self</span>.name)
             },
-            <span class="self">self</span>.<span class="ident">gate</span>.<span class="ident">index</span>,
-            <span class="self">self</span>.<span class="ident">gate</span>.<span class="ident">name</span>,
+            <span class="self">self</span>.gate.index,
+            <span class="self">self</span>.gate.name,
         )
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">Gate</span>, <span class="ident">usize</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Constraint</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">gate</span>, <span class="ident">index</span>, <span class="ident">name</span>): (<span class="ident">Gate</span>, <span class="ident">usize</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>)) -&gt; <span class="self">Self</span> {
-        <span class="ident">Constraint</span> { <span class="ident">gate</span>, <span class="ident">index</span>, <span class="ident">name</span> }
+<span class="kw">impl </span>From&lt;(Gate, usize, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str)&gt; <span class="kw">for </span>Constraint {
+    <span class="kw">fn </span>from((gate, index, name): (Gate, usize, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str)) -&gt; <span class="self">Self </span>{
+        Constraint { gate, index, name }
     }
 }
 
-<span class="doccomment">/// Metadata about an assigned region within a circuit.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Region</span> {
-    <span class="doccomment">/// The index of the region. These indices are assigned in the order in which</span>
-    <span class="doccomment">/// `Layouter::assign_region` is called during `Circuit::synthesize`.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">index</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// The name of the region. This is specified by the region creator (such as a chip</span>
-    <span class="doccomment">/// implementation), and is not enforced to be unique.</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="ident">name</span>: <span class="ident">String</span>,
+<span class="doccomment">/// Metadata about an assigned region within a circuit.
+</span><span class="attribute">#[derive(Clone, Debug, PartialEq)]</span>
+<span class="kw">pub struct </span>Region {
+    <span class="doccomment">/// The index of the region. These indices are assigned in the order in which
+    /// `Layouter::assign_region` is called during `Circuit::synthesize`.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) index: usize,
+    <span class="doccomment">/// The name of the region. This is specified by the region creator (such as a chip
+    /// implementation), and is not enforced to be unique.
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) name: String,
 }
 
-<span class="kw">impl</span> <span class="ident">fmt::Display</span> <span class="kw">for</span> <span class="ident">Region</span> {
-    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;mut</span> <span class="ident">fmt::Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) -&gt; <span class="ident">fmt::Result</span> {
-        <span class="macro">write!</span>(<span class="ident">f</span>, <span class="string">&quot;Region {} (&#39;{}&#39;)&quot;</span>, <span class="self">self</span>.<span class="ident">index</span>, <span class="self">self</span>.<span class="ident">name</span>)
+<span class="kw">impl </span>fmt::Display <span class="kw">for </span>Region {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">&quot;Region {} (&#39;{}&#39;)&quot;</span>, <span class="self">self</span>.index, <span class="self">self</span>.name)
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">usize</span>, <span class="ident">String</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Region</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">index</span>, <span class="ident">name</span>): (<span class="ident">usize</span>, <span class="ident">String</span>)) -&gt; <span class="self">Self</span> {
-        <span class="ident">Region</span> { <span class="ident">index</span>, <span class="ident">name</span> }
+<span class="kw">impl </span>From&lt;(usize, String)&gt; <span class="kw">for </span>Region {
+    <span class="kw">fn </span>from((index, name): (usize, String)) -&gt; <span class="self">Self </span>{
+        Region { index, name }
     }
 }
 
-<span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">usize</span>, <span class="kw-2">&amp;</span><span class="ident">str</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Region</span> {
-    <span class="kw">fn</span> <span class="ident">from</span>((<span class="ident">index</span>, <span class="ident">name</span>): (<span class="ident">usize</span>, <span class="kw-2">&amp;</span><span class="ident">str</span>)) -&gt; <span class="self">Self</span> {
-        <span class="ident">Region</span> {
-            <span class="ident">index</span>,
-            <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">to_owned</span>(),
+<span class="kw">impl </span>From&lt;(usize, <span class="kw-2">&amp;</span>str)&gt; <span class="kw">for </span>Region {
+    <span class="kw">fn </span>from((index, name): (usize, <span class="kw-2">&amp;</span>str)) -&gt; <span class="self">Self </span>{
+        Region {
+            index,
+            name: name.to_owned(),
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

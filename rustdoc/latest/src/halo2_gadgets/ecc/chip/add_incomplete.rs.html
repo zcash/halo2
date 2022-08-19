@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -214,201 +208,200 @@
 <span id="193">193</span>
 <span id="194">194</span>
 <span id="195">195</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident">std::collections::HashSet</span>;
+</pre><pre class="rust"><code><span class="kw">use </span>std::collections::HashSet;
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::NonIdentityEccPoint</span>;
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit::Region</span>,
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
-    <span class="ident">poly::Rotation</span>,
+<span class="kw">use </span><span class="kw">super</span>::NonIdentityEccPoint;
+<span class="kw">use </span>halo2_proofs::{
+    circuit::Region,
+    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
+    poly::Rotation,
 };
-<span class="kw">use</span> <span class="ident">pasta_curves::pallas</span>;
+<span class="kw">use </span>pasta_curves::pallas;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Config</span> {
-    <span class="ident">q_add_incomplete</span>: <span class="ident">Selector</span>,
-    <span class="comment">// x-coordinate of P in P + Q = R</span>
-    <span class="kw">pub</span> <span class="ident">x_p</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="comment">// y-coordinate of P in P + Q = R</span>
-    <span class="kw">pub</span> <span class="ident">y_p</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="comment">// x-coordinate of Q or R in P + Q = R</span>
-    <span class="kw">pub</span> <span class="ident">x_qr</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="comment">// y-coordinate of Q or R in P + Q = R</span>
-    <span class="kw">pub</span> <span class="ident">y_qr</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Clone, Copy, Debug, Eq, PartialEq)]</span>
+<span class="kw">pub struct </span>Config {
+    q_add_incomplete: Selector,
+    <span class="comment">// x-coordinate of P in P + Q = R
+    </span><span class="kw">pub </span>x_p: Column&lt;Advice&gt;,
+    <span class="comment">// y-coordinate of P in P + Q = R
+    </span><span class="kw">pub </span>y_p: Column&lt;Advice&gt;,
+    <span class="comment">// x-coordinate of Q or R in P + Q = R
+    </span><span class="kw">pub </span>x_qr: Column&lt;Advice&gt;,
+    <span class="comment">// y-coordinate of Q or R in P + Q = R
+    </span><span class="kw">pub </span>y_qr: Column&lt;Advice&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">Config</span> {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">configure</span>(
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">x_p</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">y_p</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">x_qr</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-        <span class="ident">y_qr</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="ident">meta</span>.<span class="ident">enable_equality</span>(<span class="ident">x_p</span>);
-        <span class="ident">meta</span>.<span class="ident">enable_equality</span>(<span class="ident">y_p</span>);
-        <span class="ident">meta</span>.<span class="ident">enable_equality</span>(<span class="ident">x_qr</span>);
-        <span class="ident">meta</span>.<span class="ident">enable_equality</span>(<span class="ident">y_qr</span>);
+<span class="kw">impl </span>Config {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>configure(
+        meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;,
+        x_p: Column&lt;Advice&gt;,
+        y_p: Column&lt;Advice&gt;,
+        x_qr: Column&lt;Advice&gt;,
+        y_qr: Column&lt;Advice&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        meta.enable_equality(x_p);
+        meta.enable_equality(y_p);
+        meta.enable_equality(x_qr);
+        meta.enable_equality(y_qr);
 
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">Self</span> {
-            <span class="ident">q_add_incomplete</span>: <span class="ident">meta</span>.<span class="ident">selector</span>(),
-            <span class="ident">x_p</span>,
-            <span class="ident">y_p</span>,
-            <span class="ident">x_qr</span>,
-            <span class="ident">y_qr</span>,
+        <span class="kw">let </span>config = <span class="self">Self </span>{
+            q_add_incomplete: meta.selector(),
+            x_p,
+            y_p,
+            x_qr,
+            y_qr,
         };
 
-        <span class="ident">config</span>.<span class="ident">create_gate</span>(<span class="ident">meta</span>);
+        config.create_gate(meta);
 
-        <span class="ident">config</span>
+        config
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">advice_columns</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        [<span class="self">self</span>.<span class="ident">x_p</span>, <span class="self">self</span>.<span class="ident">y_p</span>, <span class="self">self</span>.<span class="ident">x_qr</span>, <span class="self">self</span>.<span class="ident">y_qr</span>]
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">collect</span>()
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>advice_columns(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; HashSet&lt;Column&lt;Advice&gt;&gt; {
+        [<span class="self">self</span>.x_p, <span class="self">self</span>.y_p, <span class="self">self</span>.x_qr, <span class="self">self</span>.y_qr]
+            .into_iter()
+            .collect()
     }
 
-    <span class="kw">fn</span> <span class="ident">create_gate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>) {
-        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-incomplete-addition</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;incomplete addition&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q_add_incomplete</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="self">self</span>.<span class="ident">q_add_incomplete</span>);
-            <span class="kw">let</span> <span class="ident">x_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_p</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">y_p</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">y_p</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">x_q</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_qr</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">y_q</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">y_qr</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">x_r</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">x_qr</span>, <span class="ident">Rotation::next</span>());
-            <span class="kw">let</span> <span class="ident">y_r</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="self">self</span>.<span class="ident">y_qr</span>, <span class="ident">Rotation::next</span>());
+    <span class="kw">fn </span>create_gate(<span class="kw-2">&amp;</span><span class="self">self</span>, meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) {
+        <span class="comment">// https://p.z.cash/halo2-0.1:ecc-incomplete-addition
+        </span>meta.create_gate(<span class="string">&quot;incomplete addition&quot;</span>, |meta| {
+            <span class="kw">let </span>q_add_incomplete = meta.query_selector(<span class="self">self</span>.q_add_incomplete);
+            <span class="kw">let </span>x_p = meta.query_advice(<span class="self">self</span>.x_p, Rotation::cur());
+            <span class="kw">let </span>y_p = meta.query_advice(<span class="self">self</span>.y_p, Rotation::cur());
+            <span class="kw">let </span>x_q = meta.query_advice(<span class="self">self</span>.x_qr, Rotation::cur());
+            <span class="kw">let </span>y_q = meta.query_advice(<span class="self">self</span>.y_qr, Rotation::cur());
+            <span class="kw">let </span>x_r = meta.query_advice(<span class="self">self</span>.x_qr, Rotation::next());
+            <span class="kw">let </span>y_r = meta.query_advice(<span class="self">self</span>.y_qr, Rotation::next());
 
-            <span class="comment">// (x_r + x_q + x_p)⋅(x_p − x_q)^2 − (y_p − y_q)^2 = 0</span>
-            <span class="kw">let</span> <span class="ident">poly1</span> <span class="op">=</span> {
-                (<span class="ident">x_r</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="ident">x_q</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="ident">x_p</span>.<span class="ident">clone</span>())
-                    <span class="op">*</span> (<span class="ident">x_p</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_q</span>.<span class="ident">clone</span>())
-                    <span class="op">*</span> (<span class="ident">x_p</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">x_q</span>.<span class="ident">clone</span>())
-                    <span class="op">-</span> (<span class="ident">y_p</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">y_q</span>.<span class="ident">clone</span>()).<span class="ident">square</span>()
+            <span class="comment">// (x_r + x_q + x_p)⋅(x_p − x_q)^2 − (y_p − y_q)^2 = 0
+            </span><span class="kw">let </span>poly1 = {
+                (x_r.clone() + x_q.clone() + x_p.clone())
+                    * (x_p.clone() - x_q.clone())
+                    * (x_p.clone() - x_q.clone())
+                    - (y_p.clone() - y_q.clone()).square()
             };
 
-            <span class="comment">// (y_r + y_q)(x_p − x_q) − (y_p − y_q)(x_q − x_r) = 0</span>
-            <span class="kw">let</span> <span class="ident">poly2</span> <span class="op">=</span> (<span class="ident">y_r</span> <span class="op">+</span> <span class="ident">y_q</span>.<span class="ident">clone</span>()) <span class="op">*</span> (<span class="ident">x_p</span> <span class="op">-</span> <span class="ident">x_q</span>.<span class="ident">clone</span>()) <span class="op">-</span> (<span class="ident">y_p</span> <span class="op">-</span> <span class="ident">y_q</span>) <span class="op">*</span> (<span class="ident">x_q</span> <span class="op">-</span> <span class="ident">x_r</span>);
+            <span class="comment">// (y_r + y_q)(x_p − x_q) − (y_p − y_q)(x_q − x_r) = 0
+            </span><span class="kw">let </span>poly2 = (y_r + y_q.clone()) * (x_p - x_q.clone()) - (y_p - y_q) * (x_q - x_r);
 
-            <span class="ident">Constraints::with_selector</span>(<span class="ident">q_add_incomplete</span>, [(<span class="string">&quot;x_r&quot;</span>, <span class="ident">poly1</span>), (<span class="string">&quot;y_r&quot;</span>, <span class="ident">poly2</span>)])
+            Constraints::with_selector(q_add_incomplete, [(<span class="string">&quot;x_r&quot;</span>, poly1), (<span class="string">&quot;y_r&quot;</span>, poly2)])
         });
     }
 
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn</span> <span class="ident">assign_region</span>(
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>assign_region(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">p</span>: <span class="kw-2">&amp;</span><span class="ident">NonIdentityEccPoint</span>,
-        <span class="ident">q</span>: <span class="kw-2">&amp;</span><span class="ident">NonIdentityEccPoint</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">NonIdentityEccPoint</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Enable `q_add_incomplete` selector</span>
-        <span class="self">self</span>.<span class="ident">q_add_incomplete</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
+        p: <span class="kw-2">&amp;</span>NonIdentityEccPoint,
+        q: <span class="kw-2">&amp;</span>NonIdentityEccPoint,
+        offset: usize,
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;NonIdentityEccPoint, Error&gt; {
+        <span class="comment">// Enable `q_add_incomplete` selector
+        </span><span class="self">self</span>.q_add_incomplete.enable(region, offset)<span class="question-mark">?</span>;
 
-        <span class="comment">// Handle exceptional cases</span>
-        <span class="kw">let</span> (<span class="ident">x_p</span>, <span class="ident">y_p</span>) <span class="op">=</span> (<span class="ident">p</span>.<span class="ident">x</span>.<span class="ident">value</span>(), <span class="ident">p</span>.<span class="ident">y</span>.<span class="ident">value</span>());
-        <span class="kw">let</span> (<span class="ident">x_q</span>, <span class="ident">y_q</span>) <span class="op">=</span> (<span class="ident">q</span>.<span class="ident">x</span>.<span class="ident">value</span>(), <span class="ident">q</span>.<span class="ident">y</span>.<span class="ident">value</span>());
-        <span class="ident">x_p</span>.<span class="ident">zip</span>(<span class="ident">y_p</span>)
-            .<span class="ident">zip</span>(<span class="ident">x_q</span>)
-            .<span class="ident">zip</span>(<span class="ident">y_q</span>)
-            .<span class="ident">error_if_known_and</span>(<span class="op">|</span>(((<span class="ident">x_p</span>, <span class="ident">y_p</span>), <span class="ident">x_q</span>), <span class="ident">y_q</span>)<span class="op">|</span> {
-                <span class="comment">// P is point at infinity</span>
-                (<span class="ident">x_p</span>.<span class="ident">is_zero_vartime</span>() <span class="op">&amp;&amp;</span> <span class="ident">y_p</span>.<span class="ident">is_zero_vartime</span>())
-                <span class="comment">// Q is point at infinity</span>
-                <span class="op">|</span><span class="op">|</span> (<span class="ident">x_q</span>.<span class="ident">is_zero_vartime</span>() <span class="op">&amp;&amp;</span> <span class="ident">y_q</span>.<span class="ident">is_zero_vartime</span>())
-                <span class="comment">// x_p = x_q</span>
-                <span class="op">|</span><span class="op">|</span> (<span class="ident">x_p</span> <span class="op">==</span> <span class="ident">x_q</span>)
+        <span class="comment">// Handle exceptional cases
+        </span><span class="kw">let </span>(x_p, y_p) = (p.x.value(), p.y.value());
+        <span class="kw">let </span>(x_q, y_q) = (q.x.value(), q.y.value());
+        x_p.zip(y_p)
+            .zip(x_q)
+            .zip(y_q)
+            .error_if_known_and(|(((x_p, y_p), x_q), y_q)| {
+                <span class="comment">// P is point at infinity
+                </span>(x_p.is_zero_vartime() &amp;&amp; y_p.is_zero_vartime())
+                <span class="comment">// Q is point at infinity
+                </span>|| (x_q.is_zero_vartime() &amp;&amp; y_q.is_zero_vartime())
+                <span class="comment">// x_p = x_q
+                </span>|| (x_p == x_q)
             })<span class="question-mark">?</span>;
 
-        <span class="comment">// Copy point `p` into `x_p`, `y_p` columns</span>
-        <span class="ident">p</span>.<span class="ident">x</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;x_p&quot;</span>, <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">x_p</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
-        <span class="ident">p</span>.<span class="ident">y</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_p&quot;</span>, <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">y_p</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Copy point `p` into `x_p`, `y_p` columns
+        </span>p.x.copy_advice(|| <span class="string">&quot;x_p&quot;</span>, region, <span class="self">self</span>.x_p, offset)<span class="question-mark">?</span>;
+        p.y.copy_advice(|| <span class="string">&quot;y_p&quot;</span>, region, <span class="self">self</span>.y_p, offset)<span class="question-mark">?</span>;
 
-        <span class="comment">// Copy point `q` into `x_qr`, `y_qr` columns</span>
-        <span class="ident">q</span>.<span class="ident">x</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;x_q&quot;</span>, <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">x_qr</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
-        <span class="ident">q</span>.<span class="ident">y</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_q&quot;</span>, <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">y_qr</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Copy point `q` into `x_qr`, `y_qr` columns
+        </span>q.x.copy_advice(|| <span class="string">&quot;x_q&quot;</span>, region, <span class="self">self</span>.x_qr, offset)<span class="question-mark">?</span>;
+        q.y.copy_advice(|| <span class="string">&quot;y_q&quot;</span>, region, <span class="self">self</span>.y_qr, offset)<span class="question-mark">?</span>;
 
-        <span class="comment">// Compute the sum `P + Q = R`</span>
-        <span class="kw">let</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">x_p</span>
-            .<span class="ident">zip</span>(<span class="ident">y_p</span>)
-            .<span class="ident">zip</span>(<span class="ident">x_q</span>)
-            .<span class="ident">zip</span>(<span class="ident">y_q</span>)
-            .<span class="ident">map</span>(<span class="op">|</span>(((<span class="ident">x_p</span>, <span class="ident">y_p</span>), <span class="ident">x_q</span>), <span class="ident">y_q</span>)<span class="op">|</span> {
+        <span class="comment">// Compute the sum `P + Q = R`
+        </span><span class="kw">let </span>r = x_p
+            .zip(y_p)
+            .zip(x_q)
+            .zip(y_q)
+            .map(|(((x_p, y_p), x_q), y_q)| {
                 {
-                    <span class="comment">// λ = (y_q - y_p)/(x_q - x_p)</span>
-                    <span class="kw">let</span> <span class="ident">lambda</span> <span class="op">=</span> (<span class="ident">y_q</span> <span class="op">-</span> <span class="ident">y_p</span>) <span class="op">*</span> (<span class="ident">x_q</span> <span class="op">-</span> <span class="ident">x_p</span>).<span class="ident">invert</span>();
-                    <span class="comment">// x_r = λ^2 - x_p - x_q</span>
-                    <span class="kw">let</span> <span class="ident">x_r</span> <span class="op">=</span> <span class="ident">lambda</span>.<span class="ident">square</span>() <span class="op">-</span> <span class="ident">x_p</span> <span class="op">-</span> <span class="ident">x_q</span>;
-                    <span class="comment">// y_r = λ(x_p - x_r) - y_p</span>
-                    <span class="kw">let</span> <span class="ident">y_r</span> <span class="op">=</span> <span class="ident">lambda</span> <span class="op">*</span> (<span class="ident">x_p</span> <span class="op">-</span> <span class="ident">x_r</span>) <span class="op">-</span> <span class="ident">y_p</span>;
-                    (<span class="ident">x_r</span>, <span class="ident">y_r</span>)
+                    <span class="comment">// λ = (y_q - y_p)/(x_q - x_p)
+                    </span><span class="kw">let </span>lambda = (y_q - y_p) * (x_q - x_p).invert();
+                    <span class="comment">// x_r = λ^2 - x_p - x_q
+                    </span><span class="kw">let </span>x_r = lambda.square() - x_p - x_q;
+                    <span class="comment">// y_r = λ(x_p - x_r) - y_p
+                    </span><span class="kw">let </span>y_r = lambda * (x_p - x_r) - y_p;
+                    (x_r, y_r)
                 }
             });
 
-        <span class="comment">// Assign the sum to `x_qr`, `y_qr` columns in the next row</span>
-        <span class="kw">let</span> <span class="ident">x_r</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>.<span class="number">0</span>);
-        <span class="kw">let</span> <span class="ident">x_r_var</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;x_r&quot;</span>, <span class="self">self</span>.<span class="ident">x_qr</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">x_r</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Assign the sum to `x_qr`, `y_qr` columns in the next row
+        </span><span class="kw">let </span>x_r = r.map(|r| r.<span class="number">0</span>);
+        <span class="kw">let </span>x_r_var = region.assign_advice(|| <span class="string">&quot;x_r&quot;</span>, <span class="self">self</span>.x_qr, offset + <span class="number">1</span>, || x_r)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">y_r</span> <span class="op">=</span> <span class="ident">r</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">r</span>.<span class="number">1</span>);
-        <span class="kw">let</span> <span class="ident">y_r_var</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;y_r&quot;</span>, <span class="self">self</span>.<span class="ident">y_qr</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="number">1</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">y_r</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>y_r = r.map(|r| r.<span class="number">1</span>);
+        <span class="kw">let </span>y_r_var = region.assign_advice(|| <span class="string">&quot;y_r&quot;</span>, <span class="self">self</span>.y_qr, offset + <span class="number">1</span>, || y_r)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">NonIdentityEccPoint</span> {
-            <span class="ident">x</span>: <span class="ident">x_r_var</span>,
-            <span class="ident">y</span>: <span class="ident">y_r_var</span>,
+        <span class="kw">let </span>result = NonIdentityEccPoint {
+            x: x_r_var,
+            y: y_r_var,
         };
 
-        <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
+        <span class="prelude-val">Ok</span>(result)
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="ident">group::Curve</span>;
-    <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-        <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">Value</span>},
-        <span class="ident">plonk::Error</span>,
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">pub mod </span>tests {
+    <span class="kw">use </span>group::Curve;
+    <span class="kw">use </span>halo2_proofs::{
+        circuit::{Layouter, Value},
+        plonk::Error,
     };
-    <span class="kw">use</span> <span class="ident">pasta_curves::pallas</span>;
+    <span class="kw">use </span>pasta_curves::pallas;
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::ecc</span>::{<span class="ident">EccInstructions</span>, <span class="ident">NonIdentityPoint</span>};
+    <span class="kw">use </span><span class="kw">crate</span>::ecc::{EccInstructions, NonIdentityPoint};
 
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test_add_incomplete</span><span class="op">&lt;</span>
-        <span class="ident">EccChip</span>: <span class="ident">EccInstructions</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">std::fmt::Debug</span>,
-    <span class="op">&gt;</span>(
-        <span class="ident">chip</span>: <span class="ident">EccChip</span>,
-        <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span>,
-        <span class="ident">p_val</span>: <span class="ident">pallas::Affine</span>,
-        <span class="ident">p</span>: <span class="kw-2">&amp;</span><span class="ident">NonIdentityPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
-        <span class="ident">q_val</span>: <span class="ident">pallas::Affine</span>,
-        <span class="ident">q</span>: <span class="kw-2">&amp;</span><span class="ident">NonIdentityPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
-        <span class="ident">p_neg</span>: <span class="kw-2">&amp;</span><span class="ident">NonIdentityPoint</span><span class="op">&lt;</span><span class="ident">pallas::Affine</span>, <span class="ident">EccChip</span><span class="op">&gt;</span>,
-        <span class="ident">test_errors</span>: <span class="ident">bool</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// P + Q</span>
-        {
-            <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">p</span>.<span class="ident">add_incomplete</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;P + Q&quot;</span>), <span class="ident">q</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">witnessed_result</span> <span class="op">=</span> <span class="ident">NonIdentityPoint::new</span>(
-                <span class="ident">chip</span>,
-                <span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;witnessed P + Q&quot;</span>),
-                <span class="ident">Value::known</span>((<span class="ident">p_val</span> <span class="op">+</span> <span class="ident">q_val</span>).<span class="ident">to_affine</span>()),
+    <span class="attribute">#[allow(clippy::too_many_arguments)]</span>
+    <span class="kw">pub fn </span>test_add_incomplete&lt;
+        EccChip: EccInstructions&lt;pallas::Affine&gt; + Clone + Eq + std::fmt::Debug,
+    &gt;(
+        chip: EccChip,
+        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+        p_val: pallas::Affine,
+        p: <span class="kw-2">&amp;</span>NonIdentityPoint&lt;pallas::Affine, EccChip&gt;,
+        q_val: pallas::Affine,
+        q: <span class="kw-2">&amp;</span>NonIdentityPoint&lt;pallas::Affine, EccChip&gt;,
+        p_neg: <span class="kw-2">&amp;</span>NonIdentityPoint&lt;pallas::Affine, EccChip&gt;,
+        test_errors: bool,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="comment">// P + Q
+        </span>{
+            <span class="kw">let </span>result = p.add_incomplete(layouter.namespace(|| <span class="string">&quot;P + Q&quot;</span>), q)<span class="question-mark">?</span>;
+            <span class="kw">let </span>witnessed_result = NonIdentityPoint::new(
+                chip,
+                layouter.namespace(|| <span class="string">&quot;witnessed P + Q&quot;</span>),
+                Value::known((p_val + q_val).to_affine()),
             )<span class="question-mark">?</span>;
-            <span class="ident">result</span>.<span class="ident">constrain_equal</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;constrain P + Q&quot;</span>), <span class="kw-2">&amp;</span><span class="ident">witnessed_result</span>)<span class="question-mark">?</span>;
+            result.constrain_equal(layouter.namespace(|| <span class="string">&quot;constrain P + Q&quot;</span>), <span class="kw-2">&amp;</span>witnessed_result)<span class="question-mark">?</span>;
         }
 
-        <span class="kw">if</span> <span class="ident">test_errors</span> {
-            <span class="comment">// P + P should return an error</span>
-            <span class="ident">p</span>.<span class="ident">add_incomplete</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;P + P&quot;</span>), <span class="ident">p</span>)
-                .<span class="ident">expect_err</span>(<span class="string">&quot;P + P should return an error&quot;</span>);
+        <span class="kw">if </span>test_errors {
+            <span class="comment">// P + P should return an error
+            </span>p.add_incomplete(layouter.namespace(|| <span class="string">&quot;P + P&quot;</span>), p)
+                .expect_err(<span class="string">&quot;P + P should return an error&quot;</span>);
 
-            <span class="comment">// P + (-P) should return an error</span>
-            <span class="ident">p</span>.<span class="ident">add_incomplete</span>(<span class="ident">layouter</span>.<span class="ident">namespace</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;P + (-P)&quot;</span>), <span class="ident">p_neg</span>)
-                .<span class="ident">expect_err</span>(<span class="string">&quot;P + (-P) should return an error&quot;</span>);
+            <span class="comment">// P + (-P) should return an error
+            </span>p.add_incomplete(layouter.namespace(|| <span class="string">&quot;P + (-P)&quot;</span>), p_neg)
+                .expect_err(<span class="string">&quot;P + (-P) should return an error&quot;</span>);
         }
 
         <span class="prelude-val">Ok</span>(())
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

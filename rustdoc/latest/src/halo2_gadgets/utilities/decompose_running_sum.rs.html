@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_gadgets/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -410,299 +404,299 @@
 <span id="389">389</span>
 <span id="390">390</span>
 <span id="391">391</span>
-</pre><pre class="rust"><code><span class="doccomment">//! Decomposes an $n$-bit field element $\alpha$ into $W$ windows, each window</span>
-<span class="doccomment">//! being a $K$-bit word, using a running sum $z$.</span>
-<span class="doccomment">//! We constrain $K \leq 3$ for this helper.</span>
-<span class="doccomment">//!     $$\alpha = k_0 + (2^K) k_1 + (2^{2K}) k_2 + ... + (2^{(W-1)K}) k_{W-1}$$</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! $z_0$ is initialized as $\alpha$. Each successive $z_{i+1}$ is computed as</span>
-<span class="doccomment">//!                $$z_{i+1} = (z_{i} - k_i) / (2^K).$$</span>
-<span class="doccomment">//! $z_W$ is constrained to be zero.</span>
-<span class="doccomment">//! The difference between each interstitial running sum output is constrained</span>
-<span class="doccomment">//! to be $K$ bits, i.e.</span>
-<span class="doccomment">//!                      `range_check`($k_i$, $2^K$),</span>
-<span class="doccomment">//! where</span>
-<span class="doccomment">//! ```text</span>
-<span class="doccomment">//!   range_check(word, range)</span>
-<span class="doccomment">//!     = word * (1 - word) * (2 - word) * ... * ((range - 1) - word)</span>
-<span class="doccomment">//! ```</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! Given that the `range_check` constraint will be toggled by a selector, in</span>
-<span class="doccomment">//! practice we will have a `selector * range_check(word, range)` expression</span>
-<span class="doccomment">//! of degree `range + 1`.</span>
-<span class="doccomment">//!</span>
-<span class="doccomment">//! This means that $2^K$ has to be at most `degree_bound - 1` in order for</span>
-<span class="doccomment">//! the range check constraint to stay within the degree bound.</span>
+</pre><pre class="rust"><code><span class="doccomment">//! Decomposes an $n$-bit field element $\alpha$ into $W$ windows, each window
+//! being a $K$-bit word, using a running sum $z$.
+//! We constrain $K \leq 3$ for this helper.
+//!     $$\alpha = k_0 + (2^K) k_1 + (2^{2K}) k_2 + ... + (2^{(W-1)K}) k_{W-1}$$
+//!
+//! $z_0$ is initialized as $\alpha$. Each successive $z_{i+1}$ is computed as
+//!                $$z_{i+1} = (z_{i} - k_i) / (2^K).$$
+//! $z_W$ is constrained to be zero.
+//! The difference between each interstitial running sum output is constrained
+//! to be $K$ bits, i.e.
+//!                      `range_check`($k_i$, $2^K$),
+//! where
+//! ```text
+//!   range_check(word, range)
+//!     = word * (1 - word) * (2 - word) * ... * ((range - 1) - word)
+//! ```
+//!
+//! Given that the `range_check` constraint will be toggled by a selector, in
+//! practice we will have a `selector * range_check(word, range)` expression
+//! of degree `range + 1`.
+//!
+//! This means that $2^K$ has to be at most `degree_bound - 1` in order for
+//! the range check constraint to stay within the degree bound.
 
-<span class="kw">use</span> <span class="ident">ff::PrimeFieldBits</span>;
-<span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-    <span class="ident">circuit</span>::{<span class="ident">AssignedCell</span>, <span class="ident">Region</span>, <span class="ident">Value</span>},
-    <span class="ident">plonk</span>::{<span class="ident">Advice</span>, <span class="ident">Column</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Constraints</span>, <span class="ident">Error</span>, <span class="ident">Selector</span>},
-    <span class="ident">poly::Rotation</span>,
+</span><span class="kw">use </span>ff::PrimeFieldBits;
+<span class="kw">use </span>halo2_proofs::{
+    circuit::{AssignedCell, Region, Value},
+    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
+    poly::Rotation,
 };
 
-<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::range_check</span>;
-<span class="kw">use</span> <span class="ident">pasta_curves::arithmetic::FieldExt</span>;
-<span class="kw">use</span> <span class="ident">std::marker::PhantomData</span>;
+<span class="kw">use </span><span class="kw">super</span>::range_check;
+<span class="kw">use </span>pasta_curves::arithmetic::FieldExt;
+<span class="kw">use </span>std::marker::PhantomData;
 
-<span class="doccomment">/// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RunningSum</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span><span class="op">&gt;</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>);
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span><span class="op">&gt;</span> <span class="ident">std::ops::Deref</span> <span class="kw">for</span> <span class="ident">RunningSum</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="kw">type</span> <span class="ident">Target</span> <span class="op">=</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+<span class="doccomment">/// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
+</span><span class="attribute">#[derive(Debug)]</span>
+<span class="kw">pub struct </span>RunningSum&lt;F: FieldExt + PrimeFieldBits&gt;(Vec&lt;AssignedCell&lt;F, F&gt;&gt;);
+<span class="kw">impl</span>&lt;F: FieldExt + PrimeFieldBits&gt; std::ops::Deref <span class="kw">for </span>RunningSum&lt;F&gt; {
+    <span class="kw">type </span>Target = Vec&lt;AssignedCell&lt;F, F&gt;&gt;;
 
-    <span class="kw">fn</span> <span class="ident">deref</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
-    }
+    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Vec&lt;AssignedCell&lt;F, F&gt;&gt; {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+    </span>}
 }
 
-<span class="doccomment">/// Configuration that provides methods for running sum decomposition.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">RunningSumConfig</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span>, <span class="kw">const</span> <span class="ident">WINDOW_NUM_BITS</span>: <span class="ident">usize</span><span class="op">&gt;</span> {
-    <span class="ident">q_range_check</span>: <span class="ident">Selector</span>,
-    <span class="ident">z</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
+<span class="doccomment">/// Configuration that provides methods for running sum decomposition.
+</span><span class="attribute">#[derive(Debug, Clone, Copy, Eq, PartialEq)]</span>
+<span class="kw">pub struct </span>RunningSumConfig&lt;F: FieldExt + PrimeFieldBits, <span class="kw">const </span>WINDOW_NUM_BITS: usize&gt; {
+    q_range_check: Selector,
+    z: Column&lt;Advice&gt;,
+    _marker: PhantomData&lt;F&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span>, <span class="kw">const</span> <span class="ident">WINDOW_NUM_BITS</span>: <span class="ident">usize</span><span class="op">&gt;</span>
-    <span class="ident">RunningSumConfig</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WINDOW_NUM_BITS</span><span class="op">&gt;</span>
+<span class="kw">impl</span>&lt;F: FieldExt + PrimeFieldBits, <span class="kw">const </span>WINDOW_NUM_BITS: usize&gt;
+    RunningSumConfig&lt;F, WINDOW_NUM_BITS&gt;
 {
-    <span class="doccomment">/// Returns the q_range_check selector of this [`RunningSumConfig`].</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">q_range_check</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">Selector</span> {
-        <span class="self">self</span>.<span class="ident">q_range_check</span>
+    <span class="doccomment">/// Returns the q_range_check selector of this [`RunningSumConfig`].
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>q_range_check(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Selector {
+        <span class="self">self</span>.q_range_check
     }
 
-    <span class="doccomment">/// `perm` MUST include the advice column `z`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Panics</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Panics if WINDOW_NUM_BITS &gt; 3.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Side-effects</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// `z` will be equality-enabled.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure</span>(
-        <span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">q_range_check</span>: <span class="ident">Selector</span>,
-        <span class="ident">z</span>: <span class="ident">Column</span><span class="op">&lt;</span><span class="ident">Advice</span><span class="op">&gt;</span>,
-    ) -&gt; <span class="self">Self</span> {
-        <span class="macro">assert!</span>(<span class="ident">WINDOW_NUM_BITS</span> <span class="op">&lt;</span><span class="op">=</span> <span class="number">3</span>);
+    <span class="doccomment">/// `perm` MUST include the advice column `z`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if WINDOW_NUM_BITS &gt; 3.
+    ///
+    /// # Side-effects
+    ///
+    /// `z` will be equality-enabled.
+    </span><span class="kw">pub fn </span>configure(
+        meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;F&gt;,
+        q_range_check: Selector,
+        z: Column&lt;Advice&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="macro">assert!</span>(WINDOW_NUM_BITS &lt;= <span class="number">3</span>);
 
-        <span class="ident">meta</span>.<span class="ident">enable_equality</span>(<span class="ident">z</span>);
+        meta.enable_equality(z);
 
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">Self</span> {
-            <span class="ident">q_range_check</span>,
-            <span class="ident">z</span>,
-            <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
+        <span class="kw">let </span>config = <span class="self">Self </span>{
+            q_range_check,
+            z,
+            _marker: PhantomData,
         };
 
-        <span class="comment">// https://p.z.cash/halo2-0.1:decompose-short-range</span>
-        <span class="ident">meta</span>.<span class="ident">create_gate</span>(<span class="string">&quot;range check&quot;</span>, <span class="op">|</span><span class="ident">meta</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">q_range_check</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_selector</span>(<span class="ident">config</span>.<span class="ident">q_range_check</span>);
-            <span class="kw">let</span> <span class="ident">z_cur</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">z</span>, <span class="ident">Rotation::cur</span>());
-            <span class="kw">let</span> <span class="ident">z_next</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">query_advice</span>(<span class="ident">config</span>.<span class="ident">z</span>, <span class="ident">Rotation::next</span>());
-            <span class="comment">//    z_i = 2^{K}⋅z_{i + 1} + k_i</span>
-            <span class="comment">// =&gt; k_i = z_i - 2^{K}⋅z_{i + 1}</span>
-            <span class="kw">let</span> <span class="ident">word</span> <span class="op">=</span> <span class="ident">z_cur</span> <span class="op">-</span> <span class="ident">z_next</span> <span class="op">*</span> <span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">WINDOW_NUM_BITS</span>);
+        <span class="comment">// https://p.z.cash/halo2-0.1:decompose-short-range
+        </span>meta.create_gate(<span class="string">&quot;range check&quot;</span>, |meta| {
+            <span class="kw">let </span>q_range_check = meta.query_selector(config.q_range_check);
+            <span class="kw">let </span>z_cur = meta.query_advice(config.z, Rotation::cur());
+            <span class="kw">let </span>z_next = meta.query_advice(config.z, Rotation::next());
+            <span class="comment">//    z_i = 2^{K}⋅z_{i + 1} + k_i
+            // =&gt; k_i = z_i - 2^{K}⋅z_{i + 1}
+            </span><span class="kw">let </span>word = z_cur - z_next * F::from(<span class="number">1 </span>&lt;&lt; WINDOW_NUM_BITS);
 
-            <span class="ident">Constraints::with_selector</span>(<span class="ident">q_range_check</span>, <span class="prelude-val">Some</span>(<span class="ident">range_check</span>(<span class="ident">word</span>, <span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">WINDOW_NUM_BITS</span>)))
+            Constraints::with_selector(q_range_check, <span class="prelude-val">Some</span>(range_check(word, <span class="number">1 </span>&lt;&lt; WINDOW_NUM_BITS)))
         });
 
-        <span class="ident">config</span>
+        config
     }
 
-    <span class="doccomment">/// Decompose a field element alpha that is witnessed in this helper.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// `strict` = true constrains the final running sum to be zero, i.e.</span>
-    <span class="doccomment">/// constrains alpha to be within WINDOW_NUM_BITS * num_windows bits.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">witness_decompose</span>(
+    <span class="doccomment">/// Decompose a field element alpha that is witnessed in this helper.
+    ///
+    /// `strict` = true constrains the final running sum to be zero, i.e.
+    /// constrains alpha to be within WINDOW_NUM_BITS * num_windows bits.
+    </span><span class="kw">pub fn </span>witness_decompose(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">alpha</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">strict</span>: <span class="ident">bool</span>,
-        <span class="ident">word_num_bits</span>: <span class="ident">usize</span>,
-        <span class="ident">num_windows</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RunningSum</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">z_0</span> <span class="op">=</span> <span class="ident">region</span>.<span class="ident">assign_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;z_0 = alpha&quot;</span>, <span class="self">self</span>.<span class="ident">z</span>, <span class="ident">offset</span>, <span class="op">|</span><span class="op">|</span> <span class="ident">alpha</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">decompose</span>(<span class="ident">region</span>, <span class="ident">offset</span>, <span class="ident">z_0</span>, <span class="ident">strict</span>, <span class="ident">word_num_bits</span>, <span class="ident">num_windows</span>)
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, F&gt;,
+        offset: usize,
+        alpha: Value&lt;F&gt;,
+        strict: bool,
+        word_num_bits: usize,
+        num_windows: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RunningSum&lt;F&gt;, Error&gt; {
+        <span class="kw">let </span>z_0 = region.assign_advice(|| <span class="string">&quot;z_0 = alpha&quot;</span>, <span class="self">self</span>.z, offset, || alpha)<span class="question-mark">?</span>;
+        <span class="self">self</span>.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
     }
 
-    <span class="doccomment">/// Decompose an existing variable alpha that is copied into this helper.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// `strict` = true constrains the final running sum to be zero, i.e.</span>
-    <span class="doccomment">/// constrains alpha to be within WINDOW_NUM_BITS * num_windows bits.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">copy_decompose</span>(
+    <span class="doccomment">/// Decompose an existing variable alpha that is copied into this helper.
+    ///
+    /// `strict` = true constrains the final running sum to be zero, i.e.
+    /// constrains alpha to be within WINDOW_NUM_BITS * num_windows bits.
+    </span><span class="kw">pub fn </span>copy_decompose(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">alpha</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">strict</span>: <span class="ident">bool</span>,
-        <span class="ident">word_num_bits</span>: <span class="ident">usize</span>,
-        <span class="ident">num_windows</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RunningSum</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">z_0</span> <span class="op">=</span> <span class="ident">alpha</span>.<span class="ident">copy_advice</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;copy z_0 = alpha&quot;</span>, <span class="ident">region</span>, <span class="self">self</span>.<span class="ident">z</span>, <span class="ident">offset</span>)<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">decompose</span>(<span class="ident">region</span>, <span class="ident">offset</span>, <span class="ident">z_0</span>, <span class="ident">strict</span>, <span class="ident">word_num_bits</span>, <span class="ident">num_windows</span>)
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, F&gt;,
+        offset: usize,
+        alpha: AssignedCell&lt;F, F&gt;,
+        strict: bool,
+        word_num_bits: usize,
+        num_windows: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RunningSum&lt;F&gt;, Error&gt; {
+        <span class="kw">let </span>z_0 = alpha.copy_advice(|| <span class="string">&quot;copy z_0 = alpha&quot;</span>, region, <span class="self">self</span>.z, offset)<span class="question-mark">?</span>;
+        <span class="self">self</span>.decompose(region, offset, z_0, strict, word_num_bits, num_windows)
     }
 
-    <span class="doccomment">/// `z_0` must be the cell at `(self.z, offset)` in `region`.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// # Panics</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// Panics if there are too many windows for the given word size.</span>
-    <span class="kw">fn</span> <span class="ident">decompose</span>(
+    <span class="doccomment">/// `z_0` must be the cell at `(self.z, offset)` in `region`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if there are too many windows for the given word size.
+    </span><span class="kw">fn </span>decompose(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">region</span>: <span class="kw-2">&amp;mut</span> <span class="ident">Region</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span>, <span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">offset</span>: <span class="ident">usize</span>,
-        <span class="ident">z_0</span>: <span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span>,
-        <span class="ident">strict</span>: <span class="ident">bool</span>,
-        <span class="ident">word_num_bits</span>: <span class="ident">usize</span>,
-        <span class="ident">num_windows</span>: <span class="ident">usize</span>,
-    ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">RunningSum</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="comment">// Make sure that we do not have more windows than required for the number</span>
-        <span class="comment">// of bits in the word. In other words, every window must contain at least</span>
-        <span class="comment">// one bit of the word (no empty windows).</span>
-        <span class="comment">//</span>
-        <span class="comment">// For example, let:</span>
-        <span class="comment">//      - word_num_bits = 64</span>
-        <span class="comment">//      - WINDOW_NUM_BITS = 3</span>
-        <span class="comment">// In this case, the maximum allowed num_windows is 22:</span>
-        <span class="comment">//                    3 * 22 &lt; 64 + 3</span>
-        <span class="comment">//</span>
-        <span class="macro">assert!</span>(<span class="ident">WINDOW_NUM_BITS</span> <span class="op">*</span> <span class="ident">num_windows</span> <span class="op">&lt;</span> <span class="ident">word_num_bits</span> <span class="op">+</span> <span class="ident">WINDOW_NUM_BITS</span>);
+        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, F&gt;,
+        offset: usize,
+        z_0: AssignedCell&lt;F, F&gt;,
+        strict: bool,
+        word_num_bits: usize,
+        num_windows: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RunningSum&lt;F&gt;, Error&gt; {
+        <span class="comment">// Make sure that we do not have more windows than required for the number
+        // of bits in the word. In other words, every window must contain at least
+        // one bit of the word (no empty windows).
+        //
+        // For example, let:
+        //      - word_num_bits = 64
+        //      - WINDOW_NUM_BITS = 3
+        // In this case, the maximum allowed num_windows is 22:
+        //                    3 * 22 &lt; 64 + 3
+        //
+        </span><span class="macro">assert!</span>(WINDOW_NUM_BITS * num_windows &lt; word_num_bits + WINDOW_NUM_BITS);
 
-        <span class="comment">// Enable selectors</span>
-        <span class="kw">for</span> <span class="ident">idx</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_windows</span> {
-            <span class="self">self</span>.<span class="ident">q_range_check</span>.<span class="ident">enable</span>(<span class="ident">region</span>, <span class="ident">offset</span> <span class="op">+</span> <span class="ident">idx</span>)<span class="question-mark">?</span>;
+        <span class="comment">// Enable selectors
+        </span><span class="kw">for </span>idx <span class="kw">in </span><span class="number">0</span>..num_windows {
+            <span class="self">self</span>.q_range_check.enable(region, offset + idx)<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// Decompose base field element into K-bit words.</span>
-        <span class="kw">let</span> <span class="ident">words</span> <span class="op">=</span> <span class="ident">z_0</span>
-            .<span class="ident">value</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident"><span class="kw">super</span>::decompose_word</span>::<span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">word</span>, <span class="ident">word_num_bits</span>, <span class="ident">WINDOW_NUM_BITS</span>))
-            .<span class="ident">transpose_vec</span>(<span class="ident">num_windows</span>);
+        <span class="comment">// Decompose base field element into K-bit words.
+        </span><span class="kw">let </span>words = z_0
+            .value()
+            .map(|word| <span class="kw">super</span>::decompose_word::&lt;F&gt;(word, word_num_bits, WINDOW_NUM_BITS))
+            .transpose_vec(num_windows);
 
-        <span class="comment">// Initialize empty vector to store running sum values [z_0, ..., z_W].</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">zs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AssignedCell</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec!</span>[<span class="ident">z_0</span>.<span class="ident">clone</span>()];
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">z</span> <span class="op">=</span> <span class="ident">z_0</span>;
+        <span class="comment">// Initialize empty vector to store running sum values [z_0, ..., z_W].
+        </span><span class="kw">let </span><span class="kw-2">mut </span>zs: Vec&lt;AssignedCell&lt;F, F&gt;&gt; = <span class="macro">vec!</span>[z_0.clone()];
+        <span class="kw">let </span><span class="kw-2">mut </span>z = z_0;
 
-        <span class="comment">// Assign running sum `z_{i+1}` = (z_i - k_i) / (2^K) for i = 0..=n-1.</span>
-        <span class="comment">// Outside of this helper, z_0 = alpha must have already been loaded into the</span>
-        <span class="comment">// `z` column at `offset`.</span>
-        <span class="kw">let</span> <span class="ident">two_pow_k_inv</span> <span class="op">=</span> <span class="ident">Value::known</span>(<span class="ident">F::from</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">WINDOW_NUM_BITS</span> <span class="kw">as</span> <span class="ident">u64</span>).<span class="ident">invert</span>().<span class="ident">unwrap</span>());
-        <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">word</span>) <span class="kw">in</span> <span class="ident">words</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-            <span class="comment">// z_next = (z_cur - word) / (2^K)</span>
-            <span class="kw">let</span> <span class="ident">z_next</span> <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">z_cur_val</span> <span class="op">=</span> <span class="ident">z</span>.<span class="ident">value</span>().<span class="ident">copied</span>();
-                <span class="kw">let</span> <span class="ident">word</span> <span class="op">=</span> <span class="ident">word</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">word</span><span class="op">|</span> <span class="ident">F::from</span>(<span class="ident">word</span> <span class="kw">as</span> <span class="ident">u64</span>));
-                <span class="kw">let</span> <span class="ident">z_next_val</span> <span class="op">=</span> (<span class="ident">z_cur_val</span> <span class="op">-</span> <span class="ident">word</span>) <span class="op">*</span> <span class="ident">two_pow_k_inv</span>;
-                <span class="ident">region</span>.<span class="ident">assign_advice</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="macro">format!</span>(<span class="string">&quot;z_{:?}&quot;</span>, <span class="ident">i</span> <span class="op">+</span> <span class="number">1</span>),
-                    <span class="self">self</span>.<span class="ident">z</span>,
-                    <span class="ident">offset</span> <span class="op">+</span> <span class="ident">i</span> <span class="op">+</span> <span class="number">1</span>,
-                    <span class="op">|</span><span class="op">|</span> <span class="ident">z_next_val</span>,
-                )<span class="question-mark">?</span>
-            };
+        <span class="comment">// Assign running sum `z_{i+1}` = (z_i - k_i) / (2^K) for i = 0..=n-1.
+        // Outside of this helper, z_0 = alpha must have already been loaded into the
+        // `z` column at `offset`.
+        </span><span class="kw">let </span>two_pow_k_inv = Value::known(F::from(<span class="number">1 </span>&lt;&lt; WINDOW_NUM_BITS <span class="kw">as </span>u64).invert().unwrap());
+        <span class="kw">for </span>(i, word) <span class="kw">in </span>words.iter().enumerate() {
+            <span class="comment">// z_next = (z_cur - word) / (2^K)
+            </span><span class="kw">let </span>z_next = {
+                <span class="kw">let </span>z_cur_val = z.value().copied();
+                <span class="kw">let </span>word = word.map(|word| F::from(word <span class="kw">as </span>u64));
+                <span class="kw">let </span>z_next_val = (z_cur_val - word) * two_pow_k_inv;
+                region.assign_advice(
+                    || <span class="macro">format!</span>(<span class="string">&quot;z_{:?}&quot;</span>, i + <span class="number">1</span>),
+                    <span class="self">self</span>.z,
+                    offset + i + <span class="number">1</span>,
+                    || z_next_val,
+                )<span class="question-mark">?
+            </span>};
 
-            <span class="comment">// Update `z`.</span>
-            <span class="ident">z</span> <span class="op">=</span> <span class="ident">z_next</span>;
-            <span class="ident">zs</span>.<span class="ident">push</span>(<span class="ident">z</span>.<span class="ident">clone</span>());
+            <span class="comment">// Update `z`.
+            </span>z = z_next;
+            zs.push(z.clone());
         }
-        <span class="macro">assert_eq!</span>(<span class="ident">zs</span>.<span class="ident">len</span>(), <span class="ident">num_windows</span> <span class="op">+</span> <span class="number">1</span>);
+        <span class="macro">assert_eq!</span>(zs.len(), num_windows + <span class="number">1</span>);
 
-        <span class="kw">if</span> <span class="ident">strict</span> {
-            <span class="comment">// Constrain the final running sum output to be zero.</span>
-            <span class="ident">region</span>.<span class="ident">constrain_constant</span>(<span class="ident">zs</span>.<span class="ident">last</span>().<span class="ident">unwrap</span>().<span class="ident">cell</span>(), <span class="ident">F::zero</span>())<span class="question-mark">?</span>;
+        <span class="kw">if </span>strict {
+            <span class="comment">// Constrain the final running sum output to be zero.
+            </span>region.constrain_constant(zs.last().unwrap().cell(), F::zero())<span class="question-mark">?</span>;
         }
 
-        <span class="prelude-val">Ok</span>(<span class="ident">RunningSum</span>(<span class="ident">zs</span>))
+        <span class="prelude-val">Ok</span>(RunningSum(zs))
     }
 }
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">tests</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use</span> <span class="ident">group::ff</span>::{<span class="ident">Field</span>, <span class="ident">PrimeField</span>};
-    <span class="kw">use</span> <span class="ident">halo2_proofs</span>::{
-        <span class="ident">circuit</span>::{<span class="ident">Layouter</span>, <span class="ident">SimpleFloorPlanner</span>},
-        <span class="ident">dev</span>::{<span class="ident">FailureLocation</span>, <span class="ident">MockProver</span>, <span class="ident">VerifyFailure</span>},
-        <span class="ident">plonk</span>::{<span class="ident">Any</span>, <span class="ident">Circuit</span>, <span class="ident">ConstraintSystem</span>, <span class="ident">Error</span>},
+<span class="attribute">#[cfg(test)]</span>
+<span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span>group::ff::{Field, PrimeField};
+    <span class="kw">use </span>halo2_proofs::{
+        circuit::{Layouter, SimpleFloorPlanner},
+        dev::{FailureLocation, MockProver, VerifyFailure},
+        plonk::{Any, Circuit, ConstraintSystem, Error},
     };
-    <span class="kw">use</span> <span class="ident">pasta_curves</span>::{<span class="ident">arithmetic::FieldExt</span>, <span class="ident">pallas</span>};
-    <span class="kw">use</span> <span class="ident">rand::rngs::OsRng</span>;
+    <span class="kw">use </span>pasta_curves::{arithmetic::FieldExt, pallas};
+    <span class="kw">use </span>rand::rngs::OsRng;
 
-    <span class="kw">use</span> <span class="ident"><span class="kw">crate</span>::ecc::chip</span>::{
-        <span class="ident">FIXED_BASE_WINDOW_SIZE</span>, <span class="ident">L_SCALAR_SHORT</span> <span class="kw">as</span> <span class="ident">L_SHORT</span>, <span class="ident">NUM_WINDOWS</span>, <span class="ident">NUM_WINDOWS_SHORT</span>,
+    <span class="kw">use </span><span class="kw">crate</span>::ecc::chip::{
+        FIXED_BASE_WINDOW_SIZE, L_SCALAR_SHORT <span class="kw">as </span>L_SHORT, NUM_WINDOWS, NUM_WINDOWS_SHORT,
     };
 
-    <span class="kw">const</span> <span class="ident">L_BASE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="ident">pallas::Base::NUM_BITS</span> <span class="kw">as</span> <span class="ident">usize</span>;
+    <span class="kw">const </span>L_BASE: usize = pallas::Base::NUM_BITS <span class="kw">as </span>usize;
 
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_running_sum</span>() {
-        <span class="kw">struct</span> <span class="ident">MyCircuit</span><span class="op">&lt;</span>
-            <span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span>,
-            <span class="kw">const</span> <span class="ident">WORD_NUM_BITS</span>: <span class="ident">usize</span>,
-            <span class="kw">const</span> <span class="ident">WINDOW_NUM_BITS</span>: <span class="ident">usize</span>,
-            <span class="kw">const</span> <span class="ident">NUM_WINDOWS</span>: <span class="ident">usize</span>,
-        <span class="op">&gt;</span> {
-            <span class="ident">alpha</span>: <span class="ident">Value</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-            <span class="ident">strict</span>: <span class="ident">bool</span>,
+    <span class="attribute">#[test]</span>
+    <span class="kw">fn </span>test_running_sum() {
+        <span class="kw">struct </span>MyCircuit&lt;
+            F: FieldExt + PrimeFieldBits,
+            <span class="kw">const </span>WORD_NUM_BITS: usize,
+            <span class="kw">const </span>WINDOW_NUM_BITS: usize,
+            <span class="kw">const </span>NUM_WINDOWS: usize,
+        &gt; {
+            alpha: Value&lt;F&gt;,
+            strict: bool,
         }
 
-        <span class="kw">impl</span><span class="op">&lt;</span>
-                <span class="ident">F</span>: <span class="ident">FieldExt</span> <span class="op">+</span> <span class="ident">PrimeFieldBits</span>,
-                <span class="kw">const</span> <span class="ident">WORD_NUM_BITS</span>: <span class="ident">usize</span>,
-                <span class="kw">const</span> <span class="ident">WINDOW_NUM_BITS</span>: <span class="ident">usize</span>,
-                <span class="kw">const</span> <span class="ident">NUM_WINDOWS</span>: <span class="ident">usize</span>,
-            <span class="op">&gt;</span> <span class="ident">Circuit</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">MyCircuit</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WORD_NUM_BITS</span>, <span class="ident">WINDOW_NUM_BITS</span>, <span class="ident">NUM_WINDOWS</span><span class="op">&gt;</span>
+        <span class="kw">impl</span>&lt;
+                F: FieldExt + PrimeFieldBits,
+                <span class="kw">const </span>WORD_NUM_BITS: usize,
+                <span class="kw">const </span>WINDOW_NUM_BITS: usize,
+                <span class="kw">const </span>NUM_WINDOWS: usize,
+            &gt; Circuit&lt;F&gt; <span class="kw">for </span>MyCircuit&lt;F, WORD_NUM_BITS, WINDOW_NUM_BITS, NUM_WINDOWS&gt;
         {
-            <span class="kw">type</span> <span class="ident">Config</span> <span class="op">=</span> <span class="ident">RunningSumConfig</span><span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WINDOW_NUM_BITS</span><span class="op">&gt;</span>;
-            <span class="kw">type</span> <span class="ident">FloorPlanner</span> <span class="op">=</span> <span class="ident">SimpleFloorPlanner</span>;
+            <span class="kw">type </span>Config = RunningSumConfig&lt;F, WINDOW_NUM_BITS&gt;;
+            <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
 
-            <span class="kw">fn</span> <span class="ident">without_witnesses</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span> {
-                <span class="self">Self</span> {
-                    <span class="ident">alpha</span>: <span class="ident">Value::unknown</span>(),
-                    <span class="ident">strict</span>: <span class="self">self</span>.<span class="ident">strict</span>,
+            <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+                <span class="self">Self </span>{
+                    alpha: Value::unknown(),
+                    strict: <span class="self">self</span>.strict,
                 }
             }
 
-            <span class="kw">fn</span> <span class="ident">configure</span>(<span class="ident">meta</span>: <span class="kw-2">&amp;mut</span> <span class="ident">ConstraintSystem</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>) -&gt; <span class="ident"><span class="self">Self</span>::Config</span> {
-                <span class="kw">let</span> <span class="ident">z</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">advice_column</span>();
-                <span class="kw">let</span> <span class="ident">q_range_check</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">selector</span>();
-                <span class="kw">let</span> <span class="ident">constants</span> <span class="op">=</span> <span class="ident">meta</span>.<span class="ident">fixed_column</span>();
-                <span class="ident">meta</span>.<span class="ident">enable_constant</span>(<span class="ident">constants</span>);
+            <span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;F&gt;) -&gt; <span class="self">Self</span>::Config {
+                <span class="kw">let </span>z = meta.advice_column();
+                <span class="kw">let </span>q_range_check = meta.selector();
+                <span class="kw">let </span>constants = meta.fixed_column();
+                meta.enable_constant(constants);
 
-                <span class="ident">RunningSumConfig</span>::<span class="op">&lt;</span><span class="ident">F</span>, <span class="ident">WINDOW_NUM_BITS</span><span class="op">&gt;</span><span class="ident">::configure</span>(<span class="ident">meta</span>, <span class="ident">q_range_check</span>, <span class="ident">z</span>)
+                RunningSumConfig::&lt;F, WINDOW_NUM_BITS&gt;::configure(meta, q_range_check, z)
             }
 
-            <span class="kw">fn</span> <span class="ident">synthesize</span>(
+            <span class="kw">fn </span>synthesize(
                 <span class="kw-2">&amp;</span><span class="self">self</span>,
-                <span class="ident">config</span>: <span class="ident"><span class="self">Self</span>::Config</span>,
-                <span class="kw-2">mut</span> <span class="ident">layouter</span>: <span class="kw">impl</span> <span class="ident">Layouter</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>,
-            ) -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-                <span class="ident">layouter</span>.<span class="ident">assign_region</span>(
-                    <span class="op">|</span><span class="op">|</span> <span class="string">&quot;decompose&quot;</span>,
-                    <span class="op">|</span><span class="kw-2">mut</span> <span class="ident">region</span><span class="op">|</span> {
-                        <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="number">0</span>;
-                        <span class="kw">let</span> <span class="ident">zs</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">witness_decompose</span>(
-                            <span class="kw-2">&amp;mut</span> <span class="ident">region</span>,
-                            <span class="ident">offset</span>,
-                            <span class="self">self</span>.<span class="ident">alpha</span>,
-                            <span class="self">self</span>.<span class="ident">strict</span>,
-                            <span class="ident">WORD_NUM_BITS</span>,
-                            <span class="ident">NUM_WINDOWS</span>,
+                config: <span class="self">Self</span>::Config,
+                <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;F&gt;,
+            ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+                layouter.assign_region(
+                    || <span class="string">&quot;decompose&quot;</span>,
+                    |<span class="kw-2">mut </span>region| {
+                        <span class="kw">let </span>offset = <span class="number">0</span>;
+                        <span class="kw">let </span>zs = config.witness_decompose(
+                            <span class="kw-2">&amp;mut </span>region,
+                            offset,
+                            <span class="self">self</span>.alpha,
+                            <span class="self">self</span>.strict,
+                            WORD_NUM_BITS,
+                            NUM_WINDOWS,
                         )<span class="question-mark">?</span>;
-                        <span class="kw">let</span> <span class="ident">alpha</span> <span class="op">=</span> <span class="ident">zs</span>[<span class="number">0</span>].<span class="ident">clone</span>();
+                        <span class="kw">let </span>alpha = zs[<span class="number">0</span>].clone();
 
-                        <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">offset</span> <span class="op">+</span> <span class="ident">NUM_WINDOWS</span> <span class="op">+</span> <span class="number">1</span>;
+                        <span class="kw">let </span>offset = offset + NUM_WINDOWS + <span class="number">1</span>;
 
-                        <span class="ident">config</span>.<span class="ident">copy_decompose</span>(
-                            <span class="kw-2">&amp;mut</span> <span class="ident">region</span>,
-                            <span class="ident">offset</span>,
-                            <span class="ident">alpha</span>,
-                            <span class="self">self</span>.<span class="ident">strict</span>,
-                            <span class="ident">WORD_NUM_BITS</span>,
-                            <span class="ident">NUM_WINDOWS</span>,
+                        config.copy_decompose(
+                            <span class="kw-2">&amp;mut </span>region,
+                            offset,
+                            alpha,
+                            <span class="self">self</span>.strict,
+                            WORD_NUM_BITS,
+                            NUM_WINDOWS,
                         )<span class="question-mark">?</span>;
 
                         <span class="prelude-val">Ok</span>(())
@@ -711,96 +705,95 @@
             }
         }
 
-        <span class="comment">// Random base field element</span>
-        {
-            <span class="kw">let</span> <span class="ident">alpha</span> <span class="op">=</span> <span class="ident">pallas::Base::random</span>(<span class="ident">OsRng</span>);
+        <span class="comment">// Random base field element
+        </span>{
+            <span class="kw">let </span>alpha = pallas::Base::random(OsRng);
 
-            <span class="comment">// Strict full decomposition should pass.</span>
-            <span class="kw">let</span> <span class="ident">circuit</span>: <span class="ident">MyCircuit</span><span class="op">&lt;</span><span class="ident">pallas::Base</span>, <span class="ident">L_BASE</span>, <span class="ident">FIXED_BASE_WINDOW_SIZE</span>, { <span class="ident">NUM_WINDOWS</span> }<span class="op">&gt;</span> <span class="op">=</span>
-                <span class="ident">MyCircuit</span> {
-                    <span class="ident">alpha</span>: <span class="ident">Value::known</span>(<span class="ident">alpha</span>),
-                    <span class="ident">strict</span>: <span class="bool-val">true</span>,
+            <span class="comment">// Strict full decomposition should pass.
+            </span><span class="kw">let </span>circuit: MyCircuit&lt;pallas::Base, L_BASE, FIXED_BASE_WINDOW_SIZE, { NUM_WINDOWS }&gt; =
+                MyCircuit {
+                    alpha: Value::known(alpha),
+                    strict: <span class="bool-val">true</span>,
                 };
-            <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver</span>::<span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="ident">::run</span>(<span class="number">8</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
-            <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()));
+            <span class="kw">let </span>prover = MockProver::&lt;pallas::Base&gt;::run(<span class="number">8</span>, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+            <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()));
         }
 
-        <span class="comment">// Random 64-bit word</span>
-        {
-            <span class="kw">let</span> <span class="ident">alpha</span> <span class="op">=</span> <span class="ident">pallas::Base::from</span>(<span class="ident">rand::random</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>());
+        <span class="comment">// Random 64-bit word
+        </span>{
+            <span class="kw">let </span>alpha = pallas::Base::from(rand::random::&lt;u64&gt;());
 
-            <span class="comment">// Strict full decomposition should pass.</span>
-            <span class="kw">let</span> <span class="ident">circuit</span>: <span class="ident">MyCircuit</span><span class="op">&lt;</span>
-                <span class="ident">pallas::Base</span>,
-                <span class="ident">L_SHORT</span>,
-                <span class="ident">FIXED_BASE_WINDOW_SIZE</span>,
-                { <span class="ident">NUM_WINDOWS_SHORT</span> },
-            <span class="op">&gt;</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {
-                <span class="ident">alpha</span>: <span class="ident">Value::known</span>(<span class="ident">alpha</span>),
-                <span class="ident">strict</span>: <span class="bool-val">true</span>,
+            <span class="comment">// Strict full decomposition should pass.
+            </span><span class="kw">let </span>circuit: MyCircuit&lt;
+                pallas::Base,
+                L_SHORT,
+                FIXED_BASE_WINDOW_SIZE,
+                { NUM_WINDOWS_SHORT },
+            &gt; = MyCircuit {
+                alpha: Value::known(alpha),
+                strict: <span class="bool-val">true</span>,
             };
-            <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver</span>::<span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="ident">::run</span>(<span class="number">8</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
-            <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()));
+            <span class="kw">let </span>prover = MockProver::&lt;pallas::Base&gt;::run(<span class="number">8</span>, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+            <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()));
         }
 
-        <span class="comment">// 2^66</span>
-        {
-            <span class="kw">let</span> <span class="ident">alpha</span> <span class="op">=</span> <span class="ident">pallas::Base::from_u128</span>(<span class="number">1</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="number">66</span>);
+        <span class="comment">// 2^66
+        </span>{
+            <span class="kw">let </span>alpha = pallas::Base::from_u128(<span class="number">1 </span>&lt;&lt; <span class="number">66</span>);
 
-            <span class="comment">// Strict partial decomposition should fail.</span>
-            <span class="kw">let</span> <span class="ident">circuit</span>: <span class="ident">MyCircuit</span><span class="op">&lt;</span>
-                <span class="ident">pallas::Base</span>,
-                <span class="ident">L_SHORT</span>,
-                <span class="ident">FIXED_BASE_WINDOW_SIZE</span>,
-                { <span class="ident">NUM_WINDOWS_SHORT</span> },
-            <span class="op">&gt;</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {
-                <span class="ident">alpha</span>: <span class="ident">Value::known</span>(<span class="ident">alpha</span>),
-                <span class="ident">strict</span>: <span class="bool-val">true</span>,
+            <span class="comment">// Strict partial decomposition should fail.
+            </span><span class="kw">let </span>circuit: MyCircuit&lt;
+                pallas::Base,
+                L_SHORT,
+                FIXED_BASE_WINDOW_SIZE,
+                { NUM_WINDOWS_SHORT },
+            &gt; = MyCircuit {
+                alpha: Value::known(alpha),
+                strict: <span class="bool-val">true</span>,
             };
-            <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver</span>::<span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="ident">::run</span>(<span class="number">8</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
+            <span class="kw">let </span>prover = MockProver::&lt;pallas::Base&gt;::run(<span class="number">8</span>, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
             <span class="macro">assert_eq!</span>(
-                <span class="ident">prover</span>.<span class="ident">verify</span>(),
+                prover.verify(),
                 <span class="prelude-val">Err</span>(<span class="macro">vec!</span>[
-                    <span class="ident">VerifyFailure::Permutation</span> {
-                        <span class="ident">column</span>: (<span class="ident">Any::Fixed</span>, <span class="number">0</span>).<span class="ident">into</span>(),
-                        <span class="ident">location</span>: <span class="ident">FailureLocation::OutsideRegion</span> { <span class="ident">row</span>: <span class="number">0</span> },
+                    VerifyFailure::Permutation {
+                        column: (Any::Fixed, <span class="number">0</span>).into(),
+                        location: FailureLocation::OutsideRegion { row: <span class="number">0 </span>},
                     },
-                    <span class="ident">VerifyFailure::Permutation</span> {
-                        <span class="ident">column</span>: (<span class="ident">Any::Fixed</span>, <span class="number">0</span>).<span class="ident">into</span>(),
-                        <span class="ident">location</span>: <span class="ident">FailureLocation::OutsideRegion</span> { <span class="ident">row</span>: <span class="number">1</span> },
+                    VerifyFailure::Permutation {
+                        column: (Any::Fixed, <span class="number">0</span>).into(),
+                        location: FailureLocation::OutsideRegion { row: <span class="number">1 </span>},
                     },
-                    <span class="ident">VerifyFailure::Permutation</span> {
-                        <span class="ident">column</span>: (<span class="ident">Any::Advice</span>, <span class="number">0</span>).<span class="ident">into</span>(),
-                        <span class="ident">location</span>: <span class="ident">FailureLocation::InRegion</span> {
-                            <span class="ident">region</span>: (<span class="number">0</span>, <span class="string">&quot;decompose&quot;</span>).<span class="ident">into</span>(),
-                            <span class="ident">offset</span>: <span class="number">22</span>,
+                    VerifyFailure::Permutation {
+                        column: (Any::Advice, <span class="number">0</span>).into(),
+                        location: FailureLocation::InRegion {
+                            region: (<span class="number">0</span>, <span class="string">&quot;decompose&quot;</span>).into(),
+                            offset: <span class="number">22</span>,
                         },
                     },
-                    <span class="ident">VerifyFailure::Permutation</span> {
-                        <span class="ident">column</span>: (<span class="ident">Any::Advice</span>, <span class="number">0</span>).<span class="ident">into</span>(),
-                        <span class="ident">location</span>: <span class="ident">FailureLocation::InRegion</span> {
-                            <span class="ident">region</span>: (<span class="number">0</span>, <span class="string">&quot;decompose&quot;</span>).<span class="ident">into</span>(),
-                            <span class="ident">offset</span>: <span class="number">45</span>,
+                    VerifyFailure::Permutation {
+                        column: (Any::Advice, <span class="number">0</span>).into(),
+                        location: FailureLocation::InRegion {
+                            region: (<span class="number">0</span>, <span class="string">&quot;decompose&quot;</span>).into(),
+                            offset: <span class="number">45</span>,
                         },
                     },
                 ])
             );
 
-            <span class="comment">// Non-strict partial decomposition should pass.</span>
-            <span class="kw">let</span> <span class="ident">circuit</span>: <span class="ident">MyCircuit</span><span class="op">&lt;</span>
-                <span class="ident">pallas::Base</span>,
-                { <span class="ident">L_SHORT</span> },
-                <span class="ident">FIXED_BASE_WINDOW_SIZE</span>,
-                { <span class="ident">NUM_WINDOWS_SHORT</span> },
-            <span class="op">&gt;</span> <span class="op">=</span> <span class="ident">MyCircuit</span> {
-                <span class="ident">alpha</span>: <span class="ident">Value::known</span>(<span class="ident">alpha</span>),
-                <span class="ident">strict</span>: <span class="bool-val">false</span>,
+            <span class="comment">// Non-strict partial decomposition should pass.
+            </span><span class="kw">let </span>circuit: MyCircuit&lt;
+                pallas::Base,
+                { L_SHORT },
+                FIXED_BASE_WINDOW_SIZE,
+                { NUM_WINDOWS_SHORT },
+            &gt; = MyCircuit {
+                alpha: Value::known(alpha),
+                strict: <span class="bool-val">false</span>,
             };
-            <span class="kw">let</span> <span class="ident">prover</span> <span class="op">=</span> <span class="ident">MockProver</span>::<span class="op">&lt;</span><span class="ident">pallas::Base</span><span class="op">&gt;</span><span class="ident">::run</span>(<span class="number">8</span>, <span class="kw-2">&amp;</span><span class="ident">circuit</span>, <span class="macro">vec!</span>[]).<span class="ident">unwrap</span>();
-            <span class="macro">assert_eq!</span>(<span class="ident">prover</span>.<span class="ident">verify</span>(), <span class="prelude-val">Ok</span>(()));
+            <span class="kw">let </span>prover = MockProver::&lt;pallas::Base&gt;::run(<span class="number">8</span>, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+            <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()));
         }
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>

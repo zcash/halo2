@@ -13,13 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a><h2 class="location"></h2>
-    </nav>
-    <nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div>
-        </a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1">
-                                <a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div>
-                        </div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a><h2 class="location"></h2></nav><nav class="sidebar"><a class="sidebar-logo" href="../../../halo2_proofs/index.html"><div class="logo-container"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -91,78 +85,77 @@
 <span id="70">70</span>
 <span id="71">71</span>
 <span id="72">72</span>
-</pre><pre class="rust"><code><span class="kw">use</span> <span class="ident"><span class="kw">super</span>::circuit::Expression</span>;
-<span class="kw">use</span> <span class="ident">ff::Field</span>;
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::circuit::Expression;
+<span class="kw">use </span>ff::Field;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">prover</span>;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">verifier</span>;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>prover;
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>verifier;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">Argument</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="ident">input_expressions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">table_expressions</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+<span class="attribute">#[derive(Clone, Debug)]</span>
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Argument&lt;F: Field&gt; {
+    <span class="kw">pub </span>input_expressions: Vec&lt;Expression&lt;F&gt;&gt;,
+    <span class="kw">pub </span>table_expressions: Vec&lt;Expression&lt;F&gt;&gt;,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">F</span>: <span class="ident">Field</span><span class="op">&gt;</span> <span class="ident">Argument</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Constructs a new lookup argument.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// `table_map` is a sequence of `(input, table)` tuples.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">table_map</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>, <span class="ident">Expression</span><span class="op">&lt;</span><span class="ident">F</span><span class="op">&gt;</span>)<span class="op">&gt;</span>) -&gt; <span class="self">Self</span> {
-        <span class="kw">let</span> (<span class="ident">input_expressions</span>, <span class="ident">table_expressions</span>) <span class="op">=</span> <span class="ident">table_map</span>.<span class="ident">into_iter</span>().<span class="ident">unzip</span>();
-        <span class="ident">Argument</span> {
-            <span class="ident">input_expressions</span>,
-            <span class="ident">table_expressions</span>,
+<span class="kw">impl</span>&lt;F: Field&gt; Argument&lt;F&gt; {
+    <span class="doccomment">/// Constructs a new lookup argument.
+    ///
+    /// `table_map` is a sequence of `(input, table)` tuples.
+    </span><span class="kw">pub fn </span>new(table_map: Vec&lt;(Expression&lt;F&gt;, Expression&lt;F&gt;)&gt;) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>(input_expressions, table_expressions) = table_map.into_iter().unzip();
+        Argument {
+            input_expressions,
+            table_expressions,
         }
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">required_degree</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">usize</span> {
-        <span class="macro">assert_eq!</span>(<span class="self">self</span>.<span class="ident">input_expressions</span>.<span class="ident">len</span>(), <span class="self">self</span>.<span class="ident">table_expressions</span>.<span class="ident">len</span>());
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>required_degree(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="macro">assert_eq!</span>(<span class="self">self</span>.input_expressions.len(), <span class="self">self</span>.table_expressions.len());
 
-        <span class="comment">// The first value in the permutation poly should be one.</span>
-        <span class="comment">// degree 2:</span>
-        <span class="comment">// l_0(X) * (1 - z(X)) = 0</span>
-        <span class="comment">//</span>
-        <span class="comment">// The &quot;last&quot; value in the permutation poly should be a boolean, for</span>
-        <span class="comment">// completeness and soundness.</span>
-        <span class="comment">// degree 3:</span>
-        <span class="comment">// l_last(X) * (z(X)^2 - z(X)) = 0</span>
-        <span class="comment">//</span>
-        <span class="comment">// Enable the permutation argument for only the rows involved.</span>
-        <span class="comment">// degree (2 + input_degree + table_degree) or 4, whichever is larger:</span>
-        <span class="comment">// (1 - (l_last(X) + l_blind(X))) * (</span>
-        <span class="comment">//   z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)</span>
-        <span class="comment">//   - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)</span>
-        <span class="comment">// ) = 0</span>
-        <span class="comment">//</span>
-        <span class="comment">// The first two values of a&#39; and s&#39; should be the same.</span>
-        <span class="comment">// degree 2:</span>
-        <span class="comment">// l_0(X) * (a&#39;(X) - s&#39;(X)) = 0</span>
-        <span class="comment">//</span>
-        <span class="comment">// Either the two values are the same, or the previous</span>
-        <span class="comment">// value of a&#39; is the same as the current value.</span>
-        <span class="comment">// degree 3:</span>
-        <span class="comment">// (1 - (l_last(X) + l_blind(X))) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">input_degree</span> <span class="op">=</span> <span class="number">1</span>;
-        <span class="kw">for</span> <span class="ident">expr</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">input_expressions</span>.<span class="ident">iter</span>() {
-            <span class="ident">input_degree</span> <span class="op">=</span> <span class="ident">std::cmp::max</span>(<span class="ident">input_degree</span>, <span class="ident">expr</span>.<span class="ident">degree</span>());
+        <span class="comment">// The first value in the permutation poly should be one.
+        // degree 2:
+        // l_0(X) * (1 - z(X)) = 0
+        //
+        // The &quot;last&quot; value in the permutation poly should be a boolean, for
+        // completeness and soundness.
+        // degree 3:
+        // l_last(X) * (z(X)^2 - z(X)) = 0
+        //
+        // Enable the permutation argument for only the rows involved.
+        // degree (2 + input_degree + table_degree) or 4, whichever is larger:
+        // (1 - (l_last(X) + l_blind(X))) * (
+        //   z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)
+        //   - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
+        // ) = 0
+        //
+        // The first two values of a&#39; and s&#39; should be the same.
+        // degree 2:
+        // l_0(X) * (a&#39;(X) - s&#39;(X)) = 0
+        //
+        // Either the two values are the same, or the previous
+        // value of a&#39; is the same as the current value.
+        // degree 3:
+        // (1 - (l_last(X) + l_blind(X))) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0
+        </span><span class="kw">let </span><span class="kw-2">mut </span>input_degree = <span class="number">1</span>;
+        <span class="kw">for </span>expr <span class="kw">in </span><span class="self">self</span>.input_expressions.iter() {
+            input_degree = std::cmp::max(input_degree, expr.degree());
         }
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">table_degree</span> <span class="op">=</span> <span class="number">1</span>;
-        <span class="kw">for</span> <span class="ident">expr</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">table_expressions</span>.<span class="ident">iter</span>() {
-            <span class="ident">table_degree</span> <span class="op">=</span> <span class="ident">std::cmp::max</span>(<span class="ident">table_degree</span>, <span class="ident">expr</span>.<span class="ident">degree</span>());
+        <span class="kw">let </span><span class="kw-2">mut </span>table_degree = <span class="number">1</span>;
+        <span class="kw">for </span>expr <span class="kw">in </span><span class="self">self</span>.table_expressions.iter() {
+            table_degree = std::cmp::max(table_degree, expr.degree());
         }
 
-        <span class="comment">// In practice because input_degree and table_degree are initialized to</span>
-        <span class="comment">// one, the latter half of this max() invocation is at least 4 always,</span>
-        <span class="comment">// rendering this call pointless except to be explicit in case we change</span>
-        <span class="comment">// the initialization of input_degree/table_degree in the future.</span>
-        <span class="ident">std::cmp::max</span>(
-            <span class="comment">// (1 - (l_last + l_blind)) z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)</span>
-            <span class="number">4</span>,
-            <span class="comment">// (1 - (l_last + l_blind)) z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)</span>
-            <span class="number">2</span> <span class="op">+</span> <span class="ident">input_degree</span> <span class="op">+</span> <span class="ident">table_degree</span>,
+        <span class="comment">// In practice because input_degree and table_degree are initialized to
+        // one, the latter half of this max() invocation is at least 4 always,
+        // rendering this call pointless except to be explicit in case we change
+        // the initialization of input_degree/table_degree in the future.
+        </span>std::cmp::max(
+            <span class="comment">// (1 - (l_last + l_blind)) z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)
+            </span><span class="number">4</span>,
+            <span class="comment">// (1 - (l_last + l_blind)) z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
+            </span><span class="number">2 </span>+ input_degree + table_degree,
         )
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.64.0-nightly (c2f428d2f 2022-07-14)" ></div>
-</body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
