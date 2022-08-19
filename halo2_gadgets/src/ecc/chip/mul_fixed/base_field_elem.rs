@@ -13,7 +13,7 @@ use halo2_proofs::{
     plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
-use pasta_curves::{arithmetic::FieldExt, pallas};
+use halo2curves::{pasta::pallas, FieldExt};
 
 use std::convert::TryInto;
 
@@ -385,7 +385,7 @@ pub mod tests {
         circuit::{Chip, Layouter, Value},
         plonk::Error,
     };
-    use pasta_curves::pallas;
+    use halo2curves::pasta::pallas;
     use rand::rngs::OsRng;
 
     use crate::{

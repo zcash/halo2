@@ -303,7 +303,8 @@ impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
 // ANCHOR_END: circuit
 
 fn main() {
-    use halo2_proofs::{dev::MockProver, pasta::Fp};
+    use halo2_proofs::dev::MockProver;
+    use halo2curves::pasta::Fp;
 
     // ANCHOR: test-circuit
     // The number of rows in our circuit cannot exceed 2^k. Since our example

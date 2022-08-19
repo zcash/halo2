@@ -1,7 +1,7 @@
 use std::{io, marker::PhantomData};
 
 use group::ff::Field;
-use pasta_curves::arithmetic::CurveAffine;
+use halo2curves::CurveAffine;
 use rand_core::{OsRng, RngCore};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
@@ -9,8 +9,16 @@ use super::{verify_proof, VerificationStrategy};
 use crate::{
     multicore,
     plonk::{Error, VerifyingKey},
-    poly::commitment::{Guard, Params, MSM},
-    transcript::{Blake2bRead, EncodedChallenge, TranscriptRead},
+    poly::{
+        commitment::{Params, MSM},
+        ipa::{
+            commitment::{IPACommitmentScheme, ParamsVerifierIPA},
+            msm::MSMIPA,
+            multiopen::VerifierIPA,
+            strategy::GuardIPA,
+        },
+    },
+    transcript::{Blake2bRead, TranscriptReadBuffer},
 };
 
 /// A proof verification strategy that returns the proof's MSM.
@@ -18,32 +26,37 @@ use crate::{
 /// `BatchVerifier` handles the accumulation of the MSMs for the batched proofs.
 #[derive(Debug)]
 struct BatchStrategy<'params, C: CurveAffine> {
-    msm: MSM<'params, C>,
+    msm: MSMIPA<'params, C>,
 }
 
-impl<'params, C: CurveAffine> BatchStrategy<'params, C> {
-    fn new(params: &'params Params<C>) -> Self {
+impl<'params, C: CurveAffine>
+    VerificationStrategy<'params, IPACommitmentScheme<C>, VerifierIPA<'params, C>>
+    for BatchStrategy<'params, C>
+{
+    type Output = MSMIPA<'params, C>;
+
+    fn new(params: &'params ParamsVerifierIPA<C>) -> Self {
         BatchStrategy {
-            msm: MSM::new(params),
+            msm: MSMIPA::new(params),
         }
     }
-}
 
-impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for BatchStrategy<'params, C> {
-    type Output = MSM<'params, C>;
-
-    fn process<E: EncodedChallenge<C>>(
+    fn process(
         self,
-        f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
+        f: impl FnOnce(MSMIPA<'params, C>) -> Result<GuardIPA<'params, C>, Error>,
     ) -> Result<Self::Output, Error> {
         let guard = f(self.msm)?;
         Ok(guard.use_challenges())
+    }
+
+    fn finalize(self) -> bool {
+        unreachable!()
     }
 }
 
 #[derive(Debug)]
 struct BatchItem<C: CurveAffine> {
-    instances: Vec<Vec<Vec<C::Scalar>>>,
+    instances: Vec<Vec<Vec<C::ScalarExt>>>,
     proof: Vec<u8>,
 }
 
@@ -73,11 +86,11 @@ impl<C: CurveAffine> BatchVerifier<C> {
     /// This uses [`OsRng`] internally instead of taking an `R: RngCore` argument, because
     /// the internal parallelization requires access to a RNG that is guaranteed to not
     /// clone its internal state when shared between threads.
-    pub fn finalize(self, params: &Params<C>, vk: &VerifyingKey<C>) -> bool {
+    pub fn finalize(self, params: &ParamsVerifierIPA<C>, vk: &VerifyingKey<C>) -> bool {
         fn accumulate_msm<'params, C: CurveAffine>(
-            mut acc: MSM<'params, C>,
-            msm: MSM<'params, C>,
-        ) -> MSM<'params, C> {
+            mut acc: MSMIPA<'params, C>,
+            msm: MSMIPA<'params, C>,
+        ) -> MSMIPA<'params, C> {
             // Scale the MSM by a random factor to ensure that if the existing MSM has
             // `is_zero() == false` then this argument won't be able to interfere with it
             // to make it true, with high probability.
@@ -113,7 +126,7 @@ impl<C: CurveAffine> BatchVerifier<C> {
             .try_reduce(|| params.empty_msm(), |a, b| Ok(accumulate_msm(a, b)));
 
         match final_msm {
-            Ok(msm) => msm.eval(),
+            Ok(msm) => msm.check(),
             Err(_) => false,
         }
     }

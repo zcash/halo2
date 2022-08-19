@@ -35,7 +35,7 @@ struct Gate {
 ///     plonk::{Circuit, ConstraintSystem, Error},
 ///     poly::Rotation,
 /// };
-/// use pasta_curves::pallas;
+/// use halo2curves::pasta::pallas;
 ///
 /// #[derive(Copy, Clone)]
 /// struct MyConfig {}

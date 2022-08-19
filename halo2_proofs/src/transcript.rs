@@ -5,7 +5,7 @@ use blake2b_simd::{Params as Blake2bParams, State as Blake2bState};
 use group::ff::PrimeField;
 use std::convert::TryInto;
 
-use crate::arithmetic::{Coordinates, CurveAffine, FieldExt};
+use halo2curves::{Coordinates, CurveAffine, FieldExt};
 
 use std::io::{self, Read, Write};
 use std::marker::PhantomData;
@@ -61,6 +61,25 @@ pub trait TranscriptWrite<C: CurveAffine, E: EncodedChallenge<C>>: Transcript<C,
     fn write_scalar(&mut self, scalar: C::Scalar) -> io::Result<()>;
 }
 
+/// Initializes transcript at verifier side.
+pub trait TranscriptReadBuffer<R: Read, C: CurveAffine, E: EncodedChallenge<C>>:
+    TranscriptRead<C, E>
+{
+    /// Initialize a transcript given an input buffer.
+    fn init(reader: R) -> Self;
+}
+
+/// Manages begining and finising of transcript pipeline.
+pub trait TranscriptWriterBuffer<W: Write, C: CurveAffine, E: EncodedChallenge<C>>:
+    TranscriptWrite<C, E>
+{
+    /// Initialize a transcript given an output buffer.
+    fn init(writer: W) -> Self;
+
+    /// Conclude the interaction and return the output buffer (writer).
+    fn finalize(self) -> W;
+}
+
 /// We will replace BLAKE2b with an algebraic hash function in a later version.
 #[derive(Debug, Clone)]
 pub struct Blake2bRead<R: Read, C: CurveAffine, E: EncodedChallenge<C>> {
@@ -69,9 +88,11 @@ pub struct Blake2bRead<R: Read, C: CurveAffine, E: EncodedChallenge<C>> {
     _marker: PhantomData<(C, E)>,
 }
 
-impl<R: Read, C: CurveAffine, E: EncodedChallenge<C>> Blake2bRead<R, C, E> {
+impl<R: Read, C: CurveAffine> TranscriptReadBuffer<R, C, Challenge255<C>>
+    for Blake2bRead<R, C, Challenge255<C>>
+{
     /// Initialize a transcript given an input buffer.
-    pub fn init(reader: R) -> Self {
+    fn init(reader: R) -> Self {
         Blake2bRead {
             state: Blake2bParams::new()
                 .hash_length(64)
@@ -152,9 +173,10 @@ pub struct Blake2bWrite<W: Write, C: CurveAffine, E: EncodedChallenge<C>> {
     _marker: PhantomData<(C, E)>,
 }
 
-impl<W: Write, C: CurveAffine, E: EncodedChallenge<C>> Blake2bWrite<W, C, E> {
-    /// Initialize a transcript given an output buffer.
-    pub fn init(writer: W) -> Self {
+impl<W: Write, C: CurveAffine> TranscriptWriterBuffer<W, C, Challenge255<C>>
+    for Blake2bWrite<W, C, Challenge255<C>>
+{
+    fn init(writer: W) -> Self {
         Blake2bWrite {
             state: Blake2bParams::new()
                 .hash_length(64)
@@ -165,8 +187,7 @@ impl<W: Write, C: CurveAffine, E: EncodedChallenge<C>> Blake2bWrite<W, C, E> {
         }
     }
 
-    /// Conclude the interaction and return the output buffer (writer).
-    pub fn finalize(self) -> W {
+    fn finalize(self) -> W {
         // TODO: handle outstanding scalars? see issue #138
         self.writer
     }

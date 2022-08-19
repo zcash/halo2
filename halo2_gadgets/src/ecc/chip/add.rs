@@ -4,7 +4,7 @@ use halo2_proofs::{
     plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
-use pasta_curves::{arithmetic::FieldExt, pallas};
+use halo2curves::{pasta::pallas, FieldExt};
 use std::collections::HashSet;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -346,7 +346,7 @@ pub mod tests {
         circuit::{Layouter, Value},
         plonk::Error,
     };
-    use pasta_curves::{arithmetic::CurveExt, pallas};
+    use halo2curves::{pasta::pallas, CurveExt};
 
     use crate::ecc::{chip::EccPoint, EccInstructions, NonIdentityPoint};
 

@@ -3,10 +3,10 @@ use std::convert::TryInto;
 use super::{super::BLOCK_SIZE, AssignedBits, BlockWord, SpreadInputs, Table16Assignment, ROUNDS};
 use halo2_proofs::{
     circuit::Layouter,
-    pasta::pallas,
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
+use halo2curves::pasta::pallas;
 
 mod schedule_gates;
 mod schedule_util;
@@ -400,9 +400,9 @@ mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
-        pasta::pallas,
         plonk::{Circuit, ConstraintSystem, Error},
     };
+    use halo2curves::pasta::pallas;
 
     #[test]
     fn message_schedule() {

@@ -6,7 +6,7 @@ use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::Rotation;
-use pasta_curves::pallas;
+use halo2curves::pasta::pallas;
 
 use std::marker::PhantomData;
 
@@ -40,7 +40,7 @@ fn criterion_benchmark(c: &mut Criterion) {
                 advice: meta.advice_column(),
             };
 
-            meta.lookup(|meta| {
+            meta.lookup("lookup", |meta| {
                 let selector = meta.query_selector(config.selector);
                 let not_selector = Expression::Constant(F::one()) - selector.clone();
                 let advice = meta.query_advice(config.advice, Rotation::cur());

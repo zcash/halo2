@@ -585,8 +585,8 @@ pub(crate) mod tests {
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
+    use halo2curves::pasta::pallas;
     use lazy_static::lazy_static;
-    use pasta_curves::pallas;
 
     use super::{
         chip::{

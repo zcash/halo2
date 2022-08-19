@@ -6,7 +6,7 @@
 //! ```text
 //! $ sage generate_parameters_grain.sage 1 0 255 3 8 56 0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001
 //! ```
-use pasta_curves::pallas;
+use halo2curves::pasta::pallas;
 
 // Number of round constants: 192
 // Round constants for GF(p):

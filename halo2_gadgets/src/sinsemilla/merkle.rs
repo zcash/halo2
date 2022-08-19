@@ -4,7 +4,7 @@ use halo2_proofs::{
     circuit::{Chip, Layouter, Value},
     plonk::Error,
 };
-use pasta_curves::arithmetic::CurveAffine;
+use halo2curves::CurveAffine;
 
 use super::{HashDomains, SinsemillaInstructions};
 
@@ -191,9 +191,9 @@ pub mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
-        pasta::pallas,
         plonk::{Circuit, ConstraintSystem, Error},
     };
+    use halo2curves::pasta::pallas;
 
     use rand::{rngs::OsRng, RngCore};
     use std::{convert::TryInto, iter};

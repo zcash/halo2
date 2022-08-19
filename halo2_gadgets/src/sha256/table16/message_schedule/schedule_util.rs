@@ -2,9 +2,9 @@ use super::super::AssignedBits;
 use super::MessageScheduleConfig;
 use halo2_proofs::{
     circuit::{Region, Value},
-    pasta::pallas,
     plonk::Error,
 };
+use halo2curves::pasta::pallas;
 
 #[cfg(test)]
 use super::super::{super::BLOCK_SIZE, BlockWord, ROUNDS};

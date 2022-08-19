@@ -7,9 +7,9 @@ use crate::sha256::table16::{
 };
 use halo2_proofs::{
     circuit::{Region, Value},
-    pasta::pallas,
     plonk::{Advice, Column, Error},
 };
+use halo2curves::pasta::pallas;
 use std::convert::TryInto;
 
 // Test vector 'abc'

@@ -5,10 +5,10 @@ use super::{
 };
 use halo2_proofs::{
     circuit::{Layouter, Value},
-    pasta::pallas,
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
+use halo2curves::pasta::pallas;
 use std::convert::TryInto;
 use std::ops::Range;
 
@@ -943,9 +943,9 @@ mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
-        pasta::pallas,
         plonk::{Circuit, ConstraintSystem, Error},
     };
+    use halo2curves::pasta::pallas;
 
     #[test]
     fn compress() {

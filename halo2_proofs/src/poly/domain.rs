@@ -360,6 +360,16 @@ impl<G: Group> EvaluationDomain<G> {
         });
     }
 
+    /// Get the size of the domain
+    pub fn k(&self) -> u32 {
+        self.k
+    }
+
+    /// Get the size of the extended domain
+    pub fn extended_k(&self) -> u32 {
+        self.extended_k
+    }
+
     /// Get the size of the extended domain
     pub fn extended_len(&self) -> usize {
         1 << self.extended_k
@@ -480,7 +490,7 @@ fn test_rotate() {
     use rand_core::OsRng;
 
     use crate::arithmetic::eval_polynomial;
-    use crate::pasta::pallas::Scalar;
+    use halo2curves::pasta::pallas::Scalar;
 
     let domain = EvaluationDomain::<Scalar>::new(1, 3);
     let rng = OsRng;
@@ -521,7 +531,7 @@ fn test_l_i() {
     use rand_core::OsRng;
 
     use crate::arithmetic::{eval_polynomial, lagrange_interpolate};
-    use crate::pasta::pallas::Scalar;
+    use halo2curves::pasta::pallas::Scalar;
     let domain = EvaluationDomain::<Scalar>::new(1, 3);
 
     let mut l = vec![];

@@ -19,6 +19,7 @@ use crate::transcript::{ChallengeScalar, EncodedChallenge, Transcript};
 mod assigned;
 mod circuit;
 mod error;
+mod evaluation;
 mod keygen;
 mod lookup;
 pub(crate) mod permutation;
@@ -34,6 +35,7 @@ pub use keygen::*;
 pub use prover::*;
 pub use verifier::*;
 
+use evaluation::Evaluator;
 use std::io;
 
 /// This is a verifying key which allows for the verification of proofs for a
@@ -108,6 +110,21 @@ impl<C: CurveAffine> VerifyingKey<C> {
             cs: self.cs.pinned(),
         }
     }
+
+    /// Returns commitments of fixed polynomials
+    pub fn fixed_commitments(&self) -> &Vec<C> {
+        &self.fixed_commitments
+    }
+
+    /// Returns `VerifyingKey` of permutation
+    pub fn permutation(&self) -> &permutation::VerifyingKey<C> {
+        &self.permutation
+    }
+
+    /// Returns `ConstraintSystem`
+    pub fn cs(&self) -> &ConstraintSystem<C::Scalar> {
+        &self.cs
+    }
 }
 
 /// Minimal representation of a verification key that can be used to identify
@@ -128,12 +145,13 @@ pub struct PinnedVerificationKey<'a, C: CurveAffine> {
 pub struct ProvingKey<C: CurveAffine> {
     vk: VerifyingKey<C>,
     l0: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
-    l_blind: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     l_last: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    l_active_row: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     fixed_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
     fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
     fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
     permutation: permutation::ProvingKey<C>,
+    ev: Evaluator<C>,
 }
 
 impl<C: CurveAffine> ProvingKey<C> {

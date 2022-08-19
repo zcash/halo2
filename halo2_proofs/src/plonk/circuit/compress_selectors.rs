@@ -70,33 +70,30 @@ where
 
     // All provided selectors of degree 0 are assumed to be either concrete
     // selectors or do not appear in a gate. Let's address these first.
-    selectors = selectors
-        .into_iter()
-        .filter(|selector| {
-            if selector.max_degree == 0 {
-                // This is a complex selector, or a selector that does not appear in any
-                // gate constraint.
-                let expression = allocate_fixed_column();
+    selectors.retain(|selector| {
+        if selector.max_degree == 0 {
+            // This is a complex selector, or a selector that does not appear in any
+            // gate constraint.
+            let expression = allocate_fixed_column();
 
-                let combination_assignment = selector
-                    .activations
-                    .iter()
-                    .map(|b| if *b { F::one() } else { F::zero() })
-                    .collect::<Vec<_>>();
-                let combination_index = combination_assignments.len();
-                combination_assignments.push(combination_assignment);
-                selector_assignments.push(SelectorAssignment {
-                    selector: selector.selector,
-                    combination_index,
-                    expression,
-                });
+            let combination_assignment = selector
+                .activations
+                .iter()
+                .map(|b| if *b { F::one() } else { F::zero() })
+                .collect::<Vec<_>>();
+            let combination_index = combination_assignments.len();
+            combination_assignments.push(combination_assignment);
+            selector_assignments.push(SelectorAssignment {
+                selector: selector.selector,
+                combination_index,
+                expression,
+            });
 
-                false
-            } else {
-                true
-            }
-        })
-        .collect();
+            false
+        } else {
+            true
+        }
+    });
 
     // All of the remaining `selectors` are simple. Let's try to combine them.
     // First, we compute the exclusion matrix that has (j, k) = true if selector
@@ -233,7 +230,7 @@ where
 mod tests {
     use super::*;
     use crate::{plonk::FixedQuery, poly::Rotation};
-    use pasta_curves::Fp;
+    use halo2curves::pasta::Fp;
     use proptest::collection::{vec, SizeRange};
     use proptest::prelude::*;
 

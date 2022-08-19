@@ -5,7 +5,7 @@ use halo2_proofs::{
     plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
-use pasta_curves::{arithmetic::FieldExt, pallas};
+use halo2curves::{pasta::pallas, FieldExt};
 
 use super::MerkleInstructions;
 

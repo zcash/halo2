@@ -98,7 +98,7 @@ pub(super) fn generate_mds<F: FieldExt, const T: usize>(
 
 #[cfg(test)]
 mod tests {
-    use pasta_curves::Fp;
+    use halo2curves::pasta::Fp;
 
     use super::{generate_mds, Grain};
 

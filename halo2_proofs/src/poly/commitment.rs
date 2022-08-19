@@ -1,205 +1,185 @@
-//! This module contains an implementation of the polynomial commitment scheme
-//! described in the [Halo][halo] paper.
-//!
-//! [halo]: https://eprint.iacr.org/2019/1021
-
-use super::{Coeff, LagrangeCoeff, Polynomial};
-use crate::arithmetic::{
-    best_fft, best_multiexp, parallelize, CurveAffine, CurveExt, FieldExt, Group,
+use super::{
+    query::{ProverQuery, VerifierQuery},
+    strategy::Guard,
+    Coeff, LagrangeCoeff, Polynomial,
 };
-use crate::helpers::CurveRead;
+use crate::poly::Error;
+use crate::transcript::{EncodedChallenge, TranscriptRead, TranscriptWrite};
+use ff::Field;
+use group::Curve;
+use halo2curves::{CurveAffine, CurveExt, FieldExt};
+use rand_core::RngCore;
+use std::{
+    fmt::Debug,
+    io::{self, Read, Write},
+    ops::{Add, AddAssign, Mul, MulAssign},
+};
 
-use ff::{Field, PrimeField};
-use group::{prime::PrimeCurveAffine, Curve, Group as _};
-use std::ops::{Add, AddAssign, Mul, MulAssign};
+/// Defines components of a commitment scheme.
+pub trait CommitmentScheme {
+    /// Application field of this commitment scheme
+    type Scalar: FieldExt + halo2curves::Group;
 
-mod msm;
-mod prover;
-mod verifier;
+    /// Elliptic curve used to commit the application and witnesses
+    type Curve: CurveAffine<ScalarExt = Self::Scalar>;
 
-pub use msm::MSM;
-pub use prover::create_proof;
-pub use verifier::{verify_proof, Accumulator, Guard};
+    /// Constant prover parameters
+    type ParamsProver: for<'params> ParamsProver<
+        'params,
+        Self::Curve,
+        ParamsVerifier = Self::ParamsVerifier,
+    >;
 
-use std::io;
+    /// Constant verifier parameters
+    type ParamsVerifier: for<'params> ParamsVerifier<'params, Self::Curve>;
 
-/// These are the public parameters for the polynomial commitment scheme.
-#[derive(Clone, Debug)]
-pub struct Params<C: CurveAffine> {
-    pub(crate) k: u32,
-    pub(crate) n: u64,
-    pub(crate) g: Vec<C>,
-    pub(crate) g_lagrange: Vec<C>,
-    pub(crate) w: C,
-    pub(crate) u: C,
+    /// Wrapper for parameter generator
+    fn new_params(k: u32) -> Self::ParamsProver;
+
+    /// Wrapper for parameter reader
+    fn read_params<R: io::Read>(reader: &mut R) -> io::Result<Self::ParamsProver>;
 }
 
-impl<C: CurveAffine> Params<C> {
-    /// Initializes parameters for the curve, given a random oracle to draw
-    /// points from.
-    pub fn new(k: u32) -> Self {
-        // This is usually a limitation on the curve, but we also want 32-bit
-        // architectures to be supported.
-        assert!(k < 32);
+/// Parameters for circuit sysnthesis and prover parameters.
+pub trait Params<'params, C: CurveAffine>: Sized + Clone {
+    /// Multi scalar multiplication engine
+    type MSM: MSM<C> + 'params;
 
-        // In src/arithmetic/fields.rs we ensure that usize is at least 32 bits.
+    /// Logaritmic size of the circuit
+    fn k(&self) -> u32;
 
-        let n: u64 = 1 << k;
+    /// Size of the circuit
+    fn n(&self) -> u64;
 
-        let g_projective = {
-            let mut g = Vec::with_capacity(n as usize);
-            g.resize(n as usize, C::Curve::identity());
+    /// Downsize `Params` with smaller `k`.
+    fn downsize(&mut self, k: u32);
 
-            parallelize(&mut g, move |g, start| {
-                let hasher = C::CurveExt::hash_to_curve("Halo2-Parameters");
-
-                for (i, g) in g.iter_mut().enumerate() {
-                    let i = (i + start) as u32;
-
-                    let mut message = [0u8; 5];
-                    message[1..5].copy_from_slice(&i.to_le_bytes());
-
-                    *g = hasher(&message);
-                }
-            });
-
-            g
-        };
-
-        let g = {
-            let mut g = vec![C::identity(); n as usize];
-            parallelize(&mut g, |g, starts| {
-                C::Curve::batch_normalize(&g_projective[starts..(starts + g.len())], g);
-            });
-            g
-        };
-
-        // Let's evaluate all of the Lagrange basis polynomials
-        // using an inverse FFT.
-        let mut alpha_inv = <<C as PrimeCurveAffine>::Curve as Group>::Scalar::ROOT_OF_UNITY_INV;
-        for _ in k..C::Scalar::S {
-            alpha_inv = alpha_inv.square();
-        }
-        let mut g_lagrange_projective = g_projective;
-        best_fft(&mut g_lagrange_projective, alpha_inv, k);
-        let minv = C::Scalar::TWO_INV.pow_vartime(&[k as u64, 0, 0, 0]);
-        parallelize(&mut g_lagrange_projective, |g, _| {
-            for g in g.iter_mut() {
-                *g *= minv;
-            }
-        });
-
-        let g_lagrange = {
-            let mut g_lagrange = vec![C::identity(); n as usize];
-            parallelize(&mut g_lagrange, |g_lagrange, starts| {
-                C::Curve::batch_normalize(
-                    &g_lagrange_projective[starts..(starts + g_lagrange.len())],
-                    g_lagrange,
-                );
-            });
-            drop(g_lagrange_projective);
-            g_lagrange
-        };
-
-        let hasher = C::CurveExt::hash_to_curve("Halo2-Parameters");
-        let w = hasher(&[1]).to_affine();
-        let u = hasher(&[2]).to_affine();
-
-        Params {
-            k,
-            n,
-            g,
-            g_lagrange,
-            w,
-            u,
-        }
-    }
-
-    /// This computes a commitment to a polynomial described by the provided
-    /// slice of coefficients. The commitment will be blinded by the blinding
-    /// factor `r`.
-    pub fn commit(&self, poly: &Polynomial<C::Scalar, Coeff>, r: Blind<C::Scalar>) -> C::Curve {
-        let mut tmp_scalars = Vec::with_capacity(poly.len() + 1);
-        let mut tmp_bases = Vec::with_capacity(poly.len() + 1);
-
-        tmp_scalars.extend(poly.iter());
-        tmp_scalars.push(r.0);
-
-        tmp_bases.extend(self.g.iter());
-        tmp_bases.push(self.w);
-
-        best_multiexp::<C>(&tmp_scalars, &tmp_bases)
-    }
+    /// Generates an empty multiscalar multiplication struct using the
+    /// appropriate params.
+    fn empty_msm(&'params self) -> Self::MSM;
 
     /// This commits to a polynomial using its evaluations over the $2^k$ size
     /// evaluation domain. The commitment will be blinded by the blinding factor
     /// `r`.
-    pub fn commit_lagrange(
+    fn commit_lagrange(
         &self,
-        poly: &Polynomial<C::Scalar, LagrangeCoeff>,
-        r: Blind<C::Scalar>,
-    ) -> C::Curve {
-        let mut tmp_scalars = Vec::with_capacity(poly.len() + 1);
-        let mut tmp_bases = Vec::with_capacity(poly.len() + 1);
-
-        tmp_scalars.extend(poly.iter());
-        tmp_scalars.push(r.0);
-
-        tmp_bases.extend(self.g_lagrange.iter());
-        tmp_bases.push(self.w);
-
-        best_multiexp::<C>(&tmp_scalars, &tmp_bases)
-    }
-
-    /// Generates an empty multiscalar multiplication struct using the
-    /// appropriate params.
-    pub fn empty_msm(&self) -> MSM<C> {
-        MSM::new(self)
-    }
-
-    /// Getter for g generators
-    pub fn get_g(&self) -> Vec<C> {
-        self.g.clone()
-    }
+        poly: &Polynomial<C::ScalarExt, LagrangeCoeff>,
+        r: Blind<C::ScalarExt>,
+    ) -> C::CurveExt;
 
     /// Writes params to a buffer.
-    pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
-        writer.write_all(&self.k.to_le_bytes())?;
-        for g_element in &self.g {
-            writer.write_all(g_element.to_bytes().as_ref())?;
-        }
-        for g_lagrange_element in &self.g_lagrange {
-            writer.write_all(g_lagrange_element.to_bytes().as_ref())?;
-        }
-        writer.write_all(self.w.to_bytes().as_ref())?;
-        writer.write_all(self.u.to_bytes().as_ref())?;
-
-        Ok(())
-    }
+    fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()>;
 
     /// Reads params from a buffer.
-    pub fn read<R: io::Read>(reader: &mut R) -> io::Result<Self> {
-        let mut k = [0u8; 4];
-        reader.read_exact(&mut k[..])?;
-        let k = u32::from_le_bytes(k);
+    fn read<R: io::Read>(reader: &mut R) -> io::Result<Self>;
+}
 
-        let n: u64 = 1 << k;
+/// Parameters for circuit sysnthesis and prover parameters.
+pub trait ParamsProver<'params, C: CurveAffine>: Params<'params, C> {
+    /// Constant verifier parameters.
+    type ParamsVerifier: ParamsVerifier<'params, C>;
 
-        let g: Vec<_> = (0..n).map(|_| C::read(reader)).collect::<Result<_, _>>()?;
-        let g_lagrange: Vec<_> = (0..n).map(|_| C::read(reader)).collect::<Result<_, _>>()?;
+    /// Returns new instance of parameters
+    fn new(k: u32) -> Self;
 
-        let w = C::read(reader)?;
-        let u = C::read(reader)?;
+    /// This computes a commitment to a polynomial described by the provided
+    /// slice of coefficients. The commitment may be blinded by the blinding
+    /// factor `r`.
+    fn commit(&self, poly: &Polynomial<C::ScalarExt, Coeff>, r: Blind<C::ScalarExt>)
+        -> C::CurveExt;
 
-        Ok(Params {
-            k,
-            n,
-            g,
-            g_lagrange,
-            w,
-            u,
-        })
-    }
+    /// Getter for g generators
+    fn get_g(&self) -> &[C];
+
+    /// Returns verification parameters.
+    fn verifier_params(&'params self) -> &'params Self::ParamsVerifier;
+}
+
+/// Verifier specific functionality with circuit constaints
+pub trait ParamsVerifier<'params, C: CurveAffine>: Params<'params, C> {}
+
+/// Multi scalar multiplication engine
+pub trait MSM<C: CurveAffine>: Clone + Debug {
+    /// Add arbitrary term (the scalar and the point)
+    fn append_term(&mut self, scalar: C::Scalar, point: C::CurveExt);
+
+    /// Add another multiexp into this one
+    fn add_msm(&mut self, other: &Self)
+    where
+        Self: Sized;
+
+    /// Scale all scalars in the MSM by some scaling factor
+    fn scale(&mut self, factor: C::Scalar);
+
+    /// Perform multiexp and check that it results in zero
+    fn check(&self) -> bool;
+
+    /// Perform multiexp and return the result
+    fn eval(&self) -> C::CurveExt;
+
+    /// Return base points
+    fn bases(&self) -> Vec<C::CurveExt>;
+
+    /// Scalars
+    fn scalars(&self) -> Vec<C::Scalar>;
+}
+
+/// Common multi-open prover interface for various commitment schemes
+pub trait Prover<'params, Scheme: CommitmentScheme> {
+    /// Creates new prover instance
+    fn new(params: &'params Scheme::ParamsProver) -> Self;
+
+    /// Create a multi-opening proof
+    fn create_proof<
+        'com,
+        E: EncodedChallenge<Scheme::Curve>,
+        T: TranscriptWrite<Scheme::Curve, E>,
+        R,
+        I,
+    >(
+        &self,
+        rng: R,
+        transcript: &mut T,
+        queries: I,
+    ) -> io::Result<()>
+    where
+        I: IntoIterator<Item = ProverQuery<'com, Scheme::Curve>> + Clone,
+        R: RngCore;
+}
+
+/// Common multi-open verifier interface for various commitment schemes
+pub trait Verifier<'params, Scheme: CommitmentScheme> {
+    /// Unfinalized verification result. This is returned in verification
+    /// to allow developer to compress or combined verification results
+    type Guard: Guard<Scheme, MSMAccumulator = Self::MSMAccumulator>;
+
+    /// Accumulator fot comressed verification
+    type MSMAccumulator;
+
+    /// Creates new verifier instance
+    fn new(params: &'params Scheme::ParamsVerifier) -> Self;
+
+    /// Process the proof and returns unfinished result named `Guard`
+    fn verify_proof<
+        'com,
+        E: EncodedChallenge<Scheme::Curve>,
+        T: TranscriptRead<Scheme::Curve, E>,
+        I,
+    >(
+        &self,
+        transcript: &mut T,
+        queries: I,
+        msm: Self::MSMAccumulator,
+    ) -> Result<Self::Guard, Error>
+    where
+        'params: 'com,
+        I: IntoIterator<
+                Item = VerifierQuery<
+                    'com,
+                    Scheme::Curve,
+                    <Scheme::ParamsVerifier as Params<'params, Scheme::Curve>>::MSM,
+                >,
+            > + Clone;
 }
 
 /// Wrapper type around a blinding factor.
@@ -209,6 +189,13 @@ pub struct Blind<F>(pub F);
 impl<F: FieldExt> Default for Blind<F> {
     fn default() -> Self {
         Blind(F::one())
+    }
+}
+
+impl<F: FieldExt> Blind<F> {
+    /// Given `rng` creates new blinding scalar
+    pub fn new<R: RngCore>(rng: &mut R) -> Self {
+        Blind(F::random(rng))
     }
 }
 
@@ -249,128 +236,5 @@ impl<F: FieldExt> AddAssign<F> for Blind<F> {
 impl<F: FieldExt> MulAssign<F> for Blind<F> {
     fn mul_assign(&mut self, rhs: F) {
         self.0 *= rhs;
-    }
-}
-
-#[test]
-fn test_commit_lagrange_epaffine() {
-    const K: u32 = 6;
-
-    use rand_core::OsRng;
-
-    use crate::pasta::{EpAffine, Fq};
-    let params = Params::<EpAffine>::new(K);
-    let domain = super::EvaluationDomain::new(1, K);
-
-    let mut a = domain.empty_lagrange();
-
-    for (i, a) in a.iter_mut().enumerate() {
-        *a = Fq::from(i as u64);
-    }
-
-    let b = domain.lagrange_to_coeff(a.clone());
-
-    let alpha = Blind(Fq::random(OsRng));
-
-    assert_eq!(params.commit(&b, alpha), params.commit_lagrange(&a, alpha));
-}
-
-#[test]
-fn test_commit_lagrange_eqaffine() {
-    const K: u32 = 6;
-
-    use rand_core::OsRng;
-
-    use crate::pasta::{EqAffine, Fp};
-    let params = Params::<EqAffine>::new(K);
-    let domain = super::EvaluationDomain::new(1, K);
-
-    let mut a = domain.empty_lagrange();
-
-    for (i, a) in a.iter_mut().enumerate() {
-        *a = Fp::from(i as u64);
-    }
-
-    let b = domain.lagrange_to_coeff(a.clone());
-
-    let alpha = Blind(Fp::random(OsRng));
-
-    assert_eq!(params.commit(&b, alpha), params.commit_lagrange(&a, alpha));
-}
-
-#[test]
-fn test_opening_proof() {
-    const K: u32 = 6;
-
-    use ff::Field;
-    use rand_core::OsRng;
-
-    use super::{
-        commitment::{Blind, Params},
-        EvaluationDomain,
-    };
-    use crate::arithmetic::{eval_polynomial, FieldExt};
-    use crate::pasta::{EpAffine, Fq};
-    use crate::transcript::{
-        Blake2bRead, Blake2bWrite, Challenge255, Transcript, TranscriptRead, TranscriptWrite,
-    };
-
-    let rng = OsRng;
-
-    let params = Params::<EpAffine>::new(K);
-    let mut params_buffer = vec![];
-    params.write(&mut params_buffer).unwrap();
-    let params: Params<EpAffine> = Params::read::<_>(&mut &params_buffer[..]).unwrap();
-
-    let domain = EvaluationDomain::new(1, K);
-
-    let mut px = domain.empty_coeff();
-
-    for (i, a) in px.iter_mut().enumerate() {
-        *a = Fq::from(i as u64);
-    }
-
-    let blind = Blind(Fq::random(rng));
-
-    let p = params.commit(&px, blind).to_affine();
-
-    let mut transcript = Blake2bWrite::<Vec<u8>, EpAffine, Challenge255<EpAffine>>::init(vec![]);
-    transcript.write_point(p).unwrap();
-    let x = transcript.squeeze_challenge_scalar::<()>();
-    // Evaluate the polynomial
-    let v = eval_polynomial(&px, *x);
-    transcript.write_scalar(v).unwrap();
-
-    let (proof, ch_prover) = {
-        create_proof(&params, rng, &mut transcript, &px, blind, *x).unwrap();
-        let ch_prover = transcript.squeeze_challenge();
-        (transcript.finalize(), ch_prover)
-    };
-
-    // Verify the opening proof
-    let mut transcript = Blake2bRead::<&[u8], EpAffine, Challenge255<EpAffine>>::init(&proof[..]);
-    let p_prime = transcript.read_point().unwrap();
-    assert_eq!(p, p_prime);
-    let x_prime = transcript.squeeze_challenge_scalar::<()>();
-    assert_eq!(*x, *x_prime);
-    let v_prime = transcript.read_scalar().unwrap();
-    assert_eq!(v, v_prime);
-
-    let mut commitment_msm = params.empty_msm();
-    commitment_msm.append_term(Field::one(), p);
-    let guard = verify_proof(&params, commitment_msm, &mut transcript, *x, v).unwrap();
-    let ch_verifier = transcript.squeeze_challenge();
-    assert_eq!(*ch_prover, *ch_verifier);
-
-    // Test guard behavior prior to checking another proof
-    {
-        // Test use_challenges()
-        let msm_challenges = guard.clone().use_challenges();
-        assert!(msm_challenges.eval());
-
-        // Test use_g()
-        let g = guard.compute_g();
-        let (msm_g, _accumulator) = guard.clone().use_g(g);
-        assert!(msm_g.eval());
     }
 }

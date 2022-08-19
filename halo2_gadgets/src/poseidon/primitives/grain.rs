@@ -181,7 +181,7 @@ impl<F: FieldExt> Iterator for Grain<F> {
 
 #[cfg(test)]
 mod tests {
-    use pasta_curves::Fp;
+    use halo2curves::pasta::Fp;
 
     use super::{Grain, SboxType};
 

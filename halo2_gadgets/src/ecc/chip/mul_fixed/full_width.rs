@@ -8,7 +8,7 @@ use halo2_proofs::{
     plonk::{ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
-use pasta_curves::pallas;
+use halo2curves::pasta::pallas;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
@@ -184,7 +184,7 @@ pub mod tests {
         circuit::{Layouter, Value},
         plonk::Error,
     };
-    use pasta_curves::pallas;
+    use halo2curves::pasta::pallas;
     use rand::rngs::OsRng;
 
     use crate::ecc::{

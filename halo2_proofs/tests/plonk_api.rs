@@ -2,18 +2,22 @@
 #![allow(clippy::op_ref)]
 
 use assert_matches::assert_matches;
-use halo2_proofs::arithmetic::{CurveAffine, FieldExt};
+use halo2_proofs::arithmetic::{Field, FieldExt};
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
-use halo2_proofs::pasta::{Eq, EqAffine, Fp};
 use halo2_proofs::plonk::{
-    create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Assigned, BatchVerifier, Circuit,
-    Column, ConstraintSystem, Error, Fixed, SingleVerifier, TableColumn, VerificationStrategy,
+    create_proof as create_plonk_proof, keygen_pk, keygen_vk, verify_proof as verify_plonk_proof,
+    Advice, Assigned, Circuit, Column, ConstraintSystem, Error, Fixed, ProvingKey, TableColumn,
+    VerifyingKey,
 };
-use halo2_proofs::poly::commitment::{Guard, MSM};
-use halo2_proofs::poly::{commitment::Params, Rotation};
-use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge};
-use rand_core::OsRng;
+use halo2_proofs::poly::commitment::{CommitmentScheme, ParamsProver, Prover, Verifier};
+use halo2_proofs::poly::Rotation;
+use halo2_proofs::poly::VerificationStrategy;
+use halo2_proofs::transcript::{
+    Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge, TranscriptReadBuffer,
+    TranscriptWriterBuffer,
+};
+use rand_core::{OsRng, RngCore};
 use std::marker::PhantomData;
 
 #[test]
@@ -23,9 +27,6 @@ fn plonk_api() {
     /// This represents an advice column at a certain row in the ConstraintSystem
     #[derive(Copy, Clone, Debug)]
     pub struct Variable(Column<Advice>, usize);
-
-    // Initialize the polynomial commitment parameters
-    let params: Params<EqAffine> = Params::new(K);
 
     #[derive(Clone)]
     struct PlonkConfig {
@@ -312,7 +313,7 @@ fn plonk_api() {
              * ]
              */
 
-            meta.lookup(|meta| {
+            meta.lookup("lookup", |meta| {
                 let a_ = meta.query_any(a, Rotation::cur());
                 vec![(a_, sl)]
             });
@@ -398,199 +399,231 @@ fn plonk_api() {
         }
     }
 
-    let a = Fp::from(2834758237) * Fp::ZETA;
-    let instance = Fp::one() + Fp::one();
-    let lookup_table = vec![instance, a, a, Fp::zero()];
+    macro_rules! common {
+        ($scheme:ident) => {{
+            let a = <$scheme as CommitmentScheme>::Scalar::from(2834758237)
+                * <$scheme as CommitmentScheme>::Scalar::ZETA;
+            let instance = <$scheme as CommitmentScheme>::Scalar::one()
+                + <$scheme as CommitmentScheme>::Scalar::one();
+            let lookup_table = vec![
+                instance,
+                a,
+                a,
+                <$scheme as CommitmentScheme>::Scalar::zero(),
+            ];
+            (a, instance, lookup_table)
+        }};
+    }
 
-    let empty_circuit: MyCircuit<Fp> = MyCircuit {
-        a: Value::unknown(),
-        lookup_table: lookup_table.clone(),
-    };
+    macro_rules! bad_keys {
+        ($scheme:ident) => {{
+            let (_, _, lookup_table) = common!($scheme);
+            let empty_circuit: MyCircuit<<$scheme as CommitmentScheme>::Scalar> = MyCircuit {
+                a: Value::unknown(),
+                lookup_table: lookup_table.clone(),
+            };
 
-    let circuit: MyCircuit<Fp> = MyCircuit {
-        a: Value::known(a),
-        lookup_table,
-    };
+            // Check that we get an error if we try to initialize the proving key with a value of
+            // k that is too small for the minimum required number of rows.
+            let much_too_small_params= <$scheme as CommitmentScheme>::ParamsProver::new(1);
+            assert_matches!(
+                keygen_vk(&much_too_small_params, &empty_circuit),
+                Err(Error::NotEnoughRowsAvailable {
+                    current_k,
+                }) if current_k == 1
+            );
 
-    // Check that we get an error if we try to initialize the proving key with a value of
-    // k that is too small for the minimum required number of rows.
-    let much_too_small_params: Params<EqAffine> = Params::new(1);
-    assert_matches!(
-        keygen_vk(&much_too_small_params, &empty_circuit),
-        Err(Error::NotEnoughRowsAvailable {
-            current_k,
-        }) if current_k == 1
-    );
+            // Check that we get an error if we try to initialize the proving key with a value of
+            // k that is too small for the number of rows the circuit uses.
+            let slightly_too_small_params = <$scheme as CommitmentScheme>::ParamsProver::new(K-1);
+            assert_matches!(
+                keygen_vk(&slightly_too_small_params, &empty_circuit),
+                Err(Error::NotEnoughRowsAvailable {
+                    current_k,
+                }) if current_k == K - 1
+            );
+        }};
+    }
 
-    // Check that we get an error if we try to initialize the proving key with a value of
-    // k that is too small for the number of rows the circuit uses.
-    let slightly_too_small_params: Params<EqAffine> = Params::new(K - 1);
-    assert_matches!(
-        keygen_vk(&slightly_too_small_params, &empty_circuit),
-        Err(Error::NotEnoughRowsAvailable {
-            current_k,
-        }) if current_k == K - 1
-    );
+    fn keygen<Scheme: CommitmentScheme>(
+        params: &Scheme::ParamsProver,
+    ) -> ProvingKey<Scheme::Curve> {
+        let (_, _, lookup_table) = common!(Scheme);
+        let empty_circuit: MyCircuit<Scheme::Scalar> = MyCircuit {
+            a: Value::unknown(),
+            lookup_table,
+        };
 
-    // Initialize the proving key
-    let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
-    let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
+        // Initialize the proving key
+        let vk = keygen_vk(params, &empty_circuit).expect("keygen_vk should not fail");
 
-    let pubinputs = vec![instance];
+        keygen_pk(params, vk, &empty_circuit).expect("keygen_pk should not fail")
+    }
 
-    // Check this circuit is satisfied.
-    let prover = match MockProver::run(K, &circuit, vec![pubinputs.clone()]) {
-        Ok(prover) => prover,
-        Err(e) => panic!("{:?}", e),
-    };
-    assert_eq!(prover.verify(), Ok(()));
+    fn create_proof<
+        'params,
+        Scheme: CommitmentScheme,
+        P: Prover<'params, Scheme>,
+        E: EncodedChallenge<Scheme::Curve>,
+        R: RngCore,
+        T: TranscriptWriterBuffer<Vec<u8>, Scheme::Curve, E>,
+    >(
+        rng: R,
+        params: &'params Scheme::ParamsProver,
+        pk: &ProvingKey<Scheme::Curve>,
+    ) -> Vec<u8> {
+        let (a, instance, lookup_table) = common!(Scheme);
 
-    if std::env::var_os("HALO2_PLONK_TEST_GENERATE_NEW_PROOF").is_some() {
-        let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
-        // Create a proof
-        create_proof(
-            &params,
-            &pk,
+        let circuit: MyCircuit<Scheme::Scalar> = MyCircuit {
+            a: Value::known(a),
+            lookup_table,
+        };
+
+        let mut transcript = T::init(vec![]);
+
+        create_plonk_proof::<Scheme, P, _, _, _, _>(
+            params,
+            pk,
             &[circuit.clone(), circuit.clone()],
             &[&[&[instance]], &[&[instance]]],
-            OsRng,
+            rng,
             &mut transcript,
         )
         .expect("proof generation should not fail");
-        let proof: Vec<u8> = transcript.finalize();
 
-        std::fs::write("plonk_api_proof.bin", &proof[..])
-            .expect("should succeed to write new proof");
+        // Check this circuit is satisfied.
+        let prover = match MockProver::run(K, &circuit, vec![vec![instance]]) {
+            Ok(prover) => prover,
+            Err(e) => panic!("{:?}", e),
+        };
+        assert_eq!(prover.verify(), Ok(()));
+
+        transcript.finalize()
     }
 
-    {
-        // Check that a hardcoded proof is satisfied
-        let proof = include_bytes!("plonk_api_proof.bin");
-        let strategy = SingleVerifier::new(&params);
-        let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
-        assert!(verify_proof(
-            &params,
-            pk.get_vk(),
+    fn verify_proof<
+        'a,
+        'params,
+        Scheme: CommitmentScheme,
+        V: Verifier<'params, Scheme>,
+        E: EncodedChallenge<Scheme::Curve>,
+        T: TranscriptReadBuffer<&'a [u8], Scheme::Curve, E>,
+        Strategy: VerificationStrategy<'params, Scheme, V, Output = Strategy>,
+    >(
+        params_verifier: &'params Scheme::ParamsVerifier,
+        vk: &VerifyingKey<Scheme::Curve>,
+        proof: &'a [u8],
+    ) {
+        let (_, instance, _) = common!(Scheme);
+        let pubinputs = vec![instance];
+
+        let mut transcript = T::init(proof);
+
+        let strategy = Strategy::new(params_verifier);
+        let strategy = verify_plonk_proof(
+            params_verifier,
+            vk,
             strategy,
             &[&[&pubinputs[..]], &[&pubinputs[..]]],
             &mut transcript,
         )
-        .is_ok());
+        .unwrap();
+
+        assert!(strategy.finalize());
     }
 
-    for _ in 0..10 {
-        let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
-        // Create a proof
-        create_proof(
-            &params,
-            &pk,
-            &[circuit.clone(), circuit.clone()],
-            &[&[&[instance]], &[&[instance]]],
-            OsRng,
-            &mut transcript,
-        )
-        .expect("proof generation should not fail");
-        let proof: Vec<u8> = transcript.finalize();
-        assert_eq!(
-            proof.len(),
-            halo2_proofs::dev::CircuitCost::<Eq, MyCircuit<_>>::measure(K as usize, &circuit)
-                .proof_size(2)
-                .into(),
+    fn test_plonk_api_gwc() {
+        use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
+        use halo2_proofs::poly::kzg::multiopen::{ProverGWC, VerifierGWC};
+        use halo2_proofs::poly::kzg::strategy::AccumulatorStrategy;
+        use halo2curves::bn256::Bn256;
+
+        type Scheme = KZGCommitmentScheme<Bn256>;
+        bad_keys!(Scheme);
+
+        let params = ParamsKZG::<Bn256>::new(K);
+        let rng = OsRng;
+
+        let pk = keygen::<KZGCommitmentScheme<_>>(&params);
+
+        let proof = create_proof::<_, ProverGWC<_>, _, _, Blake2bWrite<_, _, Challenge255<_>>>(
+            rng, &params, &pk,
         );
 
-        // Test single-verifier strategy.
-        {
-            let strategy = SingleVerifier::new(&params);
-            let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
-            assert!(verify_proof(
-                &params,
-                pk.get_vk(),
-                strategy,
-                &[&[&pubinputs[..]], &[&pubinputs[..]]],
-                &mut transcript,
-            )
-            .is_ok());
-        }
+        let verifier_params = params.verifier_params();
 
-        //
-        // Test accumulation-based strategy.
-        //
-
-        struct AccumulationVerifier<'params, C: CurveAffine> {
-            msm: MSM<'params, C>,
-        }
-
-        impl<'params, C: CurveAffine> AccumulationVerifier<'params, C> {
-            fn new(params: &'params Params<C>) -> Self {
-                AccumulationVerifier {
-                    msm: MSM::new(params),
-                }
-            }
-        }
-
-        impl<'params, C: CurveAffine> VerificationStrategy<'params, C>
-            for AccumulationVerifier<'params, C>
-        {
-            type Output = ();
-
-            fn process<E: EncodedChallenge<C>>(
-                self,
-                f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
-            ) -> Result<Self::Output, Error> {
-                let guard = f(self.msm)?;
-                let g = guard.compute_g();
-                let (msm, _) = guard.use_g(g);
-                if msm.eval() {
-                    Ok(())
-                } else {
-                    Err(Error::ConstraintSystemFailure)
-                }
-            }
-        }
-
-        {
-            let strategy = AccumulationVerifier::new(&params);
-            let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
-            assert!(verify_proof(
-                &params,
-                pk.get_vk(),
-                strategy,
-                &[&[&pubinputs[..]], &[&pubinputs[..]]],
-                &mut transcript,
-            )
-            .is_ok());
-        }
-
-        //
-        // Test batch-verifier strategy.
-        //
-
-        {
-            let mut batch = BatchVerifier::new();
-
-            // First proof.
-            batch.add_proof(
-                vec![vec![pubinputs.clone()], vec![pubinputs.clone()]],
-                proof.clone(),
-            );
-
-            // "Second" proof (just the first proof again).
-            batch.add_proof(
-                vec![vec![pubinputs.clone()], vec![pubinputs.clone()]],
-                proof,
-            );
-
-            // Check the batch.
-            assert!(batch.finalize(&params, pk.get_vk()));
-        }
+        verify_proof::<
+            _,
+            VerifierGWC<_>,
+            _,
+            Blake2bRead<_, _, Challenge255<_>>,
+            AccumulatorStrategy<_>,
+        >(verifier_params, pk.get_vk(), &proof[..]);
     }
 
-    // Check that the verification key has not changed unexpectedly
-    {
-        //panic!("{:#?}", pk.get_vk().pinned());
-        assert_eq!(
-            format!("{:#?}", pk.get_vk().pinned()),
-            r#####"PinnedVerificationKey {
+    fn test_plonk_api_shplonk() {
+        use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
+        use halo2_proofs::poly::kzg::multiopen::{ProverSHPLONK, VerifierSHPLONK};
+        use halo2_proofs::poly::kzg::strategy::AccumulatorStrategy;
+        use halo2curves::bn256::Bn256;
+
+        type Scheme = KZGCommitmentScheme<Bn256>;
+        bad_keys!(Scheme);
+
+        let params = ParamsKZG::<Bn256>::new(K);
+        let rng = OsRng;
+
+        let pk = keygen::<KZGCommitmentScheme<_>>(&params);
+
+        let proof = create_proof::<_, ProverSHPLONK<_>, _, _, Blake2bWrite<_, _, Challenge255<_>>>(
+            rng, &params, &pk,
+        );
+
+        let verifier_params = params.verifier_params();
+
+        verify_proof::<
+            _,
+            VerifierSHPLONK<_>,
+            _,
+            Blake2bRead<_, _, Challenge255<_>>,
+            AccumulatorStrategy<_>,
+        >(verifier_params, pk.get_vk(), &proof[..]);
+    }
+
+    fn test_plonk_api_ipa() {
+        use halo2_proofs::poly::ipa::commitment::{IPACommitmentScheme, ParamsIPA};
+        use halo2_proofs::poly::ipa::multiopen::{ProverIPA, VerifierIPA};
+        use halo2_proofs::poly::ipa::strategy::AccumulatorStrategy;
+        use halo2curves::pasta::EqAffine;
+
+        type Scheme = IPACommitmentScheme<EqAffine>;
+        bad_keys!(Scheme);
+
+        let params = ParamsIPA::<EqAffine>::new(K);
+        let rng = OsRng;
+
+        let pk = keygen::<IPACommitmentScheme<EqAffine>>(&params);
+
+        let proof = create_proof::<_, ProverIPA<_>, _, _, Blake2bWrite<_, _, Challenge255<_>>>(
+            rng, &params, &pk,
+        );
+
+        let verifier_params = params.verifier_params();
+
+        verify_proof::<
+            _,
+            VerifierIPA<_>,
+            _,
+            Blake2bRead<_, _, Challenge255<_>>,
+            AccumulatorStrategy<_>,
+        >(verifier_params, pk.get_vk(), &proof[..]);
+
+        // Check that the verification key has not changed unexpectedly
+        {
+            //panic!("{:#?}", pk.get_vk().pinned());
+            assert_eq!(
+                format!("{:#?}", pk.get_vk().pinned()),
+                r#####"PinnedVerificationKey {
     base_modulus: "0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001",
     scalar_modulus: "0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001",
     domain: PinnedEvaluationDomain {
@@ -984,6 +1017,11 @@ fn plonk_api() {
         ],
     },
 }"#####
-        );
+            );
+        }
     }
+
+    test_plonk_api_ipa();
+    test_plonk_api_gwc();
+    test_plonk_api_shplonk();
 }

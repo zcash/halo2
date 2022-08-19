@@ -8,7 +8,7 @@ use halo2_proofs::{
     poly::Rotation,
 };
 
-use pasta_curves::pallas;
+use halo2curves::pasta::pallas;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Config {

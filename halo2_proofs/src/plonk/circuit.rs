@@ -33,7 +33,8 @@ impl<C: ColumnType> Column<C> {
         Column { index, column_type }
     }
 
-    pub(crate) fn index(&self) -> usize {
+    /// Index of this column.
+    pub fn index(&self) -> usize {
         self.index
     }
 
@@ -206,7 +207,7 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// Selectors can be used to conditionally enable (portions of) gates:
 /// ```
 /// use halo2_proofs::poly::Rotation;
-/// # use halo2_proofs::pasta::Fp;
+/// # use halo2curves::pasta::Fp;
 /// # use halo2_proofs::plonk::ConstraintSystem;
 ///
 /// # let mut meta = ConstraintSystem::<Fp>::default();
@@ -280,6 +281,18 @@ pub struct FixedQuery {
     pub(crate) rotation: Rotation,
 }
 
+impl FixedQuery {
+    /// Column index
+    pub fn column_index(&self) -> usize {
+        self.column_index
+    }
+
+    /// Rotation of this query
+    pub fn rotation(&self) -> Rotation {
+        self.rotation
+    }
+}
+
 /// Query of advice column at a certain relative location
 #[derive(Copy, Clone, Debug)]
 pub struct AdviceQuery {
@@ -291,6 +304,18 @@ pub struct AdviceQuery {
     pub(crate) rotation: Rotation,
 }
 
+impl AdviceQuery {
+    /// Column index
+    pub fn column_index(&self) -> usize {
+        self.column_index
+    }
+
+    /// Rotation of this query
+    pub fn rotation(&self) -> Rotation {
+        self.rotation
+    }
+}
+
 /// Query of instance column at a certain relative location
 #[derive(Copy, Clone, Debug)]
 pub struct InstanceQuery {
@@ -300,6 +325,18 @@ pub struct InstanceQuery {
     pub(crate) column_index: usize,
     /// Rotation of this query
     pub(crate) rotation: Rotation,
+}
+
+impl InstanceQuery {
+    /// Column index
+    pub fn column_index(&self) -> usize {
+        self.column_index
+    }
+
+    /// Rotation of this query
+    pub fn rotation(&self) -> Rotation {
+        self.rotation
+    }
 }
 
 /// A fixed column of a lookup table.
@@ -605,18 +642,182 @@ impl<F: Field> Expression<F> {
         }
     }
 
+    /// Evaluate the polynomial lazily using the provided closures to perform the
+    /// operations.
+    pub fn evaluate_lazy<T: PartialEq>(
+        &self,
+        constant: &impl Fn(F) -> T,
+        selector_column: &impl Fn(Selector) -> T,
+        fixed_column: &impl Fn(FixedQuery) -> T,
+        advice_column: &impl Fn(AdviceQuery) -> T,
+        instance_column: &impl Fn(InstanceQuery) -> T,
+        negated: &impl Fn(T) -> T,
+        sum: &impl Fn(T, T) -> T,
+        product: &impl Fn(T, T) -> T,
+        scaled: &impl Fn(T, F) -> T,
+        zero: &T,
+    ) -> T {
+        match self {
+            Expression::Constant(scalar) => constant(*scalar),
+            Expression::Selector(selector) => selector_column(*selector),
+            Expression::Fixed(query) => fixed_column(*query),
+            Expression::Advice(query) => advice_column(*query),
+            Expression::Instance(query) => instance_column(*query),
+            Expression::Negated(a) => {
+                let a = a.evaluate_lazy(
+                    constant,
+                    selector_column,
+                    fixed_column,
+                    advice_column,
+                    instance_column,
+                    negated,
+                    sum,
+                    product,
+                    scaled,
+                    zero,
+                );
+                negated(a)
+            }
+            Expression::Sum(a, b) => {
+                let a = a.evaluate_lazy(
+                    constant,
+                    selector_column,
+                    fixed_column,
+                    advice_column,
+                    instance_column,
+                    negated,
+                    sum,
+                    product,
+                    scaled,
+                    zero,
+                );
+                let b = b.evaluate_lazy(
+                    constant,
+                    selector_column,
+                    fixed_column,
+                    advice_column,
+                    instance_column,
+                    negated,
+                    sum,
+                    product,
+                    scaled,
+                    zero,
+                );
+                sum(a, b)
+            }
+            Expression::Product(a, b) => {
+                let (a, b) = if a.complexity() <= b.complexity() {
+                    (a, b)
+                } else {
+                    (b, a)
+                };
+                let a = a.evaluate_lazy(
+                    constant,
+                    selector_column,
+                    fixed_column,
+                    advice_column,
+                    instance_column,
+                    negated,
+                    sum,
+                    product,
+                    scaled,
+                    zero,
+                );
+
+                if a == *zero {
+                    a
+                } else {
+                    let b = b.evaluate_lazy(
+                        constant,
+                        selector_column,
+                        fixed_column,
+                        advice_column,
+                        instance_column,
+                        negated,
+                        sum,
+                        product,
+                        scaled,
+                        zero,
+                    );
+                    product(a, b)
+                }
+            }
+            Expression::Scaled(a, f) => {
+                let a = a.evaluate_lazy(
+                    constant,
+                    selector_column,
+                    fixed_column,
+                    advice_column,
+                    instance_column,
+                    negated,
+                    sum,
+                    product,
+                    scaled,
+                    zero,
+                );
+                scaled(a, *f)
+            }
+        }
+    }
+
+    /// Identifier for this expression. Expressions with identical identifiers
+    /// do the same calculation (but the expressions don't need to be exactly equal
+    /// in how they are composed e.g. `1 + 2` and `2 + 1` can have the same identifier).
+    pub fn identifier(&self) -> String {
+        match self {
+            Expression::Constant(scalar) => format!("{:?}", scalar),
+            Expression::Selector(selector) => format!("selector[{}]", selector.0),
+            Expression::Fixed(query) => {
+                format!("fixed[{}][{}]", query.column_index, query.rotation.0)
+            }
+            Expression::Advice(query) => {
+                format!("advice[{}][{}]", query.column_index, query.rotation.0)
+            }
+            Expression::Instance(query) => {
+                format!("instance[{}][{}]", query.column_index, query.rotation.0)
+            }
+            Expression::Negated(a) => {
+                format!("(-{})", a.identifier())
+            }
+            Expression::Sum(a, b) => {
+                format!("({}+{})", a.identifier(), b.identifier())
+            }
+            Expression::Product(a, b) => {
+                format!("({}*{})", a.identifier(), b.identifier())
+            }
+            Expression::Scaled(a, f) => {
+                format!("{}*{:?}", a.identifier(), f)
+            }
+        }
+    }
+
     /// Compute the degree of this polynomial
     pub fn degree(&self) -> usize {
         match self {
             Expression::Constant(_) => 0,
             Expression::Selector(_) => 1,
-            Expression::Fixed { .. } => 1,
-            Expression::Advice { .. } => 1,
-            Expression::Instance { .. } => 1,
+            Expression::Fixed(_) => 1,
+            Expression::Advice(_) => 1,
+            Expression::Instance(_) => 1,
             Expression::Negated(poly) => poly.degree(),
             Expression::Sum(a, b) => max(a.degree(), b.degree()),
             Expression::Product(a, b) => a.degree() + b.degree(),
             Expression::Scaled(poly, _) => poly.degree(),
+        }
+    }
+
+    /// Approximate the computational complexity of this expression.
+    pub fn complexity(&self) -> usize {
+        match self {
+            Expression::Constant(_) => 0,
+            Expression::Selector(_) => 1,
+            Expression::Fixed(_) => 1,
+            Expression::Advice(_) => 1,
+            Expression::Instance(_) => 1,
+            Expression::Negated(poly) => poly.complexity() + 5,
+            Expression::Sum(a, b) => a.complexity() + b.complexity() + 15,
+            Expression::Product(a, b) => a.complexity() + b.complexity() + 30,
+            Expression::Scaled(poly, _) => poly.complexity() + 30,
         }
     }
 
@@ -766,7 +967,7 @@ pub(crate) struct PointIndex(pub usize);
 /// A "virtual cell" is a PLONK cell that has been queried at a particular relative offset
 /// within a custom gate.
 #[derive(Clone, Debug)]
-pub(crate) struct VirtualCell {
+pub struct VirtualCell {
     pub(crate) column: Column<Any>,
     pub(crate) rotation: Rotation,
 }
@@ -810,7 +1011,8 @@ impl<F: Field> From<Expression<F>> for Vec<Constraint<F>> {
 /// A set of polynomial constraints with a common selector.
 ///
 /// ```
-/// use halo2_proofs::{pasta::Fp, plonk::{Constraints, Expression}, poly::Rotation};
+/// use halo2_proofs::{plonk::{Constraints, Expression}, poly::Rotation};
+/// use halo2curves::pasta::Fp;
 /// # use halo2_proofs::plonk::ConstraintSystem;
 ///
 /// # let mut meta = ConstraintSystem::<Fp>::default();
@@ -889,8 +1091,9 @@ impl<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> IntoIterato
     }
 }
 
+/// Gate
 #[derive(Clone, Debug)]
-pub(crate) struct Gate<F: Field> {
+pub struct Gate<F: Field> {
     name: &'static str,
     constraint_names: Vec<&'static str>,
     polys: Vec<Expression<F>>,
@@ -909,7 +1112,8 @@ impl<F: Field> Gate<F> {
         self.constraint_names[constraint_index]
     }
 
-    pub(crate) fn polynomials(&self) -> &[Expression<F>] {
+    /// Returns constraints of this gate
+    pub fn polynomials(&self) -> &[Expression<F>] {
         &self.polys
     }
 
@@ -1054,6 +1258,7 @@ impl<F: Field> ConstraintSystem<F> {
     /// they need to match.
     pub fn lookup(
         &mut self,
+        name: &'static str,
         table_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, TableColumn)>,
     ) -> usize {
         let mut cells = VirtualCells::new(self);
@@ -1072,7 +1277,26 @@ impl<F: Field> ConstraintSystem<F> {
 
         let index = self.lookups.len();
 
-        self.lookups.push(lookup::Argument::new(table_map));
+        self.lookups.push(lookup::Argument::new(name, table_map));
+
+        index
+    }
+
+    /// Add a lookup argument for some input expressions and table expressions.
+    ///
+    /// `table_map` returns a map between input expressions and the table expressions
+    /// they need to match.
+    pub fn lookup_any(
+        &mut self,
+        name: &'static str,
+        table_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, Expression<F>)>,
+    ) -> usize {
+        let mut cells = VirtualCells::new(self);
+        let table_map = table_map(&mut cells);
+
+        let index = self.lookups.len();
+
+        self.lookups.push(lookup::Argument::new(name, table_map));
 
         index
     }
@@ -1462,6 +1686,56 @@ impl<F: Field> ConstraintSystem<F> {
                 // permutation polynomial between the roles of l_last, l_0
                 // and the interstitial values.)
             + 1 // for at least one row
+    }
+
+    /// Returns number of fixed columns
+    pub fn num_fixed_columns(&self) -> usize {
+        self.num_fixed_columns
+    }
+
+    /// Returns number of advice columns
+    pub fn num_advice_columns(&self) -> usize {
+        self.num_advice_columns
+    }
+
+    /// Returns number of instance columns
+    pub fn num_instance_columns(&self) -> usize {
+        self.num_instance_columns
+    }
+
+    /// Returns gates
+    pub fn gates(&self) -> &Vec<Gate<F>> {
+        &self.gates
+    }
+
+    /// Returns advice queries
+    pub fn advice_queries(&self) -> &Vec<(Column<Advice>, Rotation)> {
+        &self.advice_queries
+    }
+
+    /// Returns instance queries
+    pub fn instance_queries(&self) -> &Vec<(Column<Instance>, Rotation)> {
+        &self.instance_queries
+    }
+
+    /// Returns fixed queries
+    pub fn fixed_queries(&self) -> &Vec<(Column<Fixed>, Rotation)> {
+        &self.fixed_queries
+    }
+
+    /// Returns permutation argument
+    pub fn permutation(&self) -> &permutation::Argument {
+        &self.permutation
+    }
+
+    /// Returns lookup arguments
+    pub fn lookups(&self) -> &Vec<lookup::Argument<F>> {
+        &self.lookups
+    }
+
+    /// Returns constants
+    pub fn constants(&self) -> &Vec<Column<Fixed>> {
+        &self.constants
     }
 }
 

@@ -13,9 +13,9 @@ use std::io;
 
 /// A permutation argument.
 #[derive(Debug, Clone)]
-pub(crate) struct Argument {
+pub struct Argument {
     /// A sequence of columns involved in the argument.
-    columns: Vec<Column<Any>>,
+    pub(super) columns: Vec<Column<Any>>,
 }
 
 impl Argument {
@@ -67,15 +67,22 @@ impl Argument {
         }
     }
 
-    pub(crate) fn get_columns(&self) -> Vec<Column<Any>> {
+    pub fn get_columns(&self) -> Vec<Column<Any>> {
         self.columns.clone()
     }
 }
 
 /// The verifying key for a single permutation argument.
 #[derive(Clone, Debug)]
-pub(crate) struct VerifyingKey<C: CurveAffine> {
+pub struct VerifyingKey<C: CurveAffine> {
     commitments: Vec<C>,
+}
+
+impl<C: CurveAffine> VerifyingKey<C> {
+    /// Returns commitments of sigma polynomials
+    pub fn commitments(&self) -> &Vec<C> {
+        &self.commitments
+    }
 }
 
 /// The proving key for a single permutation argument.

@@ -2,10 +2,10 @@ use super::{util::*, AssignedBits};
 use halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{Chip, Layouter, Region, Value},
-    pasta::pallas,
     plonk::{Advice, Column, ConstraintSystem, Error, TableColumn},
     poly::Rotation,
 };
+use halo2curves::pasta::pallas;
 use std::convert::TryInto;
 use std::marker::PhantomData;
 
@@ -182,7 +182,7 @@ impl<F: FieldExt> SpreadTableChip<F> {
         let table_dense = meta.lookup_table_column();
         let table_spread = meta.lookup_table_column();
 
-        meta.lookup(|meta| {
+        meta.lookup("lookup", |meta| {
             let tag_cur = meta.query_advice(input_tag, Rotation::cur());
             let dense_cur = meta.query_advice(input_dense, Rotation::cur());
             let spread_cur = meta.query_advice(input_spread, Rotation::cur());
@@ -291,9 +291,9 @@ mod tests {
         arithmetic::FieldExt,
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
-        pasta::Fp,
         plonk::{Advice, Circuit, Column, ConstraintSystem, Error},
     };
+    use halo2curves::pasta::Fp;
 
     #[test]
     fn lookup_table() {

@@ -23,10 +23,11 @@
 #![deny(unsafe_code)]
 // Remove this once we update pasta_curves
 #![allow(unused_imports)]
+#![allow(clippy::derive_partial_eq_without_eq)]
 
 pub mod arithmetic;
 pub mod circuit;
-pub use pasta_curves as pasta;
+pub use halo2curves;
 mod multicore;
 pub mod plonk;
 pub mod poly;

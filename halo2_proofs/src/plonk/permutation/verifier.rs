@@ -6,7 +6,7 @@ use super::{Argument, VerifyingKey};
 use crate::{
     arithmetic::{CurveAffine, FieldExt},
     plonk::{self, Error},
-    poly::{multiopen::VerifierQuery, Rotation},
+    poly::{commitment::MSM, Rotation, VerifierQuery},
     transcript::{EncodedChallenge, TranscriptRead},
 };
 
@@ -199,11 +199,11 @@ impl<C: CurveAffine> Evaluated<C> {
             )
     }
 
-    pub(in crate::plonk) fn queries<'r, 'params: 'r>(
+    pub(in crate::plonk) fn queries<'r, M: MSM<C> + 'r>(
         &'r self,
         vk: &'r plonk::VerifyingKey<C>,
         x: ChallengeX<C>,
-    ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone {
+    ) -> impl Iterator<Item = VerifierQuery<'r, C, M>> + Clone {
         let blinding_factors = vk.cs.blinding_factors();
         let x_next = vk.domain.rotate_omega(*x, Rotation::next());
         let x_last = vk
@@ -238,11 +238,11 @@ impl<C: CurveAffine> Evaluated<C> {
 }
 
 impl<C: CurveAffine> CommonEvaluated<C> {
-    pub(in crate::plonk) fn queries<'r, 'params: 'r>(
+    pub(in crate::plonk) fn queries<'r, M: MSM<C> + 'r>(
         &'r self,
         vkey: &'r VerifyingKey<C>,
         x: ChallengeX<C>,
-    ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone {
+    ) -> impl Iterator<Item = VerifierQuery<'r, C, M>> + Clone {
         // Open permutation commitments for each permutation argument at x
         vkey.commitments
             .iter()

@@ -13,20 +13,19 @@ use crate::{
     poly::{
         self,
         commitment::{Blind, Params},
-        multiopen::ProverQuery,
-        Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
+        Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, ProverQuery, Rotation,
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
 
-pub struct CommittedSet<C: CurveAffine, Ev> {
-    permutation_product_poly: Polynomial<C::Scalar, Coeff>,
-    permutation_product_coset: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
+pub(crate) struct CommittedSet<C: CurveAffine> {
+    pub(crate) permutation_product_poly: Polynomial<C::Scalar, Coeff>,
+    pub(crate) permutation_product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permutation_product_blind: Blind<C::Scalar>,
 }
 
-pub(crate) struct Committed<C: CurveAffine, Ev> {
-    sets: Vec<CommittedSet<C, Ev>>,
+pub(crate) struct Committed<C: CurveAffine> {
+    pub(crate) sets: Vec<CommittedSet<C>>,
 }
 
 pub struct ConstructedSet<C: CurveAffine> {
@@ -44,14 +43,15 @@ pub(crate) struct Evaluated<C: CurveAffine> {
 
 impl Argument {
     pub(in crate::plonk) fn commit<
+        'params,
         C: CurveAffine,
+        P: Params<'params, C>,
         E: EncodedChallenge<C>,
-        Ev: Copy + Send + Sync,
         R: RngCore,
         T: TranscriptWrite<C, E>,
     >(
         &self,
-        params: &Params<C>,
+        params: &P,
         pk: &plonk::ProvingKey<C>,
         pkey: &ProvingKey<C>,
         advice: &[Polynomial<C::Scalar, LagrangeCoeff>],
@@ -59,10 +59,9 @@ impl Argument {
         instance: &[Polynomial<C::Scalar, LagrangeCoeff>],
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
-        evaluator: &mut poly::Evaluator<Ev, C::Scalar, ExtendedLagrangeCoeff>,
         mut rng: R,
         transcript: &mut T,
-    ) -> Result<Committed<C, Ev>, Error> {
+    ) -> Result<Committed<C>, Error> {
         let domain = &pk.vk.domain;
 
         // How many columns can be included in a single permutation polynomial?
@@ -94,7 +93,7 @@ impl Argument {
             // where p_j(X) is the jth column in this permutation,
             // and i is the ith row of the column.
 
-            let mut modified_values = vec![C::Scalar::one(); params.n as usize];
+            let mut modified_values = vec![C::Scalar::one(); params.n() as usize];
 
             // Iterate over each column of the permutation
             for (&column, permuted_column_values) in columns.iter().zip(permutations.iter()) {
@@ -152,7 +151,7 @@ impl Argument {
             // Compute the evaluations of the permutation product polynomial
             // over our domain, starting with z[0] = 1
             let mut z = vec![last_z];
-            for row in 1..(params.n as usize) {
+            for row in 1..(params.n() as usize) {
                 let mut tmp = z[row - 1];
 
                 tmp *= &modified_values[row - 1];
@@ -160,11 +159,11 @@ impl Argument {
             }
             let mut z = domain.lagrange_from_vec(z);
             // Set blinding factors
-            for z in &mut z[params.n as usize - blinding_factors..] {
+            for z in &mut z[params.n() as usize - blinding_factors..] {
                 *z = C::Scalar::random(&mut rng);
             }
             // Set new last_z
-            last_z = z[params.n as usize - (blinding_factors + 1)];
+            last_z = z[params.n() as usize - (blinding_factors + 1)];
 
             let blind = Blind(C::Scalar::random(&mut rng));
 
@@ -173,8 +172,7 @@ impl Argument {
             let z = domain.lagrange_to_coeff(z);
             let permutation_product_poly = z.clone();
 
-            let permutation_product_coset =
-                evaluator.register_poly(domain.coeff_to_extended(z.clone()));
+            let permutation_product_coset = domain.coeff_to_extended(z.clone());
 
             let permutation_product_commitment =
                 permutation_product_commitment_projective.to_affine();
@@ -193,29 +191,9 @@ impl Argument {
     }
 }
 
-impl<C: CurveAffine, Ev: Copy + Send + Sync> Committed<C, Ev> {
-    pub(in crate::plonk) fn construct<'a>(
-        self,
-        pk: &'a plonk::ProvingKey<C>,
-        p: &'a Argument,
-        advice_cosets: &'a [poly::AstLeaf<Ev, ExtendedLagrangeCoeff>],
-        fixed_cosets: &'a [poly::AstLeaf<Ev, ExtendedLagrangeCoeff>],
-        instance_cosets: &'a [poly::AstLeaf<Ev, ExtendedLagrangeCoeff>],
-        permutation_cosets: &'a [poly::AstLeaf<Ev, ExtendedLagrangeCoeff>],
-        l0: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
-        l_blind: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
-        l_last: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
-        beta: ChallengeBeta<C>,
-        gamma: ChallengeGamma<C>,
-    ) -> (
-        Constructed<C>,
-        impl Iterator<Item = poly::Ast<Ev, C::Scalar, ExtendedLagrangeCoeff>> + 'a,
-    ) {
-        let chunk_len = pk.vk.cs_degree - 2;
-        let blinding_factors = pk.vk.cs.blinding_factors();
-        let last_rotation = Rotation(-((blinding_factors + 1) as i32));
-
-        let constructed = Constructed {
+impl<C: CurveAffine> Committed<C> {
+    pub(in crate::plonk) fn construct(self) -> Constructed<C> {
+        Constructed {
             sets: self
                 .sets
                 .iter()
@@ -224,89 +202,7 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Committed<C, Ev> {
                     permutation_product_blind: set.permutation_product_blind,
                 })
                 .collect(),
-        };
-
-        let expressions = iter::empty()
-            // Enforce only for the first set.
-            // l_0(X) * (1 - z_0(X)) = 0
-            .chain(
-                self.sets
-                    .first()
-                    .map(|first_set| (poly::Ast::one() - first_set.permutation_product_coset) * l0),
-            )
-            // Enforce only for the last set.
-            // l_last(X) * (z_l(X)^2 - z_l(X)) = 0
-            .chain(self.sets.last().map(|last_set| {
-                ((poly::Ast::from(last_set.permutation_product_coset)
-                    * last_set.permutation_product_coset)
-                    - last_set.permutation_product_coset)
-                    * l_last
-            }))
-            // Except for the first set, enforce.
-            // l_0(X) * (z_i(X) - z_{i-1}(\omega^(last) X)) = 0
-            .chain(
-                self.sets
-                    .iter()
-                    .skip(1)
-                    .zip(self.sets.iter())
-                    .map(|(set, last_set)| {
-                        (poly::Ast::from(set.permutation_product_coset)
-                            - last_set
-                                .permutation_product_coset
-                                .with_rotation(last_rotation))
-                            * l0
-                    })
-                    .collect::<Vec<_>>(),
-            )
-            // And for all the sets we enforce:
-            // (1 - (l_last(X) + l_blind(X))) * (
-            //   z_i(\omega X) \prod_j (p(X) + \beta s_j(X) + \gamma)
-            // - z_i(X) \prod_j (p(X) + \delta^j \beta X + \gamma)
-            // )
-            .chain(
-                self.sets
-                    .into_iter()
-                    .zip(p.columns.chunks(chunk_len))
-                    .zip(permutation_cosets.chunks(chunk_len))
-                    .enumerate()
-                    .map(move |(chunk_index, ((set, columns), cosets))| {
-                        let mut left = poly::Ast::<_, C::Scalar, _>::from(
-                            set.permutation_product_coset
-                                .with_rotation(Rotation::next()),
-                        );
-                        for (values, permutation) in columns
-                            .iter()
-                            .map(|&column| match column.column_type() {
-                                Any::Advice => &advice_cosets[column.index()],
-                                Any::Fixed => &fixed_cosets[column.index()],
-                                Any::Instance => &instance_cosets[column.index()],
-                            })
-                            .zip(cosets.iter())
-                        {
-                            left *= poly::Ast::<_, C::Scalar, _>::from(*values)
-                                + (poly::Ast::ConstantTerm(*beta) * poly::Ast::from(*permutation))
-                                + poly::Ast::ConstantTerm(*gamma);
-                        }
-
-                        let mut right = poly::Ast::from(set.permutation_product_coset);
-                        let mut current_delta = *beta
-                            * &(C::Scalar::DELTA.pow_vartime(&[(chunk_index * chunk_len) as u64]));
-                        for values in columns.iter().map(|&column| match column.column_type() {
-                            Any::Advice => &advice_cosets[column.index()],
-                            Any::Fixed => &fixed_cosets[column.index()],
-                            Any::Instance => &instance_cosets[column.index()],
-                        }) {
-                            right *= poly::Ast::from(*values)
-                                + poly::Ast::LinearTerm(current_delta)
-                                + poly::Ast::ConstantTerm(*gamma);
-                            current_delta *= &C::Scalar::DELTA;
-                        }
-
-                        (left - right) * (poly::Ast::one() - (poly::Ast::from(l_last) + l_blind))
-                    }),
-            );
-
-        (constructed, expressions)
+        }
     }
 }
 

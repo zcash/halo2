@@ -5,10 +5,10 @@ use super::multicore;
 pub use ff::Field;
 use group::{
     ff::{BatchInvert, PrimeField},
-    Group as _,
+    Curve, Group as _,
 };
 
-pub use pasta_curves::arithmetic::*;
+pub use halo2curves::{CurveAffine, CurveExt, FieldExt, Group};
 
 fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut C::Curve) {
     let coeffs: Vec<_> = coeffs.iter().map(|a| a.to_repr()).collect();
@@ -273,12 +273,59 @@ pub fn recursive_butterfly_arithmetic<G: Group>(
     }
 }
 
+/// Convert coefficient bases group elements to lagrange basis by inverse FFT.
+pub fn g_to_lagrange<C: CurveAffine>(g_projective: Vec<C::Curve>, k: u32) -> Vec<C> {
+    let n_inv = C::Scalar::TWO_INV.pow_vartime(&[k as u64, 0, 0, 0]);
+    let mut omega_inv = C::Scalar::ROOT_OF_UNITY_INV;
+    for _ in k..C::Scalar::S {
+        omega_inv = omega_inv.square();
+    }
+
+    let mut g_lagrange_projective = g_projective;
+    best_fft(&mut g_lagrange_projective, omega_inv, k);
+    parallelize(&mut g_lagrange_projective, |g, _| {
+        for g in g.iter_mut() {
+            *g *= n_inv;
+        }
+    });
+
+    let mut g_lagrange = vec![C::identity(); 1 << k];
+    parallelize(&mut g_lagrange, |g_lagrange, starts| {
+        C::Curve::batch_normalize(
+            &g_lagrange_projective[starts..(starts + g_lagrange.len())],
+            g_lagrange,
+        );
+    });
+
+    g_lagrange
+}
+
 /// This evaluates a provided polynomial (in coefficient form) at `point`.
 pub fn eval_polynomial<F: Field>(poly: &[F], point: F) -> F {
-    // TODO: parallelize?
-    poly.iter()
-        .rev()
-        .fold(F::zero(), |acc, coeff| acc * point + coeff)
+    fn evaluate<F: Field>(poly: &[F], point: F) -> F {
+        poly.iter()
+            .rev()
+            .fold(F::zero(), |acc, coeff| acc * point + coeff)
+    }
+    let n = poly.len();
+    let num_threads = multicore::current_num_threads();
+    if n * 2 < num_threads {
+        evaluate(poly, point)
+    } else {
+        let chunk_size = (n + num_threads - 1) / num_threads;
+        let mut parts = vec![F::zero(); num_threads];
+        multicore::scope(|scope| {
+            for (chunk_idx, (out, poly)) in
+                parts.chunks_mut(1).zip(poly.chunks(chunk_size)).enumerate()
+            {
+                scope.spawn(move |_| {
+                    let start = chunk_idx * chunk_size;
+                    out[0] = evaluate(poly, point) * point.pow_vartime(&[start as u64, 0, 0, 0]);
+                });
+            }
+        });
+        parts.iter().fold(F::zero(), |acc, coeff| acc + coeff)
+    }
 }
 
 /// This computes the inner product of two vectors `a` and `b`.
@@ -359,7 +406,7 @@ pub fn lagrange_interpolate<F: FieldExt>(points: &[F], evals: &[F]) -> Vec<F> {
     assert_eq!(points.len(), evals.len());
     if points.len() == 1 {
         // Constant polynomial
-        return vec![evals[0]];
+        vec![evals[0]]
     } else {
         let mut denoms = Vec::with_capacity(points.len());
         for (j, x_j) in points.iter().enumerate() {
@@ -410,11 +457,35 @@ pub fn lagrange_interpolate<F: FieldExt>(points: &[F], evals: &[F]) -> Vec<F> {
     }
 }
 
+pub(crate) fn evaluate_vanishing_polynomial<F: FieldExt>(roots: &[F], z: F) -> F {
+    fn evaluate<F: FieldExt>(roots: &[F], z: F) -> F {
+        roots.iter().fold(F::one(), |acc, point| (z - point) * acc)
+    }
+    let n = roots.len();
+    let num_threads = multicore::current_num_threads();
+    if n * 2 < num_threads {
+        evaluate(roots, z)
+    } else {
+        let chunk_size = (n + num_threads - 1) / num_threads;
+        let mut parts = vec![F::one(); num_threads];
+        multicore::scope(|scope| {
+            for (out, roots) in parts.chunks_mut(1).zip(roots.chunks(chunk_size)) {
+                scope.spawn(move |_| out[0] = evaluate(roots, z));
+            }
+        });
+        parts.iter().fold(F::one(), |acc, part| acc * part)
+    }
+}
+
+pub(crate) fn powers<F: FieldExt>(base: F) -> impl Iterator<Item = F> {
+    std::iter::successors(Some(F::one()), move |power| Some(base * power))
+}
+
 #[cfg(test)]
 use rand_core::OsRng;
 
 #[cfg(test)]
-use crate::pasta::Fp;
+use crate::halo2curves::pasta::Fp;
 
 #[test]
 fn test_lagrange_interpolate() {

@@ -21,7 +21,7 @@ use halo2_proofs::{
     },
     poly::Rotation,
 };
-use pasta_curves::pallas;
+use halo2curves::pasta::pallas;
 
 mod generator_table;
 use generator_table::GeneratorTableConfig;

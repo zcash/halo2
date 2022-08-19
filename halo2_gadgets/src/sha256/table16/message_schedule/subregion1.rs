@@ -2,9 +2,9 @@ use super::super::{util::*, AssignedBits, BlockWord, SpreadVar, SpreadWord, Tabl
 use super::{schedule_util::*, MessageScheduleConfig};
 use halo2_proofs::{
     circuit::{Region, Value},
-    pasta::pallas,
     plonk::Error,
 };
+use halo2curves::pasta::pallas;
 use std::convert::TryInto;
 
 // A word in subregion 1
