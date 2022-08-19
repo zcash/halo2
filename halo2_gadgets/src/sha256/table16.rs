@@ -3,8 +3,8 @@ use std::marker::PhantomData;
 
 use super::Sha256Instructions;
 use halo2_proofs::{
-    circuit::{AssignedCell, Chip, Layouter, Region},
-    pairing::bn256::Fr,
+    circuit::{AssignedCell, Chip, Layouter, Region, Value},
+    pasta::pallas,
     plonk::{Advice, Any, Assigned, Column, ConstraintSystem, Error},
 };
 
@@ -49,7 +49,7 @@ const IV: [u32; STATE] = [
 #[derive(Clone, Copy, Debug, Default)]
 /// A word in a `Table16` message block.
 // TODO: Make the internals of this struct private.
-pub struct BlockWord(pub Option<u32>);
+pub struct BlockWord(pub Value<u32>);
 
 #[derive(Clone, Debug)]
 /// Little-endian bits (up to 64 bits)
@@ -81,10 +81,10 @@ impl<const LEN: usize> From<&Bits<LEN>> for [bool; LEN] {
     }
 }
 
-impl<const LEN: usize> From<&Bits<LEN>> for Assigned<Fr> {
-    fn from(bits: &Bits<LEN>) -> Assigned<Fr> {
+impl<const LEN: usize> From<&Bits<LEN>> for Assigned<pallas::Base> {
+    fn from(bits: &Bits<LEN>) -> Assigned<pallas::Base> {
         assert!(LEN <= 64);
-        Fr::from(lebs2ip(&bits.0)).into()
+        pallas::Base::from(lebs2ip(&bits.0)).into()
     }
 }
 
@@ -113,10 +113,10 @@ impl From<u32> for Bits<32> {
 }
 
 #[derive(Clone, Debug)]
-pub struct AssignedBits<const LEN: usize>(AssignedCell<Bits<LEN>, Fr>);
+pub struct AssignedBits<const LEN: usize>(AssignedCell<Bits<LEN>, pallas::Base>);
 
 impl<const LEN: usize> std::ops::Deref for AssignedBits<LEN> {
-    type Target = AssignedCell<Bits<LEN>, Fr>;
+    type Target = AssignedCell<Bits<LEN>, pallas::Base>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -125,30 +125,30 @@ impl<const LEN: usize> std::ops::Deref for AssignedBits<LEN> {
 
 impl<const LEN: usize> AssignedBits<LEN> {
     fn assign_bits<A, AR, T: TryInto<[bool; LEN]> + std::fmt::Debug + Clone>(
-        region: &mut Region<'_, Fr>,
+        region: &mut Region<'_, pallas::Base>,
         annotation: A,
         column: impl Into<Column<Any>>,
         offset: usize,
-        value: Option<T>,
+        value: Value<T>,
     ) -> Result<Self, Error>
     where
         A: Fn() -> AR,
         AR: Into<String>,
         <T as TryInto<[bool; LEN]>>::Error: std::fmt::Debug,
     {
-        let value: Option<[bool; LEN]> = value.map(|v| v.try_into().unwrap());
-        let value: Option<Bits<LEN>> = value.map(|v| v.into());
+        let value: Value<[bool; LEN]> = value.map(|v| v.try_into().unwrap());
+        let value: Value<Bits<LEN>> = value.map(|v| v.into());
 
         let column: Column<Any> = column.into();
         match column.column_type() {
             Any::Advice => {
                 region.assign_advice(annotation, column.try_into().unwrap(), offset, || {
-                    value.clone().ok_or(Error::Synthesis)
+                    value.clone()
                 })
             }
             Any::Fixed => {
                 region.assign_fixed(annotation, column.try_into().unwrap(), offset, || {
-                    value.clone().ok_or(Error::Synthesis)
+                    value.clone()
                 })
             }
             _ => panic!("Cannot assign to instance column"),
@@ -158,32 +158,32 @@ impl<const LEN: usize> AssignedBits<LEN> {
 }
 
 impl AssignedBits<16> {
-    fn value_u16(&self) -> Option<u16> {
+    fn value_u16(&self) -> Value<u16> {
         self.value().map(|v| v.into())
     }
 
     fn assign<A, AR>(
-        region: &mut Region<'_, Fr>,
+        region: &mut Region<'_, pallas::Base>,
         annotation: A,
         column: impl Into<Column<Any>>,
         offset: usize,
-        value: Option<u16>,
+        value: Value<u16>,
     ) -> Result<Self, Error>
     where
         A: Fn() -> AR,
         AR: Into<String>,
     {
         let column: Column<Any> = column.into();
-        let value: Option<Bits<16>> = value.map(|v| v.into());
+        let value: Value<Bits<16>> = value.map(|v| v.into());
         match column.column_type() {
             Any::Advice => {
                 region.assign_advice(annotation, column.try_into().unwrap(), offset, || {
-                    value.clone().ok_or(Error::Synthesis)
+                    value.clone()
                 })
             }
             Any::Fixed => {
                 region.assign_fixed(annotation, column.try_into().unwrap(), offset, || {
-                    value.clone().ok_or(Error::Synthesis)
+                    value.clone()
                 })
             }
             _ => panic!("Cannot assign to instance column"),
@@ -193,32 +193,32 @@ impl AssignedBits<16> {
 }
 
 impl AssignedBits<32> {
-    fn value_u32(&self) -> Option<u32> {
+    fn value_u32(&self) -> Value<u32> {
         self.value().map(|v| v.into())
     }
 
     fn assign<A, AR>(
-        region: &mut Region<'_, Fr>,
+        region: &mut Region<'_, pallas::Base>,
         annotation: A,
         column: impl Into<Column<Any>>,
         offset: usize,
-        value: Option<u32>,
+        value: Value<u32>,
     ) -> Result<Self, Error>
     where
         A: Fn() -> AR,
         AR: Into<String>,
     {
         let column: Column<Any> = column.into();
-        let value: Option<Bits<32>> = value.map(|v| v.into());
+        let value: Value<Bits<32>> = value.map(|v| v.into());
         match column.column_type() {
             Any::Advice => {
                 region.assign_advice(annotation, column.try_into().unwrap(), offset, || {
-                    value.clone().ok_or(Error::Synthesis)
+                    value.clone()
                 })
             }
             Any::Fixed => {
                 region.assign_fixed(annotation, column.try_into().unwrap(), offset, || {
-                    value.clone().ok_or(Error::Synthesis)
+                    value.clone()
                 })
             }
             _ => panic!("Cannot assign to instance column"),
@@ -239,10 +239,10 @@ pub struct Table16Config {
 #[derive(Clone, Debug)]
 pub struct Table16Chip {
     config: Table16Config,
-    _marker: PhantomData<Fr>,
+    _marker: PhantomData<pallas::Base>,
 }
 
-impl Chip<Fr> for Table16Chip {
+impl Chip<pallas::Base> for Table16Chip {
     type Config = Table16Config;
     type Loaded = ();
 
@@ -257,7 +257,7 @@ impl Chip<Fr> for Table16Chip {
 
 impl Table16Chip {
     /// Reconstructs this chip from the given config.
-    pub fn construct(config: <Self as Chip<Fr>>::Config) -> Self {
+    pub fn construct(config: <Self as Chip<pallas::Base>>::Config) -> Self {
         Self {
             config,
             _marker: PhantomData,
@@ -265,7 +265,9 @@ impl Table16Chip {
     }
 
     /// Configures a circuit to include this chip.
-    pub fn configure(meta: &mut ConstraintSystem<Fr>) -> <Self as Chip<Fr>>::Config {
+    pub fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+    ) -> <Self as Chip<pallas::Base>>::Config {
         // Columns required by this chip:
         let message_schedule = meta.advice_column();
         let extras = [
@@ -316,22 +318,28 @@ impl Table16Chip {
     }
 
     /// Loads the lookup table required by this chip into the circuit.
-    pub fn load(config: Table16Config, layouter: &mut impl Layouter<Fr>) -> Result<(), Error> {
+    pub fn load(
+        config: Table16Config,
+        layouter: &mut impl Layouter<pallas::Base>,
+    ) -> Result<(), Error> {
         SpreadTableChip::load(config.lookup, layouter)
     }
 }
 
-impl Sha256Instructions<Fr> for Table16Chip {
+impl Sha256Instructions<pallas::Base> for Table16Chip {
     type State = State;
     type BlockWord = BlockWord;
 
-    fn initialization_vector(&self, layouter: &mut impl Layouter<Fr>) -> Result<State, Error> {
+    fn initialization_vector(
+        &self,
+        layouter: &mut impl Layouter<pallas::Base>,
+    ) -> Result<State, Error> {
         self.config().compression.initialize_with_iv(layouter, IV)
     }
 
     fn initialization(
         &self,
-        layouter: &mut impl Layouter<Fr>,
+        layouter: &mut impl Layouter<pallas::Base>,
         init_state: &Self::State,
     ) -> Result<Self::State, Error> {
         self.config()
@@ -343,7 +351,7 @@ impl Sha256Instructions<Fr> for Table16Chip {
     // message block and return the final state.
     fn compress(
         &self,
-        layouter: &mut impl Layouter<Fr>,
+        layouter: &mut impl Layouter<pallas::Base>,
         initialized_state: &Self::State,
         input: [Self::BlockWord; super::BLOCK_SIZE],
     ) -> Result<Self::State, Error> {
@@ -356,7 +364,7 @@ impl Sha256Instructions<Fr> for Table16Chip {
 
     fn digest(
         &self,
-        layouter: &mut impl Layouter<Fr>,
+        layouter: &mut impl Layouter<pallas::Base>,
         state: &Self::State,
     ) -> Result<[Self::BlockWord; super::DIGEST_SIZE], Error> {
         // Copy the dense forms of the state variable chunks down to this gate.
@@ -372,14 +380,14 @@ trait Table16Assignment {
     #[allow(clippy::type_complexity)]
     fn assign_spread_outputs(
         &self,
-        region: &mut Region<'_, Fr>,
+        region: &mut Region<'_, pallas::Base>,
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
         row: usize,
-        r_0_even: Option<[bool; 16]>,
-        r_0_odd: Option<[bool; 16]>,
-        r_1_even: Option<[bool; 16]>,
-        r_1_odd: Option<[bool; 16]>,
+        r_0_even: Value<[bool; 16]>,
+        r_0_odd: Value<[bool; 16]>,
+        r_1_even: Value<[bool; 16]>,
+        r_1_odd: Value<[bool; 16]>,
     ) -> Result<
         (
             (AssignedBits<16>, AssignedBits<16>),
@@ -424,14 +432,14 @@ trait Table16Assignment {
     #[allow(clippy::too_many_arguments)]
     fn assign_sigma_outputs(
         &self,
-        region: &mut Region<'_, Fr>,
+        region: &mut Region<'_, pallas::Base>,
         lookup: &SpreadInputs,
         a_3: Column<Advice>,
         row: usize,
-        r_0_even: Option<[bool; 16]>,
-        r_0_odd: Option<[bool; 16]>,
-        r_1_even: Option<[bool; 16]>,
-        r_1_odd: Option<[bool; 16]>,
+        r_0_even: Value<[bool; 16]>,
+        r_0_odd: Value<[bool; 16]>,
+        r_1_even: Value<[bool; 16]>,
+        r_1_odd: Value<[bool; 16]>,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
         let (even, _odd) = self.assign_spread_outputs(
             region, lookup, a_3, row, r_0_even, r_0_odd, r_1_even, r_1_odd,
@@ -448,7 +456,7 @@ mod tests {
     use super::{message_schedule::msg_schedule_test_input, Table16Chip, Table16Config};
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
-        pairing::bn256::Fr,
+        pasta::pallas,
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
@@ -457,7 +465,7 @@ mod tests {
         use plotters::prelude::*;
         struct MyCircuit {}
 
-        impl Circuit<Fr> for MyCircuit {
+        impl Circuit<pallas::Base> for MyCircuit {
             type Config = Table16Config;
             type FloorPlanner = SimpleFloorPlanner;
 
@@ -465,14 +473,14 @@ mod tests {
                 MyCircuit {}
             }
 
-            fn configure(meta: &mut ConstraintSystem<Fr>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
                 Table16Chip::configure(meta)
             }
 
             fn synthesize(
                 &self,
                 config: Self::Config,
-                mut layouter: impl Layouter<Fr>,
+                mut layouter: impl Layouter<pallas::Base>,
             ) -> Result<(), Error> {
                 let table16_chip = Table16Chip::construct(config.clone());
                 Table16Chip::load(config, &mut layouter)?;
@@ -501,7 +509,7 @@ mod tests {
 
         let circuit = MyCircuit {};
         halo2_proofs::dev::CircuitLayout::default()
-            .render::<Fr, _, _>(17, &circuit, &root)
+            .render::<pallas::Base, _, _>(17, &circuit, &root)
             .unwrap();
     }
 }

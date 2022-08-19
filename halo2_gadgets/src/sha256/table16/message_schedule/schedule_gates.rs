@@ -1,6 +1,6 @@
 use super::super::Gate;
 use halo2_proofs::{arithmetic::FieldExt, plonk::Expression};
-use std::{array, marker::PhantomData};
+use std::marker::PhantomData;
 
 pub struct ScheduleGate<F: FieldExt>(PhantomData<F>);
 
@@ -29,7 +29,8 @@ impl<F: FieldExt> ScheduleGate<F> {
             + (word * (-F::one()));
         let carry_check = Gate::range_check(carry, 0, 3);
 
-        array::IntoIter::new([("word_check", word_check), ("carry_check", carry_check)])
+        [("word_check", word_check), ("carry_check", carry_check)]
+            .into_iter()
             .map(move |(name, poly)| (name, s_word.clone() * poly))
     }
 
@@ -39,9 +40,9 @@ impl<F: FieldExt> ScheduleGate<F> {
         lo: Expression<F>,
         hi: Expression<F>,
         word: Expression<F>,
-    ) -> impl Iterator<Item = (&'static str, Expression<F>)> {
+    ) -> Option<(&'static str, Expression<F>)> {
         let check = lo + hi * F::from(1 << 16) - word;
-        std::iter::empty().chain(Some(("s_decompose_0", s_decompose_0 * check)))
+        Some(("s_decompose_0", s_decompose_0 * check))
     }
 
     /// s_decompose_1 for W_1 to W_13
@@ -65,11 +66,12 @@ impl<F: FieldExt> ScheduleGate<F> {
         let range_check_tag_c = Gate::range_check(tag_c, 0, 2);
         let range_check_tag_d = Gate::range_check(tag_d, 0, 4);
 
-        array::IntoIter::new([
+        [
             ("decompose_check", decompose_check),
             ("range_check_tag_c", range_check_tag_c),
             ("range_check_tag_d", range_check_tag_d),
-        ])
+        ]
+        .into_iter()
         .map(move |(name, poly)| (name, s_decompose_1.clone() * poly))
     }
 
@@ -101,11 +103,12 @@ impl<F: FieldExt> ScheduleGate<F> {
         let range_check_tag_d = Gate::range_check(tag_d, 0, 0);
         let range_check_tag_g = Gate::range_check(tag_g, 0, 3);
 
-        array::IntoIter::new([
+        [
             ("decompose_check", decompose_check),
             ("range_check_tag_g", range_check_tag_g),
             ("range_check_tag_d", range_check_tag_d),
-        ])
+        ]
+        .into_iter()
         .map(move |(name, poly)| (name, s_decompose_2.clone() * poly))
     }
 
@@ -130,11 +133,12 @@ impl<F: FieldExt> ScheduleGate<F> {
         let range_check_tag_a = Gate::range_check(tag_a, 0, 1);
         let range_check_tag_d = Gate::range_check(tag_d, 0, 3);
 
-        array::IntoIter::new([
+        [
             ("decompose_check", decompose_check),
             ("range_check_tag_a", range_check_tag_a),
             ("range_check_tag_d", range_check_tag_d),
-        ])
+        ]
+        .into_iter()
         .map(move |(name, poly)| (name, s_decompose_3.clone() * poly))
     }
 

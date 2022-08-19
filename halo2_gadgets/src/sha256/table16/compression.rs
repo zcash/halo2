@@ -4,8 +4,8 @@ use super::{
     AssignedBits, BlockWord, SpreadInputs, SpreadVar, Table16Assignment, ROUNDS, STATE,
 };
 use halo2_proofs::{
-    circuit::Layouter,
-    pairing::bn256::Fr,
+    circuit::{Layouter, Value},
+    pasta::pallas,
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
 };
@@ -27,12 +27,12 @@ pub trait UpperSigmaVar<
     const D_LEN: usize,
 >
 {
-    fn spread_a(&self) -> Option<[bool; A_LEN]>;
-    fn spread_b(&self) -> Option<[bool; B_LEN]>;
-    fn spread_c(&self) -> Option<[bool; C_LEN]>;
-    fn spread_d(&self) -> Option<[bool; D_LEN]>;
+    fn spread_a(&self) -> Value<[bool; A_LEN]>;
+    fn spread_b(&self) -> Value<[bool; B_LEN]>;
+    fn spread_c(&self) -> Value<[bool; C_LEN]>;
+    fn spread_d(&self) -> Value<[bool; D_LEN]>;
 
-    fn xor_upper_sigma(&self) -> Option<[bool; 64]> {
+    fn xor_upper_sigma(&self) -> Value<[bool; 64]> {
         self.spread_a()
             .zip(self.spread_b())
             .zip(self.spread_c())
@@ -128,15 +128,15 @@ impl AbcdVar {
 }
 
 impl UpperSigmaVar<4, 22, 18, 20> for AbcdVar {
-    fn spread_a(&self) -> Option<[bool; 4]> {
+    fn spread_a(&self) -> Value<[bool; 4]> {
         self.a.spread.value().map(|v| v.0)
     }
 
-    fn spread_b(&self) -> Option<[bool; 22]> {
+    fn spread_b(&self) -> Value<[bool; 22]> {
         self.b.spread.value().map(|v| v.0)
     }
 
-    fn spread_c(&self) -> Option<[bool; 18]> {
+    fn spread_c(&self) -> Value<[bool; 18]> {
         self.c_lo
             .spread
             .value()
@@ -153,7 +153,7 @@ impl UpperSigmaVar<4, 22, 18, 20> for AbcdVar {
             })
     }
 
-    fn spread_d(&self) -> Option<[bool; 20]> {
+    fn spread_d(&self) -> Value<[bool; 20]> {
         self.d.spread.value().map(|v| v.0)
     }
 }
@@ -217,7 +217,7 @@ impl EfghVar {
 }
 
 impl UpperSigmaVar<12, 10, 28, 14> for EfghVar {
-    fn spread_a(&self) -> Option<[bool; 12]> {
+    fn spread_a(&self) -> Value<[bool; 12]> {
         self.a_lo
             .spread
             .value()
@@ -232,7 +232,7 @@ impl UpperSigmaVar<12, 10, 28, 14> for EfghVar {
             })
     }
 
-    fn spread_b(&self) -> Option<[bool; 10]> {
+    fn spread_b(&self) -> Value<[bool; 10]> {
         self.b_lo
             .spread
             .value()
@@ -247,11 +247,11 @@ impl UpperSigmaVar<12, 10, 28, 14> for EfghVar {
             })
     }
 
-    fn spread_c(&self) -> Option<[bool; 28]> {
+    fn spread_c(&self) -> Value<[bool; 28]> {
         self.c.spread.value().map(|v| v.0)
     }
 
-    fn spread_d(&self) -> Option<[bool; 14]> {
+    fn spread_d(&self) -> Value<[bool; 14]> {
         self.d.spread.value().map(|v| v.0)
     }
 }
@@ -266,7 +266,7 @@ impl From<(AssignedBits<16>, AssignedBits<16>)> for RoundWordDense {
 }
 
 impl RoundWordDense {
-    pub fn value(&self) -> Option<u32> {
+    pub fn value(&self) -> Value<u32> {
         self.0
             .value_u16()
             .zip(self.1.value_u16())
@@ -284,7 +284,7 @@ impl From<(AssignedBits<32>, AssignedBits<32>)> for RoundWordSpread {
 }
 
 impl RoundWordSpread {
-    pub fn value(&self) -> Option<u64> {
+    pub fn value(&self) -> Value<u64> {
         self.0
             .value_u32()
             .zip(self.1.value_u32())
@@ -457,7 +457,7 @@ impl Table16Assignment for CompressionConfig {}
 
 impl CompressionConfig {
     pub(super) fn configure(
-        meta: &mut ConstraintSystem<Fr>,
+        meta: &mut ConstraintSystem<pallas::Base>,
         lookup: SpreadInputs,
         message_schedule: Column<Advice>,
         extras: [Column<Advice>; 6],
@@ -863,7 +863,7 @@ impl CompressionConfig {
     /// Returns an initialized state.
     pub(super) fn initialize_with_iv(
         &self,
-        layouter: &mut impl Layouter<Fr>,
+        layouter: &mut impl Layouter<pallas::Base>,
         init_state: [u32; STATE],
     ) -> Result<State, Error> {
         let mut new_state = State::empty_state();
@@ -881,7 +881,7 @@ impl CompressionConfig {
     /// output from a previous compression round.
     pub(super) fn initialize_with_state(
         &self,
-        layouter: &mut impl Layouter<Fr>,
+        layouter: &mut impl Layouter<pallas::Base>,
         init_state: State,
     ) -> Result<State, Error> {
         let mut new_state = State::empty_state();
@@ -898,7 +898,7 @@ impl CompressionConfig {
     /// Given an initialized state and a message schedule, perform 64 compression rounds.
     pub(super) fn compress(
         &self,
-        layouter: &mut impl Layouter<Fr>,
+        layouter: &mut impl Layouter<pallas::Base>,
         initialized_state: State,
         w_halves: [(AssignedBits<16>, AssignedBits<16>); ROUNDS],
     ) -> Result<State, Error> {
@@ -919,10 +919,10 @@ impl CompressionConfig {
     /// After the final round, convert the state into the final digest.
     pub(super) fn digest(
         &self,
-        layouter: &mut impl Layouter<Fr>,
+        layouter: &mut impl Layouter<pallas::Base>,
         state: State,
     ) -> Result<[BlockWord; DIGEST_SIZE], Error> {
-        let mut digest = [BlockWord(Some(0)); DIGEST_SIZE];
+        let mut digest = [BlockWord(Value::known(0)); DIGEST_SIZE];
         layouter.assign_region(
             || "digest",
             |mut region| {
@@ -943,7 +943,7 @@ mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
-        pairing::bn256::Fr,
+        pasta::pallas,
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
@@ -951,7 +951,7 @@ mod tests {
     fn compress() {
         struct MyCircuit {}
 
-        impl Circuit<Fr> for MyCircuit {
+        impl Circuit<pallas::Base> for MyCircuit {
             type Config = Table16Config;
             type FloorPlanner = SimpleFloorPlanner;
 
@@ -959,14 +959,14 @@ mod tests {
                 MyCircuit {}
             }
 
-            fn configure(meta: &mut ConstraintSystem<Fr>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
                 Table16Chip::configure(meta)
             }
 
             fn synthesize(
                 &self,
                 config: Self::Config,
-                mut layouter: impl Layouter<Fr>,
+                mut layouter: impl Layouter<pallas::Base>,
             ) -> Result<(), Error> {
                 Table16Chip::load(config.clone(), &mut layouter)?;
 
@@ -984,10 +984,10 @@ mod tests {
 
                 let digest = config.compression.digest(&mut layouter, state)?;
                 for (idx, digest_word) in digest.iter().enumerate() {
-                    assert_eq!(
-                        (digest_word.0.unwrap() as u64 + IV[idx] as u64) as u32,
-                        super::compression_util::COMPRESSION_OUTPUT[idx]
-                    );
+                    digest_word.0.assert_if_known(|digest_word| {
+                        (*digest_word as u64 + IV[idx] as u64) as u32
+                            == super::compression_util::COMPRESSION_OUTPUT[idx]
+                    });
                 }
 
                 Ok(())
@@ -996,7 +996,7 @@ mod tests {
 
         let circuit: MyCircuit = MyCircuit {};
 
-        let prover = match MockProver::<Fr>::run(17, &circuit, vec![]) {
+        let prover = match MockProver::<pallas::Base>::run(17, &circuit, vec![]) {
             Ok(prover) => prover,
             Err(e) => panic!("{:?}", e),
         };

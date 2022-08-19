@@ -155,10 +155,10 @@ when adding two distinct points.
 ### Point addition
 We now add two points with distinct $x$-coordinates, $P = (x_0, y_0)$ and $Q = (x_1, y_1),$
 where $x_0 \neq x_1,$ to obtain $R = P + Q = (x_2, y_2).$ The line $\overline{PQ}$ has slope
-$$\lambda = frac{y_1 - y_0}{x_1 - x_0} \implies y - y_0 = \lambda \cdot (x - x_0).$$
+$$\lambda = \frac{y_1 - y_0}{x_1 - x_0} \implies y - y_0 = \lambda \cdot (x - x_0).$$
 
 Using the expression for $\overline{PQ}$, we compute $y$-coordinate $-y_2$ of $-R$ as:
-$$-y_2 - y_0 = \lambda \cdot (x_2 - x_0) \implies \boxed{y_2 = (x_0 - x_2) - y_0}.$$
+$$-y_2 - y_0 = \lambda \cdot (x_2 - x_0) \implies \boxed{y_2 =\lambda (x_0 - x_2) - y_0}.$$
 
 Plugging the expression for $\overline{PQ}$ into the curve equation $y^2 = x^3 + b$ yields
 $$
@@ -193,7 +193,7 @@ Important notes:
 Imagine that $\mathbb{F}_p$ has a primitive cube root of unity, or in other words that
 $3 | p - 1$ and so an element $\zeta_p$ generates a $3$-order multiplicative subgroup.
 Notice that a point $(x, y)$ on our example elliptic curve $y^2 = x^3 + b$ has two cousin
-points: $(\zeta_p x, \zeta_p^2 x)$, because the computation $x^3$ effectively kills the
+points: $(\zeta_p x,y), (\zeta_p^2 x,y)$, because the computation $x^3$ effectively kills the
 $\zeta$ component of the $x$-coordinate. Applying the map $(x, y) \mapsto (\zeta_p x, y)$
 is an application of an endomorphism over the curve. The exact mechanics involved are
 complicated, but when the curve has a prime $q$ number of points (and thus a prime

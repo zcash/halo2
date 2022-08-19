@@ -9,44 +9,48 @@ derived from section 4.1 of [Hüseyin Hışıl's thesis](https://core.ac.uk/down
 The formulae from Hışıl's thesis are:
 
 - $x_3 = \left(\frac{y_1 - y_2}{x_1 - x_2}\right)^2 - x_1 - x_2$
-- $y_3 = \frac{y_1 - y_2}{x_1 - x_2} \cdot (x_1 - x_3) - y_1$
+- $y_3 = \frac{y_1 - y_2}{x_1 - x_2} \cdot (x_1 - x_3) - y_1.$
 
-Rename:
-- $(x_1, y_1)$ to $(x_q, y_q)$
-- $(x_2, y_2)$ to $(x_p, y_p)$
-- $(x_3, y_3)$ to $(x_r, y_r)$.
+Rename $(x_1, y_1)$ to $(x_q, y_q)$, $(x_2, y_2)$ to $(x_p, y_p)$, and $(x_3, y_3)$ to $(x_r, y_r)$, giving
 
-Let $\lambda = \frac{y_q - y_p}{x_q - x_p} = \frac{y_p - y_q}{x_p - x_q}$, which we implement as
-
-$\lambda \cdot (x_p - x_q) = y_p - y_q$
-
-Also,
-- $x_r = \lambda^2 - x_q - x_p$
-- $y_r = \lambda \cdot (x_q - x_r) - y_q$
+- $x_r = \left(\frac{y_q - y_p}{x_q - x_p}\right)^2 - x_q - x_p$
+- $y_r = \frac{y_q - y_p}{x_q - x_p} \cdot (x_q - x_r) - y_q$
 
 which is equivalent to
 
-- $x_r + x_q + x_p = \lambda^2$
+- $x_r + x_q + x_p = \left(\frac{y_p - y_q}{x_p - x_q}\right)^2$
+- $y_r + y_q = \frac{y_p - y_q}{x_p - x_q} \cdot (x_q - x_r).$
 
-Assuming $x_p \neq x_q$,
+Assuming $x_p \neq x_q$, we have
 
 $
 \begin{array}{lrrll}
-&&(x_r + x_q + x_p) \cdot (x_p - x_q)^2 &=& \lambda^2 \cdot (x_p - x_q)^2 \\
-&\implies &(x_r + x_q + x_p) \cdot (x_p - x_q)^2 &=& \big(\lambda \cdot (x_p - x_q)\big)^2 \\[1.2ex]
+&& x_r + x_q + x_p &=& \left(\frac{y_p - y_q}{x_p - x_q}\right)^2 \\[1.2ex]
+&\Longleftrightarrow &(x_r + x_q + x_p) \cdot (x_p - x_q)^2 &=& (y_p - y_q)^2 \\[1ex]
+&\Longleftrightarrow &(x_r + x_q + x_p) \cdot (x_p - x_q)^2 - (y_p - y_q)^2 &=& 0 \\[1.5ex]
 \text{and} \\
-&         &y_r &=& \lambda \cdot (x_q - x_r) - y_q \\
-&\implies &y_r + y_q &=& \lambda \cdot (x_q - x_r) \\
-&\implies &(y_r + y_q) \cdot (x_p - x_q) &=& \lambda \cdot (x_p - x_q) \cdot (x_q - x_r)
+&&y_r + y_q &=& \frac{y_p - y_q}{x_p - x_q} \cdot (x_q - x_r) \\[0.8ex]
+&\Longleftrightarrow &(y_r + y_q) \cdot (x_p - x_q) &=& (y_p - y_q) \cdot (x_q - x_r) \\[1ex]
+&\Longleftrightarrow &(y_r + y_q) \cdot (x_p - x_q) - (y_p - y_q) \cdot (x_q - x_r) &=& 0.
 \end{array}
 $
 
-Substituting for $\lambda \cdot (x_p - x_q)$, we get the constraints:
+So we get the constraints:
 - $(x_r + x_q + x_p) \cdot (x_p - x_q)^2 - (y_p - y_q)^2 = 0$
   - Note that this constraint is unsatisfiable for $P \;⸭\; (-P)$ (when $P \neq \mathcal{O}$),
     and so cannot be used with arbitrary inputs.
-- $(y_r + y_q) \cdot (x_p - x_q) - (y_p - y_q) \cdot (x_q - x_r) = 0$
+- $(y_r + y_q) \cdot (x_p - x_q) - (y_p - y_q) \cdot (x_q - x_r) = 0.$
 
+### Constraints <a name="incomplete-addition-constraints">
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+4 & q_\text{add-incomplete} \cdot \left( (x_r + x_q + x_p) \cdot (x_p - x_q)^2 - (y_p - y_q)^2 \right) = 0 \\\hline
+3 & q_\text{add-incomplete} \cdot \left( (y_r + y_q) \cdot (x_p - x_q) - (y_p - y_q) \cdot (x_q - x_r) \right) = 0 \\\hline
+\end{array}
+$$
 
 ## Complete addition
 
@@ -95,10 +99,10 @@ $\hspace{1em}
 \end{array}
 $
 
-### Constraints
+### Constraints <a name="complete-addition-constraints">
 
 $$
-\begin{array}{|c|rcl|l|}
+\begin{array}{|c|lcl|l|}
 \hline
 \text{Degree} & \text{Constraint}\hspace{7em} &&& \text{Meaning} \\\hline
 4 & q_\mathit{add} \cdot (x_q - x_p) \cdot ((x_q - x_p) \cdot \lambda - (y_q - y_p)) &=& 0 & x_q \neq x_p \implies \lambda = \frac{y_q - y_p}{x_q - x_p} \\\hline \\[-2.3ex]
@@ -199,16 +203,16 @@ $$
   & \text{Therefore:} \\
   & \hspace{2em} x_p = 0 \implies (x_r, y_r) = (x_q, y_q). \\
   & \\
-5.\text{ a)} & (1 - x_q \cdot \beta) \cdot (x_r - x_p) = 0 \\
-  \text{ b)} & (1 - x_q \cdot \beta) \cdot (y_r - y_p) = 0 \\
+5.\text{ a)} & (1 - x_q \cdot \gamma) \cdot (x_r - x_p) = 0 \\
+  \text{ b)} & (1 - x_q \cdot \gamma) \cdot (y_r - y_p) = 0 \\
   & \\
   & \begin{aligned}
-      \text{At least one of } 1 - x_q \cdot \beta &= 0 \\
+      \text{At least one of } 1 - x_q \cdot \gamma &= 0 \\
                              \text{or } x_r - x_p &= 0
     \end{aligned} \\
   & \text{must be satisfied for constraint (a) to be satisfied.} \\
   & \\
-  & \text{If } x_q = 0 \text{ then } 1 - x_q \cdot \beta = 0 \text{ has no solutions for } \beta, \\
+  & \text{If } x_q = 0 \text{ then } 1 - x_q \cdot \gamma = 0 \text{ has no solutions for } \gamma, \\
   & \text{and so it must be that } x_r - x_p = 0. \\
   & \\
   & \text{Similarly, constraint (b) imposes that if } x_q = 0 \\
@@ -227,7 +231,7 @@ $$
   & \text{must be satisfied for constraint (a) to be satisfied,} \\
   & \text{and similarly replacing } x_r \text{ by } y_r. \\
   & \\
-  & \text{If } x_r \neq 0 \text{ or } y_r = 0, \text{ then it must be that } 1 - (x_q - x_p) \cdot \alpha - (y_q + y_p) \cdot \delta = 0. \\
+  & \text{If } x_r \neq 0 \text{ or } y_r \neq 0, \text{ then it must be that } 1 - (x_q - x_p) \cdot \alpha - (y_q + y_p) \cdot \delta = 0. \\
   & \\
   & \text{However, if } x_q = x_p \wedge y_q = -y_p, \text{ then there are no solutions for } \alpha \text { and } \delta. \\
   & \\

@@ -2,11 +2,13 @@ use std::iter;
 
 use ff::Field;
 
-use crate::poly::Rotation;
 use crate::{
     arithmetic::CurveAffine,
     plonk::{Error, VerifyingKey},
-    poly::{commitment::Params, multiopen::VerifierQuery, MSM},
+    poly::{
+        commitment::{Params, MSM},
+        multiopen::VerifierQuery,
+    },
     transcript::{read_n_points, EncodedChallenge, TranscriptRead},
 };
 
@@ -28,8 +30,8 @@ pub struct PartiallyEvaluated<C: CurveAffine> {
     random_eval: C::Scalar,
 }
 
-pub struct Evaluated<C: CurveAffine> {
-    h_commitment: MSM<C>,
+pub struct Evaluated<'params, C: CurveAffine> {
+    h_commitment: MSM<'params, C>,
     random_poly_commitment: C,
     expected_h_eval: C::Scalar,
     random_eval: C::Scalar,
@@ -87,6 +89,7 @@ impl<C: CurveAffine> Constructed<C> {
 impl<C: CurveAffine> PartiallyEvaluated<C> {
     pub(in crate::plonk) fn verify(
         self,
+        params: &Params<C>,
         expressions: impl Iterator<Item = C::Scalar>,
         y: ChallengeY<C>,
         xn: C::Scalar,
@@ -98,7 +101,7 @@ impl<C: CurveAffine> PartiallyEvaluated<C> {
             self.h_commitments
                 .iter()
                 .rev()
-                .fold(MSM::new(), |mut acc, commitment| {
+                .fold(params.empty_msm(), |mut acc, commitment| {
                     acc.scale(xn);
                     acc.append_term(C::Scalar::one(), *commitment);
                     acc
@@ -113,11 +116,11 @@ impl<C: CurveAffine> PartiallyEvaluated<C> {
     }
 }
 
-impl<'params, C: CurveAffine> Evaluated<C> {
+impl<'params, C: CurveAffine> Evaluated<'params, C> {
     pub(in crate::plonk) fn queries<'r>(
         &'r self,
         x: ChallengeX<C>,
-    ) -> impl Iterator<Item = VerifierQuery<'r, C>> + Clone
+    ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone
     where
         'params: 'r,
     {
@@ -125,13 +128,11 @@ impl<'params, C: CurveAffine> Evaluated<C> {
             .chain(Some(VerifierQuery::new_msm(
                 &self.h_commitment,
                 *x,
-                Rotation::cur(),
                 self.expected_h_eval,
             )))
             .chain(Some(VerifierQuery::new_commitment(
                 &self.random_poly_commitment,
                 *x,
-                Rotation::cur(),
                 self.random_eval,
             )))
     }

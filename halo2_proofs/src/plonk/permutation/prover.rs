@@ -8,26 +8,30 @@ use std::iter::{self, ExactSizeIterator};
 use super::super::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};
 use super::{Argument, ProvingKey};
 use crate::{
-    arithmetic::{eval_polynomial, parallelize, BaseExt, CurveAffine, FieldExt},
+    arithmetic::{eval_polynomial, parallelize, CurveAffine, FieldExt},
     plonk::{self, Error},
     poly::{
-        commitment::Params, multiopen::ProverQuery, Coeff, ExtendedLagrangeCoeff, LagrangeCoeff,
-        Polynomial, Rotation,
+        self,
+        commitment::{Blind, Params},
+        multiopen::ProverQuery,
+        Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
 
-pub(crate) struct CommittedSet<C: CurveAffine> {
-    pub(crate) permutation_product_poly: Polynomial<C::Scalar, Coeff>,
-    pub(crate) permutation_product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+pub struct CommittedSet<C: CurveAffine, Ev> {
+    permutation_product_poly: Polynomial<C::Scalar, Coeff>,
+    permutation_product_coset: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
+    permutation_product_blind: Blind<C::Scalar>,
 }
 
-pub(crate) struct Committed<C: CurveAffine> {
-    pub(crate) sets: Vec<CommittedSet<C>>,
+pub(crate) struct Committed<C: CurveAffine, Ev> {
+    sets: Vec<CommittedSet<C, Ev>>,
 }
 
 pub struct ConstructedSet<C: CurveAffine> {
     permutation_product_poly: Polynomial<C::Scalar, Coeff>,
+    permutation_product_blind: Blind<C::Scalar>,
 }
 
 pub(crate) struct Constructed<C: CurveAffine> {
@@ -42,6 +46,7 @@ impl Argument {
     pub(in crate::plonk) fn commit<
         C: CurveAffine,
         E: EncodedChallenge<C>,
+        Ev: Copy + Send + Sync,
         R: RngCore,
         T: TranscriptWrite<C, E>,
     >(
@@ -54,17 +59,18 @@ impl Argument {
         instance: &[Polynomial<C::Scalar, LagrangeCoeff>],
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
+        evaluator: &mut poly::Evaluator<Ev, C::Scalar, ExtendedLagrangeCoeff>,
         mut rng: R,
         transcript: &mut T,
-    ) -> Result<Committed<C>, Error> {
+    ) -> Result<Committed<C, Ev>, Error> {
         let domain = &pk.vk.domain;
 
         // How many columns can be included in a single permutation polynomial?
         // We need to multiply by z(X) and (1 - (l_last(X) + l_blind(X))). This
         // will never underflow because of the requirement of at least a degree
         // 3 circuit for the permutation argument.
-        assert!(pk.vk.cs.degree() >= 3);
-        let chunk_len = pk.vk.cs.degree() - 2;
+        assert!(pk.vk.cs_degree >= 3);
+        let chunk_len = pk.vk.cs_degree - 2;
         let blinding_factors = pk.vk.cs.blinding_factors();
 
         // Each column gets its own delta power.
@@ -160,11 +166,15 @@ impl Argument {
             // Set new last_z
             last_z = z[params.n as usize - (blinding_factors + 1)];
 
-            let permutation_product_commitment_projective = params.commit_lagrange(&z);
+            let blind = Blind(C::Scalar::random(&mut rng));
+
+            let permutation_product_commitment_projective = params.commit_lagrange(&z, blind);
+            let permutation_product_blind = blind;
             let z = domain.lagrange_to_coeff(z);
             let permutation_product_poly = z.clone();
 
-            let permutation_product_coset = domain.coeff_to_extended(z.clone());
+            let permutation_product_coset =
+                evaluator.register_poly(domain.coeff_to_extended(z.clone()));
 
             let permutation_product_commitment =
                 permutation_product_commitment_projective.to_affine();
@@ -175,6 +185,7 @@ impl Argument {
             sets.push(CommittedSet {
                 permutation_product_poly,
                 permutation_product_coset,
+                permutation_product_blind,
             });
         }
 
@@ -182,17 +193,120 @@ impl Argument {
     }
 }
 
-impl<C: CurveAffine> Committed<C> {
-    pub(in crate::plonk) fn construct(self) -> Constructed<C> {
-        Constructed {
+impl<C: CurveAffine, Ev: Copy + Send + Sync> Committed<C, Ev> {
+    pub(in crate::plonk) fn construct<'a>(
+        self,
+        pk: &'a plonk::ProvingKey<C>,
+        p: &'a Argument,
+        advice_cosets: &'a [poly::AstLeaf<Ev, ExtendedLagrangeCoeff>],
+        fixed_cosets: &'a [poly::AstLeaf<Ev, ExtendedLagrangeCoeff>],
+        instance_cosets: &'a [poly::AstLeaf<Ev, ExtendedLagrangeCoeff>],
+        permutation_cosets: &'a [poly::AstLeaf<Ev, ExtendedLagrangeCoeff>],
+        l0: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
+        l_blind: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
+        l_last: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
+        beta: ChallengeBeta<C>,
+        gamma: ChallengeGamma<C>,
+    ) -> (
+        Constructed<C>,
+        impl Iterator<Item = poly::Ast<Ev, C::Scalar, ExtendedLagrangeCoeff>> + 'a,
+    ) {
+        let chunk_len = pk.vk.cs_degree - 2;
+        let blinding_factors = pk.vk.cs.blinding_factors();
+        let last_rotation = Rotation(-((blinding_factors + 1) as i32));
+
+        let constructed = Constructed {
             sets: self
                 .sets
                 .iter()
                 .map(|set| ConstructedSet {
                     permutation_product_poly: set.permutation_product_poly.clone(),
+                    permutation_product_blind: set.permutation_product_blind,
                 })
                 .collect(),
-        }
+        };
+
+        let expressions = iter::empty()
+            // Enforce only for the first set.
+            // l_0(X) * (1 - z_0(X)) = 0
+            .chain(
+                self.sets
+                    .first()
+                    .map(|first_set| (poly::Ast::one() - first_set.permutation_product_coset) * l0),
+            )
+            // Enforce only for the last set.
+            // l_last(X) * (z_l(X)^2 - z_l(X)) = 0
+            .chain(self.sets.last().map(|last_set| {
+                ((poly::Ast::from(last_set.permutation_product_coset)
+                    * last_set.permutation_product_coset)
+                    - last_set.permutation_product_coset)
+                    * l_last
+            }))
+            // Except for the first set, enforce.
+            // l_0(X) * (z_i(X) - z_{i-1}(\omega^(last) X)) = 0
+            .chain(
+                self.sets
+                    .iter()
+                    .skip(1)
+                    .zip(self.sets.iter())
+                    .map(|(set, last_set)| {
+                        (poly::Ast::from(set.permutation_product_coset)
+                            - last_set
+                                .permutation_product_coset
+                                .with_rotation(last_rotation))
+                            * l0
+                    })
+                    .collect::<Vec<_>>(),
+            )
+            // And for all the sets we enforce:
+            // (1 - (l_last(X) + l_blind(X))) * (
+            //   z_i(\omega X) \prod_j (p(X) + \beta s_j(X) + \gamma)
+            // - z_i(X) \prod_j (p(X) + \delta^j \beta X + \gamma)
+            // )
+            .chain(
+                self.sets
+                    .into_iter()
+                    .zip(p.columns.chunks(chunk_len))
+                    .zip(permutation_cosets.chunks(chunk_len))
+                    .enumerate()
+                    .map(move |(chunk_index, ((set, columns), cosets))| {
+                        let mut left = poly::Ast::<_, C::Scalar, _>::from(
+                            set.permutation_product_coset
+                                .with_rotation(Rotation::next()),
+                        );
+                        for (values, permutation) in columns
+                            .iter()
+                            .map(|&column| match column.column_type() {
+                                Any::Advice => &advice_cosets[column.index()],
+                                Any::Fixed => &fixed_cosets[column.index()],
+                                Any::Instance => &instance_cosets[column.index()],
+                            })
+                            .zip(cosets.iter())
+                        {
+                            left *= poly::Ast::<_, C::Scalar, _>::from(*values)
+                                + (poly::Ast::ConstantTerm(*beta) * poly::Ast::from(*permutation))
+                                + poly::Ast::ConstantTerm(*gamma);
+                        }
+
+                        let mut right = poly::Ast::from(set.permutation_product_coset);
+                        let mut current_delta = *beta
+                            * &(C::Scalar::DELTA.pow_vartime(&[(chunk_index * chunk_len) as u64]));
+                        for values in columns.iter().map(|&column| match column.column_type() {
+                            Any::Advice => &advice_cosets[column.index()],
+                            Any::Fixed => &fixed_cosets[column.index()],
+                            Any::Instance => &instance_cosets[column.index()],
+                        }) {
+                            right *= poly::Ast::from(*values)
+                                + poly::Ast::LinearTerm(current_delta)
+                                + poly::Ast::ConstantTerm(*gamma);
+                            current_delta *= &C::Scalar::DELTA;
+                        }
+
+                        (left - right) * (poly::Ast::one() - (poly::Ast::from(l_last) + l_blind))
+                    }),
+            );
+
+        (constructed, expressions)
     }
 }
 
@@ -203,8 +317,8 @@ impl<C: CurveAffine> super::ProvingKey<C> {
     ) -> impl Iterator<Item = ProverQuery<'_, C>> + Clone {
         self.polys.iter().map(move |poly| ProverQuery {
             point: *x,
-            rotation: Rotation::cur(),
             poly,
+            blind: Blind::default(),
         })
     }
 
@@ -288,13 +402,13 @@ impl<C: CurveAffine> Evaluated<C> {
                     // Open permutation product commitments at x and \omega x
                     .chain(Some(ProverQuery {
                         point: *x,
-                        rotation: Rotation::cur(),
                         poly: &set.permutation_product_poly,
+                        blind: set.permutation_product_blind,
                     }))
                     .chain(Some(ProverQuery {
                         point: x_next,
-                        rotation: Rotation::next(),
                         poly: &set.permutation_product_poly,
+                        blind: set.permutation_product_blind,
                     }))
             }))
             // Open it at \omega^{last} x for all but the last set. This rotation is only
@@ -309,8 +423,8 @@ impl<C: CurveAffine> Evaluated<C> {
                     .flat_map(move |set| {
                         Some(ProverQuery {
                             point: x_last,
-                            rotation: Rotation(-((blinding_factors + 1) as i32)),
                             poly: &set.permutation_product_poly,
+                            blind: set.permutation_product_blind,
                         })
                     }),
             )

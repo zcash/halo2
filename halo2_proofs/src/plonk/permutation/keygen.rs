@@ -141,7 +141,11 @@ impl Assembly {
             }
 
             // Compute commitment to permutation polynomial
-            commitments.push(params.commit_lagrange(&permutation_poly).to_affine());
+            commitments.push(
+                params
+                    .commit_lagrange(&permutation_poly, Blind::default())
+                    .to_affine(),
+            );
         }
         VerifyingKey { commitments }
     }

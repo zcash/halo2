@@ -119,9 +119,9 @@ impl<C: CurveAffine> Evaluated<C> {
                         expression.evaluate(
                             &|scalar| scalar,
                             &|_| panic!("virtual selectors are removed during optimization"),
-                            &|index, _, _| fixed_evals[index],
-                            &|index, _, _| advice_evals[index],
-                            &|index, _, _| instance_evals[index],
+                            &|query| fixed_evals[query.index],
+                            &|query| advice_evals[query.index],
+                            &|query| instance_evals[query.index],
                             &|a| -a,
                             &|a, b| a + &b,
                             &|a, b| a * &b,
@@ -165,11 +165,11 @@ impl<C: CurveAffine> Evaluated<C> {
             ))
     }
 
-    pub(in crate::plonk) fn queries<'r>(
+    pub(in crate::plonk) fn queries<'r, 'params: 'r>(
         &'r self,
         vk: &'r VerifyingKey<C>,
         x: ChallengeX<C>,
-    ) -> impl Iterator<Item = VerifierQuery<'r, C>> + Clone {
+    ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone {
         let x_inv = vk.domain.rotate_omega(*x, Rotation::prev());
         let x_next = vk.domain.rotate_omega(*x, Rotation::next());
 
@@ -178,35 +178,30 @@ impl<C: CurveAffine> Evaluated<C> {
             .chain(Some(VerifierQuery::new_commitment(
                 &self.committed.product_commitment,
                 *x,
-                Rotation::cur(),
                 self.product_eval,
             )))
             // Open lookup input commitments at x
             .chain(Some(VerifierQuery::new_commitment(
                 &self.committed.permuted.permuted_input_commitment,
                 *x,
-                Rotation::cur(),
                 self.permuted_input_eval,
             )))
             // Open lookup table commitments at x
             .chain(Some(VerifierQuery::new_commitment(
                 &self.committed.permuted.permuted_table_commitment,
                 *x,
-                Rotation::cur(),
                 self.permuted_table_eval,
             )))
             // Open lookup input commitments at \omega^{-1} x
             .chain(Some(VerifierQuery::new_commitment(
                 &self.committed.permuted.permuted_input_commitment,
                 x_inv,
-                Rotation::prev(),
                 self.permuted_input_inv_eval,
             )))
             // Open lookup product commitment at \omega x
             .chain(Some(VerifierQuery::new_commitment(
                 &self.committed.product_commitment,
                 x_next,
-                Rotation::next(),
                 self.product_next_eval,
             )))
     }

@@ -15,7 +15,7 @@ use std::io;
 #[derive(Debug, Clone)]
 pub(crate) struct Argument {
     /// A sequence of columns involved in the argument.
-    pub(super) columns: Vec<Column<Any>>,
+    columns: Vec<Column<Any>>,
 }
 
 impl Argument {
@@ -73,30 +73,13 @@ impl Argument {
 }
 
 /// The verifying key for a single permutation argument.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct VerifyingKey<C: CurveAffine> {
     commitments: Vec<C>,
 }
 
-impl<C: CurveAffine> VerifyingKey<C> {
-    pub(crate) fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
-        for commitment in &self.commitments {
-            writer.write_all(commitment.to_bytes().as_ref())?;
-        }
-
-        Ok(())
-    }
-
-    pub(crate) fn read<R: io::Read>(reader: &mut R, argument: &Argument) -> io::Result<Self> {
-        let commitments = (0..argument.columns.len())
-            .map(|_| C::read(reader))
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(VerifyingKey { commitments })
-    }
-}
-
 /// The proving key for a single permutation argument.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct ProvingKey<C: CurveAffine> {
     permutations: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
     polys: Vec<Polynomial<C::Scalar, Coeff>>,

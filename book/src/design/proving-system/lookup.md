@@ -1,11 +1,11 @@
 # Lookup argument
 
-halo2 uses the following lookup technique, which allows for lookups in arbitrary sets, and
+Halo 2 uses the following lookup technique, which allows for lookups in arbitrary sets, and
 is arguably simpler than Plookup.
 
 ## Note on Language
 
-In addition to the [general notes on language](../design.md#note-on-language):
+In addition to the [general notes on language](../../design.md#note-on-language):
 
 - We call the $Z(X)$ polynomial (the grand product argument polynomial for the permutation
   argument) the "permutation product" column.
@@ -147,7 +147,7 @@ soundness is not affected.
 
 ## Generalizations
 
-halo2's lookup argument implementation generalizes the above technique in the following
+Halo 2's lookup argument implementation generalizes the above technique in the following
 ways:
 
 - $A$ and $S$ can be extended to multiple columns, combined using a random challenge. $A'$

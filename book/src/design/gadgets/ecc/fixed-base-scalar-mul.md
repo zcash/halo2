@@ -13,22 +13,15 @@ A $255$-bit scalar from $\mathbb{F}_q$. We decompose a full-width scalar $\alpha
 
 $$\alpha = k_0 + k_1 \cdot (2^3)^1 + \cdots + k_{84} \cdot (2^3)^{84}, k_i \in [0..2^3).$$
 
-The scalar multiplication will be computed correctly for $k_{0..84}$ representing any integer in the range $[0, 2^{255})$.
-
-$$
-\begin{array}{|c|l|}
-\hline
-\text{Degree} & \text{Constraint} \\\hline
-9 & q_\text{scalar-fixed} \cdot \left(\sum\limits_{i=0}^7{w - i}\right) = 0 \\\hline
-\end{array}
-$$
+The scalar multiplication will be computed correctly for $k_{0..84}$ representing any
+integer in the range $[0, 2^{255})$ - that is, the scalar is allowed to be non-canonical.
 
 We range-constrain each $3$-bit word of the scalar decomposition using a polynomial range-check constraint:
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-9 & q_\text{decompose-base-field} \cdot \RangeCheck{\text{word}}{2^3} = 0 \\\hline
+9 & q_\texttt{mul\_fixed\_full} \cdot \RangeCheck{\text{word}}{2^3} = 0 \\\hline
 \end{array}
 $$
 where $\RangeCheck{\text{word}}{\texttt{range}} = \text{word} \cdot (1 - \text{word}) \cdots (\texttt{range} - 1 - \text{word}).$
@@ -48,7 +41,7 @@ $$
 \hline
 \text{Degree} & \text{Constraint} \\\hline
 5 & q_\text{canon-base-field} \cdot \RangeCheck{\alpha_1}{2^2} = 0 \\\hline
-3 & q_\text{canon-base-field} \cdot \RangeCheck{\alpha_2}{2^1} = 0 \\\hline
+3 & q_\text{canon-base-field} \cdot \BoolCheck{\alpha_2} = 0 \\\hline
 2 & q_\text{canon-base-field} \cdot \left(z_{84} - (\alpha_1 + \alpha_2 \cdot 2^2)\right) = 0 \\\hline
 \end{array}
 $$
@@ -74,9 +67,10 @@ $$
 \begin{array}{|c|l|l|}
 \hline
 \text{Degree} & \text{Constraint} & \text{Comment} \\\hline
+2 & q_\text{canon-base-field} \cdot (\alpha_0' - (\alpha_0 + 2^{130} - t_\mathbb{P})) = 0 \\\hline
 3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot \alpha_1 = 0 & \alpha_2 = 1 \implies \alpha_1 = 0 \\\hline
 3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot \textsf{alpha\_0\_hi\_120} = 0 & \text{Constrain $\alpha_0$ to be a $132$-bit value} \\\hline
-4 & q_\text{canon-base-field} \cdot \alpha_2 \cdot k_{43} \cdot (1 - k_{43}) = 0 & \text{Constrain $\alpha_0[130..\!\!=\!\!131]$ to $0$}  \\\hline
+4 & q_\text{canon-base-field} \cdot \alpha_2 \cdot \BoolCheck{k_{43}} = 0 & \text{Constrain $\alpha_0[130..\!\!=\!\!131]$ to $0$}  \\\hline
 3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot z_{13}(\texttt{lookup}(\alpha_0', 13)) = 0 & \alpha_2 = 1 \implies 0 \leq \alpha'_0 < 2^{130}\\\hline
 \end{array}
 $$
@@ -97,13 +91,13 @@ $\mathsf{v^{old}}$ and $\mathsf{v^{new}}$ are each already constrained to $64$ b
 
 Decompose the magnitude $m$ into three-bit windows, and range-constrain each window, using the [short range decomposition](../decomposition.md#short-range-decomposition) gadget in strict mode, with $W = 22, K = 3.$
 
-We have two additional constraints:
+<a name="constrain-short-signed-msb"></a> We have two additional constraints:
 $$
 \begin{array}{|c|l|l|}
 \hline
 \text{Degree} & \text{Constraint} & \text{Comment} \\\hline
-3 & q_\text{scalar-fixed-short} \cdot \BoolCheck{k_{21}} = 0 & \text{The last window must be a single bit.}\\\hline
-3 & q_\text{scalar-fixed-short} \cdot \left(s^2 - 1\right) = 0  &\text{The sign must be $1$ or $-1$.}\\\hline
+3 & q_\texttt{mul\_fixed\_short} \cdot \BoolCheck{k_{21}} = 0 & \text{The last window must be a single bit.}\\\hline
+3 & q_\texttt{mul\_fixed\_short} \cdot \left(s^2 - 1\right) = 0  &\text{The sign must be $1$ or $-1$.}\\\hline
 \end{array}
 $$
 where $\BoolCheck{x} = x \cdot (1 - x)$.
@@ -153,7 +147,7 @@ Given a decomposed scalar $\alpha$ and a fixed base $B$, we compute $[\alpha]B$ 
 
 > Note: complete addition is required in the final step to correctly map $[0]B$ to a representation of the point at infinity, $(0,0)$; and also to handle a corner case for which the last step is a doubling.
 
-Constraints:
+<a name="constrain-coordinates"></a> Constraints:
 $$
 \begin{array}{|c|l|}
 \hline
@@ -169,12 +163,13 @@ where $b = 5$ (from the Pallas curve equation).
 ### Signed short exponent
 Recall that the signed short exponent is witnessed as a $64-$bit magnitude $m$, and a sign $s \in {1, -1}.$ Using the above algorithm, we compute $P = [m] \mathcal{B}$. Then, to get the final result $P',$ we conditionally negate $P$ using $(x, y) \mapsto (x, s \cdot y)$.
 
-Constraints:
+<a name="constrain-short-signed-conditional-neg"></a> Constraints:
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-3 & q_\text{mul-fixed-short} \cdot \left(s \cdot P_y - P'_y\right) = 0 \\\hline
+3 & q_\texttt{mul\_fixed\_short} \cdot \left(P'_y - P_y\right) \cdot \left(P'_y + P_y\right) = 0 \\\hline
+3 & q_\texttt{mul\_fixed\_short} \cdot \left(s \cdot P'_y - P_y\right) = 0 \\\hline
 \end{array}
 $$
 

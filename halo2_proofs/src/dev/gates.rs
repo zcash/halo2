@@ -35,7 +35,7 @@ struct Gate {
 ///     plonk::{Circuit, ConstraintSystem, Error},
 ///     poly::Rotation,
 /// };
-/// use pairing::bn256::Fr;
+/// use pasta_curves::pallas;
 ///
 /// #[derive(Copy, Clone)]
 /// struct MyConfig {}
@@ -76,7 +76,7 @@ struct Gate {
 ///     }
 /// }
 ///
-/// let gates = CircuitGates::collect::<Fr, MyCircuit>();
+/// let gates = CircuitGates::collect::<pallas::Base, MyCircuit>();
 /// assert_eq!(
 ///     format!("{}", gates),
 ///     r#####"R1CS constraint:
@@ -119,9 +119,9 @@ impl CircuitGates {
                         expression: constraint.evaluate(
                             &util::format_value,
                             &|selector| format!("S{}", selector.0),
-                            &|_, column, rotation| format!("F{}@{}", column, rotation.0),
-                            &|_, column, rotation| format!("A{}@{}", column, rotation.0),
-                            &|_, column, rotation| format!("I{}@{}", column, rotation.0),
+                            &|query| format!("F{}@{}", query.column_index, query.rotation.0),
+                            &|query| format!("A{}@{}", query.column_index, query.rotation.0),
+                            &|query| format!("I{}@{}", query.column_index, query.rotation.0),
                             &|a| {
                                 if a.contains(' ') {
                                     format!("-({})", a)
@@ -153,18 +153,18 @@ impl CircuitGates {
                         queries: constraint.evaluate(
                             &|_| BTreeSet::default(),
                             &|selector| vec![format!("S{}", selector.0)].into_iter().collect(),
-                            &|_, column, rotation| {
-                                vec![format!("F{}@{}", column, rotation.0)]
+                            &|query| {
+                                vec![format!("F{}@{}", query.column_index, query.rotation.0)]
                                     .into_iter()
                                     .collect()
                             },
-                            &|_, column, rotation| {
-                                vec![format!("A{}@{}", column, rotation.0)]
+                            &|query| {
+                                vec![format!("A{}@{}", query.column_index, query.rotation.0)]
                                     .into_iter()
                                     .collect()
                             },
-                            &|_, column, rotation| {
-                                vec![format!("I{}@{}", column, rotation.0)]
+                            &|query| {
+                                vec![format!("I{}@{}", query.column_index, query.rotation.0)]
                                     .into_iter()
                                     .collect()
                             },
@@ -192,9 +192,9 @@ impl CircuitGates {
                     poly.evaluate(
                         &|_| (0, 0, 0),
                         &|_| (0, 0, 0),
-                        &|_, _, _| (0, 0, 0),
-                        &|_, _, _| (0, 0, 0),
-                        &|_, _, _| (0, 0, 0),
+                        &|_| (0, 0, 0),
+                        &|_| (0, 0, 0),
+                        &|_| (0, 0, 0),
                         &|(a_n, a_a, a_m)| (a_n + 1, a_a, a_m),
                         &|(a_n, a_a, a_m), (b_n, b_a, b_m)| (a_n + b_n, a_a + b_a + 1, a_m + b_m),
                         &|(a_n, a_a, a_m), (b_n, b_a, b_m)| (a_n + b_n, a_a + b_a, a_m + b_m + 1),

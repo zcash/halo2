@@ -8,15 +8,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # We don't need to test across multiple platforms yet
-        # os: [ubuntu-latest, windows-latest, macOS-latest]
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          override: false
+          toolchain: 1.56.1
+          override: true
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
@@ -33,10 +32,11 @@ jobs:
           - wasm32-wasi
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          override: false
+          toolchain: 1.56.1
+          override: true
       - name: Add target
         run: rustup target add ${{ matrix.target }}
       - name: cargo build
@@ -50,10 +50,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          override: false
+          toolchain: 1.56.1
+          override: true
       # Build benchmarks to prevent bitrot
       - name: Build benchmarks
         uses: actions-rs/cargo@v1
@@ -61,16 +62,37 @@ jobs:
           command: build
           args: --benches --examples --all-features
 
+  book:
+    name: Book tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.56.1
+          override: true
+      - name: cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+      - name: Setup mdBook
+        uses: peaceiris/actions-mdbook@v1
+        with:
+          mdbook-version: '0.4.5'
+      - name: Test halo2 book
+        run: mdbook test -L target/debug/deps book/
+
   codecov:
     name: Code coverage
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       # Use stable for this to ensure that cargo-tarpaulin can be built.
       - uses: actions-rs/toolchain@v1
         with:
-          override: false
+          toolchain: stable
+          override: true
       - name: Install cargo-tarpaulin
         uses: actions-rs/cargo@v1
         with:
@@ -82,19 +104,18 @@ jobs:
           command: tarpaulin
           args: --all-features --timeout 600 --out Xml
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{secrets.CODECOV_TOKEN}}
+        uses: codecov/codecov-action@v3.1.0
 
   doc-links:
     name: Intra-doc links
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          override: false
+          toolchain: 1.56.1
+          override: true
       - name: cargo fetch
         uses: actions-rs/cargo@v1
         with:
@@ -113,10 +134,11 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          override: false
+          toolchain: 1.56.1
+          override: true
       - run: rustup component add rustfmt
       - uses: actions-rs/cargo@v1
         with:

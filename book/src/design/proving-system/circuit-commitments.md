@@ -61,7 +61,7 @@ Let $c$ be the number of columns that are enabled for equality constraints.
 
 Let $m$ be the maximum number of columns that can accommodated by a
 [column set](permutation.md#spanning-a-large-number-of-columns) without exceeding
-the PLONK configuration's polynomial degree bound.
+the PLONK configuration's maximum constraint degree.
 
 Let $u$ be the number of “usable” rows as defined in the
 [Permutation argument](permutation.md#zero-knowledge-adjustment) section.

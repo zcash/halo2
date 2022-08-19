@@ -1,12 +1,10 @@
 # halo2 [![Crates.io](https://img.shields.io/crates/v/halo2.svg)](https://crates.io/crates/halo2) #
 
-**IMPORTANT**: This library is in beta, and should not be used in production software.
-
 ## [Documentation](https://docs.rs/halo2)
 
 ## Minimum Supported Rust Version
 
-Requires Rust **1.51** or higher.
+Requires Rust **1.56.1** or higher.
 
 Minimum supported Rust version can be changed in the future, but it will be done with a
 minor version bump.
@@ -18,14 +16,17 @@ The `RAYON_NUM_THREADS` environment variable can be used to set the number of th
 
 ## License
 
-Copyright 2020-2021 The Electric Coin Company.
+Licensed under either of
 
-You may use this package under the Bootstrap Open Source Licence, version 1.0,
-or at your option, any later version. See the file [`COPYING`](COPYING) for
-more details, and [`LICENSE-BOSL`](LICENSE-BOSL) for the terms of the Bootstrap
-Open Source Licence, version 1.0.
+ * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
+   http://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
-The purpose of the BOSL is to allow commercial improvements to the package
-while ensuring that all improvements are open source. See
-[here](https://electriccoin.co/blog/introducing-tgppl-a-radically-new-type-of-open-source-license/)
-for why the BOSL exists.
+at your option.
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally
+submitted for inclusion in the work by you, as defined in the Apache-2.0
+license, shall be dual licensed as above, without any additional terms or
+conditions.

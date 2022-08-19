@@ -15,7 +15,7 @@ use std::marker::PhantomData;
 /// This structure contains precomputed constants and other details needed for
 /// performing operations on an evaluation domain of size $2^k$ and an extended
 /// domain of size $2^{k} * j$ with $j \neq 0$.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct EvaluationDomain<G: Group> {
     n: u64,
     k: u32,
@@ -360,16 +360,6 @@ impl<G: Group> EvaluationDomain<G> {
         });
     }
 
-    /// Get the size of the domain
-    pub fn k(&self) -> u32 {
-        self.k
-    }
-
-    /// Get the size of the extended domain
-    pub fn extended_k(&self) -> u32 {
-        self.extended_k
-    }
-
     /// Get the size of the extended domain
     pub fn extended_len(&self) -> usize {
         1 << self.extended_k
@@ -400,7 +390,7 @@ impl<G: Group> EvaluationDomain<G> {
         } else {
             point *= &self
                 .get_omega_inv()
-                .pow_vartime(&[(rotation.0 as i64).abs() as u64]);
+                .pow_vartime(&[(rotation.0 as i64).unsigned_abs()]);
         }
         point
     }
@@ -490,7 +480,7 @@ fn test_rotate() {
     use rand_core::OsRng;
 
     use crate::arithmetic::eval_polynomial;
-    use pairing::bn256::Fr as Scalar;
+    use crate::pasta::pallas::Scalar;
 
     let domain = EvaluationDomain::<Scalar>::new(1, 3);
     let rng = OsRng;
@@ -530,8 +520,8 @@ fn test_rotate() {
 fn test_l_i() {
     use rand_core::OsRng;
 
-    use crate::arithmetic::{eval_polynomial, lagrange_interpolate, BaseExt};
-    use pairing::bn256::Fr as Scalar;
+    use crate::arithmetic::{eval_polynomial, lagrange_interpolate};
+    use crate::pasta::pallas::Scalar;
     let domain = EvaluationDomain::<Scalar>::new(1, 3);
 
     let mut l = vec![];

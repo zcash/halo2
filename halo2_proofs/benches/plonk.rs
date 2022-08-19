@@ -3,13 +3,10 @@ extern crate criterion;
 
 use group::ff::Field;
 use halo2_proofs::arithmetic::FieldExt;
-use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner};
-use halo2_proofs::pairing::bn256::{Bn256, Fr as Fp, G1Affine};
+use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
+use halo2_proofs::pasta::{EqAffine, Fp};
 use halo2_proofs::plonk::*;
-use halo2_proofs::poly::{
-    commitment::{Params, ParamsVerifier},
-    Rotation,
-};
+use halo2_proofs::poly::{commitment::Params, Rotation};
 use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
 use rand_core::OsRng;
 
@@ -41,20 +38,20 @@ fn criterion_benchmark(c: &mut Criterion) {
             f: F,
         ) -> Result<(Cell, Cell, Cell), Error>
         where
-            F: FnMut() -> Result<(FF, FF, FF), Error>;
+            F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>;
         fn raw_add<F>(
             &self,
             layouter: &mut impl Layouter<FF>,
             f: F,
         ) -> Result<(Cell, Cell, Cell), Error>
         where
-            F: FnMut() -> Result<(FF, FF, FF), Error>;
+            F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>;
         fn copy(&self, layouter: &mut impl Layouter<FF>, a: Cell, b: Cell) -> Result<(), Error>;
     }
 
     #[derive(Clone)]
     struct MyCircuit<F: FieldExt> {
-        a: Option<F>,
+        a: Value<F>,
         k: u32,
     }
 
@@ -79,7 +76,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             mut f: F,
         ) -> Result<(Cell, Cell, Cell), Error>
         where
-            F: FnMut() -> Result<(FF, FF, FF), Error>,
+            F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>,
         {
             layouter.assign_region(
                 || "raw_multiply",
@@ -90,27 +87,32 @@ fn criterion_benchmark(c: &mut Criterion) {
                         self.config.a,
                         0,
                         || {
-                            value = Some(f()?);
-                            Ok(value.ok_or(Error::Synthesis)?.0)
+                            value = Some(f());
+                            value.unwrap().map(|v| v.0)
                         },
                     )?;
                     let rhs = region.assign_advice(
                         || "rhs",
                         self.config.b,
                         0,
-                        || Ok(value.ok_or(Error::Synthesis)?.1),
+                        || value.unwrap().map(|v| v.1),
                     )?;
                     let out = region.assign_advice(
                         || "out",
                         self.config.c,
                         0,
-                        || Ok(value.ok_or(Error::Synthesis)?.2),
+                        || value.unwrap().map(|v| v.2),
                     )?;
 
-                    region.assign_fixed(|| "a", self.config.sa, 0, || Ok(FF::zero()))?;
-                    region.assign_fixed(|| "b", self.config.sb, 0, || Ok(FF::zero()))?;
-                    region.assign_fixed(|| "c", self.config.sc, 0, || Ok(FF::one()))?;
-                    region.assign_fixed(|| "a * b", self.config.sm, 0, || Ok(FF::one()))?;
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::zero()))?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::zero()))?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
+                    region.assign_fixed(
+                        || "a * b",
+                        self.config.sm,
+                        0,
+                        || Value::known(FF::one()),
+                    )?;
                     Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
             )
@@ -121,7 +123,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             mut f: F,
         ) -> Result<(Cell, Cell, Cell), Error>
         where
-            F: FnMut() -> Result<(FF, FF, FF), Error>,
+            F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>,
         {
             layouter.assign_region(
                 || "raw_add",
@@ -132,27 +134,32 @@ fn criterion_benchmark(c: &mut Criterion) {
                         self.config.a,
                         0,
                         || {
-                            value = Some(f()?);
-                            Ok(value.ok_or(Error::Synthesis)?.0)
+                            value = Some(f());
+                            value.unwrap().map(|v| v.0)
                         },
                     )?;
                     let rhs = region.assign_advice(
                         || "rhs",
                         self.config.b,
                         0,
-                        || Ok(value.ok_or(Error::Synthesis)?.1),
+                        || value.unwrap().map(|v| v.1),
                     )?;
                     let out = region.assign_advice(
                         || "out",
                         self.config.c,
                         0,
-                        || Ok(value.ok_or(Error::Synthesis)?.2),
+                        || value.unwrap().map(|v| v.2),
                     )?;
 
-                    region.assign_fixed(|| "a", self.config.sa, 0, || Ok(FF::one()))?;
-                    region.assign_fixed(|| "b", self.config.sb, 0, || Ok(FF::one()))?;
-                    region.assign_fixed(|| "c", self.config.sc, 0, || Ok(FF::one()))?;
-                    region.assign_fixed(|| "a * b", self.config.sm, 0, || Ok(FF::zero()))?;
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::one()))?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::one()))?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
+                    region.assign_fixed(
+                        || "a * b",
+                        self.config.sm,
+                        0,
+                        || Value::known(FF::zero()),
+                    )?;
                     Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
             )
@@ -172,7 +179,10 @@ fn criterion_benchmark(c: &mut Criterion) {
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            Self { a: None, k: self.k }
+            Self {
+                a: Value::unknown(),
+                k: self.k,
+            }
         }
 
         fn configure(meta: &mut ConstraintSystem<F>) -> PlonkConfig {
@@ -223,22 +233,17 @@ fn criterion_benchmark(c: &mut Criterion) {
             let cs = StandardPlonk::new(config);
 
             for _ in 0..((1 << (self.k - 1)) - 3) {
-                let mut a_squared = None;
+                let a: Value<Assigned<_>> = self.a.into();
+                let mut a_squared = Value::unknown();
                 let (a0, _, c0) = cs.raw_multiply(&mut layouter, || {
-                    a_squared = self.a.map(|a| a.square());
-                    Ok((
-                        self.a.ok_or(Error::Synthesis)?,
-                        self.a.ok_or(Error::Synthesis)?,
-                        a_squared.ok_or(Error::Synthesis)?,
-                    ))
+                    a_squared = a.square();
+                    a.zip(a_squared).map(|(a, a_squared)| (a, a, a_squared))
                 })?;
                 let (a1, b1, _) = cs.raw_add(&mut layouter, || {
-                    let fin = a_squared.and_then(|a2| self.a.map(|a| a + a2));
-                    Ok((
-                        self.a.ok_or(Error::Synthesis)?,
-                        a_squared.ok_or(Error::Synthesis)?,
-                        fin.ok_or(Error::Synthesis)?,
-                    ))
+                    let fin = a_squared + a;
+                    a.zip(a_squared)
+                        .zip(fin)
+                        .map(|((a, a_squared), fin)| (a, a_squared, fin))
                 })?;
                 cs.copy(&mut layouter, a0, a1)?;
                 cs.copy(&mut layouter, b1, c0)?;
@@ -248,27 +253,22 @@ fn criterion_benchmark(c: &mut Criterion) {
         }
     }
 
-    fn keygen(
-        k: u32,
-    ) -> (
-        Params<G1Affine>,
-        ParamsVerifier<Bn256>,
-        ProvingKey<G1Affine>,
-    ) {
-        let params: Params<G1Affine> = Params::<G1Affine>::unsafe_setup::<Bn256>(k);
-        let params_verifier: ParamsVerifier<Bn256> = params.verifier(0).unwrap();
-
-        let empty_circuit: MyCircuit<Fp> = MyCircuit { a: None, k };
+    fn keygen(k: u32) -> (Params<EqAffine>, ProvingKey<EqAffine>) {
+        let params: Params<EqAffine> = Params::new(k);
+        let empty_circuit: MyCircuit<Fp> = MyCircuit {
+            a: Value::unknown(),
+            k,
+        };
         let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
         let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
-        (params, params_verifier, pk)
+        (params, pk)
     }
 
-    fn prover(k: u32, params: &Params<G1Affine>, pk: &ProvingKey<G1Affine>) -> Vec<u8> {
+    fn prover(k: u32, params: &Params<EqAffine>, pk: &ProvingKey<EqAffine>) -> Vec<u8> {
         let rng = OsRng;
 
         let circuit: MyCircuit<Fp> = MyCircuit {
-            a: Some(Fp::random(rng)),
+            a: Value::known(Fp::random(rng)),
             k,
         };
 
@@ -278,10 +278,10 @@ fn criterion_benchmark(c: &mut Criterion) {
         transcript.finalize()
     }
 
-    fn verifier(params: &ParamsVerifier<Bn256>, vk: &VerifyingKey<G1Affine>, proof: &[u8]) {
+    fn verifier(params: &Params<EqAffine>, vk: &VerifyingKey<EqAffine>, proof: &[u8]) {
         let strategy = SingleVerifier::new(params);
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(proof);
-        verify_proof(params, vk, strategy, &[&[]], &mut transcript).unwrap();
+        assert!(verify_proof(params, vk, strategy, &[&[]], &mut transcript).is_ok());
     }
 
     let k_range = 8..=16;
@@ -298,7 +298,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     let mut prover_group = c.benchmark_group("plonk-prover");
     prover_group.sample_size(10);
     for k in k_range.clone() {
-        let (params, _, pk) = keygen(k);
+        let (params, pk) = keygen(k);
 
         prover_group.bench_with_input(
             BenchmarkId::from_parameter(k),
@@ -312,14 +312,14 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     let mut verifier_group = c.benchmark_group("plonk-verifier");
     for k in k_range {
-        let (params, params_verifier, pk) = keygen(k);
+        let (params, pk) = keygen(k);
         let proof = prover(k, &params, &pk);
 
         verifier_group.bench_with_input(
             BenchmarkId::from_parameter(k),
             &(&params, pk.get_vk(), &proof[..]),
-            |b, &(_, vk, proof)| {
-                b.iter(|| verifier(&params_verifier, vk, proof));
+            |b, &(params, vk, proof)| {
+                b.iter(|| verifier(params, vk, proof));
             },
         );
     }

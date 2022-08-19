@@ -26,6 +26,7 @@ equivalent objects in Halo 2 (which builds on the nomenclature from the Halo pap
 | $\bar{\omega}$ |   `s_poly_blind`    |
 |   $\bar{C}$    | `s_poly_commitment` |
 |     $h(X)$     |       $g(X)$        |
+|      $U$       |         $G$         |
 |   $\omega'$    |   `blind` / $\xi$   |
 |  $\mathbf{c}$  |    $\mathbf{a}$     |
 |      $c$       | $a = \mathbf{a}_0$  |
@@ -47,7 +48,7 @@ Halo 2's polynomial commitment scheme differs from Appendix A.2 of BCMS20 in two
      sampling $z$.
 
 2. The $\text{PC}_\text{DL}.\text{SuccinctCheck}$ subroutine (Figure 2 of BCMS20) computes
-   the initial group element $C_0$ by adding $[v] H' = [v \epsilon] H$, which requires two
+   the initial group element $C_0$ by adding $[v] H' = [v \xi_0] H$, which requires two
    scalar multiplications. Instead, we subtract $[v] G_0$ from the original commitment $P$,
    so that we're effectively opening the polynomial at the point to the value zero. The
    computation $[v] G_0$ is more efficient in the context of recursion because $G_0$ is a
