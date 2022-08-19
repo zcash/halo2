@@ -1,8 +1,8 @@
 use super::{util::*, AssignedBits};
 use halo2_proofs::{
     arithmetic::FieldExt,
-    circuit::{Chip, Layouter, Region},
-    pairing::bn256::Fr,
+    circuit::{Chip, Layouter, Region, Value},
+    pasta::pallas,
     plonk::{Advice, Column, ConstraintSystem, Error, TableColumn},
     poly::Rotation,
 };
@@ -68,17 +68,17 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadWord<DENSE, SPREAD> {
 /// A variable stored in advice columns corresponding to a row of [`SpreadTableConfig`].
 #[derive(Clone, Debug)]
 pub(super) struct SpreadVar<const DENSE: usize, const SPREAD: usize> {
-    pub tag: Option<u8>,
+    pub tag: Value<u8>,
     pub dense: AssignedBits<DENSE>,
     pub spread: AssignedBits<SPREAD>,
 }
 
 impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
     pub(super) fn with_lookup(
-        region: &mut Region<'_, Fr>,
+        region: &mut Region<'_, pallas::Base>,
         cols: &SpreadInputs,
         row: usize,
-        word: Option<SpreadWord<DENSE, SPREAD>>,
+        word: Value<SpreadWord<DENSE, SPREAD>>,
     ) -> Result<Self, Error> {
         let tag = word.map(|word| word.tag);
         let dense_val = word.map(|word| word.dense);
@@ -88,7 +88,7 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
             || "tag",
             cols.tag,
             row,
-            || tag.map(|tag| Fr::from(tag as u64)).ok_or(Error::Synthesis),
+            || tag.map(|tag| pallas::Base::from(tag as u64)),
         )?;
 
         let dense =
@@ -101,12 +101,12 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
     }
 
     pub(super) fn without_lookup(
-        region: &mut Region<'_, Fr>,
+        region: &mut Region<'_, pallas::Base>,
         dense_col: Column<Advice>,
         dense_row: usize,
         spread_col: Column<Advice>,
         spread_row: usize,
-        word: Option<SpreadWord<DENSE, SPREAD>>,
+        word: Value<SpreadWord<DENSE, SPREAD>>,
     ) -> Result<Self, Error> {
         let tag = word.map(|word| word.tag);
         let dense_val = word.map(|word| word.dense);
@@ -226,20 +226,20 @@ impl<F: FieldExt> SpreadTableChip<F> {
                         index,
                         || {
                             row = rows.next();
-                            row.map(|(tag, _, _)| tag).ok_or(Error::Synthesis)
+                            Value::known(row.map(|(tag, _, _)| tag).unwrap())
                         },
                     )?;
                     table.assign_cell(
                         || "dense",
                         config.table.dense,
                         index,
-                        || row.map(|(_, dense, _)| dense).ok_or(Error::Synthesis),
+                        || Value::known(row.map(|(_, dense, _)| dense).unwrap()),
                     )?;
                     table.assign_cell(
                         || "spread",
                         config.table.spread,
                         index,
-                        || row.map(|(_, _, spread)| spread).ok_or(Error::Synthesis),
+                        || Value::known(row.map(|(_, _, spread)| spread).unwrap()),
                     )?;
                 }
 
@@ -289,9 +289,9 @@ mod tests {
 
     use halo2_proofs::{
         arithmetic::FieldExt,
-        circuit::{Layouter, SimpleFloorPlanner},
+        circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
-        pairing::bn256::Fr,
+        pasta::Fp,
         plonk::{Advice, Circuit, Column, ConstraintSystem, Error},
     };
 
@@ -331,13 +331,23 @@ mod tests {
                     |mut gate| {
                         let mut row = 0;
                         let mut add_row = |tag, dense, spread| -> Result<(), Error> {
-                            gate.assign_advice(|| "tag", config.input.tag, row, || Ok(tag))?;
-                            gate.assign_advice(|| "dense", config.input.dense, row, || Ok(dense))?;
+                            gate.assign_advice(
+                                || "tag",
+                                config.input.tag,
+                                row,
+                                || Value::known(tag),
+                            )?;
+                            gate.assign_advice(
+                                || "dense",
+                                config.input.dense,
+                                row,
+                                || Value::known(dense),
+                            )?;
                             gate.assign_advice(
                                 || "spread",
                                 config.input.spread,
                                 row,
-                                || Ok(spread),
+                                || Value::known(spread),
                             )?;
                             row += 1;
                             Ok(())
@@ -429,7 +439,7 @@ mod tests {
 
         let circuit: MyCircuit = MyCircuit {};
 
-        let prover = match MockProver::<Fr>::run(17, &circuit, vec![]) {
+        let prover = match MockProver::<Fp>::run(17, &circuit, vec![]) {
             Ok(prover) => prover,
             Err(e) => panic!("{:?}", e),
         };

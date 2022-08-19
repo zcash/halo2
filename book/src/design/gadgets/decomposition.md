@@ -61,7 +61,7 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-       2      & q_\mathit{bitshift} \cdot (\alpha' - (\alpha \cdot 2^{K - n})) \\\hline
+       2      & q_\mathit{bitshift} \cdot ((\alpha \cdot 2^{K - n}) - \alpha') \\\hline
 \end{array}
 $$
 

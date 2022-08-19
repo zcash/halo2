@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use halo2_proofs::{
     arithmetic::FieldExt,
-    circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner},
+    circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner, Value},
     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Instance, Selector},
     poly::Rotation,
 };
@@ -20,7 +20,7 @@ trait FieldInstructions<F: FieldExt>: AddInstructions<F> + MulInstructions<F> {
     fn load_private(
         &self,
         layouter: impl Layouter<F>,
-        a: Option<F>,
+        a: Value<F>,
     ) -> Result<<Self as FieldInstructions<F>>::Num, Error>;
 
     /// Returns `d = (a + b) * c`.
@@ -217,17 +217,12 @@ impl<F: FieldExt> AddInstructions<F> for AddChip<F> {
 
                 // Now we can compute the addition result, which is to be assigned
                 // into the output position.
-                let value = a.0.value().and_then(|a| b.0.value().map(|b| *a + *b));
+                let value = a.0.value().copied() + b.0.value();
 
                 // Finally, we do the assignment to the output, returning a
                 // variable to be used in another part of the circuit.
                 region
-                    .assign_advice(
-                        || "lhs + rhs",
-                        config.advice[0],
-                        1,
-                        || value.ok_or(Error::Synthesis),
-                    )
+                    .assign_advice(|| "lhs + rhs", config.advice[0], 1, || value)
                     .map(Number)
             },
         )
@@ -343,17 +338,12 @@ impl<F: FieldExt> MulInstructions<F> for MulChip<F> {
 
                 // Now we can compute the multiplication result, which is to be assigned
                 // into the output position.
-                let value = a.0.value().and_then(|a| b.0.value().map(|b| *a * *b));
+                let value = a.0.value().copied() * b.0.value();
 
                 // Finally, we do the assignment to the output, returning a
                 // variable to be used in another part of the circuit.
                 region
-                    .assign_advice(
-                        || "lhs * rhs",
-                        config.advice[0],
-                        1,
-                        || value.ok_or(Error::Synthesis),
-                    )
+                    .assign_advice(|| "lhs * rhs", config.advice[0], 1, || value)
                     .map(Number)
             },
         )
@@ -412,7 +402,7 @@ impl<F: FieldExt> FieldInstructions<F> for FieldChip<F> {
     fn load_private(
         &self,
         mut layouter: impl Layouter<F>,
-        value: Option<F>,
+        value: Value<F>,
     ) -> Result<<Self as FieldInstructions<F>>::Num, Error> {
         let config = self.config();
 
@@ -420,12 +410,7 @@ impl<F: FieldExt> FieldInstructions<F> for FieldChip<F> {
             || "load private",
             |mut region| {
                 region
-                    .assign_advice(
-                        || "private input",
-                        config.advice[0],
-                        0,
-                        || value.ok_or(Error::Synthesis),
-                    )
+                    .assign_advice(|| "private input", config.advice[0], 0, || value)
                     .map(Number)
             },
         )
@@ -459,14 +444,14 @@ impl<F: FieldExt> FieldInstructions<F> for FieldChip<F> {
 // ANCHOR: circuit
 /// The full circuit implementation.
 ///
-/// In this struct we store the private input variables. We use `Option<F>` because
+/// In this struct we store the private input variables. We use `Value<F>` because
 /// they won't have any value during key generation. During proving, if any of these
-/// were `None` we would get an error.
+/// were `Value::unknown()` we would get an error.
 #[derive(Default)]
 struct MyCircuit<F: FieldExt> {
-    a: Option<F>,
-    b: Option<F>,
-    c: Option<F>,
+    a: Value<F>,
+    b: Value<F>,
+    c: Value<F>,
 }
 
 impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
@@ -530,9 +515,9 @@ fn main() {
 
     // Instantiate the circuit with the private inputs.
     let circuit = MyCircuit {
-        a: Some(a),
-        b: Some(b),
-        c: Some(c),
+        a: Value::known(a),
+        b: Value::known(b),
+        c: Value::known(c),
     };
 
     // Arrange the public input. We expose the multiplication result in row 0

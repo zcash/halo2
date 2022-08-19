@@ -9,6 +9,9 @@ use crate::{
     plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector, TableColumn},
 };
 
+mod value;
+pub use value::Value;
+
 pub mod floor_planner;
 pub use floor_planner::single_pass::SimpleFloorPlanner;
 
@@ -95,14 +98,14 @@ pub struct Cell {
 /// An assigned cell.
 #[derive(Clone, Debug)]
 pub struct AssignedCell<V, F: Field> {
-    value: Option<V>,
+    value: Value<V>,
     cell: Cell,
     _marker: PhantomData<F>,
 }
 
 impl<V, F: Field> AssignedCell<V, F> {
     /// Returns the value of the [`AssignedCell`].
-    pub fn value(&self) -> Option<&V> {
+    pub fn value(&self) -> Value<&V> {
         self.value.as_ref()
     }
 
@@ -117,8 +120,22 @@ where
     for<'v> Assigned<F>: From<&'v V>,
 {
     /// Returns the field element value of the [`AssignedCell`].
-    pub fn value_field(&self) -> Option<Assigned<F>> {
-        self.value().map(|v| v.into())
+    pub fn value_field(&self) -> Value<Assigned<F>> {
+        self.value.to_field()
+    }
+}
+
+impl<F: Field> AssignedCell<Assigned<F>, F> {
+    /// Evaluates this assigned cell's value directly, performing an unbatched inversion
+    /// if necessary.
+    ///
+    /// If the denominator is zero, the returned cell's value is zero.
+    pub fn evaluate(self) -> AssignedCell<F, F> {
+        AssignedCell {
+            value: self.value.evaluate(),
+            cell: self.cell,
+            _marker: Default::default(),
+        }
     }
 }
 
@@ -141,9 +158,8 @@ where
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        let assigned_cell = region.assign_advice(annotation, column, offset, || {
-            self.value.clone().ok_or(Error::Synthesis)
-        })?;
+        let assigned_cell =
+            region.assign_advice(annotation, column, offset, || self.value.clone())?;
         region.constrain_equal(assigned_cell.cell(), self.cell())?;
 
         Ok(assigned_cell)
@@ -199,19 +215,19 @@ impl<'r, F: Field> Region<'r, F> {
         mut to: V,
     ) -> Result<AssignedCell<VR, F>, Error>
     where
-        V: FnMut() -> Result<VR, Error> + 'v,
+        V: FnMut() -> Value<VR> + 'v,
         for<'vr> Assigned<F>: From<&'vr VR>,
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        let mut value = None;
+        let mut value = Value::unknown();
         let cell =
             self.region
                 .assign_advice(&|| annotation().into(), column, offset, &mut || {
-                    let v = to()?;
-                    let value_f = (&v).into();
-                    value = Some(v);
-                    Ok(value_f)
+                    let v = to();
+                    let value_f = v.to_field();
+                    value = v;
+                    value_f
                 })?;
 
         Ok(AssignedCell {
@@ -247,7 +263,7 @@ impl<'r, F: Field> Region<'r, F> {
         )?;
 
         Ok(AssignedCell {
-            value: Some(constant),
+            value: Value::known(constant),
             cell,
             _marker: PhantomData,
         })
@@ -295,19 +311,19 @@ impl<'r, F: Field> Region<'r, F> {
         mut to: V,
     ) -> Result<AssignedCell<VR, F>, Error>
     where
-        V: FnMut() -> Result<VR, Error> + 'v,
+        V: FnMut() -> Value<VR> + 'v,
         for<'vr> Assigned<F>: From<&'vr VR>,
         A: Fn() -> AR,
         AR: Into<String>,
     {
-        let mut value = None;
+        let mut value = Value::unknown();
         let cell =
             self.region
                 .assign_fixed(&|| annotation().into(), column, offset, &mut || {
-                    let v = to()?;
-                    let value_f = (&v).into();
-                    value = Some(v);
-                    Ok(value_f)
+                    let v = to();
+                    let value_f = v.to_field();
+                    value = v;
+                    value_f
                 })?;
 
         Ok(AssignedCell {
@@ -362,14 +378,14 @@ impl<'r, F: Field> Table<'r, F> {
         mut to: V,
     ) -> Result<(), Error>
     where
-        V: FnMut() -> Result<VR, Error> + 'v,
+        V: FnMut() -> Value<VR> + 'v,
         VR: Into<Assigned<F>>,
         A: Fn() -> AR,
         AR: Into<String>,
     {
         self.table
             .assign_cell(&|| annotation().into(), column, offset, &mut || {
-                to().map(|v| v.into())
+                to().into_field()
             })
     }
 }

@@ -7,8 +7,10 @@ use std::{
 };
 
 use super::{lookup, permutation, Assigned, Error};
-use crate::circuit::Layouter;
-use crate::{circuit::Region, poly::Rotation};
+use crate::{
+    circuit::{Layouter, Region, Value},
+    poly::Rotation,
+};
 
 mod compress_selectors;
 
@@ -227,7 +229,11 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// Selectors are disabled on all rows by default, and must be explicitly enabled on each
 /// row when required:
 /// ```
-/// use halo2_proofs::{arithmetic::FieldExt, circuit::{Chip, Layouter}, plonk::{Advice, Column, Error, Selector}};
+/// use halo2_proofs::{
+///     arithmetic::FieldExt,
+///     circuit::{Chip, Layouter, Value},
+///     plonk::{Advice, Column, Error, Selector},
+/// };
 /// # use ff::Field;
 /// # use halo2_proofs::plonk::Fixed;
 ///
@@ -241,8 +247,8 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 ///     let config = chip.config();
 ///     # let config: Config = todo!();
 ///     layouter.assign_region(|| "bar", |mut region| {
-///         region.assign_advice(|| "a", config.a, 0, || Ok(F::one()))?;
-///         region.assign_advice(|| "a", config.b, 1, || Ok(F::one()))?;
+///         region.assign_advice(|| "a", config.a, 0, || Value::known(F::one()))?;
+///         region.assign_advice(|| "a", config.b, 1, || Value::known(F::one()))?;
 ///         config.s.enable(&mut region, 1)
 ///     })?;
 ///     Ok(())
@@ -262,6 +268,39 @@ impl Selector {
     pub fn is_simple(&self) -> bool {
         self.1
     }
+}
+
+/// Query of fixed column at a certain relative location
+#[derive(Copy, Clone, Debug)]
+pub struct FixedQuery {
+    /// Query index
+    pub(crate) index: usize,
+    /// Column index
+    pub(crate) column_index: usize,
+    /// Rotation of this query
+    pub(crate) rotation: Rotation,
+}
+
+/// Query of advice column at a certain relative location
+#[derive(Copy, Clone, Debug)]
+pub struct AdviceQuery {
+    /// Query index
+    pub(crate) index: usize,
+    /// Column index
+    pub(crate) column_index: usize,
+    /// Rotation of this query
+    pub(crate) rotation: Rotation,
+}
+
+/// Query of instance column at a certain relative location
+#[derive(Copy, Clone, Debug)]
+pub struct InstanceQuery {
+    /// Query index
+    pub(crate) index: usize,
+    /// Column index
+    pub(crate) column_index: usize,
+    /// Rotation of this query
+    pub(crate) rotation: Rotation,
 }
 
 /// A fixed column of a lookup table.
@@ -330,7 +369,7 @@ pub trait Assignment<F: Field> {
     /// Queries the cell of an instance column at a particular absolute row.
     ///
     /// Returns the cell's value, if known.
-    fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Option<F>, Error>;
+    fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Value<F>, Error>;
 
     /// Assign an advice column value (witness)
     fn assign_advice<V, VR, A, AR>(
@@ -341,7 +380,7 @@ pub trait Assignment<F: Field> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>;
@@ -355,7 +394,7 @@ pub trait Assignment<F: Field> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>;
@@ -374,7 +413,7 @@ pub trait Assignment<F: Field> {
         &mut self,
         column: Column<Fixed>,
         row: usize,
-        to: Option<Assigned<F>>,
+        to: Value<Assigned<F>>,
     ) -> Result<(), Error>;
 
     /// Creates a new (sub)namespace and enters into it.
@@ -443,39 +482,18 @@ pub trait Circuit<F: Field> {
 }
 
 /// Low-degree expression representing an identity that must hold over the committed columns.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum Expression<F> {
     /// This is a constant polynomial
     Constant(F),
     /// This is a virtual selector
     Selector(Selector),
     /// This is a fixed column queried at a certain relative location
-    Fixed {
-        /// Query index
-        query_index: usize,
-        /// Column index
-        column_index: usize,
-        /// Rotation of this query
-        rotation: Rotation,
-    },
+    Fixed(FixedQuery),
     /// This is an advice (witness) column queried at a certain relative location
-    Advice {
-        /// Query index
-        query_index: usize,
-        /// Column index
-        column_index: usize,
-        /// Rotation of this query
-        rotation: Rotation,
-    },
+    Advice(AdviceQuery),
     /// This is an instance (external) column queried at a certain relative location
-    Instance {
-        /// Query index
-        query_index: usize,
-        /// Column index
-        column_index: usize,
-        /// Rotation of this query
-        rotation: Rotation,
-    },
+    Instance(InstanceQuery),
     /// This is a negated polynomial
     Negated(Box<Expression<F>>),
     /// This is the sum of two polynomials
@@ -493,9 +511,9 @@ impl<F: Field> Expression<F> {
         &self,
         constant: &impl Fn(F) -> T,
         selector_column: &impl Fn(Selector) -> T,
-        fixed_column: &impl Fn(usize, usize, Rotation) -> T,
-        advice_column: &impl Fn(usize, usize, Rotation) -> T,
-        instance_column: &impl Fn(usize, usize, Rotation) -> T,
+        fixed_column: &impl Fn(FixedQuery) -> T,
+        advice_column: &impl Fn(AdviceQuery) -> T,
+        instance_column: &impl Fn(InstanceQuery) -> T,
         negated: &impl Fn(T) -> T,
         sum: &impl Fn(T, T) -> T,
         product: &impl Fn(T, T) -> T,
@@ -504,21 +522,9 @@ impl<F: Field> Expression<F> {
         match self {
             Expression::Constant(scalar) => constant(*scalar),
             Expression::Selector(selector) => selector_column(*selector),
-            Expression::Fixed {
-                query_index,
-                column_index,
-                rotation,
-            } => fixed_column(*query_index, *column_index, *rotation),
-            Expression::Advice {
-                query_index,
-                column_index,
-                rotation,
-            } => advice_column(*query_index, *column_index, *rotation),
-            Expression::Instance {
-                query_index,
-                column_index,
-                rotation,
-            } => instance_column(*query_index, *column_index, *rotation),
+            Expression::Fixed(query) => fixed_column(*query),
+            Expression::Advice(query) => advice_column(*query),
+            Expression::Instance(query) => instance_column(*query),
             Expression::Negated(a) => {
                 let a = a.evaluate(
                     constant,
@@ -807,9 +813,9 @@ impl<F: Field> Expression<F> {
         self.evaluate(
             &|_| false,
             &|selector| selector.is_simple(),
-            &|_, _, _| false,
-            &|_, _, _| false,
-            &|_, _, _| false,
+            &|_| false,
+            &|_| false,
+            &|_| false,
             &|a| a,
             &|a, b| a || b,
             &|a, b| a || b,
@@ -834,14 +840,60 @@ impl<F: Field> Expression<F> {
                     None
                 }
             },
-            &|_, _, _| None,
-            &|_, _, _| None,
-            &|_, _, _| None,
+            &|_| None,
+            &|_| None,
+            &|_| None,
             &|a| a,
             &op,
             &op,
             &|a, _| a,
         )
+    }
+}
+
+impl<F: std::fmt::Debug> std::fmt::Debug for Expression<F> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Expression::Constant(scalar) => f.debug_tuple("Constant").field(scalar).finish(),
+            Expression::Selector(selector) => f.debug_tuple("Selector").field(selector).finish(),
+            // Skip enum variant and print query struct directly to maintain backwards compatibility.
+            Expression::Fixed(FixedQuery {
+                index,
+                column_index,
+                rotation,
+            }) => f
+                .debug_struct("Fixed")
+                .field("query_index", index)
+                .field("column_index", column_index)
+                .field("rotation", rotation)
+                .finish(),
+            Expression::Advice(AdviceQuery {
+                index,
+                column_index,
+                rotation,
+            }) => f
+                .debug_struct("Advice")
+                .field("query_index", index)
+                .field("column_index", column_index)
+                .field("rotation", rotation)
+                .finish(),
+            Expression::Instance(InstanceQuery {
+                index,
+                column_index,
+                rotation,
+            }) => f
+                .debug_struct("Instance")
+                .field("query_index", index)
+                .field("column_index", column_index)
+                .field("rotation", rotation)
+                .finish(),
+            Expression::Negated(poly) => f.debug_tuple("Negated").field(poly).finish(),
+            Expression::Sum(a, b) => f.debug_tuple("Sum").field(a).field(b).finish(),
+            Expression::Product(a, b) => f.debug_tuple("Product").field(a).field(b).finish(),
+            Expression::Scaled(poly, scalar) => {
+                f.debug_tuple("Scaled").field(poly).field(scalar).finish()
+            }
+        }
     }
 }
 
@@ -938,6 +990,88 @@ impl<F: Field> From<Expression<F>> for Vec<Constraint<F>> {
     }
 }
 
+/// A set of polynomial constraints with a common selector.
+///
+/// ```
+/// use halo2_proofs::{pasta::Fp, plonk::{Constraints, Expression}, poly::Rotation};
+/// # use halo2_proofs::plonk::ConstraintSystem;
+///
+/// # let mut meta = ConstraintSystem::<Fp>::default();
+/// let a = meta.advice_column();
+/// let b = meta.advice_column();
+/// let c = meta.advice_column();
+/// let s = meta.selector();
+///
+/// meta.create_gate("foo", |meta| {
+///     let next = meta.query_advice(a, Rotation::next());
+///     let a = meta.query_advice(a, Rotation::cur());
+///     let b = meta.query_advice(b, Rotation::cur());
+///     let c = meta.query_advice(c, Rotation::cur());
+///     let s_ternary = meta.query_selector(s);
+///
+///     let one_minus_a = Expression::Constant(Fp::one()) - a.clone();
+///
+///     Constraints::with_selector(
+///         s_ternary,
+///         std::array::IntoIter::new([
+///             ("a is boolean", a.clone() * one_minus_a.clone()),
+///             ("next == a ? b : c", next - (a * b + one_minus_a * c)),
+///         ]),
+///     )
+/// });
+/// ```
+///
+/// Note that the use of `std::array::IntoIter::new` is only necessary if you need to
+/// support Rust 1.51 or 1.52. If your minimum supported Rust version is 1.53 or greater,
+/// you can pass an array directly.
+#[derive(Debug)]
+pub struct Constraints<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> {
+    selector: Expression<F>,
+    constraints: Iter,
+}
+
+impl<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> Constraints<F, C, Iter> {
+    /// Constructs a set of constraints that are controlled by the given selector.
+    ///
+    /// Each constraint `c` in `iterator` will be converted into the constraint
+    /// `selector * c`.
+    pub fn with_selector(selector: Expression<F>, constraints: Iter) -> Self {
+        Constraints {
+            selector,
+            constraints,
+        }
+    }
+}
+
+fn apply_selector_to_constraint<F: Field, C: Into<Constraint<F>>>(
+    (selector, c): (Expression<F>, C),
+) -> Constraint<F> {
+    let constraint: Constraint<F> = c.into();
+    Constraint {
+        name: constraint.name,
+        poly: selector * constraint.poly,
+    }
+}
+
+type ApplySelectorToConstraint<F, C> = fn((Expression<F>, C)) -> Constraint<F>;
+type ConstraintsIterator<F, C, I> = std::iter::Map<
+    std::iter::Zip<std::iter::Repeat<Expression<F>>, I>,
+    ApplySelectorToConstraint<F, C>,
+>;
+
+impl<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> IntoIterator
+    for Constraints<F, C, Iter>
+{
+    type Item = Constraint<F>;
+    type IntoIter = ConstraintsIterator<F, C, Iter::IntoIter>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        std::iter::repeat(self.selector)
+            .zip(self.constraints.into_iter())
+            .map(apply_selector_to_constraint)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct Gate<F: Field> {
     name: &'static str,
@@ -979,7 +1113,12 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) num_advice_columns: usize,
     pub(crate) num_instance_columns: usize,
     pub(crate) num_selectors: usize,
+
+    /// This is a cached vector that maps virtual selectors to the concrete
+    /// fixed column that they were compressed into. This is just used by dev
+    /// tooling right now.
     pub(crate) selector_map: Vec<Column<Fixed>>,
+
     pub(crate) gates: Vec<Gate<F>>,
     pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
     // Contains an integer for each advice column
@@ -1011,7 +1150,6 @@ pub struct PinnedConstraintSystem<'a, F: Field> {
     num_advice_columns: &'a usize,
     num_instance_columns: &'a usize,
     num_selectors: &'a usize,
-    selector_map: &'a [Column<Fixed>],
     gates: PinnedGates<'a, F>,
     advice_queries: &'a Vec<(Column<Advice>, Rotation)>,
     instance_queries: &'a Vec<(Column<Instance>, Rotation)>,
@@ -1063,7 +1201,6 @@ impl<F: Field> ConstraintSystem<F> {
             num_advice_columns: &self.num_advice_columns,
             num_instance_columns: &self.num_instance_columns,
             num_selectors: &self.num_selectors,
-            selector_map: &self.selector_map,
             gates: PinnedGates(&self.gates),
             fixed_queries: &self.fixed_queries,
             advice_queries: &self.advice_queries,
@@ -1333,11 +1470,11 @@ impl<F: Field> ConstraintSystem<F> {
             || {
                 let column = self.fixed_column();
                 new_columns.push(column);
-                Expression::Fixed {
-                    query_index: self.query_fixed_index(column, Rotation::cur()),
+                Expression::Fixed(FixedQuery {
+                    index: self.query_fixed_index(column, Rotation::cur()),
                     column_index: column.index,
                     rotation: Rotation::cur(),
-                }
+                })
             },
         );
 
@@ -1374,21 +1511,9 @@ impl<F: Field> ConstraintSystem<F> {
 
                     selector_replacements[selector.0].clone()
                 },
-                &|query_index, column_index, rotation| Expression::Fixed {
-                    query_index,
-                    column_index,
-                    rotation,
-                },
-                &|query_index, column_index, rotation| Expression::Advice {
-                    query_index,
-                    column_index,
-                    rotation,
-                },
-                &|query_index, column_index, rotation| Expression::Instance {
-                    query_index,
-                    column_index,
-                    rotation,
-                },
+                &|query| Expression::Fixed(query),
+                &|query| Expression::Advice(query),
+                &|query| Expression::Instance(query),
                 &|a| -a,
                 &|a, b| a + b,
                 &|a, b| a * b,
@@ -1572,31 +1697,31 @@ impl<'a, F: Field> VirtualCells<'a, F> {
     /// Query a fixed column at a relative position
     pub fn query_fixed(&mut self, column: Column<Fixed>, at: Rotation) -> Expression<F> {
         self.queried_cells.push((column, at).into());
-        Expression::Fixed {
-            query_index: self.meta.query_fixed_index(column, at),
+        Expression::Fixed(FixedQuery {
+            index: self.meta.query_fixed_index(column, at),
             column_index: column.index,
             rotation: at,
-        }
+        })
     }
 
     /// Query an advice column at a relative position
     pub fn query_advice(&mut self, column: Column<Advice>, at: Rotation) -> Expression<F> {
         self.queried_cells.push((column, at).into());
-        Expression::Advice {
-            query_index: self.meta.query_advice_index(column, at),
+        Expression::Advice(AdviceQuery {
+            index: self.meta.query_advice_index(column, at),
             column_index: column.index,
             rotation: at,
-        }
+        })
     }
 
     /// Query an instance column at a relative position
     pub fn query_instance(&mut self, column: Column<Instance>, at: Rotation) -> Expression<F> {
         self.queried_cells.push((column, at).into());
-        Expression::Instance {
-            query_index: self.meta.query_instance_index(column, at),
+        Expression::Instance(InstanceQuery {
+            index: self.meta.query_instance_index(column, at),
             column_index: column.index,
             rotation: at,
-        }
+        })
     }
 
     /// Query an Any column at a relative position

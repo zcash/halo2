@@ -232,8 +232,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::poly::Rotation;
-    use pairing::bn256::Fr as Fp;
+    use crate::{plonk::FixedQuery, poly::Rotation};
+    use pasta_curves::Fp;
     use proptest::collection::{vec, SizeRange};
     use proptest::prelude::*;
 
@@ -283,11 +283,11 @@ mod tests {
             let mut query = 0;
             let (combination_assignments, selector_assignments) =
                 process::<Fp, _>(selectors.clone(), max_degree, || {
-                    let tmp = Expression::Fixed {
-                        query_index: query,
+                    let tmp = Expression::Fixed(FixedQuery {
+                        index: query,
                         column_index: query,
                         rotation: Rotation::cur(),
-                    };
+                    });
                     query += 1;
                     tmp
                 });
@@ -321,13 +321,13 @@ mod tests {
                     let eval = selector.expression.evaluate(
                         &|c| c,
                         &|_| panic!("should not occur in returned expressions"),
-                        &|query_index, _, _| {
+                        &|query| {
                             // Should be the correct combination in the expression
-                            assert_eq!(selector.combination_index, query_index);
+                            assert_eq!(selector.combination_index, query.index);
                             assignment
                         },
-                        &|_, _, _| panic!("should not occur in returned expressions"),
-                        &|_, _, _| panic!("should not occur in returned expressions"),
+                        &|_| panic!("should not occur in returned expressions"),
+                        &|_| panic!("should not occur in returned expressions"),
                         &|a| -a,
                         &|a, b| a + b,
                         &|a, b| a * b,

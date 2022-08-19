@@ -10,19 +10,17 @@ use super::{
         Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
         Selector,
     },
-    evaluation::Evaluator,
     permutation, Assigned, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
 };
-use crate::{arithmetic::CurveAffine, poly::batch_invert_assigned};
 use crate::{
-    plonk::Expression,
+    arithmetic::CurveAffine,
+    circuit::Value,
     poly::{
+        batch_invert_assigned,
         commitment::{Blind, Params},
-        EvaluationDomain, Rotation,
+        EvaluationDomain,
     },
 };
-
-use crate::arithmetic::parallelize;
 
 pub(crate) fn create_domain<C, ConcreteCircuit>(
     params: &Params<C>,
@@ -84,13 +82,13 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         Ok(())
     }
 
-    fn query_instance(&self, _: Column<Instance>, row: usize) -> Result<Option<F>, Error> {
+    fn query_instance(&self, _: Column<Instance>, row: usize) -> Result<Value<F>, Error> {
         if !self.usable_rows.contains(&row) {
             return Err(Error::not_enough_rows_available(self.k));
         }
 
         // There is no instance in this context.
-        Ok(None)
+        Ok(Value::unknown())
     }
 
     fn assign_advice<V, VR, A, AR>(
@@ -101,7 +99,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         _: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
@@ -118,7 +116,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         to: V,
     ) -> Result<(), Error>
     where
-        V: FnOnce() -> Result<VR, Error>,
+        V: FnOnce() -> Value<VR>,
         VR: Into<Assigned<F>>,
         A: FnOnce() -> AR,
         AR: Into<String>,
@@ -131,7 +129,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
             .fixed
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? = to()?.into();
+            .ok_or(Error::BoundsFailure)? = to().into_field().assign()?;
 
         Ok(())
     }
@@ -155,7 +153,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         &mut self,
         column: Column<Fixed>,
         from_row: usize,
-        to: Option<Assigned<F>>,
+        to: Value<Assigned<F>>,
     ) -> Result<(), Error> {
         if !self.usable_rows.contains(&from_row) {
             return Err(Error::not_enough_rows_available(self.k));
@@ -166,8 +164,9 @@ impl<F: Field> Assignment<F> for Assembly<F> {
             .get_mut(column.index())
             .ok_or(Error::BoundsFailure)?;
 
+        let filler = to.assign()?;
         for row in self.usable_rows.clone().skip(from_row) {
-            col[row] = to.ok_or(Error::Synthesis)?;
+            col[row] = filler;
         }
 
         Ok(())
@@ -232,15 +231,15 @@ where
 
     let fixed_commitments = fixed
         .iter()
-        .map(|poly| params.commit_lagrange(poly).to_affine())
+        .map(|poly| params.commit_lagrange(poly, Blind::default()).to_affine())
         .collect();
 
-    Ok(VerifyingKey {
+    Ok(VerifyingKey::from_parts(
         domain,
         fixed_commitments,
-        permutation: permutation_vk,
+        permutation_vk,
         cs,
-    })
+    ))
 }
 
 /// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `Circuit`.
@@ -324,28 +323,14 @@ where
     let l_last = vk.domain.lagrange_to_coeff(l_last);
     let l_last = vk.domain.coeff_to_extended(l_last);
 
-    // Compute l_active_row(X)
-    let one = C::Scalar::one();
-    let mut l_active_row = vk.domain.empty_extended();
-    parallelize(&mut l_active_row, |values, start| {
-        for (i, value) in values.iter_mut().enumerate() {
-            let idx = i + start;
-            *value = one - (l_last[idx] + l_blind[idx]);
-        }
-    });
-
-    // Compute the optimized evaluation data structure
-    let ev = Evaluator::new(&vk.cs);
-
     Ok(ProvingKey {
         vk,
         l0,
+        l_blind,
         l_last,
-        l_active_row,
         fixed_values: fixed,
         fixed_polys,
         fixed_cosets,
         permutation: permutation_pk,
-        ev,
     })
 }

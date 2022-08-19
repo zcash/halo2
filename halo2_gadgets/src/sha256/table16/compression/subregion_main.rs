@@ -1,18 +1,16 @@
 use super::super::{AssignedBits, RoundWord, RoundWordA, RoundWordE, StateWord, ROUND_CONSTANTS};
 use super::{compression_util::*, CompressionConfig, State};
-use halo2_proofs::{circuit::Region, pairing::bn256::Fr, plonk::Error};
+use halo2_proofs::{circuit::Region, pasta::pallas, plonk::Error};
 
 impl CompressionConfig {
     #[allow(clippy::many_single_char_names)]
     pub fn assign_round(
         &self,
-        region: &mut Region<'_, Fr>,
-        round_idx: RoundIdx,
+        region: &mut Region<'_, pallas::Base>,
+        round_idx: MainRoundIdx,
         state: State,
         schedule_word: &(AssignedBits<16>, AssignedBits<16>),
     ) -> Result<State, Error> {
-        assert!(matches!(round_idx, RoundIdx::Main(_)));
-
         let a_3 = self.extras[0];
         let a_4 = self.extras[1];
         let a_7 = self.extras[3];
@@ -70,7 +68,7 @@ impl CompressionConfig {
 
         if round_idx < 63.into() {
             // Assign and copy A_new
-            let a_new_row = get_decompose_a_row(round_idx + 1);
+            let a_new_row = get_decompose_a_row((round_idx + 1).into());
             a_new_dense
                 .0
                 .copy_advice(|| "a_new_lo", region, a_7, a_new_row)?;
@@ -79,7 +77,7 @@ impl CompressionConfig {
                 .copy_advice(|| "a_new_hi", region, a_7, a_new_row + 1)?;
 
             // Assign and copy E_new
-            let e_new_row = get_decompose_e_row(round_idx + 1);
+            let e_new_row = get_decompose_e_row((round_idx + 1).into());
             e_new_dense
                 .0
                 .copy_advice(|| "e_new_lo", region, a_7, e_new_row)?;
@@ -88,10 +86,10 @@ impl CompressionConfig {
                 .copy_advice(|| "e_new_hi", region, a_7, e_new_row + 1)?;
 
             // Decompose A into (2, 11, 9, 10)-bit chunks
-            let a_new = self.decompose_a(region, round_idx + 1, a_new_val)?;
+            let a_new = self.decompose_a(region, (round_idx + 1).into(), a_new_val)?;
 
             // Decompose E into (6, 5, 14, 7)-bit chunks
-            let e_new = self.decompose_e(region, round_idx + 1, e_new_val)?;
+            let e_new = self.decompose_e(region, (round_idx + 1).into(), e_new_val)?;
 
             Ok(State::new(
                 StateWord::A(a_new),

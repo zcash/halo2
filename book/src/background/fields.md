@@ -248,7 +248,7 @@ odd, and so half of all elements are squares.
 In order to compute the square root, we can first raise the element
 $a = \alpha^i \cdot  \beta^j$ to the power $t$ to "kill" the $t$-order component, giving
 
-$$a^t = \alpha^{it \pmod 2^k} \cdot \beta^{jt \pmod t} = \alpha^{it \pmod 2^k}$$
+$$a^t = \alpha^{it \pmod {2^k}} \cdot \beta^{jt \pmod t} = \alpha^{it \pmod {2^k}}$$
 
 and then raise this result to the power $t^{-1} \pmod{2^k}$ to undo the effect of the
 original exponentiation on the $2^k$-order component:

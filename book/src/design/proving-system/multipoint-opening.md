@@ -55,7 +55,8 @@ The multipoint opening optimization proceeds as such:
             ]
     ```
     NB: `q_eval_sets` is a vector of sets of evaluations, where the outer vector
-    goes over the point sets, and the inner vector goes over the points in each set.
+    corresponds to the point sets, which in this example are $\{x\}$ and $\{x, \omega x\}$,
+    and the inner vector corresponds to the points in each set.
 3. Interpolate each set of values in `q_eval_sets`:
     `r_polys`:
     $$

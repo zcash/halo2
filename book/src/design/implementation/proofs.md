@@ -36,8 +36,8 @@ the cost of deserialization, which isn't negligible due to point compression.
 
 A Halo 2 proof, constructed over a curve $E(\mathbb{F}_p)$, is encoded as a stream of:
 
-- Points $P \in E(\mathbb{F}_p)$) (for commitments to polynomials), and
-- Scalars $s \in \mathbb{F}_q$) (for evaluations of polynomials, and blinding values).
+- Points $P \in E(\mathbb{F}_p)$ (for commitments to polynomials), and
+- Scalars $s \in \mathbb{F}_q$ (for evaluations of polynomials, and blinding values).
 
 For the Pallas and Vesta curves, both points and scalars have 32-byte encodings, meaning
 that proofs are always a multiple of 32 bytes.

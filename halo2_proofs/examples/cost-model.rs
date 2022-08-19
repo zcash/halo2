@@ -8,13 +8,13 @@ use std::{
 use ff::Field;
 use group::{Curve, Group};
 use gumdrop::Options;
-use halo2_proofs::{arithmetic::best_multiexp, pairing::bn256};
+use halo2_proofs::{arithmetic::best_multiexp, pasta::pallas};
 
 struct Estimator {
     /// Scalars for estimating multiexp performance.
-    multiexp_scalars: Vec<bn256::Fr>,
+    multiexp_scalars: Vec<pallas::Scalar>,
     /// Bases for estimating multiexp performance.
-    multiexp_bases: Vec<bn256::G1Affine>,
+    multiexp_bases: Vec<pallas::Affine>,
 }
 
 impl fmt::Debug for Estimator {
@@ -29,9 +29,11 @@ impl Estimator {
         let mut rng = rand_core::OsRng;
 
         Estimator {
-            multiexp_scalars: (0..max_size).map(|_| bn256::Fr::random(&mut rng)).collect(),
+            multiexp_scalars: (0..max_size)
+                .map(|_| pallas::Scalar::random(&mut rng))
+                .collect(),
             multiexp_bases: (0..max_size)
-                .map(|_| bn256::G1::random(&mut rng).to_affine())
+                .map(|_| pallas::Point::random(&mut rng).to_affine())
                 .collect(),
         }
     }
@@ -100,8 +102,7 @@ impl FromStr for Poly {
 
 #[derive(Debug)]
 struct Lookup {
-    #[allow(dead_code)]
-    columns: usize,
+    _columns: usize,
     input_deg: usize,
     table_deg: usize,
 }
@@ -111,11 +112,11 @@ impl FromStr for Lookup {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut parts = s.split(',');
-        let columns = parts.next().unwrap().parse()?;
+        let _columns = parts.next().unwrap().parse()?;
         let input_deg = parts.next().unwrap().parse()?;
         let table_deg = parts.next().unwrap().parse()?;
         Ok(Lookup {
-            columns,
+            _columns,
             input_deg,
             table_deg,
         })
@@ -124,7 +125,7 @@ impl FromStr for Lookup {
 
 impl Lookup {
     fn required_degree(&self) -> usize {
-        1 + cmp::max(1, self.input_deg) + cmp::max(1, self.table_deg)
+        2 + cmp::max(1, self.input_deg) + cmp::max(1, self.table_deg)
     }
 
     fn queries(&self) -> impl Iterator<Item = Poly> {
@@ -209,8 +210,8 @@ impl From<CostOptions> for Circuit {
             .chain(opts.instance.iter())
             .chain(opts.fixed.iter())
             .cloned()
-            .chain(opts.lookup.iter().map(|l| l.queries()).flatten())
-            .chain(opts.permutation.iter().map(|p| p.queries()).flatten())
+            .chain(opts.lookup.iter().flat_map(|l| l.queries()))
+            .chain(opts.permutation.iter().flat_map(|p| p.queries()))
             .chain(iter::repeat("0".parse().unwrap()).take(max_deg - 1))
             .collect();
 

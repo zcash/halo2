@@ -6,8 +6,8 @@ use crate::sha256::table16::{
     util::*, AssignedBits, SpreadVar, SpreadWord, StateWord, Table16Assignment,
 };
 use halo2_proofs::{
-    circuit::Region,
-    pairing::bn256::Fr,
+    circuit::{Region, Value},
+    pasta::pallas,
     plonk::{Advice, Column, Error},
 };
 use std::convert::TryInto;
@@ -39,70 +39,77 @@ pub const SUBREGION_MAIN_WORD: usize =
     DECOMPOSE_ABCD + SIGMA_0_ROWS + DECOMPOSE_EFGH + SIGMA_1_ROWS + CH_ROWS + MAJ_ROWS;
 pub const SUBREGION_MAIN_ROWS: usize = SUBREGION_MAIN_LEN * SUBREGION_MAIN_WORD;
 
+/// The initial round.
+pub struct InitialRound;
+
+/// A main round index.
+#[derive(Debug, Copy, Clone)]
+pub struct MainRoundIdx(usize);
+
 /// Round index.
 #[derive(Debug, Copy, Clone)]
 pub enum RoundIdx {
     Init,
-    Main(usize),
+    Main(MainRoundIdx),
 }
 
-impl RoundIdx {
+impl From<InitialRound> for RoundIdx {
+    fn from(_: InitialRound) -> Self {
+        RoundIdx::Init
+    }
+}
+
+impl From<MainRoundIdx> for RoundIdx {
+    fn from(idx: MainRoundIdx) -> Self {
+        RoundIdx::Main(idx)
+    }
+}
+
+impl MainRoundIdx {
     pub(crate) fn as_usize(&self) -> usize {
-        match self {
-            Self::Main(idx) => *idx,
-            _ => panic!(),
-        }
+        self.0
     }
 }
 
-impl From<usize> for RoundIdx {
+impl From<usize> for MainRoundIdx {
     fn from(idx: usize) -> Self {
-        Self::Main(idx)
+        MainRoundIdx(idx)
     }
 }
 
-impl std::ops::Add<usize> for RoundIdx {
+impl std::ops::Add<usize> for MainRoundIdx {
     type Output = Self;
 
     fn add(self, rhs: usize) -> Self::Output {
-        match self {
-            Self::Main(idx) => Self::Main(idx + rhs),
-            _ => panic!(),
-        }
+        MainRoundIdx(self.0 + rhs)
     }
 }
 
-impl Ord for RoundIdx {
+impl Ord for MainRoundIdx {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match (self, other) {
-            (Self::Main(idx_0), Self::Main(idx_1)) => idx_0.cmp(idx_1),
-            _ => panic!(),
-        }
+        self.0.cmp(&other.0)
     }
 }
 
-impl PartialOrd for RoundIdx {
+impl PartialOrd for MainRoundIdx {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl PartialEq for RoundIdx {
+impl PartialEq for MainRoundIdx {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Main(idx_0), Self::Main(idx_1)) => idx_0 == idx_1,
-            _ => panic!(),
-        }
+        self.0 == other.0
     }
 }
 
-impl Eq for RoundIdx {}
+impl Eq for MainRoundIdx {}
 
 /// Returns starting row number of a compression round
 pub fn get_round_row(round_idx: RoundIdx) -> usize {
     match round_idx {
         RoundIdx::Init => 0,
-        RoundIdx::Main(idx) => {
+        RoundIdx::Main(MainRoundIdx(idx)) => {
             assert!(idx < 64);
             (idx as usize) * SUBREGION_MAIN_WORD
         }
@@ -113,81 +120,73 @@ pub fn get_decompose_e_row(round_idx: RoundIdx) -> usize {
     get_round_row(round_idx)
 }
 
-pub fn get_decompose_f_row(round_idx: RoundIdx) -> usize {
-    assert!(matches!(round_idx, RoundIdx::Init));
-    get_decompose_e_row(round_idx) + DECOMPOSE_EFGH
+pub fn get_decompose_f_row(round_idx: InitialRound) -> usize {
+    get_decompose_e_row(round_idx.into()) + DECOMPOSE_EFGH
 }
 
-pub fn get_decompose_g_row(round_idx: RoundIdx) -> usize {
+pub fn get_decompose_g_row(round_idx: InitialRound) -> usize {
     get_decompose_f_row(round_idx) + DECOMPOSE_EFGH
 }
 
-pub fn get_upper_sigma_1_row(round_idx: RoundIdx) -> usize {
-    assert!(matches!(round_idx, RoundIdx::Main(_)));
-    get_decompose_e_row(round_idx) + DECOMPOSE_EFGH + 1
+pub fn get_upper_sigma_1_row(round_idx: MainRoundIdx) -> usize {
+    get_decompose_e_row(round_idx.into()) + DECOMPOSE_EFGH + 1
 }
 
-pub fn get_ch_row(round_idx: RoundIdx) -> usize {
-    assert!(matches!(round_idx, RoundIdx::Main(_)));
-    get_decompose_e_row(round_idx) + DECOMPOSE_EFGH + SIGMA_1_ROWS + 1
+pub fn get_ch_row(round_idx: MainRoundIdx) -> usize {
+    get_decompose_e_row(round_idx.into()) + DECOMPOSE_EFGH + SIGMA_1_ROWS + 1
 }
 
-pub fn get_ch_neg_row(round_idx: RoundIdx) -> usize {
+pub fn get_ch_neg_row(round_idx: MainRoundIdx) -> usize {
     get_ch_row(round_idx) + CH_ROWS / 2
 }
 
 pub fn get_decompose_a_row(round_idx: RoundIdx) -> usize {
     match round_idx {
         RoundIdx::Init => get_h_row(round_idx) + DECOMPOSE_EFGH,
-        _ => get_ch_neg_row(round_idx) - 1 + CH_ROWS / 2,
+        RoundIdx::Main(mri) => get_ch_neg_row(mri) - 1 + CH_ROWS / 2,
     }
 }
 
-pub fn get_upper_sigma_0_row(round_idx: RoundIdx) -> usize {
-    assert!(matches!(round_idx, RoundIdx::Main(_)));
-    get_decompose_a_row(round_idx) + DECOMPOSE_ABCD + 1
+pub fn get_upper_sigma_0_row(round_idx: MainRoundIdx) -> usize {
+    get_decompose_a_row(round_idx.into()) + DECOMPOSE_ABCD + 1
 }
 
-pub fn get_decompose_b_row(round_idx: RoundIdx) -> usize {
-    assert!(matches!(round_idx, RoundIdx::Init));
-    get_decompose_a_row(round_idx) + DECOMPOSE_ABCD
+pub fn get_decompose_b_row(round_idx: InitialRound) -> usize {
+    get_decompose_a_row(round_idx.into()) + DECOMPOSE_ABCD
 }
 
-pub fn get_decompose_c_row(round_idx: RoundIdx) -> usize {
+pub fn get_decompose_c_row(round_idx: InitialRound) -> usize {
     get_decompose_b_row(round_idx) + DECOMPOSE_ABCD
 }
 
-pub fn get_maj_row(round_idx: RoundIdx) -> usize {
-    assert!(matches!(round_idx, RoundIdx::Main(_)));
+pub fn get_maj_row(round_idx: MainRoundIdx) -> usize {
     get_upper_sigma_0_row(round_idx) + SIGMA_0_ROWS
 }
 
 // Get state word rows
 pub fn get_h_row(round_idx: RoundIdx) -> usize {
     match round_idx {
-        RoundIdx::Init => get_decompose_g_row(round_idx) + DECOMPOSE_EFGH,
-        _ => get_ch_row(round_idx) - 1,
+        RoundIdx::Init => get_decompose_g_row(InitialRound) + DECOMPOSE_EFGH,
+        RoundIdx::Main(mri) => get_ch_row(mri) - 1,
     }
 }
 
-pub fn get_h_prime_row(round_idx: RoundIdx) -> usize {
-    assert!(matches!(round_idx, RoundIdx::Main(_)));
+pub fn get_h_prime_row(round_idx: MainRoundIdx) -> usize {
     get_ch_row(round_idx)
 }
 
 pub fn get_d_row(round_idx: RoundIdx) -> usize {
     match round_idx {
-        RoundIdx::Init => get_decompose_c_row(round_idx) + DECOMPOSE_ABCD,
-        _ => get_ch_row(round_idx) + 2,
+        RoundIdx::Init => get_decompose_c_row(InitialRound) + DECOMPOSE_ABCD,
+        RoundIdx::Main(mri) => get_ch_row(mri) + 2,
     }
 }
 
-pub fn get_e_new_row(round_idx: RoundIdx) -> usize {
-    assert!(matches!(round_idx, RoundIdx::Main(_)));
-    get_d_row(round_idx)
+pub fn get_e_new_row(round_idx: MainRoundIdx) -> usize {
+    get_d_row(round_idx.into())
 }
 
-pub fn get_a_new_row(round_idx: RoundIdx) -> usize {
+pub fn get_a_new_row(round_idx: MainRoundIdx) -> usize {
     get_maj_row(round_idx)
 }
 
@@ -202,9 +201,9 @@ pub fn get_digest_efgh_row() -> usize {
 impl CompressionConfig {
     pub(super) fn decompose_abcd(
         &self,
-        region: &mut Region<'_, Fr>,
+        region: &mut Region<'_, pallas::Base>,
         row: usize,
-        val: Option<u32>,
+        val: Value<u32>,
     ) -> Result<AbcdVar, Error> {
         self.s_decompose_abcd.enable(region, row)?;
 
@@ -214,7 +213,7 @@ impl CompressionConfig {
         let a_6 = self.extras[2];
 
         let spread_pieces = val.map(AbcdVar::pieces);
-        let spread_pieces = transpose_option_vec(spread_pieces, 6);
+        let spread_pieces = spread_pieces.transpose_vec(6);
 
         let a = SpreadVar::without_lookup(
             region,
@@ -273,9 +272,9 @@ impl CompressionConfig {
 
     pub(super) fn decompose_efgh(
         &self,
-        region: &mut Region<'_, Fr>,
+        region: &mut Region<'_, pallas::Base>,
         row: usize,
-        val: Option<u32>,
+        val: Value<u32>,
     ) -> Result<EfghVar, Error> {
         self.s_decompose_efgh.enable(region, row)?;
 
@@ -285,7 +284,7 @@ impl CompressionConfig {
         let a_6 = self.extras[2];
 
         let spread_pieces = val.map(EfghVar::pieces);
-        let spread_pieces = transpose_option_vec(spread_pieces, 6);
+        let spread_pieces = spread_pieces.transpose_vec(6);
 
         let a_lo = SpreadVar::without_lookup(
             region,
@@ -344,9 +343,9 @@ impl CompressionConfig {
 
     pub(super) fn decompose_a(
         &self,
-        region: &mut Region<'_, Fr>,
+        region: &mut Region<'_, pallas::Base>,
         round_idx: RoundIdx,
-        a_val: Option<u32>,
+        a_val: Value<u32>,
     ) -> Result<RoundWordA, Error> {
         let row = get_decompose_a_row(round_idx);
 
@@ -357,9 +356,9 @@ impl CompressionConfig {
 
     pub(super) fn decompose_e(
         &self,
-        region: &mut Region<'_, Fr>,
+        region: &mut Region<'_, pallas::Base>,
         round_idx: RoundIdx,
-        e_val: Option<u32>,
+        e_val: Value<u32>,
     ) -> Result<RoundWordE, Error> {
         let row = get_decompose_e_row(round_idx);
 
@@ -370,8 +369,8 @@ impl CompressionConfig {
 
     pub(super) fn assign_upper_sigma_0(
         &self,
-        region: &mut Region<'_, Fr>,
-        round_idx: RoundIdx,
+        region: &mut Region<'_, pallas::Base>,
+        round_idx: MainRoundIdx,
         word: AbcdVar,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
         // Rename these here for ease of matching the gates to the specification.
@@ -406,11 +405,11 @@ impl CompressionConfig {
 
         // Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
         let r = word.xor_upper_sigma();
-        let r_0: Option<[bool; 32]> = r.map(|r| r[..32].try_into().unwrap());
+        let r_0: Value<[bool; 32]> = r.map(|r| r[..32].try_into().unwrap());
         let r_0_even = r_0.map(even_bits);
         let r_0_odd = r_0.map(odd_bits);
 
-        let r_1: Option<[bool; 32]> = r.map(|r| r[32..].try_into().unwrap());
+        let r_1: Value<[bool; 32]> = r.map(|r| r[32..].try_into().unwrap());
         let r_1_even = r_1.map(even_bits);
         let r_1_odd = r_1.map(odd_bits);
 
@@ -428,8 +427,8 @@ impl CompressionConfig {
 
     pub(super) fn assign_upper_sigma_1(
         &self,
-        region: &mut Region<'_, Fr>,
-        round_idx: RoundIdx,
+        region: &mut Region<'_, pallas::Base>,
+        round_idx: MainRoundIdx,
         word: EfghVar,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
         // Rename these here for ease of matching the gates to the specification.
@@ -465,11 +464,11 @@ impl CompressionConfig {
         // Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
         // Calculate R_0^{even}, R_0^{odd}, R_1^{even}, R_1^{odd}
         let r = word.xor_upper_sigma();
-        let r_0: Option<[bool; 32]> = r.map(|r| r[..32].try_into().unwrap());
+        let r_0: Value<[bool; 32]> = r.map(|r| r[..32].try_into().unwrap());
         let r_0_even = r_0.map(even_bits);
         let r_0_odd = r_0.map(odd_bits);
 
-        let r_1: Option<[bool; 32]> = r.map(|r| r[32..].try_into().unwrap());
+        let r_1: Value<[bool; 32]> = r.map(|r| r[32..].try_into().unwrap());
         let r_1_even = r_1.map(even_bits);
         let r_1_odd = r_1.map(odd_bits);
 
@@ -487,12 +486,12 @@ impl CompressionConfig {
 
     fn assign_ch_outputs(
         &self,
-        region: &mut Region<'_, Fr>,
+        region: &mut Region<'_, pallas::Base>,
         row: usize,
-        r_0_even: Option<[bool; 16]>,
-        r_0_odd: Option<[bool; 16]>,
-        r_1_even: Option<[bool; 16]>,
-        r_1_odd: Option<[bool; 16]>,
+        r_0_even: Value<[bool; 16]>,
+        r_0_odd: Value<[bool; 16]>,
+        r_1_even: Value<[bool; 16]>,
+        r_1_odd: Value<[bool; 16]>,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
         let a_3 = self.extras[0];
 
@@ -512,8 +511,8 @@ impl CompressionConfig {
 
     pub(super) fn assign_ch(
         &self,
-        region: &mut Region<'_, Fr>,
-        round_idx: RoundIdx,
+        region: &mut Region<'_, pallas::Base>,
+        round_idx: MainRoundIdx,
         spread_halves_e: RoundWordSpread,
         spread_halves_f: RoundWordSpread,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
@@ -540,16 +539,16 @@ impl CompressionConfig {
             .1
             .copy_advice(|| "spread_f_hi", region, a_4, row + 1)?;
 
-        let p: Option<[bool; 64]> = spread_halves_e
+        let p: Value<[bool; 64]> = spread_halves_e
             .value()
             .zip(spread_halves_f.value())
             .map(|(e, f)| i2lebsp(e + f));
 
-        let p_0: Option<[bool; 32]> = p.map(|p| p[..32].try_into().unwrap());
+        let p_0: Value<[bool; 32]> = p.map(|p| p[..32].try_into().unwrap());
         let p_0_even = p_0.map(even_bits);
         let p_0_odd = p_0.map(odd_bits);
 
-        let p_1: Option<[bool; 32]> = p.map(|p| p[32..].try_into().unwrap());
+        let p_1: Value<[bool; 32]> = p.map(|p| p[32..].try_into().unwrap());
         let p_1_even = p_1.map(even_bits);
         let p_1_odd = p_1.map(odd_bits);
 
@@ -558,8 +557,8 @@ impl CompressionConfig {
 
     pub(super) fn assign_ch_neg(
         &self,
-        region: &mut Region<'_, Fr>,
-        round_idx: RoundIdx,
+        region: &mut Region<'_, pallas::Base>,
+        round_idx: MainRoundIdx,
         spread_halves_e: RoundWordSpread,
         spread_halves_g: RoundWordSpread,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
@@ -615,7 +614,7 @@ impl CompressionConfig {
             spread_neg_e_hi,
         )?;
 
-        let p: Option<[bool; 64]> = {
+        let p: Value<[bool; 64]> = {
             let spread_neg_e = spread_neg_e_lo
                 .zip(spread_neg_e_hi)
                 .map(|(lo, hi)| lebs2ip(&lo) + (1 << 32) * lebs2ip(&hi));
@@ -624,11 +623,11 @@ impl CompressionConfig {
                 .map(|(neg_e, g)| i2lebsp(neg_e + g))
         };
 
-        let p_0: Option<[bool; 32]> = p.map(|p| p[..32].try_into().unwrap());
+        let p_0: Value<[bool; 32]> = p.map(|p| p[..32].try_into().unwrap());
         let p_0_even = p_0.map(even_bits);
         let p_0_odd = p_0.map(odd_bits);
 
-        let p_1: Option<[bool; 32]> = p.map(|p| p[32..].try_into().unwrap());
+        let p_1: Value<[bool; 32]> = p.map(|p| p[32..].try_into().unwrap());
         let p_1_even = p_1.map(even_bits);
         let p_1_odd = p_1.map(odd_bits);
 
@@ -637,12 +636,12 @@ impl CompressionConfig {
 
     fn assign_maj_outputs(
         &self,
-        region: &mut Region<'_, Fr>,
+        region: &mut Region<'_, pallas::Base>,
         row: usize,
-        r_0_even: Option<[bool; 16]>,
-        r_0_odd: Option<[bool; 16]>,
-        r_1_even: Option<[bool; 16]>,
-        r_1_odd: Option<[bool; 16]>,
+        r_0_even: Value<[bool; 16]>,
+        r_0_odd: Value<[bool; 16]>,
+        r_1_even: Value<[bool; 16]>,
+        r_1_odd: Value<[bool; 16]>,
     ) -> Result<(AssignedBits<16>, AssignedBits<16>), Error> {
         let a_3 = self.extras[0];
         let (_even, odd) = self.assign_spread_outputs(
@@ -661,8 +660,8 @@ impl CompressionConfig {
 
     pub(super) fn assign_maj(
         &self,
-        region: &mut Region<'_, Fr>,
-        round_idx: RoundIdx,
+        region: &mut Region<'_, pallas::Base>,
+        round_idx: MainRoundIdx,
         spread_halves_a: RoundWordSpread,
         spread_halves_b: RoundWordSpread,
         spread_halves_c: RoundWordSpread,
@@ -698,17 +697,17 @@ impl CompressionConfig {
             .1
             .copy_advice(|| "spread_c_hi", region, a_5, row + 1)?;
 
-        let m: Option<[bool; 64]> = spread_halves_a
+        let m: Value<[bool; 64]> = spread_halves_a
             .value()
             .zip(spread_halves_b.value())
             .zip(spread_halves_c.value())
             .map(|((a, b), c)| i2lebsp(a + b + c));
 
-        let m_0: Option<[bool; 32]> = m.map(|m| m[..32].try_into().unwrap());
+        let m_0: Value<[bool; 32]> = m.map(|m| m[..32].try_into().unwrap());
         let m_0_even = m_0.map(even_bits);
         let m_0_odd = m_0.map(odd_bits);
 
-        let m_1: Option<[bool; 32]> = m.map(|m| m[32..].try_into().unwrap());
+        let m_1: Value<[bool; 32]> = m.map(|m| m[32..].try_into().unwrap());
         let m_1_even = m_1.map(even_bits);
         let m_1_odd = m_1.map(odd_bits);
 
@@ -719,8 +718,8 @@ impl CompressionConfig {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn assign_h_prime(
         &self,
-        region: &mut Region<'_, Fr>,
-        round_idx: RoundIdx,
+        region: &mut Region<'_, pallas::Base>,
+        round_idx: MainRoundIdx,
         h: RoundWordDense,
         ch: (AssignedBits<16>, AssignedBits<16>),
         ch_neg: (AssignedBits<16>, AssignedBits<16>),
@@ -751,8 +750,8 @@ impl CompressionConfig {
         let k_lo: [bool; 16] = k[..16].try_into().unwrap();
         let k_hi: [bool; 16] = k[16..].try_into().unwrap();
         {
-            AssignedBits::<16>::assign_bits(region, || "k_lo", a_6, row - 1, Some(k_lo))?;
-            AssignedBits::<16>::assign_bits(region, || "k_hi", a_6, row, Some(k_hi))?;
+            AssignedBits::<16>::assign_bits(region, || "k_lo", a_6, row - 1, Value::known(k_lo))?;
+            AssignedBits::<16>::assign_bits(region, || "k_hi", a_6, row, Value::known(k_hi))?;
         }
 
         // Assign and copy w
@@ -773,7 +772,10 @@ impl CompressionConfig {
                 (ch.0.value_u16(), ch.1.value_u16()),
                 (ch_neg.0.value_u16(), ch_neg.1.value_u16()),
                 (sigma_1.0.value_u16(), sigma_1.1.value_u16()),
-                (Some(lebs2ip(&k_lo) as u16), Some(lebs2ip(&k_hi) as u16)),
+                (
+                    Value::known(lebs2ip(&k_lo) as u16),
+                    Value::known(lebs2ip(&k_hi) as u16),
+                ),
                 (w.0.value_u16(), w.1.value_u16()),
             ]);
 
@@ -781,16 +783,12 @@ impl CompressionConfig {
                 || "h_prime_carry",
                 a_9,
                 row + 1,
-                || {
-                    h_prime_carry
-                        .map(|value| Fr::from(value as u64))
-                        .ok_or(Error::Synthesis)
-                },
+                || h_prime_carry.map(|value| pallas::Base::from(value as u64)),
             )?;
 
-            let h_prime: Option<[bool; 32]> = h_prime.map(|w| i2lebsp(w.into()));
-            let h_prime_lo: Option<[bool; 16]> = h_prime.map(|w| w[..16].try_into().unwrap());
-            let h_prime_hi: Option<[bool; 16]> = h_prime.map(|w| w[16..].try_into().unwrap());
+            let h_prime: Value<[bool; 32]> = h_prime.map(|w| i2lebsp(w.into()));
+            let h_prime_lo: Value<[bool; 16]> = h_prime.map(|w| w[..16].try_into().unwrap());
+            let h_prime_hi: Value<[bool; 16]> = h_prime.map(|w| w[16..].try_into().unwrap());
 
             let h_prime_lo =
                 AssignedBits::<16>::assign_bits(region, || "h_prime_lo", a_7, row + 1, h_prime_lo)?;
@@ -804,8 +802,8 @@ impl CompressionConfig {
     // s_e_new to get E_new = H' + D
     pub(super) fn assign_e_new(
         &self,
-        region: &mut Region<'_, Fr>,
-        round_idx: RoundIdx,
+        region: &mut Region<'_, pallas::Base>,
+        round_idx: MainRoundIdx,
         d: &RoundWordDense,
         h_prime: &RoundWordDense,
     ) -> Result<RoundWordDense, Error> {
@@ -832,7 +830,7 @@ impl CompressionConfig {
             || "e_new_carry",
             a_9,
             row + 1,
-            || e_new_carry.map(Fr::from).ok_or(Error::Synthesis),
+            || e_new_carry.map(pallas::Base::from),
         )?;
 
         Ok(e_new_dense)
@@ -841,8 +839,8 @@ impl CompressionConfig {
     // s_a_new to get A_new = H' + Maj(A, B, C) + s_upper_sigma_0(A)
     pub(super) fn assign_a_new(
         &self,
-        region: &mut Region<'_, Fr>,
-        round_idx: RoundIdx,
+        region: &mut Region<'_, pallas::Base>,
+        round_idx: MainRoundIdx,
         maj: (AssignedBits<16>, AssignedBits<16>),
         sigma_0: (AssignedBits<16>, AssignedBits<16>),
         h_prime: RoundWordDense,
@@ -886,7 +884,7 @@ impl CompressionConfig {
             || "a_new_carry",
             a_9,
             row,
-            || a_new_carry.map(Fr::from).ok_or(Error::Synthesis),
+            || a_new_carry.map(pallas::Base::from),
         )?;
 
         Ok(a_new_dense)
@@ -894,22 +892,22 @@ impl CompressionConfig {
 
     pub fn assign_word_halves_dense(
         &self,
-        region: &mut Region<'_, Fr>,
+        region: &mut Region<'_, pallas::Base>,
         lo_row: usize,
         lo_col: Column<Advice>,
         hi_row: usize,
         hi_col: Column<Advice>,
-        word: Option<u32>,
+        word: Value<u32>,
     ) -> Result<RoundWordDense, Error> {
-        let word: Option<[bool; 32]> = word.map(|w| i2lebsp(w.into()));
+        let word: Value<[bool; 32]> = word.map(|w| i2lebsp(w.into()));
 
         let lo = {
-            let lo: Option<[bool; 16]> = word.map(|w| w[..16].try_into().unwrap());
+            let lo: Value<[bool; 16]> = word.map(|w| w[..16].try_into().unwrap());
             AssignedBits::<16>::assign_bits(region, || "lo", lo_col, lo_row, lo)?
         };
 
         let hi = {
-            let hi: Option<[bool; 16]> = word.map(|w| w[16..].try_into().unwrap());
+            let hi: Value<[bool; 16]> = word.map(|w| w[16..].try_into().unwrap());
             AssignedBits::<16>::assign_bits(region, || "hi", hi_col, hi_row, hi)?
         };
 
@@ -920,17 +918,17 @@ impl CompressionConfig {
     #[allow(clippy::type_complexity)]
     pub fn assign_word_halves(
         &self,
-        region: &mut Region<'_, Fr>,
+        region: &mut Region<'_, pallas::Base>,
         row: usize,
-        word: Option<u32>,
+        word: Value<u32>,
     ) -> Result<(RoundWordDense, RoundWordSpread), Error> {
         // Rename these here for ease of matching the gates to the specification.
         let a_7 = self.extras[3];
         let a_8 = self.extras[4];
 
-        let word: Option<[bool; 32]> = word.map(|w| i2lebsp(w.into()));
-        let lo: Option<[bool; 16]> = word.map(|w| w[..16].try_into().unwrap());
-        let hi: Option<[bool; 16]> = word.map(|w| w[16..].try_into().unwrap());
+        let word: Value<[bool; 32]> = word.map(|w| i2lebsp(w.into()));
+        let lo: Value<[bool; 16]> = word.map(|w| w[..16].try_into().unwrap());
+        let hi: Value<[bool; 16]> = word.map(|w| w[16..].try_into().unwrap());
 
         let w_lo = SpreadVar::without_lookup(region, a_7, row, a_8, row, lo.map(SpreadWord::new))?;
         let w_hi =
