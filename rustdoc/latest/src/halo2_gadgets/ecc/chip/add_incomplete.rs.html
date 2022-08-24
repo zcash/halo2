@@ -218,8 +218,8 @@
 };
 <span class="kw">use </span>pasta_curves::pallas;
 
-<span class="attribute">#[derive(Clone, Copy, Debug, Eq, PartialEq)]</span>
-<span class="kw">pub struct </span>Config {
+<span class="attribute">#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+</span><span class="kw">pub struct </span>Config {
     q_add_incomplete: Selector,
     <span class="comment">// x-coordinate of P in P + Q = R
     </span><span class="kw">pub </span>x_p: Column&lt;Advice&gt;,
@@ -355,8 +355,8 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">pub mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">pub mod </span>tests {
     <span class="kw">use </span>group::Curve;
     <span class="kw">use </span>halo2_proofs::{
         circuit::{Layouter, Value},
@@ -366,8 +366,8 @@
 
     <span class="kw">use </span><span class="kw">crate</span>::ecc::{EccInstructions, NonIdentityPoint};
 
-    <span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="kw">pub fn </span>test_add_incomplete&lt;
+    <span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub fn </span>test_add_incomplete&lt;
         EccChip: EccInstructions&lt;pallas::Affine&gt; + Clone + Eq + std::fmt::Debug,
     &gt;(
         chip: EccChip,
@@ -404,4 +404,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

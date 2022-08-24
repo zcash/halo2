@@ -661,8 +661,8 @@
 <span class="doccomment">/// A curve point represented in affine (x, y) coordinates, or the
 /// identity represented as (0, 0).
 /// Each coordinate is assigned to a cell.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>EccPoint {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>EccPoint {
     <span class="doccomment">/// x-coordinate
     ///
     /// Stored as an `Assigned&lt;F&gt;` to enable batching inversions.
@@ -706,16 +706,16 @@
         <span class="self">self</span>.y.clone().evaluate()
     }
 
-    <span class="attribute">#[cfg(test)]</span>
-    <span class="kw">fn </span>is_identity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;bool&gt; {
+    <span class="attribute">#[cfg(test)]
+    </span><span class="kw">fn </span>is_identity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Value&lt;bool&gt; {
         <span class="self">self</span>.x.value().map(|x| x.is_zero_vartime())
     }
 }
 
 <span class="doccomment">/// A non-identity point represented in affine (x, y) coordinates.
 /// Each coordinate is assigned to a cell.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>NonIdentityEccPoint {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>NonIdentityEccPoint {
     <span class="doccomment">/// x-coordinate
     ///
     /// Stored as an `Assigned&lt;F&gt;` to enable batching inversions.
@@ -765,9 +765,9 @@
 }
 
 <span class="doccomment">/// Configuration for [`EccChip`].
-</span><span class="attribute">#[derive(Clone, Debug, Eq, PartialEq)]</span>
-<span class="attribute">#[allow(non_snake_case)]</span>
-<span class="kw">pub struct </span>EccConfig&lt;FixedPoints: <span class="kw">super</span>::FixedPoints&lt;pallas::Affine&gt;&gt; {
+</span><span class="attribute">#[derive(Clone, Debug, Eq, PartialEq)]
+#[allow(non_snake_case)]
+</span><span class="kw">pub struct </span>EccConfig&lt;FixedPoints: <span class="kw">super</span>::FixedPoints&lt;pallas::Affine&gt;&gt; {
     <span class="doccomment">/// Advice columns needed by instructions in the ECC chip.
     </span><span class="kw">pub </span>advices: [Column&lt;Advice&gt;; <span class="number">10</span>],
 
@@ -804,24 +804,24 @@
 
 <span class="doccomment">/// Type marker representing a full-width scalar for use in fixed-base scalar
 /// multiplication.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub enum </span>FullScalar {}
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub enum </span>FullScalar {}
 <span class="kw">impl </span>FixedScalarKind <span class="kw">for </span>FullScalar {
     <span class="kw">const </span>NUM_WINDOWS: usize = NUM_WINDOWS;
 }
 
 <span class="doccomment">/// Type marker representing a signed 64-bit scalar for use in fixed-base scalar
 /// multiplication.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub enum </span>ShortScalar {}
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub enum </span>ShortScalar {}
 <span class="kw">impl </span>FixedScalarKind <span class="kw">for </span>ShortScalar {
     <span class="kw">const </span>NUM_WINDOWS: usize = NUM_WINDOWS_SHORT;
 }
 
 <span class="doccomment">/// Type marker representing a base field element being used as a scalar in fixed-base
 /// scalar multiplication.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub enum </span>BaseFieldElem {}
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub enum </span>BaseFieldElem {}
 <span class="kw">impl </span>FixedScalarKind <span class="kw">for </span>BaseFieldElem {
     <span class="kw">const </span>NUM_WINDOWS: usize = NUM_WINDOWS;
 }
@@ -856,8 +856,8 @@
 }
 
 <span class="doccomment">/// An [`EccInstructions`] chip that uses 10 advice columns.
-</span><span class="attribute">#[derive(Clone, Debug, Eq, PartialEq)]</span>
-<span class="kw">pub struct </span>EccChip&lt;FixedPoints: <span class="kw">super</span>::FixedPoints&lt;pallas::Affine&gt;&gt; {
+</span><span class="attribute">#[derive(Clone, Debug, Eq, PartialEq)]
+</span><span class="kw">pub struct </span>EccChip&lt;FixedPoints: <span class="kw">super</span>::FixedPoints&lt;pallas::Affine&gt;&gt; {
     config: EccConfig&lt;FixedPoints&gt;,
 }
 
@@ -889,8 +889,8 @@
     <span class="doccomment">/// # Side effects
     ///
     /// All columns in `advices` will be equality-enabled.
-    </span><span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="kw">pub fn </span>configure(
+    </span><span class="attribute">#[allow(non_snake_case)]
+    </span><span class="kw">pub fn </span>configure(
         meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;,
         advices: [Column&lt;Advice&gt;; <span class="number">10</span>],
         lagrange_coeffs: [Column&lt;Fixed&gt;; <span class="number">8</span>],
@@ -957,8 +957,8 @@
 /// i.e. `windows` = [k_0, k_1, ..., k_84] (for a 255-bit scalar)
 /// where `scalar = k_0 + k_1 * (2^3) + ... + k_84 * (2^3)^84` and
 /// each `k_i` is in the range [0..2^3).
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>EccScalarFixed {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>EccScalarFixed {
     value: Value&lt;pallas::Scalar&gt;,
     <span class="doccomment">/// The circuit-assigned windows representing this scalar, or `None` if the scalar has
     /// not been used yet.
@@ -983,8 +983,8 @@
 /// where `scalar = k_0 + k_1 * (2^3) + ... + k_84 * (2^3)^84` and
 /// each `k_i` is in the range [0..2^3).
 /// k_21 must be a single bit, i.e. 0 or 1.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>EccScalarFixedShort {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>EccScalarFixedShort {
     magnitude: MagnitudeCell,
     sign: SignCell,
     <span class="doccomment">/// The circuit-assigned running sum constraining this signed short scalar, or `None`
@@ -1002,8 +1002,8 @@
 /// `running_sum` = [z_0, ..., z_85], where we expect z_85 = 0.
 /// Since z_0 is initialized as the scalar α, we store it as
 /// `base_field_elem`.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">struct </span>EccBaseFieldElemFixed {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">struct </span>EccBaseFieldElemFixed {
     base_field_elem: AssignedCell&lt;pallas::Base, pallas::Base&gt;,
     running_sum: ArrayVec&lt;AssignedCell&lt;pallas::Base, pallas::Base&gt;, { NUM_WINDOWS + <span class="number">1 </span>}&gt;,
 }
@@ -1016,8 +1016,8 @@
 
 <span class="doccomment">/// An enumeration of the possible types of scalars used in variable-base
 /// multiplication.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub enum </span>ScalarVar {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub enum </span>ScalarVar {
     <span class="doccomment">/// An element of the elliptic curve&#39;s base field, that is used as a scalar
     /// in variable-base scalar mul.
     ///
@@ -1242,4 +1242,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

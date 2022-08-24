@@ -479,8 +479,8 @@
 <span class="kw">const </span>BITS_14: usize = <span class="number">1 </span>&lt;&lt; <span class="number">14</span>;
 
 <span class="doccomment">/// An input word into a lookup, containing (tag, dense, spread)
-</span><span class="attribute">#[derive(Copy, Clone, Debug)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadWord&lt;<span class="kw">const </span>DENSE: usize, <span class="kw">const </span>SPREAD: usize&gt; {
+</span><span class="attribute">#[derive(Copy, Clone, Debug)]
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadWord&lt;<span class="kw">const </span>DENSE: usize, <span class="kw">const </span>SPREAD: usize&gt; {
     <span class="kw">pub </span>tag: u8,
     <span class="kw">pub </span>dense: [bool; DENSE],
     <span class="kw">pub </span>spread: [bool; SPREAD],
@@ -529,8 +529,8 @@
 }
 
 <span class="doccomment">/// A variable stored in advice columns corresponding to a row of [`SpreadTableConfig`].
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadVar&lt;<span class="kw">const </span>DENSE: usize, <span class="kw">const </span>SPREAD: usize&gt; {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadVar&lt;<span class="kw">const </span>DENSE: usize, <span class="kw">const </span>SPREAD: usize&gt; {
     <span class="kw">pub </span>tag: Value&lt;u8&gt;,
     <span class="kw">pub </span>dense: AssignedBits&lt;DENSE&gt;,
     <span class="kw">pub </span>spread: AssignedBits&lt;SPREAD&gt;,
@@ -595,28 +595,28 @@
     }
 }
 
-<span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadInputs {
+<span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadInputs {
     <span class="kw">pub</span>(<span class="kw">super</span>) tag: Column&lt;Advice&gt;,
     <span class="kw">pub</span>(<span class="kw">super</span>) dense: Column&lt;Advice&gt;,
     <span class="kw">pub</span>(<span class="kw">super</span>) spread: Column&lt;Advice&gt;,
 }
 
-<span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadTable {
+<span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadTable {
     <span class="kw">pub</span>(<span class="kw">super</span>) tag: TableColumn,
     <span class="kw">pub</span>(<span class="kw">super</span>) dense: TableColumn,
     <span class="kw">pub</span>(<span class="kw">super</span>) spread: TableColumn,
 }
 
-<span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadTableConfig {
+<span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadTableConfig {
     <span class="kw">pub </span>input: SpreadInputs,
     <span class="kw">pub </span>table: SpreadTable,
 }
 
-<span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadTableChip&lt;F: FieldExt&gt; {
+<span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>SpreadTableChip&lt;F: FieldExt&gt; {
     config: SpreadTableConfig,
     _marker: PhantomData&lt;F&gt;,
 }
@@ -745,8 +745,8 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::{get_tag, SpreadTableChip, SpreadTableConfig};
     <span class="kw">use </span>rand::Rng;
 
@@ -758,11 +758,11 @@
         plonk::{Advice, Circuit, Column, ConstraintSystem, Error},
     };
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>lookup_table() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>lookup_table() {
         <span class="doccomment">/// This represents an advice column at a certain row in the ConstraintSystem
-        </span><span class="attribute">#[derive(Copy, Clone, Debug)]</span>
-        <span class="kw">pub struct </span>Variable(Column&lt;Advice&gt;, usize);
+        </span><span class="attribute">#[derive(Copy, Clone, Debug)]
+        </span><span class="kw">pub struct </span>Variable(Column&lt;Advice&gt;, usize);
 
         <span class="kw">struct </span>MyCircuit {}
 
@@ -910,4 +910,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

@@ -1138,15 +1138,15 @@
 <span class="kw">mod </span>gates;
 <span class="kw">pub use </span>gates::CircuitGates;
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]</span>
-<span class="kw">mod </span>graph;
+<span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]
+</span><span class="kw">mod </span>graph;
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]</span>
-<span class="attribute">#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)))]</span>
-<span class="kw">pub use </span>graph::{circuit_dot_graph, layout::CircuitLayout};
+<span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]
+#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)))]
+</span><span class="kw">pub use </span>graph::{circuit_dot_graph, layout::CircuitLayout};
 
-<span class="attribute">#[derive(Debug)]</span>
-<span class="kw">struct </span>Region {
+<span class="attribute">#[derive(Debug)]
+</span><span class="kw">struct </span>Region {
     <span class="doccomment">/// The name of the region. Not required to be unique.
     </span>name: String,
     <span class="doccomment">/// The columns involved in this region.
@@ -1180,8 +1180,8 @@
 }
 
 <span class="doccomment">/// The value of a particular cell within the circuit.
-</span><span class="attribute">#[derive(Clone, Copy, Debug, PartialEq, Eq)]</span>
-<span class="kw">enum </span>CellValue&lt;F: Group + Field&gt; {
+</span><span class="attribute">#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+</span><span class="kw">enum </span>CellValue&lt;F: Group + Field&gt; {
     <span class="comment">// An unassigned cell.
     </span>Unassigned,
     <span class="comment">// A cell that has been assigned a value.
@@ -1191,8 +1191,8 @@
 }
 
 <span class="doccomment">/// A value within an expression.
-</span><span class="attribute">#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]</span>
-<span class="kw">enum </span>Value&lt;F: Group + Field&gt; {
+</span><span class="attribute">#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
+</span><span class="kw">enum </span>Value&lt;F: Group + Field&gt; {
     Real(F),
     Poison,
 }
@@ -1375,8 +1375,8 @@
 ///     } if current_k == 2,
 /// ));
 /// ```
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>MockProver&lt;F: Group + Field&gt; {
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>MockProver&lt;F: Group + Field&gt; {
     k: u32,
     n: u32,
     cs: ConstraintSystem&lt;F&gt;,
@@ -1982,8 +1982,8 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use </span>pasta_curves::Fp;
 
     <span class="kw">use super</span>::{FailureLocation, MockProver, VerifyFailure};
@@ -1996,12 +1996,12 @@
         poly::Rotation,
     };
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>unassigned_cell() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>unassigned_cell() {
         <span class="kw">const </span>K: u32 = <span class="number">4</span>;
 
-        <span class="attribute">#[derive(Clone)]</span>
-        <span class="kw">struct </span>FaultyCircuitConfig {
+        <span class="attribute">#[derive(Clone)]
+        </span><span class="kw">struct </span>FaultyCircuitConfig {
             a: Column&lt;Advice&gt;,
             q: Selector,
         }
@@ -2069,12 +2069,12 @@
         );
     }
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>bad_lookup() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>bad_lookup() {
         <span class="kw">const </span>K: u32 = <span class="number">4</span>;
 
-        <span class="attribute">#[derive(Clone)]</span>
-        <span class="kw">struct </span>FaultyCircuitConfig {
+        <span class="attribute">#[derive(Clone)]
+        </span><span class="kw">struct </span>FaultyCircuitConfig {
             a: Column&lt;Advice&gt;,
             q: Selector,
             table: TableColumn,
@@ -2198,4 +2198,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

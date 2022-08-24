@@ -577,8 +577,8 @@
 <span class="doccomment">/// This structure contains precomputed constants and other details needed for
 /// performing operations on an evaluation domain of size $2^k$ and an extended
 /// domain of size $2^{k} * j$ with $j \neq 0$.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>EvaluationDomain&lt;G: Group&gt; {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>EvaluationDomain&lt;G: Group&gt; {
     n: u64,
     k: u32,
     extended_k: u32,
@@ -1029,16 +1029,16 @@
 }
 
 <span class="doccomment">/// Represents the minimal parameters that determine an `EvaluationDomain`.
-</span><span class="attribute">#[allow(dead_code)]</span>
-<span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>PinnedEvaluationDomain&lt;<span class="lifetime">&#39;a</span>, G: Group&gt; {
+</span><span class="attribute">#[allow(dead_code)]
+#[derive(Debug)]
+</span><span class="kw">pub struct </span>PinnedEvaluationDomain&lt;<span class="lifetime">&#39;a</span>, G: Group&gt; {
     k: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u32,
     extended_k: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u32,
     omega: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>G::Scalar,
 }
 
-<span class="attribute">#[test]</span>
-<span class="kw">fn </span>test_rotate() {
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_rotate() {
     <span class="kw">use </span>rand_core::OsRng;
 
     <span class="kw">use </span><span class="kw">crate</span>::arithmetic::eval_polynomial;
@@ -1078,8 +1078,8 @@
     );
 }
 
-<span class="attribute">#[test]</span>
-<span class="kw">fn </span>test_l_i() {
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_l_i() {
     <span class="kw">use </span>rand_core::OsRng;
 
     <span class="kw">use </span><span class="kw">crate</span>::arithmetic::{eval_polynomial, lagrange_interpolate};
@@ -1108,4 +1108,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

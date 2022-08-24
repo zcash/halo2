@@ -415,8 +415,8 @@
 <span class="kw">use </span>std::io;
 
 <span class="doccomment">/// These are the public parameters for the polynomial commitment scheme.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>Params&lt;C: CurveAffine&gt; {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>Params&lt;C: CurveAffine&gt; {
     <span class="kw">pub</span>(<span class="kw">crate</span>) k: u32,
     <span class="kw">pub</span>(<span class="kw">crate</span>) n: u64,
     <span class="kw">pub</span>(<span class="kw">crate</span>) g: Vec&lt;C&gt;,
@@ -594,8 +594,8 @@
 }
 
 <span class="doccomment">/// Wrapper type around a blinding factor.
-</span><span class="attribute">#[derive(Copy, Clone, Eq, PartialEq, Debug)]</span>
-<span class="kw">pub struct </span>Blind&lt;F&gt;(<span class="kw">pub </span>F);
+</span><span class="attribute">#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+</span><span class="kw">pub struct </span>Blind&lt;F&gt;(<span class="kw">pub </span>F);
 
 <span class="kw">impl</span>&lt;F: FieldExt&gt; Default <span class="kw">for </span>Blind&lt;F&gt; {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
@@ -643,8 +643,8 @@
     }
 }
 
-<span class="attribute">#[test]</span>
-<span class="kw">fn </span>test_commit_lagrange_epaffine() {
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_commit_lagrange_epaffine() {
     <span class="kw">const </span>K: u32 = <span class="number">6</span>;
 
     <span class="kw">use </span>rand_core::OsRng;
@@ -666,8 +666,8 @@
     <span class="macro">assert_eq!</span>(params.commit(<span class="kw-2">&amp;</span>b, alpha), params.commit_lagrange(<span class="kw-2">&amp;</span>a, alpha));
 }
 
-<span class="attribute">#[test]</span>
-<span class="kw">fn </span>test_commit_lagrange_eqaffine() {
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_commit_lagrange_eqaffine() {
     <span class="kw">const </span>K: u32 = <span class="number">6</span>;
 
     <span class="kw">use </span>rand_core::OsRng;
@@ -689,8 +689,8 @@
     <span class="macro">assert_eq!</span>(params.commit(<span class="kw-2">&amp;</span>b, alpha), params.commit_lagrange(<span class="kw-2">&amp;</span>a, alpha));
 }
 
-<span class="attribute">#[test]</span>
-<span class="kw">fn </span>test_opening_proof() {
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_opening_proof() {
     <span class="kw">const </span>K: u32 = <span class="number">6</span>;
 
     <span class="kw">use </span>ff::Field;
@@ -766,4 +766,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

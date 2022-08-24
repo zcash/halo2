@@ -426,8 +426,8 @@
 
 <span class="doccomment">/// The shape of a region. For a region at a certain index, we track
 /// the set of columns it uses as well as the number of rows it uses.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>RegionShape {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>RegionShape {
     <span class="kw">pub</span>(<span class="kw">super</span>) region_index: RegionIndex,
     <span class="kw">pub</span>(<span class="kw">super</span>) columns: HashSet&lt;RegionColumn&gt;,
     <span class="kw">pub</span>(<span class="kw">super</span>) row_count: usize,
@@ -435,8 +435,8 @@
 
 <span class="doccomment">/// The virtual column involved in a region. This includes concrete columns,
 /// as well as selectors that are not concrete columns at this stage.
-</span><span class="attribute">#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]</span>
-<span class="kw">pub enum </span>RegionColumn {
+</span><span class="attribute">#[derive(Eq, PartialEq, Copy, Clone, Debug, Hash)]
+</span><span class="kw">pub enum </span>RegionColumn {
     <span class="doccomment">/// Concrete column
     </span>Column(Column&lt;Any&gt;),
     <span class="doccomment">/// Virtual column representing a (boolean) selector
@@ -588,4 +588,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

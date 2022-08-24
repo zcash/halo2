@@ -688,8 +688,8 @@
 /// Stored as a fraction, so the backend can use batch inversion.
 ///
 /// A denominator of zero maps to an assigned value of zero.
-</span><span class="attribute">#[derive(Clone, Copy, Debug)]</span>
-<span class="kw">pub enum </span>Assigned&lt;F&gt; {
+</span><span class="attribute">#[derive(Clone, Copy, Debug)]
+</span><span class="kw">pub enum </span>Assigned&lt;F&gt; {
     <span class="doccomment">/// The field element zero.
     </span>Zero,
     <span class="doccomment">/// A value that does not require inversion to evaluate.
@@ -989,8 +989,8 @@
     }
 
     <span class="doccomment">/// Doubles this element.
-    </span><span class="attribute">#[must_use]</span>
-    <span class="kw">pub fn </span>double(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+    </span><span class="attribute">#[must_use]
+    </span><span class="kw">pub fn </span>double(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Zero =&gt; <span class="self">Self</span>::Zero,
             <span class="self">Self</span>::Trivial(x) =&gt; <span class="self">Self</span>::Trivial(x.double()),
@@ -1001,8 +1001,8 @@
     }
 
     <span class="doccomment">/// Squares this element.
-    </span><span class="attribute">#[must_use]</span>
-    <span class="kw">pub fn </span>square(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+    </span><span class="attribute">#[must_use]
+    </span><span class="kw">pub fn </span>square(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Zero =&gt; <span class="self">Self</span>::Zero,
             <span class="self">Self</span>::Trivial(x) =&gt; <span class="self">Self</span>::Trivial(x.square()),
@@ -1013,8 +1013,8 @@
     }
 
     <span class="doccomment">/// Cubes this element.
-    </span><span class="attribute">#[must_use]</span>
-    <span class="kw">pub fn </span>cube(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+    </span><span class="attribute">#[must_use]
+    </span><span class="kw">pub fn </span>cube(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.square() * <span class="self">self
     </span>}
 
@@ -1046,14 +1046,14 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use </span>pasta_curves::Fp;
 
     <span class="kw">use </span><span class="kw">super</span>::Assigned;
     <span class="comment">// We use (numerator, denominator) in the comments below to denote a rational.
-    </span><span class="attribute">#[test]</span>
-    <span class="kw">fn </span>add_trivial_to_inv0_rational() {
+    </span><span class="attribute">#[test]
+    </span><span class="kw">fn </span>add_trivial_to_inv0_rational() {
         <span class="comment">// a = 2
         // b = (1,0)
         </span><span class="kw">let </span>a = Assigned::Trivial(Fp::from(<span class="number">2</span>));
@@ -1065,8 +1065,8 @@
         <span class="macro">assert_eq!</span>((b + a).evaluate(), a.evaluate());
     }
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>add_rational_to_inv0_rational() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>add_rational_to_inv0_rational() {
         <span class="comment">// a = (1,2)
         // b = (1,0)
         </span><span class="kw">let </span>a = Assigned::Rational(Fp::one(), Fp::from(<span class="number">2</span>));
@@ -1078,8 +1078,8 @@
         <span class="macro">assert_eq!</span>((b + a).evaluate(), a.evaluate());
     }
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>sub_trivial_from_inv0_rational() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>sub_trivial_from_inv0_rational() {
         <span class="comment">// a = 2
         // b = (1,0)
         </span><span class="kw">let </span>a = Assigned::Trivial(Fp::from(<span class="number">2</span>));
@@ -1093,8 +1093,8 @@
         </span><span class="macro">assert_eq!</span>((a - b).evaluate(), a.evaluate());
     }
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>sub_rational_from_inv0_rational() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>sub_rational_from_inv0_rational() {
         <span class="comment">// a = (1,2)
         // b = (1,0)
         </span><span class="kw">let </span>a = Assigned::Rational(Fp::one(), Fp::from(<span class="number">2</span>));
@@ -1108,8 +1108,8 @@
         </span><span class="macro">assert_eq!</span>((a - b).evaluate(), a.evaluate());
     }
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>mul_rational_by_inv0_rational() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>mul_rational_by_inv0_rational() {
         <span class="comment">// a = (1,2)
         // b = (1,0)
         </span><span class="kw">let </span>a = Assigned::Rational(Fp::one(), Fp::from(<span class="number">2</span>));
@@ -1123,8 +1123,8 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>proptests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>proptests {
     <span class="kw">use </span>std::{
         cmp,
         convert::TryFrom,
@@ -1180,8 +1180,8 @@
         }
     }
 
-    <span class="attribute">#[derive(Clone, Debug)]</span>
-    <span class="kw">enum </span>UnaryOperator {
+    <span class="attribute">#[derive(Clone, Debug)]
+    </span><span class="kw">enum </span>UnaryOperator {
         Neg,
         Double,
         Square,
@@ -1213,8 +1213,8 @@
     <span class="kw">impl</span>&lt;F: Field&gt; BinaryOperand <span class="kw">for </span>F {}
     <span class="kw">impl</span>&lt;F: Field&gt; BinaryOperand <span class="kw">for </span>Assigned&lt;F&gt; {}
 
-    <span class="attribute">#[derive(Clone, Debug)]</span>
-    <span class="kw">enum </span>BinaryOperator {
+    <span class="attribute">#[derive(Clone, Debug)]
+    </span><span class="kw">enum </span>BinaryOperator {
         Add,
         Sub,
         Mul,
@@ -1236,26 +1236,26 @@
         }
     }
 
-    <span class="attribute">#[derive(Clone, Debug)]</span>
-    <span class="kw">enum </span>Operator {
+    <span class="attribute">#[derive(Clone, Debug)]
+    </span><span class="kw">enum </span>Operator {
         Unary(UnaryOperator),
         Binary(BinaryOperator),
     }
 
-    <span class="macro">prop_compose!</span> {
+    <span class="macro">prop_compose! </span>{
         <span class="doccomment">/// Use narrow that can be easily reduced.
         </span><span class="kw">fn </span>arb_element()(val <span class="kw">in </span>any::&lt;u64&gt;()) -&gt; Fp {
             Fp::from(val)
         }
     }
 
-    <span class="macro">prop_compose!</span> {
+    <span class="macro">prop_compose! </span>{
         <span class="kw">fn </span>arb_trivial()(element <span class="kw">in </span>arb_element()) -&gt; Assigned&lt;Fp&gt; {
             Assigned::Trivial(element)
         }
     }
 
-    <span class="macro">prop_compose!</span> {
+    <span class="macro">prop_compose! </span>{
         <span class="doccomment">/// Generates half of the denominators as zero to represent a deferred inversion.
         </span><span class="kw">fn </span>arb_rational()(
             numerator <span class="kw">in </span>arb_element(),
@@ -1268,7 +1268,7 @@
         }
     }
 
-    <span class="macro">prop_compose!</span> {
+    <span class="macro">prop_compose! </span>{
         <span class="kw">fn </span>arb_operators(num_unary: usize, num_binary: usize)(
             unary <span class="kw">in </span>vec(select(UNARY_OPERATORS), num_unary),
             binary <span class="kw">in </span>vec(select(BINARY_OPERATORS), num_binary),
@@ -1280,7 +1280,7 @@
         }
     }
 
-    <span class="macro">prop_compose!</span> {
+    <span class="macro">prop_compose! </span>{
         <span class="kw">fn </span>arb_testcase()(
             num_unary <span class="kw">in </span><span class="number">0usize</span>..<span class="number">5</span>,
             num_binary <span class="kw">in </span><span class="number">0usize</span>..<span class="number">5</span>,
@@ -1301,9 +1301,9 @@
         }
     }
 
-    <span class="macro">proptest!</span> {
-        <span class="attribute">#[test]</span>
-        <span class="kw">fn </span>operation_commutativity((values, operations) <span class="kw">in </span>arb_testcase()) {
+    <span class="macro">proptest! </span>{
+        <span class="attribute">#[test]
+        </span><span class="kw">fn </span>operation_commutativity((values, operations) <span class="kw">in </span>arb_testcase()) {
             <span class="comment">// Evaluate the values at the start.
             </span><span class="kw">let </span>elements: Vec&lt;<span class="kw">_</span>&gt; = values.iter().cloned().map(|v| v.evaluate()).collect();
 
@@ -1346,4 +1346,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

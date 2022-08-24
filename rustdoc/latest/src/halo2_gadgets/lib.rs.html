@@ -61,21 +61,21 @@
 //! Chips can be highly optimised by their developers, as long as they conform to the
 //! defined instructions.
 
-</span><span class="attribute">#![cfg_attr(docsrs, feature(doc_cfg))]</span>
-<span class="comment">// Temporary until we have more of the crate implemented.
-</span><span class="attribute">#![allow(dead_code)]</span>
-<span class="comment">// Catch documentation errors caused by code changes.
-</span><span class="attribute">#![deny(rustdoc::broken_intra_doc_links)]</span>
-<span class="attribute">#![deny(missing_debug_implementations)]</span>
-<span class="attribute">#![deny(missing_docs)]</span>
-<span class="attribute">#![deny(unsafe_code)]</span>
+</span><span class="attribute">#![cfg_attr(docsrs, feature(doc_cfg))]
+</span><span class="comment">// Temporary until we have more of the crate implemented.
+</span><span class="attribute">#![allow(dead_code)]
+</span><span class="comment">// Catch documentation errors caused by code changes.
+</span><span class="attribute">#![deny(rustdoc::broken_intra_doc_links)]
+#![deny(missing_debug_implementations)]
+#![deny(missing_docs)]
+#![deny(unsafe_code)]
 
-<span class="kw">pub mod </span>ecc;
+</span><span class="kw">pub mod </span>ecc;
 <span class="kw">pub mod </span>poseidon;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;unstable&quot;</span>)]</span>
-<span class="attribute">#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;unstable&quot;</span>)))]</span>
-<span class="kw">pub mod </span>sha256;
+<span class="attribute">#[cfg(feature = <span class="string">&quot;unstable&quot;</span>)]
+#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;unstable&quot;</span>)))]
+</span><span class="kw">pub mod </span>sha256;
 <span class="kw">pub mod </span>sinsemilla;
 <span class="kw">pub mod </span>utilities;
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

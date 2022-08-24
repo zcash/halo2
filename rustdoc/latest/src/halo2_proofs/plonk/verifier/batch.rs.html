@@ -151,8 +151,8 @@
 <span class="doccomment">/// A proof verification strategy that returns the proof&#39;s MSM.
 ///
 /// `BatchVerifier` handles the accumulation of the MSMs for the batched proofs.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">struct </span>BatchStrategy&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; {
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">struct </span>BatchStrategy&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; {
     msm: MSM&lt;<span class="lifetime">&#39;params</span>, C&gt;,
 }
 
@@ -176,16 +176,16 @@
     }
 }
 
-<span class="attribute">#[derive(Debug)]</span>
-<span class="kw">struct </span>BatchItem&lt;C: CurveAffine&gt; {
+<span class="attribute">#[derive(Debug)]
+</span><span class="kw">struct </span>BatchItem&lt;C: CurveAffine&gt; {
     instances: Vec&lt;Vec&lt;Vec&lt;C::Scalar&gt;&gt;&gt;,
     proof: Vec&lt;u8&gt;,
 }
 
 <span class="doccomment">/// A verifier that checks multiple proofs in a batch. **This requires the
 /// `batch` crate feature to be enabled.**
-</span><span class="attribute">#[derive(Debug, Default)]</span>
-<span class="kw">pub struct </span>BatchVerifier&lt;C: CurveAffine&gt; {
+</span><span class="attribute">#[derive(Debug, Default)]
+</span><span class="kw">pub struct </span>BatchVerifier&lt;C: CurveAffine&gt; {
     items: Vec&lt;BatchItem&lt;C&gt;&gt;,
 }
 
@@ -254,4 +254,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

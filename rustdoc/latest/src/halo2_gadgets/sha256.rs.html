@@ -238,13 +238,13 @@
 }
 
 <span class="doccomment">/// The output of a SHA-256 circuit invocation.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>Sha256Digest&lt;BlockWord&gt;([BlockWord; DIGEST_SIZE]);
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>Sha256Digest&lt;BlockWord&gt;([BlockWord; DIGEST_SIZE]);
 
 <span class="doccomment">/// A gadget that constrains a SHA-256 invocation. It supports input at a granularity of
 /// 32 bits.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>Sha256&lt;F: FieldExt, CS: Sha256Instructions&lt;F&gt;&gt; {
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>Sha256&lt;F: FieldExt, CS: Sha256Instructions&lt;F&gt;&gt; {
     chip: CS,
     state: CS::State,
     cur_block: Vec&lt;CS::BlockWord&gt;,
@@ -346,4 +346,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

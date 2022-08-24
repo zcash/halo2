@@ -500,8 +500,8 @@
             <span class="kw-2">*</span>acc = acc.double();
         }
 
-        <span class="attribute">#[derive(Clone, Copy)]</span>
-        <span class="kw">enum </span>Bucket&lt;C: CurveAffine&gt; {
+        <span class="attribute">#[derive(Clone, Copy)]
+        </span><span class="kw">enum </span>Bucket&lt;C: CurveAffine&gt; {
             <span class="prelude-val">None</span>,
             Affine(C),
             Projective(C::Curve),
@@ -862,14 +862,14 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">use </span>rand_core::OsRng;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">use </span>rand_core::OsRng;
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">use </span><span class="kw">crate</span>::pasta::Fp;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">use </span><span class="kw">crate</span>::pasta::Fp;
 
-<span class="attribute">#[test]</span>
-<span class="kw">fn </span>test_lagrange_interpolate() {
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_lagrange_interpolate() {
     <span class="kw">let </span>rng = OsRng;
 
     <span class="kw">let </span>points = (<span class="number">0</span>..<span class="number">5</span>).map(|<span class="kw">_</span>| Fp::random(rng)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
@@ -888,4 +888,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

@@ -241,8 +241,8 @@
 <span class="kw">use </span>std::collections::BTreeMap;
 
 <span class="doccomment">/// A multiscalar multiplication in the polynomial commitment scheme
-</span><span class="attribute">#[derive(Debug, Clone)]</span>
-<span class="kw">pub struct </span>MSM&lt;<span class="lifetime">&#39;a</span>, C: CurveAffine&gt; {
+</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="kw">pub struct </span>MSM&lt;<span class="lifetime">&#39;a</span>, C: CurveAffine&gt; {
     <span class="kw">pub</span>(<span class="kw">crate</span>) params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Params&lt;C&gt;,
     g_scalars: <span class="prelude-ty">Option</span>&lt;Vec&lt;C::Scalar&gt;&gt;,
     w_scalar: <span class="prelude-ty">Option</span>&lt;C::Scalar&gt;,
@@ -405,14 +405,14 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use </span><span class="kw">crate</span>::poly::commitment::{Params, MSM};
     <span class="kw">use </span>group::Curve;
     <span class="kw">use </span>pasta_curves::{arithmetic::CurveAffine, EpAffine, Fp, Fq};
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>msm_arithmetic() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>msm_arithmetic() {
         <span class="kw">let </span>base = EpAffine::from_xy(-Fp::one(), Fp::from(<span class="number">2</span>)).unwrap();
         <span class="kw">let </span>base_viol = (base + base).to_affine();
 
@@ -454,4 +454,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

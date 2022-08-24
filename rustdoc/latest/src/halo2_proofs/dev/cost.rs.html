@@ -413,8 +413,8 @@
 };
 
 <span class="doccomment">/// Measures a circuit to determine its costs, and explain what contributes to them.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>CircuitCost&lt;G: PrimeGroup, ConcreteCircuit: Circuit&lt;G::Scalar&gt;&gt; {
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>CircuitCost&lt;G: PrimeGroup, ConcreteCircuit: Circuit&lt;G::Scalar&gt;&gt; {
     <span class="doccomment">/// Power-of-2 bound on the number of rows in the circuit.
     </span>k: usize,
     <span class="doccomment">/// Maximum degree of the circuit.
@@ -677,8 +677,8 @@
 }
 
 <span class="doccomment">/// (commitments, evaluations)
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">struct </span>ProofContribution {
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">struct </span>ProofContribution {
     commitments: usize,
     evaluations: usize,
 }
@@ -719,8 +719,8 @@
 }
 
 <span class="doccomment">/// The marginal size of a Halo 2 proof, broken down into its contributing factors.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>MarginalProofSize&lt;G: PrimeGroup&gt; {
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>MarginalProofSize&lt;G: PrimeGroup&gt; {
     instance: ProofContribution,
     advice: ProofContribution,
     lookups: ProofContribution,
@@ -741,8 +741,8 @@
 }
 
 <span class="doccomment">/// The size of a Halo 2 proof, broken down into its contributing factors.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>ProofSize&lt;G: PrimeGroup&gt; {
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>ProofSize&lt;G: PrimeGroup&gt; {
     instance: ProofContribution,
     advice: ProofContribution,
     fixed: ProofContribution,
@@ -770,4 +770,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

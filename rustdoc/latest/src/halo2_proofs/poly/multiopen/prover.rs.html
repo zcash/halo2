@@ -275,9 +275,9 @@
     commitment::create_proof(params, rng, transcript, <span class="kw-2">&amp;</span>p_poly, p_poly_blind, <span class="kw-2">*</span>x_3)
 }
 
-<span class="attribute">#[doc(hidden)]</span>
-<span class="attribute">#[derive(Copy, Clone)]</span>
-<span class="kw">pub struct </span>PolynomialPointer&lt;<span class="lifetime">&#39;a</span>, C: CurveAffine&gt; {
+<span class="attribute">#[doc(hidden)]
+#[derive(Copy, Clone)]
+</span><span class="kw">pub struct </span>PolynomialPointer&lt;<span class="lifetime">&#39;a</span>, C: CurveAffine&gt; {
     poly: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Polynomial&lt;C::Scalar, Coeff&gt;,
     blind: commitment::Blind&lt;C::Scalar&gt;,
 }
@@ -304,4 +304,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

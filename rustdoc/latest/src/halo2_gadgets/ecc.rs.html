@@ -1103,8 +1103,8 @@
 }
 
 <span class="doccomment">/// An integer representing an element of the scalar field for a specific elliptic curve.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>ScalarVar&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>ScalarVar&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
     chip: EccChip,
     inner: EccChip::ScalarVar,
 }
@@ -1138,8 +1138,8 @@
 
 <span class="doccomment">/// An integer representing an element of the scalar field for a specific elliptic curve,
 /// for [`FixedPoint`] scalar multiplication.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>ScalarFixed&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>ScalarFixed&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
     chip: EccChip,
     inner: EccChip::ScalarFixed,
 }
@@ -1161,8 +1161,8 @@
 
 <span class="doccomment">/// A signed short (64-bit) integer represented as an element of the scalar field for a
 /// specific elliptic curve, to be used for [`FixedPointShort`] scalar multiplication.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>ScalarFixedShort&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>ScalarFixedShort&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
     chip: EccChip,
     inner: EccChip::ScalarFixedShort,
 }
@@ -1188,8 +1188,8 @@
 }
 
 <span class="doccomment">/// A point on a specific elliptic curve that is guaranteed to not be the identity.
-</span><span class="attribute">#[derive(Copy, Clone, Debug)]</span>
-<span class="kw">pub struct </span>NonIdentityPoint&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+</span><span class="attribute">#[derive(Copy, Clone, Debug)]
+</span><span class="kw">pub struct </span>NonIdentityPoint&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
     chip: EccChip,
     inner: EccChip::NonIdentityPoint,
 }
@@ -1270,8 +1270,8 @@
     }
 
     <span class="doccomment">/// Returns `[by] self`.
-    </span><span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="kw">pub fn </span>mul(
+    </span><span class="attribute">#[allow(clippy::type_complexity)]
+    </span><span class="kw">pub fn </span>mul(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
         by: ScalarVar&lt;C, EccChip&gt;,
@@ -1306,8 +1306,8 @@
 }
 
 <span class="doccomment">/// A point on a specific elliptic curve.
-</span><span class="attribute">#[derive(Copy, Clone, Debug)]</span>
-<span class="kw">pub struct </span>Point&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt; + Clone + Debug + Eq&gt; {
+</span><span class="attribute">#[derive(Copy, Clone, Debug)]
+</span><span class="kw">pub struct </span>Point&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt; + Clone + Debug + Eq&gt; {
     chip: EccChip,
     inner: EccChip::Point,
 }
@@ -1368,8 +1368,8 @@
 }
 
 <span class="doccomment">/// The affine short Weierstrass x-coordinate of a point on a specific elliptic curve.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>X&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>X&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
     chip: EccChip,
     inner: EccChip::X,
 }
@@ -1391,8 +1391,8 @@
 /// Fixing the curve point enables window tables to be baked into the circuit, making
 /// scalar multiplication more efficient. These window tables are tuned to full-width
 /// scalar multiplication.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>FixedPoint&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>FixedPoint&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
     chip: EccChip,
     inner: &lt;EccChip::FixedPoints <span class="kw">as </span>FixedPoints&lt;C&gt;&gt;::FullScalar,
 }
@@ -1402,22 +1402,22 @@
 /// Fixing the curve point enables window tables to be baked into the circuit, making
 /// scalar multiplication more efficient. These window tables are tuned to scalar
 /// multiplication by base-field elements.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>FixedPointBaseField&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>FixedPointBaseField&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
     chip: EccChip,
     inner: &lt;EccChip::FixedPoints <span class="kw">as </span>FixedPoints&lt;C&gt;&gt;::Base,
 }
 
 <span class="doccomment">/// Precomputed multiples of a fixed point, for short signed scalar multiplication.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>FixedPointShort&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>FixedPointShort&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; {
     chip: EccChip,
     inner: &lt;EccChip::FixedPoints <span class="kw">as </span>FixedPoints&lt;C&gt;&gt;::ShortScalar,
 }
 
 <span class="kw">impl</span>&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; FixedPoint&lt;C, EccChip&gt; {
-    <span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="doccomment">/// Returns `[by] self`.
+    <span class="attribute">#[allow(clippy::type_complexity)]
+    </span><span class="doccomment">/// Returns `[by] self`.
     </span><span class="kw">pub fn </span>mul(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
@@ -1450,8 +1450,8 @@
 }
 
 <span class="kw">impl</span>&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; FixedPointBaseField&lt;C, EccChip&gt; {
-    <span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="doccomment">/// Returns `[by] self`.
+    <span class="attribute">#[allow(clippy::type_complexity)]
+    </span><span class="doccomment">/// Returns `[by] self`.
     </span><span class="kw">pub fn </span>mul(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
@@ -1475,8 +1475,8 @@
 }
 
 <span class="kw">impl</span>&lt;C: CurveAffine, EccChip: EccInstructions&lt;C&gt;&gt; FixedPointShort&lt;C, EccChip&gt; {
-    <span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="doccomment">/// Returns `[by] self`.
+    <span class="attribute">#[allow(clippy::type_complexity)]
+    </span><span class="doccomment">/// Returns `[by] self`.
     </span><span class="kw">pub fn </span>mul(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
@@ -1508,8 +1508,8 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>tests {
     <span class="kw">use </span>ff::PrimeField;
     <span class="kw">use </span>group::{prime::PrimeCurveAffine, Curve, Group};
 
@@ -1530,16 +1530,16 @@
     };
     <span class="kw">use </span><span class="kw">crate</span>::utilities::lookup_range_check::LookupRangeCheckConfig;
 
-    <span class="attribute">#[derive(Debug, Eq, PartialEq, Clone)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>TestFixedBases;
-    <span class="attribute">#[derive(Debug, Eq, PartialEq, Clone)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>FullWidth(pallas::Affine, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[(u64, [pallas::Base; H])]);
-    <span class="attribute">#[derive(Debug, Eq, PartialEq, Clone)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>BaseField;
-    <span class="attribute">#[derive(Debug, Eq, PartialEq, Clone)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Short;
+    <span class="attribute">#[derive(Debug, Eq, PartialEq, Clone)]
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>TestFixedBases;
+    <span class="attribute">#[derive(Debug, Eq, PartialEq, Clone)]
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>FullWidth(pallas::Affine, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[(u64, [pallas::Base; H])]);
+    <span class="attribute">#[derive(Debug, Eq, PartialEq, Clone)]
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>BaseField;
+    <span class="attribute">#[derive(Debug, Eq, PartialEq, Clone)]
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Short;
 
-    <span class="macro">lazy_static!</span> {
+    <span class="macro">lazy_static! </span>{
         <span class="kw">static </span><span class="kw-2">ref </span>BASE: pallas::Affine = pallas::Point::generator().to_affine();
         <span class="kw">static </span><span class="kw-2">ref </span>ZS_AND_US: Vec&lt;(u64, [pallas::Base; H])&gt; =
             find_zs_and_us(<span class="kw-2">*</span>BASE, NUM_WINDOWS).unwrap();
@@ -1660,8 +1660,8 @@
         test_errors: bool,
     }
 
-    <span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="kw">impl </span>Circuit&lt;pallas::Base&gt; <span class="kw">for </span>MyCircuit {
+    <span class="attribute">#[allow(non_snake_case)]
+    </span><span class="kw">impl </span>Circuit&lt;pallas::Base&gt; <span class="kw">for </span>MyCircuit {
         <span class="kw">type </span>Config = EccConfig&lt;TestFixedBases&gt;;
         <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
 
@@ -1826,17 +1826,17 @@
         }
     }
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>ecc_chip() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>ecc_chip() {
         <span class="kw">let </span>k = <span class="number">13</span>;
         <span class="kw">let </span>circuit = MyCircuit { test_errors: <span class="bool-val">true </span>};
         <span class="kw">let </span>prover = MockProver::run(k, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
         <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()))
     }
 
-    <span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]</span>
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>print_ecc_chip() {
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]
+    #[test]
+    </span><span class="kw">fn </span>print_ecc_chip() {
         <span class="kw">use </span>plotters::prelude::<span class="kw-2">*</span>;
 
         <span class="kw">let </span>root = BitMapBackend::new(<span class="string">&quot;ecc-chip-layout.png&quot;</span>, (<span class="number">1024</span>, <span class="number">7680</span>)).into_drawing_area();
@@ -1850,4 +1850,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

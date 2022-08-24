@@ -400,8 +400,8 @@
 <span class="kw">use </span>pasta_curves::{arithmetic::FieldExt, pallas};
 
 <span class="doccomment">/// A helper struct for implementing single-row double-and-add using incomplete addition.
-</span><span class="attribute">#[derive(Copy, Clone, Debug, Eq, PartialEq)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>DoubleAndAdd {
+</span><span class="attribute">#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>DoubleAndAdd {
     <span class="comment">// x-coordinate of the accumulator in each double-and-add iteration.
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) x_a: Column&lt;Advice&gt;,
     <span class="comment">// x-coordinate of the point being added in each double-and-add iteration.
@@ -429,8 +429,8 @@
     ///
     /// Note that this is missing the factor of `1/2`; the Sinsemilla constraints factor
     /// it out, so we leave it up to the caller to handle it.
-    </span><span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>Y_A(
+    </span><span class="attribute">#[allow(non_snake_case)]
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>Y_A(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         meta: <span class="kw-2">&amp;mut </span>VirtualCells&lt;pallas::Base&gt;,
         rotation: Rotation,
@@ -442,8 +442,8 @@
     }
 }
 
-<span class="attribute">#[derive(Copy, Clone, Debug, Eq, PartialEq)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Config&lt;<span class="kw">const </span>NUM_BITS: usize&gt; {
+<span class="attribute">#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Config&lt;<span class="kw">const </span>NUM_BITS: usize&gt; {
     <span class="comment">// Selector constraining the first row of incomplete addition.
     </span><span class="kw">pub</span>(<span class="kw">super</span>) q_mul_1: Selector,
     <span class="comment">// Selector constraining the main loop of incomplete addition.
@@ -611,8 +611,8 @@
     /// non-overlapping columns. The base is never the identity point even at
     /// the boundary between halves.
     /// Returns (x, y, z).
-    </span><span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>double_and_add(
+    </span><span class="attribute">#[allow(clippy::type_complexity)]
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>double_and_add(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
         offset: usize,
@@ -760,4 +760,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

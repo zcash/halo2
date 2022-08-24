@@ -439,9 +439,9 @@
 
 <span class="doccomment">/// A domain in which $\mathsf{SinsemillaHashToPoint}$ and $\mathsf{SinsemillaHash}$ can
 /// be used.
-</span><span class="attribute">#[derive(Debug, Clone)]</span>
-<span class="attribute">#[allow(non_snake_case)]</span>
-<span class="kw">pub struct </span>HashDomain {
+</span><span class="attribute">#[derive(Debug, Clone)]
+#[allow(non_snake_case)]
+</span><span class="kw">pub struct </span>HashDomain {
     Q: pallas::Point,
 }
 
@@ -460,8 +460,8 @@
         <span class="self">self</span>.hash_to_point_inner(msg).into()
     }
 
-    <span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="kw">fn </span>hash_to_point_inner(<span class="kw-2">&amp;</span><span class="self">self</span>, msg: <span class="kw">impl </span>Iterator&lt;Item = bool&gt;) -&gt; IncompletePoint {
+    <span class="attribute">#[allow(non_snake_case)]
+    </span><span class="kw">fn </span>hash_to_point_inner(<span class="kw-2">&amp;</span><span class="self">self</span>, msg: <span class="kw">impl </span>Iterator&lt;Item = bool&gt;) -&gt; IncompletePoint {
         <span class="kw">let </span>padded: Vec&lt;<span class="kw">_</span>&gt; = Pad::new(msg).collect();
 
         padded
@@ -487,26 +487,26 @@
     <span class="doccomment">/// Constructs a new `HashDomain` from a given `Q`.
     ///
     /// This is only for testing use.
-    </span><span class="attribute">#[cfg(test)]</span>
-    <span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>from_Q(Q: pallas::Point) -&gt; <span class="self">Self </span>{
+    </span><span class="attribute">#[cfg(test)]
+    #[allow(non_snake_case)]
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>from_Q(Q: pallas::Point) -&gt; <span class="self">Self </span>{
         HashDomain { Q }
     }
 
     <span class="doccomment">/// Returns the Sinsemilla $Q$ constant for this domain.
-    </span><span class="attribute">#[cfg(any(test, feature = <span class="string">&quot;test-dependencies&quot;</span>))]</span>
-    <span class="attribute">#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;test-dependencies&quot;</span>)))]</span>
-    <span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="kw">pub fn </span>Q(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; pallas::Point {
+    </span><span class="attribute">#[cfg(any(test, feature = <span class="string">&quot;test-dependencies&quot;</span>))]
+    #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;test-dependencies&quot;</span>)))]
+    #[allow(non_snake_case)]
+    </span><span class="kw">pub fn </span>Q(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; pallas::Point {
         <span class="self">self</span>.Q
     }
 }
 
 <span class="doccomment">/// A domain in which $\mathsf{SinsemillaCommit}$ and $\mathsf{SinsemillaShortCommit}$ can
 /// be used.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="attribute">#[allow(non_snake_case)]</span>
-<span class="kw">pub struct </span>CommitDomain {
+</span><span class="attribute">#[derive(Debug)]
+#[allow(non_snake_case)]
+</span><span class="kw">pub struct </span>CommitDomain {
     M: HashDomain,
     R: pallas::Point,
 }
@@ -526,8 +526,8 @@
     <span class="doccomment">/// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
     ///
     /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
-    </span><span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="kw">pub fn </span>commit(
+    </span><span class="attribute">#[allow(non_snake_case)]
+    </span><span class="kw">pub fn </span>commit(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         msg: <span class="kw">impl </span>Iterator&lt;Item = bool&gt;,
         r: <span class="kw-2">&amp;</span>pallas::Scalar,
@@ -549,29 +549,29 @@
     }
 
     <span class="doccomment">/// Returns the Sinsemilla $R$ constant for this domain.
-    </span><span class="attribute">#[cfg(any(test, feature = <span class="string">&quot;test-dependencies&quot;</span>))]</span>
-    <span class="attribute">#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;test-dependencies&quot;</span>)))]</span>
-    <span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="kw">pub fn </span>R(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; pallas::Point {
+    </span><span class="attribute">#[cfg(any(test, feature = <span class="string">&quot;test-dependencies&quot;</span>))]
+    #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;test-dependencies&quot;</span>)))]
+    #[allow(non_snake_case)]
+    </span><span class="kw">pub fn </span>R(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; pallas::Point {
         <span class="self">self</span>.R
     }
 
     <span class="doccomment">/// Returns the Sinsemilla $Q$ constant for this domain.
-    </span><span class="attribute">#[cfg(any(test, feature = <span class="string">&quot;test-dependencies&quot;</span>))]</span>
-    <span class="attribute">#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;test-dependencies&quot;</span>)))]</span>
-    <span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="kw">pub fn </span>Q(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; pallas::Point {
+    </span><span class="attribute">#[cfg(any(test, feature = <span class="string">&quot;test-dependencies&quot;</span>))]
+    #[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;test-dependencies&quot;</span>)))]
+    #[allow(non_snake_case)]
+    </span><span class="kw">pub fn </span>Q(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; pallas::Point {
         <span class="self">self</span>.M.Q
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::{Pad, K};
     <span class="kw">use </span>pasta_curves::{arithmetic::CurveExt, pallas};
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>pad() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>pad() {
         <span class="macro">assert_eq!</span>(
             Pad::new([].iter().cloned()).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(),
             <span class="macro">vec!</span>[<span class="bool-val">false</span>; <span class="number">0</span>]
@@ -611,8 +611,8 @@
         );
     }
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>sinsemilla_s() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>sinsemilla_s() {
         <span class="kw">use </span><span class="kw">super</span>::sinsemilla_s::SINSEMILLA_S;
         <span class="kw">use </span>group::Curve;
         <span class="kw">use </span>pasta_curves::arithmetic::CurveAffine;
@@ -630,4 +630,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

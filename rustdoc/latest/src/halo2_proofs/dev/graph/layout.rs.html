@@ -557,8 +557,8 @@
 /// let k = 5; // Suitable size for MyCircuit
 /// CircuitLayout::default().render(k, &amp;circuit, &amp;drawing_area).unwrap();
 /// ```
-</span><span class="attribute">#[derive(Debug, Default)]</span>
-<span class="kw">pub struct </span>CircuitLayout {
+</span><span class="attribute">#[derive(Debug, Default)]
+</span><span class="kw">pub struct </span>CircuitLayout {
     hide_labels: bool,
     mark_equality_cells: bool,
     show_equality_constraints: bool,
@@ -841,8 +841,8 @@
     }
 }
 
-<span class="attribute">#[derive(Debug)]</span>
-<span class="kw">struct </span>Region {
+<span class="attribute">#[derive(Debug)]
+</span><span class="kw">struct </span>Region {
     <span class="doccomment">/// The name of the region. Not required to be unique.
     </span>name: String,
     <span class="doccomment">/// The columns used by this region.
@@ -856,8 +856,8 @@
     </span>cells: Vec&lt;(RegionColumn, usize)&gt;,
 }
 
-<span class="attribute">#[derive(Default)]</span>
-<span class="kw">struct </span>Layout {
+<span class="attribute">#[derive(Default)]
+</span><span class="kw">struct </span>Layout {
     k: u32,
     regions: Vec&lt;Region&gt;,
     current_region: <span class="prelude-ty">Option</span>&lt;usize&gt;,
@@ -1022,4 +1022,4 @@
     </span>}
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

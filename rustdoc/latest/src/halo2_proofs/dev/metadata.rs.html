@@ -194,8 +194,8 @@
 <span class="kw">use </span>std::fmt;
 
 <span class="doccomment">/// Metadata about a column within a circuit.
-</span><span class="attribute">#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]</span>
-<span class="kw">pub struct </span>Column {
+</span><span class="attribute">#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+</span><span class="kw">pub struct </span>Column {
     <span class="doccomment">/// The type of the column.
     </span><span class="kw">pub</span>(<span class="kw">super</span>) column_type: Any,
     <span class="doccomment">/// The index of the column.
@@ -225,8 +225,8 @@
 
 <span class="doccomment">/// A &quot;virtual cell&quot; is a PLONK cell that has been queried at a particular relative offset
 /// within a custom gate.
-</span><span class="attribute">#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]</span>
-<span class="kw">pub struct </span>VirtualCell {
+</span><span class="attribute">#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+</span><span class="kw">pub struct </span>VirtualCell {
     name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
     <span class="kw">pub</span>(<span class="kw">super</span>) column: Column,
     <span class="kw">pub</span>(<span class="kw">super</span>) rotation: i32,
@@ -273,8 +273,8 @@
 }
 
 <span class="doccomment">/// Metadata about a configured gate within a circuit.
-</span><span class="attribute">#[derive(Debug, PartialEq)]</span>
-<span class="kw">pub struct </span>Gate {
+</span><span class="attribute">#[derive(Debug, PartialEq)]
+</span><span class="kw">pub struct </span>Gate {
     <span class="doccomment">/// The index of the active gate. These indices are assigned in the order in which
     /// `ConstraintSystem::create_gate` is called during `Circuit::configure`.
     </span><span class="kw">pub</span>(<span class="kw">super</span>) index: usize,
@@ -296,8 +296,8 @@
 }
 
 <span class="doccomment">/// Metadata about a configured constraint within a circuit.
-</span><span class="attribute">#[derive(Debug, PartialEq)]</span>
-<span class="kw">pub struct </span>Constraint {
+</span><span class="attribute">#[derive(Debug, PartialEq)]
+</span><span class="kw">pub struct </span>Constraint {
     <span class="doccomment">/// The gate containing the constraint.
     </span><span class="kw">pub</span>(<span class="kw">super</span>) gate: Gate,
     <span class="doccomment">/// The index of the polynomial constraint within the gate. These indices correspond
@@ -333,8 +333,8 @@
 }
 
 <span class="doccomment">/// Metadata about an assigned region within a circuit.
-</span><span class="attribute">#[derive(Clone, Debug, PartialEq)]</span>
-<span class="kw">pub struct </span>Region {
+</span><span class="attribute">#[derive(Clone, Debug, PartialEq)]
+</span><span class="kw">pub struct </span>Region {
     <span class="doccomment">/// The index of the region. These indices are assigned in the order in which
     /// `Layouter::assign_region` is called during `Circuit::synthesize`.
     </span><span class="kw">pub</span>(<span class="kw">super</span>) index: usize,
@@ -364,4 +364,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

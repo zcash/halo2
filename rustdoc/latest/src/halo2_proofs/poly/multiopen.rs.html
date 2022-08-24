@@ -535,30 +535,30 @@
 <span class="kw">pub use </span>prover::create_proof;
 <span class="kw">pub use </span>verifier::verify_proof;
 
-<span class="attribute">#[derive(Clone, Copy, Debug)]</span>
-<span class="kw">struct </span>X1 {}
+<span class="attribute">#[derive(Clone, Copy, Debug)]
+</span><span class="kw">struct </span>X1 {}
 <span class="doccomment">/// Challenge for compressing openings at the same point sets together.
 </span><span class="kw">type </span>ChallengeX1&lt;F&gt; = ChallengeScalar&lt;F, X1&gt;;
 
-<span class="attribute">#[derive(Clone, Copy, Debug)]</span>
-<span class="kw">struct </span>X2 {}
+<span class="attribute">#[derive(Clone, Copy, Debug)]
+</span><span class="kw">struct </span>X2 {}
 <span class="doccomment">/// Challenge for keeping the multi-point quotient polynomial terms linearly independent.
 </span><span class="kw">type </span>ChallengeX2&lt;F&gt; = ChallengeScalar&lt;F, X2&gt;;
 
-<span class="attribute">#[derive(Clone, Copy, Debug)]</span>
-<span class="kw">struct </span>X3 {}
+<span class="attribute">#[derive(Clone, Copy, Debug)]
+</span><span class="kw">struct </span>X3 {}
 <span class="doccomment">/// Challenge point at which the commitments are opened.
 </span><span class="kw">type </span>ChallengeX3&lt;F&gt; = ChallengeScalar&lt;F, X3&gt;;
 
-<span class="attribute">#[derive(Clone, Copy, Debug)]</span>
-<span class="kw">struct </span>X4 {}
+<span class="attribute">#[derive(Clone, Copy, Debug)]
+</span><span class="kw">struct </span>X4 {}
 <span class="doccomment">/// Challenge for collapsing the openings of the various remaining polynomials at x_3
 /// together.
 </span><span class="kw">type </span>ChallengeX4&lt;F&gt; = ChallengeScalar&lt;F, X4&gt;;
 
 <span class="doccomment">/// A polynomial query at a point
-</span><span class="attribute">#[derive(Debug, Clone)]</span>
-<span class="kw">pub struct </span>ProverQuery&lt;<span class="lifetime">&#39;a</span>, C: CurveAffine&gt; {
+</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="kw">pub struct </span>ProverQuery&lt;<span class="lifetime">&#39;a</span>, C: CurveAffine&gt; {
     <span class="doccomment">/// point at which polynomial is queried
     </span><span class="kw">pub </span>point: C::Scalar,
     <span class="doccomment">/// coefficients of polynomial
@@ -568,8 +568,8 @@
 }
 
 <span class="doccomment">/// A polynomial query at a point
-</span><span class="attribute">#[derive(Debug, Clone)]</span>
-<span class="kw">pub struct </span>VerifierQuery&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span>, C: CurveAffine&gt; {
+</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="kw">pub struct </span>VerifierQuery&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span>, C: CurveAffine&gt; {
     <span class="doccomment">/// point at which polynomial is queried
     </span>point: C::Scalar,
     <span class="doccomment">/// commitment to polynomial
@@ -602,8 +602,8 @@
     }
 }
 
-<span class="attribute">#[derive(Copy, Clone, Debug)]</span>
-<span class="kw">enum </span>CommitmentReference&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span>, C: CurveAffine&gt; {
+<span class="attribute">#[derive(Copy, Clone, Debug)]
+</span><span class="kw">enum </span>CommitmentReference&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span>, C: CurveAffine&gt; {
     Commitment(<span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span>C),
     MSM(<span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span>commitment::MSM&lt;<span class="lifetime">&#39;params</span>, C&gt;),
 }
@@ -620,8 +620,8 @@
     }
 }
 
-<span class="attribute">#[derive(Debug)]</span>
-<span class="kw">struct </span>CommitmentData&lt;F, T: PartialEq&gt; {
+<span class="attribute">#[derive(Debug)]
+</span><span class="kw">struct </span>CommitmentData&lt;F, T: PartialEq&gt; {
     commitment: T,
     set_index: usize,
     point_indices: Vec&lt;usize&gt;,
@@ -765,8 +765,8 @@
     (commitment_map, point_sets)
 }
 
-<span class="attribute">#[test]</span>
-<span class="kw">fn </span>test_roundtrip() {
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_roundtrip() {
     <span class="kw">use </span>group::Curve;
     <span class="kw">use </span>rand_core::OsRng;
 
@@ -877,14 +877,14 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::{construct_intermediate_sets, Query};
     <span class="kw">use </span><span class="kw">crate</span>::arithmetic::FieldExt;
     <span class="kw">use </span><span class="kw">crate</span>::pasta::Fp;
 
-    <span class="attribute">#[derive(Clone)]</span>
-    <span class="kw">struct </span>MyQuery&lt;F&gt; {
+    <span class="attribute">#[derive(Clone)]
+    </span><span class="kw">struct </span>MyQuery&lt;F&gt; {
         commitment: usize,
         point: F,
         eval: F,
@@ -906,8 +906,8 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>proptests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>proptests {
     <span class="kw">use </span>proptest::{
         collection::vec,
         prelude::<span class="kw-2">*</span>,
@@ -922,8 +922,8 @@
     <span class="kw">use </span>std::collections::BTreeMap;
     <span class="kw">use </span>std::convert::TryFrom;
 
-    <span class="attribute">#[derive(Debug, Clone)]</span>
-    <span class="kw">struct </span>MyQuery&lt;F&gt; {
+    <span class="attribute">#[derive(Debug, Clone)]
+    </span><span class="kw">struct </span>MyQuery&lt;F&gt; {
         point: F,
         eval: F,
         commitment: usize,
@@ -946,7 +946,7 @@
         }
     }
 
-    <span class="macro">prop_compose!</span> {
+    <span class="macro">prop_compose! </span>{
         <span class="kw">fn </span>arb_point()(
             bytes <span class="kw">in </span>vec(any::&lt;u8&gt;(), <span class="number">64</span>)
         ) -&gt; Fp {
@@ -954,7 +954,7 @@
         }
     }
 
-    <span class="macro">prop_compose!</span> {
+    <span class="macro">prop_compose! </span>{
         <span class="kw">fn </span>arb_query(commitment: usize, point: Fp)(
             eval <span class="kw">in </span>arb_point()
         ) -&gt; MyQuery&lt;Fp&gt; {
@@ -966,7 +966,7 @@
         }
     }
 
-    <span class="macro">prop_compose!</span> {
+    <span class="macro">prop_compose! </span>{
         <span class="comment">// Mapping from column index to point index.
         </span><span class="kw">fn </span>arb_queries_inner(num_points: usize, num_cols: usize, num_queries: usize)(
             col_indices <span class="kw">in </span>vec(select((<span class="number">0</span>..num_cols).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()), num_queries),
@@ -976,7 +976,7 @@
         }
     }
 
-    <span class="macro">prop_compose!</span> {
+    <span class="macro">prop_compose! </span>{
         <span class="kw">fn </span>compare_queries(
             num_points: usize,
             num_cols: usize,
@@ -999,9 +999,9 @@
         }
     }
 
-    <span class="macro">proptest!</span> {
-        <span class="attribute">#[test]</span>
-        <span class="kw">fn </span>test_intermediate_sets(
+    <span class="macro">proptest! </span>{
+        <span class="attribute">#[test]
+        </span><span class="kw">fn </span>test_intermediate_sets(
             (queries_1, queries_2) <span class="kw">in </span>compare_queries(<span class="number">8</span>, <span class="number">8</span>, <span class="number">16</span>)
         ) {
             <span class="kw">let </span>(commitment_data, _point_sets) = construct_intermediate_sets(queries_1);
@@ -1020,4 +1020,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

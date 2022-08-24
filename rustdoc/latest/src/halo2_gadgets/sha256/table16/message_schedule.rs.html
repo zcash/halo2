@@ -487,11 +487,11 @@
 <span class="kw">use </span>schedule_gates::ScheduleGate;
 <span class="kw">use </span>schedule_util::<span class="kw-2">*</span>;
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">pub use </span>schedule_util::msg_schedule_test_input;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">pub use </span>schedule_util::msg_schedule_test_input;
 
-<span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>MessageWord(AssignedBits&lt;<span class="number">32</span>&gt;);
+<span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>MessageWord(AssignedBits&lt;<span class="number">32</span>&gt;);
 
 <span class="kw">impl </span>std::ops::Deref <span class="kw">for </span>MessageWord {
     <span class="kw">type </span>Target = AssignedBits&lt;<span class="number">32</span>&gt;;
@@ -501,8 +501,8 @@
     </span>}
 }
 
-<span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>MessageScheduleConfig {
+<span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>MessageScheduleConfig {
     lookup: SpreadInputs,
     message_schedule: Column&lt;Advice&gt;,
     extras: [Column&lt;Advice&gt;; <span class="number">6</span>],
@@ -539,8 +539,8 @@
     /// `extras` contains columns that the message schedule will only use for internal
     /// gates, and will not place any constraints on (such as lookup constraints) outside
     /// itself.
-    </span><span class="attribute">#[allow(clippy::many_single_char_names)]</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>configure(
+    </span><span class="attribute">#[allow(clippy::many_single_char_names)]
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>configure(
         meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;,
         lookup: SpreadInputs,
         message_schedule: Column&lt;Advice&gt;,
@@ -771,8 +771,8 @@
         }
     }
 
-    <span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>process(
+    <span class="attribute">#[allow(clippy::type_complexity)]
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>process(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
         input: [BlockWord; BLOCK_SIZE],
@@ -861,8 +861,8 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{
         <span class="kw">super</span>::BLOCK_SIZE, util::lebs2ip, BlockWord, SpreadTableChip, Table16Chip, Table16Config,
     };
@@ -874,8 +874,8 @@
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>message_schedule() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>message_schedule() {
         <span class="kw">struct </span>MyCircuit {}
 
         <span class="kw">impl </span>Circuit&lt;pallas::Base&gt; <span class="kw">for </span>MyCircuit {
@@ -924,4 +924,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

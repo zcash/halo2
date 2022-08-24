@@ -473,8 +473,8 @@
 
     <span class="comment">// Decompose `A,B,C,D` words
     // (2, 11, 9, 10)-bit chunks
-    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="kw">pub fn </span>s_decompose_abcd(
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub fn </span>s_decompose_abcd(
         s_decompose_abcd: Expression&lt;F&gt;,
         a: Expression&lt;F&gt;,
         spread_a: Expression&lt;F&gt;,
@@ -541,8 +541,8 @@
 
     <span class="comment">// Decompose `E,F,G,H` words
     // (6, 5, 14, 7)-bit chunks
-    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="kw">pub fn </span>s_decompose_efgh(
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub fn </span>s_decompose_efgh(
         s_decompose_efgh: Expression&lt;F&gt;,
         a_lo: Expression&lt;F&gt;,
         spread_a_lo: Expression&lt;F&gt;,
@@ -612,8 +612,8 @@
 
     <span class="comment">// s_upper_sigma_0 on abcd words
     // (2, 11, 9, 10)-bit chunks
-    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="kw">pub fn </span>s_upper_sigma_0(
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub fn </span>s_upper_sigma_0(
         s_upper_sigma_0: Expression&lt;F&gt;,
         spread_r0_even: Expression&lt;F&gt;,
         spread_r0_odd: Expression&lt;F&gt;,
@@ -655,8 +655,8 @@
 
     <span class="comment">// s_upper_sigma_1 on efgh words
     // (6, 5, 14, 7)-bit chunks
-    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="kw">pub fn </span>s_upper_sigma_1(
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub fn </span>s_upper_sigma_1(
         s_upper_sigma_1: Expression&lt;F&gt;,
         spread_r0_even: Expression&lt;F&gt;,
         spread_r0_odd: Expression&lt;F&gt;,
@@ -698,8 +698,8 @@
     }
 
     <span class="comment">// First part of choice gate on (E, F, G), E ∧ F
-    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="kw">pub fn </span>s_ch(
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub fn </span>s_ch(
         s_ch: Expression&lt;F&gt;,
         spread_p0_even: Expression&lt;F&gt;,
         spread_p0_odd: Expression&lt;F&gt;,
@@ -724,8 +724,8 @@
     }
 
     <span class="comment">// Second part of Choice gate on (E, F, G), ¬E ∧ G
-    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="kw">pub fn </span>s_ch_neg(
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub fn </span>s_ch_neg(
         s_ch_neg: Expression&lt;F&gt;,
         spread_q0_even: Expression&lt;F&gt;,
         spread_q0_odd: Expression&lt;F&gt;,
@@ -766,8 +766,8 @@
     }
 
     <span class="comment">// Majority gate on (A, B, C)
-    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="kw">pub fn </span>s_maj(
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub fn </span>s_maj(
         s_maj: Expression&lt;F&gt;,
         spread_m_0_even: Expression&lt;F&gt;,
         spread_m_0_odd: Expression&lt;F&gt;,
@@ -793,8 +793,8 @@
     }
 
     <span class="comment">// s_h_prime to get H&#39; = H + Ch(E, F, G) + s_upper_sigma_1(E) + K + W
-    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="kw">pub fn </span>s_h_prime(
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub fn </span>s_h_prime(
         s_h_prime: Expression&lt;F&gt;,
         h_prime_lo: Expression&lt;F&gt;,
         h_prime_hi: Expression&lt;F&gt;,
@@ -824,8 +824,8 @@
     }
 
     <span class="comment">// s_a_new to get A_new = H&#39; + Maj(A, B, C) + s_upper_sigma_0(A)
-    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="kw">pub fn </span>s_a_new(
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub fn </span>s_a_new(
         s_a_new: Expression&lt;F&gt;,
         a_new_lo: Expression&lt;F&gt;,
         a_new_hi: Expression&lt;F&gt;,
@@ -848,8 +848,8 @@
     }
 
     <span class="comment">// s_e_new to get E_new = H&#39; + D
-    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="kw">pub fn </span>s_e_new(
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub fn </span>s_e_new(
         s_e_new: Expression&lt;F&gt;,
         e_new_lo: Expression&lt;F&gt;,
         e_new_hi: Expression&lt;F&gt;,
@@ -870,8 +870,8 @@
     }
 
     <span class="comment">// s_digest on final round
-    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="kw">pub fn </span>s_digest(
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub fn </span>s_digest(
         s_digest: Expression&lt;F&gt;,
         lo_0: Expression&lt;F&gt;,
         hi_0: Expression&lt;F&gt;,
@@ -902,4 +902,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

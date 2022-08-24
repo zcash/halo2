@@ -451,9 +451,9 @@
 ///      1. z + y = u^2,
 ///      2. z - y is not a square
 /// for the y-coordinate of each fixed-base multiple in each window.
-</span><span class="attribute">#[cfg(any(test, feature = <span class="string">&quot;test-dependencies&quot;</span>))]</span>
-<span class="attribute">#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;test-dependencies&quot;</span>)))]</span>
-<span class="kw">pub fn </span>test_zs_and_us&lt;C: CurveAffine&gt;(base: C, z: <span class="kw-2">&amp;</span>[u64], u: <span class="kw-2">&amp;</span>[[[u8; <span class="number">32</span>]; H]], num_windows: usize) {
+</span><span class="attribute">#[cfg(any(test, feature = <span class="string">&quot;test-dependencies&quot;</span>))]
+#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;test-dependencies&quot;</span>)))]
+</span><span class="kw">pub fn </span>test_zs_and_us&lt;C: CurveAffine&gt;(base: C, z: <span class="kw-2">&amp;</span>[u64], u: <span class="kw-2">&amp;</span>[[[u8; <span class="number">32</span>]; H]], num_windows: usize) {
     <span class="kw">let </span>window_table = compute_window_table(base, num_windows);
 
     <span class="kw">for </span>((u, z), window_points) <span class="kw">in </span>u.iter().zip(z.iter()).zip(window_table) {
@@ -470,9 +470,9 @@
 
 <span class="doccomment">/// Test that Lagrange interpolation coefficients reproduce the correct x-coordinate
 /// for each fixed-base multiple in each window.
-</span><span class="attribute">#[cfg(any(test, feature = <span class="string">&quot;test-dependencies&quot;</span>))]</span>
-<span class="attribute">#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;test-dependencies&quot;</span>)))]</span>
-<span class="kw">pub fn </span>test_lagrange_coeffs&lt;C: CurveAffine&gt;(base: C, num_windows: usize) {
+</span><span class="attribute">#[cfg(any(test, feature = <span class="string">&quot;test-dependencies&quot;</span>))]
+#[cfg_attr(docsrs, doc(cfg(feature = <span class="string">&quot;test-dependencies&quot;</span>)))]
+</span><span class="kw">pub fn </span>test_lagrange_coeffs&lt;C: CurveAffine&gt;(base: C, num_windows: usize) {
     <span class="doccomment">/// Evaluate y = f(x) given the coefficients of f(x)
     </span><span class="kw">fn </span>evaluate&lt;C: CurveAffine&gt;(x: u8, coeffs: <span class="kw-2">&amp;</span>[C::Base]) -&gt; C::Base {
         <span class="kw">let </span>x = C::Base::from(x <span class="kw">as </span>u64);
@@ -527,8 +527,8 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use </span>group::{ff::Field, Curve, Group};
     <span class="kw">use </span>pasta_curves::{
         arithmetic::{CurveAffine, FieldExt},
@@ -538,7 +538,7 @@
 
     <span class="kw">use super</span>::{compute_window_table, find_zs_and_us, test_lagrange_coeffs, H, NUM_WINDOWS};
 
-    <span class="macro">prop_compose!</span> {
+    <span class="macro">prop_compose! </span>{
         <span class="doccomment">/// Generate an arbitrary Pallas point.
         </span><span class="kw">pub fn </span>arb_point()(bytes <span class="kw">in </span>prop::array::uniform32(<span class="number">0u8</span>..)) -&gt; pallas::Point {
             <span class="comment">// Instead of rejecting out-of-range bytes, let&#39;s reduce them.
@@ -549,17 +549,17 @@
         }
     }
 
-    <span class="macro">proptest!</span> {
-        <span class="attribute">#[test]</span>
-        <span class="kw">fn </span>lagrange_coeffs(
+    <span class="macro">proptest! </span>{
+        <span class="attribute">#[test]
+        </span><span class="kw">fn </span>lagrange_coeffs(
             base <span class="kw">in </span>arb_point(),
         ) {
             test_lagrange_coeffs(base.to_affine(), NUM_WINDOWS);
         }
     }
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>zs_and_us() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>zs_and_us() {
         <span class="kw">let </span>base = pallas::Point::random(rand::rngs::OsRng);
         <span class="kw">let </span>(z, u): (Vec&lt;u64&gt;, Vec&lt;[pallas::Base; H]&gt;) =
             find_zs_and_us(base.to_affine(), NUM_WINDOWS)
@@ -578,4 +578,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

@@ -1019,8 +1019,8 @@
 <span class="kw">use </span>std::convert::TryInto;
 
 <span class="comment">// Test vector &#39;abc&#39;
-</span><span class="attribute">#[cfg(test)]</span>
-<span class="kw">pub const </span>COMPRESSION_OUTPUT: [u32; <span class="number">8</span>] = [
+</span><span class="attribute">#[cfg(test)]
+</span><span class="kw">pub const </span>COMPRESSION_OUTPUT: [u32; <span class="number">8</span>] = [
     <span class="number">0b10111010011110000001011010111111</span>,
     <span class="number">0b10001111000000011100111111101010</span>,
     <span class="number">0b01000001010000010100000011011110</span>,
@@ -1049,12 +1049,12 @@
 </span><span class="kw">pub struct </span>InitialRound;
 
 <span class="doccomment">/// A main round index.
-</span><span class="attribute">#[derive(Debug, Copy, Clone)]</span>
-<span class="kw">pub struct </span>MainRoundIdx(usize);
+</span><span class="attribute">#[derive(Debug, Copy, Clone)]
+</span><span class="kw">pub struct </span>MainRoundIdx(usize);
 
 <span class="doccomment">/// Round index.
-</span><span class="attribute">#[derive(Debug, Copy, Clone)]</span>
-<span class="kw">pub enum </span>RoundIdx {
+</span><span class="attribute">#[derive(Debug, Copy, Clone)]
+</span><span class="kw">pub enum </span>RoundIdx {
     Init,
     Main(MainRoundIdx),
 }
@@ -1721,8 +1721,8 @@
     }
 
     <span class="comment">// s_h_prime to get H&#39; = H + Ch(E, F, G) + s_upper_sigma_1(E) + K + W
-    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>assign_h_prime(
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>assign_h_prime(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
         round_idx: MainRoundIdx,
@@ -1921,8 +1921,8 @@
     }
 
     <span class="comment">// Assign hi and lo halves for both dense and spread versions of a word
-    </span><span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="kw">pub fn </span>assign_word_halves(
+    </span><span class="attribute">#[allow(clippy::type_complexity)]
+    </span><span class="kw">pub fn </span>assign_word_halves(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
         row: usize,
@@ -1947,8 +1947,8 @@
     }
 }
 
-<span class="attribute">#[allow(clippy::many_single_char_names)]</span>
-<span class="kw">pub fn </span>match_state(
+<span class="attribute">#[allow(clippy::many_single_char_names)]
+</span><span class="kw">pub fn </span>match_state(
     state: State,
 ) -&gt; (
     RoundWordA,
@@ -1996,4 +1996,4 @@
     (a, b, c, d, e, f, g, h)
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

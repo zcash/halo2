@@ -377,10 +377,10 @@
 };
 <span class="kw">use </span><span class="kw">crate</span>::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
 
-<span class="attribute">#[cfg(feature = <span class="string">&quot;batch&quot;</span>)]</span>
-<span class="kw">mod </span>batch;
-<span class="attribute">#[cfg(feature = <span class="string">&quot;batch&quot;</span>)]</span>
-<span class="kw">pub use </span>batch::BatchVerifier;
+<span class="attribute">#[cfg(feature = <span class="string">&quot;batch&quot;</span>)]
+</span><span class="kw">mod </span>batch;
+<span class="attribute">#[cfg(feature = <span class="string">&quot;batch&quot;</span>)]
+</span><span class="kw">pub use </span>batch::BatchVerifier;
 
 <span class="doccomment">/// Trait representing a strategy for verifying Halo 2 proofs.
 </span><span class="kw">pub trait </span>VerificationStrategy&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; {
@@ -396,8 +396,8 @@
 }
 
 <span class="doccomment">/// A verifier that checks a single proof at a time.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>SingleVerifier&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; {
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>SingleVerifier&lt;<span class="lifetime">&#39;params</span>, C: CurveAffine&gt; {
     msm: MSM&lt;<span class="lifetime">&#39;params</span>, C&gt;,
 }
 
@@ -710,4 +710,4 @@
     })
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

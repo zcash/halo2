@@ -707,8 +707,8 @@
     ops::{Mul, MulAssign},
 };
 
-<span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">struct </span>Permuted&lt;C: CurveAffine, Ev&gt; {
+<span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">struct </span>Permuted&lt;C: CurveAffine, Ev&gt; {
     unpermuted_input_expressions: Vec&lt;Polynomial&lt;C::Scalar, LagrangeCoeff&gt;&gt;,
     unpermuted_input_cosets: Vec&lt;poly::Ast&lt;Ev, C::Scalar, ExtendedLagrangeCoeff&gt;&gt;,
     permuted_input_expression: Polynomial&lt;C::Scalar, LagrangeCoeff&gt;,
@@ -723,8 +723,8 @@
     permuted_table_blind: Blind&lt;C::Scalar&gt;,
 }
 
-<span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">struct </span>Committed&lt;C: CurveAffine, Ev&gt; {
+<span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">struct </span>Committed&lt;C: CurveAffine, Ev&gt; {
     permuted: Permuted&lt;C, Ev&gt;,
     product_poly: Polynomial&lt;C::Scalar, Coeff&gt;,
     product_coset: poly::AstLeaf&lt;Ev, ExtendedLagrangeCoeff&gt;,
@@ -1027,8 +1027,8 @@
         <span class="macro">assert_eq!</span>(z.len(), params.n <span class="kw">as </span>usize);
         <span class="kw">let </span>z = pk.vk.domain.lagrange_from_vec(z);
 
-        <span class="attribute">#[cfg(feature = <span class="string">&quot;sanity-checks&quot;</span>)]</span>
-        <span class="comment">// This test works only with intermediate representations in this method.
+        <span class="attribute">#[cfg(feature = <span class="string">&quot;sanity-checks&quot;</span>)]
+        </span><span class="comment">// This test works only with intermediate representations in this method.
         // It can be used for debugging purposes.
         </span>{
             <span class="comment">// While in Lagrange basis, check that product is correctly constructed
@@ -1329,8 +1329,8 @@
     <span class="macro">assert_eq!</span>(permuted_input_expression.len(), params.n <span class="kw">as </span>usize);
     <span class="macro">assert_eq!</span>(permuted_table_coeffs.len(), params.n <span class="kw">as </span>usize);
 
-    <span class="attribute">#[cfg(feature = <span class="string">&quot;sanity-checks&quot;</span>)]</span>
-    {
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;sanity-checks&quot;</span>)]
+    </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>last = <span class="prelude-val">None</span>;
         <span class="kw">for </span>(a, b) <span class="kw">in </span>permuted_input_expression
             .iter()
@@ -1350,4 +1350,4 @@
     ))
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

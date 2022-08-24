@@ -921,8 +921,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::utilities::Var;
 
 <span class="doccomment">/// Configuration for a [`Pow5Chip`].
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>Pow5Config&lt;F: FieldExt, <span class="kw">const </span>WIDTH: usize, <span class="kw">const </span>RATE: usize&gt; {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>Pow5Config&lt;F: FieldExt, <span class="kw">const </span>WIDTH: usize, <span class="kw">const </span>RATE: usize&gt; {
     <span class="kw">pub</span>(<span class="kw">crate</span>) state: [Column&lt;Advice&gt;; WIDTH],
     partial_sbox: Column&lt;Advice&gt;,
     rc_a: [Column&lt;Fixed&gt;; WIDTH],
@@ -943,8 +943,8 @@
 ///
 /// The chip is implemented using a single round per row for full rounds, and two rounds
 /// per row for partial rounds.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>Pow5Chip&lt;F: FieldExt, <span class="kw">const </span>WIDTH: usize, <span class="kw">const </span>RATE: usize&gt; {
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>Pow5Chip&lt;F: FieldExt, <span class="kw">const </span>WIDTH: usize, <span class="kw">const </span>RATE: usize&gt; {
     config: Pow5Config&lt;F, WIDTH, RATE&gt;,
 }
 
@@ -1306,8 +1306,8 @@
 }
 
 <span class="doccomment">/// A word in the Poseidon state.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>StateWord&lt;F: FieldExt&gt;(AssignedCell&lt;F, F&gt;);
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>StateWord&lt;F: FieldExt&gt;(AssignedCell&lt;F, F&gt;);
 
 <span class="kw">impl</span>&lt;F: FieldExt&gt; From&lt;StateWord&lt;F&gt;&gt; <span class="kw">for </span>AssignedCell&lt;F, F&gt; {
     <span class="kw">fn </span>from(state_word: StateWord&lt;F&gt;) -&gt; AssignedCell&lt;F, F&gt; {
@@ -1331,8 +1331,8 @@
     }
 }
 
-<span class="attribute">#[derive(Debug)]</span>
-<span class="kw">struct </span>Pow5State&lt;F: FieldExt, <span class="kw">const </span>WIDTH: usize&gt;([StateWord&lt;F&gt;; WIDTH]);
+<span class="attribute">#[derive(Debug)]
+</span><span class="kw">struct </span>Pow5State&lt;F: FieldExt, <span class="kw">const </span>WIDTH: usize&gt;([StateWord&lt;F&gt;; WIDTH]);
 
 <span class="kw">impl</span>&lt;F: FieldExt, <span class="kw">const </span>WIDTH: usize&gt; Pow5State&lt;F, WIDTH&gt; {
     <span class="kw">fn </span>full_round&lt;<span class="kw">const </span>RATE: usize&gt;(
@@ -1496,8 +1496,8 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use </span>group::ff::{Field, PrimeField};
     <span class="kw">use </span>halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
@@ -1614,8 +1614,8 @@
         }
     }
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>poseidon_permute() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>poseidon_permute() {
         <span class="kw">let </span>k = <span class="number">6</span>;
         <span class="kw">let </span>circuit = PermuteCircuit::&lt;OrchardNullifier, <span class="number">3</span>, <span class="number">2</span>&gt;(PhantomData);
         <span class="kw">let </span>prover = MockProver::run(k, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
@@ -1713,8 +1713,8 @@
         }
     }
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>poseidon_hash() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>poseidon_hash() {
         <span class="kw">let </span>rng = OsRng;
 
         <span class="kw">let </span>message = [Fp::random(rng), Fp::random(rng)];
@@ -1731,8 +1731,8 @@
         <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()))
     }
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>poseidon_hash_longer_input() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>poseidon_hash_longer_input() {
         <span class="kw">let </span>rng = OsRng;
 
         <span class="kw">let </span>message = [Fp::random(rng), Fp::random(rng), Fp::random(rng)];
@@ -1749,8 +1749,8 @@
         <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()))
     }
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>hash_test_vectors() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>hash_test_vectors() {
         <span class="kw">for </span>tv <span class="kw">in </span><span class="kw">crate</span>::poseidon::primitives::test_vectors::fp::hash() {
             <span class="kw">let </span>message = [
                 pallas::Base::from_repr(tv.input[<span class="number">0</span>]).unwrap(),
@@ -1770,9 +1770,9 @@
         }
     }
 
-    <span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]</span>
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>print_poseidon_chip() {
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]
+    #[test]
+    </span><span class="kw">fn </span>print_poseidon_chip() {
         <span class="kw">use </span>plotters::prelude::<span class="kw-2">*</span>;
 
         <span class="kw">let </span>root = BitMapBackend::new(<span class="string">&quot;poseidon-chip-layout.png&quot;</span>, (<span class="number">1024</span>, <span class="number">768</span>)).into_drawing_area();
@@ -1792,4 +1792,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

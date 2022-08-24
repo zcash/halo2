@@ -303,15 +303,15 @@
     plonk::{Circuit, ConstraintSystem},
 };
 
-<span class="attribute">#[derive(Debug)]</span>
-<span class="kw">struct </span>Constraint {
+<span class="attribute">#[derive(Debug)]
+</span><span class="kw">struct </span>Constraint {
     name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
     expression: String,
     queries: BTreeSet&lt;String&gt;,
 }
 
-<span class="attribute">#[derive(Debug)]</span>
-<span class="kw">struct </span>Gate {
+<span class="attribute">#[derive(Debug)]
+</span><span class="kw">struct </span>Gate {
     name: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
     constraints: Vec&lt;Constraint&gt;,
 }
@@ -383,8 +383,8 @@
 /// &quot;#####,
 /// );
 /// ```
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>CircuitGates {
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>CircuitGates {
     gates: Vec&lt;Gate&gt;,
     total_negations: usize,
     total_additions: usize,
@@ -570,4 +570,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

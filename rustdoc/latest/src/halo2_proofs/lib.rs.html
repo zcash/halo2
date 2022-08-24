@@ -51,14 +51,14 @@
 <span id="36">36</span>
 </pre><pre class="rust"><code><span class="doccomment">//! # halo2_proofs
 
-</span><span class="attribute">#![cfg_attr(docsrs, feature(doc_cfg))]</span>
-<span class="comment">// Build without warnings on stable 1.51 and later.
-</span><span class="attribute">#![allow(unknown_lints)]</span>
-<span class="comment">// Disable old lint warnings until our MSRV is at least 1.51.
-</span><span class="attribute">#![allow(renamed_and_removed_lints)]</span>
-<span class="comment">// Use the old lint name to build without warnings until our MSRV is at least 1.51.
-</span><span class="attribute">#![allow(clippy::unknown_clippy_lints)]</span>
-<span class="comment">// The actual lints we want to disable.
+</span><span class="attribute">#![cfg_attr(docsrs, feature(doc_cfg))]
+</span><span class="comment">// Build without warnings on stable 1.51 and later.
+</span><span class="attribute">#![allow(unknown_lints)]
+</span><span class="comment">// Disable old lint warnings until our MSRV is at least 1.51.
+</span><span class="attribute">#![allow(renamed_and_removed_lints)]
+</span><span class="comment">// Use the old lint name to build without warnings until our MSRV is at least 1.51.
+</span><span class="attribute">#![allow(clippy::unknown_clippy_lints)]
+</span><span class="comment">// The actual lints we want to disable.
 </span><span class="attribute">#![allow(
     clippy::op_ref,
     clippy::assign_op_pattern,
@@ -67,15 +67,15 @@
     clippy::many_single_char_names,
     clippy::same_item_push,
     clippy::upper_case_acronyms
-)]</span>
-<span class="attribute">#![deny(broken_intra_doc_links)]</span>
-<span class="attribute">#![deny(missing_debug_implementations)]</span>
-<span class="attribute">#![deny(missing_docs)]</span>
-<span class="attribute">#![deny(unsafe_code)]</span>
-<span class="comment">// Remove this once we update pasta_curves
-</span><span class="attribute">#![allow(unused_imports)]</span>
+)]
+#![deny(broken_intra_doc_links)]
+#![deny(missing_debug_implementations)]
+#![deny(missing_docs)]
+#![deny(unsafe_code)]
+</span><span class="comment">// Remove this once we update pasta_curves
+</span><span class="attribute">#![allow(unused_imports)]
 
-<span class="kw">pub mod </span>arithmetic;
+</span><span class="kw">pub mod </span>arithmetic;
 <span class="kw">pub mod </span>circuit;
 <span class="kw">pub use </span>pasta_curves <span class="kw">as </span>pasta;
 <span class="kw">mod </span>multicore;
@@ -86,4 +86,4 @@
 <span class="kw">pub mod </span>dev;
 <span class="kw">mod </span>helpers;
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

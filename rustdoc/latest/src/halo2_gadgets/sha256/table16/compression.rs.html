@@ -1099,8 +1099,8 @@
 ///   respectively in each round, we therefore also have the same pieces in earlier rows.
 ///   We align the columns to make it efficient to copy-constrain these forms where they
 ///   are needed.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>AbcdVar {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>AbcdVar {
     a: SpreadVar&lt;<span class="number">2</span>, <span class="number">4</span>&gt;,
     b: SpreadVar&lt;<span class="number">11</span>, <span class="number">22</span>&gt;,
     c_lo: SpreadVar&lt;<span class="number">3</span>, <span class="number">6</span>&gt;,
@@ -1188,8 +1188,8 @@
 ///   respectively in each round, we therefore also have the same pieces in earlier rows.
 ///   We align the columns to make it efficient to copy-constrain these forms where they
 ///   are needed.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>EfghVar {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>EfghVar {
     a_lo: SpreadVar&lt;<span class="number">3</span>, <span class="number">6</span>&gt;,
     a_hi: SpreadVar&lt;<span class="number">3</span>, <span class="number">6</span>&gt;,
     b_lo: SpreadVar&lt;<span class="number">2</span>, <span class="number">4</span>&gt;,
@@ -1276,8 +1276,8 @@
     }
 }
 
-<span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>RoundWordDense(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;);
+<span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>RoundWordDense(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;);
 
 <span class="kw">impl </span>From&lt;(AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;)&gt; <span class="kw">for </span>RoundWordDense {
     <span class="kw">fn </span>from(halves: (AssignedBits&lt;<span class="number">16</span>&gt;, AssignedBits&lt;<span class="number">16</span>&gt;)) -&gt; <span class="self">Self </span>{
@@ -1294,8 +1294,8 @@
     }
 }
 
-<span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>RoundWordSpread(AssignedBits&lt;<span class="number">32</span>&gt;, AssignedBits&lt;<span class="number">32</span>&gt;);
+<span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>RoundWordSpread(AssignedBits&lt;<span class="number">32</span>&gt;, AssignedBits&lt;<span class="number">32</span>&gt;);
 
 <span class="kw">impl </span>From&lt;(AssignedBits&lt;<span class="number">32</span>&gt;, AssignedBits&lt;<span class="number">32</span>&gt;)&gt; <span class="kw">for </span>RoundWordSpread {
     <span class="kw">fn </span>from(halves: (AssignedBits&lt;<span class="number">32</span>&gt;, AssignedBits&lt;<span class="number">32</span>&gt;)) -&gt; <span class="self">Self </span>{
@@ -1312,8 +1312,8 @@
     }
 }
 
-<span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>RoundWordA {
+<span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>RoundWordA {
     pieces: <span class="prelude-ty">Option</span>&lt;AbcdVar&gt;,
     dense_halves: RoundWordDense,
     spread_halves: <span class="prelude-ty">Option</span>&lt;RoundWordSpread&gt;,
@@ -1341,8 +1341,8 @@
     }
 }
 
-<span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>RoundWordE {
+<span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>RoundWordE {
     pieces: <span class="prelude-ty">Option</span>&lt;EfghVar&gt;,
     dense_halves: RoundWordDense,
     spread_halves: <span class="prelude-ty">Option</span>&lt;RoundWordSpread&gt;,
@@ -1370,8 +1370,8 @@
     }
 }
 
-<span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>RoundWord {
+<span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>RoundWord {
     dense_halves: RoundWordDense,
     spread_halves: RoundWordSpread,
 }
@@ -1386,8 +1386,8 @@
 }
 
 <span class="doccomment">/// The internal state for SHA-256.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>State {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>State {
     a: <span class="prelude-ty">Option</span>&lt;StateWord&gt;,
     b: <span class="prelude-ty">Option</span>&lt;StateWord&gt;,
     c: <span class="prelude-ty">Option</span>&lt;StateWord&gt;,
@@ -1399,9 +1399,9 @@
 }
 
 <span class="kw">impl </span>State {
-    <span class="attribute">#[allow(clippy::many_single_char_names)]</span>
-    <span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="kw">pub fn </span>new(
+    <span class="attribute">#[allow(clippy::many_single_char_names)]
+    #[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub fn </span>new(
         a: StateWord,
         b: StateWord,
         c: StateWord,
@@ -1437,8 +1437,8 @@
     }
 }
 
-<span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub enum </span>StateWord {
+<span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub enum </span>StateWord {
     A(RoundWordA),
     B(RoundWord),
     C(RoundWord),
@@ -1449,8 +1449,8 @@
     H(RoundWordDense),
 }
 
-<span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>CompressionConfig {
+<span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>CompressionConfig {
     lookup: SpreadInputs,
     message_schedule: Column&lt;Advice&gt;,
     extras: [Column&lt;Advice&gt;; <span class="number">6</span>],
@@ -1955,8 +1955,8 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{
         <span class="kw">super</span>::BLOCK_SIZE, msg_schedule_test_input, BlockWord, Table16Chip, Table16Config, IV,
     };
@@ -1967,8 +1967,8 @@
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>compress() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>compress() {
         <span class="kw">struct </span>MyCircuit {}
 
         <span class="kw">impl </span>Circuit&lt;pallas::Base&gt; <span class="kw">for </span>MyCircuit {
@@ -2024,4 +2024,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

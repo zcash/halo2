@@ -285,8 +285,8 @@
 
 <span class="doccomment">/// This is an error that could occur during proving or circuit synthesis.
 </span><span class="comment">// TODO: these errors need to be cleaned up
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub enum </span>Error {
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub enum </span>Error {
     <span class="doccomment">/// OpeningProof is not well-formed
     </span>OpeningError,
     <span class="doccomment">/// Caller needs to re-sample a point
@@ -297,25 +297,25 @@
 </span><span class="kw">pub trait </span>Basis: Copy + Debug + Send + Sync {}
 
 <span class="doccomment">/// The polynomial is defined as coefficients
-</span><span class="attribute">#[derive(Clone, Copy, Debug)]</span>
-<span class="kw">pub struct </span>Coeff;
+</span><span class="attribute">#[derive(Clone, Copy, Debug)]
+</span><span class="kw">pub struct </span>Coeff;
 <span class="kw">impl </span>Basis <span class="kw">for </span>Coeff {}
 
 <span class="doccomment">/// The polynomial is defined as coefficients of Lagrange basis polynomials
-</span><span class="attribute">#[derive(Clone, Copy, Debug)]</span>
-<span class="kw">pub struct </span>LagrangeCoeff;
+</span><span class="attribute">#[derive(Clone, Copy, Debug)]
+</span><span class="kw">pub struct </span>LagrangeCoeff;
 <span class="kw">impl </span>Basis <span class="kw">for </span>LagrangeCoeff {}
 
 <span class="doccomment">/// The polynomial is defined as coefficients of Lagrange basis polynomials in
 /// an extended size domain which supports multiplication
-</span><span class="attribute">#[derive(Clone, Copy, Debug)]</span>
-<span class="kw">pub struct </span>ExtendedLagrangeCoeff;
+</span><span class="attribute">#[derive(Clone, Copy, Debug)]
+</span><span class="kw">pub struct </span>ExtendedLagrangeCoeff;
 <span class="kw">impl </span>Basis <span class="kw">for </span>ExtendedLagrangeCoeff {}
 
 <span class="doccomment">/// Represents a univariate polynomial defined over a field and a particular
 /// basis.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>Polynomial&lt;F, B&gt; {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>Polynomial&lt;F, B&gt; {
     values: Vec&lt;F&gt;,
     _marker: PhantomData&lt;B&gt;,
 }
@@ -492,8 +492,8 @@
 <span class="doccomment">/// Describes the relative rotation of a vector. Negative numbers represent
 /// reverse (leftmost) rotations and positive numbers represent forward (rightmost)
 /// rotations. Zero represents no rotation.
-</span><span class="attribute">#[derive(Copy, Clone, Debug, PartialEq)]</span>
-<span class="kw">pub struct </span>Rotation(<span class="kw">pub </span>i32);
+</span><span class="attribute">#[derive(Copy, Clone, Debug, PartialEq)]
+</span><span class="kw">pub struct </span>Rotation(<span class="kw">pub </span>i32);
 
 <span class="kw">impl </span>Rotation {
     <span class="doccomment">/// The current location in the evaluation domain
@@ -512,4 +512,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

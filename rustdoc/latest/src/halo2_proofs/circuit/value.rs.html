@@ -725,8 +725,8 @@
 ///   helps to ensure that unwitnessed values correctly propagate.
 /// - It provides pass-through implementations of common traits such as `Add` and `Mul`,
 ///   for improved usability.
-</span><span class="attribute">#[derive(Clone, Copy, Debug)]</span>
-<span class="kw">pub struct </span>Value&lt;V&gt; {
+</span><span class="attribute">#[derive(Clone, Copy, Debug)]
+</span><span class="kw">pub struct </span>Value&lt;V&gt; {
     inner: <span class="prelude-ty">Option</span>&lt;V&gt;,
 }
 
@@ -844,8 +844,8 @@
 
 <span class="kw">impl</span>&lt;V&gt; Value&lt;<span class="kw-2">&amp;</span>V&gt; {
     <span class="doccomment">/// Maps a `Value&lt;&amp;V&gt;` to a `Value&lt;V&gt;` by copying the contents of the value.
-    </span><span class="attribute">#[must_use = <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]</span>
-    <span class="kw">pub fn </span>copied(<span class="self">self</span>) -&gt; Value&lt;V&gt;
+    </span><span class="attribute">#[must_use = <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]
+    </span><span class="kw">pub fn </span>copied(<span class="self">self</span>) -&gt; Value&lt;V&gt;
     <span class="kw">where
         </span>V: Copy,
     {
@@ -855,8 +855,8 @@
     }
 
     <span class="doccomment">/// Maps a `Value&lt;&amp;V&gt;` to a `Value&lt;V&gt;` by cloning the contents of the value.
-    </span><span class="attribute">#[must_use = <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]</span>
-    <span class="kw">pub fn </span>cloned(<span class="self">self</span>) -&gt; Value&lt;V&gt;
+    </span><span class="attribute">#[must_use = <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]
+    </span><span class="kw">pub fn </span>cloned(<span class="self">self</span>) -&gt; Value&lt;V&gt;
     <span class="kw">where
         </span>V: Clone,
     {
@@ -868,8 +868,8 @@
 
 <span class="kw">impl</span>&lt;V&gt; Value&lt;<span class="kw-2">&amp;mut </span>V&gt; {
     <span class="doccomment">/// Maps a `Value&lt;&amp;mut V&gt;` to a `Value&lt;V&gt;` by copying the contents of the value.
-    </span><span class="attribute">#[must_use = <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]</span>
-    <span class="kw">pub fn </span>copied(<span class="self">self</span>) -&gt; Value&lt;V&gt;
+    </span><span class="attribute">#[must_use = <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]
+    </span><span class="kw">pub fn </span>copied(<span class="self">self</span>) -&gt; Value&lt;V&gt;
     <span class="kw">where
         </span>V: Copy,
     {
@@ -879,8 +879,8 @@
     }
 
     <span class="doccomment">/// Maps a `Value&lt;&amp;mut V&gt;` to a `Value&lt;V&gt;` by cloning the contents of the value.
-    </span><span class="attribute">#[must_use = <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]</span>
-    <span class="kw">pub fn </span>cloned(<span class="self">self</span>) -&gt; Value&lt;V&gt;
+    </span><span class="attribute">#[must_use = <span class="string">&quot;`self` will be dropped if the result is not used&quot;</span>]
+    </span><span class="kw">pub fn </span>cloned(<span class="self">self</span>) -&gt; Value&lt;V&gt;
     <span class="kw">where
         </span>V: Clone,
     {
@@ -1410,4 +1410,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

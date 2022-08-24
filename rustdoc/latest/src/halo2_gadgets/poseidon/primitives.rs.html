@@ -424,8 +424,8 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>grain;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>mds;
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>test_vectors;
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>test_vectors;
 
 <span class="kw">mod </span>p128pow5t3;
 <span class="kw">pub use </span>p128pow5t3::P128Pow5T3;
@@ -499,8 +499,8 @@
     <span class="kw">let </span>apply_mds = |state: <span class="kw-2">&amp;mut </span>State&lt;F, T&gt;| {
         <span class="kw">let </span><span class="kw-2">mut </span>new_state = [F::zero(); T];
         <span class="comment">// Matrix multiplication
-        </span><span class="attribute">#[allow(clippy::needless_range_loop)]</span>
-        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..T {
+        </span><span class="attribute">#[allow(clippy::needless_range_loop)]
+        </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..T {
             <span class="kw">for </span>j <span class="kw">in </span><span class="number">0</span>..T {
                 new_state[i] += mds[i][j] * state[j];
             }
@@ -568,12 +568,12 @@
 </span><span class="kw">pub trait </span>SpongeMode: private::SealedSpongeMode {}
 
 <span class="doccomment">/// The absorbing state of the `Sponge`.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>Absorbing&lt;F, <span class="kw">const </span>RATE: usize&gt;(<span class="kw">pub</span>(<span class="kw">crate</span>) SpongeRate&lt;F, RATE&gt;);
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>Absorbing&lt;F, <span class="kw">const </span>RATE: usize&gt;(<span class="kw">pub</span>(<span class="kw">crate</span>) SpongeRate&lt;F, RATE&gt;);
 
 <span class="doccomment">/// The squeezing state of the `Sponge`.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>Squeezing&lt;F, <span class="kw">const </span>RATE: usize&gt;(<span class="kw">pub</span>(<span class="kw">crate</span>) SpongeRate&lt;F, RATE&gt;);
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>Squeezing&lt;F, <span class="kw">const </span>RATE: usize&gt;(<span class="kw">pub</span>(<span class="kw">crate</span>) SpongeRate&lt;F, RATE&gt;);
 
 <span class="kw">impl</span>&lt;F, <span class="kw">const </span>RATE: usize&gt; SpongeMode <span class="kw">for </span>Absorbing&lt;F, RATE&gt; {}
 <span class="kw">impl</span>&lt;F, <span class="kw">const </span>RATE: usize&gt; SpongeMode <span class="kw">for </span>Squeezing&lt;F, RATE&gt; {}
@@ -704,8 +704,8 @@
 <span class="doccomment">/// A Poseidon hash function used with constant input length.
 ///
 /// Domain specified in [ePrint 2019/458 section 4.2](https://eprint.iacr.org/2019/458.pdf).
-</span><span class="attribute">#[derive(Clone, Copy, Debug)]</span>
-<span class="kw">pub struct </span>ConstantLength&lt;<span class="kw">const </span>L: usize&gt;;
+</span><span class="attribute">#[derive(Clone, Copy, Debug)]
+</span><span class="kw">pub struct </span>ConstantLength&lt;<span class="kw">const </span>L: usize&gt;;
 
 <span class="kw">impl</span>&lt;F: FieldExt, <span class="kw">const </span>RATE: usize, <span class="kw">const </span>L: usize&gt; Domain&lt;F, RATE&gt; <span class="kw">for </span>ConstantLength&lt;L&gt; {
     <span class="kw">type </span>Padding = iter::Take&lt;iter::Repeat&lt;F&gt;&gt;;
@@ -784,15 +784,15 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use </span>halo2_proofs::arithmetic::FieldExt;
     <span class="kw">use </span>pasta_curves::pallas;
 
     <span class="kw">use super</span>::{permute, ConstantLength, Hash, P128Pow5T3 <span class="kw">as </span>OrchardNullifier, Spec};
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>orchard_spec_equivalence() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>orchard_spec_equivalence() {
         <span class="kw">let </span>message = [pallas::Base::from(<span class="number">6</span>), pallas::Base::from(<span class="number">42</span>)];
 
         <span class="kw">let </span>(round_constants, mds, <span class="kw">_</span>) = OrchardNullifier::constants();
@@ -808,4 +808,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

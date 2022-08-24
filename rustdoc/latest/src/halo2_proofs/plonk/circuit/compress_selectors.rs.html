@@ -371,8 +371,8 @@
 <span class="kw">use </span>ff::Field;
 
 <span class="doccomment">/// This describes a selector and where it is activated.
-</span><span class="attribute">#[derive(Debug, Clone)]</span>
-<span class="kw">pub struct </span>SelectorDescription {
+</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="kw">pub struct </span>SelectorDescription {
     <span class="doccomment">/// The selector that this description references, by index.
     </span><span class="kw">pub </span>selector: usize,
 
@@ -388,8 +388,8 @@
 
 <span class="doccomment">/// This describes the assigned combination of a particular selector as well as
 /// the expression it should be substituted with.
-</span><span class="attribute">#[derive(Debug, Clone)]</span>
-<span class="kw">pub struct </span>SelectorAssignment&lt;F&gt; {
+</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="kw">pub struct </span>SelectorAssignment&lt;F&gt; {
     <span class="doccomment">/// The selector that this structure references, by index.
     </span><span class="kw">pub </span>selector: usize,
 
@@ -598,15 +598,15 @@
     (combination_assignments, selector_assignments)
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
     <span class="kw">use crate</span>::{plonk::FixedQuery, poly::Rotation};
     <span class="kw">use </span>pasta_curves::Fp;
     <span class="kw">use </span>proptest::collection::{vec, SizeRange};
     <span class="kw">use </span>proptest::prelude::<span class="kw-2">*</span>;
 
-    <span class="macro">prop_compose!</span> {
+    <span class="macro">prop_compose! </span>{
         <span class="kw">fn </span>arb_selector(assignment_size: usize, max_degree: usize)
                        (degree <span class="kw">in </span><span class="number">0</span>..max_degree,
                         assignment <span class="kw">in </span>vec(any::&lt;bool&gt;(), assignment_size))
@@ -615,7 +615,7 @@
         }
     }
 
-    <span class="macro">prop_compose!</span> {
+    <span class="macro">prop_compose! </span>{
         <span class="kw">fn </span>arb_selector_list(assignment_size: usize, max_degree: usize, num_selectors: <span class="kw">impl </span>Into&lt;SizeRange&gt;)
                             (list <span class="kw">in </span>vec(arb_selector(assignment_size, max_degree), num_selectors))
                             -&gt; Vec&lt;SelectorDescription&gt;
@@ -630,7 +630,7 @@
         }
     }
 
-    <span class="macro">prop_compose!</span> {
+    <span class="macro">prop_compose! </span>{
         <span class="kw">fn </span>arb_instance(max_assignment_size: usize,
                         max_degree: usize,
                         max_selectors: usize)
@@ -645,10 +645,10 @@
         }
     }
 
-    <span class="macro">proptest!</span> {
-        <span class="attribute">#![proptest_config(ProptestConfig::with_cases(<span class="number">10000</span>))]</span>
-        <span class="attribute">#[test]</span>
-        <span class="kw">fn </span>test_selector_combination((selectors, max_degree) <span class="kw">in </span>arb_instance(<span class="number">10</span>, <span class="number">10</span>, <span class="number">15</span>)) {
+    <span class="macro">proptest! </span>{
+        <span class="attribute">#![proptest_config(ProptestConfig::with_cases(<span class="number">10000</span>))]
+        #[test]
+        </span><span class="kw">fn </span>test_selector_combination((selectors, max_degree) <span class="kw">in </span>arb_instance(<span class="number">10</span>, <span class="number">10</span>, <span class="number">15</span>)) {
             <span class="kw">let </span><span class="kw-2">mut </span>query = <span class="number">0</span>;
             <span class="kw">let </span>(combination_assignments, selector_assignments) =
                 process::&lt;Fp, <span class="kw">_</span>&gt;(selectors.clone(), max_degree, || {
@@ -722,4 +722,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

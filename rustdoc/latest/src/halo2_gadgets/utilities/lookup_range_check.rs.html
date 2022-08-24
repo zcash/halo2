@@ -678,8 +678,8 @@
 <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
 <span class="doccomment">/// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="kw">pub struct </span>RunningSum&lt;F: FieldExt + PrimeFieldBits&gt;(Vec&lt;AssignedCell&lt;F, F&gt;&gt;);
+</span><span class="attribute">#[derive(Debug)]
+</span><span class="kw">pub struct </span>RunningSum&lt;F: FieldExt + PrimeFieldBits&gt;(Vec&lt;AssignedCell&lt;F, F&gt;&gt;);
 <span class="kw">impl</span>&lt;F: FieldExt + PrimeFieldBits&gt; std::ops::Deref <span class="kw">for </span>RunningSum&lt;F&gt; {
     <span class="kw">type </span>Target = Vec&lt;AssignedCell&lt;F, F&gt;&gt;;
 
@@ -720,8 +720,8 @@
 }
 
 <span class="doccomment">/// Configuration that provides methods for a lookup range check.
-</span><span class="attribute">#[derive(Eq, PartialEq, Debug, Clone, Copy)]</span>
-<span class="kw">pub struct </span>LookupRangeCheckConfig&lt;F: FieldExt + PrimeFieldBits, <span class="kw">const </span>K: usize&gt; {
+</span><span class="attribute">#[derive(Eq, PartialEq, Debug, Clone, Copy)]
+</span><span class="kw">pub struct </span>LookupRangeCheckConfig&lt;F: FieldExt + PrimeFieldBits, <span class="kw">const </span>K: usize&gt; {
     q_lookup: Selector,
     q_running: Selector,
     q_bitshift: Selector,
@@ -816,8 +816,8 @@
         config
     }
 
-    <span class="attribute">#[cfg(test)]</span>
-    <span class="comment">// Loads the values [0..2^K) into `table_idx`. This is only used in testing
+    <span class="attribute">#[cfg(test)]
+    </span><span class="comment">// Loads the values [0..2^K) into `table_idx`. This is only used in testing
     // for now, since the Sinsemilla chip provides a pre-loaded table in the
     // Orchard context.
     </span><span class="kw">pub fn </span>load(<span class="kw-2">&amp;</span><span class="self">self</span>, layouter: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>Layouter&lt;F&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
@@ -1047,8 +1047,8 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use </span><span class="kw">super</span>::LookupRangeCheckConfig;
 
     <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::lebs2ip;
@@ -1064,10 +1064,10 @@
 
     <span class="kw">use </span>std::{convert::TryInto, marker::PhantomData};
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>lookup_range_check() {
-        <span class="attribute">#[derive(Clone, Copy)]</span>
-        <span class="kw">struct </span>MyCircuit&lt;F: FieldExt + PrimeFieldBits&gt; {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>lookup_range_check() {
+        <span class="attribute">#[derive(Clone, Copy)]
+        </span><span class="kw">struct </span>MyCircuit&lt;F: FieldExt + PrimeFieldBits&gt; {
             num_words: usize,
             _marker: PhantomData&lt;F&gt;,
         }
@@ -1161,8 +1161,8 @@
         }
     }
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>short_range_check() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>short_range_check() {
         <span class="kw">struct </span>MyCircuit&lt;F: FieldExt + PrimeFieldBits&gt; {
             element: Value&lt;F&gt;,
             num_bits: usize,
@@ -1314,4 +1314,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

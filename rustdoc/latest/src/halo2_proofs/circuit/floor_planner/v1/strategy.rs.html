@@ -288,8 +288,8 @@
 <span class="kw">use crate</span>::{circuit::RegionStart, plonk::Any};
 
 <span class="doccomment">/// A region allocated within a column.
-</span><span class="attribute">#[derive(Clone, Default, Debug, PartialEq, Eq)]</span>
-<span class="kw">struct </span>AllocatedRegion {
+</span><span class="attribute">#[derive(Clone, Default, Debug, PartialEq, Eq)]
+</span><span class="kw">struct </span>AllocatedRegion {
     <span class="comment">// The starting position of the region.
     </span>start: usize,
     <span class="comment">// The length of the region.
@@ -325,8 +325,8 @@
 <span class="doccomment">/// Allocated rows within a column.
 ///
 /// This is a set of [a_start, a_end) pairs representing disjoint allocated intervals.
-</span><span class="attribute">#[derive(Clone, Default, Debug)]</span>
-<span class="kw">pub struct </span>Allocations(BTreeSet&lt;AllocatedRegion&gt;);
+</span><span class="attribute">#[derive(Clone, Default, Debug)]
+</span><span class="kw">pub struct </span>Allocations(BTreeSet&lt;AllocatedRegion&gt;);
 
 <span class="kw">impl </span>Allocations {
     <span class="doccomment">/// Returns the row that forms the unbounded unallocated interval [row, None).
@@ -504,8 +504,8 @@
     (regions, column_allocations)
 }
 
-<span class="attribute">#[test]</span>
-<span class="kw">fn </span>test_slot_in() {
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_slot_in() {
     <span class="kw">use </span><span class="kw">crate</span>::plonk::Column;
 
     <span class="kw">let </span>regions = <span class="macro">vec!</span>[
@@ -544,4 +544,4 @@
     );
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

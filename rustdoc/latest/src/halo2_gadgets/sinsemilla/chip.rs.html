@@ -371,8 +371,8 @@
 <span class="kw">mod </span>hash_to_point;
 
 <span class="doccomment">/// Configuration for the Sinsemilla hash chip
-</span><span class="attribute">#[derive(Eq, PartialEq, Clone, Debug)]</span>
-<span class="kw">pub struct </span>SinsemillaConfig&lt;Hash, Commit, F&gt;
+</span><span class="attribute">#[derive(Eq, PartialEq, Clone, Debug)]
+</span><span class="kw">pub struct </span>SinsemillaConfig&lt;Hash, Commit, F&gt;
 <span class="kw">where
     </span>Hash: HashDomains&lt;pallas::Affine&gt;,
     F: FixedPoints&lt;pallas::Affine&gt;,
@@ -437,8 +437,8 @@
 <span class="doccomment">/// A chip that implements 10-bit Sinsemilla using a lookup table and 5 advice columns.
 ///
 /// [Chip description](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html#plonk--halo-2-constraints).
-</span><span class="attribute">#[derive(Eq, PartialEq, Clone, Debug)]</span>
-<span class="kw">pub struct </span>SinsemillaChip&lt;Hash, Commit, Fixed&gt;
+</span><span class="attribute">#[derive(Eq, PartialEq, Clone, Debug)]
+</span><span class="kw">pub struct </span>SinsemillaChip&lt;Hash, Commit, Fixed&gt;
 <span class="kw">where
     </span>Hash: HashDomains&lt;pallas::Affine&gt;,
     Fixed: FixedPoints&lt;pallas::Affine&gt;,
@@ -488,9 +488,9 @@
     <span class="doccomment">/// # Side-effects
     ///
     /// All columns in `advices` and will be equality-enabled.
-    </span><span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="kw">pub fn </span>configure(
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
+    #[allow(non_snake_case)]
+    </span><span class="kw">pub fn </span>configure(
         meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;,
         advices: [Column&lt;Advice&gt;; <span class="number">5</span>],
         witness_pieces: Column&lt;Advice&gt;,
@@ -649,9 +649,9 @@
         <span class="prelude-val">Ok</span>(MessagePiece::new(cell, num_words))
     }
 
-    <span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="kw">fn </span>hash_to_point(
+    <span class="attribute">#[allow(non_snake_case)]
+    #[allow(clippy::type_complexity)]
+    </span><span class="kw">fn </span>hash_to_point(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
         Q: pallas::Affine,
@@ -668,4 +668,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

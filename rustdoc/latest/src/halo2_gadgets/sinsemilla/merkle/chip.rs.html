@@ -571,8 +571,8 @@
 <span class="kw">use </span>group::ff::PrimeField;
 
 <span class="doccomment">/// Configuration for the `MerkleChip` implementation.
-</span><span class="attribute">#[derive(Clone, Debug, PartialEq, Eq)]</span>
-<span class="kw">pub struct </span>MerkleConfig&lt;Hash, Commit, Fixed&gt;
+</span><span class="attribute">#[derive(Clone, Debug, PartialEq, Eq)]
+</span><span class="kw">pub struct </span>MerkleConfig&lt;Hash, Commit, Fixed&gt;
 <span class="kw">where
     </span>Hash: HashDomains&lt;pallas::Affine&gt;,
     Fixed: FixedPoints&lt;pallas::Affine&gt;,
@@ -594,8 +594,8 @@
 ///
 /// This chip does **NOT** constrain `left⋆` and `right⋆` to be canonical encodings of
 /// `left` and `right`.
-</span><span class="attribute">#[derive(Clone, Debug, PartialEq, Eq)]</span>
-<span class="kw">pub struct </span>MerkleChip&lt;Hash, Commit, Fixed&gt;
+</span><span class="attribute">#[derive(Clone, Debug, PartialEq, Eq)]
+</span><span class="kw">pub struct </span>MerkleChip&lt;Hash, Commit, Fixed&gt;
 <span class="kw">where
     </span>Hash: HashDomains&lt;pallas::Affine&gt;,
     Fixed: FixedPoints&lt;pallas::Affine&gt;,
@@ -748,8 +748,8 @@
     F: FixedPoints&lt;pallas::Affine&gt;,
     Commit: CommitDomains&lt;pallas::Affine, F, Hash&gt; + Eq,
 {
-    <span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="kw">fn </span>hash_layer(
+    <span class="attribute">#[allow(non_snake_case)]
+    </span><span class="kw">fn </span>hash_layer(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
         Q: pallas::Affine,
@@ -920,8 +920,8 @@
         }
 
         <span class="comment">// Check layer hash output against Sinsemilla primitives hash
-        </span><span class="attribute">#[cfg(test)]</span>
-        {
+        </span><span class="attribute">#[cfg(test)]
+        </span>{
             <span class="kw">use crate</span>::{sinsemilla::primitives::HashDomain, utilities::i2lebsp};
 
             <span class="kw">use </span>group::ff::PrimeFieldBits;
@@ -974,8 +974,8 @@
     F: FixedPoints&lt;pallas::Affine&gt;,
     Commit: CommitDomains&lt;pallas::Affine, F, Hash&gt;,
 {
-    <span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="kw">fn </span>swap(
+    <span class="attribute">#[allow(clippy::type_complexity)]
+    </span><span class="kw">fn </span>swap(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
         pair: (<span class="self">Self</span>::Var, Value&lt;pallas::Base&gt;),
@@ -1054,9 +1054,9 @@
         chip.witness_message_piece(layouter, value, num_words)
     }
 
-    <span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="kw">fn </span>hash_to_point(
+    <span class="attribute">#[allow(non_snake_case)]
+    #[allow(clippy::type_complexity)]
+    </span><span class="kw">fn </span>hash_to_point(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
         Q: pallas::Affine,
@@ -1072,4 +1072,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

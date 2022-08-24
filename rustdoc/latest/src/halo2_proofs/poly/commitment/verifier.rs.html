@@ -193,8 +193,8 @@
 <span class="kw">use </span><span class="kw">crate</span>::arithmetic::{best_multiexp, CurveAffine};
 
 <span class="doccomment">/// A guard returned by the verifier
-</span><span class="attribute">#[derive(Debug, Clone)]</span>
-<span class="kw">pub struct </span>Guard&lt;<span class="lifetime">&#39;a</span>, C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt; {
+</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="kw">pub struct </span>Guard&lt;<span class="lifetime">&#39;a</span>, C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt; {
     msm: MSM&lt;<span class="lifetime">&#39;a</span>, C&gt;,
     neg_c: C::Scalar,
     u: Vec&lt;C::Scalar&gt;,
@@ -202,8 +202,8 @@
 }
 
 <span class="doccomment">/// An accumulator instance consisting of an evaluation claim and a proof.
-</span><span class="attribute">#[derive(Debug, Clone)]</span>
-<span class="kw">pub struct </span>Accumulator&lt;C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt; {
+</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="kw">pub struct </span>Accumulator&lt;C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt; {
     <span class="doccomment">/// The claimed output of the linear-time polycommit opening protocol
     </span><span class="kw">pub </span>g: C,
 
@@ -350,4 +350,4 @@
     v
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

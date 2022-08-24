@@ -121,17 +121,17 @@
 <span class="kw">use </span>pasta_curves::{arithmetic::FieldExt, pallas};
 
 <span class="doccomment">/// Table containing independent generators S[0..2^k]
-</span><span class="attribute">#[derive(Eq, PartialEq, Copy, Clone, Debug)]</span>
-<span class="kw">pub struct </span>GeneratorTableConfig {
+</span><span class="attribute">#[derive(Eq, PartialEq, Copy, Clone, Debug)]
+</span><span class="kw">pub struct </span>GeneratorTableConfig {
     <span class="kw">pub </span>table_idx: TableColumn,
     <span class="kw">pub </span>table_x: TableColumn,
     <span class="kw">pub </span>table_y: TableColumn,
 }
 
 <span class="kw">impl </span>GeneratorTableConfig {
-    <span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="doccomment">/// Even though the lookup table can be used in other parts of the circuit,
+    <span class="attribute">#[allow(clippy::too_many_arguments)]
+    #[allow(non_snake_case)]
+    </span><span class="doccomment">/// Even though the lookup table can be used in other parts of the circuit,
     /// this specific configuration sets up Sinsemilla-specific constraints
     /// controlled by `q_sinsemilla`, and would likely not apply to other chips.
     </span><span class="kw">pub fn </span>configure&lt;Hash, Commit, F&gt;(
@@ -208,4 +208,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

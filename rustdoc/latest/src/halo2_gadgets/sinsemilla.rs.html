@@ -849,9 +849,9 @@
     /// decomposition in the form of intermediate values in a cumulative
     /// sum.
     ///
-    </span><span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="kw">fn </span>hash_to_point(
+    </span><span class="attribute">#[allow(non_snake_case)]
+    #[allow(clippy::type_complexity)]
+    </span><span class="kw">fn </span>hash_to_point(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
         Q: C,
@@ -867,8 +867,8 @@
 /// Composed of [`MessagePiece`]s with bitlength some multiple of `K`.
 ///
 /// [`MessagePiece`]: SinsemillaInstructions::MessagePiece
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>Message&lt;C: CurveAffine, SinsemillaChip, <span class="kw">const </span>K: usize, <span class="kw">const </span>MAX_WORDS: usize&gt;
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>Message&lt;C: CurveAffine, SinsemillaChip, <span class="kw">const </span>K: usize, <span class="kw">const </span>MAX_WORDS: usize&gt;
 <span class="kw">where
     </span>SinsemillaChip: SinsemillaInstructions&lt;C, K, MAX_WORDS&gt; + Clone + Debug + Eq,
 {
@@ -930,8 +930,8 @@
 }
 
 <span class="doccomment">/// A message piece with a bitlength of some multiple of `K`.
-</span><span class="attribute">#[derive(Copy, Clone, Debug)]</span>
-<span class="kw">pub struct </span>MessagePiece&lt;C: CurveAffine, SinsemillaChip, <span class="kw">const </span>K: usize, <span class="kw">const </span>MAX_WORDS: usize&gt;
+</span><span class="attribute">#[derive(Copy, Clone, Debug)]
+</span><span class="kw">pub struct </span>MessagePiece&lt;C: CurveAffine, SinsemillaChip, <span class="kw">const </span>K: usize, <span class="kw">const </span>MAX_WORDS: usize&gt;
 <span class="kw">where
     </span>SinsemillaChip: SinsemillaInstructions&lt;C, K, MAX_WORDS&gt; + Clone + Debug + Eq,
 {
@@ -1034,9 +1034,9 @@
 
 <span class="doccomment">/// A domain in which $\mathsf{SinsemillaHashToPoint}$ and $\mathsf{SinsemillaHash}$ can
 /// be used.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="attribute">#[allow(non_snake_case)]</span>
-<span class="kw">pub struct </span>HashDomain&lt;
+</span><span class="attribute">#[derive(Debug)]
+#[allow(non_snake_case)]
+</span><span class="kw">pub struct </span>HashDomain&lt;
     C: CurveAffine,
     SinsemillaChip,
     EccChip,
@@ -1069,8 +1069,8 @@
         + Debug
         + Eq,
 {
-    <span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="doccomment">/// Constructs a new `HashDomain` for the given domain.
+    <span class="attribute">#[allow(non_snake_case)]
+    </span><span class="doccomment">/// Constructs a new `HashDomain` for the given domain.
     </span><span class="kw">pub fn </span>new(
         sinsemilla_chip: SinsemillaChip,
         ecc_chip: EccChip,
@@ -1083,8 +1083,8 @@
         }
     }
 
-    <span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="doccomment">/// $\mathsf{SinsemillaHashToPoint}$ from [§ 5.4.1.9][concretesinsemillahash].
+    <span class="attribute">#[allow(clippy::type_complexity)]
+    </span><span class="doccomment">/// $\mathsf{SinsemillaHashToPoint}$ from [§ 5.4.1.9][concretesinsemillahash].
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
     </span><span class="kw">pub fn </span>hash_to_point(
@@ -1101,8 +1101,8 @@
     <span class="doccomment">/// $\mathsf{SinsemillaHash}$ from [§ 5.4.1.9][concretesinsemillahash].
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
-    </span><span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="kw">pub fn </span>hash(
+    </span><span class="attribute">#[allow(clippy::type_complexity)]
+    </span><span class="kw">pub fn </span>hash(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
         message: Message&lt;C, SinsemillaChip, K, MAX_WORDS&gt;,
@@ -1126,17 +1126,17 @@
 }
 
 <span class="doccomment">/// Trait allowing circuit&#39;s Sinsemilla HashDomains to be enumerated.
-</span><span class="attribute">#[allow(non_snake_case)]</span>
-<span class="kw">pub trait </span>HashDomains&lt;C: CurveAffine&gt;: Clone + Debug {
+</span><span class="attribute">#[allow(non_snake_case)]
+</span><span class="kw">pub trait </span>HashDomains&lt;C: CurveAffine&gt;: Clone + Debug {
     <span class="doccomment">/// Returns the `Q` constant for this domain.
     </span><span class="kw">fn </span>Q(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; C;
 }
 
 <span class="doccomment">/// Gadget representing a domain in which $\mathsf{SinsemillaCommit}$ and
 /// $\mathsf{SinsemillaShortCommit}$ can be used.
-</span><span class="attribute">#[derive(Debug)]</span>
-<span class="attribute">#[allow(non_snake_case)]</span>
-<span class="kw">pub struct </span>CommitDomain&lt;
+</span><span class="attribute">#[derive(Debug)]
+#[allow(non_snake_case)]
+</span><span class="kw">pub struct </span>CommitDomain&lt;
     C: CurveAffine,
     SinsemillaChip,
     EccChip,
@@ -1181,8 +1181,8 @@
         }
     }
 
-    <span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="doccomment">/// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
+    <span class="attribute">#[allow(clippy::type_complexity)]
+    </span><span class="doccomment">/// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
     ///
     /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
     </span><span class="kw">pub fn </span>commit(
@@ -1204,8 +1204,8 @@
         <span class="prelude-val">Ok</span>((commitment, zs))
     }
 
-    <span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="doccomment">/// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
+    <span class="attribute">#[allow(clippy::type_complexity)]
+    </span><span class="doccomment">/// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
     ///
     /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
     </span><span class="kw">pub fn </span>short_commit(
@@ -1220,8 +1220,8 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>tests {
     <span class="kw">use </span>halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
@@ -1255,7 +1255,7 @@
 
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>PERSONALIZATION: <span class="kw-2">&amp;</span>str = <span class="string">&quot;MerkleCRH&quot;</span>;
 
-    <span class="macro">lazy_static!</span> {
+    <span class="macro">lazy_static! </span>{
         <span class="kw">static </span><span class="kw-2">ref </span>COMMIT_DOMAIN: sinsemilla::CommitDomain =
             sinsemilla::CommitDomain::new(PERSONALIZATION);
         <span class="kw">static </span><span class="kw-2">ref </span>Q: pallas::Affine = COMMIT_DOMAIN.Q().to_affine();
@@ -1264,8 +1264,8 @@
             find_zs_and_us(<span class="kw-2">*</span>R, NUM_WINDOWS).unwrap();
     }
 
-    <span class="attribute">#[derive(Debug, Clone, Eq, PartialEq)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>TestHashDomain;
+    <span class="attribute">#[derive(Debug, Clone, Eq, PartialEq)]
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>TestHashDomain;
     <span class="kw">impl </span>HashDomains&lt;pallas::Affine&gt; <span class="kw">for </span>TestHashDomain {
         <span class="kw">fn </span>Q(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; pallas::Affine {
             <span class="kw-2">*</span>Q
@@ -1273,8 +1273,8 @@
     }
 
     <span class="comment">// This test does not make use of the CommitDomain.
-    </span><span class="attribute">#[derive(Debug, Clone, Eq, PartialEq)]</span>
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>TestCommitDomain;
+    </span><span class="attribute">#[derive(Debug, Clone, Eq, PartialEq)]
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>TestCommitDomain;
     <span class="kw">impl </span>CommitDomains&lt;pallas::Affine, TestFixedBases, TestHashDomain&gt; <span class="kw">for </span>TestCommitDomain {
         <span class="kw">fn </span>r(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; FullWidth {
             FullWidth::from_parts(<span class="kw-2">*</span>R, <span class="kw-2">&amp;</span>R_ZS_AND_US)
@@ -1288,8 +1288,8 @@
     <span class="kw">struct </span>MyCircuit {}
 
     <span class="kw">impl </span>Circuit&lt;pallas::Base&gt; <span class="kw">for </span>MyCircuit {
-        <span class="attribute">#[allow(clippy::type_complexity)]</span>
-        <span class="kw">type </span>Config = (
+        <span class="attribute">#[allow(clippy::type_complexity)]
+        </span><span class="kw">type </span>Config = (
             EccConfig&lt;TestFixedBases&gt;,
             SinsemillaConfig&lt;TestHashDomain, TestCommitDomain, TestFixedBases&gt;,
             SinsemillaConfig&lt;TestHashDomain, TestCommitDomain, TestFixedBases&gt;,
@@ -1300,8 +1300,8 @@
             MyCircuit {}
         }
 
-        <span class="attribute">#[allow(non_snake_case)]</span>
-        <span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) -&gt; <span class="self">Self</span>::Config {
+        <span class="attribute">#[allow(non_snake_case)]
+        </span><span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) -&gt; <span class="self">Self</span>::Config {
             <span class="kw">let </span>advices = [
                 meta.advice_column(),
                 meta.advice_column(),
@@ -1499,17 +1499,17 @@
         }
     }
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>sinsemilla_chip() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>sinsemilla_chip() {
         <span class="kw">let </span>k = <span class="number">11</span>;
         <span class="kw">let </span>circuit = MyCircuit {};
         <span class="kw">let </span>prover = MockProver::run(k, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
         <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()))
     }
 
-    <span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]</span>
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>print_sinsemilla_chip() {
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]
+    #[test]
+    </span><span class="kw">fn </span>print_sinsemilla_chip() {
         <span class="kw">use </span>plotters::prelude::<span class="kw-2">*</span>;
 
         <span class="kw">let </span>root =
@@ -1524,4 +1524,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

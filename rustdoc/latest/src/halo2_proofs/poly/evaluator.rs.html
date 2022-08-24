@@ -712,6 +712,14 @@
 <span id="697">697</span>
 <span id="698">698</span>
 <span id="699">699</span>
+<span id="700">700</span>
+<span id="701">701</span>
+<span id="702">702</span>
+<span id="703">703</span>
+<span id="704">704</span>
+<span id="705">705</span>
+<span id="706">706</span>
+<span id="707">707</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{
     cmp,
     collections::{HashMap, HashSet},
@@ -751,8 +759,8 @@
 }
 
 <span class="doccomment">/// A reference to a polynomial registered with an [`Evaluator`].
-</span><span class="attribute">#[derive(Clone, Copy)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>AstLeaf&lt;E, B: Basis&gt; {
+</span><span class="attribute">#[derive(Clone, Copy)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>AstLeaf&lt;E, B: Basis&gt; {
     index: usize,
     rotation: Rotation,
     _evaluator: PhantomData&lt;(E, B)&gt;,
@@ -873,14 +881,20 @@
         }
         <span class="kw">let </span>leaves = collect_rotations(ast);
 
-        <span class="comment">// Produce the rotated polynomials.
+        <span class="comment">// Produce a map from each leaf to the rotated polynomial it corresponds to, if
+        // any (or None if the leaf uses an unrotated polynomial).
         </span><span class="kw">let </span>rotated: HashMap&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt; = leaves
             .iter()
             .cloned()
             .map(|leaf| {
                 (
                     leaf,
-                    B::rotate(domain, <span class="kw-2">&amp;</span><span class="self">self</span>.polys[leaf.index], leaf.rotation),
+                    <span class="kw">if </span>leaf.rotation == Rotation::cur() {
+                        <span class="comment">// We can use the polynomial as-is for this leaf.
+                        </span><span class="prelude-val">None
+                    </span>} <span class="kw">else </span>{
+                        <span class="prelude-val">Some</span>(B::rotate(domain, <span class="kw-2">&amp;</span><span class="self">self</span>.polys[leaf.index], leaf.rotation))
+                    },
                 )
             })
             .collect();
@@ -889,7 +903,7 @@
         </span><span class="kw">let </span>poly_len = <span class="self">self</span>.polys.first().unwrap().len();
         <span class="kw">let </span>(chunk_size, num_chunks) = get_chunk_params(poly_len);
 
-        <span class="comment">// Split each rotated polynomial into chunks.
+        <span class="comment">// Split each rotated and unrotated polynomial into chunks.
         </span><span class="kw">let </span>chunks: Vec&lt;HashMap&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt; = (<span class="number">0</span>..num_chunks)
             .map(|i| {
                 rotated
@@ -897,7 +911,9 @@
                     .map(|(leaf, poly)| {
                         (
                             <span class="kw-2">*</span>leaf,
-                            poly.chunks(chunk_size)
+                            poly.as_ref()
+                                .unwrap_or(<span class="kw-2">&amp;</span><span class="self">self</span>.polys[leaf.index])
+                                .chunks(chunk_size)
                                 .nth(i)
                                 .expect(<span class="string">&quot;num_chunks was calculated correctly&quot;</span>),
                         )
@@ -995,8 +1011,8 @@
 /// This struct exists to make the internals of this case private so that we don&#39;t
 /// accidentally construct this case directly, because it can only be implemented for the
 /// [`ExtendedLagrangeCoeff`] basis.
-</span><span class="attribute">#[derive(Clone)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>AstMul&lt;E, F: Field, B: Basis&gt;(Arc&lt;Ast&lt;E, F, B&gt;&gt;, Arc&lt;Ast&lt;E, F, B&gt;&gt;);
+</span><span class="attribute">#[derive(Clone)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>AstMul&lt;E, F: Field, B: Basis&gt;(Arc&lt;Ast&lt;E, F, B&gt;&gt;, Arc&lt;Ast&lt;E, F, B&gt;&gt;);
 
 <span class="kw">impl</span>&lt;E, F: Field, B: Basis&gt; fmt::Debug <span class="kw">for </span>AstMul&lt;E, F, B&gt; {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
@@ -1008,8 +1024,8 @@
 }
 
 <span class="doccomment">/// A polynomial operation backed by an [`Evaluator`].
-</span><span class="attribute">#[derive(Clone)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum </span>Ast&lt;E, F: Field, B: Basis&gt; {
+</span><span class="attribute">#[derive(Clone)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum </span>Ast&lt;E, F: Field, B: Basis&gt; {
     Poly(AstLeaf&lt;E, B&gt;),
     Add(Arc&lt;Ast&lt;E, F, B&gt;&gt;, Arc&lt;Ast&lt;E, F, B&gt;&gt;),
     Mul(AstMul&lt;E, F, B&gt;),
@@ -1360,8 +1376,8 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use </span>std::iter;
 
     <span class="kw">use </span>pasta_curves::pallas;
@@ -1372,8 +1388,8 @@
         poly::{Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff},
     };
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>short_chunk_regression_test() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>short_chunk_regression_test() {
         <span class="comment">// Pick the smallest polynomial length that is guaranteed to produce a short chunk
         // on this machine.
         </span><span class="kw">let </span>k = <span class="kw">match </span>(<span class="number">1</span>..<span class="number">16</span>)
@@ -1412,4 +1428,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

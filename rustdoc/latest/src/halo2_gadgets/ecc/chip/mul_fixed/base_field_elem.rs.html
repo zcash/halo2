@@ -560,8 +560,8 @@
 
 <span class="kw">use </span>std::convert::TryInto;
 
-<span class="attribute">#[derive(Clone, Debug, Eq, PartialEq)]</span>
-<span class="kw">pub struct </span>Config&lt;Fixed: FixedPoints&lt;pallas::Affine&gt;&gt; {
+<span class="attribute">#[derive(Clone, Debug, Eq, PartialEq)]
+</span><span class="kw">pub struct </span>Config&lt;Fixed: FixedPoints&lt;pallas::Affine&gt;&gt; {
     q_mul_fixed_base_field: Selector,
     canon_advices: [Column&lt;Advice&gt;; <span class="number">3</span>],
     lookup_config: LookupRangeCheckConfig&lt;pallas::Base, { sinsemilla::K }&gt;,
@@ -757,8 +757,8 @@
             },
         )<span class="question-mark">?</span>;
 
-        <span class="attribute">#[cfg(test)]</span>
-        <span class="comment">// Check that the correct multiple is obtained.
+        <span class="attribute">#[cfg(test)]
+        </span><span class="comment">// Check that the correct multiple is obtained.
         </span>{
             <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::FixedPoint;
             <span class="kw">use </span>group::Curve;
@@ -918,8 +918,8 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">pub mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">pub mod </span>tests {
     <span class="kw">use </span>group::{
         ff::{Field, PrimeField},
         Curve,
@@ -952,8 +952,8 @@
         )
     }
 
-    <span class="attribute">#[allow(clippy::op_ref)]</span>
-    <span class="kw">fn </span>test_single_base(
+    <span class="attribute">#[allow(clippy::op_ref)]
+    </span><span class="kw">fn </span>test_single_base(
         chip: EccChip&lt;TestFixedBases&gt;,
         <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
         base: FixedPointBaseField&lt;pallas::Affine, EccChip&lt;TestFixedBases&gt;&gt;,
@@ -1070,4 +1070,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

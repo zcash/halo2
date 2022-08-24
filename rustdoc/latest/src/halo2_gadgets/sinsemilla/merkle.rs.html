@@ -445,8 +445,8 @@
     <span class="doccomment">/// Compute MerkleCRH for a given `layer`. The hash that computes the root
     /// is at layer 0, and the hashes that are applied to two leaves are at
     /// layer `MERKLE_DEPTH - 1` = layer 31.
-    </span><span class="attribute">#[allow(non_snake_case)]</span>
-    <span class="kw">fn </span>hash_layer(
+    </span><span class="attribute">#[allow(non_snake_case)]
+    </span><span class="kw">fn </span>hash_layer(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
         Q: C,
@@ -458,8 +458,8 @@
 
 <span class="doccomment">/// Gadget representing a Merkle path that proves a leaf exists in a Merkle tree at a
 /// specific position.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub struct </span>MerklePath&lt;
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub struct </span>MerklePath&lt;
     C: CurveAffine,
     MerkleChip,
     <span class="kw">const </span>PATH_LENGTH: usize,
@@ -510,8 +510,8 @@
     }
 }
 
-<span class="attribute">#[allow(non_snake_case)]</span>
-<span class="kw">impl</span>&lt;
+<span class="attribute">#[allow(non_snake_case)]
+</span><span class="kw">impl</span>&lt;
         C: CurveAffine,
         MerkleChip,
         <span class="kw">const </span>PATH_LENGTH: usize,
@@ -583,8 +583,8 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">pub mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">pub mod </span>tests {
     <span class="kw">use super</span>::{
         chip::{MerkleChip, MerkleConfig},
         MerklePath,
@@ -613,8 +613,8 @@
 
     <span class="kw">const </span>MERKLE_DEPTH: usize = <span class="number">32</span>;
 
-    <span class="attribute">#[derive(Default)]</span>
-    <span class="kw">struct </span>MyCircuit {
+    <span class="attribute">#[derive(Default)]
+    </span><span class="kw">struct </span>MyCircuit {
         leaf: Value&lt;pallas::Base&gt;,
         leaf_pos: Value&lt;u32&gt;,
         merkle_path: Value&lt;[pallas::Base; MERKLE_DEPTH]&gt;,
@@ -768,8 +768,8 @@
         }
     }
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>merkle_chip() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>merkle_chip() {
         <span class="kw">let </span><span class="kw-2">mut </span>rng = OsRng;
 
         <span class="comment">// Choose a random leaf and position
@@ -793,9 +793,9 @@
         <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()))
     }
 
-    <span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]</span>
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>print_merkle_chip() {
+    <span class="attribute">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]
+    #[test]
+    </span><span class="kw">fn </span>print_merkle_chip() {
         <span class="kw">use </span>plotters::prelude::<span class="kw-2">*</span>;
 
         <span class="kw">let </span>root = BitMapBackend::new(<span class="string">&quot;merkle-path-layout.png&quot;</span>, (<span class="number">1024</span>, <span class="number">7680</span>)).into_drawing_area();
@@ -810,4 +810,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

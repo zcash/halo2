@@ -114,8 +114,8 @@
 <span class="kw">use </span>std::io;
 
 <span class="doccomment">/// A permutation argument.
-</span><span class="attribute">#[derive(Debug, Clone)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Argument {
+</span><span class="attribute">#[derive(Debug, Clone)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Argument {
     <span class="doccomment">/// A sequence of columns involved in the argument.
     </span>columns: Vec&lt;Column&lt;Any&gt;&gt;,
 }
@@ -175,17 +175,17 @@
 }
 
 <span class="doccomment">/// The verifying key for a single permutation argument.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>VerifyingKey&lt;C: CurveAffine&gt; {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>VerifyingKey&lt;C: CurveAffine&gt; {
     commitments: Vec&lt;C&gt;,
 }
 
 <span class="doccomment">/// The proving key for a single permutation argument.
-</span><span class="attribute">#[derive(Clone, Debug)]</span>
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ProvingKey&lt;C: CurveAffine&gt; {
+</span><span class="attribute">#[derive(Clone, Debug)]
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ProvingKey&lt;C: CurveAffine&gt; {
     permutations: Vec&lt;Polynomial&lt;C::Scalar, LagrangeCoeff&gt;&gt;,
     polys: Vec&lt;Polynomial&lt;C::Scalar, Coeff&gt;&gt;,
     <span class="kw">pub</span>(<span class="kw">super</span>) cosets: Vec&lt;Polynomial&lt;C::Scalar, ExtendedLagrangeCoeff&gt;&gt;,
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

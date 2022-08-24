@@ -215,11 +215,11 @@
 
 <span class="kw">const </span>STATE: usize = <span class="number">80</span>;
 
-<span class="attribute">#[derive(Debug, Clone, Copy)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">enum </span>FieldType {
+<span class="attribute">#[derive(Debug, Clone, Copy)]
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">enum </span>FieldType {
     <span class="doccomment">/// GF(2^n)
-    </span><span class="attribute">#[allow(dead_code)]</span>
-    Binary,
+    </span><span class="attribute">#[allow(dead_code)]
+    </span>Binary,
     <span class="doccomment">/// GF(p)
     </span>PrimeOrder,
 }
@@ -233,13 +233,13 @@
     }
 }
 
-<span class="attribute">#[derive(Debug, Clone, Copy)]</span>
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">enum </span>SboxType {
+<span class="attribute">#[derive(Debug, Clone, Copy)]
+</span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">enum </span>SboxType {
     <span class="doccomment">/// x^alpha
     </span>Pow,
     <span class="doccomment">/// x^(-1)
-    </span><span class="attribute">#[allow(dead_code)]</span>
-    Inv,
+    </span><span class="attribute">#[allow(dead_code)]
+    </span>Inv,
 }
 
 <span class="kw">impl </span>SboxType {
@@ -387,17 +387,17 @@
     }
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use </span>pasta_curves::Fp;
 
     <span class="kw">use super</span>::{Grain, SboxType};
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>grain() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>grain() {
         <span class="kw">let </span><span class="kw-2">mut </span>grain = Grain::&lt;Fp&gt;::new(SboxType::Pow, <span class="number">3</span>, <span class="number">8</span>, <span class="number">56</span>);
         <span class="kw">let </span>_f = grain.next_field_element();
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

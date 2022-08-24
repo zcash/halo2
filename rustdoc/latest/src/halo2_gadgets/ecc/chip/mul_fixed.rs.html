@@ -544,15 +544,15 @@
 <span class="kw">pub mod </span>full_width;
 <span class="kw">pub mod </span>short;
 
-<span class="macro">lazy_static!</span> {
+<span class="macro">lazy_static! </span>{
     <span class="kw">static </span><span class="kw-2">ref </span>TWO_SCALAR: pallas::Scalar = pallas::Scalar::from(<span class="number">2</span>);
     <span class="comment">// H = 2^3 (3-bit window)
     </span><span class="kw">static </span><span class="kw-2">ref </span>H_SCALAR: pallas::Scalar = pallas::Scalar::from(H <span class="kw">as </span>u64);
     <span class="kw">static </span><span class="kw-2">ref </span>H_BASE: pallas::Base = pallas::Base::from(H <span class="kw">as </span>u64);
 }
 
-<span class="attribute">#[derive(Clone, Debug, Eq, PartialEq)]</span>
-<span class="kw">pub struct </span>Config&lt;FixedPoints: <span class="kw">super</span>::FixedPoints&lt;pallas::Affine&gt;&gt; {
+<span class="attribute">#[derive(Clone, Debug, Eq, PartialEq)]
+</span><span class="kw">pub struct </span>Config&lt;FixedPoints: <span class="kw">super</span>::FixedPoints&lt;pallas::Affine&gt;&gt; {
     running_sum_config: RunningSumConfig&lt;pallas::Base, FIXED_BASE_WINDOW_SIZE&gt;,
     <span class="comment">// The fixed Lagrange interpolation coefficients for `x_p`.
     </span>lagrange_coeffs: [Column&lt;Fixed&gt;; H],
@@ -571,8 +571,8 @@
 }
 
 <span class="kw">impl</span>&lt;FixedPoints: <span class="kw">super</span>::FixedPoints&lt;pallas::Affine&gt;&gt; Config&lt;FixedPoints&gt; {
-    <span class="attribute">#[allow(clippy::too_many_arguments)]</span>
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>configure(
+    <span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>configure(
         meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;,
         lagrange_coeffs: [Column&lt;Fixed&gt;; H],
         window: Column&lt;Advice&gt;,
@@ -648,8 +648,8 @@
     }
 
     <span class="doccomment">/// [Specification](https://p.z.cash/halo2-0.1:ecc-fixed-mul-coordinates).
-    </span><span class="attribute">#[allow(clippy::op_ref)]</span>
-    <span class="kw">fn </span>coords_check(
+    </span><span class="attribute">#[allow(clippy::op_ref)]
+    </span><span class="kw">fn </span>coords_check(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         meta: <span class="kw-2">&amp;mut </span>VirtualCells&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
         window: Expression&lt;pallas::Base&gt;,
@@ -689,8 +689,8 @@
         ]
     }
 
-    <span class="attribute">#[allow(clippy::type_complexity)]</span>
-    <span class="kw">fn </span>assign_region_inner&lt;F: FixedPoint&lt;pallas::Affine&gt;, <span class="kw">const </span>NUM_WINDOWS: usize&gt;(
+    <span class="attribute">#[allow(clippy::type_complexity)]
+    </span><span class="kw">fn </span>assign_region_inner&lt;F: FixedPoint&lt;pallas::Affine&gt;, <span class="kw">const </span>NUM_WINDOWS: usize&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">&#39;_</span>, pallas::Base&gt;,
         offset: usize,
@@ -1016,4 +1016,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>

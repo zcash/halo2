@@ -187,8 +187,8 @@
         // and we want to rely on the reference impl for MDS security, so we use the same
         // formulation.
         </span><span class="kw">let </span><span class="kw-2">mut </span>mds = [[F::zero(); T]; T];
-        <span class="attribute">#[allow(clippy::needless_range_loop)]</span>
-        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..T {
+        <span class="attribute">#[allow(clippy::needless_range_loop)]
+        </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..T {
             <span class="kw">for </span>j <span class="kw">in </span><span class="number">0</span>..T {
                 <span class="kw">let </span>sum = xs[i] + ys[j];
                 <span class="comment">// We leverage the secure MDS selection counter to also check this.
@@ -234,21 +234,21 @@
     (mds, mds_inv)
 }
 
-<span class="attribute">#[cfg(test)]</span>
-<span class="kw">mod </span>tests {
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
     <span class="kw">use </span>pasta_curves::Fp;
 
     <span class="kw">use super</span>::{generate_mds, Grain};
 
-    <span class="attribute">#[test]</span>
-    <span class="kw">fn </span>poseidon_mds() {
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>poseidon_mds() {
         <span class="kw">const </span>T: usize = <span class="number">3</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>grain = Grain::new(<span class="kw">super</span>::<span class="kw">super</span>::grain::SboxType::Pow, T <span class="kw">as </span>u16, <span class="number">8</span>, <span class="number">56</span>);
         <span class="kw">let </span>(mds, mds_inv) = generate_mds::&lt;Fp, T&gt;(<span class="kw-2">&amp;mut </span>grain, <span class="number">0</span>);
 
         <span class="comment">// Verify that MDS * MDS^-1 = I.
-        </span><span class="attribute">#[allow(clippy::needless_range_loop)]</span>
-        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..T {
+        </span><span class="attribute">#[allow(clippy::needless_range_loop)]
+        </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..T {
             <span class="kw">for </span>j <span class="kw">in </span><span class="number">0</span>..T {
                 <span class="kw">let </span>expected = <span class="kw">if </span>i == j { Fp::one() } <span class="kw">else </span>{ Fp::zero() };
                 <span class="macro">assert_eq!</span>(
@@ -260,4 +260,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (9c20b2a8c 2022-08-17)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (060e47f74 2022-08-23)" ></div></body></html>
