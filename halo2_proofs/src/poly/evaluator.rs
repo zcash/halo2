@@ -159,14 +159,20 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
         }
         let leaves = collect_rotations(ast);
 
-        // Produce the rotated polynomials.
+        // Produce a map from each leaf to the rotated polynomial it corresponds to, if
+        // any (or None if the leaf uses an unrotated polynomial).
         let rotated: HashMap<_, _> = leaves
             .iter()
             .cloned()
             .map(|leaf| {
                 (
                     leaf,
-                    B::rotate(domain, &self.polys[leaf.index], leaf.rotation),
+                    if leaf.rotation == Rotation::cur() {
+                        // We can use the polynomial as-is for this leaf.
+                        None
+                    } else {
+                        Some(B::rotate(domain, &self.polys[leaf.index], leaf.rotation))
+                    },
                 )
             })
             .collect();
@@ -175,7 +181,7 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
         let poly_len = self.polys.first().unwrap().len();
         let (chunk_size, num_chunks) = get_chunk_params(poly_len);
 
-        // Split each rotated polynomial into chunks.
+        // Split each rotated and unrotated polynomial into chunks.
         let chunks: Vec<HashMap<_, _>> = (0..num_chunks)
             .map(|i| {
                 rotated
@@ -183,7 +189,9 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                     .map(|(leaf, poly)| {
                         (
                             *leaf,
-                            poly.chunks(chunk_size)
+                            poly.as_ref()
+                                .unwrap_or(&self.polys[leaf.index])
+                                .chunks(chunk_size)
                                 .nth(i)
                                 .expect("num_chunks was calculated correctly"),
                         )
