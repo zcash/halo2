@@ -247,6 +247,7 @@ impl<F: Clone + Copy, B> Polynomial<F, B> {
         // coefficients move to the end, and the last `k` coefficients move to the front.
         // The coefficient previously at `mid` will be the first coefficient in the
         // rotated polynomial, and the position from which chunk indexing begins.
+        #[allow(clippy::branches_sharing_code)]
         let (mid, k) = if rotation_is_negative {
             let k = rotation_abs;
             assert!(k <= self.len());
