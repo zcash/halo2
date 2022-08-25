@@ -323,3 +323,43 @@ impl Rotation {
         Rotation(1)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use ff::Field;
+    use pasta_curves::pallas;
+    use rand_core::OsRng;
+
+    use super::{EvaluationDomain, Polynomial, Rotation};
+
+    #[test]
+    fn test_get_chunk_of_rotated() {
+        let k = 11;
+        let domain = EvaluationDomain::<pallas::Base>::new(1, k);
+
+        // Create a random polynomial.
+        let mut poly = domain.empty_lagrange();
+        for coefficient in poly.iter_mut() {
+            *coefficient = pallas::Base::random(OsRng);
+        }
+
+        // Pick a chunk size that is guaranteed to not be a multiple of the polynomial
+        // length.
+        let chunk_size = 7;
+
+        for rotation in [
+            Rotation(-6),
+            Rotation::prev(),
+            Rotation::cur(),
+            Rotation::next(),
+            Rotation(12),
+        ] {
+            for (chunk_index, chunk) in poly.rotate(rotation).chunks(chunk_size).enumerate() {
+                assert_eq!(
+                    poly.get_chunk_of_rotated(rotation, chunk_size, chunk_index),
+                    chunk
+                );
+            }
+        }
+    }
+}
