@@ -272,6 +272,27 @@ impl<G: Group> EvaluationDomain<G> {
         poly
     }
 
+    /// Gets the specified chunk of the rotated version of this polynomial.
+    ///
+    /// Equivalent to:
+    /// ```ignore
+    /// self.rotate_extended(poly, rotation)
+    ///     .chunks(chunk_size)
+    ///     .nth(chunk_index)
+    ///     .unwrap()
+    ///     .to_vec()
+    /// ```
+    pub(crate) fn get_chunk_of_rotated_extended(
+        &self,
+        poly: &Polynomial<G, ExtendedLagrangeCoeff>,
+        rotation: Rotation,
+        chunk_size: usize,
+        chunk_index: usize,
+    ) -> Vec<G> {
+        let new_rotation = ((1 << (self.extended_k - self.k)) * rotation.0.abs()) as usize;
+        poly.get_chunk_of_rotated_helper(rotation.0 < 0, new_rotation, chunk_size, chunk_index)
+    }
+
     /// This takes us from the extended evaluation domain and gets us the
     /// quotient polynomial coefficients.
     ///
