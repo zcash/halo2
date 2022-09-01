@@ -597,9 +597,11 @@ mod tests {
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
         pasta::Fp,
-        plonk::{Circuit, ConstraintSystem, Error},
+        plonk::{self, Circuit, ConstraintSystem, Error, SingleVerifier},
+        poly::commitment::Params,
+        transcript::{Blake2bRead, Blake2bWrite, Challenge255},
     };
-    use pasta_curves::pallas;
+    use pasta_curves::{pallas, EqAffine};
     use rand::rngs::OsRng;
 
     use super::{PoseidonInstructions, Pow5Chip, Pow5Config, StateWord};
@@ -840,7 +842,29 @@ mod tests {
             _spec: PhantomData,
         };
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
-        assert_eq!(prover.verify(), Ok(()))
+        assert_eq!(prover.verify(), Ok(()));
+
+        let params = Params::new(k);
+        let vk = plonk::keygen_vk(&params, &circuit).unwrap();
+        let pk = plonk::keygen_pk(&params, vk, &circuit).unwrap();
+
+        let mut transcript = Blake2bWrite::<_, EqAffine, _>::init(vec![]);
+        plonk::create_proof(
+            &params,
+            &pk,
+            &[circuit],
+            &[&[]],
+            &mut OsRng,
+            &mut transcript,
+        )
+        .unwrap();
+        let proof = transcript.finalize();
+
+        let strategy = SingleVerifier::new(&params);
+        let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+        assert!(
+            plonk::verify_proof(&params, pk.get_vk(), strategy, &[&[]], &mut transcript).is_ok()
+        );
     }
 
     #[test]
