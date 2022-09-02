@@ -476,3 +476,4 @@ $$
 
 * 25 10-bit and one 3-bit range check, to constrain $\alpha''$ to 253 bits;
 * 25 10-bit and one 3-bit range check, to constrain $\alpha'' + t_q$ to 253 bits when $\boldsymbol\alpha_{254} = 0 \;\wedge\; \boldsymbol\alpha_{253} = 1 \;\wedge\; \mathbf{k}_{254} = 0$;
+* two times 13 10-bit range checks.
