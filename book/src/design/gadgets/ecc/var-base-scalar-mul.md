@@ -306,15 +306,24 @@ $\mathbf{z}_i$ cannot overflow for any $i \geq 1$, because it is a weighted sum 
 
 However, $\mathbf{z}_0 = \alpha + t_q$ *can* overflow $[0, p)$.
 
+> Note: for full-width scalar mul, it may not be possible to represent $\mathbf{z}_0$ in the base field (e.g. when the base field is Pasta's $\mathbb{F}_p$ and $p < q$).
+> In that case, we need to special-case the row that would mention $\mathbf{z}_0$ so that it is correct for whatever representation we use for a full-width scalar.
+> Our representation for $k$ will be the pair $(\mathbb{k}_{254}, k' = k - 2^{254} \cdot \mathbb{k}_{254})$.
+> We'll use $k'$ in place of $\alpha + t_q$ for $\mathbf{z}_0$, constraining $k'$ to 254 bits so that it fits in an $\mathbb{F}_p$ element.
+> Then we just have to generalize the argument below to work for $k' \in [0, 2 \cdot t_q)$ (because the maximum value of $\alpha + t_q$ is $q - 1 + t_q = 2^{254} + t_q - 1 + t_q$).
+
 Since overflow can only occur in the final step that constrains $\mathbf{z}_0 = 2 \cdot \mathbf{z}_1 + \mathbf{k}_0$, we have $\mathbf{z}_0 = k \pmod{p}$. It is then sufficient to also check that $\mathbf{z}_0 = \alpha + t_q \pmod{p}$ (so that $k = \alpha + t_q \pmod{p}$) and that $k \in [t_q, p + t_q)$. These conditions together imply that $k = \alpha + t_q$ as an integer, and so $2^{254} + k = \alpha \pmod{q}$ as required.
 
 > Note: the bits $\mathbf{k}_{254..0}$ do not represent a value reduced modulo $q$, but rather a representation of the unreduced $\alpha + t_q$.
 
 ### Optimized check for $k \in [t_q, p + t_q)$
 
-Since $t_p + t_q < 2^{130}$, we have $$[t_q, p + t_q) = [t_q, t_q + 2^{130}) \;\cup\; [2^{130}, 2^{254}) \;\cup\; \big([2^{254}, 2^{254} + 2^{130}) \;\cap\; [p + t_q - 2^{130}, p + t_q)\big).$$
+Since $t_p + t_q < 2^{130}$ (also true if $p$ and $q$ are swapped), we have $$[t_q, p + t_q) = [t_q, t_q + 2^{130}) \;\cup\; [2^{130}, 2^{254}) \;\cup\; \big([2^{254}, 2^{254} + 2^{130}) \;\cap\; [p + t_q - 2^{130}, p + t_q)\big).$$
 
 We may assume that $k = \alpha + t_q \pmod{p}$.
+
+(This is true for the use of variable-base scalar mul in Orchard, where we know that $\alpha < p$. If is also true if we swap $p$ and $q$ so that we have $p > q$.
+It is *not* true for a full-width scalar $\alpha \geq p$ when $p < q$.)
 
 Therefore,
 $\begin{array}{rcl}
@@ -392,3 +401,79 @@ where $(s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}$ can be comp
 
 #### Running sum range check
 We make use of a $10$-bit [lookup range check](../decomposition.md#lookup-decomposition) in the circuit to subtract the low $130$ bits of $\mathbf{s}$. The range check subtracts the first $13 \cdot 10$ bits of $\mathbf{s},$ and right-shifts the result to give $(s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}.$
+
+## Overflow check (general)
+Recall that we defined $\mathbf{z}_j = \sum_{i=j}^n (\mathbf{k}_i \cdot 2^{i−j})$, where $n = 254$.
+
+$\mathbf{z}_j$ cannot overflow for any $j \geq 1$, because it is a weighted sum of bits only up to and including $2^{n-j}$. When $n = 254$ and $j = 1$ this sum can be at most $2^{254} - 1$, which is smaller than $p$ (and also $q$).
+
+However, for full-width scalar mul, it may not be possible to represent $\mathbf{z}_0$ in the base field (e.g. when the base field is Pasta's $\mathbb{F}_p$ and $p < q$). In that case $\mathbf{z}_0 = \alpha + t_q$ *can* overflow $[0, p)$.
+
+So, we need to special-case the row that would mention $\mathbf{z}_0$ so that it is correct for whatever representation we use for a full-width scalar.
+
+Our representation for $k$ will be the pair $(\mathbf{k}_{254}, k' = k - 2^{254} \cdot \mathbf{k}_{254})$. We'll use $k'$ in place of $\alpha + t_q$ for $\mathbf{z}_0$, constraining $k'$ to 254 bits so that it fits in an $\mathbb{F}_p$ element.
+
+Then we just have to generalize the [overflow check used for variable-base scalar mul in the Orchard circuit](https://zcash.github.io/halo2/design/gadgets/ecc/var-base-scalar-mul.html#overflow-check) to work for $k' \in [0, 2 \cdot t_q)$ (because the maximum value of $\alpha + t_q$ is $q - 1 + t_q = 2^{254} + t_q - 1 + t_q$).
+
+
+> Note: the bits $\mathbf{k}_{254..0}$ do not represent a value reduced modulo $q$, but rather a representation of the unreduced $\alpha + t_q$.
+
+Overflow can only occur in the final step that constrains $\mathbf{z}_0 = 2 \cdot \mathbf{z}_1 + \mathbf{k}_0$, and only if $\mathbf{z}_1$ has the bit with weight $2^{253}$ set (i.e. if $\mathbf{k}_{254} = 1$). If we instead set $\mathbf{z}_0 = 2 \cdot \mathbf{z}_1 - 2^{254} \cdot \mathbf{k}_{254} + \mathbf{k}_0$, now $\mathbf{z}_0$ cannot overflow and should be equal to $k'$.
+
+It is then sufficient to also check that $\mathbf{z}_0 + 2^{254} \cdot \mathbf{k}_{254} = \alpha + t_q$ as an integer where $\alpha \in [0, q)$.
+
+Represent $\alpha$ as $2^{254} \cdot \boldsymbol\alpha_{254} + 2^{253} \cdot \boldsymbol\alpha_{253} + \alpha''$ where we constrain $\alpha'' \in [0, 2^{253})$ and $\boldsymbol\alpha_{253}$ and $\boldsymbol\alpha_{254}$ to boolean. For this to be a canonical representation we also need $\boldsymbol \alpha_{254} = 1 \implies (\boldsymbol \alpha_{253} = 0 \;\wedge\; \alpha'' \in [0, t_q))$.
+
+Let $\alpha' = 2^{253} \cdot \boldsymbol\alpha_{253} + \alpha''$.
+
+If $\boldsymbol\alpha_{254} = 1$:
+* constrain $\mathbf{k}_{254} = 1$ and $\mathbf{z}_0 = \alpha' + t_q$. This cannot overflow because in this case $\alpha' \in [0, t_q)$ and so $\mathbf{z}_0 \in [0, 2 \cdot t_q)$.
+
+If $\boldsymbol\alpha_{254} = 0$:
+* we should have $\mathbf{k}_{254} = 1$ iff $\alpha' \in [2^{254} - t_q, 2^{254})$, i.e. witness $\mathbf{k}_{254}$ as boolean and then
+  * If $\mathbf{k}_{254} = 0$ then constrain $\alpha' \not\in [2^{254} - t_q, 2^{254})$.
+    * This can be done by constraining either $\boldsymbol\alpha_{253} = 0$ or $\alpha'' + t_q \in [0, 2^{253})$. ($\alpha'' + t_q$ cannot overflow.)
+  * If $\mathbf{k}_{254} = 1$ then constrain $\alpha' \in [2^{254} - t_q, 2^{254})$.
+    * This can be done by constraining $\alpha' - (2^{254} - t_q) \in [0, 2^{130})$ and $\alpha' - 2^{254} + 2^{130} \in [0, 2^{130})$.
+
+### Overflow check constraints (general)
+
+Represent $\alpha$ as $2^{254} \cdot \boldsymbol\alpha_{254} + 2^{253} \cdot \boldsymbol\alpha_{253} + \alpha''$ as above.
+
+The constraints for the overflow check are:
+
+$$
+\begin{aligned}
+&\alpha'' \in [0, 2^{253}) \\
+&\boldsymbol\alpha_{253} \in \{0,1\} \\
+&\boldsymbol\alpha_{254} \in \{0,1\} \\
+&\mathbf{k}_{254} \in \{0,1\} \\
+\boldsymbol \alpha_{254} = 1 \implies &\boldsymbol \alpha_{253} = 0 \\
+\boldsymbol \alpha_{254} = 1 \implies &\alpha'' \in [0, 2^{130}) \;❁ \\
+\boldsymbol \alpha_{254} = 1 \implies &\alpha'' + 2^{130} - t_q \in [0, 2^{130}) \;❁ \\
+\boldsymbol\alpha_{254} = 1 \implies &\mathbf{k}_{254} = 1 \\
+\boldsymbol\alpha_{254} = 1 \implies &\mathbf{z}_0 = \alpha' + t_q \\
+\boldsymbol\alpha_{254} = 0 \;\wedge\; \boldsymbol\alpha_{253} = 1 \;\wedge\; \mathbf{k}_{254} = 0 &\implies \alpha'' + t_q \in [0, 2^{253}) \\
+\boldsymbol\alpha_{254} = 0 \;\wedge\; \mathbf{k}_{254} = 1 &\implies \alpha' - 2^{254} + t_q \in [0, 2^{130}) \;❁ \\
+\boldsymbol\alpha_{254} = 0 \;\wedge\; \mathbf{k}_{254} = 1 &\implies \alpha' - 2^{254} + 2^{130} \in [0, 2^{130}) \;❁ \\
+\end{aligned}
+$$
+
+Note that the four 130-bit constraints marked $❁$ are in two pairs that occur in disjoint cases. We can therefore combine them into two 130-bit constraints using a new witness variable $u$; the other constraint always being on $u + 2^{130} - t_q$:
+
+$$
+\begin{aligned}
+\boldsymbol \alpha_{254} = 1 \implies &u = \alpha'' \\
+\boldsymbol\alpha_{254} = 0 \;\wedge\; \mathbf{k}_{254} = 1 \implies &u = \alpha' - 2^{254} + t_q \\
+&u \in [0, 2^{130}) \\
+&u + 2^{130} - t_q \in [0, 2^{130}) \\
+\end{aligned}
+$$
+
+($u$ is unconstrained and can be witnessed as $0$ in the case $\boldsymbol\alpha_{254} = 0 \;\wedge\; \mathbf{k}_{254} = 0$.)
+
+### Cost
+
+* 25 10-bit and one 3-bit range check, to constrain $\alpha''$ to 253 bits;
+* 25 10-bit and one 3-bit range check, to constrain $\alpha'' + t_q$ to 253 bits when $\boldsymbol\alpha_{254} = 0 \;\wedge\; \boldsymbol\alpha_{253} = 1 \;\wedge\; \mathbf{k}_{254} = 0$;
+* two times 13 10-bit range checks.
