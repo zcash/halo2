@@ -405,7 +405,7 @@ We make use of a $10$-bit [lookup range check](../decomposition.md#lookup-decomp
 ## Overflow check (general)
 Recall that we defined $\mathbf{z}_j = \sum_{i=j}^n (\mathbf{k}_i \cdot 2^{i−j})$, where $n = 254$.
 
-$\mathbf{z}_j$ cannot overflow for any $j \geq 1$, because it is a weighted sum of bits only up to $2^{n-j}$, which can be at most $2^{254} - 1$ when $j = 1$; this is smaller than $p$ (and also $q$).
+$\mathbf{z}_j$ cannot overflow for any $j \geq 1$, because it is a weighted sum of bits only up to and including $2^{n-j}$. When $n = 254$ and $j = 1$ this sum can be at most $2^{254} - 1$, which is smaller than $p$ (and also $q$).
 
 However, for full-width scalar mul, it may not be possible to represent $\mathbf{z}_0$ in the base field (e.g. when the base field is Pasta's $\mathbb{F}_p$ and $p < q$). In that case $\mathbf{z}_0 = \alpha + t_q$ *can* overflow $[0, p)$.
 
