@@ -1,4 +1,4 @@
-use super::{add, EccPoint, NonIdentityEccPoint, ScalarVar, T_Q};
+use super::{add, EccPoint, NonIdentityEccPoint, ScalarVar, T_Q, EccScalarVarFullWidth};
 use crate::{
     sinsemilla::primitives as sinsemilla,
     utilities::{bool_check, lookup_range_check::LookupRangeCheckConfig, ternary},
@@ -163,14 +163,14 @@ impl Config {
         });
     }
 
-    pub(super) fn assign(
+    pub(super) fn assign_base_field(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         alpha: AssignedCell<pallas::Base, pallas::Base>,
         base: &NonIdentityEccPoint,
     ) -> Result<(EccPoint, ScalarVar), Error> {
         let (result, zs): (EccPoint, Vec<Z<pallas::Base>>) = layouter.assign_region(
-            || "variable-base scalar mul",
+            || "variable-base scalar mul (base field)",
             |mut region| {
                 let offset = 0;
 
@@ -294,13 +294,22 @@ impl Config {
             },
         )?;
 
-        self.overflow_config.overflow_check(
+        self.overflow_config.overflow_check_base(
             layouter.namespace(|| "overflow check"),
             alpha.clone(),
             &zs,
         )?;
 
         Ok((result, ScalarVar::BaseFieldElem(alpha)))
+    }
+
+    pub(super) fn assign_full_width(
+        &self,
+        mut layouter: impl Layouter<pallas::Base>,
+        alpha: EccScalarVarFullWidth<pallas::Affine>,
+        base: &NonIdentityEccPoint,
+    ) -> Result<(EccPoint, ScalarVar), Error> {
+        todo!()
     }
 
     /// Processes the final scalar bit `k_0`.
