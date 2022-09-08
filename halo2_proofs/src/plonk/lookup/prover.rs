@@ -78,6 +78,7 @@ impl<F: FieldExt> Argument<F> {
         advice_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
         fixed_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
         instance_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+        challenges: &'a [C::Scalar],
         mut rng: R,
         transcript: &mut T,
     ) -> Result<Permuted<C>, Error>
@@ -97,6 +98,7 @@ impl<F: FieldExt> Argument<F> {
                         fixed_values,
                         advice_values,
                         instance_values,
+                        challenges,
                     ))
                 })
                 .fold(domain.empty_lagrange(), |acc, expression| {

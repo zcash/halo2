@@ -4,8 +4,8 @@ use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 use crate::{
     circuit::Value,
     plonk::{
-        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
-        FloorPlanner, Instance, Selector,
+        Advice, Any, Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error,
+        Fixed, FloorPlanner, Instance, Selector,
     },
 };
 
@@ -155,6 +155,10 @@ impl<F: Field> Assignment<F> for Graph {
         _: Value<Assigned<F>>,
     ) -> Result<(), Error> {
         Ok(())
+    }
+
+    fn get_challenge(&self, _: Challenge) -> Value<F> {
+        Value::unknown()
     }
 
     fn push_namespace<NR, N>(&mut self, name_fn: N)

@@ -7,15 +7,16 @@ use std::iter;
 use std::ops::{Add, Mul, Neg, Range};
 use std::time::{Duration, Instant};
 
+use blake2b_simd::blake2b;
 use ff::Field;
 
-use crate::plonk::Assigned;
 use crate::{
     arithmetic::{FieldExt, Group},
     circuit,
     plonk::{
-        permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
-        Expression, Fixed, FloorPlanner, Instance, Selector, VirtualCell,
+        permutation, Advice, Any, Assigned, Assignment, Challenge, Circuit, Column, ColumnType,
+        ConstraintSystem, Error, Expression, Fixed, FloorPlanner, Instance, Phase, Selector,
+        VirtualCell,
     },
     poly::Rotation,
 };
@@ -260,9 +261,9 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 ///             offset: 0,
 ///         },
 ///         cell_values: vec![
-///             (((Any::Advice, 0).into(), 0).into(), "0x2".to_string()),
-///             (((Any::Advice, 1).into(), 0).into(), "0x4".to_string()),
-///             (((Any::Advice, 2).into(), 0).into(), "0x8".to_string()),
+///             (((Any::advice(), 0).into(), 0).into(), "0x2".to_string()),
+///             (((Any::advice(), 1).into(), 0).into(), "0x4".to_string()),
+///             (((Any::advice(), 2).into(), 0).into(), "0x8".to_string()),
 ///         ],
 ///     }])
 /// );
@@ -295,6 +296,8 @@ pub struct MockProver<F: Group + Field> {
     instance: Vec<Vec<F>>,
 
     selectors: Vec<Vec<bool>>,
+
+    challenges: Vec<F>,
 
     permutation: permutation::keygen::Assembly,
 
@@ -466,6 +469,10 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         Ok(())
     }
 
+    fn get_challenge(&self, challenge: Challenge) -> circuit::Value<F> {
+        circuit::Value::known(self.challenges[challenge.index()])
+    }
+
     fn push_namespace<NR, N>(&mut self, _: N)
     where
         NR: Into<String>,
@@ -533,6 +540,17 @@ impl<F: FieldExt> MockProver<F> {
         let permutation = permutation::keygen::Assembly::new(n, &cs.permutation);
         let constants = cs.constants.clone();
 
+        // Use hash chain to derive deterministic challenges for testing
+        let challenges = {
+            let mut hash: [u8; 64] = blake2b(b"Halo2-MockProver").as_bytes().try_into().unwrap();
+            iter::repeat_with(|| {
+                hash = blake2b(&hash).as_bytes().try_into().unwrap();
+                F::from_bytes_wide(&hash)
+            })
+            .take(cs.num_challenges)
+            .collect()
+        };
+
         let mut prover = MockProver {
             k,
             n: n as u32,
@@ -543,6 +561,7 @@ impl<F: FieldExt> MockProver<F> {
             advice,
             instance,
             selectors,
+            challenges,
             permutation,
             usable_rows: 0..usable_rows,
         };
@@ -662,6 +681,7 @@ impl<F: FieldExt> MockProver<F> {
                                     &self.cs.instance_queries,
                                     &self.instance,
                                 ),
+                                &|challenge| Value::Real(self.challenges[challenge.index()]),
                                 &|a| -a,
                                 &|a, b| a + b,
                                 &|a, b| a * b,
@@ -746,6 +766,7 @@ impl<F: FieldExt> MockProver<F> {
                                         [(row as i32 + n + rotation) as usize % n as usize],
                                 )
                             },
+                            &|challenge| Value::Real(self.challenges[challenge.index()]),
                             &|a| -a,
                             &|a, b| a + b,
                             &|a, b| a * b,
@@ -856,7 +877,7 @@ impl<F: FieldExt> MockProver<F> {
                     .get_columns()
                     .get(column)
                     .map(|c: &Column<Any>| match c.column_type() {
-                        Any::Advice => self.advice[c.index()][row],
+                        Any::Advice(_) => self.advice[c.index()][row],
                         Any::Fixed => self.fixed[c.index()][row],
                         Any::Instance => CellValue::Assigned(self.instance[c.index()][row]),
                     })
@@ -1029,6 +1050,7 @@ impl<F: FieldExt> MockProver<F> {
                                     &self.cs.instance_queries,
                                     &self.instance,
                                 ),
+                                &|challenge| Value::Real(self.challenges[challenge.index()]),
                                 &|a| -a,
                                 &|a, b| a + b,
                                 &|a, b| a * b,
@@ -1106,6 +1128,7 @@ impl<F: FieldExt> MockProver<F> {
                                         [(row as i32 + n + query.rotation.0) as usize % n as usize],
                                 )
                             },
+                            &|challenge| Value::Real(self.challenges[challenge.index()]),
                             &|a| -a,
                             &|a, b| a + b,
                             &|a, b| a * b,
@@ -1211,7 +1234,7 @@ impl<F: FieldExt> MockProver<F> {
                     .get_columns()
                     .get(column)
                     .map(|c: &Column<Any>| match c.column_type() {
-                        Any::Advice => self.advice[c.index()][row],
+                        Any::Advice(_) => self.advice[c.index()][row],
                         Any::Fixed => self.fixed[c.index()][row],
                         Any::Instance => CellValue::Assigned(self.instance[c.index()][row]),
                     })
@@ -1375,7 +1398,7 @@ mod tests {
                 gate: (0, "Equality check").into(),
                 region: (0, "Faulty synthesis".to_owned()).into(),
                 gate_offset: 1,
-                column: Column::new(1, Any::Advice),
+                column: Column::new(1, Any::advice()),
                 offset: 1,
             }])
         );

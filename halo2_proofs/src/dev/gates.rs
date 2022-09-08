@@ -7,7 +7,10 @@ use ff::PrimeField;
 
 use crate::{
     dev::util,
-    plonk::{Circuit, ConstraintSystem},
+    plonk::{
+        sealed::{self, SealedPhase},
+        Circuit, ConstraintSystem, FirstPhase,
+    },
 };
 
 #[derive(Debug)]
@@ -120,8 +123,20 @@ impl CircuitGates {
                             &util::format_value,
                             &|selector| format!("S{}", selector.0),
                             &|query| format!("F{}@{}", query.column_index, query.rotation.0),
-                            &|query| format!("A{}@{}", query.column_index, query.rotation.0),
+                            &|query| {
+                                if query.phase == FirstPhase.to_sealed() {
+                                    format!("A{}@{}", query.column_index, query.rotation.0)
+                                } else {
+                                    format!(
+                                        "A{}({})@{}",
+                                        query.column_index,
+                                        query.phase(),
+                                        query.rotation.0
+                                    )
+                                }
+                            },
                             &|query| format!("I{}@{}", query.column_index, query.rotation.0),
+                            &|challenge| format!("C{}({})", challenge.index(), challenge.phase()),
                             &|a| {
                                 if a.contains(' ') {
                                     format!("-({})", a)
@@ -159,12 +174,25 @@ impl CircuitGates {
                                     .collect()
                             },
                             &|query| {
-                                vec![format!("A{}@{}", query.column_index, query.rotation.0)]
-                                    .into_iter()
-                                    .collect()
+                                let query = if query.phase == FirstPhase.to_sealed() {
+                                    format!("A{}@{}", query.column_index, query.rotation.0)
+                                } else {
+                                    format!(
+                                        "A{}({})@{}",
+                                        query.column_index,
+                                        query.phase(),
+                                        query.rotation.0
+                                    )
+                                };
+                                vec![query].into_iter().collect()
                             },
                             &|query| {
                                 vec![format!("I{}@{}", query.column_index, query.rotation.0)]
+                                    .into_iter()
+                                    .collect()
+                            },
+                            &|challenge| {
+                                vec![format!("C{}({})", challenge.index(), challenge.phase())]
                                     .into_iter()
                                     .collect()
                             },
@@ -190,6 +218,7 @@ impl CircuitGates {
             .flat_map(|gate| {
                 gate.polynomials().iter().map(|poly| {
                     poly.evaluate(
+                        &|_| (0, 0, 0),
                         &|_| (0, 0, 0),
                         &|_| (0, 0, 0),
                         &|_| (0, 0, 0),

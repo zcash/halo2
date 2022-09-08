@@ -11,7 +11,8 @@ use super::{
         Selector,
     },
     evaluation::Evaluator,
-    permutation, Assigned, Error, Expression, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
+    permutation, Assigned, Challenge, Error, Expression, LagrangeCoeff, Polynomial, ProvingKey,
+    VerifyingKey,
 };
 use crate::{
     arithmetic::{parallelize, CurveAffine},
@@ -171,6 +172,10 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         }
 
         Ok(())
+    }
+
+    fn get_challenge(&self, _: Challenge) -> Value<F> {
+        Value::unknown()
     }
 
     fn push_namespace<NR, N>(&mut self, _: N)

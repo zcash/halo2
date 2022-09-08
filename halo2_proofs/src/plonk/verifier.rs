@@ -76,12 +76,34 @@ pub fn verify_proof<
         }
     }
 
-    let advice_commitments = (0..num_proofs)
-        .map(|_| -> Result<Vec<_>, _> {
-            // Hash the prover's advice commitments into the transcript
-            read_n_points(transcript, vk.cs.num_advice_columns)
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    // Hash the prover's advice commitments into the transcript and squeeze challenges
+    let (advice_commitments, challenges) = {
+        let mut advice_commitments =
+            vec![vec![Scheme::Curve::default(); vk.cs.num_advice_columns]; num_proofs];
+        let mut challenges = vec![Scheme::Scalar::zero(); vk.cs.num_challenges];
+
+        for current_phase in vk.cs.phases() {
+            for advice_commitments in advice_commitments.iter_mut() {
+                for (phase, commitment) in vk
+                    .cs
+                    .advice_column_phase
+                    .iter()
+                    .zip(advice_commitments.iter_mut())
+                {
+                    if current_phase == *phase {
+                        *commitment = transcript.read_point()?;
+                    }
+                }
+            }
+            for (phase, challenge) in vk.cs.challenge_phase.iter().zip(challenges.iter_mut()) {
+                if current_phase == *phase {
+                    *challenge = *transcript.squeeze_challenge_scalar::<()>();
+                }
+            }
+        }
+
+        (advice_commitments, challenges)
+    };
 
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
@@ -184,6 +206,7 @@ pub fn verify_proof<
             .zip(permutations_evaluated.iter())
             .zip(lookups_evaluated.iter())
             .flat_map(|(((advice_evals, instance_evals), permutation), lookups)| {
+                let challenges = &challenges;
                 let fixed_evals = &fixed_evals;
                 std::iter::empty()
                     // Evaluate the circuit using the custom gates provided
@@ -195,6 +218,7 @@ pub fn verify_proof<
                                 &|query| fixed_evals[query.index],
                                 &|query| advice_evals[query.index],
                                 &|query| instance_evals[query.index],
+                                &|challenge| challenges[challenge.index()],
                                 &|a| -a,
                                 &|a, b| a + &b,
                                 &|a, b| a * &b,
@@ -232,6 +256,7 @@ pub fn verify_proof<
                                     advice_evals,
                                     fixed_evals,
                                     instance_evals,
+                                    challenges,
                                 )
                             })
                             .into_iter(),

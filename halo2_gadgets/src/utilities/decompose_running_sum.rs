@@ -358,14 +358,14 @@ mod tests {
                         location: FailureLocation::OutsideRegion { row: 1 },
                     },
                     VerifyFailure::Permutation {
-                        column: (Any::Advice, 0).into(),
+                        column: (Any::advice(), 0).into(),
                         location: FailureLocation::InRegion {
                             region: (0, "decompose").into(),
                             offset: 22,
                         },
                     },
                     VerifyFailure::Permutation {
-                        column: (Any::Advice, 0).into(),
+                        column: (Any::advice(), 0).into(),
                         location: FailureLocation::InRegion {
                             region: (0, "decompose").into(),
                             offset: 45,

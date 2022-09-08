@@ -325,6 +325,7 @@ mod tests {
                         },
                         &|_| panic!("should not occur in returned expressions"),
                         &|_| panic!("should not occur in returned expressions"),
+                        &|_| panic!("should not occur in returned expressions"),
                         &|a| -a,
                         &|a, b| a + b,
                         &|a, b| a * b,

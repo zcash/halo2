@@ -141,7 +141,7 @@ impl<const LEN: usize> AssignedBits<LEN> {
 
         let column: Column<Any> = column.into();
         match column.column_type() {
-            Any::Advice => {
+            Any::Advice(_) => {
                 region.assign_advice(annotation, column.try_into().unwrap(), offset, || {
                     value.clone()
                 })
@@ -176,7 +176,7 @@ impl AssignedBits<16> {
         let column: Column<Any> = column.into();
         let value: Value<Bits<16>> = value.map(|v| v.into());
         match column.column_type() {
-            Any::Advice => {
+            Any::Advice(_) => {
                 region.assign_advice(annotation, column.try_into().unwrap(), offset, || {
                     value.clone()
                 })
@@ -211,7 +211,7 @@ impl AssignedBits<32> {
         let column: Column<Any> = column.into();
         let value: Value<Bits<32>> = value.map(|v| v.into());
         match column.column_type() {
-            Any::Advice => {
+            Any::Advice(_) => {
                 region.assign_advice(annotation, column.try_into().unwrap(), offset, || {
                     value.clone()
                 })

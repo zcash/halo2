@@ -329,7 +329,7 @@ mod tests {
                         region: (0, "range constrain").into(),
                         offset: 0,
                     },
-                    cell_values: vec![(((Any::Advice, 0).into(), 0).into(), "0x8".to_string())],
+                    cell_values: vec![(((Any::advice(), 0).into(), 0).into(), "0x8".to_string())],
                 }])
             );
         }

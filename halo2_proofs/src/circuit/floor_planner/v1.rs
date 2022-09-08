@@ -9,8 +9,8 @@ use crate::{
         Cell, Layouter, Region, RegionIndex, RegionStart, Table, Value,
     },
     plonk::{
-        Advice, Any, Assigned, Assignment, Circuit, Column, Error, Fixed, FloorPlanner, Instance,
-        Selector, TableColumn,
+        Advice, Any, Assigned, Assignment, Challenge, Circuit, Column, Error, Fixed, FloorPlanner,
+        Instance, Selector, TableColumn,
     },
 };
 
@@ -196,6 +196,13 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for V1Pass<'p, 'a, F,
         match &mut self.0 {
             Pass::Measurement(_) => Ok(()),
             Pass::Assignment(pass) => pass.constrain_instance(cell, instance, row),
+        }
+    }
+
+    fn get_challenge(&self, challenge: Challenge) -> Value<F> {
+        match &self.0 {
+            Pass::Measurement(_) => Value::unknown(),
+            Pass::Assignment(pass) => pass.plan.cs.get_challenge(challenge),
         }
     }
 

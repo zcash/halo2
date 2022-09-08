@@ -98,7 +98,7 @@ impl Argument {
             // Iterate over each column of the permutation
             for (&column, permuted_column_values) in columns.iter().zip(permutations.iter()) {
                 let values = match column.column_type() {
-                    Any::Advice => advice,
+                    Any::Advice(_) => advice,
                     Any::Fixed => fixed,
                     Any::Instance => instance,
                 };
@@ -121,7 +121,7 @@ impl Argument {
             for &column in columns.iter() {
                 let omega = domain.get_omega();
                 let values = match column.column_type() {
-                    Any::Advice => advice,
+                    Any::Advice(_) => advice,
                     Any::Fixed => fixed,
                     Any::Instance => instance,
                 };

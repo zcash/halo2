@@ -62,6 +62,7 @@ impl FailureLocation {
                     &|query| vec![cs.fixed_queries[query.index].0.into()],
                     &|query| vec![cs.advice_queries[query.index].0.into()],
                     &|query| vec![cs.instance_queries[query.index].0.into()],
+                    &|_| vec![],
                     &|a| a,
                     &|mut a, mut b| {
                         a.append(&mut b);
@@ -404,6 +405,7 @@ fn render_lookup<F: FieldExt>(
             &|query| format!("F{}", query.column_index),
             &|_| panic!("no advice columns in table expressions"),
             &|_| panic!("no instance columns in table expressions"),
+            &|_| panic!("no challenges in table expressions"),
             &|_| panic!("no negations in table expressions"),
             &|_, _| panic!("no sums in table expressions"),
             &|_, _| panic!("no products in table expressions"),
@@ -412,11 +414,11 @@ fn render_lookup<F: FieldExt>(
     });
 
     fn cell_value<'a, F: FieldExt, Q: Into<AnyQuery> + Copy>(
-        column_type: Any,
         load: impl Fn(Q) -> Value<F> + 'a,
     ) -> impl Fn(Q) -> BTreeMap<metadata::VirtualCell, String> + 'a {
         move |query| {
             let AnyQuery {
+                column_type,
                 column_index,
                 rotation,
                 ..
@@ -451,18 +453,15 @@ fn render_lookup<F: FieldExt>(
         let cell_values = input.evaluate(
             &|_| BTreeMap::default(),
             &|_| panic!("virtual selectors are removed during optimization"),
-            &cell_value(
-                Any::Fixed,
-                &util::load(n, row, &cs.fixed_queries, &prover.fixed),
-            ),
-            &cell_value(
-                Any::Advice,
-                &util::load(n, row, &cs.advice_queries, &prover.advice),
-            ),
-            &cell_value(
-                Any::Instance,
-                &util::load_instance(n, row, &cs.instance_queries, &prover.instance),
-            ),
+            &cell_value(&util::load(n, row, &cs.fixed_queries, &prover.fixed)),
+            &cell_value(&util::load(n, row, &cs.advice_queries, &prover.advice)),
+            &cell_value(&util::load_instance(
+                n,
+                row,
+                &cs.instance_queries,
+                &prover.instance,
+            )),
+            &|_| BTreeMap::default(),
             &|a| a,
             &|mut a, mut b| {
                 a.append(&mut b);
