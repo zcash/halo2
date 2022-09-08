@@ -45,41 +45,47 @@ pub fn verify_proof<
         }
     }
 
-    // let instance_commitments = instances
-    //     .iter()
-    //     .map(|instance| {
-    //         instance
-    //             .iter()
-    //             .map(|instance| {
-    //                 if instance.len() > params.n() as usize - (vk.cs.blinding_factors() + 1) {
-    //                     return Err(Error::InstanceTooLarge);
-    //                 }
-    //                 let mut poly = instance.to_vec();
-    //                 poly.resize(params.n() as usize, Scheme::Scalar::zero());
-    //                 let poly = vk.domain.lagrange_from_vec(poly);
+    let instance_commitments = if V::QUERY_INSTANCE {
+        instances
+            .iter()
+            .map(|instance| {
+                instance
+                    .iter()
+                    .map(|instance| {
+                        if instance.len() > params.n() as usize - (vk.cs.blinding_factors() + 1) {
+                            return Err(Error::InstanceTooLarge);
+                        }
+                        let mut poly = instance.to_vec();
+                        poly.resize(params.n() as usize, Scheme::Scalar::zero());
+                        let poly = vk.domain.lagrange_from_vec(poly);
 
-    //                 Ok(params.commit_lagrange(&poly, Blind::default()).to_affine())
-    //             })
-    //             .collect::<Result<Vec<_>, _>>()
-    //     })
-    //     .collect::<Result<Vec<_>, _>>()?;
+                        Ok(params.commit_lagrange(&poly, Blind::default()).to_affine())
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .collect::<Result<Vec<_>, _>>()?
+    } else {
+        vec![vec![]; instances.len()]
+    };
 
-    let num_proofs = instances.len();
+    let num_proofs = instance_commitments.len();
 
     // Hash verification key into transcript
     vk.hash_into(transcript)?;
 
-    // for instance_commitments in instance_commitments.iter() {
-    //     // Hash the instance (external) commitments into the transcript
-    //     for commitment in instance_commitments {
-    //         transcript.common_point(*commitment)?
-    //     }
-    // }
-
-    for instance in instances.iter() {
-        for instance in instance.iter() {
-            for value in instance.iter() {
-                transcript.common_scalar(*value)?;
+    if V::QUERY_INSTANCE {
+        for instance_commitments in instance_commitments.iter() {
+            // Hash the instance (external) commitments into the transcript
+            for commitment in instance_commitments {
+                transcript.common_point(*commitment)?
+            }
+        }
+    } else {
+        for instance in instances.iter() {
+            for instance in instance.iter() {
+                for value in instance.iter() {
+                    transcript.common_scalar(*value)?;
+                }
             }
         }
     }
@@ -161,10 +167,13 @@ pub fn verify_proof<
     // Sample x challenge, which is used to ensure the circuit is
     // satisfied with high probability.
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
-    // let instance_evals = (0..num_proofs)
-    //     .map(|_| -> Result<Vec<_>, _> { read_n_scalars(transcript, vk.cs.instance_queries.len()) })
-    //     .collect::<Result<Vec<_>, _>>()?;
-    let instance_evals = {
+    let instance_evals = if V::QUERY_INSTANCE {
+        (0..num_proofs)
+            .map(|_| -> Result<Vec<_>, _> {
+                read_n_scalars(transcript, vk.cs.instance_queries.len())
+            })
+            .collect::<Result<Vec<_>, _>>()?
+    } else {
         let xn = x.pow(&[params.n() as u64, 0, 0, 0]);
         let l_i_s = &vk.domain.l_i_range(
             *x,
@@ -295,35 +304,36 @@ pub fn verify_proof<
         vanishing.verify(params, expressions, y, xn)
     };
 
-    // let queries = instance_commitments
-    //     .iter()
-    //     .zip(instance_evals.iter())
-    //     .zip(advice_commitments.iter())
-    let queries = advice_commitments
+    let queries = instance_commitments
         .iter()
+        .zip(instance_evals.iter())
+        .zip(advice_commitments.iter())
         .zip(advice_evals.iter())
         .zip(permutations_evaluated.iter())
         .zip(lookups_evaluated.iter())
-        // .flat_map(
-        //     |(
-        //         (
-        //             (((instance_commitments, instance_evals), advice_commitments), advice_evals),
-        //             permutation,
-        //         ),
-        //         lookups,
-        //     )| {
         .flat_map(
-            |(((advice_commitments, advice_evals), permutation), lookups)| {
+            |(
+                (
+                    (((instance_commitments, instance_evals), advice_commitments), advice_evals),
+                    permutation,
+                ),
+                lookups,
+            )| {
                 iter::empty()
-                    // .chain(vk.cs.instance_queries.iter().enumerate().map(
-                    //     move |(query_index, &(column, at))| {
-                    //         VerifierQuery::new_commitment(
-                    //             &instance_commitments[column.index()],
-                    //             vk.domain.rotate_omega(*x, at),
-                    //             instance_evals[query_index],
-                    //         )
-                    //     },
-                    // ))
+                    .chain(
+                        V::QUERY_INSTANCE
+                            .then_some(vk.cs.instance_queries.iter().enumerate().map(
+                                move |(query_index, &(column, at))| {
+                                    VerifierQuery::new_commitment(
+                                        &instance_commitments[column.index()],
+                                        vk.domain.rotate_omega(*x, at),
+                                        instance_evals[query_index],
+                                    )
+                                },
+                            ))
+                            .into_iter()
+                            .flatten(),
+                    )
                     .chain(vk.cs.advice_queries.iter().enumerate().map(
                         move |(query_index, &(column, at))| {
                             VerifierQuery::new_commitment(

@@ -30,6 +30,8 @@ impl<'params, C: CurveAffine> Verifier<'params, IPACommitmentScheme<C>>
     type Guard = GuardIPA<'params, C>;
     type MSMAccumulator = MSMIPA<'params, C>;
 
+    const QUERY_INSTANCE: bool = true;
+
     fn new(params: &'params ParamsVerifierIPA<C>) -> Self {
         Self { params }
     }
