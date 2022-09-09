@@ -3,11 +3,10 @@ use std::{io, marker::PhantomData};
 use group::ff::Field;
 use pasta_curves::arithmetic::CurveAffine;
 use rand_core::{OsRng, RngCore};
-use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
 use super::{verify_proof, VerificationStrategy};
 use crate::{
-    multicore,
+    multicore::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator},
     plonk::{Error, VerifyingKey},
     poly::commitment::{Guard, Params, MSM},
     transcript::{Blake2bRead, EncodedChallenge, TranscriptRead},

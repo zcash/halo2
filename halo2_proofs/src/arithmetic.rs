@@ -247,7 +247,7 @@ pub fn recursive_butterfly_arithmetic<G: Group>(
         a[1].group_sub(&t);
     } else {
         let (left, right) = a.split_at_mut(n / 2);
-        rayon::join(
+        multicore::join(
             || recursive_butterfly_arithmetic(left, n / 2, twiddle_chunk * 2, twiddles),
             || recursive_butterfly_arithmetic(right, n / 2, twiddle_chunk * 2, twiddles),
         );
