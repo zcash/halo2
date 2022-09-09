@@ -84,6 +84,7 @@ impl<'r, 'params: 'r, C: CurveAffine> VerifierQuery<'r, 'params, C> {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Copy, Clone, Debug)]
 enum CommitmentReference<'r, 'params: 'r, C: CurveAffine> {
     Commitment(&'r C),
