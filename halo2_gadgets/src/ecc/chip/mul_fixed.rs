@@ -299,7 +299,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
                 || y,
             )?;
 
-            NonIdentityEccPoint { x, y }
+            NonIdentityEccPoint::from_coordinates_unchecked(x, y)
         };
 
         // Assign u = (y_p + z_w).sqrt()

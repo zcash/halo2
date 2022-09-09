@@ -109,7 +109,7 @@ impl Config {
         }
 
         // Use x_a, y_a output from incomplete addition
-        let mut acc = EccPoint { x: x_a.0, y: y_a.0 };
+        let mut acc = EccPoint::from_coordinates_unchecked(x_a.0, y_a.0);
 
         // Copy running sum `z` from incomplete addition
         let mut z = {
@@ -176,10 +176,7 @@ impl Config {
             };
 
             // U = P if the bit is set; U = -P is the bit is not set.
-            let U = EccPoint {
-                x: base.x.clone(),
-                y: y_p,
-            };
+            let U = EccPoint::from_coordinates_unchecked(base.x.clone(), y_p);
 
             // Acc + U
             let tmp_acc = self

@@ -375,10 +375,7 @@ impl Config {
         let x_cell = region.assign_advice(|| "x", self.add_config.x_p, offset, || x)?;
         let y_cell = region.assign_advice(|| "y", self.add_config.y_p, offset, || y)?;
 
-        let p = EccPoint {
-            x: x_cell,
-            y: y_cell,
-        };
+        let p = EccPoint::from_coordinates_unchecked(x_cell, y_cell);
 
         // Return the result of the final complete addition as `[scalar]B`
         let result = self.add_config.assign_region(&p, &acc, offset, region)?;

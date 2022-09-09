@@ -194,10 +194,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                     || y_val,
                 )?;
 
-                Ok(EccPoint {
-                    x: magnitude_mul.x,
-                    y: y_var,
-                })
+                Ok(EccPoint::from_coordinates_unchecked(magnitude_mul.x, y_var))
             },
         )?;
 

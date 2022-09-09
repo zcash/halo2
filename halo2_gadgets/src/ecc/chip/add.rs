@@ -315,10 +315,7 @@ impl Config {
         let y_r = r.map(|r| r.1);
         let y_r_cell = region.assign_advice(|| "y_r", self.y_qr, offset + 1, || y_r)?;
 
-        let result = EccPoint {
-            x: x_r_cell,
-            y: y_r_cell,
-        };
+        let result = EccPoint::from_coordinates_unchecked(x_r_cell, y_r_cell);
 
         #[cfg(test)]
         // Check that the correct sum is obtained.
