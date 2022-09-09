@@ -111,6 +111,7 @@ impl<C: CurveAffine, SinsemillaChip, const K: usize, const MAX_WORDS: usize>
 where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
 {
+    #![allow(dead_code)]
     fn from_bitstring(
         chip: SinsemillaChip,
         mut layouter: impl Layouter<C::Base>,
@@ -185,6 +186,7 @@ impl<C: CurveAffine, SinsemillaChip, const K: usize, const MAX_WORDS: usize>
 where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
 {
+    #![allow(dead_code)]
     fn from_bitstring(
         chip: SinsemillaChip,
         layouter: impl Layouter<C::Base>,

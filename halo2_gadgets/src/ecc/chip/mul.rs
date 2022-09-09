@@ -29,7 +29,6 @@ const NUM_COMPLETE_BITS: usize = 3;
 
 // Bits used in incomplete addition. k_{254} to k_{4} inclusive
 const INCOMPLETE_LEN: usize = pallas::Scalar::NUM_BITS as usize - 1 - NUM_COMPLETE_BITS;
-const INCOMPLETE_RANGE: Range<usize> = 0..INCOMPLETE_LEN;
 
 // Bits k_{254} to k_{4} inclusive are used in incomplete addition.
 // The `hi` half is k_{254} to k_{130} inclusive (length 125 bits).

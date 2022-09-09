@@ -67,22 +67,6 @@ impl Config {
         config
     }
 
-    pub(crate) fn advice_columns(&self) -> HashSet<Column<Advice>> {
-        [
-            self.x_p,
-            self.y_p,
-            self.x_qr,
-            self.y_qr,
-            self.lambda,
-            self.alpha,
-            self.beta,
-            self.gamma,
-            self.delta,
-        ]
-        .into_iter()
-        .collect()
-    }
-
     pub(crate) fn output_columns(&self) -> HashSet<Column<Advice>> {
         [self.x_qr, self.y_qr].into_iter().collect()
     }

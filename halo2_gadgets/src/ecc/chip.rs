@@ -379,6 +379,7 @@ struct EccBaseFieldElemFixed {
 }
 
 impl EccBaseFieldElemFixed {
+    #![allow(dead_code)]
     fn base_field_elem(&self) -> AssignedCell<pallas::Base, pallas::Base> {
         self.base_field_elem.clone()
     }
