@@ -1,15 +1,13 @@
-use std::{io, marker::PhantomData};
-
 use group::ff::Field;
 use pasta_curves::arithmetic::CurveAffine;
-use rand_core::{OsRng, RngCore};
+use rand_core::OsRng;
 
 use super::{verify_proof, VerificationStrategy};
 use crate::{
     multicore::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator},
     plonk::{Error, VerifyingKey},
     poly::commitment::{Guard, Params, MSM},
-    transcript::{Blake2bRead, EncodedChallenge, TranscriptRead},
+    transcript::{Blake2bRead, EncodedChallenge},
 };
 
 /// A proof verification strategy that returns the proof's MSM.

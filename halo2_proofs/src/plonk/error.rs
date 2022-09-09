@@ -1,4 +1,3 @@
-use std::cmp;
 use std::error;
 use std::fmt;
 use std::io;

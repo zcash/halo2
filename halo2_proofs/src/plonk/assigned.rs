@@ -446,12 +446,11 @@ mod tests {
 mod proptests {
     use std::{
         cmp,
-        convert::TryFrom,
         ops::{Add, Mul, Neg, Sub},
     };
 
     use group::ff::Field;
-    use pasta_curves::{arithmetic::FieldExt, Fp};
+    use pasta_curves::Fp;
     use proptest::{collection::vec, prelude::*, sample::select};
 
     use super::Assigned;

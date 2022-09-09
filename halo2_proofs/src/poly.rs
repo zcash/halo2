@@ -17,7 +17,7 @@ mod evaluator;
 pub mod multiopen;
 
 pub use domain::*;
-pub use evaluator::*;
+pub(crate) use evaluator::*;
 
 /// This is an error that could occur during proving or circuit synthesis.
 // TODO: these errors need to be cleaned up

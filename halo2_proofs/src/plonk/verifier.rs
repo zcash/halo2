@@ -1,6 +1,5 @@
 use ff::Field;
 use group::Curve;
-use rand_core::RngCore;
 use std::iter;
 
 use super::{

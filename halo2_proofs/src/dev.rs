@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fmt;
 use std::iter;
 use std::ops::{Add, Mul, Neg, Range};
 
@@ -13,10 +12,9 @@ use crate::{
     arithmetic::{FieldExt, Group},
     circuit,
     plonk::{
-        permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
-        Expression, Fixed, FloorPlanner, Instance, Selector, VirtualCell,
+        permutation, Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Expression,
+        Fixed, FloorPlanner, Instance, Selector,
     },
-    poly::Rotation,
 };
 
 pub mod metadata;

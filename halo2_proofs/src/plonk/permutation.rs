@@ -1,15 +1,12 @@
 use super::circuit::{Any, Column};
 use crate::{
     arithmetic::CurveAffine,
-    helpers::CurveRead,
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
 };
 
 pub(crate) mod keygen;
 pub(crate) mod prover;
 pub(crate) mod verifier;
-
-use std::io;
 
 /// A permutation argument.
 #[derive(Debug, Clone)]

@@ -1,6 +1,6 @@
 //! Traits and structs for implementing circuit components.
 
-use std::{convert::TryInto, fmt, marker::PhantomData};
+use std::{fmt, marker::PhantomData};
 
 use ff::Field;
 

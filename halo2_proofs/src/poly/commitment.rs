@@ -309,7 +309,7 @@ fn test_opening_proof() {
         commitment::{Blind, Params},
         EvaluationDomain,
     };
-    use crate::arithmetic::{eval_polynomial, FieldExt};
+    use crate::arithmetic::eval_polynomial;
     use crate::pasta::{EpAffine, Fq};
     use crate::transcript::{
         Blake2bRead, Blake2bWrite, Challenge255, Transcript, TranscriptRead, TranscriptWrite,

@@ -253,7 +253,7 @@ fn test_roundtrip() {
     use rand_core::OsRng;
 
     use super::commitment::{Blind, Params};
-    use crate::arithmetic::{eval_polynomial, FieldExt};
+    use crate::arithmetic::eval_polynomial;
     use crate::pasta::{EqAffine, Fp};
     use crate::transcript::Challenge255;
 
@@ -361,9 +361,7 @@ fn test_roundtrip() {
 
 #[cfg(test)]
 mod tests {
-    use super::{construct_intermediate_sets, Query};
-    use crate::arithmetic::FieldExt;
-    use crate::pasta::Fp;
+    use super::Query;
 
     #[derive(Clone)]
     struct MyQuery<F> {
@@ -390,18 +388,11 @@ mod tests {
 
 #[cfg(test)]
 mod proptests {
-    use proptest::{
-        collection::vec,
-        prelude::*,
-        sample::{select, subsequence},
-        strategy::Strategy,
-    };
+    use proptest::{collection::vec, prelude::*, sample::select};
 
     use super::construct_intermediate_sets;
-    use crate::poly::Rotation;
     use pasta_curves::{arithmetic::FieldExt, Fp};
 
-    use std::collections::BTreeMap;
     use std::convert::TryFrom;
 
     #[derive(Debug, Clone)]
