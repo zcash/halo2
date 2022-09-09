@@ -49,7 +49,7 @@ pub fn create_proof<
     // Evaluate the random polynomial at x_3
     let s_at_x3 = eval_polynomial(&s_poly[..], x_3);
     // Subtract constant coefficient to get a random polynomial with a root at x_3
-    s_poly[0] = s_poly[0] - &s_at_x3;
+    s_poly[0] -= &s_at_x3;
     // And sample a random blind
     let s_poly_blind = Blind(C::Scalar::random(&mut rng));
 
@@ -70,7 +70,7 @@ pub fn create_proof<
     // zero.
     let mut p_prime_poly = s_poly * xi + p_poly;
     let v = eval_polynomial(&p_prime_poly, x_3);
-    p_prime_poly[0] = p_prime_poly[0] - &v;
+    p_prime_poly[0] -= &v;
     let p_prime_blind = s_poly_blind * Blind(xi) + p_blind;
 
     // This accumulates the synthetic blinding factor `f` starting
@@ -124,6 +124,7 @@ pub fn create_proof<
 
         // Collapse `p_prime` and `b`.
         // TODO: parallelize
+        #[allow(clippy::assign_op_pattern)]
         for i in 0..half {
             p_prime[i] = p_prime[i] + &(p_prime[i + half] * &u_j_inv);
             b[i] = b[i] + &(b[i + half] * &u_j);
