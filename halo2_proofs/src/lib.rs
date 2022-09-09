@@ -4,7 +4,6 @@
 // The actual lints we want to disable.
 #![allow(
     clippy::op_ref,
-    clippy::too_many_arguments,
     clippy::suspicious_arithmetic_impl,
     clippy::many_single_char_names,
     clippy::same_item_push,

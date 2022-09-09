@@ -61,6 +61,7 @@ impl<C: CurveAffine> Argument<C> {
 }
 
 impl<C: CurveAffine> Committed<C> {
+    #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn construct<
         E: EncodedChallenge<C>,
         Ev: Copy + Send + Sync,
