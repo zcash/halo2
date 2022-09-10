@@ -674,52 +674,6 @@
 <span id="659">659</span>
 <span id="660">660</span>
 <span id="661">661</span>
-<span id="662">662</span>
-<span id="663">663</span>
-<span id="664">664</span>
-<span id="665">665</span>
-<span id="666">666</span>
-<span id="667">667</span>
-<span id="668">668</span>
-<span id="669">669</span>
-<span id="670">670</span>
-<span id="671">671</span>
-<span id="672">672</span>
-<span id="673">673</span>
-<span id="674">674</span>
-<span id="675">675</span>
-<span id="676">676</span>
-<span id="677">677</span>
-<span id="678">678</span>
-<span id="679">679</span>
-<span id="680">680</span>
-<span id="681">681</span>
-<span id="682">682</span>
-<span id="683">683</span>
-<span id="684">684</span>
-<span id="685">685</span>
-<span id="686">686</span>
-<span id="687">687</span>
-<span id="688">688</span>
-<span id="689">689</span>
-<span id="690">690</span>
-<span id="691">691</span>
-<span id="692">692</span>
-<span id="693">693</span>
-<span id="694">694</span>
-<span id="695">695</span>
-<span id="696">696</span>
-<span id="697">697</span>
-<span id="698">698</span>
-<span id="699">699</span>
-<span id="700">700</span>
-<span id="701">701</span>
-<span id="702">702</span>
-<span id="703">703</span>
-<span id="704">704</span>
-<span id="705">705</span>
-<span id="706">706</span>
-<span id="707">707</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{
     cmp,
     collections::{HashMap, HashSet},
@@ -860,82 +814,30 @@
         F: FieldExt,
         B: BasisOps,
     {
-        <span class="comment">// Traverse `ast` to collect the used leaves.
-        </span><span class="kw">fn </span>collect_rotations&lt;E: Copy, F: Field, B: Basis&gt;(
-            ast: <span class="kw-2">&amp;</span>Ast&lt;E, F, B&gt;,
-        ) -&gt; HashSet&lt;AstLeaf&lt;E, B&gt;&gt; {
-            <span class="kw">match </span>ast {
-                Ast::Poly(leaf) =&gt; <span class="macro">vec!</span>[<span class="kw-2">*</span>leaf].into_iter().collect(),
-                Ast::Add(a, b) | Ast::Mul(AstMul(a, b)) =&gt; {
-                    <span class="kw">let </span>lhs = collect_rotations(a);
-                    <span class="kw">let </span>rhs = collect_rotations(b);
-                    lhs.union(<span class="kw-2">&amp;</span>rhs).cloned().collect()
-                }
-                Ast::Scale(a, <span class="kw">_</span>) =&gt; collect_rotations(a),
-                Ast::DistributePowers(terms, <span class="kw">_</span>) =&gt; terms
-                    .iter()
-                    .flat_map(|term| collect_rotations(term).into_iter())
-                    .collect(),
-                Ast::LinearTerm(<span class="kw">_</span>) | Ast::ConstantTerm(<span class="kw">_</span>) =&gt; HashSet::default(),
-            }
-        }
-        <span class="kw">let </span>leaves = collect_rotations(ast);
-
-        <span class="comment">// Produce a map from each leaf to the rotated polynomial it corresponds to, if
-        // any (or None if the leaf uses an unrotated polynomial).
-        </span><span class="kw">let </span>rotated: HashMap&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt; = leaves
-            .iter()
-            .cloned()
-            .map(|leaf| {
-                (
-                    leaf,
-                    <span class="kw">if </span>leaf.rotation == Rotation::cur() {
-                        <span class="comment">// We can use the polynomial as-is for this leaf.
-                        </span><span class="prelude-val">None
-                    </span>} <span class="kw">else </span>{
-                        <span class="prelude-val">Some</span>(B::rotate(domain, <span class="kw-2">&amp;</span><span class="self">self</span>.polys[leaf.index], leaf.rotation))
-                    },
-                )
-            })
-            .collect();
-
         <span class="comment">// We&#39;re working in a single basis, so all polynomials are the same length.
         </span><span class="kw">let </span>poly_len = <span class="self">self</span>.polys.first().unwrap().len();
-        <span class="kw">let </span>(chunk_size, num_chunks) = get_chunk_params(poly_len);
+        <span class="kw">let </span>(chunk_size, _num_chunks) = get_chunk_params(poly_len);
 
-        <span class="comment">// Split each rotated and unrotated polynomial into chunks.
-        </span><span class="kw">let </span>chunks: Vec&lt;HashMap&lt;<span class="kw">_</span>, <span class="kw">_</span>&gt;&gt; = (<span class="number">0</span>..num_chunks)
-            .map(|i| {
-                rotated
-                    .iter()
-                    .map(|(leaf, poly)| {
-                        (
-                            <span class="kw-2">*</span>leaf,
-                            poly.as_ref()
-                                .unwrap_or(<span class="kw-2">&amp;</span><span class="self">self</span>.polys[leaf.index])
-                                .chunks(chunk_size)
-                                .nth(i)
-                                .expect(<span class="string">&quot;num_chunks was calculated correctly&quot;</span>),
-                        )
-                    })
-                    .collect()
-            })
-            .collect();
-
-        <span class="kw">struct </span>AstContext&lt;<span class="lifetime">&#39;a</span>, E, F: FieldExt, B: Basis&gt; {
+        <span class="kw">struct </span>AstContext&lt;<span class="lifetime">&#39;a</span>, F: FieldExt, B: Basis&gt; {
             domain: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>EvaluationDomain&lt;F&gt;,
             poly_len: usize,
             chunk_size: usize,
             chunk_index: usize,
-            leaves: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>HashMap&lt;AstLeaf&lt;E, B&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[F]&gt;,
+            polys: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Polynomial&lt;F, B&gt;],
         }
 
         <span class="kw">fn </span>recurse&lt;E, F: FieldExt, B: BasisOps&gt;(
             ast: <span class="kw-2">&amp;</span>Ast&lt;E, F, B&gt;,
-            ctx: <span class="kw-2">&amp;</span>AstContext&lt;<span class="lifetime">&#39;_</span>, E, F, B&gt;,
+            ctx: <span class="kw-2">&amp;</span>AstContext&lt;<span class="lifetime">&#39;_</span>, F, B&gt;,
         ) -&gt; Vec&lt;F&gt; {
             <span class="kw">match </span>ast {
-                Ast::Poly(leaf) =&gt; ctx.leaves.get(leaf).expect(<span class="string">&quot;We prepared this&quot;</span>).to_vec(),
+                Ast::Poly(leaf) =&gt; B::get_chunk_of_rotated(
+                    ctx.domain,
+                    ctx.chunk_size,
+                    ctx.chunk_index,
+                    <span class="kw-2">&amp;</span>ctx.polys[leaf.index],
+                    leaf.rotation,
+                ),
                 Ast::Add(a, b) =&gt; {
                     <span class="kw">let </span><span class="kw-2">mut </span>lhs = recurse(a, ctx);
                     <span class="kw">let </span>rhs = recurse(b, ctx);
@@ -987,16 +889,14 @@
         // polynomial.
         </span><span class="kw">let </span><span class="kw-2">mut </span>result = B::empty_poly(domain);
         multicore::scope(|scope| {
-            <span class="kw">for </span>(chunk_index, (out, leaves)) <span class="kw">in
-                </span>result.chunks_mut(chunk_size).zip(chunks.iter()).enumerate()
-            {
+            <span class="kw">for </span>(chunk_index, out) <span class="kw">in </span>result.chunks_mut(chunk_size).enumerate() {
                 scope.spawn(<span class="kw">move </span>|<span class="kw">_</span>| {
                     <span class="kw">let </span>ctx = AstContext {
                         domain,
                         poly_len,
                         chunk_size,
                         chunk_index,
-                        leaves,
+                        polys: <span class="kw-2">&amp;</span><span class="self">self</span>.polys,
                     };
                     out.copy_from_slice(<span class="kw-2">&amp;</span>recurse(ast, <span class="kw-2">&amp;</span>ctx));
                 });
@@ -1233,11 +1133,13 @@
         chunk_index: usize,
         scalar: F,
     ) -&gt; Vec&lt;F&gt;;
-    <span class="kw">fn </span>rotate&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>get_chunk_of_rotated&lt;F: FieldExt&gt;(
         domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
+        chunk_size: usize,
+        chunk_index: usize,
         poly: <span class="kw-2">&amp;</span>Polynomial&lt;F, <span class="self">Self</span>&gt;,
         rotation: Rotation,
-    ) -&gt; Polynomial&lt;F, <span class="self">Self</span>&gt;;
+    ) -&gt; Vec&lt;F&gt;;
 }
 
 <span class="kw">impl </span>BasisOps <span class="kw">for </span>Coeff {
@@ -1280,11 +1182,13 @@
         chunk
     }
 
-    <span class="kw">fn </span>rotate&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>get_chunk_of_rotated&lt;F: FieldExt&gt;(
         <span class="kw">_</span>: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
+        <span class="kw">_</span>: usize,
+        <span class="kw">_</span>: usize,
         <span class="kw">_</span>: <span class="kw-2">&amp;</span>Polynomial&lt;F, <span class="self">Self</span>&gt;,
         <span class="kw">_</span>: Rotation,
-    ) -&gt; Polynomial&lt;F, <span class="self">Self</span>&gt; {
+    ) -&gt; Vec&lt;F&gt; {
         <span class="macro">panic!</span>(<span class="string">&quot;Can&#39;t rotate polynomials in the standard basis&quot;</span>)
     }
 }
@@ -1322,12 +1226,14 @@
             .collect()
     }
 
-    <span class="kw">fn </span>rotate&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>get_chunk_of_rotated&lt;F: FieldExt&gt;(
         <span class="kw">_</span>: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
+        chunk_size: usize,
+        chunk_index: usize,
         poly: <span class="kw-2">&amp;</span>Polynomial&lt;F, <span class="self">Self</span>&gt;,
         rotation: Rotation,
-    ) -&gt; Polynomial&lt;F, <span class="self">Self</span>&gt; {
-        poly.rotate(rotation)
+    ) -&gt; Vec&lt;F&gt; {
+        poly.get_chunk_of_rotated(rotation, chunk_size, chunk_index)
     }
 }
 
@@ -1367,12 +1273,14 @@
             .collect()
     }
 
-    <span class="kw">fn </span>rotate&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>get_chunk_of_rotated&lt;F: FieldExt&gt;(
         domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
+        chunk_size: usize,
+        chunk_index: usize,
         poly: <span class="kw-2">&amp;</span>Polynomial&lt;F, <span class="self">Self</span>&gt;,
         rotation: Rotation,
-    ) -&gt; Polynomial&lt;F, <span class="self">Self</span>&gt; {
-        domain.rotate_extended(poly, rotation)
+    ) -&gt; Vec&lt;F&gt; {
+        domain.get_chunk_of_rotated_extended(poly, rotation, chunk_size, chunk_index)
     }
 }
 
@@ -1428,4 +1336,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (2e35f954a 2022-09-01)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>

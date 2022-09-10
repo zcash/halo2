@@ -262,6 +262,122 @@
 <span id="247">247</span>
 <span id="248">248</span>
 <span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains utilities for performing arithmetic over univariate polynomials in
 //! various forms, including computing commitments to them and provably opening
 //! the committed polynomials at arbitrary points.
@@ -473,6 +589,82 @@
             _marker: PhantomData,
         }
     }
+
+    <span class="doccomment">/// Gets the specified chunk of the rotated version of this polynomial.
+    ///
+    /// Equivalent to:
+    /// ```ignore
+    /// self.rotate(rotation)
+    ///     .chunks(chunk_size)
+    ///     .nth(chunk_index)
+    ///     .unwrap()
+    ///     .to_vec()
+    /// ```
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_chunk_of_rotated(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        rotation: Rotation,
+        chunk_size: usize,
+        chunk_index: usize,
+    ) -&gt; Vec&lt;F&gt; {
+        <span class="self">self</span>.get_chunk_of_rotated_helper(
+            rotation.<span class="number">0 </span>&lt; <span class="number">0</span>,
+            rotation.<span class="number">0</span>.unsigned_abs() <span class="kw">as </span>usize,
+            chunk_size,
+            chunk_index,
+        )
+    }
+}
+
+<span class="kw">impl</span>&lt;F: Clone + Copy, B&gt; Polynomial&lt;F, B&gt; {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_chunk_of_rotated_helper(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        rotation_is_negative: bool,
+        rotation_abs: usize,
+        chunk_size: usize,
+        chunk_index: usize,
+    ) -&gt; Vec&lt;F&gt; {
+        <span class="comment">// Compute the lengths such that when applying the rotation, the first `mid`
+        // coefficients move to the end, and the last `k` coefficients move to the front.
+        // The coefficient previously at `mid` will be the first coefficient in the
+        // rotated polynomial, and the position from which chunk indexing begins.
+        </span><span class="attribute">#[allow(clippy::branches_sharing_code)]
+        </span><span class="kw">let </span>(mid, k) = <span class="kw">if </span>rotation_is_negative {
+            <span class="kw">let </span>k = rotation_abs;
+            <span class="macro">assert!</span>(k &lt;= <span class="self">self</span>.len());
+            <span class="kw">let </span>mid = <span class="self">self</span>.len() - k;
+            (mid, k)
+        } <span class="kw">else </span>{
+            <span class="kw">let </span>mid = rotation_abs;
+            <span class="macro">assert!</span>(mid &lt;= <span class="self">self</span>.len());
+            <span class="kw">let </span>k = <span class="self">self</span>.len() - mid;
+            (mid, k)
+        };
+
+        <span class="comment">// Compute [chunk_start..chunk_end], the range of the chunk within the rotated
+        // polynomial.
+        </span><span class="kw">let </span>chunk_start = chunk_size * chunk_index;
+        <span class="kw">let </span>chunk_end = <span class="self">self</span>.len().min(chunk_size * (chunk_index + <span class="number">1</span>));
+
+        <span class="kw">if </span>chunk_end &lt; k {
+            <span class="comment">// The chunk is entirely in the last `k` coefficients of the unrotated
+            // polynomial.
+            </span><span class="self">self</span>.values[mid + chunk_start..mid + chunk_end].to_vec()
+        } <span class="kw">else if </span>chunk_start &gt;= k {
+            <span class="comment">// The chunk is entirely in the first `mid` coefficients of the unrotated
+            // polynomial.
+            </span><span class="self">self</span>.values[chunk_start - k..chunk_end - k].to_vec()
+        } <span class="kw">else </span>{
+            <span class="comment">// The chunk falls across the boundary between the last `k` and first `mid`
+            // coefficients of the unrotated polynomial. Splice the halves together.
+            </span><span class="kw">let </span>chunk = <span class="self">self</span>.values[mid + chunk_start..]
+                .iter()
+                .chain(<span class="kw-2">&amp;</span><span class="self">self</span>.values[..chunk_end - k])
+                .copied()
+                .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+            <span class="macro">assert!</span>(chunk.len() &lt;= chunk_size);
+            chunk
+        }
+    }
 }
 
 <span class="kw">impl</span>&lt;F: Field, B: Basis&gt; Mul&lt;F&gt; <span class="kw">for </span>Polynomial&lt;F, B&gt; {
@@ -511,5 +703,45 @@
         Rotation(<span class="number">1</span>)
     }
 }
+
+<span class="attribute">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use </span>ff::Field;
+    <span class="kw">use </span>pasta_curves::pallas;
+    <span class="kw">use </span>rand_core::OsRng;
+
+    <span class="kw">use super</span>::{EvaluationDomain, Polynomial, Rotation};
+
+    <span class="attribute">#[test]
+    </span><span class="kw">fn </span>test_get_chunk_of_rotated() {
+        <span class="kw">let </span>k = <span class="number">11</span>;
+        <span class="kw">let </span>domain = EvaluationDomain::&lt;pallas::Base&gt;::new(<span class="number">1</span>, k);
+
+        <span class="comment">// Create a random polynomial.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>poly = domain.empty_lagrange();
+        <span class="kw">for </span>coefficient <span class="kw">in </span>poly.iter_mut() {
+            <span class="kw-2">*</span>coefficient = pallas::Base::random(OsRng);
+        }
+
+        <span class="comment">// Pick a chunk size that is guaranteed to not be a multiple of the polynomial
+        // length.
+        </span><span class="kw">let </span>chunk_size = <span class="number">7</span>;
+
+        <span class="kw">for </span>rotation <span class="kw">in </span>[
+            Rotation(-<span class="number">6</span>),
+            Rotation::prev(),
+            Rotation::cur(),
+            Rotation::next(),
+            Rotation(<span class="number">12</span>),
+        ] {
+            <span class="kw">for </span>(chunk_index, chunk) <span class="kw">in </span>poly.rotate(rotation).chunks(chunk_size).enumerate() {
+                <span class="macro">assert_eq!</span>(
+                    poly.get_chunk_of_rotated(rotation, chunk_size, chunk_index),
+                    chunk
+                );
+            }
+        }
+    }
+}
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (2e35f954a 2022-09-01)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>

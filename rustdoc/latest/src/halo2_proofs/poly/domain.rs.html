@@ -560,6 +560,65 @@
 <span id="545">545</span>
 <span id="546">546</span>
 <span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
+<span id="563">563</span>
+<span id="564">564</span>
+<span id="565">565</span>
+<span id="566">566</span>
+<span id="567">567</span>
+<span id="568">568</span>
+<span id="569">569</span>
+<span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
+<span id="576">576</span>
+<span id="577">577</span>
+<span id="578">578</span>
+<span id="579">579</span>
+<span id="580">580</span>
+<span id="581">581</span>
+<span id="582">582</span>
+<span id="583">583</span>
+<span id="584">584</span>
+<span id="585">585</span>
+<span id="586">586</span>
+<span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains utilities for performing polynomial arithmetic over an evaluation
 //! domain that is of a suitable size for the application.
 
@@ -832,6 +891,27 @@
         }
 
         poly
+    }
+
+    <span class="doccomment">/// Gets the specified chunk of the rotated version of this polynomial.
+    ///
+    /// Equivalent to:
+    /// ```ignore
+    /// self.rotate_extended(poly, rotation)
+    ///     .chunks(chunk_size)
+    ///     .nth(chunk_index)
+    ///     .unwrap()
+    ///     .to_vec()
+    /// ```
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_chunk_of_rotated_extended(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        poly: <span class="kw-2">&amp;</span>Polynomial&lt;G, ExtendedLagrangeCoeff&gt;,
+        rotation: Rotation,
+        chunk_size: usize,
+        chunk_index: usize,
+    ) -&gt; Vec&lt;G&gt; {
+        <span class="kw">let </span>new_rotation = ((<span class="number">1 </span>&lt;&lt; (<span class="self">self</span>.extended_k - <span class="self">self</span>.k)) * rotation.<span class="number">0</span>.abs()) <span class="kw">as </span>usize;
+        poly.get_chunk_of_rotated_helper(rotation.<span class="number">0 </span>&lt; <span class="number">0</span>, new_rotation, chunk_size, chunk_index)
     }
 
     <span class="doccomment">/// This takes us from the extended evaluation domain and gets us the
@@ -1107,5 +1187,43 @@
         <span class="macro">assert_eq!</span>(eval_polynomial(<span class="kw-2">&amp;</span>l[(<span class="number">8 </span>- i) % <span class="number">8</span>][..], x), evaluations[<span class="number">7 </span>- i]);
     }
 }
+
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_get_chunk_of_rotated_extended() {
+    <span class="kw">use </span>pasta_curves::pallas;
+    <span class="kw">use </span>rand_core::OsRng;
+
+    <span class="kw">let </span>k = <span class="number">11</span>;
+    <span class="kw">let </span>domain = EvaluationDomain::&lt;pallas::Base&gt;::new(<span class="number">3</span>, k);
+
+    <span class="comment">// Create a random polynomial.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>poly = domain.empty_extended();
+    <span class="kw">for </span>coefficient <span class="kw">in </span>poly.iter_mut() {
+        <span class="kw-2">*</span>coefficient = pallas::Base::random(OsRng);
+    }
+
+    <span class="comment">// Pick a chunk size that is guaranteed to not be a multiple of the polynomial
+    // length.
+    </span><span class="kw">let </span>chunk_size = <span class="number">7</span>;
+
+    <span class="kw">for </span>rotation <span class="kw">in </span>[
+        Rotation(-<span class="number">6</span>),
+        Rotation::prev(),
+        Rotation::cur(),
+        Rotation::next(),
+        Rotation(<span class="number">12</span>),
+    ] {
+        <span class="kw">for </span>(chunk_index, chunk) <span class="kw">in </span>domain
+            .rotate_extended(<span class="kw-2">&amp;</span>poly, rotation)
+            .chunks(chunk_size)
+            .enumerate()
+        {
+            <span class="macro">assert_eq!</span>(
+                domain.get_chunk_of_rotated_extended(<span class="kw-2">&amp;</span>poly, rotation, chunk_size, chunk_index),
+                chunk
+            );
+        }
+    }
+}
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (2e35f954a 2022-09-01)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
