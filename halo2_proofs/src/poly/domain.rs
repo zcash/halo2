@@ -272,6 +272,27 @@ impl<G: Group> EvaluationDomain<G> {
         poly
     }
 
+    /// Gets the specified chunk of the rotated version of this polynomial.
+    ///
+    /// Equivalent to:
+    /// ```ignore
+    /// self.rotate_extended(poly, rotation)
+    ///     .chunks(chunk_size)
+    ///     .nth(chunk_index)
+    ///     .unwrap()
+    ///     .to_vec()
+    /// ```
+    pub(crate) fn get_chunk_of_rotated_extended(
+        &self,
+        poly: &Polynomial<G, ExtendedLagrangeCoeff>,
+        rotation: Rotation,
+        chunk_size: usize,
+        chunk_index: usize,
+    ) -> Vec<G> {
+        let new_rotation = ((1 << (self.extended_k - self.k)) * rotation.0.abs()) as usize;
+        poly.get_chunk_of_rotated_helper(rotation.0 < 0, new_rotation, chunk_size, chunk_index)
+    }
+
     /// This takes us from the extended evaluation domain and gets us the
     /// quotient polynomial coefficients.
     ///
@@ -543,5 +564,43 @@ fn test_l_i() {
     for i in 0..8 {
         assert_eq!(eval_polynomial(&l[i][..], x), evaluations[7 + i]);
         assert_eq!(eval_polynomial(&l[(8 - i) % 8][..], x), evaluations[7 - i]);
+    }
+}
+
+#[test]
+fn test_get_chunk_of_rotated_extended() {
+    use pasta_curves::pallas;
+    use rand_core::OsRng;
+
+    let k = 11;
+    let domain = EvaluationDomain::<pallas::Base>::new(3, k);
+
+    // Create a random polynomial.
+    let mut poly = domain.empty_extended();
+    for coefficient in poly.iter_mut() {
+        *coefficient = pallas::Base::random(OsRng);
+    }
+
+    // Pick a chunk size that is guaranteed to not be a multiple of the polynomial
+    // length.
+    let chunk_size = 7;
+
+    for rotation in [
+        Rotation(-6),
+        Rotation::prev(),
+        Rotation::cur(),
+        Rotation::next(),
+        Rotation(12),
+    ] {
+        for (chunk_index, chunk) in domain
+            .rotate_extended(&poly, rotation)
+            .chunks(chunk_size)
+            .enumerate()
+        {
+            assert_eq!(
+                domain.get_chunk_of_rotated_extended(&poly, rotation, chunk_size, chunk_index),
+                chunk
+            );
+        }
     }
 }

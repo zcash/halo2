@@ -138,82 +138,30 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
         F: FieldExt,
         B: BasisOps,
     {
-        // Traverse `ast` to collect the used leaves.
-        fn collect_rotations<E: Copy, F: Field, B: Basis>(
-            ast: &Ast<E, F, B>,
-        ) -> HashSet<AstLeaf<E, B>> {
-            match ast {
-                Ast::Poly(leaf) => vec![*leaf].into_iter().collect(),
-                Ast::Add(a, b) | Ast::Mul(AstMul(a, b)) => {
-                    let lhs = collect_rotations(a);
-                    let rhs = collect_rotations(b);
-                    lhs.union(&rhs).cloned().collect()
-                }
-                Ast::Scale(a, _) => collect_rotations(a),
-                Ast::DistributePowers(terms, _) => terms
-                    .iter()
-                    .flat_map(|term| collect_rotations(term).into_iter())
-                    .collect(),
-                Ast::LinearTerm(_) | Ast::ConstantTerm(_) => HashSet::default(),
-            }
-        }
-        let leaves = collect_rotations(ast);
-
-        // Produce a map from each leaf to the rotated polynomial it corresponds to, if
-        // any (or None if the leaf uses an unrotated polynomial).
-        let rotated: HashMap<_, _> = leaves
-            .iter()
-            .cloned()
-            .map(|leaf| {
-                (
-                    leaf,
-                    if leaf.rotation == Rotation::cur() {
-                        // We can use the polynomial as-is for this leaf.
-                        None
-                    } else {
-                        Some(B::rotate(domain, &self.polys[leaf.index], leaf.rotation))
-                    },
-                )
-            })
-            .collect();
-
         // We're working in a single basis, so all polynomials are the same length.
         let poly_len = self.polys.first().unwrap().len();
-        let (chunk_size, num_chunks) = get_chunk_params(poly_len);
+        let (chunk_size, _num_chunks) = get_chunk_params(poly_len);
 
-        // Split each rotated and unrotated polynomial into chunks.
-        let chunks: Vec<HashMap<_, _>> = (0..num_chunks)
-            .map(|i| {
-                rotated
-                    .iter()
-                    .map(|(leaf, poly)| {
-                        (
-                            *leaf,
-                            poly.as_ref()
-                                .unwrap_or(&self.polys[leaf.index])
-                                .chunks(chunk_size)
-                                .nth(i)
-                                .expect("num_chunks was calculated correctly"),
-                        )
-                    })
-                    .collect()
-            })
-            .collect();
-
-        struct AstContext<'a, E, F: FieldExt, B: Basis> {
+        struct AstContext<'a, F: FieldExt, B: Basis> {
             domain: &'a EvaluationDomain<F>,
             poly_len: usize,
             chunk_size: usize,
             chunk_index: usize,
-            leaves: &'a HashMap<AstLeaf<E, B>, &'a [F]>,
+            polys: &'a [Polynomial<F, B>],
         }
 
         fn recurse<E, F: FieldExt, B: BasisOps>(
             ast: &Ast<E, F, B>,
-            ctx: &AstContext<'_, E, F, B>,
+            ctx: &AstContext<'_, F, B>,
         ) -> Vec<F> {
             match ast {
-                Ast::Poly(leaf) => ctx.leaves.get(leaf).expect("We prepared this").to_vec(),
+                Ast::Poly(leaf) => B::get_chunk_of_rotated(
+                    ctx.domain,
+                    ctx.chunk_size,
+                    ctx.chunk_index,
+                    &ctx.polys[leaf.index],
+                    leaf.rotation,
+                ),
                 Ast::Add(a, b) => {
                     let mut lhs = recurse(a, ctx);
                     let rhs = recurse(b, ctx);
@@ -265,16 +213,14 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
         // polynomial.
         let mut result = B::empty_poly(domain);
         multicore::scope(|scope| {
-            for (chunk_index, (out, leaves)) in
-                result.chunks_mut(chunk_size).zip(chunks.iter()).enumerate()
-            {
+            for (chunk_index, out) in result.chunks_mut(chunk_size).enumerate() {
                 scope.spawn(move |_| {
                     let ctx = AstContext {
                         domain,
                         poly_len,
                         chunk_size,
                         chunk_index,
-                        leaves,
+                        polys: &self.polys,
                     };
                     out.copy_from_slice(&recurse(ast, &ctx));
                 });
@@ -511,11 +457,13 @@ pub(crate) trait BasisOps: Basis {
         chunk_index: usize,
         scalar: F,
     ) -> Vec<F>;
-    fn rotate<F: FieldExt>(
+    fn get_chunk_of_rotated<F: FieldExt>(
         domain: &EvaluationDomain<F>,
+        chunk_size: usize,
+        chunk_index: usize,
         poly: &Polynomial<F, Self>,
         rotation: Rotation,
-    ) -> Polynomial<F, Self>;
+    ) -> Vec<F>;
 }
 
 impl BasisOps for Coeff {
@@ -558,11 +506,13 @@ impl BasisOps for Coeff {
         chunk
     }
 
-    fn rotate<F: FieldExt>(
+    fn get_chunk_of_rotated<F: FieldExt>(
         _: &EvaluationDomain<F>,
+        _: usize,
+        _: usize,
         _: &Polynomial<F, Self>,
         _: Rotation,
-    ) -> Polynomial<F, Self> {
+    ) -> Vec<F> {
         panic!("Can't rotate polynomials in the standard basis")
     }
 }
@@ -600,12 +550,14 @@ impl BasisOps for LagrangeCoeff {
             .collect()
     }
 
-    fn rotate<F: FieldExt>(
+    fn get_chunk_of_rotated<F: FieldExt>(
         _: &EvaluationDomain<F>,
+        chunk_size: usize,
+        chunk_index: usize,
         poly: &Polynomial<F, Self>,
         rotation: Rotation,
-    ) -> Polynomial<F, Self> {
-        poly.rotate(rotation)
+    ) -> Vec<F> {
+        poly.get_chunk_of_rotated(rotation, chunk_size, chunk_index)
     }
 }
 
@@ -645,12 +597,14 @@ impl BasisOps for ExtendedLagrangeCoeff {
             .collect()
     }
 
-    fn rotate<F: FieldExt>(
+    fn get_chunk_of_rotated<F: FieldExt>(
         domain: &EvaluationDomain<F>,
+        chunk_size: usize,
+        chunk_index: usize,
         poly: &Polynomial<F, Self>,
         rotation: Rotation,
-    ) -> Polynomial<F, Self> {
-        domain.rotate_extended(poly, rotation)
+    ) -> Vec<F> {
+        domain.get_chunk_of_rotated_extended(poly, rotation, chunk_size, chunk_index)
     }
 }
 

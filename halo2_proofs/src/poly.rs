@@ -209,6 +209,82 @@ impl<F: Field> Polynomial<F, LagrangeCoeff> {
             _marker: PhantomData,
         }
     }
+
+    /// Gets the specified chunk of the rotated version of this polynomial.
+    ///
+    /// Equivalent to:
+    /// ```ignore
+    /// self.rotate(rotation)
+    ///     .chunks(chunk_size)
+    ///     .nth(chunk_index)
+    ///     .unwrap()
+    ///     .to_vec()
+    /// ```
+    pub(crate) fn get_chunk_of_rotated(
+        &self,
+        rotation: Rotation,
+        chunk_size: usize,
+        chunk_index: usize,
+    ) -> Vec<F> {
+        self.get_chunk_of_rotated_helper(
+            rotation.0 < 0,
+            rotation.0.unsigned_abs() as usize,
+            chunk_size,
+            chunk_index,
+        )
+    }
+}
+
+impl<F: Clone + Copy, B> Polynomial<F, B> {
+    pub(crate) fn get_chunk_of_rotated_helper(
+        &self,
+        rotation_is_negative: bool,
+        rotation_abs: usize,
+        chunk_size: usize,
+        chunk_index: usize,
+    ) -> Vec<F> {
+        // Compute the lengths such that when applying the rotation, the first `mid`
+        // coefficients move to the end, and the last `k` coefficients move to the front.
+        // The coefficient previously at `mid` will be the first coefficient in the
+        // rotated polynomial, and the position from which chunk indexing begins.
+        #[allow(clippy::branches_sharing_code)]
+        let (mid, k) = if rotation_is_negative {
+            let k = rotation_abs;
+            assert!(k <= self.len());
+            let mid = self.len() - k;
+            (mid, k)
+        } else {
+            let mid = rotation_abs;
+            assert!(mid <= self.len());
+            let k = self.len() - mid;
+            (mid, k)
+        };
+
+        // Compute [chunk_start..chunk_end], the range of the chunk within the rotated
+        // polynomial.
+        let chunk_start = chunk_size * chunk_index;
+        let chunk_end = self.len().min(chunk_size * (chunk_index + 1));
+
+        if chunk_end < k {
+            // The chunk is entirely in the last `k` coefficients of the unrotated
+            // polynomial.
+            self.values[mid + chunk_start..mid + chunk_end].to_vec()
+        } else if chunk_start >= k {
+            // The chunk is entirely in the first `mid` coefficients of the unrotated
+            // polynomial.
+            self.values[chunk_start - k..chunk_end - k].to_vec()
+        } else {
+            // The chunk falls across the boundary between the last `k` and first `mid`
+            // coefficients of the unrotated polynomial. Splice the halves together.
+            let chunk = self.values[mid + chunk_start..]
+                .iter()
+                .chain(&self.values[..chunk_end - k])
+                .copied()
+                .collect::<Vec<_>>();
+            assert!(chunk.len() <= chunk_size);
+            chunk
+        }
+    }
 }
 
 impl<F: Field, B: Basis> Mul<F> for Polynomial<F, B> {
@@ -245,5 +321,45 @@ impl Rotation {
     /// The next location in the evaluation domain
     pub fn next() -> Rotation {
         Rotation(1)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ff::Field;
+    use pasta_curves::pallas;
+    use rand_core::OsRng;
+
+    use super::{EvaluationDomain, Polynomial, Rotation};
+
+    #[test]
+    fn test_get_chunk_of_rotated() {
+        let k = 11;
+        let domain = EvaluationDomain::<pallas::Base>::new(1, k);
+
+        // Create a random polynomial.
+        let mut poly = domain.empty_lagrange();
+        for coefficient in poly.iter_mut() {
+            *coefficient = pallas::Base::random(OsRng);
+        }
+
+        // Pick a chunk size that is guaranteed to not be a multiple of the polynomial
+        // length.
+        let chunk_size = 7;
+
+        for rotation in [
+            Rotation(-6),
+            Rotation::prev(),
+            Rotation::cur(),
+            Rotation::next(),
+            Rotation(12),
+        ] {
+            for (chunk_index, chunk) in poly.rotate(rotation).chunks(chunk_size).enumerate() {
+                assert_eq!(
+                    poly.get_chunk_of_rotated(rotation, chunk_size, chunk_index),
+                    chunk
+                );
+            }
+        }
     }
 }
