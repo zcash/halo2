@@ -2,7 +2,7 @@
 //! various forms, including computing commitments to them and provably opening
 //! the committed polynomials at arbitrary points.
 
-use crate::arithmetic::parallelize;
+use crate::multicore::parallelize;
 use crate::plonk::Assigned;
 
 use group::ff::{BatchInvert, Field};

@@ -8,7 +8,8 @@ use std::iter::{self, ExactSizeIterator};
 use super::super::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};
 use super::{Argument, ProvingKey};
 use crate::{
-    arithmetic::{eval_polynomial, parallelize, CurveAffine, FieldExt},
+    arithmetic::{eval_polynomial, CurveAffine, FieldExt},
+    multicore::parallelize,
     plonk::{self, Error},
     poly::{
         self,

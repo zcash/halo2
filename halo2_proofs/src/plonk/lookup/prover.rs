@@ -4,7 +4,8 @@ use super::super::{
 };
 use super::Argument;
 use crate::{
-    arithmetic::{eval_polynomial, parallelize, CurveAffine, FieldExt},
+    arithmetic::{eval_polynomial, CurveAffine, FieldExt},
+    multicore::parallelize,
     poly::{
         self,
         commitment::{Blind, Params},
