@@ -1,5 +1,6 @@
 use super::Params;
 use crate::arithmetic::{best_multiexp, CurveAffine};
+use crate::multicore::parallelize;
 use ff::Field;
 use group::Group;
 

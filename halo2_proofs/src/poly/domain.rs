@@ -1,8 +1,9 @@
 //! Contains utilities for performing polynomial arithmetic over an evaluation
 //! domain that is of a suitable size for the application.
 
+use crate::multicore::parallelize;
 use crate::{
-    arithmetic::{best_fft, parallelize, FieldExt, Group},
+    arithmetic::{best_fft, best_ifft, FieldExt, Group},
     plonk::Assigned,
 };
 
@@ -227,7 +228,7 @@ impl<G: Group> EvaluationDomain<G> {
         assert_eq!(a.values.len(), 1 << self.k);
 
         // Perform inverse FFT to obtain the polynomial in coefficient form
-        Self::ifft(&mut a.values, self.omega_inv, self.k, self.ifft_divisor);
+        best_ifft(&mut a.values, self.omega_inv, self.k, self.ifft_divisor);
 
         Polynomial {
             values: a.values,
@@ -303,7 +304,7 @@ impl<G: Group> EvaluationDomain<G> {
         assert_eq!(a.values.len(), self.extended_len());
 
         // Inverse FFT
-        Self::ifft(
+        best_ifft(
             &mut a.values,
             self.extended_omega_inv,
             self.extended_k,
@@ -333,7 +334,7 @@ impl<G: Group> EvaluationDomain<G> {
 
         // Divide to obtain the quotient polynomial in the coset evaluation
         // domain.
-        parallelize(&mut a.values, |h, mut index| {
+        parallelize(&mut a.values, 8, |h, mut index| {
             for h in h {
                 h.group_scale(&self.t_evaluations[index % self.t_evaluations.len()]);
                 index += 1;
@@ -359,7 +360,7 @@ impl<G: Group> EvaluationDomain<G> {
         } else {
             [self.g_coset_inv, self.g_coset]
         };
-        parallelize(a, |a, mut index| {
+        parallelize(a, 8, |a, mut index| {
             for a in a {
                 // Distribute powers to move into/from coset
                 let i = index % (coset_powers.len() + 1);
@@ -367,16 +368,6 @@ impl<G: Group> EvaluationDomain<G> {
                     a.group_scale(&coset_powers[i - 1]);
                 }
                 index += 1;
-            }
-        });
-    }
-
-    fn ifft(a: &mut [G], omega_inv: G::Scalar, log_n: u32, divisor: G::Scalar) {
-        best_fft(a, omega_inv, log_n);
-        parallelize(a, |a, _| {
-            for a in a {
-                // Finish iFFT
-                a.group_scale(&divisor);
             }
         });
     }
@@ -400,6 +391,12 @@ impl<G: Group> EvaluationDomain<G> {
     /// Get the generator of the extended domain's multiplicative subgroup.
     pub fn get_extended_omega(&self) -> G::Scalar {
         self.extended_omega
+    }
+
+    /// Get the divisor used for inverse fft.
+    #[cfg(test)]
+    pub(crate) fn get_divisor(&self) -> G::Scalar {
+        self.ifft_divisor
     }
 
     /// Multiplies a value by some power of $\omega$, essentially rotating over
@@ -496,74 +493,73 @@ pub struct PinnedEvaluationDomain<'a, G: Group> {
     omega: &'a G::Scalar,
 }
 
-#[test]
-fn test_rotate() {
-    use rand_core::OsRng;
-
-    use crate::arithmetic::eval_polynomial;
-    use crate::pasta::pallas::Scalar;
-
-    let domain = EvaluationDomain::<Scalar>::new(1, 3);
-    let rng = OsRng;
-
-    let mut poly = domain.empty_lagrange();
-    assert_eq!(poly.len(), 8);
-    for value in poly.iter_mut() {
-        *value = Scalar::random(rng);
-    }
-
-    let poly_rotated_cur = poly.rotate(Rotation::cur());
-    let poly_rotated_next = poly.rotate(Rotation::next());
-    let poly_rotated_prev = poly.rotate(Rotation::prev());
-
-    let poly = domain.lagrange_to_coeff(poly);
-    let poly_rotated_cur = domain.lagrange_to_coeff(poly_rotated_cur);
-    let poly_rotated_next = domain.lagrange_to_coeff(poly_rotated_next);
-    let poly_rotated_prev = domain.lagrange_to_coeff(poly_rotated_prev);
-
-    let x = Scalar::random(rng);
-
-    assert_eq!(
-        eval_polynomial(&poly[..], x),
-        eval_polynomial(&poly_rotated_cur[..], x)
-    );
-    assert_eq!(
-        eval_polynomial(&poly[..], x * domain.omega),
-        eval_polynomial(&poly_rotated_next[..], x)
-    );
-    assert_eq!(
-        eval_polynomial(&poly[..], x * domain.omega_inv),
-        eval_polynomial(&poly_rotated_prev[..], x)
-    );
-}
-
-#[test]
-fn test_l_i() {
-    use rand_core::OsRng;
-
+#[cfg(test)]
+pub(crate) mod tests {
+    use super::{EvaluationDomain, Field, FieldExt, Rotation};
     use crate::arithmetic::{eval_polynomial, lagrange_interpolate};
     use crate::pasta::pallas::Scalar;
-    let domain = EvaluationDomain::<Scalar>::new(1, 3);
+    use rand_core::OsRng;
 
-    let mut l = vec![];
-    let mut points = vec![];
-    for i in 0..8 {
-        points.push(domain.omega.pow(&[i, 0, 0, 0]));
+    #[test]
+    fn test_rotate() {
+        let domain = EvaluationDomain::<Scalar>::new(1, 3);
+        let rng = OsRng;
+
+        let mut poly = domain.empty_lagrange();
+        assert_eq!(poly.len(), 8);
+        for value in poly.iter_mut() {
+            *value = Scalar::random(rng);
+        }
+
+        let poly_rotated_cur = poly.rotate(Rotation::cur());
+        let poly_rotated_next = poly.rotate(Rotation::next());
+        let poly_rotated_prev = poly.rotate(Rotation::prev());
+
+        let poly = domain.lagrange_to_coeff(poly);
+        let poly_rotated_cur = domain.lagrange_to_coeff(poly_rotated_cur);
+        let poly_rotated_next = domain.lagrange_to_coeff(poly_rotated_next);
+        let poly_rotated_prev = domain.lagrange_to_coeff(poly_rotated_prev);
+
+        let x = Scalar::random(rng);
+
+        assert_eq!(
+            eval_polynomial(&poly[..], x),
+            eval_polynomial(&poly_rotated_cur[..], x)
+        );
+        assert_eq!(
+            eval_polynomial(&poly[..], x * domain.omega),
+            eval_polynomial(&poly_rotated_next[..], x)
+        );
+        assert_eq!(
+            eval_polynomial(&poly[..], x * domain.omega_inv),
+            eval_polynomial(&poly_rotated_prev[..], x)
+        );
     }
-    for i in 0..8 {
-        let mut l_i = vec![Scalar::zero(); 8];
-        l_i[i] = Scalar::one();
-        let l_i = lagrange_interpolate(&points[..], &l_i[..]);
-        l.push(l_i);
-    }
 
-    let x = Scalar::random(OsRng);
-    let xn = x.pow(&[8, 0, 0, 0]);
+    #[test]
+    fn test_l_i() {
+        let domain = EvaluationDomain::<Scalar>::new(1, 3);
 
-    let evaluations = domain.l_i_range(x, xn, -7..=7);
-    for i in 0..8 {
-        assert_eq!(eval_polynomial(&l[i][..], x), evaluations[7 + i]);
-        assert_eq!(eval_polynomial(&l[(8 - i) % 8][..], x), evaluations[7 - i]);
+        let mut l = vec![];
+        let mut points = vec![];
+        for i in 0..8 {
+            points.push(domain.omega.pow(&[i, 0, 0, 0]));
+        }
+        for i in 0..8 {
+            let mut l_i = vec![Scalar::zero(); 8];
+            l_i[i] = Scalar::one();
+            let l_i = lagrange_interpolate(&points[..], &l_i[..]);
+            l.push(l_i);
+        }
+
+        let x = Scalar::random(OsRng);
+        let xn = x.pow(&[8, 0, 0, 0]);
+
+        let evaluations = domain.l_i_range(x, xn, -7..=7);
+        for i in 0..8 {
+            assert_eq!(eval_polynomial(&l[i][..], x), evaluations[7 + i]);
+            assert_eq!(eval_polynomial(&l[(8 - i) % 8][..], x), evaluations[7 - i]);
+        }
     }
 }
 

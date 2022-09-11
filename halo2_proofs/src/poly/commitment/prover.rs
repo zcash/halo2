@@ -4,8 +4,9 @@ use rand_core::RngCore;
 use super::super::{Coeff, Polynomial};
 use super::{Blind, Params};
 use crate::arithmetic::{
-    best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine, FieldExt,
+    best_multiexp, compute_inner_product, eval_polynomial, CurveAffine, FieldExt,
 };
+use crate::multicore::parallelize;
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use group::Curve;
@@ -154,7 +155,7 @@ fn parallel_generator_collapse<C: CurveAffine>(g: &mut [C], challenge: C::Scalar
     let len = g.len() / 2;
     let (g_lo, g_hi) = g.split_at_mut(len);
 
-    parallelize(g_lo, |g_lo, start| {
+    parallelize(g_lo, 64, |g_lo, start| {
         let g_hi = &g_hi[start..];
         let mut tmp = Vec::with_capacity(g_lo.len());
         for (g_lo, g_hi) in g_lo.iter().zip(g_hi.iter()) {

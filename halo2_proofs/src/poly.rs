@@ -2,7 +2,7 @@
 //! various forms, including computing commitments to them and provably opening
 //! the committed polynomials at arbitrary points.
 
-use crate::arithmetic::parallelize;
+use crate::multicore::parallelize;
 use crate::plonk::Assigned;
 
 use group::ff::{BatchInvert, Field};
@@ -185,7 +185,7 @@ impl<'a, F: Field, B: Basis> Add<&'a Polynomial<F, B>> for Polynomial<F, B> {
     type Output = Polynomial<F, B>;
 
     fn add(mut self, rhs: &'a Polynomial<F, B>) -> Polynomial<F, B> {
-        parallelize(&mut self.values, |lhs, start| {
+        parallelize(&mut self.values, 1, |lhs, start| {
             for (lhs, rhs) in lhs.iter_mut().zip(rhs.values[start..].iter()) {
                 *lhs += *rhs;
             }
@@ -291,7 +291,7 @@ impl<F: Field, B: Basis> Mul<F> for Polynomial<F, B> {
     type Output = Polynomial<F, B>;
 
     fn mul(mut self, rhs: F) -> Polynomial<F, B> {
-        parallelize(&mut self.values, |lhs, _| {
+        parallelize(&mut self.values, 8, |lhs, _| {
             for lhs in lhs.iter_mut() {
                 *lhs *= rhs;
             }

@@ -4,7 +4,8 @@ use super::super::{
 };
 use super::Argument;
 use crate::{
-    arithmetic::{eval_polynomial, parallelize, CurveAffine, FieldExt},
+    arithmetic::{eval_polynomial, CurveAffine, FieldExt},
+    multicore::parallelize,
     poly::{
         self,
         commitment::{Blind, Params},
@@ -274,7 +275,7 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
         // and i is the ith row of the expression.
         let mut lookup_product = vec![C::Scalar::zero(); params.n as usize];
         // Denominator uses the permuted input expression and permuted table expression
-        parallelize(&mut lookup_product, |lookup_product, start| {
+        parallelize(&mut lookup_product, 32, |lookup_product, start| {
             for ((lookup_product, permuted_input_value), permuted_table_value) in lookup_product
                 .iter_mut()
                 .zip(self.permuted_input_expression[start..].iter())
@@ -291,7 +292,7 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
         // Finish the computation of the entire fraction by computing the numerators
         // (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
         // * (\theta^{m-1} s_0(\omega^i) + \theta^{m-2} s_1(\omega^i) + ... + \theta s_{m-2}(\omega^i) + s_{m-1}(\omega^i) + \gamma)
-        parallelize(&mut lookup_product, |product, start| {
+        parallelize(&mut lookup_product, 1024, |product, start| {
             for (i, product) in product.iter_mut().enumerate() {
                 let i = i + start;
 

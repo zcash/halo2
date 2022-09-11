@@ -4,10 +4,9 @@
 //! [halo]: https://eprint.iacr.org/2019/1021
 
 use super::{Coeff, LagrangeCoeff, Polynomial};
-use crate::arithmetic::{
-    best_fft, best_multiexp, parallelize, CurveAffine, CurveExt, FieldExt, Group,
-};
+use crate::arithmetic::{best_fft, best_multiexp, CurveAffine, CurveExt, FieldExt, Group};
 use crate::helpers::CurveRead;
+use crate::multicore::parallelize;
 
 use ff::{Field, PrimeField};
 use group::{prime::PrimeCurveAffine, Curve, Group as _};
@@ -50,7 +49,7 @@ impl<C: CurveAffine> Params<C> {
             let mut g = Vec::with_capacity(n as usize);
             g.resize(n as usize, C::Curve::identity());
 
-            parallelize(&mut g, move |g, start| {
+            parallelize(&mut g, 64, move |g, start| {
                 let hasher = C::CurveExt::hash_to_curve("Halo2-Parameters");
 
                 for (i, g) in g.iter_mut().enumerate() {
@@ -68,7 +67,7 @@ impl<C: CurveAffine> Params<C> {
 
         let g = {
             let mut g = vec![C::identity(); n as usize];
-            parallelize(&mut g, |g, starts| {
+            parallelize(&mut g, 64, |g, starts| {
                 C::Curve::batch_normalize(&g_projective[starts..(starts + g.len())], g);
             });
             g
@@ -83,7 +82,7 @@ impl<C: CurveAffine> Params<C> {
         let mut g_lagrange_projective = g_projective;
         best_fft(&mut g_lagrange_projective, alpha_inv, k);
         let minv = C::Scalar::TWO_INV.pow_vartime(&[k as u64, 0, 0, 0]);
-        parallelize(&mut g_lagrange_projective, |g, _| {
+        parallelize(&mut g_lagrange_projective, 8, |g, _| {
             for g in g.iter_mut() {
                 *g *= minv;
             }
@@ -91,7 +90,7 @@ impl<C: CurveAffine> Params<C> {
 
         let g_lagrange = {
             let mut g_lagrange = vec![C::identity(); n as usize];
-            parallelize(&mut g_lagrange, |g_lagrange, starts| {
+            parallelize(&mut g_lagrange, 64, |g_lagrange, starts| {
                 C::Curve::batch_normalize(
                     &g_lagrange_projective[starts..(starts + g_lagrange.len())],
                     g_lagrange,
