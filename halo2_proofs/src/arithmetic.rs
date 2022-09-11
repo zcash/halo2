@@ -1,128 +1,18 @@
 //! This module provides common utilities, traits and structures for group,
 //! field and polynomial arithmetic.
 
-use super::multicore;
+use super::multicore::{self, log_threads, parallelize, prelude::*};
 pub use ff::Field;
 use group::{
     ff::{BatchInvert, PrimeField},
     Group as _,
 };
-
 pub use pasta_curves::arithmetic::*;
 
-fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut C::Curve) {
-    let coeffs: Vec<_> = coeffs.iter().map(|a| a.to_repr()).collect();
-
-    let c = if bases.len() < 4 {
-        1
-    } else if bases.len() < 32 {
-        3
-    } else {
-        (f64::from(bases.len() as u32)).ln().ceil() as usize
-    };
-
-    fn get_at<F: PrimeField>(segment: usize, c: usize, bytes: &F::Repr) -> usize {
-        let skip_bits = segment * c;
-        let skip_bytes = skip_bits / 8;
-
-        if skip_bytes >= 32 {
-            return 0;
-        }
-
-        let mut v = [0; 8];
-        for (v, o) in v.iter_mut().zip(bytes.as_ref()[skip_bytes..].iter()) {
-            *v = *o;
-        }
-
-        let mut tmp = u64::from_le_bytes(v);
-        tmp >>= skip_bits - (skip_bytes * 8);
-        tmp = tmp % (1 << c);
-
-        tmp as usize
-    }
-
-    let segments = (256 / c) + 1;
-
-    for current_segment in (0..segments).rev() {
-        for _ in 0..c {
-            *acc = acc.double();
-        }
-
-        #[derive(Clone, Copy)]
-        enum Bucket<C: CurveAffine> {
-            None,
-            Affine(C),
-            Projective(C::Curve),
-        }
-
-        impl<C: CurveAffine> Bucket<C> {
-            fn add_assign(&mut self, other: &C) {
-                *self = match *self {
-                    Bucket::None => Bucket::Affine(*other),
-                    Bucket::Affine(a) => Bucket::Projective(a + *other),
-                    Bucket::Projective(mut a) => {
-                        a += *other;
-                        Bucket::Projective(a)
-                    }
-                }
-            }
-
-            fn add(self, mut other: C::Curve) -> C::Curve {
-                match self {
-                    Bucket::None => other,
-                    Bucket::Affine(a) => {
-                        other += a;
-                        other
-                    }
-                    Bucket::Projective(a) => other + &a,
-                }
-            }
-        }
-
-        let mut buckets: Vec<Bucket<C>> = vec![Bucket::None; (1 << c) - 1];
-
-        for (coeff, base) in coeffs.iter().zip(bases.iter()) {
-            let coeff = get_at::<C::Scalar>(current_segment, c, coeff);
-            if coeff != 0 {
-                buckets[coeff - 1].add_assign(base);
-            }
-        }
-
-        // Summation by parts
-        // e.g. 3a + 2b + 1c = a +
-        //                    (a) + b +
-        //                    ((a) + b) + c
-        let mut running_sum = C::Curve::identity();
-        for exp in buckets.into_iter().rev() {
-            running_sum = exp.add(running_sum);
-            *acc = *acc + &running_sum;
-        }
-    }
-}
-
-/// Performs a small multi-exponentiation operation.
-/// Uses the double-and-add algorithm with doublings shared across points.
-pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
-    let coeffs: Vec<_> = coeffs.iter().map(|a| a.to_repr()).collect();
-    let mut acc = C::Curve::identity();
-
-    // for byte idx
-    for byte_idx in (0..32).rev() {
-        // for bit idx
-        for bit_idx in (0..8).rev() {
-            acc = acc.double();
-            // for each coeff
-            for coeff_idx in 0..coeffs.len() {
-                let byte = coeffs[coeff_idx].as_ref()[byte_idx];
-                if ((byte >> bit_idx) & 1) != 0 {
-                    acc += bases[coeff_idx];
-                }
-            }
-        }
-    }
-
-    acc
-}
+mod fft;
+mod multiexp;
+use fft::*;
+use multiexp::{multiexp_serial, small_multiexp};
 
 /// Performs a multi-exponentiation operation.
 ///
@@ -130,31 +20,20 @@ pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::C
 ///
 /// This will use multithreading if beneficial.
 pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
-    assert_eq!(coeffs.len(), bases.len());
+    let n = coeffs.len();
+    assert_eq!(n, bases.len());
 
     let num_threads = multicore::current_num_threads();
-    if coeffs.len() > num_threads {
-        let chunk = coeffs.len() / num_threads;
-        let num_chunks = coeffs.chunks(chunk).len();
-        let mut results = vec![C::Curve::identity(); num_chunks];
-        multicore::scope(|scope| {
-            let chunk = coeffs.len() / num_threads;
-
-            for ((coeffs, bases), acc) in coeffs
-                .chunks(chunk)
-                .zip(bases.chunks(chunk))
-                .zip(results.iter_mut())
-            {
-                scope.spawn(move |_| {
-                    multiexp_serial(coeffs, bases, acc);
-                });
-            }
-        });
+    if n > num_threads && n > 32 {
+        let chunk = n / num_threads;
+        let results: Vec<C::Curve> = coeffs
+            .par_chunks(chunk)
+            .zip(bases.par_chunks(chunk))
+            .map(|(coeffs, bases)| multiexp_serial(coeffs, bases))
+            .collect();
         results.iter().fold(C::Curve::identity(), |a, b| a + b)
     } else {
-        let mut acc = C::Curve::identity();
-        multiexp_serial(coeffs, bases, &mut acc);
-        acc
+        small_multiexp(coeffs, bases)
     }
 }
 
@@ -169,26 +48,11 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
 ///
 /// This will use multithreading if beneficial.
 pub fn best_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
-    fn bitreverse(mut n: usize, l: usize) -> usize {
-        let mut r = 0;
-        for _ in 0..l {
-            r = (r << 1) | (n & 1);
-            n >>= 1;
-        }
-        r
-    }
-
-    let threads = multicore::current_num_threads();
-    let log_threads = log2_floor(threads);
     let n = a.len() as usize;
     assert_eq!(n, 1 << log_n);
 
-    for k in 0..n {
-        let rk = bitreverse(k, log_n as usize);
-        if k < rk {
-            a.swap(rk, k);
-        }
-    }
+    // bit reverse permutation
+    swap_bit_reverse(a, n, log_n);
 
     // precompute twiddle factors
     let twiddles: Vec<_> = (0..(n / 2) as usize)
@@ -199,77 +63,39 @@ pub fn best_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
         })
         .collect();
 
-    if log_n <= log_threads {
-        let mut chunk = 2_usize;
-        let mut twiddle_chunk = (n / 2) as usize;
-        for _ in 0..log_n {
-            a.chunks_mut(chunk).for_each(|coeffs| {
-                let (left, right) = coeffs.split_at_mut(chunk / 2);
-
-                // case when twiddle factor is one
-                let (a, left) = left.split_at_mut(1);
-                let (b, right) = right.split_at_mut(1);
-                let t = b[0];
-                b[0] = a[0];
-                a[0].group_add(&t);
-                b[0].group_sub(&t);
-
-                left.iter_mut()
-                    .zip(right.iter_mut())
-                    .enumerate()
-                    .for_each(|(i, (a, b))| {
-                        let mut t = *b;
-                        t.group_scale(&twiddles[(i + 1) * twiddle_chunk]);
-                        *b = *a;
-                        a.group_add(&t);
-                        b.group_sub(&t);
-                    });
-            });
-            chunk *= 2;
-            twiddle_chunk /= 2;
-        }
+    if log_n <= log_threads() {
+        serial_fft(a, n, log_n, &twiddles)
     } else {
-        recursive_butterfly_arithmetic(a, n, 1, &twiddles)
+        let (left, right) = a.split_at_mut(n / 2);
+        parallel_fft(left, right, n / 2, 2, &twiddles);
+        parallel_butterfly_arithmetic(left, right, 1, &twiddles)
     }
 }
 
-/// This perform recursive butterfly arithmetic
-pub fn recursive_butterfly_arithmetic<G: Group>(
-    a: &mut [G],
-    n: usize,
-    twiddle_chunk: usize,
-    twiddles: &[G::Scalar],
-) {
-    if n == 2 {
-        let t = a[1];
-        a[1] = a[0];
-        a[0].group_add(&t);
-        a[1].group_sub(&t);
+/// Performs a radix-$2$ inverse Fast-Fourier Transformation (iFFT)
+pub fn best_ifft<G: Group>(a: &mut [G], omega_inv: G::Scalar, log_n: u32, divisor: G::Scalar) {
+    let n = a.len() as usize;
+    assert_eq!(n, 1 << log_n);
+
+    // bit reverse permutation
+    swap_bit_reverse(a, n, log_n);
+
+    // precompute twiddle factors
+    let twiddles: Vec<_> = (0..(n / 2) as usize)
+        .scan(G::Scalar::one(), |w, _| {
+            let tw = *w;
+            w.group_scale(&omega_inv);
+            Some(tw)
+        })
+        .collect();
+
+    if log_n <= log_threads() {
+        serial_fft(a, n, log_n, &twiddles);
+        a.iter_mut().for_each(|a| a.group_scale(&divisor))
     } else {
         let (left, right) = a.split_at_mut(n / 2);
-        rayon::join(
-            || recursive_butterfly_arithmetic(left, n / 2, twiddle_chunk * 2, twiddles),
-            || recursive_butterfly_arithmetic(right, n / 2, twiddle_chunk * 2, twiddles),
-        );
-
-        // case when twiddle factor is one
-        let (a, left) = left.split_at_mut(1);
-        let (b, right) = right.split_at_mut(1);
-        let t = b[0];
-        b[0] = a[0];
-        a[0].group_add(&t);
-        b[0].group_sub(&t);
-
-        left.iter_mut()
-            .zip(right.iter_mut())
-            .enumerate()
-            .for_each(|(i, (a, b))| {
-                let mut t = *b;
-                t.group_scale(&twiddles[(i + 1) * twiddle_chunk]);
-                *b = *a;
-                a.group_add(&t);
-                b.group_sub(&t);
-            });
+        parallel_fft(left, right, n / 2, 2, &twiddles);
+        parallel_butterfly_arithmetic_with_divisor(left, right, 1, &twiddles, divisor)
     }
 }
 
@@ -317,39 +143,6 @@ where
     }
 
     q
-}
-
-/// This simple utility function will parallelize an operation that is to be
-/// performed over a mutable slice.
-pub fn parallelize<T: Send, F: Fn(&mut [T], usize) + Send + Sync + Clone>(v: &mut [T], f: F) {
-    let n = v.len();
-    let num_threads = multicore::current_num_threads();
-    let mut chunk = (n as usize) / num_threads;
-    if chunk < num_threads {
-        chunk = n as usize;
-    }
-
-    multicore::scope(|scope| {
-        for (chunk_num, v) in v.chunks_mut(chunk).enumerate() {
-            let f = f.clone();
-            scope.spawn(move |_| {
-                let start = chunk_num * chunk;
-                f(v, start);
-            });
-        }
-    });
-}
-
-fn log2_floor(num: usize) -> u32 {
-    assert!(num > 0);
-
-    let mut pow = 0;
-
-    while (1 << (pow + 1)) <= num {
-        pow += 1;
-    }
-
-    pow
 }
 
 /// Returns coefficients of an n - 1 degree polynomial given a set of n points
@@ -411,27 +204,99 @@ pub fn lagrange_interpolate<F: FieldExt>(points: &[F], evals: &[F]) -> Vec<F> {
 }
 
 #[cfg(test)]
-use rand_core::OsRng;
+mod tests {
+    use super::{
+        best_fft, best_ifft, eval_polynomial, lagrange_interpolate, swap_bit_reverse, Field, Group,
+    };
+    use crate::pasta::{arithmetic::FieldExt, Fp};
+    use crate::poly::EvaluationDomain;
+    use proptest::{collection::vec, prelude::*};
+    use rand_core::OsRng;
 
-#[cfg(test)]
-use crate::pasta::Fp;
+    fn prev_fft<G: Group>(a: &mut [G], omega: G::Scalar, log_n: u32) {
+        let n = a.len() as u32;
+        assert_eq!(n, 1 << log_n);
 
-#[test]
-fn test_lagrange_interpolate() {
-    let rng = OsRng;
+        swap_bit_reverse(a, n as usize, log_n);
 
-    let points = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
-    let evals = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
+        let mut m = 1;
+        for _ in 0..log_n {
+            let w_m = omega.pow_vartime(&[u64::from(n / (2 * m)), 0, 0, 0]);
+            let mut k = 0;
+            while k < n {
+                let mut w = G::Scalar::one();
+                for j in 0..m {
+                    let mut t = a[(k + j + m) as usize];
+                    t.group_scale(&w);
+                    a[(k + j + m) as usize] = a[(k + j) as usize];
+                    a[(k + j + m) as usize].group_sub(&t);
+                    a[(k + j) as usize].group_add(&t);
+                    w *= &w_m;
+                }
+                k += 2 * m;
+            }
+            m *= 2;
+        }
+    }
 
-    for coeffs in 0..5 {
-        let points = &points[0..coeffs];
-        let evals = &evals[0..coeffs];
+    prop_compose! {
+        fn arb_fp()(
+            bytes in vec(any::<u8>(), 64)
+        ) -> Fp {
+            Fp::from_bytes_wide(&<[u8; 64]>::try_from(bytes).unwrap())
+        }
+    }
 
-        let poly = lagrange_interpolate(points, evals);
-        assert_eq!(poly.len(), points.len());
+    fn arb_poly(k: usize, rng: OsRng) -> Vec<Fp> {
+        (0..(1 << k)).map(|_| Fp::random(rng)).collect::<Vec<_>>()
+    }
 
-        for (point, eval) in points.iter().zip(evals) {
-            assert_eq!(eval_polynomial(&poly, *point), *eval);
+    fn fft(k: u32, omega: Fp, rng: OsRng) {
+        let mut a = arb_poly(k as usize, rng);
+        let mut b = a.clone();
+        prev_fft(&mut a, omega, k);
+        best_fft(&mut b, omega, k);
+        assert_eq!(a, b);
+    }
+
+    fn ifft(k: u32, rng: OsRng) {
+        let domain = EvaluationDomain::<Fp>::new(1, k);
+        let mut a = arb_poly(k as usize, rng);
+        let b = a.clone();
+        best_fft(&mut a, domain.get_omega(), k);
+        best_ifft(&mut a, domain.get_omega_inv(), k, domain.get_divisor());
+        assert_eq!(a, b);
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(100))]
+        #[test]
+        fn test_fft(omega in arb_fp(), k in 3u32..10) {
+            // This checks whether fft algorithm is correct by comparing with previous `serial_fft`
+            fft(k, omega, OsRng);
+            // This checks whether `best_ifft` is inverse operation of `best_fft`
+            ifft(k, OsRng);
+        }
+    }
+
+    #[test]
+    fn test_lagrange_interpolate() {
+        let k = 5;
+        let rng = OsRng;
+
+        let points = arb_poly(k, rng);
+        let evals = arb_poly(k, rng);
+
+        for coeffs in 0..k {
+            let points = &points[0..coeffs];
+            let evals = &evals[0..coeffs];
+
+            let poly = lagrange_interpolate(points, evals);
+            assert_eq!(poly.len(), points.len());
+
+            for (point, eval) in points.iter().zip(evals) {
+                assert_eq!(eval_polynomial(&poly, *point), *eval);
+            }
         }
     }
 }

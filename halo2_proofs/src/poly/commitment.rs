@@ -4,10 +4,9 @@
 //! [halo]: https://eprint.iacr.org/2019/1021
 
 use super::{Coeff, LagrangeCoeff, Polynomial};
-use crate::arithmetic::{
-    best_fft, best_multiexp, parallelize, CurveAffine, CurveExt, FieldExt, Group,
-};
+use crate::arithmetic::{best_fft, best_multiexp, CurveAffine, CurveExt, FieldExt, Group};
 use crate::helpers::CurveRead;
+use crate::multicore::parallelize;
 
 use ff::{Field, PrimeField};
 use group::{prime::PrimeCurveAffine, Curve, Group as _};
