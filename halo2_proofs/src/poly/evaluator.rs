@@ -1,7 +1,5 @@
 use std::{
-    cmp,
-    collections::{HashMap, HashSet},
-    fmt,
+    cmp, fmt,
     hash::{Hash, Hasher},
     marker::PhantomData,
     ops::{Add, Mul, MulAssign, Neg, Sub},

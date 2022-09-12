@@ -330,7 +330,7 @@ mod tests {
     use pasta_curves::pallas;
     use rand_core::OsRng;
 
-    use super::{EvaluationDomain, Polynomial, Rotation};
+    use super::{EvaluationDomain, Rotation};
 
     #[test]
     fn test_get_chunk_of_rotated() {
