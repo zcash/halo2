@@ -1,6 +1,5 @@
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::fmt;
-use std::iter;
 
 use group::ff::Field;
 use pasta_curves::arithmetic::FieldExt;
@@ -13,7 +12,6 @@ use super::{
 use crate::{
     dev::Value,
     plonk::{Any, Column, ConstraintSystem, Expression, Gate},
-    poly::Rotation,
 };
 
 mod emitter;

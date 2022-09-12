@@ -36,7 +36,7 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
 
         let mut tmp = u64::from_le_bytes(v);
         tmp >>= skip_bits - (skip_bytes * 8);
-        tmp = tmp % (1 << c);
+        tmp %= 1 << c;
 
         tmp as usize
     }
@@ -95,7 +95,7 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
         let mut running_sum = C::Curve::identity();
         for exp in buckets.into_iter().rev() {
             running_sum = exp.add(running_sum);
-            *acc = *acc + &running_sum;
+            *acc += &running_sum;
         }
     }
 }
@@ -247,7 +247,7 @@ pub fn recursive_butterfly_arithmetic<G: Group>(
         a[1].group_sub(&t);
     } else {
         let (left, right) = a.split_at_mut(n / 2);
-        rayon::join(
+        multicore::join(
             || recursive_butterfly_arithmetic(left, n / 2, twiddle_chunk * 2, twiddles),
             || recursive_butterfly_arithmetic(right, n / 2, twiddle_chunk * 2, twiddles),
         );

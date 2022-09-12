@@ -47,8 +47,7 @@ pub struct EccPoint {
 impl EccPoint {
     /// Constructs a point from its coordinates, without checking they are on the curve.
     ///
-    /// This is an internal API that we only use where we know we have a valid curve point
-    /// (specifically inside Sinsemilla).
+    /// This is an internal API that we only use where we know we have a valid curve point.
     pub(crate) fn from_coordinates_unchecked(
         x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
         y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
@@ -101,7 +100,7 @@ impl NonIdentityEccPoint {
     /// Constructs a point from its coordinates, without checking they are on the curve.
     ///
     /// This is an internal API that we only use where we know we have a valid non-identity
-    /// curve point (specifically inside Sinsemilla).
+    /// curve point.
     pub(crate) fn from_coordinates_unchecked(
         x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
         y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
@@ -380,6 +379,7 @@ struct EccBaseFieldElemFixed {
 }
 
 impl EccBaseFieldElemFixed {
+    #![allow(dead_code)]
     fn base_field_elem(&self) -> AssignedCell<pallas::Base, pallas::Base> {
         self.base_field_elem.clone()
     }

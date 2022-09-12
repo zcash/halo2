@@ -83,6 +83,7 @@ mod tests {
     pub struct P128Pow5T3Gen<F: FieldExt, const SECURE_MDS: usize>(PhantomData<F>);
 
     impl<F: FieldExt, const SECURE_MDS: usize> P128Pow5T3Gen<F, SECURE_MDS> {
+        #![allow(dead_code)]
         pub fn new() -> Self {
             P128Pow5T3Gen(PhantomData::default())
         }

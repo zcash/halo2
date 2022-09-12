@@ -29,7 +29,6 @@ const NUM_COMPLETE_BITS: usize = 3;
 
 // Bits used in incomplete addition. k_{254} to k_{4} inclusive
 const INCOMPLETE_LEN: usize = pallas::Scalar::NUM_BITS as usize - 1 - NUM_COMPLETE_BITS;
-const INCOMPLETE_RANGE: Range<usize> = 0..INCOMPLETE_LEN;
 
 // Bits k_{254} to k_{4} inclusive are used in incomplete addition.
 // The `hi` half is k_{254} to k_{130} inclusive (length 125 bits).
@@ -375,10 +374,7 @@ impl Config {
         let x_cell = region.assign_advice(|| "x", self.add_config.x_p, offset, || x)?;
         let y_cell = region.assign_advice(|| "y", self.add_config.y_p, offset, || y)?;
 
-        let p = EccPoint {
-            x: x_cell,
-            y: y_cell,
-        };
+        let p = EccPoint::from_coordinates_unchecked(x_cell, y_cell);
 
         // Return the result of the final complete addition as `[scalar]B`
         let result = self.add_config.assign_region(&p, &acc, offset, region)?;

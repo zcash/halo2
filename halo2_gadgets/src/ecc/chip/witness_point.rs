@@ -123,7 +123,7 @@ impl Config {
         });
 
         self.assign_xy(value, offset, region)
-            .map(|(x, y)| EccPoint { x, y })
+            .map(|(x, y)| EccPoint::from_coordinates_unchecked(x, y))
     }
 
     /// Assigns a non-identity point.
@@ -145,7 +145,7 @@ impl Config {
         });
 
         self.assign_xy(value, offset, region)
-            .map(|(x, y)| NonIdentityEccPoint { x, y })
+            .map(|(x, y)| NonIdentityEccPoint::from_coordinates_unchecked(x, y))
     }
 }
 

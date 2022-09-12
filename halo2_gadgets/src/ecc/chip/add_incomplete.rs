@@ -136,10 +136,7 @@ impl Config {
         let y_r = r.map(|r| r.1);
         let y_r_var = region.assign_advice(|| "y_r", self.y_qr, offset + 1, || y_r)?;
 
-        let result = NonIdentityEccPoint {
-            x: x_r_var,
-            y: y_r_var,
-        };
+        let result = NonIdentityEccPoint::from_coordinates_unchecked(x_r_var, y_r_var);
 
         Ok(result)
     }

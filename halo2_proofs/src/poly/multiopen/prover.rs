@@ -7,7 +7,7 @@ use super::{
     Query,
 };
 
-use crate::arithmetic::{eval_polynomial, kate_division, CurveAffine, FieldExt};
+use crate::arithmetic::{eval_polynomial, kate_division, CurveAffine};
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use ff::Field;

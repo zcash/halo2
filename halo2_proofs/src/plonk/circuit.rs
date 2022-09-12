@@ -506,6 +506,7 @@ pub enum Expression<F> {
 impl<F: Field> Expression<F> {
     /// Evaluate the polynomial using the provided closures to perform the
     /// operations.
+    #[allow(clippy::too_many_arguments)]
     pub fn evaluate<T>(
         &self,
         constant: &impl Fn(F) -> T,

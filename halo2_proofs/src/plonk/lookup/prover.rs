@@ -71,6 +71,7 @@ impl<F: FieldExt> Argument<F> {
     /// - constructs Permuted<C> struct using permuted_input_value = A', and
     ///   permuted_table_expression = S'.
     /// The Permuted<C> struct is used to update the Lookup, and is then returned.
+    #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn commit_permuted<
         'a,
         C,
@@ -245,6 +246,7 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
     /// grand product polynomial over the lookup. The grand product polynomial
     /// is used to populate the Product<C> struct. The Product<C> struct is
     /// added to the Lookup and finally returned by the method.
+    #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn commit_product<
         E: EncodedChallenge<C>,
         R: RngCore,

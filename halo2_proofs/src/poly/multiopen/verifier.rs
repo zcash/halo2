@@ -1,5 +1,4 @@
 use ff::Field;
-use rand_core::RngCore;
 
 use super::super::{
     commitment::{Guard, Params, MSM},
@@ -9,7 +8,7 @@ use super::{
     construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4,
     CommitmentReference, Query, VerifierQuery,
 };
-use crate::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine, FieldExt};
+use crate::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine};
 use crate::transcript::{EncodedChallenge, TranscriptRead};
 
 /// Verify a multi-opening proof

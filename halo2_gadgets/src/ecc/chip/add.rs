@@ -67,22 +67,6 @@ impl Config {
         config
     }
 
-    pub(crate) fn advice_columns(&self) -> HashSet<Column<Advice>> {
-        [
-            self.x_p,
-            self.y_p,
-            self.x_qr,
-            self.y_qr,
-            self.lambda,
-            self.alpha,
-            self.beta,
-            self.gamma,
-            self.delta,
-        ]
-        .into_iter()
-        .collect()
-    }
-
     pub(crate) fn output_columns(&self) -> HashSet<Column<Advice>> {
         [self.x_qr, self.y_qr].into_iter().collect()
     }
@@ -315,10 +299,7 @@ impl Config {
         let y_r = r.map(|r| r.1);
         let y_r_cell = region.assign_advice(|| "y_r", self.y_qr, offset + 1, || y_r)?;
 
-        let result = EccPoint {
-            x: x_r_cell,
-            y: y_r_cell,
-        };
+        let result = EccPoint::from_coordinates_unchecked(x_r_cell, y_r_cell);
 
         #[cfg(test)]
         // Check that the correct sum is obtained.

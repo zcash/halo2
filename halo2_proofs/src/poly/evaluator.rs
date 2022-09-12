@@ -14,7 +14,7 @@ use pasta_curves::arithmetic::FieldExt;
 use super::{
     Basis, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
 };
-use crate::{arithmetic::parallelize, multicore};
+use crate::multicore;
 
 /// Returns `(chunk_size, num_chunks)` suitable for processing the given polynomial length
 /// in the current parallelization environment.
@@ -610,15 +610,10 @@ impl BasisOps for ExtendedLagrangeCoeff {
 
 #[cfg(test)]
 mod tests {
-    use std::iter;
-
     use pasta_curves::pallas;
 
     use super::{get_chunk_params, new_evaluator, Ast, BasisOps, Evaluator};
-    use crate::{
-        multicore,
-        poly::{Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff},
-    };
+    use crate::poly::{Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff};
 
     #[test]
     fn short_chunk_regression_test() {

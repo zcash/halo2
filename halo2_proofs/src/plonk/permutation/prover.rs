@@ -43,6 +43,7 @@ pub(crate) struct Evaluated<C: CurveAffine> {
 }
 
 impl Argument {
+    #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn commit<
         C: CurveAffine,
         E: EncodedChallenge<C>,
@@ -194,6 +195,7 @@ impl Argument {
 }
 
 impl<C: CurveAffine, Ev: Copy + Send + Sync> Committed<C, Ev> {
+    #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn construct<'a>(
         self,
         pk: &'a plonk::ProvingKey<C>,
