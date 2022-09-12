@@ -54,6 +54,7 @@ All APIs that represented witnessed values as `Option<V>` now represent them as
     any verification failures before panicking.
 - `halo2_proofs::plonk::Constraints` helper, for constructing a gate from a set
   of constraints with a common selector.
+- `halo2_proofs::arithmetic::best_ifft`
 
 ### Changed
 - `halo2_proofs::dev`:

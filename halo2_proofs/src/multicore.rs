@@ -3,3 +3,9 @@
 //! be extended in the future to allow for various parallelism strategies.
 
 pub use rayon::{current_num_threads, scope, Scope};
+
+pub(crate) fn log_threads() -> u32 {
+    let num_threads = current_num_threads();
+    assert!(num_threads > 0);
+    usize::BITS - 1 - num_threads.leading_zeros()
+}
