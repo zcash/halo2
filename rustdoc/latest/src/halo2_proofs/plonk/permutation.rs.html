@@ -97,21 +97,15 @@
 <span id="82">82</span>
 <span id="83">83</span>
 <span id="84">84</span>
-<span id="85">85</span>
-<span id="86">86</span>
-<span id="87">87</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::circuit::{Any, Column};
 <span class="kw">use crate</span>::{
     arithmetic::CurveAffine,
-    helpers::CurveRead,
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
 };
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>keygen;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>prover;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>verifier;
-
-<span class="kw">use </span>std::io;
 
 <span class="doccomment">/// A permutation argument.
 </span><span class="attribute">#[derive(Debug, Clone)]
@@ -188,4 +182,4 @@
     <span class="kw">pub</span>(<span class="kw">super</span>) cosets: Vec&lt;Polynomial&lt;C::Scalar, ExtendedLagrangeCoeff&gt;&gt;,
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

@@ -178,13 +178,14 @@
 <span id="163">163</span>
 <span id="164">164</span>
 <span id="165">165</span>
+<span id="166">166</span>
 </pre><pre class="rust"><code><span class="kw">use </span>ff::Field;
 <span class="kw">use </span>rand_core::RngCore;
 
 <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{Coeff, Polynomial};
 <span class="kw">use super</span>::{Blind, Params};
 <span class="kw">use </span><span class="kw">crate</span>::arithmetic::{
-    best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine, FieldExt,
+    best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine,
 };
 <span class="kw">use </span><span class="kw">crate</span>::transcript::{EncodedChallenge, TranscriptWrite};
 
@@ -229,7 +230,7 @@
     <span class="comment">// Evaluate the random polynomial at x_3
     </span><span class="kw">let </span>s_at_x3 = eval_polynomial(<span class="kw-2">&amp;</span>s_poly[..], x_3);
     <span class="comment">// Subtract constant coefficient to get a random polynomial with a root at x_3
-    </span>s_poly[<span class="number">0</span>] = s_poly[<span class="number">0</span>] - <span class="kw-2">&amp;</span>s_at_x3;
+    </span>s_poly[<span class="number">0</span>] -= <span class="kw-2">&amp;</span>s_at_x3;
     <span class="comment">// And sample a random blind
     </span><span class="kw">let </span>s_poly_blind = Blind(C::Scalar::random(<span class="kw-2">&amp;mut </span>rng));
 
@@ -250,7 +251,7 @@
     // zero.
     </span><span class="kw">let </span><span class="kw-2">mut </span>p_prime_poly = s_poly * xi + p_poly;
     <span class="kw">let </span>v = eval_polynomial(<span class="kw-2">&amp;</span>p_prime_poly, x_3);
-    p_prime_poly[<span class="number">0</span>] = p_prime_poly[<span class="number">0</span>] - <span class="kw-2">&amp;</span>v;
+    p_prime_poly[<span class="number">0</span>] -= <span class="kw-2">&amp;</span>v;
     <span class="kw">let </span>p_prime_blind = s_poly_blind * Blind(xi) + p_blind;
 
     <span class="comment">// This accumulates the synthetic blinding factor `f` starting
@@ -304,6 +305,7 @@
 
         // Collapse `p_prime` and `b`.
         // TODO: parallelize
+        </span><span class="attribute">#[allow(clippy::assign_op_pattern)]
         </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..half {
             p_prime[i] = p_prime[i] + <span class="kw-2">&amp;</span>(p_prime[i + half] * <span class="kw-2">&amp;</span>u_j_inv);
             b[i] = b[i] + <span class="kw-2">&amp;</span>(b[i + half] * <span class="kw-2">&amp;</span>u_j);
@@ -344,4 +346,4 @@
     });
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

@@ -18,10 +18,18 @@
 <span id="3">3</span>
 <span id="4">4</span>
 <span id="5">5</span>
+<span id="6">6</span>
+<span id="7">7</span>
+<span id="8">8</span>
+<span id="9">9</span>
 </pre><pre class="rust"><code><span class="doccomment">//! An interface for dealing with the kinds of parallel computations involved in
 //! `halo2`. It&#39;s currently just a (very!) thin wrapper around [`rayon`] but may
 //! be extended in the future to allow for various parallelism strategies.
 
-</span><span class="kw">pub use </span>rayon::{current_num_threads, scope, Scope};
+</span><span class="kw">pub use </span>rayon::{
+    current_num_threads,
+    iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator},
+    join, scope, Scope,
+};
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

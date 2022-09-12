@@ -678,7 +678,6 @@
 <span id="663">663</span>
 <span id="664">664</span>
 <span id="665">665</span>
-<span id="666">666</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 <span class="kw">use </span>group::ff::Field;
@@ -1127,12 +1126,11 @@
 </span><span class="kw">mod </span>proptests {
     <span class="kw">use </span>std::{
         cmp,
-        convert::TryFrom,
         ops::{Add, Mul, Neg, Sub},
     };
 
     <span class="kw">use </span>group::ff::Field;
-    <span class="kw">use </span>pasta_curves::{arithmetic::FieldExt, Fp};
+    <span class="kw">use </span>pasta_curves::Fp;
     <span class="kw">use </span>proptest::{collection::vec, prelude::<span class="kw-2">*</span>, sample::select};
 
     <span class="kw">use </span><span class="kw">super</span>::Assigned;
@@ -1346,4 +1344,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

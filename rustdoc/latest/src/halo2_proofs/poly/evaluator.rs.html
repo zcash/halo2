@@ -669,11 +669,6 @@
 <span id="654">654</span>
 <span id="655">655</span>
 <span id="656">656</span>
-<span id="657">657</span>
-<span id="658">658</span>
-<span id="659">659</span>
-<span id="660">660</span>
-<span id="661">661</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{
     cmp,
     collections::{HashMap, HashSet},
@@ -690,7 +685,7 @@
 <span class="kw">use super</span>::{
     Basis, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
 };
-<span class="kw">use crate</span>::{arithmetic::parallelize, multicore};
+<span class="kw">use </span><span class="kw">crate</span>::multicore;
 
 <span class="doccomment">/// Returns `(chunk_size, num_chunks)` suitable for processing the given polynomial length
 /// in the current parallelization environment.
@@ -1286,15 +1281,10 @@
 
 <span class="attribute">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
-    <span class="kw">use </span>std::iter;
-
     <span class="kw">use </span>pasta_curves::pallas;
 
     <span class="kw">use super</span>::{get_chunk_params, new_evaluator, Ast, BasisOps, Evaluator};
-    <span class="kw">use crate</span>::{
-        multicore,
-        poly::{Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff},
-    };
+    <span class="kw">use </span><span class="kw">crate</span>::poly::{Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff};
 
     <span class="attribute">#[test]
     </span><span class="kw">fn </span>short_chunk_regression_test() {
@@ -1336,4 +1326,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

@@ -1103,13 +1103,10 @@
 <span id="1088">1088</span>
 <span id="1089">1089</span>
 <span id="1090">1090</span>
-<span id="1091">1091</span>
-<span id="1092">1092</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Tools for developing circuits.
 
 </span><span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::collections::HashSet;
-<span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::iter;
 <span class="kw">use </span>std::ops::{Add, Mul, Neg, Range};
 
@@ -1120,10 +1117,9 @@
     arithmetic::{FieldExt, Group},
     circuit,
     plonk::{
-        permutation, Advice, Any, Assignment, Circuit, Column, ColumnType, ConstraintSystem, Error,
-        Expression, Fixed, FloorPlanner, Instance, Selector, VirtualCell,
+        permutation, Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Expression,
+        Fixed, FloorPlanner, Instance, Selector,
     },
-    poly::Rotation,
 };
 
 <span class="kw">pub mod </span>metadata;
@@ -2198,4 +2194,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

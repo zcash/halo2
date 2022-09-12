@@ -33,47 +33,15 @@
 <span id="18">18</span>
 <span id="19">19</span>
 <span id="20">20</span>
-<span id="21">21</span>
-<span id="22">22</span>
-<span id="23">23</span>
-<span id="24">24</span>
-<span id="25">25</span>
-<span id="26">26</span>
-<span id="27">27</span>
-<span id="28">28</span>
-<span id="29">29</span>
-<span id="30">30</span>
-<span id="31">31</span>
-<span id="32">32</span>
-<span id="33">33</span>
-<span id="34">34</span>
-<span id="35">35</span>
-<span id="36">36</span>
 </pre><pre class="rust"><code><span class="doccomment">//! # halo2_proofs
 
 </span><span class="attribute">#![cfg_attr(docsrs, feature(doc_cfg))]
-</span><span class="comment">// Build without warnings on stable 1.51 and later.
-</span><span class="attribute">#![allow(unknown_lints)]
-</span><span class="comment">// Disable old lint warnings until our MSRV is at least 1.51.
-</span><span class="attribute">#![allow(renamed_and_removed_lints)]
-</span><span class="comment">// Use the old lint name to build without warnings until our MSRV is at least 1.51.
-</span><span class="attribute">#![allow(clippy::unknown_clippy_lints)]
 </span><span class="comment">// The actual lints we want to disable.
-</span><span class="attribute">#![allow(
-    clippy::op_ref,
-    clippy::assign_op_pattern,
-    clippy::too_many_arguments,
-    clippy::suspicious_arithmetic_impl,
-    clippy::many_single_char_names,
-    clippy::same_item_push,
-    clippy::upper_case_acronyms
-)]
-#![deny(broken_intra_doc_links)]
+</span><span class="attribute">#![allow(clippy::op_ref, clippy::many_single_char_names)]
+#![deny(rustdoc::broken_intra_doc_links)]
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
 #![deny(unsafe_code)]
-</span><span class="comment">// Remove this once we update pasta_curves
-</span><span class="attribute">#![allow(unused_imports)]
 
 </span><span class="kw">pub mod </span>arithmetic;
 <span class="kw">pub mod </span>circuit;
@@ -86,4 +54,4 @@
 <span class="kw">pub mod </span>dev;
 <span class="kw">mod </span>helpers;
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

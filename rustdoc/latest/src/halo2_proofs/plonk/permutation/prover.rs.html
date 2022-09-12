@@ -445,6 +445,8 @@
 <span id="430">430</span>
 <span id="431">431</span>
 <span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
 </pre><pre class="rust"><code><span class="kw">use </span>group::{
     ff::{BatchInvert, Field},
     Curve,
@@ -490,7 +492,8 @@
 }
 
 <span class="kw">impl </span>Argument {
-    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>commit&lt;
+    <span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>commit&lt;
         C: CurveAffine,
         E: EncodedChallenge&lt;C&gt;,
         Ev: Copy + Send + Sync,
@@ -641,7 +644,8 @@
 }
 
 <span class="kw">impl</span>&lt;C: CurveAffine, Ev: Copy + Send + Sync&gt; Committed&lt;C, Ev&gt; {
-    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>construct&lt;<span class="lifetime">&#39;a</span>&gt;(
+    <span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>construct&lt;<span class="lifetime">&#39;a</span>&gt;(
         <span class="self">self</span>,
         pk: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>plonk::ProvingKey&lt;C&gt;,
         p: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Argument,
@@ -878,4 +882,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

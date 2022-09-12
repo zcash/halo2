@@ -596,10 +596,6 @@
 <span id="581">581</span>
 <span id="582">582</span>
 <span id="583">583</span>
-<span id="584">584</span>
-<span id="585">585</span>
-<span id="586">586</span>
-<span id="587">587</span>
 </pre><pre class="rust"><code><span class="kw">use super</span>::{add, EccPoint, NonIdentityEccPoint, ScalarVar, T_Q};
 <span class="kw">use crate</span>::{
     sinsemilla::primitives <span class="kw">as </span>sinsemilla,
@@ -631,7 +627,6 @@
 
 <span class="comment">// Bits used in incomplete addition. k_{254} to k_{4} inclusive
 </span><span class="kw">const </span>INCOMPLETE_LEN: usize = pallas::Scalar::NUM_BITS <span class="kw">as </span>usize - <span class="number">1 </span>- NUM_COMPLETE_BITS;
-<span class="kw">const </span>INCOMPLETE_RANGE: Range&lt;usize&gt; = <span class="number">0</span>..INCOMPLETE_LEN;
 
 <span class="comment">// Bits k_{254} to k_{4} inclusive are used in incomplete addition.
 // The `hi` half is k_{254} to k_{130} inclusive (length 125 bits).
@@ -977,10 +972,7 @@
         <span class="kw">let </span>x_cell = region.assign_advice(|| <span class="string">&quot;x&quot;</span>, <span class="self">self</span>.add_config.x_p, offset, || x)<span class="question-mark">?</span>;
         <span class="kw">let </span>y_cell = region.assign_advice(|| <span class="string">&quot;y&quot;</span>, <span class="self">self</span>.add_config.y_p, offset, || y)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>p = EccPoint {
-            x: x_cell,
-            y: y_cell,
-        };
+        <span class="kw">let </span>p = EccPoint::from_coordinates_unchecked(x_cell, y_cell);
 
         <span class="comment">// Return the result of the final complete addition as `[scalar]B`
         </span><span class="kw">let </span>result = <span class="self">self</span>.add_config.assign_region(<span class="kw-2">&amp;</span>p, <span class="kw-2">&amp;</span>acc, offset, region)<span class="question-mark">?</span>;
@@ -1188,4 +1180,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

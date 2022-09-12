@@ -155,9 +155,7 @@
 <span id="140">140</span>
 <span id="141">141</span>
 <span id="142">142</span>
-<span id="143">143</span>
 </pre><pre class="rust"><code><span class="kw">use </span>ff::Field;
-<span class="kw">use </span>rand_core::RngCore;
 
 <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{
     commitment::{Guard, Params, MSM},
@@ -167,7 +165,7 @@
     construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4,
     CommitmentReference, Query, VerifierQuery,
 };
-<span class="kw">use </span><span class="kw">crate</span>::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine, FieldExt};
+<span class="kw">use </span><span class="kw">crate</span>::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine};
 <span class="kw">use </span><span class="kw">crate</span>::transcript::{EncodedChallenge, TranscriptRead};
 
 <span class="doccomment">/// Verify a multi-opening proof
@@ -300,4 +298,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

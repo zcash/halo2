@@ -450,25 +450,6 @@
 <span id="435">435</span>
 <span id="436">436</span>
 <span id="437">437</span>
-<span id="438">438</span>
-<span id="439">439</span>
-<span id="440">440</span>
-<span id="441">441</span>
-<span id="442">442</span>
-<span id="443">443</span>
-<span id="444">444</span>
-<span id="445">445</span>
-<span id="446">446</span>
-<span id="447">447</span>
-<span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
-<span id="451">451</span>
-<span id="452">452</span>
-<span id="453">453</span>
-<span id="454">454</span>
-<span id="455">455</span>
-<span id="456">456</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::EccPoint;
 <span class="kw">use </span>halo2_proofs::{
     circuit::Region,
@@ -536,22 +517,6 @@
         config.create_gate(meta);
 
         config
-    }
-
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>advice_columns(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; HashSet&lt;Column&lt;Advice&gt;&gt; {
-        [
-            <span class="self">self</span>.x_p,
-            <span class="self">self</span>.y_p,
-            <span class="self">self</span>.x_qr,
-            <span class="self">self</span>.y_qr,
-            <span class="self">self</span>.lambda,
-            <span class="self">self</span>.alpha,
-            <span class="self">self</span>.beta,
-            <span class="self">self</span>.gamma,
-            <span class="self">self</span>.delta,
-        ]
-        .into_iter()
-        .collect()
     }
 
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>output_columns(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; HashSet&lt;Column&lt;Advice&gt;&gt; {
@@ -786,10 +751,7 @@
         </span><span class="kw">let </span>y_r = r.map(|r| r.<span class="number">1</span>);
         <span class="kw">let </span>y_r_cell = region.assign_advice(|| <span class="string">&quot;y_r&quot;</span>, <span class="self">self</span>.y_qr, offset + <span class="number">1</span>, || y_r)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>result = EccPoint {
-            x: x_r_cell,
-            y: y_r_cell,
-        };
+        <span class="kw">let </span>result = EccPoint::from_coordinates_unchecked(x_r_cell, y_r_cell);
 
         <span class="attribute">#[cfg(test)]
         </span><span class="comment">// Check that the correct sum is obtained.
@@ -926,4 +888,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

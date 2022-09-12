@@ -681,6 +681,8 @@
 <span id="666">666</span>
 <span id="667">667</span>
 <span id="668">668</span>
+<span id="669">669</span>
+<span id="670">670</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{
     circuit::Expression, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error,
     ProvingKey,
@@ -754,6 +756,7 @@
     /// - constructs Permuted&lt;C&gt; struct using permuted_input_value = A&#39;, and
     ///   permuted_table_expression = S&#39;.
     /// The Permuted&lt;C&gt; struct is used to update the Lookup, and is then returned.
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
     </span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>commit_permuted&lt;
         <span class="lifetime">&#39;a</span>,
         C,
@@ -928,6 +931,7 @@
     /// grand product polynomial over the lookup. The grand product polynomial
     /// is used to populate the Product&lt;C&gt; struct. The Product&lt;C&gt; struct is
     /// added to the Lookup and finally returned by the method.
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
     </span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>commit_product&lt;
         E: EncodedChallenge&lt;C&gt;,
         R: RngCore,
@@ -1350,4 +1354,4 @@
     ))
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

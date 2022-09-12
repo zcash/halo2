@@ -312,7 +312,7 @@
         });
 
         <span class="self">self</span>.assign_xy(value, offset, region)
-            .map(|(x, y)| EccPoint { x, y })
+            .map(|(x, y)| EccPoint::from_coordinates_unchecked(x, y))
     }
 
     <span class="doccomment">/// Assigns a non-identity point.
@@ -334,7 +334,7 @@
         });
 
         <span class="self">self</span>.assign_xy(value, offset, region)
-            .map(|(x, y)| NonIdentityEccPoint { x, y })
+            .map(|(x, y)| NonIdentityEccPoint::from_coordinates_unchecked(x, y))
     }
 }
 
@@ -362,4 +362,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

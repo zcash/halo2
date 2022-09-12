@@ -768,6 +768,8 @@
 <span id="753">753</span>
 <span id="754">754</span>
 <span id="755">755</span>
+<span id="756">756</span>
+<span id="757">757</span>
 </pre><pre class="rust"><code><span class="doccomment">//! The [Sinsemilla] hash function.
 //!
 //! [Sinsemilla]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
@@ -881,7 +883,8 @@
 <span class="kw">where
     </span>SinsemillaChip: SinsemillaInstructions&lt;C, K, MAX_WORDS&gt; + Clone + Debug + Eq,
 {
-    <span class="kw">fn </span>from_bitstring(
+    <span class="attribute">#![allow(dead_code)]
+    </span><span class="kw">fn </span>from_bitstring(
         chip: SinsemillaChip,
         <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
         bitstring: Vec&lt;Value&lt;bool&gt;&gt;,
@@ -955,7 +958,8 @@
 <span class="kw">where
     </span>SinsemillaChip: SinsemillaInstructions&lt;C, K, MAX_WORDS&gt; + Clone + Debug + Eq,
 {
-    <span class="kw">fn </span>from_bitstring(
+    <span class="attribute">#![allow(dead_code)]
+    </span><span class="kw">fn </span>from_bitstring(
         chip: SinsemillaChip,
         layouter: <span class="kw">impl </span>Layouter&lt;C::Base&gt;,
         bitstring: <span class="kw-2">&amp;</span>[Value&lt;bool&gt;],
@@ -1524,4 +1528,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

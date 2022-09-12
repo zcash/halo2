@@ -1544,6 +1544,7 @@
 <span id="1529">1529</span>
 <span id="1530">1530</span>
 <span id="1531">1531</span>
+<span id="1532">1532</span>
 </pre><pre class="rust"><code><span class="kw">use </span>core::cmp::max;
 <span class="kw">use </span>core::ops::{Add, Mul};
 <span class="kw">use </span>ff::Field;
@@ -2052,6 +2053,7 @@
 <span class="kw">impl</span>&lt;F: Field&gt; Expression&lt;F&gt; {
     <span class="doccomment">/// Evaluate the polynomial using the provided closures to perform the
     /// operations.
+    </span><span class="attribute">#[allow(clippy::too_many_arguments)]
     </span><span class="kw">pub fn </span>evaluate&lt;T&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         constant: <span class="kw-2">&amp;</span><span class="kw">impl </span>Fn(F) -&gt; T,
@@ -3076,4 +3078,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

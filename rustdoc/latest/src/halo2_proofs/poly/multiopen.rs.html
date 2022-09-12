@@ -508,14 +508,6 @@
 <span id="493">493</span>
 <span id="494">494</span>
 <span id="495">495</span>
-<span id="496">496</span>
-<span id="497">497</span>
-<span id="498">498</span>
-<span id="499">499</span>
-<span id="500">500</span>
-<span id="501">501</span>
-<span id="502">502</span>
-<span id="503">503</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module contains an optimisation of the polynomial commitment opening
 //! scheme described in the [Halo][halo] paper.
 //!
@@ -602,7 +594,8 @@
     }
 }
 
-<span class="attribute">#[derive(Copy, Clone, Debug)]
+<span class="attribute">#[allow(clippy::upper_case_acronyms)]
+#[derive(Copy, Clone, Debug)]
 </span><span class="kw">enum </span>CommitmentReference&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span>, C: CurveAffine&gt; {
     Commitment(<span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span>C),
     MSM(<span class="kw-2">&amp;</span><span class="lifetime">&#39;r </span>commitment::MSM&lt;<span class="lifetime">&#39;params</span>, C&gt;),
@@ -771,7 +764,7 @@
     <span class="kw">use </span>rand_core::OsRng;
 
     <span class="kw">use </span><span class="kw">super</span>::commitment::{Blind, Params};
-    <span class="kw">use </span><span class="kw">crate</span>::arithmetic::{eval_polynomial, FieldExt};
+    <span class="kw">use </span><span class="kw">crate</span>::arithmetic::eval_polynomial;
     <span class="kw">use </span><span class="kw">crate</span>::pasta::{EqAffine, Fp};
     <span class="kw">use </span><span class="kw">crate</span>::transcript::Challenge255;
 
@@ -879,9 +872,7 @@
 
 <span class="attribute">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
-    <span class="kw">use super</span>::{construct_intermediate_sets, Query};
-    <span class="kw">use </span><span class="kw">crate</span>::arithmetic::FieldExt;
-    <span class="kw">use </span><span class="kw">crate</span>::pasta::Fp;
+    <span class="kw">use </span><span class="kw">super</span>::Query;
 
     <span class="attribute">#[derive(Clone)]
     </span><span class="kw">struct </span>MyQuery&lt;F&gt; {
@@ -908,18 +899,11 @@
 
 <span class="attribute">#[cfg(test)]
 </span><span class="kw">mod </span>proptests {
-    <span class="kw">use </span>proptest::{
-        collection::vec,
-        prelude::<span class="kw-2">*</span>,
-        sample::{select, subsequence},
-        strategy::Strategy,
-    };
+    <span class="kw">use </span>proptest::{collection::vec, prelude::<span class="kw-2">*</span>, sample::select};
 
     <span class="kw">use </span><span class="kw">super</span>::construct_intermediate_sets;
-    <span class="kw">use </span><span class="kw">crate</span>::poly::Rotation;
     <span class="kw">use </span>pasta_curves::{arithmetic::FieldExt, Fp};
 
-    <span class="kw">use </span>std::collections::BTreeMap;
     <span class="kw">use </span>std::convert::TryFrom;
 
     <span class="attribute">#[derive(Debug, Clone)]
@@ -1020,4 +1004,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

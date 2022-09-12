@@ -206,9 +206,6 @@
 <span id="191">191</span>
 <span id="192">192</span>
 <span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{add, EccPoint};
 <span class="kw">use super</span>::{COMPLETE_RANGE, X, Y, Z};
 <span class="kw">use </span><span class="kw">crate</span>::utilities::{bool_check, ternary};
@@ -320,7 +317,7 @@
         }
 
         <span class="comment">// Use x_a, y_a output from incomplete addition
-        </span><span class="kw">let </span><span class="kw-2">mut </span>acc = EccPoint { x: x_a.<span class="number">0</span>, y: y_a.<span class="number">0 </span>};
+        </span><span class="kw">let </span><span class="kw-2">mut </span>acc = EccPoint::from_coordinates_unchecked(x_a.<span class="number">0</span>, y_a.<span class="number">0</span>);
 
         <span class="comment">// Copy running sum `z` from incomplete addition
         </span><span class="kw">let </span><span class="kw-2">mut </span>z = {
@@ -387,10 +384,7 @@
             </span>};
 
             <span class="comment">// U = P if the bit is set; U = -P is the bit is not set.
-            </span><span class="kw">let </span>U = EccPoint {
-                x: base.x.clone(),
-                y: y_p,
-            };
+            </span><span class="kw">let </span>U = EccPoint::from_coordinates_unchecked(base.x.clone(), y_p);
 
             <span class="comment">// Acc + U
             </span><span class="kw">let </span>tmp_acc = <span class="self">self
@@ -406,4 +400,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

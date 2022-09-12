@@ -326,6 +326,7 @@
 <span id="311">311</span>
 <span id="312">312</span>
 <span id="313">313</span>
+<span id="314">314</span>
 </pre><pre class="rust"><code><span class="kw">use </span>halo2_proofs::arithmetic::Field;
 <span class="kw">use </span>pasta_curves::{pallas::Base <span class="kw">as </span>Fp, vesta::Base <span class="kw">as </span>Fq};
 
@@ -411,7 +412,8 @@
     </span><span class="kw">pub struct </span>P128Pow5T3Gen&lt;F: FieldExt, <span class="kw">const </span>SECURE_MDS: usize&gt;(PhantomData&lt;F&gt;);
 
     <span class="kw">impl</span>&lt;F: FieldExt, <span class="kw">const </span>SECURE_MDS: usize&gt; P128Pow5T3Gen&lt;F, SECURE_MDS&gt; {
-        <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
+        <span class="attribute">#![allow(dead_code)]
+        </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
             P128Pow5T3Gen(PhantomData::default())
         }
     }
@@ -640,4 +642,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

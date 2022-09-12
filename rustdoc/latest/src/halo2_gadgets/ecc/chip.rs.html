@@ -676,8 +676,7 @@
 <span class="kw">impl </span>EccPoint {
     <span class="doccomment">/// Constructs a point from its coordinates, without checking they are on the curve.
     ///
-    /// This is an internal API that we only use where we know we have a valid curve point
-    /// (specifically inside Sinsemilla).
+    /// This is an internal API that we only use where we know we have a valid curve point.
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>from_coordinates_unchecked(
         x: AssignedCell&lt;Assigned&lt;pallas::Base&gt;, pallas::Base&gt;,
         y: AssignedCell&lt;Assigned&lt;pallas::Base&gt;, pallas::Base&gt;,
@@ -730,7 +729,7 @@
     <span class="doccomment">/// Constructs a point from its coordinates, without checking they are on the curve.
     ///
     /// This is an internal API that we only use where we know we have a valid non-identity
-    /// curve point (specifically inside Sinsemilla).
+    /// curve point.
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>from_coordinates_unchecked(
         x: AssignedCell&lt;Assigned&lt;pallas::Base&gt;, pallas::Base&gt;,
         y: AssignedCell&lt;Assigned&lt;pallas::Base&gt;, pallas::Base&gt;,
@@ -1009,7 +1008,8 @@
 }
 
 <span class="kw">impl </span>EccBaseFieldElemFixed {
-    <span class="kw">fn </span>base_field_elem(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AssignedCell&lt;pallas::Base, pallas::Base&gt; {
+    <span class="attribute">#![allow(dead_code)]
+    </span><span class="kw">fn </span>base_field_elem(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; AssignedCell&lt;pallas::Base, pallas::Base&gt; {
         <span class="self">self</span>.base_field_elem.clone()
     }
 }
@@ -1242,4 +1242,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

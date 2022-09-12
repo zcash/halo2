@@ -673,9 +673,6 @@
 <span id="658">658</span>
 <span id="659">659</span>
 <span id="660">660</span>
-<span id="661">661</span>
-<span id="662">662</span>
-<span id="663">663</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::convert::TryInto;
 
 <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{EccPoint, EccScalarFixedShort, FixedPoints, L_SCALAR_SHORT, NUM_WINDOWS_SHORT};
@@ -872,10 +869,7 @@
                     || y_val,
                 )<span class="question-mark">?</span>;
 
-                <span class="prelude-val">Ok</span>(EccPoint {
-                    x: magnitude_mul.x,
-                    y: y_var,
-                })
+                <span class="prelude-val">Ok</span>(EccPoint::from_coordinates_unchecked(magnitude_mul.x, y_var))
             },
         )<span class="question-mark">?</span>;
 
@@ -1340,4 +1334,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

@@ -130,22 +130,16 @@
 <span id="115">115</span>
 <span id="116">116</span>
 <span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-</pre><pre class="rust"><code><span class="kw">use </span>std::{io, marker::PhantomData};
-
-<span class="kw">use </span>group::ff::Field;
+</pre><pre class="rust"><code><span class="kw">use </span>group::ff::Field;
 <span class="kw">use </span>pasta_curves::arithmetic::CurveAffine;
-<span class="kw">use </span>rand_core::{OsRng, RngCore};
-<span class="kw">use </span>rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+<span class="kw">use </span>rand_core::OsRng;
 
 <span class="kw">use super</span>::{verify_proof, VerificationStrategy};
 <span class="kw">use crate</span>::{
-    multicore,
+    multicore::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator},
     plonk::{Error, VerifyingKey},
     poly::commitment::{Guard, Params, MSM},
-    transcript::{Blake2bRead, EncodedChallenge, TranscriptRead},
+    transcript::{Blake2bRead, EncodedChallenge},
 };
 
 <span class="doccomment">/// A proof verification strategy that returns the proof&#39;s MSM.
@@ -254,4 +248,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

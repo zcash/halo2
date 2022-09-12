@@ -205,9 +205,6 @@
 <span id="190">190</span>
 <span id="191">191</span>
 <span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::collections::HashSet;
 
 <span class="kw">use </span><span class="kw">super</span>::NonIdentityEccPoint;
@@ -346,10 +343,7 @@
         <span class="kw">let </span>y_r = r.map(|r| r.<span class="number">1</span>);
         <span class="kw">let </span>y_r_var = region.assign_advice(|| <span class="string">&quot;y_r&quot;</span>, <span class="self">self</span>.y_qr, offset + <span class="number">1</span>, || y_r)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>result = NonIdentityEccPoint {
-            x: x_r_var,
-            y: y_r_var,
-        };
+        <span class="kw">let </span>result = NonIdentityEccPoint::from_coordinates_unchecked(x_r_var, y_r_var);
 
         <span class="prelude-val">Ok</span>(result)
     }
@@ -404,4 +398,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_gadgets" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

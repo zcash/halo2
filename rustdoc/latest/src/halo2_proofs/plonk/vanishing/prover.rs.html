@@ -186,6 +186,7 @@
 <span id="171">171</span>
 <span id="172">172</span>
 <span id="173">173</span>
+<span id="174">174</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::iter;
 
 <span class="kw">use </span>ff::Field;
@@ -194,7 +195,7 @@
 
 <span class="kw">use </span><span class="kw">super</span>::Argument;
 <span class="kw">use crate</span>::{
-    arithmetic::{eval_polynomial, CurveAffine, FieldExt},
+    arithmetic::{eval_polynomial, CurveAffine},
     plonk::{ChallengeX, ChallengeY, Error},
     poly::{
         <span class="self">self</span>,
@@ -249,7 +250,8 @@
 }
 
 <span class="kw">impl</span>&lt;C: CurveAffine&gt; Committed&lt;C&gt; {
-    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>construct&lt;
+    <span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>construct&lt;
         E: EncodedChallenge&lt;C&gt;,
         Ev: Copy + Send + Sync,
         R: RngCore,
@@ -360,4 +362,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

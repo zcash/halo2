@@ -221,6 +221,7 @@
 <span id="206">206</span>
 <span id="207">207</span>
 <span id="208">208</span>
+<span id="209">209</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::iter;
 
 <span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{
@@ -313,7 +314,8 @@
 }
 
 <span class="kw">impl</span>&lt;C: CurveAffine&gt; Evaluated&lt;C&gt; {
-    <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>expressions&lt;<span class="lifetime">&#39;a</span>&gt;(
+    <span class="attribute">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>expressions&lt;<span class="lifetime">&#39;a</span>&gt;(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="self">self</span>,
         l_0: C::Scalar,
         l_last: C::Scalar,
@@ -430,4 +432,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

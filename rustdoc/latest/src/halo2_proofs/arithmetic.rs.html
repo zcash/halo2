@@ -488,7 +488,7 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>tmp = u64::from_le_bytes(v);
         tmp &gt;&gt;= skip_bits - (skip_bytes * <span class="number">8</span>);
-        tmp = tmp % (<span class="number">1 </span>&lt;&lt; c);
+        tmp %= <span class="number">1 </span>&lt;&lt; c;
 
         tmp <span class="kw">as </span>usize
     }
@@ -547,7 +547,7 @@
         </span><span class="kw">let </span><span class="kw-2">mut </span>running_sum = C::Curve::identity();
         <span class="kw">for </span>exp <span class="kw">in </span>buckets.into_iter().rev() {
             running_sum = exp.add(running_sum);
-            <span class="kw-2">*</span>acc = <span class="kw-2">*</span>acc + <span class="kw-2">&amp;</span>running_sum;
+            <span class="kw-2">*</span>acc += <span class="kw-2">&amp;</span>running_sum;
         }
     }
 }
@@ -699,7 +699,7 @@
         a[<span class="number">1</span>].group_sub(<span class="kw-2">&amp;</span>t);
     } <span class="kw">else </span>{
         <span class="kw">let </span>(left, right) = a.split_at_mut(n / <span class="number">2</span>);
-        rayon::join(
+        multicore::join(
             || recursive_butterfly_arithmetic(left, n / <span class="number">2</span>, twiddle_chunk * <span class="number">2</span>, twiddles),
             || recursive_butterfly_arithmetic(right, n / <span class="number">2</span>, twiddle_chunk * <span class="number">2</span>, twiddles),
         );
@@ -888,4 +888,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>

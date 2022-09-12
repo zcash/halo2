@@ -183,7 +183,6 @@
 <span id="168">168</span>
 <span id="169">169</span>
 <span id="170">170</span>
-<span id="171">171</span>
 </pre><pre class="rust"><code><span class="doccomment">//! This module provides an implementation of a variant of (Turbo)[PLONK][plonk]
 //! that is designed specifically for the polynomial commitment scheme described
 //! in the [Halo][halo] paper.
@@ -195,10 +194,9 @@
 <span class="kw">use </span>group::ff::Field;
 
 <span class="kw">use </span><span class="kw">crate</span>::arithmetic::{CurveAffine, FieldExt};
-<span class="kw">use </span><span class="kw">crate</span>::helpers::CurveRead;
 <span class="kw">use </span><span class="kw">crate</span>::poly::{
-    commitment::Params, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff,
-    PinnedEvaluationDomain, Polynomial,
+    Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, PinnedEvaluationDomain,
+    Polynomial,
 };
 <span class="kw">use </span><span class="kw">crate</span>::transcript::{ChallengeScalar, EncodedChallenge, Transcript};
 
@@ -356,4 +354,4 @@
 </span><span class="kw">struct </span>X;
 <span class="kw">type </span>ChallengeX&lt;F&gt; = ChallengeScalar&lt;F, X&gt;;
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (1d37ed661 2022-09-09)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (59e7a308e 2022-09-11)" ></div></body></html>
