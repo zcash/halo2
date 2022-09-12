@@ -48,7 +48,7 @@ pprof = { version = "0.8", features = ["criterion", "flamegraph"] } # MSRV 1.56
 bench = false
 
 [features]
-dev-graph = ["halo2_proofs/dev-graph", "plotters"]
+test-dev-graph = ["halo2_proofs/dev-graph", "plotters"]
 test-dependencies = ["proptest"]
 unstable = []
 
