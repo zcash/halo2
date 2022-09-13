@@ -739,7 +739,7 @@ pub(crate) mod tests {
         assert_eq!(prover.verify(), Ok(()))
     }
 
-    #[cfg(feature = "dev-graph")]
+    #[cfg(feature = "test-dev-graph")]
     #[test]
     fn print_sinsemilla_chip() {
         use plotters::prelude::*;

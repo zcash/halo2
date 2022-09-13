@@ -866,7 +866,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "dev-graph")]
+    #[cfg(feature = "test-dev-graph")]
     #[test]
     fn print_poseidon_chip() {
         use plotters::prelude::*;
