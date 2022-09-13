@@ -720,3 +720,64 @@ pub fn create_proof<
 
     multiopen::create_proof(params, rng, transcript, instances).map_err(|_| Error::Opening)
 }
+
+#[test]
+fn test_create_proof() {
+    use crate::{
+        circuit::SimpleFloorPlanner,
+        plonk::{keygen_pk, keygen_vk},
+        transcript::{Blake2bWrite, Challenge255},
+    };
+    use pasta_curves::EqAffine;
+    use rand_core::OsRng;
+
+    #[derive(Clone, Copy)]
+    struct MyCircuit;
+
+    impl<F: Field> Circuit<F> for MyCircuit {
+        type Config = ();
+
+        type FloorPlanner = SimpleFloorPlanner;
+
+        fn without_witnesses(&self) -> Self {
+            *self
+        }
+
+        fn configure(_meta: &mut ConstraintSystem<F>) -> Self::Config {}
+
+        fn synthesize(
+            &self,
+            _config: Self::Config,
+            _layouter: impl crate::circuit::Layouter<F>,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+    }
+
+    let params: Params<EqAffine> = Params::new(3);
+    let vk = keygen_vk(&params, &MyCircuit).expect("keygen_vk should not fail");
+    let pk = keygen_pk(&params, vk, &MyCircuit).expect("keygen_pk should not fail");
+    let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
+
+    // Create proof with wrong number of instances
+    let proof = create_proof(
+        &params,
+        &pk,
+        &[MyCircuit, MyCircuit],
+        &[],
+        OsRng,
+        &mut transcript,
+    );
+    assert!(matches!(proof.unwrap_err(), Error::InvalidInstances));
+
+    // Create proof with correct number of instances
+    create_proof(
+        &params,
+        &pk,
+        &[MyCircuit, MyCircuit],
+        &[&[], &[]],
+        OsRng,
+        &mut transcript,
+    )
+    .expect("proof generation should not fail");
+}
