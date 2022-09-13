@@ -46,6 +46,10 @@ pub fn create_proof<
     mut rng: R,
     transcript: &mut T,
 ) -> Result<(), Error> {
+    if circuits.len() != instances.len() {
+        return Err(Error::InvalidInstances);
+    }
+
     for instance in instances.iter() {
         if instance.len() != pk.vk.cs.num_instance_columns {
             return Err(Error::InvalidInstances);
