@@ -735,6 +735,71 @@
 <span id="720">720</span>
 <span id="721">721</span>
 <span id="722">722</span>
+<span id="723">723</span>
+<span id="724">724</span>
+<span id="725">725</span>
+<span id="726">726</span>
+<span id="727">727</span>
+<span id="728">728</span>
+<span id="729">729</span>
+<span id="730">730</span>
+<span id="731">731</span>
+<span id="732">732</span>
+<span id="733">733</span>
+<span id="734">734</span>
+<span id="735">735</span>
+<span id="736">736</span>
+<span id="737">737</span>
+<span id="738">738</span>
+<span id="739">739</span>
+<span id="740">740</span>
+<span id="741">741</span>
+<span id="742">742</span>
+<span id="743">743</span>
+<span id="744">744</span>
+<span id="745">745</span>
+<span id="746">746</span>
+<span id="747">747</span>
+<span id="748">748</span>
+<span id="749">749</span>
+<span id="750">750</span>
+<span id="751">751</span>
+<span id="752">752</span>
+<span id="753">753</span>
+<span id="754">754</span>
+<span id="755">755</span>
+<span id="756">756</span>
+<span id="757">757</span>
+<span id="758">758</span>
+<span id="759">759</span>
+<span id="760">760</span>
+<span id="761">761</span>
+<span id="762">762</span>
+<span id="763">763</span>
+<span id="764">764</span>
+<span id="765">765</span>
+<span id="766">766</span>
+<span id="767">767</span>
+<span id="768">768</span>
+<span id="769">769</span>
+<span id="770">770</span>
+<span id="771">771</span>
+<span id="772">772</span>
+<span id="773">773</span>
+<span id="774">774</span>
+<span id="775">775</span>
+<span id="776">776</span>
+<span id="777">777</span>
+<span id="778">778</span>
+<span id="779">779</span>
+<span id="780">780</span>
+<span id="781">781</span>
+<span id="782">782</span>
+<span id="783">783</span>
+<span id="784">784</span>
+<span id="785">785</span>
+<span id="786">786</span>
+<span id="787">787</span>
 </pre><pre class="rust"><code><span class="kw">use </span>ff::Field;
 <span class="kw">use </span>group::Curve;
 <span class="kw">use </span>rand_core::RngCore;
@@ -783,6 +848,10 @@
     <span class="kw-2">mut </span>rng: R,
     transcript: <span class="kw-2">&amp;mut </span>T,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    <span class="kw">if </span>circuits.len() != instances.len() {
+        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidInstances);
+    }
+
     <span class="kw">for </span>instance <span class="kw">in </span>instances.iter() {
         <span class="kw">if </span>instance.len() != pk.vk.cs.num_instance_columns {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidInstances);
@@ -1456,6 +1525,67 @@
         </span>.chain(vanishing.open(x));
 
     multiopen::create_proof(params, rng, transcript, instances).map_err(|<span class="kw">_</span>| Error::Opening)
+}
+
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_create_proof() {
+    <span class="kw">use crate</span>::{
+        circuit::SimpleFloorPlanner,
+        plonk::{keygen_pk, keygen_vk},
+        transcript::{Blake2bWrite, Challenge255},
+    };
+    <span class="kw">use </span>pasta_curves::EqAffine;
+    <span class="kw">use </span>rand_core::OsRng;
+
+    <span class="attribute">#[derive(Clone, Copy)]
+    </span><span class="kw">struct </span>MyCircuit;
+
+    <span class="kw">impl</span>&lt;F: Field&gt; Circuit&lt;F&gt; <span class="kw">for </span>MyCircuit {
+        <span class="kw">type </span>Config = ();
+
+        <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
+
+        <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+            <span class="kw-2">*</span><span class="self">self
+        </span>}
+
+        <span class="kw">fn </span>configure(_meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;F&gt;) -&gt; <span class="self">Self</span>::Config {}
+
+        <span class="kw">fn </span>synthesize(
+            <span class="kw-2">&amp;</span><span class="self">self</span>,
+            _config: <span class="self">Self</span>::Config,
+            _layouter: <span class="kw">impl </span><span class="kw">crate</span>::circuit::Layouter&lt;F&gt;,
+        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+            <span class="prelude-val">Ok</span>(())
+        }
+    }
+
+    <span class="kw">let </span>params: Params&lt;EqAffine&gt; = Params::new(<span class="number">3</span>);
+    <span class="kw">let </span>vk = keygen_vk(<span class="kw-2">&amp;</span>params, <span class="kw-2">&amp;</span>MyCircuit).expect(<span class="string">&quot;keygen_vk should not fail&quot;</span>);
+    <span class="kw">let </span>pk = keygen_pk(<span class="kw-2">&amp;</span>params, vk, <span class="kw-2">&amp;</span>MyCircuit).expect(<span class="string">&quot;keygen_pk should not fail&quot;</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>transcript = Blake2bWrite::&lt;<span class="kw">_</span>, <span class="kw">_</span>, Challenge255&lt;<span class="kw">_</span>&gt;&gt;::init(<span class="macro">vec!</span>[]);
+
+    <span class="comment">// Create proof with wrong number of instances
+    </span><span class="kw">let </span>proof = create_proof(
+        <span class="kw-2">&amp;</span>params,
+        <span class="kw-2">&amp;</span>pk,
+        <span class="kw-2">&amp;</span>[MyCircuit, MyCircuit],
+        <span class="kw-2">&amp;</span>[],
+        OsRng,
+        <span class="kw-2">&amp;mut </span>transcript,
+    );
+    <span class="macro">assert!</span>(<span class="macro">matches!</span>(proof.unwrap_err(), Error::InvalidInstances));
+
+    <span class="comment">// Create proof with correct number of instances
+    </span>create_proof(
+        <span class="kw-2">&amp;</span>params,
+        <span class="kw-2">&amp;</span>pk,
+        <span class="kw-2">&amp;</span>[MyCircuit, MyCircuit],
+        <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span>[]],
+        OsRng,
+        <span class="kw-2">&amp;mut </span>transcript,
+    )
+    .expect(<span class="string">&quot;proof generation should not fail&quot;</span>);
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.65.0-nightly (fa6ee9375 2022-09-12)" ></div></body></html>

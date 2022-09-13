@@ -1545,6 +1545,11 @@
 <span id="1530">1530</span>
 <span id="1531">1531</span>
 <span id="1532">1532</span>
+<span id="1533">1533</span>
+<span id="1534">1534</span>
+<span id="1535">1535</span>
+<span id="1536">1536</span>
+<span id="1537">1537</span>
 </pre><pre class="rust"><code><span class="kw">use </span>core::cmp::max;
 <span class="kw">use </span>core::ops::{Add, Mul};
 <span class="kw">use </span>ff::Field;
@@ -1874,6 +1879,11 @@
 <span class="kw">impl </span>TableColumn {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>inner(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Column&lt;Fixed&gt; {
         <span class="self">self</span>.inner
+    }
+
+    <span class="doccomment">/// Enable equality on this TableColumn.
+    </span><span class="kw">pub fn </span>enable_equality&lt;F: Field&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;F&gt;) {
+        meta.enable_equality(<span class="self">self</span>.inner)
     }
 }
 
