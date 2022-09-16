@@ -393,7 +393,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
 
     fn add_to_lookup(
         &mut self,
-        table: &crate::plonk::DynamicTable,
+        table: crate::plonk::DynamicTable,
         offset: usize,
     ) -> Result<(), Error> {
         self.plan

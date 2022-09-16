@@ -42,7 +42,7 @@ impl Circuit<Fp> for DynLookupCircuit {
 
             DynamicTableMap {
                 selector: is_even,
-                table_map: vec![(a.clone(), table_vals.into())],
+                table_map: vec![(a, table_vals.into())],
             }
         });
 
@@ -52,7 +52,7 @@ impl Circuit<Fp> for DynLookupCircuit {
 
             DynamicTableMap {
                 selector: is_odd,
-                table_map: vec![(a.clone(), table_vals.into())],
+                table_map: vec![(a, table_vals.into())],
             }
         });
 
@@ -126,13 +126,13 @@ fn main() {
     let params: Params<EqAffine> = Params::new(k);
     let verifier = SingleVerifier::new(&params);
     let vk = keygen_vk(&params, &DynLookupCircuit {}).unwrap();
-    let pk = keygen_pk(&params, vk.clone(), &DynLookupCircuit {}).unwrap();
+    let pk = keygen_pk(&params, vk, &DynLookupCircuit {}).unwrap();
     let mut transcript = Blake2bWrite::<_, vesta::Affine, _>::init(vec![]);
     create_proof(
         &params,
         &pk,
         &[DynLookupCircuit {}],
-        &[],
+        &[&[]],
         &mut OsRng,
         &mut transcript,
     )
@@ -141,6 +141,6 @@ fn main() {
     let proof: Vec<u8> = transcript.finalize();
 
     let mut transcript = Blake2bRead::init(&proof[..]);
-    verify_proof(&params, pk.get_vk(), verifier, &[], &mut transcript)
+    verify_proof(&params, pk.get_vk(), verifier, &[&[]], &mut transcript)
         .expect("could not verify_proof");
 }

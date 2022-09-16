@@ -71,8 +71,8 @@ impl<F: Field> Assignment<F> for Assembly {
         Ok(())
     }
 
-    fn add_row_to_table(&mut self, table: &DynamicTable, row: usize) -> Result<(), Error> {
-        self.dynamic_tables[table.index.index()][row] = true;
+    fn add_row_to_table(&mut self, table: DynamicTable, row: usize) -> Result<(), Error> {
+        self.dynamic_tables[table.index()][row] = true;
 
         Ok(())
     }
@@ -159,7 +159,7 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
         )
         .unwrap();
         let (cs, _) = cs.compress_selectors(assembly.selectors);
-        let (cs, _) = cs.compress_dynamic_table_tags(assembly.dynamic_tables);
+        let (cs, _) = cs.compress_dynamic_table_tags(&assembly.dynamic_tables);
 
         assert!((1 << k) >= cs.minimum_rows());
 

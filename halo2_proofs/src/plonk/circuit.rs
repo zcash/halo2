@@ -341,16 +341,16 @@ impl TableColumn {
 /// The index of a dynamic table in `ConstraintSystem.dynamic_tables`.
 /// The `index + 1` serves as this dynamic table's unique tag value.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct DynamicTableIndex(usize);
+pub struct DynamicTable(usize);
 
-impl DynamicTableIndex {
+impl DynamicTable {
     pub(crate) fn index(self) -> usize {
         self.0
     }
 
     #[cfg(test)]
     pub(crate) fn from_index(index: usize) -> Self {
-        DynamicTableIndex(index)
+        DynamicTable(index)
     }
 
     pub(crate) fn tag(self) -> u64 {
@@ -358,30 +358,30 @@ impl DynamicTableIndex {
     }
 }
 
-/// `DynamicTable` is used to track the columns and rows comprise a dynamic lookup table.
-/// `DynamicTable` are constructed in the configuration phase by `create_dynamic_table`.
-/// To include a row of a region in a dynamic table use `add_row_to_table` during synthesize.
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct DynamicTable {
-    pub(crate) name: String,
-    pub(crate) index: DynamicTableIndex,
-    /// Columns contained in this table, excluding the tag column.
-    pub(crate) columns: Vec<Column<Any>>,
-}
-
-impl fmt::Display for DynamicTable {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "DynamicTable {} ('{}')", self.index.0, self.name)
-    }
-}
-
 impl DynamicTable {
     /// Includes a row at `offset` in this dynamic lookup table.
-    pub fn add_row<F>(&self, region: &mut Region<F>, offset: usize) -> Result<(), Error>
+    pub fn add_row<F>(self, region: &mut Region<F>, offset: usize) -> Result<(), Error>
     where
         F: Field,
     {
         region.add_row_to_table(self, offset)
+    }
+}
+
+/// `DynamicTable` is used to track the columns and rows comprise a dynamic lookup table.
+/// `DynamicTable` are constructed in the configuration phase by `create_dynamic_table`.
+/// To include a row of a region in a dynamic table use `add_row_to_table` during synthesize.
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct DynamicTableInfo {
+    pub(crate) name: String,
+    pub(crate) index: DynamicTable,
+    /// Columns contained in this table, excluding the tag column.
+    pub(crate) columns: Vec<Column<Any>>,
+}
+
+impl fmt::Display for DynamicTableInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "DynamicTable {} ('{}')", self.index.0, self.name)
     }
 }
 
@@ -435,7 +435,7 @@ pub trait Assignment<F: Field> {
         AR: Into<String>;
 
     /// Adds a row in the provided dynamic lookup table.
-    fn add_row_to_table(&mut self, table: &DynamicTable, row: usize) -> Result<(), Error>;
+    fn add_row_to_table(&mut self, table: DynamicTable, row: usize) -> Result<(), Error>;
 
     /// Queries the cell of an instance column at a particular absolute row.
     ///
@@ -554,7 +554,7 @@ pub trait Circuit<F: Field> {
 
 /// A placeholder which will be resolved as a fixed column during optimization.
 #[derive(Clone, Copy, Debug)]
-pub struct VirtualColumn(pub(crate) DynamicTableIndex);
+pub struct VirtualColumn(pub(crate) DynamicTable);
 
 /// Low-degree expression representing an identity that must hold over the committed columns.
 #[derive(Clone)]
@@ -1028,11 +1028,11 @@ pub struct ConstraintSystem<F: Field> {
     /// fixed column that they were compressed into. This is just used by dev
     /// tooling right now.
     pub(crate) selector_map: Vec<Column<Fixed>>,
-    /// Like selector_map, but for `DynamicTable`s.
+    /// Like selector_map, but for dynamic tables.
     pub(crate) dynamic_table_tag_map: Vec<Column<Fixed>>,
 
-    /// A map between `DynamicTable.index` and `DynamicTable`,
-    pub(crate) dynamic_tables: Vec<DynamicTable>,
+    /// A map between `DynamicTable.index` and `DynamicTableInfo`,
+    pub(crate) dynamic_tables: Vec<DynamicTableInfo>,
 
     pub(crate) gates: Vec<Gate<F>>,
     pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
@@ -1200,11 +1200,7 @@ impl<F: Field> ConstraintSystem<F> {
         let non_table_columns: Vec<_> = table_map
             .iter()
             .map(|(_, c)| c)
-            .filter(|col| {
-                !cells.meta.dynamic_tables[table.index.0]
-                    .columns
-                    .contains(col)
-            })
+            .filter(|col| !cells.meta.dynamic_tables[table.0].columns.contains(col))
             .collect();
         if !non_table_columns.is_empty() {
             panic!(
@@ -1232,8 +1228,8 @@ impl<F: Field> ConstraintSystem<F> {
             .collect();
 
         table_map.push((
-            selector.clone() * Expression::Constant(F::from(table.index.tag())),
-            selector * Expression::VirtualColumn(VirtualColumn(table.index)),
+            selector.clone() * Expression::Constant(F::from(table.tag())),
+            selector * Expression::VirtualColumn(VirtualColumn(*table)),
         ));
 
         let index = self.lookups.len();
@@ -1388,7 +1384,7 @@ impl<F: Field> ConstraintSystem<F> {
 
     pub(crate) fn compress_dynamic_table_tags(
         mut self,
-        dynamic_tables: Vec<Vec<bool>>,
+        dynamic_tables: &[Vec<bool>],
     ) -> (Self, Vec<Vec<F>>)
     where
         F: PrimeField,
@@ -1396,7 +1392,7 @@ impl<F: Field> ConstraintSystem<F> {
         assert!(self.dynamic_table_tag_map.is_empty());
         assert_eq!(self.dynamic_tables.len(), dynamic_tables.len());
 
-        let exclusion_matrix = compress_selectors::exclusion_matrix(&dynamic_tables, |rows| {
+        let exclusion_matrix = compress_selectors::exclusion_matrix(dynamic_tables, |rows| {
             // true means the row is included in this dynamic table.
             rows.iter().cloned()
         });
@@ -1450,7 +1446,7 @@ impl<F: Field> ConstraintSystem<F> {
                                 if rows[i] {
                                     // Assert that only one table in the combination includes this row
                                     assert_eq!(tag, 0);
-                                    DynamicTableIndex(*tag_col_index).tag()
+                                    DynamicTable(*tag_col_index).tag()
                                 } else {
                                     tag
                                 }
@@ -1645,21 +1641,21 @@ impl<F: Field> ConstraintSystem<F> {
         fixed_columns: &[Column<Fixed>],
         advice_columns: &[Column<Advice>],
     ) -> DynamicTable {
-        let index = DynamicTableIndex(self.dynamic_tables.len());
+        let index = DynamicTable(self.dynamic_tables.len());
         let columns: Vec<_> = fixed_columns
             .iter()
             .map(|f| Column::<Any>::from(*f))
             .chain(advice_columns.iter().map(|f| Column::<Any>::from(*f)))
             .collect();
 
-        let table = DynamicTable {
+        let table = DynamicTableInfo {
             name: name.into(),
             index,
             columns,
         };
 
-        self.dynamic_tables.push(table.clone());
-        table
+        self.dynamic_tables.push(table);
+        index
     }
 
     /// Allocates a new fixed column that can be used in a lookup table.

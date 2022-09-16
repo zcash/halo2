@@ -85,12 +85,12 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         Ok(())
     }
 
-    fn add_row_to_table(&mut self, table: &DynamicTable, row: usize) -> Result<(), Error> {
+    fn add_row_to_table(&mut self, table: DynamicTable, row: usize) -> Result<(), Error> {
         if !self.usable_rows.contains(&row) {
             return Err(Error::not_enough_rows_available(self.k));
         }
 
-        self.dynamic_tables[table.index.index()][row] = true;
+        self.dynamic_tables[table.index()][row] = true;
 
         Ok(())
     }
@@ -239,7 +239,7 @@ where
             .map(|poly| domain.lagrange_from_vec(poly)),
     );
 
-    let (cs, dynamic_table_polys) = cs.compress_dynamic_table_tags(assembly.dynamic_tables);
+    let (cs, dynamic_table_polys) = cs.compress_dynamic_table_tags(&assembly.dynamic_tables);
     fixed.extend(
         dynamic_table_polys
             .into_iter()
@@ -308,7 +308,7 @@ where
             .map(|poly| vk.domain.lagrange_from_vec(poly)),
     );
 
-    let (cs, dynamic_table_polys) = cs.compress_dynamic_table_tags(assembly.dynamic_tables);
+    let (cs, dynamic_table_polys) = cs.compress_dynamic_table_tags(&assembly.dynamic_tables);
     fixed.extend(
         dynamic_table_polys
             .into_iter()

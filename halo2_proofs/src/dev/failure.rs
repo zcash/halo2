@@ -9,7 +9,7 @@ use super::{
     util::{self, AnyQuery},
     MockProver, Region,
 };
-use crate::plonk::DynamicTable;
+use crate::plonk::DynamicTableInfo;
 use crate::{
     dev::Value,
     plonk::{Any, Column, ConstraintSystem, Expression, Gate},
@@ -113,7 +113,7 @@ pub enum VerifyFailure {
     /// A cell used in an active gate was not assigned to.
     DynamicTableCellNotAssigned {
         /// The tag of the table containing a unassigned cell.
-        dynamic_table: DynamicTable,
+        dynamic_table: DynamicTableInfo,
         /// The region in which this cell should be assigned.
         region: metadata::Region,
         /// The column in which this cell should be assigned.

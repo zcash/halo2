@@ -8,6 +8,7 @@ use ff::Field;
 
 use crate::plonk::Assigned;
 use crate::plonk::DynamicTable;
+use crate::plonk::DynamicTableInfo;
 use crate::{
     arithmetic::{FieldExt, Group},
     circuit,
@@ -339,11 +340,11 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         Ok(())
     }
 
-    fn add_row_to_table(&mut self, table: &DynamicTable, row: usize) -> Result<(), Error> {
-        self.dynamic_tables[table.index.index()][row] = true;
+    fn add_row_to_table(&mut self, table: DynamicTable, row: usize) -> Result<(), Error> {
+        self.dynamic_tables[table.index()][row] = true;
 
         if let Some(region) = self.current_region.as_mut() {
-            for column in table.columns.iter() {
+            for column in self.cs.dynamic_tables[table.index()].columns.iter() {
                 region.update_extent(*column, row);
             }
         }
@@ -560,7 +561,7 @@ impl<F: FieldExt> MockProver<F> {
 
         let (cs, tag_polys) = prover
             .cs
-            .compress_dynamic_table_tags(prover.dynamic_tables.clone());
+            .compress_dynamic_table_tags(&prover.dynamic_tables);
         prover.cs = cs;
         prover.fixed.extend(tag_polys.into_iter().map(|poly| {
             let mut v = vec![CellValue::Unassigned; n];
@@ -865,7 +866,7 @@ impl<F: FieldExt> MockProver<F> {
             fn unassigned_error<F: FieldExt>(
                 regions: &[Region],
                 cell: CellValue<F>,
-                dynamic_table: &DynamicTable,
+                dynamic_table: &DynamicTableInfo,
                 column: Column<Any>,
                 row: usize,
             ) -> Option<VerifyFailure> {
@@ -969,7 +970,7 @@ mod tests {
     use crate::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         plonk::{
-            Advice, Any, Circuit, Column, ConstraintSystem, DynamicTable, Error, Expression,
+            Advice, Any, Circuit, Column, ConstraintSystem, DynamicTableInfo, Error, Expression,
             Selector, TableColumn,
         },
         poly::Rotation,
@@ -1179,7 +1180,7 @@ mod tests {
 
     #[cfg(test)]
     mod dynamic_lookups {
-        use crate::plonk::{DynamicTableIndex, DynamicTableMap};
+        use crate::plonk::{DynamicTable, DynamicTableMap};
 
         use super::*;
 
@@ -1277,7 +1278,7 @@ mod tests {
                                     i,
                                     || Value::known(Fp::from(i as u64)),
                                 )?;
-                                region.add_row_to_table(&config.table, i)?;
+                                region.add_row_to_table(config.table, i)?;
                             }
                             Ok(())
                         },
@@ -1345,7 +1346,7 @@ mod tests {
                                     0,
                                     || Value::known(Fp::from(i as u64)),
                                 )?;
-                                region.add_row_to_table(&config.table, 0)?;
+                                region.add_row_to_table(config.table, 0)?;
                                 Ok(())
                             },
                         )?;
@@ -1614,9 +1615,9 @@ mod tests {
             assert_eq!(
                 res,
                 Err(vec![VerifyFailure::DynamicTableCellNotAssigned {
-                    dynamic_table: DynamicTable {
+                    dynamic_table: DynamicTableInfo {
                         name: "table".to_string(),
-                        index: DynamicTableIndex::from_index(0),
+                        index: DynamicTable::from_index(0),
                         columns: vec![Column::new(1, Any::Advice)],
                     },
                     region: (0, "table".to_string(),).into(),
@@ -1689,9 +1690,9 @@ mod tests {
             assert_eq!(
                 res,
                 Err(vec![VerifyFailure::DynamicTableCellNotAssigned {
-                    dynamic_table: DynamicTable {
+                    dynamic_table: DynamicTableInfo {
                         name: "table".to_string(),
-                        index: DynamicTableIndex::from_index(0),
+                        index: DynamicTable::from_index(0),
                         columns: vec![Column::new(1, Any::Advice)],
                     },
                     region: (0, "table".to_string(),).into(),
@@ -1704,7 +1705,7 @@ mod tests {
 
     #[cfg(test)]
     mod even_odd_dyn_tables {
-        use crate::plonk::DynamicTableMap;
+        use crate::plonk::{DynamicTable, DynamicTableMap};
 
         use super::*;
 

@@ -8,8 +8,7 @@ use ff::Field;
 
 use super::{Cell, RegionIndex, Value};
 use crate::plonk::{
-    Advice, Any, Assigned, Column, DynamicTable, DynamicTableIndex, Error, Fixed, Instance,
-    Selector, TableColumn,
+    Advice, Any, Assigned, Column, DynamicTable, Error, Fixed, Instance, Selector, TableColumn,
 };
 
 /// Helper trait for implementing a custom [`Layouter`].
@@ -52,7 +51,7 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
     ) -> Result<(), Error>;
 
     /// Enables a selector at the given offset.
-    fn add_to_lookup(&mut self, table: &DynamicTable, offset: usize) -> Result<(), Error>;
+    fn add_to_lookup(&mut self, table: DynamicTable, offset: usize) -> Result<(), Error>;
 
     /// Assign an advice column value (witness)
     fn assign_advice<'v>(
@@ -146,7 +145,7 @@ pub enum RegionColumn {
     /// Virtual column representing a (boolean) selector
     Selector(Selector),
     /// Virtual column used for storing dynamic table tags
-    TableTag(DynamicTableIndex),
+    TableTag(DynamicTable),
 }
 
 impl From<Column<Any>> for RegionColumn {
@@ -161,9 +160,9 @@ impl From<Selector> for RegionColumn {
     }
 }
 
-impl From<&DynamicTable> for RegionColumn {
-    fn from(table: &DynamicTable) -> RegionColumn {
-        RegionColumn::TableTag(table.index)
+impl From<DynamicTable> for RegionColumn {
+    fn from(table: DynamicTable) -> RegionColumn {
+        RegionColumn::TableTag(table)
     }
 }
 
@@ -226,7 +225,7 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         Ok(())
     }
 
-    fn add_to_lookup(&mut self, table: &DynamicTable, offset: usize) -> Result<(), Error> {
+    fn add_to_lookup(&mut self, table: DynamicTable, offset: usize) -> Result<(), Error> {
         // Track the tag's fixed column as part of the region's shape.
         self.columns.insert(table.into());
         self.row_count = cmp::max(self.row_count, offset + 1);

@@ -209,7 +209,7 @@ impl<'r, F: Field> Region<'r, F> {
     /// Includes a row at `offset` in this dynamic lookup table.
     pub(crate) fn add_row_to_table(
         &mut self,
-        table: &DynamicTable,
+        table: DynamicTable,
         offset: usize,
     ) -> Result<(), Error> {
         self.region.add_to_lookup(table, offset)

@@ -172,7 +172,7 @@ pub fn create_proof<
                     Ok(())
                 }
 
-                fn add_row_to_table(&mut self, _: &DynamicTable, _: usize) -> Result<(), Error> {
+                fn add_row_to_table(&mut self, _: DynamicTable, _: usize) -> Result<(), Error> {
                     // We only care about advice columns here
 
                     Ok(())
