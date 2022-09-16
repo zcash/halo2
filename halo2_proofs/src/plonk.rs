@@ -10,8 +10,8 @@ use group::ff::{Field, FromUniformBytes, PrimeField};
 
 use crate::arithmetic::CurveAffine;
 use crate::poly::{
-    Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, PinnedEvaluationDomain,
-    Polynomial,
+    commitment::Params, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff,
+    PinnedEvaluationDomain, Polynomial,
 };
 use crate::transcript::{ChallengeScalar, EncodedChallenge, Transcript};
 
@@ -33,6 +33,7 @@ pub use keygen::*;
 pub use prover::*;
 pub use verifier::*;
 
+use crate::helpers::CurveRead;
 use std::io;
 
 /// This is a verifying key which allows for the verification of proofs for a
@@ -47,17 +48,81 @@ pub struct VerifyingKey<C: CurveAffine> {
     cs_degree: usize,
     /// The representative of this `VerifyingKey` in transcripts.
     transcript_repr: C::Scalar,
+    selectors: Vec<Vec<bool>>,
 }
 
 impl<C: CurveAffine> VerifyingKey<C>
 where
     C::Scalar: FromUniformBytes<64>,
 {
+    /// Writes a verifying key to a buffer.
+    pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
+        for commitment in &self.fixed_commitments {
+            writer.write_all(commitment.to_bytes().as_ref())?;
+        }
+        self.permutation.write(writer)?;
+
+        // write self.selectors
+        for selector in &self.selectors {
+            let mut selector_bytes = vec![0u8; selector.len() / 8 + 1];
+            for i in 0..selector.len() {
+                let byte_index = i / 8;
+                let bit_index = i % 8;
+                selector_bytes[byte_index] |= (selector[i] as u8) << bit_index;
+            }
+            writer.write_all(&selector_bytes)?;
+        }
+
+        Ok(())
+    }
+
+    /// Reads a verification key from a buffer.
+    pub fn read<R: io::Read, ConcreteCircuit: Circuit<C::Scalar>>(
+        reader: &mut R,
+        params: &Params<C>,
+    ) -> io::Result<Self> {
+        let (domain, cs, _) = keygen::create_domain::<C, ConcreteCircuit>(params);
+
+        let fixed_commitments: Vec<_> = (0..cs.num_fixed_columns)
+            .map(|_| C::read(reader))
+            .collect::<Result<_, _>>()?;
+
+        let permutation = permutation::VerifyingKey::read(reader, &cs.permutation)?;
+
+        // read selectors
+        let selectors: Vec<Vec<bool>> = vec![vec![false; params.n as usize]; cs.num_selectors]
+            .into_iter()
+            .map(|mut selector| {
+                let mut selector_bytes = vec![0u8; selector.len() / 8 + 1];
+                reader
+                    .read_exact(&mut selector_bytes)
+                    .expect("unable to read selector bytes");
+                for i in 0..selector.len() {
+                    let byte_index = i / 8;
+                    let bit_index = i % 8;
+                    selector[i] = (selector_bytes[byte_index] >> bit_index) & 1 == 1;
+                }
+                Ok(selector)
+            })
+            .collect::<Result<Vec<Vec<bool>>, &str>>()
+            .unwrap();
+        let (cs, _) = cs.compress_selectors(selectors.clone());
+
+        Ok(Self::from_parts(
+            domain,
+            fixed_commitments,
+            permutation,
+            cs,
+            selectors,
+        ))
+    }
+
     fn from_parts(
         domain: EvaluationDomain<C::Scalar>,
         fixed_commitments: Vec<C>,
         permutation: permutation::VerifyingKey<C>,
         cs: ConstraintSystem<C::Scalar>,
+        selectors: Vec<Vec<bool>>,
     ) -> Self {
         // Compute cached values.
         let cs_degree = cs.degree();
@@ -70,6 +135,7 @@ where
             cs_degree,
             // Temporary, this is not pinned.
             transcript_repr: C::Scalar::ZERO,
+            selectors,
         };
 
         let mut hasher = Blake2bParams::new()

@@ -8,6 +8,9 @@ pub(crate) mod keygen;
 pub(crate) mod prover;
 pub(crate) mod verifier;
 
+use crate::helpers::CurveRead;
+use std::io;
+
 /// A permutation argument.
 #[derive(Debug, Clone)]
 pub(crate) struct Argument {
@@ -73,6 +76,23 @@ impl Argument {
 #[derive(Clone, Debug)]
 pub(crate) struct VerifyingKey<C: CurveAffine> {
     commitments: Vec<C>,
+}
+
+impl<C: CurveAffine> VerifyingKey<C> {
+    pub(crate) fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
+        for commitment in &self.commitments {
+            writer.write_all(commitment.to_bytes().as_ref())?;
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn read<R: io::Read>(reader: &mut R, argument: &Argument) -> io::Result<Self> {
+        let commitments = (0..argument.columns.len())
+            .map(|_| C::read(reader))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(VerifyingKey { commitments })
+    }
 }
 
 /// The proving key for a single permutation argument.
