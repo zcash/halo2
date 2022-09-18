@@ -9,6 +9,7 @@ use crate::{
 use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation};
 
 use group::ff::{BatchInvert, Field, PrimeField};
+use rand_core::RngCore;
 
 use std::marker::PhantomData;
 
@@ -197,6 +198,21 @@ impl<G: Group> EvaluationDomain<G> {
     pub fn constant_lagrange(&self, scalar: G) -> Polynomial<G, LagrangeCoeff> {
         Polynomial {
             values: vec![scalar; self.n as usize],
+            _marker: PhantomData,
+        }
+    }
+
+    /// Returns a random polynomial in the Lagrange coefficient basis,
+    /// with deferred inversions.
+    pub(crate) fn random_lagrange_assigned(
+        &self,
+        mut rng: impl RngCore,
+    ) -> Polynomial<Assigned<G>, LagrangeCoeff>
+    where
+        G: Field,
+    {
+        Polynomial {
+            values: (0..self.n).map(|_| G::random(&mut rng).into()).collect(),
             _marker: PhantomData,
         }
     }
