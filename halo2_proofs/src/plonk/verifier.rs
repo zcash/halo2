@@ -175,21 +175,40 @@ pub fn verify_proof<
             .collect::<Result<Vec<_>, _>>()?
     } else {
         let xn = x.pow(&[params.n() as u64, 0, 0, 0]);
+        let (min_rotation, max_rotation) =
+            vk.cs
+                .instance_queries
+                .iter()
+                .fold((0, 0), |(min, max), (_, rotation)| {
+                    if rotation.0 < min {
+                        (rotation.0, max)
+                    } else if rotation.0 > max {
+                        (min, rotation.0)
+                    } else {
+                        (min, max)
+                    }
+                });
+        let max_instance_len = instances
+            .iter()
+            .flat_map(|instance| instance.iter().map(|instance| instance.len()))
+            .max_by(Ord::cmp)
+            .unwrap_or_default();
         let l_i_s = &vk.domain.l_i_range(
             *x,
             xn,
-            0..instances
-                .iter()
-                .flat_map(|instance| instance.iter().map(|instance| instance.len()))
-                .max_by(Ord::cmp)
-                .unwrap_or_default() as i32,
+            -max_rotation..max_instance_len as i32 + min_rotation.abs(),
         );
         instances
             .iter()
-            .map(|instance| {
-                instance
+            .map(|instances| {
+                vk.cs
+                    .instance_queries
                     .iter()
-                    .map(|instance| compute_inner_product(instance, &l_i_s[..instance.len()]))
+                    .map(|(column, rotation)| {
+                        let instances = instances[column.index()];
+                        let offset = (max_rotation - rotation.0) as usize;
+                        compute_inner_product(instances, &l_i_s[offset..offset + instances.len()])
+                    })
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>()
