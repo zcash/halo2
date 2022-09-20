@@ -52,6 +52,7 @@ pasta_curves = "0.4"
 rand_core = { version = "0.6", default-features = false }
 tracing = "0.1"
 blake2b_simd = "1"
+halo2_proofs = "0.2.0"
 
 # Developer tooling dependencies
 plotters = { version = "0.3.0", default-features = false, optional = true }
