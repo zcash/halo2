@@ -465,8 +465,8 @@ fn plonk_api() {
 
     {
         // Check that a hardcoded proof is satisfied
-        let proof = std::fs::read("./tests/plonk_api_proof.bin")
-            .expect("should succeed to read proof");
+        let proof =
+            std::fs::read("./tests/plonk_api_proof.bin").expect("should succeed to read proof");
         let strategy = SingleVerifier::new(&params);
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
         assert!(verify_proof(
