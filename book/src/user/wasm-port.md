@@ -118,6 +118,10 @@ If you'd prefer to use your own Worker/React setup, the code to [fetch and seria
 
 Note that `wasm-bindgen-rayon` library is not supported by Safari because it spawns Web Workers from inside another Web Worker. Chrome marks the [status of Safari support as "No Signal"](https://www.chromestatus.com/feature/6080438103703552) and there has been no activity on the [Webkit issue](https://bugs.webkit.org/show_bug.cgi?id=25212) in many years, so if Safari is support is important to you, the only reasonable route is to fork `halo2` and replace the use of Rayon with single threaded functions.
 
+## Debugging
+
+Often, you'll run into issues with your Rust code and see that the WASM execution errors with `Uncaught (in promise) RuntimeError: unreachable`, a wholly unhelpful error for debugging. This is because the code is compiled in release mode which strips out error messages as a performance optimisation. To debug, you can build the WASM package in debug mode using the flag `--dev` with `wasm-pack build`. This will build in debug mode, slowing down execution significantly but allowing you to see any runtime error messages in the browser console. Additionally, you can install the [`console_error_panic_hook`](https://github.com/rustwasm/console_error_panic_hook) crate (as is done by Zordle) to also get helpful debug messages for runtime panics.
+
 ## Credits
 
 This guide was written by [Nalin](https://twitter.com/nibnalin). Thanks additionally to [Uma](https://twitter.com/pumatheuma) and [Blaine](https://twitter.com/BlaineBublitz) for significant work on figuring out these steps. Feel free to reach out to me if you have trouble with any of these steps.
