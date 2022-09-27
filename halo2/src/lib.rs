@@ -6,4 +6,6 @@
 #![deny(missing_docs)]
 #![deny(unsafe_code)]
 
-mod recursive_verifier;
+mod accumulator;
+mod prover;
+mod transcript;

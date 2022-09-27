@@ -28,6 +28,9 @@ where
     /// The number of fixed bases available.
     const NUM_FIXED_BASES: usize;
 
+    /// Returns fixed bases
+    fn fixed_bases(&self) -> Vec<Self::FixedBases>;
+
     /// Witnesses a slice of bools as a vector of [`Self::Bitstring`]s.
     fn witness_bitstring(
         &self,

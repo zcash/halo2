@@ -78,13 +78,13 @@ where
     /// - Returns the assigned scalar field element.
     pub fn common_scalar(
         &mut self,
-        mut layouter: impl Layouter<C::Base>,
+        layouter: impl Layouter<C::Base>,
         scalar: Value<C::Scalar>,
     ) -> Result<ScalarVar<C, TranscriptChip>, Error> {
         // TODO: absorb POSEIDON_PREFIX_SCALAR
         // TODO: absorb scalar
 
-        todo!()
+        ScalarVar::new(self.transcript_chip.clone(), layouter, scalar)
     }
 
     /// Squeezes a `LENGTH`-bit challenge from the transcript.
