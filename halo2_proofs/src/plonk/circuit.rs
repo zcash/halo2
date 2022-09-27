@@ -1469,6 +1469,26 @@ impl<F: Field> ConstraintSystem<F> {
                 // and the interstitial values.)
             + 1 // for at least one row
     }
+
+    /// Returns num_fixed_columns
+    pub fn num_fixed_columns(&self) -> usize {
+        self.num_fixed_columns
+    }
+
+    /// Returns num_advice_columns
+    pub fn num_advice_columns(&self) -> usize {
+        self.num_advice_columns
+    }
+
+    /// Returns num_instance_columns
+    pub fn num_instance_columns(&self) -> usize {
+        self.num_instance_columns
+    }
+
+    /// Returns num_selectors
+    pub fn num_selectors(&self) -> usize {
+        self.num_selectors
+    }
 }
 
 /// Exposes the "virtual cells" that can be queried while creating a custom gate or lookup

@@ -20,7 +20,7 @@ where
     /// A bitstring up to `MAX_BITSTRING_LENGTH` bits.
     type Bitstring: Clone + Debug;
     /// Enumeration of fixed bases used in endoscaling.
-    type FixedBases;
+    type FixedBases: Clone + Debug;
     /// The maximum number of bits that can be represented by [`Self::Bitstring`].
     /// When endoscaling with a base, each unique base can only support up to
     /// `MAX_BITSTRING_LENGTH` bits.
