@@ -19,7 +19,7 @@ mod batch;
 pub use batch::BatchVerifier;
 
 /// Trait representing a strategy for verifying Halo 2 proofs.
-pub trait VerificationStrategy<'params, C: CurveAffine> {
+pub trait VerificationStrategy<C: CurveAffine> {
     /// The output type of this verification strategy after processing a proof.
     type Output;
 
@@ -27,35 +27,35 @@ pub trait VerificationStrategy<'params, C: CurveAffine> {
     /// output.
     fn process<E: EncodedChallenge<C>>(
         self,
-        f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
+        params: &Params<C>,
+        f: impl FnOnce(MSM<C>) -> Result<Guard<C, E>, Error>,
     ) -> Result<Self::Output, Error>;
 }
 
 /// A verifier that checks a single proof at a time.
 #[derive(Debug)]
-pub struct SingleVerifier<'params, C: CurveAffine> {
-    msm: MSM<'params, C>,
+pub struct SingleVerifier<C: CurveAffine> {
+    msm: MSM<C>,
 }
 
-impl<'params, C: CurveAffine> SingleVerifier<'params, C> {
+impl<C: CurveAffine> SingleVerifier<C> {
     /// Constructs a new single proof verifier.
-    pub fn new(params: &'params Params<C>) -> Self {
-        SingleVerifier {
-            msm: MSM::new(params),
-        }
+    pub fn new(n: u64) -> Self {
+        SingleVerifier { msm: MSM::new(n) }
     }
 }
 
-impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for SingleVerifier<'params, C> {
+impl<C: CurveAffine> VerificationStrategy<C> for SingleVerifier<C> {
     type Output = ();
 
     fn process<E: EncodedChallenge<C>>(
         self,
-        f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
+        params: &Params<C>,
+        f: impl FnOnce(MSM<C>) -> Result<Guard<C, E>, Error>,
     ) -> Result<Self::Output, Error> {
         let guard = f(self.msm)?;
         let msm = guard.use_challenges();
-        if msm.eval() {
+        if msm.eval(params) {
             Ok(())
         } else {
             Err(Error::ConstraintSystemFailure)
@@ -69,7 +69,7 @@ pub fn verify_proof<
     C: CurveAffine,
     E: EncodedChallenge<C>,
     T: TranscriptRead<C, E>,
-    V: VerificationStrategy<'params, C>,
+    V: VerificationStrategy<C>,
 >(
     params: &'params Params<C>,
     vk: &VerifyingKey<C>,
@@ -341,7 +341,7 @@ pub fn verify_proof<
 
     // We are now convinced the circuit is satisfied so long as the
     // polynomial commitments open to the correct values.
-    strategy.process(|msm| {
+    strategy.process(params,|msm| {
         multiopen::verify_proof(params, transcript, queries, msm).map_err(|_| Error::Opening)
     })
 }

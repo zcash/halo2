@@ -11,8 +11,8 @@ use crate::arithmetic::{best_multiexp, CurveAffine};
 
 /// A guard returned by the verifier
 #[derive(Debug, Clone)]
-pub struct Guard<'a, C: CurveAffine, E: EncodedChallenge<C>> {
-    msm: MSM<'a, C>,
+pub struct Guard<C: CurveAffine, E: EncodedChallenge<C>> {
+    msm: MSM<C>,
     neg_c: C::Scalar,
     u: Vec<C::Scalar>,
     u_packed: Vec<E>,
@@ -29,10 +29,10 @@ pub struct Accumulator<C: CurveAffine, E: EncodedChallenge<C>> {
     pub u_packed: Vec<E>,
 }
 
-impl<'a, C: CurveAffine, E: EncodedChallenge<C>> Guard<'a, C, E> {
+impl<'a, C: CurveAffine, E: EncodedChallenge<C>> Guard<C, E> {
     /// Lets caller supply the challenges and obtain an MSM with updated
     /// scalars and points.
-    pub fn use_challenges(mut self) -> MSM<'a, C> {
+    pub fn use_challenges(mut self) -> MSM<C> {
         let s = compute_s(&self.u, self.neg_c);
         self.msm.add_to_g_scalars(&s);
 
@@ -41,7 +41,7 @@ impl<'a, C: CurveAffine, E: EncodedChallenge<C>> Guard<'a, C, E> {
 
     /// Lets caller supply the purported G point and simply appends
     /// [-c] G to return an updated MSM.
-    pub fn use_g(mut self, g: C) -> (MSM<'a, C>, Accumulator<C, E>) {
+    pub fn use_g(mut self, g: C) -> (MSM<C>, Accumulator<C, E>) {
         self.msm.append_term(self.neg_c, g);
 
         let accumulator = Accumulator {
@@ -53,23 +53,23 @@ impl<'a, C: CurveAffine, E: EncodedChallenge<C>> Guard<'a, C, E> {
     }
 
     /// Computes G = ⟨s, params.g⟩
-    pub fn compute_g(&self) -> C {
+    pub fn compute_g(&self, params: &Params<C>) -> C {
         let s = compute_s(&self.u, C::Scalar::one());
 
-        best_multiexp(&s, &self.msm.params.g).to_affine()
+        best_multiexp(&s, &params.g).to_affine()
     }
 }
 
 /// Checks to see if the proof represented within `transcript` is valid, and a
 /// point `x` that the polynomial commitment `P` opens purportedly to the value
 /// `v`. The provided `msm` should evaluate to the commitment `P` being opened.
-pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
-    params: &'a Params<C>,
-    mut msm: MSM<'a, C>,
+pub fn verify_proof<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
+    params: &Params<C>,
+    mut msm: MSM<C>,
     transcript: &mut T,
     x: C::Scalar,
     v: C::Scalar,
-) -> Result<Guard<'a, C, E>, Error> {
+) -> Result<Guard<C, E>, Error> {
     let k = params.k as usize;
 
     // P' = P - [v] G_0 + [ξ] S

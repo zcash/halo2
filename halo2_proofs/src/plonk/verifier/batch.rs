@@ -14,24 +14,23 @@ use crate::{
 ///
 /// `BatchVerifier` handles the accumulation of the MSMs for the batched proofs.
 #[derive(Debug)]
-struct BatchStrategy<'params, C: CurveAffine> {
-    msm: MSM<'params, C>,
+struct BatchStrategy<C: CurveAffine> {
+    msm: MSM<C>,
 }
 
-impl<'params, C: CurveAffine> BatchStrategy<'params, C> {
-    fn new(params: &'params Params<C>) -> Self {
-        BatchStrategy {
-            msm: MSM::new(params),
-        }
+impl<C: CurveAffine> BatchStrategy<C> {
+    fn new(n: u64) -> Self {
+        BatchStrategy { msm: MSM::new(n) }
     }
 }
 
-impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for BatchStrategy<'params, C> {
-    type Output = MSM<'params, C>;
+impl<C: CurveAffine> VerificationStrategy<C> for BatchStrategy<C> {
+    type Output = MSM<C>;
 
     fn process<E: EncodedChallenge<C>>(
         self,
-        f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
+        _: &Params<C>,
+        f: impl FnOnce(MSM<C>) -> Result<Guard<C, E>, Error>,
     ) -> Result<Self::Output, Error> {
         let guard = f(self.msm)?;
         Ok(guard.use_challenges())
@@ -71,10 +70,7 @@ impl<C: CurveAffine> BatchVerifier<C> {
     /// the internal parallelization requires access to a RNG that is guaranteed to not
     /// clone its internal state when shared between threads.
     pub fn finalize(self, params: &Params<C>, vk: &VerifyingKey<C>) -> bool {
-        fn accumulate_msm<'params, C: CurveAffine>(
-            mut acc: MSM<'params, C>,
-            msm: MSM<'params, C>,
-        ) -> MSM<'params, C> {
+        fn accumulate_msm<C: CurveAffine>(mut acc: MSM<C>, msm: MSM<C>) -> MSM<C> {
             // Scale the MSM by a random factor to ensure that if the existing MSM has
             // `is_zero() == false` then this argument won't be able to interfere with it
             // to make it true, with high probability.
@@ -96,7 +92,7 @@ impl<C: CurveAffine> BatchVerifier<C> {
                     .collect();
                 let instances: Vec<_> = instances.iter().map(|i| &i[..]).collect();
 
-                let strategy = BatchStrategy::new(params);
+                let strategy = BatchStrategy::new(params.n);
                 let mut transcript = Blake2bRead::init(&item.proof[..]);
                 verify_proof(params, vk, strategy, &instances, &mut transcript).map_err(|e| {
                     tracing::debug!("Batch item {} failed verification: {}", i, e);
@@ -110,7 +106,7 @@ impl<C: CurveAffine> BatchVerifier<C> {
             .try_reduce(|| params.empty_msm(), |a, b| Ok(accumulate_msm(a, b)));
 
         match final_msm {
-            Ok(msm) => msm.eval(),
+            Ok(msm) => msm.eval(params),
             Err(_) => false,
         }
     }

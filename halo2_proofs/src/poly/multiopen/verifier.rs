@@ -23,10 +23,10 @@ pub fn verify_proof<
     params: &'params Params<C>,
     transcript: &mut T,
     queries: I,
-    mut msm: MSM<'params, C>,
-) -> Result<Guard<'params, C, E>, Error>
+    mut msm: MSM<C>,
+) -> Result<Guard<C, E>, Error>
 where
-    I: IntoIterator<Item = VerifierQuery<'r, 'params, C>> + Clone,
+    I: IntoIterator<Item = VerifierQuery<'r, C>> + Clone,
 {
     // Sample x_1 for compressing openings at the same point sets together
     let x_1: ChallengeX1<_> = transcript.squeeze_challenge_scalar();
@@ -126,8 +126,8 @@ where
     super::commitment::verify_proof(params, msm, transcript, *x_3, v)
 }
 
-impl<'a, 'b, C: CurveAffine> Query<C::Scalar> for VerifierQuery<'a, 'b, C> {
-    type Commitment = CommitmentReference<'a, 'b, C>;
+impl<'a, C: CurveAffine> Query<C::Scalar> for VerifierQuery<'a, C> {
+    type Commitment = CommitmentReference<'a, C>;
     type Eval = C::Scalar;
 
     fn get_point(&self) -> C::Scalar {
