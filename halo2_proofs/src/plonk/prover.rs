@@ -185,7 +185,7 @@ pub fn create_proof<
                         .get(column.index())
                         .and_then(|column| column.get(row))
                         .map(|v| Value::known(*v))
-                        .ok_or(Error::BoundsFailure)
+                        .ok_or(Error::QueryOutOfBounds(format!("column: {:?}, row: {}", &column, row)))
                 }
 
                 fn assign_advice<V, VR, A, AR>(
@@ -209,7 +209,7 @@ pub fn create_proof<
                         .advice
                         .get_mut(column.index())
                         .and_then(|v| v.get_mut(row))
-                        .ok_or(Error::BoundsFailure)? = to().into_field().assign()?;
+                        .ok_or(Error::AssignOutOfBounds)? = to().into_field().assign()?;
 
                     Ok(())
                 }

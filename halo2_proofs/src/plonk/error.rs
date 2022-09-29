@@ -10,13 +10,15 @@ use super::{Any, Column};
 pub enum Error {
     /// This is an error that can occur during synthesis of the circuit, for
     /// example, when the witness is not present.
-    Synthesis,
+    Synthesis(String),
     /// The provided instances do not match the circuit parameters.
     InvalidInstances,
     /// The constraint system is not satisfied.
     ConstraintSystemFailure,
-    /// Out of bounds index passed to a backend
-    BoundsFailure,
+    /// And out of bounds query passed to a backend.
+    QueryOutOfBounds(String),
+    /// Not enough usable rows for circuit assignment.
+    AssignOutOfBounds,
     /// Opening error
     Opening,
     /// Transcript error
@@ -55,10 +57,11 @@ impl Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Synthesis => write!(f, "General synthesis error"),
+            Error::Synthesis(err) => write!(f, "Synthesis error: {:?}", err),
             Error::InvalidInstances => write!(f, "Provided instances do not match the circuit"),
             Error::ConstraintSystemFailure => write!(f, "The constraint system is not satisfied"),
-            Error::BoundsFailure => write!(f, "An out-of-bounds index was passed to the backend"),
+            Error::QueryOutOfBounds(query) => write!(f, "The query `{:?}` is out of bounds", query),
+            Error::AssignOutOfBounds => write!(f, "Not enough rows for circuit assignments. Try using a larger value of k"),
             Error::Opening => write!(f, "Multi-opening proof was invalid"),
             Error::Transcript(e) => write!(f, "Transcript error: {}", e),
             Error::NotEnoughRowsAvailable { current_k } => write!(

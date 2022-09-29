@@ -321,7 +321,7 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> {
                     _ => None,
                 }) {
                 Some(Some(len)) => len,
-                _ => return Err(Error::Synthesis), // TODO better error
+                _ => return Err(Error::Synthesis("Table columns differ in length and/or cells are unassigned".into())),
             }
         };
 

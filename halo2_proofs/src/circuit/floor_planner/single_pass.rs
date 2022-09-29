@@ -180,7 +180,7 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
                     _ => None,
                 }) {
                 Some(Some(len)) => len,
-                _ => return Err(Error::Synthesis), // TODO better error
+                _ => return Err(Error::Synthesis("Table columns differ in length and/or cells are unassigned".into())),
             }
         };
 
@@ -416,7 +416,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
         to: &'v mut (dyn FnMut() -> Value<Assigned<F>> + 'v),
     ) -> Result<(), Error> {
         if self.used_columns.contains(&column) {
-            return Err(Error::Synthesis); // TODO better error
+            return Err(Error::Synthesis(format!("Table column {:?} has already been assigned to", &column)));
         }
 
         let entry = self.default_and_assigned.entry(column).or_default();
@@ -438,7 +438,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
             (true, 0) => entry.0 = Some(value),
             // Since there is already an existing default value for this table column,
             // the caller should not be attempting to assign another value at offset 0.
-            (false, 0) => return Err(Error::Synthesis), // TODO better error
+            (false, 0) => return Err(Error::Synthesis(format!("Table column {:?} has already been assigned to at offset 0", &column))),
             _ => (),
         }
         if entry.1.len() <= offset {
