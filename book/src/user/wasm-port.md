@@ -2,7 +2,7 @@
 
 Since halo2 is written in Rust, you can compile it to WebAssembly (wasm), which will allow you to use the prover and verifier for your circuits in browser applications. This tutorial takes you through all you need to know to compile your circuits to wasm.
 
-Throughout this tutorial, we will follow the repository for [Zordle](https://github.com/nalinbhardwaj/zordle) for reference, one of the first known webapps based on Halo 2 circuits. Zordle is ZK Wordle, where the circuit takes as advice values the player's input words and the player's share grid (the grey, yellow and green squares) and verifies that they match correctly. Therefore, the proof verifies that the player knows a "preimage" to the output share sheet, which can then be verified using just the ZK proof.
+Throughout this tutorial, we will follow the repository for [Zordle](https://github.com/nalinbhardwaj/zordle) for reference, one of the first known webapps based on Halo 2 circuits. Zordle is ZK [Wordle](https://www.nytimes.com/games/wordle/index.html), where the circuit takes as advice values the player's input words and the player's share grid (the grey, yellow and green squares) and verifies that they match correctly. Therefore, the proof verifies that the player knows a "preimage" to the output share sheet, which can then be verified using just the ZK proof.
 
 ## Circuit code setup
 
@@ -24,11 +24,11 @@ pub async fn prove_play(final_word: String, words_js: JsValue, params_ser: JsVal
 }
 ```
 
-While the specific inputs and their serialisations will depend on your circuit and webapp set up, its useful to note the format in the specific case of Zordle since your use case will likely be similar:
+While the specific inputs and their serialisations will depend on your circuit and webapp set up, it's useful to note the format in the specific case of Zordle since your use case will likely be similar:
 
 This function takes as input the `final_word` that the user aimed for, and the words they attempted to use (in the form of `words_js`). It also takes as input the parameters for the circuit, which are serialized in `params_ser`. More to follow on that later.
 
-Note that the function parameters are passed in `wasm_bindgen` compatible formats: `String` and `JsValue`. The `JsValue` type is a type from the [`Serde`](https://serde.rs) library. You can find much more details about this type and how to use it in the documentation [here](https://rustwasm.github.io/wasm-bindgen/reference/arbitrary-data-with-serde.html#serializing-and-deserializing-arbitrary-data-into-and-from-jsvalue-with-serde).
+Note that the function parameters are passed in `wasm_bindgen`-compatible formats: `String` and `JsValue`. The `JsValue` type is a type from the [`Serde`](https://serde.rs) library. You can find much more details about this type and how to use it in the documentation [here](https://rustwasm.github.io/wasm-bindgen/reference/arbitrary-data-with-serde.html#serializing-and-deserializing-arbitrary-data-into-and-from-jsvalue-with-serde).
 
 The output is a `Vec<u8>` converted to a `JSValue` using Serde. This is later passed in as input to the the verifier function.
 
