@@ -181,6 +181,9 @@
 <span id="166">166</span>
 <span id="167">167</span>
 <span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
 </pre><pre class="rust"><code><span class="kw">use </span>group::{
     ff::{BatchInvert, Field},
     Curve,
@@ -302,6 +305,9 @@
     //   P&#39; + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
     //   + [-c] G&#39;_0 + [-cbz] U + [-f] W
     //   = 0
+    //
+    // Note that the guard returned from this function does not include
+    // the [-c]G&#39;_0 term.
 
     </span><span class="kw">let </span>c = transcript.read_scalar().map_err(|<span class="kw">_</span>| Error::SamplingError)<span class="question-mark">?</span>;
     <span class="kw">let </span>neg_c = -c;
@@ -350,4 +356,4 @@
     v
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (01af5040f 2022-10-04)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (0ca356586 2022-10-06)" ></div></body></html>
