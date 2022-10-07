@@ -166,7 +166,6 @@ pub struct MessagePiece<C: CurveAffine, SinsemillaChip, const K: usize, const MA
 where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
 {
-    chip: SinsemillaChip,
     inner: SinsemillaChip::MessagePiece,
 }
 
@@ -227,7 +226,7 @@ where
         num_words: usize,
     ) -> Result<Self, Error> {
         let inner = chip.witness_message_piece(layouter, field_elem, num_words)?;
-        Ok(Self { chip, inner })
+        Ok(Self { inner })
     }
 
     /// Constructs a `MessagePiece` by concatenating a sequence of [`RangeConstrained`]

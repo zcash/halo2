@@ -33,7 +33,6 @@ pub struct Pow5Config<F: Field, const WIDTH: usize, const RATE: usize> {
     alpha: [u64; 4],
     round_constants: Vec<[F; WIDTH]>,
     m_reg: Mds<F, WIDTH>,
-    m_inv: Mds<F, WIDTH>,
 }
 
 /// A Poseidon chip using an $x^5$ S-Box.
@@ -200,7 +199,6 @@ impl<F: Field, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE> {
             alpha,
             round_constants,
             m_reg,
-            m_inv,
         }
     }
 

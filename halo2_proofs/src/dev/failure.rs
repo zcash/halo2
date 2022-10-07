@@ -16,7 +16,7 @@ use crate::{
 mod emitter;
 
 /// The location within the circuit at which a particular [`VerifyFailure`] occurred.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum FailureLocation {
     /// A location inside a region.
     InRegion {
@@ -109,7 +109,7 @@ impl FailureLocation {
 }
 
 /// The reasons why a particular circuit is not satisfied.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum VerifyFailure {
     /// A cell used in an active gate was not assigned to.
     CellNotAssigned {

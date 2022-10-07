@@ -83,7 +83,7 @@ impl fmt::Display for VirtualCell {
 }
 
 /// Metadata about a configured gate within a circuit.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Gate {
     /// The index of the active gate. These indices are assigned in the order in which
     /// `ConstraintSystem::create_gate` is called during `Circuit::configure`.
@@ -106,7 +106,7 @@ impl From<(usize, &'static str)> for Gate {
 }
 
 /// Metadata about a configured constraint within a circuit.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Constraint {
     /// The gate containing the constraint.
     pub(super) gate: Gate,
@@ -143,7 +143,7 @@ impl From<(Gate, usize, &'static str)> for Constraint {
 }
 
 /// Metadata about an assigned region within a circuit.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Region {
     /// The index of the region. These indices are assigned in the order in which
     /// `Layouter::assign_region` is called during `Circuit::synthesize`.
