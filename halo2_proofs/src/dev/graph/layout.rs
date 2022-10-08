@@ -3,17 +3,13 @@ use plotters::{
     coord::Shift,
     prelude::{DrawingArea, DrawingAreaErrorKind, DrawingBackend},
 };
-use std::cmp;
 use std::collections::HashSet;
 use std::ops::Range;
 
 use crate::{
-    circuit::{layouter::RegionColumn, Value},
-    plonk::{
-        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
-        FloorPlanner, Instance, Selector,
-    },
-    dev::cost::{Layout}
+    circuit::layouter::RegionColumn,
+    dev::cost::Layout,
+    plonk::{Any, Circuit, Column, ConstraintSystem, FloorPlanner},
 };
 
 /// Graphical renderer for circuit layouts.

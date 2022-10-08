@@ -1,12 +1,12 @@
 //! Developer tools for investigating the cost of a circuit.
 
 use std::{
+    cmp,
     collections::{HashMap, HashSet},
     iter,
     marker::PhantomData,
     ops::{Add, Mul},
 };
-use std::cmp;
 
 use ff::{Field, PrimeField};
 use group::prime::PrimeGroup;
@@ -113,15 +113,12 @@ impl Layout {
     pub fn update(&mut self, column: RegionColumn, row: usize) {
         self.total_rows = cmp::max(self.total_rows, row + 1);
 
-        match column {
-            RegionColumn::Column(col) => {
-                match col.column_type() {
-                    Any::Advice => self.total_advice_rows = cmp::max(self.total_advice_rows, row + 1),
-                    Any::Fixed => self.total_fixed_rows = cmp::max(self.total_fixed_rows, row + 1),
-                    _ => {}
-                }
-            },
-            _ => {},
+        if let RegionColumn::Column(col) = column {
+            match col.column_type() {
+                Any::Advice => self.total_advice_rows = cmp::max(self.total_advice_rows, row + 1),
+                Any::Fixed => self.total_fixed_rows = cmp::max(self.total_fixed_rows, row + 1),
+                _ => {}
+            }
         }
 
         if let Some(region) = self.current_region {
@@ -333,7 +330,9 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
             num_advice_columns: cs.num_advice_columns,
             num_fixed_columns: cs.num_fixed_columns,
             num_instance_columns: cs.num_instance_columns,
-            num_total_columns: cs.num_instance_columns + cs.num_advice_columns + cs.num_fixed_columns,
+            num_total_columns: cs.num_instance_columns
+                + cs.num_advice_columns
+                + cs.num_fixed_columns,
         }
     }
 

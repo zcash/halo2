@@ -493,7 +493,7 @@ fn plonk_api() {
         let proof: Vec<u8> = transcript.finalize();
         assert_eq!(
             proof.len(),
-            halo2_proofs::dev::CircuitCost::<Eq, MyCircuit<_>>::measure(K as usize, &circuit)
+            halo2_proofs::dev::CircuitCost::<Eq, MyCircuit<_>>::measure(K, &circuit)
                 .proof_size(2)
                 .into(),
         );
