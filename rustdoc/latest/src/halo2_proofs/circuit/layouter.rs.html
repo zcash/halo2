@@ -300,6 +300,19 @@
 <span id="285">285</span>
 <span id="286">286</span>
 <span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Implementations of common circuit layouters.
 
 </span><span class="kw">use </span>std::cmp;
@@ -376,7 +389,8 @@
     <span class="doccomment">/// Assign the value of the instance column&#39;s cell at absolute location
     /// `row` to the column `advice` at `offset` within this region.
     ///
-    /// Returns the advice cell, and its value if known.
+    /// Returns the advice cell that has been equality-constrained to the
+    /// instance cell, and its value if known.
     </span><span class="kw">fn </span>assign_advice_from_instance&lt;<span class="lifetime">&#39;v</span>&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         annotation: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>(<span class="kw">dyn </span>Fn() -&gt; String + <span class="lifetime">&#39;v</span>),
@@ -386,7 +400,11 @@
         offset: usize,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(Cell, Value&lt;F&gt;), Error&gt;;
 
-    <span class="doccomment">/// Assign a fixed value
+    <span class="doccomment">/// Returns the value of the instance column&#39;s cell at absolute location `row`.
+    </span><span class="kw">fn </span>instance_value(<span class="kw-2">&amp;mut </span><span class="self">self</span>, instance: Column&lt;Instance&gt;, row: usize)
+        -&gt; <span class="prelude-ty">Result</span>&lt;Value&lt;F&gt;, Error&gt;;
+
+    <span class="doccomment">/// Assigns a fixed value
     </span><span class="kw">fn </span>assign_fixed&lt;<span class="lifetime">&#39;v</span>&gt;(
         <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span><span class="kw-2">mut </span><span class="self">self</span>,
         annotation: <span class="kw-2">&amp;</span><span class="lifetime">&#39;v </span>(<span class="kw">dyn </span>Fn() -&gt; String + <span class="lifetime">&#39;v</span>),
@@ -558,6 +576,14 @@
             },
             Value::unknown(),
         ))
+    }
+
+    <span class="kw">fn </span>instance_value(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        _instance: Column&lt;Instance&gt;,
+        _row: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Value&lt;F&gt;, Error&gt; {
+        <span class="prelude-val">Ok</span>(Value::unknown())
     }
 
     <span class="kw">fn </span>assign_fixed&lt;<span class="lifetime">&#39;v</span>&gt;(

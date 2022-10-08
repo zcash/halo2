@@ -554,6 +554,14 @@
 <span id="539">539</span>
 <span id="540">540</span>
 <span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::fmt;
 
 <span class="kw">use </span>ff::Field;
@@ -1002,6 +1010,14 @@
         )<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>((cell, value))
+    }
+
+    <span class="kw">fn </span>instance_value(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        instance: Column&lt;Instance&gt;,
+        row: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Value&lt;F&gt;, Error&gt; {
+        <span class="self">self</span>.plan.cs.query_instance(instance, row)
     }
 
     <span class="kw">fn </span>assign_fixed&lt;<span class="lifetime">&#39;v</span>&gt;(

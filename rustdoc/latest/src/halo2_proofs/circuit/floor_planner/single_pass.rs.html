@@ -519,6 +519,14 @@
 <span id="504">504</span>
 <span id="505">505</span>
 <span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::cmp;
 <span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>std::fmt;
@@ -851,6 +859,14 @@
         )<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>((cell, value))
+    }
+
+    <span class="kw">fn </span>instance_value(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        instance: Column&lt;Instance&gt;,
+        row: usize,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Value&lt;F&gt;, Error&gt; {
+        <span class="self">self</span>.layouter.cs.query_instance(instance, row)
     }
 
     <span class="kw">fn </span>assign_fixed&lt;<span class="lifetime">&#39;v</span>&gt;(
