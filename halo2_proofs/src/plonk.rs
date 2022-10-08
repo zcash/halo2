@@ -57,6 +57,7 @@ where
 {
     /// Writes a verifying key to a buffer.
     pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
+        writer.write_all(&(self.fixed_commitments.len() as u32).to_be_bytes())?;
         for commitment in &self.fixed_commitments {
             writer.write_all(commitment.to_bytes().as_ref())?;
         }
@@ -65,10 +66,10 @@ where
         // write self.selectors
         for selector in &self.selectors {
             let mut selector_bytes = vec![0u8; selector.len() / 8 + 1];
-            for i in 0..selector.len() {
+            for (i, selector_idx) in selector.iter().enumerate() {
                 let byte_index = i / 8;
                 let bit_index = i % 8;
-                selector_bytes[byte_index] |= (selector[i] as u8) << bit_index;
+                selector_bytes[byte_index] |= (*selector_idx as u8) << bit_index;
             }
             writer.write_all(&selector_bytes)?;
         }
@@ -82,8 +83,11 @@ where
         params: &Params<C>,
     ) -> io::Result<Self> {
         let (domain, cs, _) = keygen::create_domain::<C, ConcreteCircuit>(params);
+        let mut num_fixed_columns_be_bytes = [0u8; 4];
+        reader.read_exact(&mut num_fixed_columns_be_bytes)?;
+        let num_fixed_columns = u32::from_be_bytes(num_fixed_columns_be_bytes);
 
-        let fixed_commitments: Vec<_> = (0..cs.num_fixed_columns)
+        let fixed_commitments: Vec<_> = (0..num_fixed_columns)
             .map(|_| C::read(reader))
             .collect::<Result<_, _>>()?;
 
@@ -97,10 +101,10 @@ where
                 reader
                     .read_exact(&mut selector_bytes)
                     .expect("unable to read selector bytes");
-                for i in 0..selector.len() {
+                for (i, selector_idx) in selector.iter_mut().enumerate() {
                     let byte_index = i / 8;
                     let bit_index = i % 8;
-                    selector[i] = (selector_bytes[byte_index] >> bit_index) & 1 == 1;
+                    *selector_idx = (selector_bytes[byte_index] >> bit_index) & 1 == 1;
                 }
                 Ok(selector)
             })
