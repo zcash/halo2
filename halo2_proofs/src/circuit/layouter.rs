@@ -74,7 +74,8 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
     /// Assign the value of the instance column's cell at absolute location
     /// `row` to the column `advice` at `offset` within this region.
     ///
-    /// Returns the advice cell, and its value if known.
+    /// Returns the advice cell that has been equality-constrained to the
+    /// instance cell, and its value if known.
     fn assign_advice_from_instance<'v>(
         &mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
@@ -84,7 +85,11 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
         offset: usize,
     ) -> Result<(Cell, Value<F>), Error>;
 
-    /// Assign a fixed value
+    /// Returns the value of the instance column's cell at absolute location `row`.
+    fn instance_value(&mut self, instance: Column<Instance>, row: usize)
+        -> Result<Value<F>, Error>;
+
+    /// Assigns a fixed value
     fn assign_fixed<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
@@ -256,6 +261,14 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
             },
             Value::unknown(),
         ))
+    }
+
+    fn instance_value(
+        &mut self,
+        _instance: Column<Instance>,
+        _row: usize,
+    ) -> Result<Value<F>, Error> {
+        Ok(Value::unknown())
     }
 
     fn assign_fixed<'v>(
