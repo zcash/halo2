@@ -1103,6 +1103,49 @@
 <span id="1088">1088</span>
 <span id="1089">1089</span>
 <span id="1090">1090</span>
+<span id="1091">1091</span>
+<span id="1092">1092</span>
+<span id="1093">1093</span>
+<span id="1094">1094</span>
+<span id="1095">1095</span>
+<span id="1096">1096</span>
+<span id="1097">1097</span>
+<span id="1098">1098</span>
+<span id="1099">1099</span>
+<span id="1100">1100</span>
+<span id="1101">1101</span>
+<span id="1102">1102</span>
+<span id="1103">1103</span>
+<span id="1104">1104</span>
+<span id="1105">1105</span>
+<span id="1106">1106</span>
+<span id="1107">1107</span>
+<span id="1108">1108</span>
+<span id="1109">1109</span>
+<span id="1110">1110</span>
+<span id="1111">1111</span>
+<span id="1112">1112</span>
+<span id="1113">1113</span>
+<span id="1114">1114</span>
+<span id="1115">1115</span>
+<span id="1116">1116</span>
+<span id="1117">1117</span>
+<span id="1118">1118</span>
+<span id="1119">1119</span>
+<span id="1120">1120</span>
+<span id="1121">1121</span>
+<span id="1122">1122</span>
+<span id="1123">1123</span>
+<span id="1124">1124</span>
+<span id="1125">1125</span>
+<span id="1126">1126</span>
+<span id="1127">1127</span>
+<span id="1128">1128</span>
+<span id="1129">1129</span>
+<span id="1130">1130</span>
+<span id="1131">1131</span>
+<span id="1132">1132</span>
+<span id="1133">1133</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Tools for developing circuits.
 
 </span><span class="kw">use </span>std::collections::HashMap;
@@ -1388,7 +1431,7 @@
     <span class="comment">// The advice cells in the circuit, arranged as [column][row].
     </span>advice: Vec&lt;Vec&lt;CellValue&lt;F&gt;&gt;&gt;,
     <span class="comment">// The instance cells in the circuit, arranged as [column][row].
-    </span>instance: Vec&lt;Vec&lt;F&gt;&gt;,
+    </span>instance: Vec&lt;Vec&lt;InstanceValue&lt;F&gt;&gt;&gt;,
 
     selectors: Vec&lt;Vec&lt;bool&gt;&gt;,
 
@@ -1396,6 +1439,21 @@
 
     <span class="comment">// A range of available rows for assignment and copies.
     </span>usable_rows: Range&lt;usize&gt;,
+}
+
+<span class="attribute">#[derive(Debug, Clone, PartialEq, Eq)]
+</span><span class="kw">enum </span>InstanceValue&lt;F: Field&gt; {
+    Assigned(F),
+    Padding,
+}
+
+<span class="kw">impl</span>&lt;F: Field&gt; InstanceValue&lt;F&gt; {
+    <span class="kw">fn </span>value(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; F {
+        <span class="kw">match </span><span class="self">self </span>{
+            InstanceValue::Assigned(v) =&gt; <span class="kw-2">*</span>v,
+            InstanceValue::Padding =&gt; F::zero(),
+        }
+    }
 }
 
 <span class="kw">impl</span>&lt;F: Field + Group&gt; Assignment&lt;F&gt; <span class="kw">for </span>MockProver&lt;F&gt; {
@@ -1454,7 +1512,7 @@
         <span class="self">self</span>.instance
             .get(column.index())
             .and_then(|column| column.get(row))
-            .map(|v| circuit::Value::known(<span class="kw-2">*</span>v))
+            .map(|v| circuit::Value::known(v.value()))
             .ok_or(Error::BoundsFailure)
     }
 
@@ -1591,13 +1649,17 @@
 
         <span class="kw">let </span>instance = instance
             .into_iter()
-            .map(|<span class="kw-2">mut </span>instance| {
+            .map(|instance| {
                 <span class="kw">if </span>instance.len() &gt; n - (cs.blinding_factors() + <span class="number">1</span>) {
                     <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InstanceTooLarge);
                 }
 
-                instance.resize(n, F::zero());
-                <span class="prelude-val">Ok</span>(instance)
+                <span class="kw">let </span><span class="kw-2">mut </span>instance_values = <span class="macro">vec!</span>[InstanceValue::Padding; n];
+                <span class="kw">for </span>(idx, value) <span class="kw">in </span>instance.into_iter().enumerate() {
+                    instance_values[idx] = InstanceValue::Assigned(value);
+                }
+
+                <span class="prelude-val">Ok</span>(instance_values)
             })
             .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;, <span class="kw">_</span>&gt;&gt;()<span class="question-mark">?</span>;
 
@@ -1681,17 +1743,37 @@
                                 <span class="comment">// Determine where this cell should have been assigned.
                                 </span><span class="kw">let </span>cell_row = ((gate_row + n + cell.rotation.<span class="number">0</span>) % n) <span class="kw">as </span>usize;
 
-                                <span class="comment">// Check that it was assigned!
-                                </span><span class="kw">if </span>r.cells.contains(<span class="kw-2">&amp;</span>(cell.column, cell_row)) {
-                                    <span class="prelude-val">None
-                                </span>} <span class="kw">else </span>{
-                                    <span class="prelude-val">Some</span>(VerifyFailure::CellNotAssigned {
-                                        gate: (gate_index, gate.name()).into(),
-                                        region: (r_i, r.name.clone()).into(),
-                                        gate_offset: <span class="kw-2">*</span>selector_row,
-                                        column: cell.column,
-                                        offset: cell_row <span class="kw">as </span>isize - r.rows.unwrap().<span class="number">0 </span><span class="kw">as </span>isize,
-                                    })
+                                <span class="kw">match </span>cell.column.column_type() {
+                                    Any::Instance =&gt; {
+                                        <span class="comment">// Handle instance cells, which are not in the region.
+                                        </span><span class="kw">let </span>instance_value =
+                                            <span class="kw-2">&amp;</span><span class="self">self</span>.instance[cell.column.index()][cell_row];
+                                        <span class="kw">match </span>instance_value {
+                                            InstanceValue::Assigned(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
+                                            <span class="kw">_ </span>=&gt; <span class="prelude-val">Some</span>(VerifyFailure::InstanceCellNotAssigned {
+                                                gate: (gate_index, gate.name()).into(),
+                                                region: (r_i, r.name.clone()).into(),
+                                                gate_offset: <span class="kw-2">*</span>selector_row,
+                                                column: cell.column.try_into().unwrap(),
+                                                row: cell_row,
+                                            }),
+                                        }
+                                    }
+                                    <span class="kw">_ </span>=&gt; {
+                                        <span class="comment">// Check that it was assigned!
+                                        </span><span class="kw">if </span>r.cells.contains(<span class="kw-2">&amp;</span>(cell.column, cell_row)) {
+                                            <span class="prelude-val">None
+                                        </span>} <span class="kw">else </span>{
+                                            <span class="prelude-val">Some</span>(VerifyFailure::CellNotAssigned {
+                                                gate: (gate_index, gate.name()).into(),
+                                                region: (r_i, r.name.clone()).into(),
+                                                gate_offset: <span class="kw-2">*</span>selector_row,
+                                                column: cell.column,
+                                                offset: cell_row <span class="kw">as </span>isize
+                                                    - r.rows.unwrap().<span class="number">0 </span><span class="kw">as </span>isize,
+                                            })
+                                        }
+                                    }
                                 }
                             })
                         })
@@ -1798,7 +1880,8 @@
                                 <span class="kw">let </span>rotation = query.<span class="number">1 </span>.<span class="number">0</span>;
                                 Value::Real(
                                     <span class="self">self</span>.instance[column_index]
-                                        [(row <span class="kw">as </span>i32 + n + rotation) <span class="kw">as </span>usize % n <span class="kw">as </span>usize],
+                                        [(row <span class="kw">as </span>i32 + n + rotation) <span class="kw">as </span>usize % n <span class="kw">as </span>usize]
+                                        .value(),
                                 )
                             },
                             <span class="kw-2">&amp;</span>|a| -a,
@@ -1901,7 +1984,10 @@
                     .map(|c: <span class="kw-2">&amp;</span>Column&lt;Any&gt;| <span class="kw">match </span>c.column_type() {
                         Any::Advice =&gt; <span class="self">self</span>.advice[c.index()][row],
                         Any::Fixed =&gt; <span class="self">self</span>.fixed[c.index()][row],
-                        Any::Instance =&gt; CellValue::Assigned(<span class="self">self</span>.instance[c.index()][row]),
+                        Any::Instance =&gt; {
+                            <span class="kw">let </span>cell: <span class="kw-2">&amp;</span>InstanceValue&lt;F&gt; = <span class="kw-2">&amp;</span><span class="self">self</span>.instance[c.index()][row];
+                            CellValue::Assigned(cell.value())
+                        }
                     })
                     .unwrap()
             };
@@ -2194,4 +2280,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (0ca356586 2022-10-06)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (8b0c05d9a 2022-10-07)" ></div></body></html>

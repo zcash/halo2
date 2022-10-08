@@ -550,6 +550,33 @@
 <span id="535">535</span>
 <span id="536">536</span>
 <span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
+<span id="563">563</span>
+<span id="564">564</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::collections::{BTreeMap, HashSet};
 <span class="kw">use </span>std::fmt;
 
@@ -563,7 +590,7 @@
 };
 <span class="kw">use crate</span>::{
     dev::Value,
-    plonk::{Any, Column, ConstraintSystem, Expression, Gate},
+    plonk::{Any, Column, ConstraintSystem, Expression, Gate, Instance},
 };
 
 <span class="kw">mod </span>emitter;
@@ -676,6 +703,20 @@
         /// offset 0, but the gate uses `Rotation::prev()`).
         </span>offset: isize,
     },
+    <span class="doccomment">/// An instance cell used in an active gate was not assigned to.
+    </span>InstanceCellNotAssigned {
+        <span class="doccomment">/// The index of the active gate.
+        </span>gate: metadata::Gate,
+        <span class="doccomment">/// The region in which this gate was activated.
+        </span>region: metadata::Region,
+        <span class="doccomment">/// The offset (relative to the start of the region) at which the active gate
+        /// queries this cell.
+        </span>gate_offset: usize,
+        <span class="doccomment">/// The column in which this cell should be assigned.
+        </span>column: Column&lt;Instance&gt;,
+        <span class="doccomment">/// The absolute row at which this cell should be assigned.
+        </span>row: usize,
+    },
     <span class="doccomment">/// A constraint was not satisfied for a particular row.
     </span>ConstraintNotSatisfied {
         <span class="doccomment">/// The polynomial constraint that is not satisfied.
@@ -736,6 +777,19 @@
                     f,
                     <span class="string">&quot;{} uses {} at offset {}, which requires cell in column {:?} at offset {} to be assigned.&quot;</span>,
                     region, gate, gate_offset, column, offset
+                )
+            }
+            <span class="self">Self</span>::InstanceCellNotAssigned {
+                gate,
+                region,
+                gate_offset,
+                column,
+                row,
+            } =&gt; {
+                <span class="macro">write!</span>(
+                    f,
+                    <span class="string">&quot;{} uses {} at offset {}, which requires cell in instance column {:?} at row {} to be assigned.&quot;</span>,
+                    region, gate, gate_offset, column, row
                 )
             }
             <span class="self">Self</span>::ConstraintNotSatisfied {
@@ -1088,4 +1142,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (0ca356586 2022-10-06)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (8b0c05d9a 2022-10-07)" ></div></body></html>

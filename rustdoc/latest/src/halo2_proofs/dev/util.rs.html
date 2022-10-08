@@ -174,12 +174,13 @@
 <span id="159">159</span>
 <span id="160">160</span>
 <span id="161">161</span>
+<span id="162">162</span>
 </pre><pre class="rust"><code><span class="kw">use </span>std::collections::BTreeMap;
 
 <span class="kw">use </span>group::ff::Field;
 <span class="kw">use </span>pasta_curves::arithmetic::FieldExt;
 
-<span class="kw">use super</span>::{metadata, CellValue, Value};
+<span class="kw">use super</span>::{metadata, CellValue, InstanceValue, Value};
 <span class="kw">use crate</span>::{
     plonk::{
         AdviceQuery, Any, Column, ColumnType, Expression, FixedQuery, Gate, InstanceQuery,
@@ -266,12 +267,13 @@
     n: i32,
     row: i32,
     queries: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[(Column&lt;T&gt;, Rotation)],
-    cells: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Vec&lt;F&gt;],
+    cells: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Vec&lt;InstanceValue&lt;F&gt;&gt;],
 ) -&gt; <span class="kw">impl </span>Fn(Q) -&gt; Value&lt;F&gt; + <span class="lifetime">&#39;a </span>{
     <span class="kw">move </span>|query| {
         <span class="kw">let </span>(column, at) = <span class="kw-2">&amp;</span>queries[query.into().index];
         <span class="kw">let </span>resolved_row = (row + at.<span class="number">0</span>) % n;
-        Value::Real(cells[column.index()][resolved_row <span class="kw">as </span>usize])
+        <span class="kw">let </span>cell = <span class="kw-2">&amp;</span>cells[column.index()][resolved_row <span class="kw">as </span>usize];
+        Value::Real(cell.value())
     }
 }
 
@@ -336,4 +338,4 @@
     cell_values.into_iter().collect()
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (0ca356586 2022-10-06)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="halo2_proofs" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (8b0c05d9a 2022-10-07)" ></div></body></html>
