@@ -659,30 +659,6 @@
 <span id="644">644</span>
 <span id="645">645</span>
 <span id="646">646</span>
-<span id="647">647</span>
-<span id="648">648</span>
-<span id="649">649</span>
-<span id="650">650</span>
-<span id="651">651</span>
-<span id="652">652</span>
-<span id="653">653</span>
-<span id="654">654</span>
-<span id="655">655</span>
-<span id="656">656</span>
-<span id="657">657</span>
-<span id="658">658</span>
-<span id="659">659</span>
-<span id="660">660</span>
-<span id="661">661</span>
-<span id="662">662</span>
-<span id="663">663</span>
-<span id="664">664</span>
-<span id="665">665</span>
-<span id="666">666</span>
-<span id="667">667</span>
-<span id="668">668</span>
-<span id="669">669</span>
-<span id="670">670</span>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{
     circuit::Expression, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error,
     ProvingKey,
@@ -711,14 +687,14 @@
 
 <span class="attribute">#[derive(Debug)]
 </span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">struct </span>Permuted&lt;C: CurveAffine, Ev&gt; {
-    unpermuted_input_expressions: Vec&lt;Polynomial&lt;C::Scalar, LagrangeCoeff&gt;&gt;,
-    unpermuted_input_cosets: Vec&lt;poly::Ast&lt;Ev, C::Scalar, ExtendedLagrangeCoeff&gt;&gt;,
+    compressed_input_expression: Polynomial&lt;C::Scalar, LagrangeCoeff&gt;,
     permuted_input_expression: Polynomial&lt;C::Scalar, LagrangeCoeff&gt;,
+    compressed_input_coset: poly::Ast&lt;Ev, C::Scalar, ExtendedLagrangeCoeff&gt;,
     permuted_input_poly: Polynomial&lt;C::Scalar, Coeff&gt;,
     permuted_input_coset: poly::AstLeaf&lt;Ev, ExtendedLagrangeCoeff&gt;,
     permuted_input_blind: Blind&lt;C::Scalar&gt;,
-    unpermuted_table_expressions: Vec&lt;Polynomial&lt;C::Scalar, LagrangeCoeff&gt;&gt;,
-    unpermuted_table_cosets: Vec&lt;poly::Ast&lt;Ev, C::Scalar, ExtendedLagrangeCoeff&gt;&gt;,
+    compressed_table_expression: Polynomial&lt;C::Scalar, LagrangeCoeff&gt;,
+    compressed_table_coset: poly::Ast&lt;Ev, C::Scalar, ExtendedLagrangeCoeff&gt;,
     permuted_table_expression: Polynomial&lt;C::Scalar, LagrangeCoeff&gt;,
     permuted_table_poly: Polynomial&lt;C::Scalar, Coeff&gt;,
     permuted_table_coset: poly::AstLeaf&lt;Ev, ExtendedLagrangeCoeff&gt;,
@@ -853,22 +829,24 @@
                 |acc, expression| <span class="kw-2">&amp;</span>(acc * <span class="kw-2">*</span>theta) + expression,
             );
 
+            <span class="comment">// Compressed version of cosets
+            </span><span class="kw">let </span>compressed_coset = unpermuted_cosets.iter().fold(
+                poly::Ast::&lt;<span class="kw">_</span>, <span class="kw">_</span>, ExtendedLagrangeCoeff&gt;::ConstantTerm(C::Scalar::zero()),
+                |acc, eval| acc * poly::Ast::ConstantTerm(<span class="kw-2">*</span>theta) + eval.clone(),
+            );
+
             (
-                unpermuted_expressions
-                    .iter()
-                    .map(|ast| value_evaluator.evaluate(ast, domain))
-                    .collect(),
-                unpermuted_cosets,
+                compressed_coset,
                 value_evaluator.evaluate(<span class="kw-2">&amp;</span>compressed_expression, domain),
             )
         };
 
         <span class="comment">// Get values of input expressions involved in the lookup and compress them
-        </span><span class="kw">let </span>(unpermuted_input_expressions, unpermuted_input_cosets, compressed_input_expression) =
+        </span><span class="kw">let </span>(compressed_input_coset, compressed_input_expression) =
             compress_expressions(<span class="kw-2">&amp;</span><span class="self">self</span>.input_expressions);
 
         <span class="comment">// Get values of table expressions involved in the lookup and compress them
-        </span><span class="kw">let </span>(unpermuted_table_expressions, unpermuted_table_cosets, compressed_table_expression) =
+        </span><span class="kw">let </span>(compressed_table_coset, compressed_table_expression) =
             compress_expressions(<span class="kw-2">&amp;</span><span class="self">self</span>.table_expressions);
 
         <span class="comment">// Permute compressed (InputExpression, TableExpression) pair
@@ -909,14 +887,14 @@
             .register_poly(pk.vk.domain.coeff_to_extended(permuted_table_poly.clone()));
 
         <span class="prelude-val">Ok</span>(Permuted {
-            unpermuted_input_expressions,
-            unpermuted_input_cosets,
+            compressed_input_expression,
+            compressed_input_coset,
             permuted_input_expression,
             permuted_input_poly,
             permuted_input_coset,
             permuted_input_blind,
-            unpermuted_table_expressions,
-            unpermuted_table_cosets,
+            compressed_table_expression,
+            compressed_table_coset,
             permuted_table_expression,
             permuted_table_poly,
             permuted_table_coset,
@@ -940,7 +918,6 @@
         <span class="self">self</span>,
         pk: <span class="kw-2">&amp;</span>ProvingKey&lt;C&gt;,
         params: <span class="kw-2">&amp;</span>Params&lt;C&gt;,
-        theta: ChallengeTheta&lt;C&gt;,
         beta: ChallengeBeta&lt;C&gt;,
         gamma: ChallengeGamma&lt;C&gt;,
         evaluator: <span class="kw-2">&amp;mut </span>poly::Evaluator&lt;Ev, C::Scalar, ExtendedLagrangeCoeff&gt;,
@@ -979,23 +956,11 @@
         // (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
         // * (\theta^{m-1} s_0(\omega^i) + \theta^{m-2} s_1(\omega^i) + ... + \theta s_{m-2}(\omega^i) + s_{m-1}(\omega^i) + \gamma)
         </span>parallelize(<span class="kw-2">&amp;mut </span>lookup_product, |product, start| {
-            <span class="kw">for </span>(i, product) <span class="kw">in </span>product.iter_mut().enumerate() {
-                <span class="kw">let </span>i = i + start;
-
-                <span class="comment">// Compress unpermuted input expressions
-                </span><span class="kw">let </span><span class="kw-2">mut </span>input_term = C::Scalar::zero();
-                <span class="kw">for </span>unpermuted_input_expression <span class="kw">in </span><span class="self">self</span>.unpermuted_input_expressions.iter() {
-                    input_term <span class="kw-2">*</span>= <span class="kw-2">&amp;*</span>theta;
-                    input_term += <span class="kw-2">&amp;</span>unpermuted_input_expression[i];
-                }
-
-                <span class="comment">// Compress unpermuted table expressions
-                </span><span class="kw">let </span><span class="kw-2">mut </span>table_term = C::Scalar::zero();
-                <span class="kw">for </span>unpermuted_table_expression <span class="kw">in </span><span class="self">self</span>.unpermuted_table_expressions.iter() {
-                    table_term <span class="kw-2">*</span>= <span class="kw-2">&amp;*</span>theta;
-                    table_term += <span class="kw-2">&amp;</span>unpermuted_table_expression[i];
-                }
-
+            <span class="kw">for </span>((product, <span class="kw-2">&amp;</span>input_term), <span class="kw-2">&amp;</span>table_term) <span class="kw">in </span>product
+                .iter_mut()
+                .zip(<span class="self">self</span>.compressed_input_expression[start..].iter())
+                .zip(<span class="self">self</span>.compressed_table_expression[start..].iter())
+            {
                 <span class="kw-2">*</span>product <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>(input_term + <span class="kw-2">&amp;*</span>beta);
                 <span class="kw-2">*</span>product <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>(table_term + <span class="kw-2">&amp;*</span>gamma);
             }
@@ -1053,15 +1018,9 @@
                 left <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>gamma + permuted_table_value);
 
                 <span class="kw">let </span><span class="kw-2">mut </span>right = z[i];
-                <span class="kw">let </span><span class="kw-2">mut </span>input_term = <span class="self">self
-                    </span>.unpermuted_input_expressions
-                    .iter()
-                    .fold(C::Scalar::zero(), |acc, input| acc * <span class="kw-2">&amp;*</span>theta + <span class="kw-2">&amp;</span>input[i]);
+                <span class="kw">let </span><span class="kw-2">mut </span>input_term = <span class="self">self</span>.compressed_input_expression[i];
 
-                <span class="kw">let </span><span class="kw-2">mut </span>table_term = <span class="self">self
-                    </span>.unpermuted_table_expressions
-                    .iter()
-                    .fold(C::Scalar::zero(), |acc, table| acc * <span class="kw-2">&amp;*</span>theta + <span class="kw-2">&amp;</span>table[i]);
+                <span class="kw">let </span><span class="kw-2">mut </span>table_term = <span class="self">self</span>.compressed_table_expression[i];
 
                 input_term += <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>beta);
                 table_term += <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>gamma);
@@ -1101,7 +1060,6 @@
     /// the extended evaluation domain.
     </span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::plonk) <span class="kw">fn </span>construct(
         <span class="self">self</span>,
-        theta: ChallengeTheta&lt;C&gt;,
         beta: ChallengeBeta&lt;C&gt;,
         gamma: ChallengeGamma&lt;C&gt;,
         l0: poly::AstLeaf&lt;Ev, ExtendedLagrangeCoeff&gt;,
@@ -1138,15 +1096,9 @@
                     * (poly::Ast::from(permuted.permuted_table_coset) + gamma.clone());
 
                 <span class="comment">//  z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
-                </span><span class="kw">let </span>compress_cosets = |cosets: <span class="kw-2">&amp;</span>[poly::Ast&lt;<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt;]| {
-                    cosets.iter().fold(
-                        poly::Ast::&lt;<span class="kw">_</span>, <span class="kw">_</span>, ExtendedLagrangeCoeff&gt;::ConstantTerm(C::Scalar::zero()),
-                        |acc, eval| acc * poly::Ast::ConstantTerm(<span class="kw-2">*</span>theta) + eval.clone(),
-                    )
-                };
-                <span class="kw">let </span>right: poly::Ast&lt;<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt; = poly::Ast::from(<span class="self">self</span>.product_coset)
-                    * (compress_cosets(<span class="kw-2">&amp;</span>permuted.unpermuted_input_cosets) + beta)
-                    * (compress_cosets(<span class="kw-2">&amp;</span>permuted.unpermuted_table_cosets) + gamma);
+                </span><span class="kw">let </span>right: poly::Ast&lt;<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>&gt; = poly::Ast::from(<span class="self">self</span>.product_coset)
+                    * (permuted.compressed_input_coset + beta)
+                    * (permuted.compressed_table_coset + gamma);
 
                 <span class="prelude-val">Some</span>((left - right) * active_rows.clone())
             })

@@ -799,7 +799,6 @@
 <span id="784">784</span>
 <span id="785">785</span>
 <span id="786">786</span>
-<span id="787">787</span>
 </pre><pre class="rust"><code><span class="kw">use </span>ff::Field;
 <span class="kw">use </span>group::Curve;
 <span class="kw">use </span>rand_core::RngCore;
@@ -1292,7 +1291,6 @@
                     lookup.commit_product(
                         pk,
                         params,
-                        theta,
                         beta,
                         gamma,
                         <span class="kw-2">&amp;mut </span>coset_evaluator,
@@ -1338,7 +1336,7 @@
             <span class="comment">// Evaluate the h(X) polynomial&#39;s constraint system expressions for the lookup constraints, if any.
             </span>lookups
                 .into_iter()
-                .map(|p| p.construct(theta, beta, gamma, l0, l_blind, l_last))
+                .map(|p| p.construct(beta, gamma, l0, l_blind, l_last))
                 .unzip()
         })
         .unzip();
