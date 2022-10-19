@@ -119,6 +119,9 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
     //   P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
     //   + [-c] G'_0 + [-cbz] U + [-f] W
     //   = 0
+    //
+    // Note that the guard returned from this function does not include
+    // the [-c]G'_0 term.
 
     let c = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
     let neg_c = -c;

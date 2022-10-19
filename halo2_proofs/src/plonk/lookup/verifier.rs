@@ -141,7 +141,7 @@ impl<C: CurveAffine> Evaluated<C> {
 
         std::iter::empty()
             .chain(
-                // l_0(X) * (1 - z'(X)) = 0
+                // l_0(X) * (1 - z(X)) = 0
                 Some(l_0 * &(C::Scalar::one() - &self.product_eval)),
             )
             .chain(

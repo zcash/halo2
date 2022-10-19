@@ -12,7 +12,7 @@ use super::{
 use crate::plonk::DynamicTableInfo;
 use crate::{
     dev::Value,
-    plonk::{Any, Column, ConstraintSystem, Expression, Gate},
+    plonk::{Any, Column, ConstraintSystem, Expression, Gate, Instance},
 };
 
 mod emitter;
@@ -137,6 +137,20 @@ pub enum VerifyFailure {
         /// offset 0, but the gate uses `Rotation::prev()`).
         offset: isize,
     },
+    /// An instance cell used in an active gate was not assigned to.
+    InstanceCellNotAssigned {
+        /// The index of the active gate.
+        gate: metadata::Gate,
+        /// The region in which this gate was activated.
+        region: metadata::Region,
+        /// The offset (relative to the start of the region) at which the active gate
+        /// queries this cell.
+        gate_offset: usize,
+        /// The column in which this cell should be assigned.
+        column: Column<Instance>,
+        /// The absolute row at which this cell should be assigned.
+        row: usize,
+    },
     /// A constraint was not satisfied for a particular row.
     ConstraintNotSatisfied {
         /// The polynomial constraint that is not satisfied.
@@ -209,6 +223,19 @@ impl fmt::Display for VerifyFailure {
                     f,
                     "{} uses {} at offset {}, which requires cell in column {:?} at offset {} to be assigned.",
                     region, gate, gate_offset, column, offset
+                )
+            }
+            Self::InstanceCellNotAssigned {
+                gate,
+                region,
+                gate_offset,
+                column,
+                row,
+            } => {
+                write!(
+                    f,
+                    "{} uses {} at offset {}, which requires cell in instance column {:?} at row {} to be assigned.",
+                    region, gate, gate_offset, column, row
                 )
             }
             Self::ConstraintNotSatisfied {

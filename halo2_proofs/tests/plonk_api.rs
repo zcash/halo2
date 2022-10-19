@@ -459,13 +459,14 @@ fn plonk_api() {
         .expect("proof generation should not fail");
         let proof: Vec<u8> = transcript.finalize();
 
-        std::fs::write("plonk_api_proof.bin", &proof[..])
+        std::fs::write("./tests/plonk_api_proof.bin", &proof[..])
             .expect("should succeed to write new proof");
     }
 
     {
         // Check that a hardcoded proof is satisfied
-        let proof = include_bytes!("plonk_api_proof.bin");
+        let proof =
+            std::fs::read("./tests/plonk_api_proof.bin").expect("should succeed to read proof");
         let strategy = SingleVerifier::new(&params);
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
         assert!(verify_proof(
@@ -493,7 +494,7 @@ fn plonk_api() {
         let proof: Vec<u8> = transcript.finalize();
         assert_eq!(
             proof.len(),
-            halo2_proofs::dev::CircuitCost::<Eq, MyCircuit<_>>::measure(K as usize, &circuit)
+            halo2_proofs::dev::CircuitCost::<Eq, MyCircuit<_>>::measure(K, &circuit)
                 .proof_size(2)
                 .into(),
         );
