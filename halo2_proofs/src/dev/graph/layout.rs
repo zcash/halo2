@@ -4,18 +4,15 @@ use plotters::{
     coord::Shift,
     prelude::{DrawingArea, DrawingAreaErrorKind, DrawingBackend},
 };
-use std::collections::HashSet;
 use std::ops::Range;
+use std::{cmp, collections::HashSet};
 
 use crate::{
-    circuit::layouter::RegionColumn,
     circuit::{layouter::RegionColumn, Value},
-    dev::cost::Layout,
     plonk::{
         Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, DynamicTable,
         DynamicTableInfo, Error, Fixed, FloorPlanner, Instance, Selector,
     },
-    plonk::{Any, Circuit, Column, ConstraintSystem, FloorPlanner},
 };
 
 /// Graphical renderer for circuit layouts.
