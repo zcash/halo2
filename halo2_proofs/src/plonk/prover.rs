@@ -88,26 +88,32 @@ pub fn create_proof<
                         return Err(Error::InstanceTooLarge);
                     }
                     for (poly, value) in poly.iter_mut().zip(values.iter()) {
+                        if !P::QUERY_INSTANCE {
+                            transcript.common_scalar(*value)?;
+                        }
                         *poly = *value;
                     }
                     Ok(poly)
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            let instance_commitments_projective: Vec<_> = instance_values
-                .iter()
-                .map(|poly| params.commit_lagrange(poly, Blind::default()))
-                .collect();
-            let mut instance_commitments =
-                vec![Scheme::Curve::identity(); instance_commitments_projective.len()];
-            <Scheme::Curve as CurveAffine>::CurveExt::batch_normalize(
-                &instance_commitments_projective,
-                &mut instance_commitments,
-            );
-            let instance_commitments = instance_commitments;
-            drop(instance_commitments_projective);
 
-            for commitment in &instance_commitments {
-                transcript.common_point(*commitment)?;
+            if P::QUERY_INSTANCE {
+                let instance_commitments_projective: Vec<_> = instance_values
+                    .iter()
+                    .map(|poly| params.commit_lagrange(poly, Blind::default()))
+                    .collect();
+                let mut instance_commitments =
+                    vec![Scheme::Curve::identity(); instance_commitments_projective.len()];
+                <Scheme::Curve as CurveAffine>::CurveExt::batch_normalize(
+                    &instance_commitments_projective,
+                    &mut instance_commitments,
+                );
+                let instance_commitments = instance_commitments;
+                drop(instance_commitments_projective);
+
+                for commitment in &instance_commitments {
+                    transcript.common_point(*commitment)?;
+                }
             }
 
             let instance_polys: Vec<_> = instance_values
@@ -504,23 +510,25 @@ pub fn create_proof<
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
     let xn = x.pow(&[params.n() as u64, 0, 0, 0]);
 
-    // Compute and hash instance evals for each circuit instance
-    for instance in instance.iter() {
-        // Evaluate polynomials at omega^i x
-        let instance_evals: Vec<_> = meta
-            .instance_queries
-            .iter()
-            .map(|&(column, at)| {
-                eval_polynomial(
-                    &instance.instance_polys[column.index()],
-                    domain.rotate_omega(*x, at),
-                )
-            })
-            .collect();
+    if P::QUERY_INSTANCE {
+        // Compute and hash instance evals for each circuit instance
+        for instance in instance.iter() {
+            // Evaluate polynomials at omega^i x
+            let instance_evals: Vec<_> = meta
+                .instance_queries
+                .iter()
+                .map(|&(column, at)| {
+                    eval_polynomial(
+                        &instance.instance_polys[column.index()],
+                        domain.rotate_omega(*x, at),
+                    )
+                })
+                .collect();
 
-        // Hash each instance column evaluation
-        for eval in instance_evals.iter() {
-            transcript.write_scalar(*eval)?;
+            // Hash each instance column evaluation
+            for eval in instance_evals.iter() {
+                transcript.write_scalar(*eval)?;
+            }
         }
     }
 
@@ -588,15 +596,16 @@ pub fn create_proof<
         .flat_map(|(((instance, advice), permutation), lookups)| {
             iter::empty()
                 .chain(
-                    pk.vk
-                        .cs
-                        .instance_queries
-                        .iter()
-                        .map(move |&(column, at)| ProverQuery {
-                            point: domain.rotate_omega(*x, at),
-                            poly: &instance.instance_polys[column.index()],
-                            blind: Blind::default(),
-                        }),
+                    P::QUERY_INSTANCE
+                        .then_some(pk.vk.cs.instance_queries.iter().map(move |&(column, at)| {
+                            ProverQuery {
+                                point: domain.rotate_omega(*x, at),
+                                poly: &instance.instance_polys[column.index()],
+                                blind: Blind::default(),
+                            }
+                        }))
+                        .into_iter()
+                        .flatten(),
                 )
                 .chain(
                     pk.vk

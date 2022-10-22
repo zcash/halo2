@@ -28,6 +28,8 @@ pub struct ProverGWC<'params, E: Engine> {
 
 /// Create a multi-opening proof
 impl<'params, E: Engine + Debug> Prover<'params, KZGCommitmentScheme<E>> for ProverGWC<'params, E> {
+    const QUERY_INSTANCE: bool = false;
+
     fn new(params: &'params ParamsKZG<E>) -> Self {
         Self { params }
     }

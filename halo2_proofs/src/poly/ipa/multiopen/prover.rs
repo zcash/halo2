@@ -22,6 +22,8 @@ pub struct ProverIPA<'params, C: CurveAffine> {
 }
 
 impl<'params, C: CurveAffine> Prover<'params, IPACommitmentScheme<C>> for ProverIPA<'params, C> {
+    const QUERY_INSTANCE: bool = true;
+
     fn new(params: &'params ParamsIPA<C>) -> Self {
         Self { params }
     }
