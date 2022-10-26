@@ -39,7 +39,9 @@ where
 
     // Compress the commitments and expected evaluations at x together.
     // using the challenge x_1
-    let mut q_commitments: Vec<_> = vec![params.empty_msm(); point_sets.len()];
+    let mut q_commitments: Vec<_> = vec![
+        (params.empty_msm(), C::Scalar::one()); // (accumulator, next x_1 power).
+        point_sets.len()];
 
     // A vec of vecs of evals. The outer vec corresponds to the point set,
     // while the inner vec corresponds to the points in a particular set.
@@ -47,26 +49,30 @@ where
     for point_set in point_sets.iter() {
         q_eval_sets.push(vec![C::Scalar::zero(); point_set.len()]);
     }
+
     {
         let mut accumulate = |set_idx: usize, new_commitment, evals: Vec<C::Scalar>| {
-            q_commitments[set_idx].scale(*x_1);
+            let (q_commitment, x_1_power) = &mut q_commitments[set_idx];
             match new_commitment {
                 CommitmentReference::Commitment(c) => {
-                    q_commitments[set_idx].append_term(C::Scalar::one(), *c);
+                    q_commitment.append_term(*x_1_power, *c);
                 }
                 CommitmentReference::MSM(msm) => {
-                    q_commitments[set_idx].add_msm(msm);
+                    let mut msm = msm.clone();
+                    msm.scale(*x_1_power);
+                    q_commitment.add_msm(&msm);
                 }
             }
             for (eval, set_eval) in evals.iter().zip(q_eval_sets[set_idx].iter_mut()) {
-                *set_eval *= &(*x_1);
-                *set_eval += eval;
+                *set_eval += (*eval) * (*x_1_power);
             }
+            *x_1_power *= *x_1;
         };
 
         // Each commitment corresponds to evaluations at a set of points.
         // For each set, we collapse each commitment's evals pointwise.
-        for commitment_data in commitment_map.into_iter() {
+        // Run in order of increasing x_1 powers.
+        for commitment_data in commitment_map.into_iter().rev() {
             accumulate(
                 commitment_data.set_index,  // set_idx,
                 commitment_data.commitment, // commitment,
@@ -115,7 +121,7 @@ where
     msm.append_term(C::Scalar::one(), q_prime_commitment);
     let (msm, v) = q_commitments.into_iter().zip(u.iter()).fold(
         (msm, msm_eval),
-        |(mut msm, msm_eval), (q_commitment, q_eval)| {
+        |(mut msm, msm_eval), ((q_commitment, _), q_eval)| {
             msm.scale(*x_4);
             msm.add_msm(&q_commitment);
             (msm, msm_eval * &(*x_4) + q_eval)
