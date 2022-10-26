@@ -361,6 +361,9 @@ fn test_roundtrip() {
 }
 
 #[cfg(test)]
+mod bench;
+
+#[cfg(test)]
 mod tests {
     use super::Query;
 
