@@ -3,7 +3,7 @@ use std::iter;
 
 use halo2_proofs::{
     arithmetic::FieldExt,
-    circuit::{AssignedCell, Cell, Chip, Layouter, Region, Value},
+    circuit::{AssignedCell, Chip, Layouter, Region, Value},
     plonk::{
         Advice, Any, Column, ConstraintSystem, Constraints, Error, Expression, Fixed, Selector,
     },
@@ -14,7 +14,6 @@ use super::{
     primitives::{Absorbing, Domain, Mds, Spec, Squeezing, State},
     PaddedWord, PoseidonInstructions, PoseidonSpongeInstructions,
 };
-use crate::utilities::Var;
 
 /// Configuration for a [`Pow5Chip`].
 #[derive(Clone, Debug)]
@@ -414,16 +413,6 @@ impl<F: FieldExt> From<StateWord<F>> for AssignedCell<F, F> {
 impl<F: FieldExt> From<AssignedCell<F, F>> for StateWord<F> {
     fn from(cell_value: AssignedCell<F, F>) -> StateWord<F> {
         StateWord(cell_value)
-    }
-}
-
-impl<F: FieldExt> Var<F> for StateWord<F> {
-    fn cell(&self) -> Cell {
-        self.0.cell()
-    }
-
-    fn value(&self) -> Value<F> {
-        self.0.value().cloned()
     }
 }
 

@@ -394,7 +394,7 @@ pub mod tests {
             tests::{BaseField, TestFixedBases},
             FixedPointBaseField, NonIdentityPoint, Point,
         },
-        utilities::UtilitiesInstructions,
+        utilities::load_private,
     };
 
     pub(crate) fn test_mul_fixed_base_field(
@@ -441,7 +441,7 @@ pub mod tests {
         {
             let scalar_fixed = pallas::Base::random(rng);
             let result = {
-                let scalar_fixed = chip.load_private(
+                let scalar_fixed = load_private(
                     layouter.namespace(|| "random base field element"),
                     column,
                     Value::known(scalar_fixed),
@@ -469,7 +469,7 @@ pub mod tests {
                             acc * &h + &pallas::Base::from(c.to_digit(8).unwrap() as u64)
                         });
             let result = {
-                let scalar_fixed = chip.load_private(
+                let scalar_fixed = load_private(
                     layouter.namespace(|| "mul with double"),
                     column,
                     Value::known(scalar_fixed),
@@ -490,7 +490,7 @@ pub mod tests {
         {
             let scalar_fixed = pallas::Base::zero();
             let result = {
-                let scalar_fixed = chip.load_private(
+                let scalar_fixed = load_private(
                     layouter.namespace(|| "zero"),
                     column,
                     Value::known(scalar_fixed),
@@ -507,7 +507,7 @@ pub mod tests {
         {
             let scalar_fixed = -pallas::Base::one();
             let result = {
-                let scalar_fixed = chip.load_private(
+                let scalar_fixed = load_private(
                     layouter.namespace(|| "-1"),
                     column,
                     Value::known(scalar_fixed),

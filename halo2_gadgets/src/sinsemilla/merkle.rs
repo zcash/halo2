@@ -1,14 +1,14 @@
 //! Gadgets for implementing a Merkle tree with Sinsemilla.
 
 use halo2_proofs::{
-    circuit::{Chip, Layouter, Value},
+    circuit::{AssignedCell, Chip, Layouter, Value},
     plonk::Error,
 };
 use pasta_curves::arithmetic::CurveAffine;
 
 use super::{HashDomains, SinsemillaInstructions};
 
-use crate::utilities::{cond_swap::CondSwapInstructions, i2lebsp, UtilitiesInstructions};
+use crate::utilities::{cond_swap::CondSwapInstructions, i2lebsp};
 
 pub mod chip;
 
@@ -23,11 +23,7 @@ pub trait MerkleInstructions<
     const PATH_LENGTH: usize,
     const K: usize,
     const MAX_WORDS: usize,
->:
-    SinsemillaInstructions<C, K, MAX_WORDS>
-    + CondSwapInstructions<C::Base>
-    + UtilitiesInstructions<C::Base>
-    + Chip<C::Base>
+>: SinsemillaInstructions<C, K, MAX_WORDS> + CondSwapInstructions<C::Base> + Chip<C::Base>
 {
     /// Compute MerkleCRH for a given `layer`. The hash that computes the root
     /// is at layer 0, and the hashes that are applied to two leaves are at
@@ -38,9 +34,9 @@ pub trait MerkleInstructions<
         layouter: impl Layouter<C::Base>,
         Q: C,
         l: usize,
-        left: Self::Var,
-        right: Self::Var,
-    ) -> Result<Self::Var, Error>;
+        left: AssignedCell<C::Base, C::Base>,
+        right: AssignedCell<C::Base, C::Base>,
+    ) -> Result<AssignedCell<C::Base, C::Base>, Error>;
 }
 
 /// Gadget representing a Merkle path that proves a leaf exists in a Merkle tree at a
@@ -117,8 +113,8 @@ where
     pub fn calculate_root(
         &self,
         mut layouter: impl Layouter<C::Base>,
-        leaf: MerkleChip::Var,
-    ) -> Result<MerkleChip::Var, Error> {
+        leaf: AssignedCell<C::Base, C::Base>,
+    ) -> Result<AssignedCell<C::Base, C::Base>, Error> {
         // Each chip processes `ceil(PATH_LENGTH / PAR)` layers.
         let layers_per_chip = (PATH_LENGTH + PAR - 1) / PAR;
 
@@ -184,7 +180,7 @@ pub mod tests {
             tests::{TestCommitDomain, TestHashDomain},
             HashDomains,
         },
-        utilities::{i2lebsp, lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
+        utilities::{i2lebsp, load_private, lookup_range_check::LookupRangeCheckConfig},
     };
 
     use group::ff::{Field, PrimeField, PrimeFieldBits};
@@ -288,7 +284,7 @@ pub mod tests {
             let chip_1 = MerkleChip::construct(config.0.clone());
             let chip_2 = MerkleChip::construct(config.1.clone());
 
-            let leaf = chip_1.load_private(
+            let leaf = load_private(
                 layouter.namespace(|| ""),
                 config.0.cond_swap_config.a(),
                 self.leaf,

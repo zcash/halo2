@@ -1,6 +1,6 @@
 //! Gadget and chip for a conditional swap utility.
 
-use super::{bool_check, ternary, UtilitiesInstructions};
+use super::{bool_check, ternary};
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter, Value},
     plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
@@ -10,7 +10,7 @@ use pasta_curves::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
 /// Instructions for a conditional swap gadget.
-pub trait CondSwapInstructions<F: FieldExt>: UtilitiesInstructions<F> {
+pub trait CondSwapInstructions<F: FieldExt> {
     #[allow(clippy::type_complexity)]
     /// Given an input pair (a,b) and a `swap` boolean flag, returns
     /// (b,a) if `swap` is set, else (a,b) if `swap` is not set.
@@ -20,9 +20,9 @@ pub trait CondSwapInstructions<F: FieldExt>: UtilitiesInstructions<F> {
     fn swap(
         &self,
         layouter: impl Layouter<F>,
-        pair: (Self::Var, Value<F>),
+        pair: (AssignedCell<F, F>, Value<F>),
         swap: Value<bool>,
-    ) -> Result<(Self::Var, Self::Var), Error>;
+    ) -> Result<(AssignedCell<F, F>, AssignedCell<F, F>), Error>;
 }
 
 /// A chip implementing a conditional swap.
@@ -63,18 +63,14 @@ impl CondSwapConfig {
     }
 }
 
-impl<F: FieldExt> UtilitiesInstructions<F> for CondSwapChip<F> {
-    type Var = AssignedCell<F, F>;
-}
-
 impl<F: FieldExt> CondSwapInstructions<F> for CondSwapChip<F> {
     #[allow(clippy::type_complexity)]
     fn swap(
         &self,
         mut layouter: impl Layouter<F>,
-        pair: (Self::Var, Value<F>),
+        pair: (AssignedCell<F, F>, Value<F>),
         swap: Value<bool>,
-    ) -> Result<(Self::Var, Self::Var), Error> {
+    ) -> Result<(AssignedCell<F, F>, AssignedCell<F, F>), Error> {
         let config = self.config();
 
         layouter.assign_region(
@@ -193,7 +189,7 @@ impl<F: FieldExt> CondSwapChip<F> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::UtilitiesInstructions;
+    use super::super::load_private;
     use super::{CondSwapChip, CondSwapConfig, CondSwapInstructions};
     use group::ff::Field;
     use halo2_proofs::{
@@ -241,7 +237,7 @@ mod tests {
                 let chip = CondSwapChip::<F>::construct(config.clone());
 
                 // Load the pair and the swap flag into the circuit.
-                let a = chip.load_private(layouter.namespace(|| "a"), config.a, self.a)?;
+                let a = load_private(layouter.namespace(|| "a"), config.a, self.a)?;
                 // Return the swapped pair.
                 let swapped_pair = chip.swap(
                     layouter.namespace(|| "swap"),

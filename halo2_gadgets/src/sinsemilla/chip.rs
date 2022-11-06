@@ -271,12 +271,10 @@ where
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
 {
-    type CellValue = AssignedCell<pallas::Base, pallas::Base>;
-
     type Message = Message<pallas::Base, { sinsemilla::K }, { sinsemilla::C }>;
     type MessagePiece = MessagePiece<pallas::Base, { sinsemilla::K }>;
 
-    type RunningSum = Vec<Self::CellValue>;
+    type RunningSum = Vec<AssignedCell<pallas::Base, pallas::Base>>;
 
     type X = AssignedCell<pallas::Base, pallas::Base>;
     type NonIdentityPoint = NonIdentityEccPoint;

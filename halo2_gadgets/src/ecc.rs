@@ -4,18 +4,14 @@ use std::fmt::Debug;
 
 use halo2_proofs::{
     arithmetic::CurveAffine,
-    circuit::{Chip, Layouter, Value},
+    circuit::{AssignedCell, Chip, Layouter, Value},
     plonk::Error,
 };
-
-use crate::utilities::UtilitiesInstructions;
 
 pub mod chip;
 
 /// The set of circuit instructions required to use the ECC gadgets.
-pub trait EccInstructions<C: CurveAffine>:
-    Chip<C::Base> + UtilitiesInstructions<C::Base> + Clone + Debug + Eq
-{
+pub trait EccInstructions<C: CurveAffine>: Chip<C::Base> + Clone + Debug + Eq {
     /// Variable representing a scalar used in variable-base scalar mul.
     ///
     /// This type is treated as a full-width scalar. However, if `Self` implements
@@ -84,10 +80,14 @@ pub trait EccInstructions<C: CurveAffine>:
 
     /// Converts a magnitude and sign that exists as variables in the circuit into a
     /// signed short scalar to be used in fixed-base scalar multiplication.
+    #[allow(clippy::type_complexity)]
     fn scalar_fixed_from_signed_short(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        magnitude_sign: (Self::Var, Self::Var),
+        magnitude_sign: (
+            AssignedCell<C::Base, C::Base>,
+            AssignedCell<C::Base, C::Base>,
+        ),
     ) -> Result<Self::ScalarFixedShort, Error>;
 
     /// Extracts the x-coordinate of a point.
@@ -142,7 +142,7 @@ pub trait EccInstructions<C: CurveAffine>:
     fn mul_fixed_base_field_elem(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        base_field_elem: Self::Var,
+        base_field_elem: AssignedCell<C::Base, C::Base>,
         base: &<Self::FixedPoints as FixedPoints<C>>::Base,
     ) -> Result<Self::Point, Error>;
 }
@@ -155,7 +155,7 @@ pub trait BaseFitsInScalarInstructions<C: CurveAffine>: EccInstructions<C> {
     fn scalar_var_from_base(
         &self,
         layouter: &mut impl Layouter<C::Base>,
-        base: &Self::Var,
+        base: &AssignedCell<C::Base, C::Base>,
     ) -> Result<Self::ScalarVar, Error>;
 }
 
@@ -196,7 +196,7 @@ impl<C: CurveAffine, EccChip: BaseFitsInScalarInstructions<C>> ScalarVar<C, EccC
     pub fn from_base(
         chip: EccChip,
         mut layouter: impl Layouter<C::Base>,
-        base: &EccChip::Var,
+        base: &AssignedCell<C::Base, C::Base>,
     ) -> Result<Self, Error> {
         let scalar = chip.scalar_var_from_base(&mut layouter, base);
         scalar.map(|inner| ScalarVar { chip, inner })
@@ -244,10 +244,14 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> ScalarFixedShort<C, EccChip> {
     /// Depending on the `EccChip` implementation, the scalar may either be constrained
     /// immediately by this constructor, or lazily constrained when it is first used in
     /// [`FixedPointShort::mul`].
+    #[allow(clippy::type_complexity)]
     pub fn new(
         chip: EccChip,
         mut layouter: impl Layouter<C::Base>,
-        magnitude_sign: (EccChip::Var, EccChip::Var),
+        magnitude_sign: (
+            AssignedCell<C::Base, C::Base>,
+            AssignedCell<C::Base, C::Base>,
+        ),
     ) -> Result<Self, Error> {
         let scalar = chip.scalar_fixed_from_signed_short(&mut layouter, magnitude_sign);
         scalar.map(|inner| ScalarFixedShort { chip, inner })
@@ -522,7 +526,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> FixedPointBaseField<C, EccChip
     pub fn mul(
         &self,
         mut layouter: impl Layouter<C::Base>,
-        by: EccChip::Var,
+        by: AssignedCell<C::Base, C::Base>,
     ) -> Result<Point<C, EccChip>, Error> {
         self.chip
             .mul_fixed_base_field_elem(&mut layouter, by, &self.inner)
