@@ -436,19 +436,20 @@ fn render_lookup<F: FieldExt>(
         FailureLocation::OutsideRegion { row } => *row,
     } as i32;
 
-    // Recover the fixed columns from the table expressions. We don't allow composite
-    // expressions for the table side of lookups.
+    // Recover the fixed columns from the table expressions.
+    // We don't allow composite expressions for the table side of fixed lookups.
+    // The table side of Dynamic lookups have a tag column.
     let table_columns = lookup.table_expressions.iter().map(|expr| {
         expr.evaluate(
             &|_| panic!("no constants in table expressions"),
             &|_| panic!("no selectors in table expressions"),
             &|_| panic!("no virtual columns in table expressions"),
             &|query| format!("F{}", query.column_index),
-            &|_| panic!("no advice columns in table expressions"),
+            &|query| format!("A{}", query.column_index),
             &|_| panic!("no instance columns in table expressions"),
             &|_| panic!("no negations in table expressions"),
             &|_, _| panic!("no sums in table expressions"),
-            &|_, _| panic!("no products in table expressions"),
+            &|a, b| format!("{} * {}", a, b),
             &|_, _| panic!("no scaling in table expressions"),
         )
     });
