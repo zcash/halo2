@@ -1467,10 +1467,6 @@ mod tests {
 
             let errs = MockProver::run(K, &DynLookupCircuit {}, vec![])
                 .unwrap()
-                .assert_satisfied();
-
-            let errs = MockProver::run(K, &DynLookupCircuit {}, vec![])
-                .unwrap()
                 .verify()
                 .expect_err("The table only contains 0..=5, but lookups on 0..=6 succeeded");
 
