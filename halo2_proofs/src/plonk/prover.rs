@@ -308,7 +308,6 @@ pub fn create_proof<
                 .collect();
             let mut advice_commitments = vec![C::identity(); advice_commitments_projective.len()];
             C::Curve::batch_normalize(&advice_commitments_projective, &mut advice_commitments);
-            let advice_commitments = advice_commitments;
             drop(advice_commitments_projective);
 
             for commitment in &advice_commitments {
