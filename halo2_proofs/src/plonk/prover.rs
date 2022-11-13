@@ -97,7 +97,6 @@ pub fn create_proof<
             let mut instance_commitments =
                 vec![C::identity(); instance_commitments_projective.len()];
             C::Curve::batch_normalize(&instance_commitments_projective, &mut instance_commitments);
-            let instance_commitments = instance_commitments;
             drop(instance_commitments_projective);
 
             for commitment in &instance_commitments {
