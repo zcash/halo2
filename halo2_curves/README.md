@@ -1,6 +1,6 @@
-# BN256 pairing
+# halo2_curves
 
-BN256 pairing library that implements original traits from `zkcrypto`,
+A PSE library that implements original traits from `zkcrypto`
 
 * [`zkcrypto/ff`](https://github.com/zkcrypto/ff)
 * [`zkcrypto/group`](https://github.com/zkcrypto/group)
