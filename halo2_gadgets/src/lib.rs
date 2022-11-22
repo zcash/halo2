@@ -22,6 +22,7 @@
 #![deny(unsafe_code)]
 
 pub mod ecc;
+pub mod fibonacci;
 pub mod poseidon;
 #[cfg(feature = "unstable")]
 #[cfg_attr(docsrs, doc(cfg(feature = "unstable")))]
