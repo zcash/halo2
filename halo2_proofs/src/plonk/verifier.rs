@@ -84,8 +84,6 @@ pub fn verify_proof<
         }
     }
 
-    println!("{:?}", 1);
-
     let instance_commitments = instances
         .iter()
         .map(|instance| {
@@ -137,8 +135,6 @@ pub fn verify_proof<
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;
-
-    println!("{:?}", 5);
 
     // Sample beta challenge
     let beta: ChallengeBeta<_> = transcript.squeeze_challenge_scalar();
