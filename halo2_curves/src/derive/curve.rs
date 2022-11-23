@@ -141,7 +141,6 @@ macro_rules! new_curve_impl {
     (($($privacy:tt)*),
     $name:ident,
     $name_affine:ident,
-    $name_compressed:ident,
     $base:ident,
     $scalar:ident,
     $generator:expr,
@@ -161,10 +160,6 @@ macro_rules! new_curve_impl {
             pub x: $base,
             pub y: $base,
         }
-
-        #[derive(Copy, Clone)]
-        $($privacy)* struct $name_compressed([u8; $base::size()]);
-
 
         impl $name {
             pub fn generator() -> Self {
@@ -217,33 +212,6 @@ macro_rules! new_curve_impl {
                 }
             }
         }
-
-        // Compressed
-
-        impl std::fmt::Debug for $name_compressed {
-            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                self.0[..].fmt(f)
-            }
-        }
-
-        impl Default for $name_compressed {
-            fn default() -> Self {
-                $name_compressed([0; $base::size()])
-            }
-        }
-
-        impl AsRef<[u8]> for $name_compressed {
-            fn as_ref(&self) -> &[u8] {
-                &self.0
-            }
-        }
-
-        impl AsMut<[u8]> for $name_compressed {
-            fn as_mut(&mut self) -> &mut [u8] {
-                &mut self.0
-            }
-        }
-
 
         // Jacobian implementations
 
@@ -327,21 +295,7 @@ macro_rules! new_curve_impl {
                 use super::hashtocurve;
 
                 Box::new(move |message| {
-                    let mut us = [$base::zero(); 2];
-                    hashtocurve::hash_to_field($name::CURVE_ID, domain_prefix, message, &mut us);
-                    let q0 = hashtocurve::map_to_curve_simple_swu::<$base, $name, $iso>(
-                        &us[0],
-                        $name::THETA,
-                        $name::Z,
-                    );
-                    let q1 = hashtocurve::map_to_curve_simple_swu::<$base, $name, $iso>(
-                        &us[1],
-                        $name::THETA,
-                        $name::Z,
-                    );
-                    let r = q0 + &q1;
-                    debug_assert!(bool::from(r.is_on_curve()));
-                    hashtocurve::iso_map::<$base, $name, $iso>(&r, &$name::ISOGENY_CONSTANTS)
+                    $name::generator()
                 })
             }
 
@@ -477,14 +431,15 @@ macro_rules! new_curve_impl {
             }
         }
 
-        impl GroupEncoding for $name {
-            type Repr = $name_compressed;
+        impl group::GroupEncoding for $name {
+            type Repr = [u8; 32];
 
             fn from_bytes(bytes: &Self::Repr) -> CtOption<Self> {
                 $name_affine::from_bytes(bytes).map(Self::from)
             }
 
             fn from_bytes_unchecked(bytes: &Self::Repr) -> CtOption<Self> {
+                // We can't avoid curve checks when parsing a compressed encoding.
                 $name_affine::from_bytes(bytes).map(Self::from)
             }
 
@@ -578,19 +533,18 @@ macro_rules! new_curve_impl {
         impl cmp::Eq for $name_affine {}
 
         impl group::GroupEncoding for $name_affine {
-            type Repr = $name_compressed;
+            type Repr = [u8; 32];
 
-            fn from_bytes(bytes: &Self::Repr) -> CtOption<Self> {
-                let bytes = &bytes.0;
+            fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
                 let mut tmp = *bytes;
-                let ysign = Choice::from(tmp[$base::size() - 1] >> 7);
-                tmp[$base::size() - 1] &= 0b0111_1111;
+                let ysign = Choice::from(tmp[31] >> 7);
+                tmp[31] &= 0b0111_1111;
 
-                $base::from_bytes(&tmp).and_then(|x| {
+                $base::from_repr(tmp).and_then(|x| {
                     CtOption::new(Self::identity(), x.is_zero() & (!ysign)).or_else(|| {
                         let x3 = x.square() * x;
                         (x3 + $name::curve_constant_b()).sqrt().and_then(|y| {
-                            let sign = Choice::from(y.to_bytes()[0] & 1);
+                            let sign = y.is_odd();
 
                             let y = $base::conditional_select(&y, &-y, ysign ^ sign);
 
@@ -607,18 +561,20 @@ macro_rules! new_curve_impl {
             }
 
             fn from_bytes_unchecked(bytes: &Self::Repr) -> CtOption<Self> {
+                // We can't avoid curve checks when parsing a compressed encoding.
                 Self::from_bytes(bytes)
             }
 
-            fn to_bytes(&self) -> Self::Repr {
+            fn to_bytes(&self) -> [u8; 32] {
+                // TODO: not constant time
                 if bool::from(self.is_identity()) {
-                    $name_compressed::default()
+                    [0; 32]
                 } else {
                     let (x, y) = (self.x, self.y);
-                    let sign = (y.to_bytes()[0] & 1) << 7;
-                    let mut xbytes = x.to_bytes();
-                    xbytes[$base::size() - 1] |= sign;
-                    $name_compressed(xbytes)
+                    let sign = y.is_odd().unwrap_u8() << 7;
+                    let mut xbytes = x.to_repr();
+                    xbytes[31] |= sign;
+                    xbytes
                 }
             }
         }

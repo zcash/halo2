@@ -220,17 +220,17 @@ mod tests {
 
         let params: Params<Secp256k1Affine> = Params::new(k);
 
-        let empty_circuit = MyCircuit::<Fp> {
+        let empty_circuit = MyCircuit::<Fq> {
             a: Value::unknown(),
             b: Value::unknown(),
         };
 
-        let a = Fp::from(1); // F[0]
-        let b = Fp::from(1); // F[1]
-        let out = Fp::from(55); // F[9]
+        let a = Fq::from(1); // F[0]
+        let b = Fq::from(1); // F[1]
+        let out = Fq::from(55); // F[9]
         let mut public_input = vec![a, b, out];
 
-        let circuit = MyCircuit::<Fp> {
+        let circuit = MyCircuit::<Fq> {
             a: Value::known(a),
             b: Value::known(b),
         };
