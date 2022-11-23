@@ -1,0 +1,62 @@
+[package]
+name = "secpq_curves"
+version = "0.2.1"
+authors = [
+  "Sean Bowe <ewillbefull@gmail.com>",
+  "Jack Grigg <jack@z.cash>",
+  "Alex Vlasov <alex.m.vlasov@gmail.com>",
+  "Alex Gluchowski <alex@gluchowski.net>"
+]
+license = "MIT/Apache-2.0"
+edition = "2018"
+repository = "https://github.com/kilic/pairing"
+readme = "README.md"
+description = "Elliptic curve implementations and wrappers for halo2 library"
+
+[dev-dependencies]
+criterion = { version = "0.3", features = ["html_reports"] }
+rand_xorshift = "0.3"
+ark-std = { version = "0.3", features = ["print-trace"] }
+
+[dependencies]
+subtle = "2.4"
+ff = "0.12.0"
+group = "0.12.0"
+pasta_curves = "0.4.0"
+static_assertions = "1.1.0"
+rand = "0.8"
+rand_core = { version = "0.6", default-features = false }
+num-bigint = "0.4.3"
+num-traits = "0.2"
+
+# alloc dependencies
+blake2b_simd = { version = "1", optional = true, default-features = false }
+
+# sqrt-table dependencies
+lazy_static = { version = "1.4.0", optional = true }
+
+# gpu dependencies
+ec-gpu = { version = "0.2.0", optional = true }
+
+# serde dependencies
+serde_crate = { version = "1.0.16", optional = true, default-features = false, features = ["alloc"], package = "serde" }
+hex = { version = "0.4", optional = true, default-features = false, features = ["alloc", "serde"] }
+
+[features]
+default = ["bits", "sqrt-table"]
+alloc = ["group/alloc", "blake2b_simd"]
+bits = ["ff/bits"]
+gpu = ["alloc", "ec-gpu"]
+sqrt-table = ["alloc", "lazy_static"]
+repr-c = []
+uninline-portable = []
+serde = ["hex", "serde_crate"]
+
+[profile.bench]
+opt-level = 3
+debug = false
+debug-assertions = false
+overflow-checks = false
+lto = true
+incremental = false
+codegen-units = 1
