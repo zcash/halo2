@@ -6,6 +6,8 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- `halo2_gadgets::poseidon::primitives::generate_constants`
 
 ## [0.2.0] - 2022-06-23
 ### Added

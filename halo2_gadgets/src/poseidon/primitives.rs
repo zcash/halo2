@@ -27,7 +27,7 @@ pub(crate) type State<F, const T: usize> = [F; T];
 pub(crate) type SpongeRate<F, const RATE: usize> = [Option<F>; RATE];
 
 /// The type used to hold the MDS matrix and its inverse.
-pub(crate) type Mds<F, const T: usize> = [[F; T]; T];
+pub type Mds<F, const T: usize> = [[F; T]; T];
 
 /// A specification for a Poseidon permutation.
 pub trait Spec<F: FieldExt, const T: usize, const RATE: usize>: fmt::Debug {
@@ -50,29 +50,33 @@ pub trait Spec<F: FieldExt, const T: usize, const RATE: usize>: fmt::Debug {
     fn secure_mds() -> usize;
 
     /// Generates `(round_constants, mds, mds^-1)` corresponding to this specification.
-    fn constants() -> (Vec<[F; T]>, Mds<F, T>, Mds<F, T>) {
-        let r_f = Self::full_rounds();
-        let r_p = Self::partial_rounds();
+    fn constants() -> (Vec<[F; T]>, Mds<F, T>, Mds<F, T>);
+}
 
-        let mut grain = grain::Grain::new(SboxType::Pow, T as u16, r_f as u16, r_p as u16);
+/// Generates `(round_constants, mds, mds^-1)` corresponding to this specification.
+pub fn generate_constants<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>(
+) -> (Vec<[F; T]>, Mds<F, T>, Mds<F, T>) {
+    let r_f = S::full_rounds();
+    let r_p = S::partial_rounds();
 
-        let round_constants = (0..(r_f + r_p))
-            .map(|_| {
-                let mut rc_row = [F::zero(); T];
-                for (rc, value) in rc_row
-                    .iter_mut()
-                    .zip((0..T).map(|_| grain.next_field_element()))
-                {
-                    *rc = value;
-                }
-                rc_row
-            })
-            .collect();
+    let mut grain = grain::Grain::new(SboxType::Pow, T as u16, r_f as u16, r_p as u16);
 
-        let (mds, mds_inv) = mds::generate_mds::<F, T>(&mut grain, Self::secure_mds());
+    let round_constants = (0..(r_f + r_p))
+        .map(|_| {
+            let mut rc_row = [F::zero(); T];
+            for (rc, value) in rc_row
+                .iter_mut()
+                .zip((0..T).map(|_| grain.next_field_element()))
+            {
+                *rc = value;
+            }
+            rc_row
+        })
+        .collect();
 
-        (round_constants, mds, mds_inv)
-    }
+    let (mds, mds_inv) = mds::generate_mds::<F, T>(&mut grain, S::secure_mds());
+
+    (round_constants, mds, mds_inv)
 }
 
 /// Runs the Poseidon permutation on the given state.

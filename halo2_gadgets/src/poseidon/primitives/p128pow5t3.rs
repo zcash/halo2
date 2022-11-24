@@ -75,7 +75,9 @@ mod tests {
         super::{fp, fq},
         Fp, Fq,
     };
-    use crate::poseidon::primitives::{permute, ConstantLength, Hash, Spec};
+    use crate::poseidon::primitives::{
+        generate_constants, permute, ConstantLength, Hash, Mds, Spec,
+    };
 
     /// The same Poseidon specification as poseidon::P128Pow5T3, but constructed
     /// such that its constants will be generated at runtime.
@@ -104,6 +106,10 @@ mod tests {
 
         fn secure_mds() -> usize {
             SECURE_MDS
+        }
+
+        fn constants() -> (Vec<[F; 3]>, Mds<F, 3>, Mds<F, 3>) {
+            generate_constants::<_, Self, 3, 2>()
         }
     }
 
