@@ -23,7 +23,7 @@ use pasta_curves::arithmetic::{Coordinates, CurveAffine, CurveExt};
 
 // Reference: https://neuromancer.sk/std/secg/secp256k1
 macro_rules! new_curve_impl {
-    (($($privacy:tt)*), $name:ident, $name_affine:ident, $iso:ident, $base:ident, $scalar:ident,
+    (($($privacy:tt)*), $name:ident, $name_affine:ident, $name_compressed:ident, $iso:ident, $base:ident, $scalar:ident,
      $curve_id:literal, $a_raw:expr, $b_raw:expr, $curve_type:ident) => {
         /// Represents a point in the projective coordinate space.
         #[derive(Copy, Clone, Debug)]
@@ -52,6 +52,9 @@ macro_rules! new_curve_impl {
             x: $base,
             y: $base,
         }
+
+        #[derive(Copy, Clone)]
+        $($privacy)* struct $name_compressed([u8; 33]);
 
         impl fmt::Debug for $name_affine {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
@@ -100,6 +103,31 @@ macro_rules! new_curve_impl {
                 self.z.is_zero()
             }
         }
+
+        impl std::fmt::Debug for $name_compressed {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                self.0[..].fmt(f)
+            }
+        }
+
+        impl Default for $name_compressed {
+            fn default() -> Self {
+                $name_compressed([0; 33])
+            }
+        }
+
+        impl AsRef<[u8]> for $name_compressed {
+            fn as_ref(&self) -> &[u8] {
+                &self.0
+            }
+        }
+
+        impl AsMut<[u8]> for $name_compressed {
+            fn as_mut(&mut self) -> &mut [u8] {
+                &mut self.0
+            }
+        }
+
 
         #[cfg(feature = "alloc")]
         #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
@@ -228,7 +256,7 @@ macro_rules! new_curve_impl {
         }
 
         impl GroupEncoding for $name {
-            type Repr = [u8; 32];
+            type Repr = $name_compressed;
 
             fn from_bytes(bytes: &Self::Repr) -> CtOption<Self> {
                 $name_affine::from_bytes(bytes).map(Self::from)
@@ -631,14 +659,16 @@ macro_rules! new_curve_impl {
         }
 
         impl GroupEncoding for $name_affine {
-            type Repr = [u8; 32];
+            type Repr = $name_compressed;
 
-            fn from_bytes(bytes: &[u8; 32]) -> CtOption<Self> {
+            fn from_bytes(bytes: &Self::Repr) -> CtOption<Self> {
+                let bytes = &bytes.0;
                 let mut tmp = *bytes;
-                let ysign = Choice::from(tmp[31] >> 7);
-                tmp[31] &= 0b0111_1111;
+                let ysign = Choice::from(tmp[32]);
+                let mut x_repr = [0; 32];
+                x_repr.copy_from_slice(&tmp[..32]);
 
-                $base::from_repr(tmp).and_then(|x| {
+                $base::from_repr(x_repr).and_then(|x| {
                     CtOption::new(Self::identity(), x.is_zero() & (!ysign)).or_else(|| {
                         let x3 = x.square() * x;
                         (x3 + $name::curve_constant_b()).sqrt().and_then(|y| {
@@ -663,16 +693,17 @@ macro_rules! new_curve_impl {
                 Self::from_bytes(bytes)
             }
 
-            fn to_bytes(&self) -> [u8; 32] {
+            fn to_bytes(&self) -> Self::Repr {
                 // TODO: not constant time
                 if bool::from(self.is_identity()) {
-                    [0; 32]
+                    $name_compressed::default()
                 } else {
                     let (x, y) = (self.x, self.y);
-                    let sign = y.is_odd().unwrap_u8() << 7;
-                    let mut xbytes = x.to_repr();
-                    xbytes[31] |= sign;
-                    xbytes
+                    let sign = y.is_odd().unwrap_u8();
+                    let mut dest = [0; 33];
+                    dest[..32].copy_from_slice(&x.to_repr());
+                    dest[32] = sign;
+                    $name_compressed(dest)
                 }
             }
         }
@@ -1062,6 +1093,7 @@ new_curve_impl!(
     (pub),
     Secp256k1,
     Secp256k1Affine,
+    Secp256k1Compressed,
     IsoSecp256k1,
     Fp,
     Fq,
@@ -1074,6 +1106,7 @@ new_curve_impl!(
     (pub),
     Secq256k1,
     Secq256k1Affine,
+    Secq256k1Compressed,
     IsoSecq256k1,
     Fq,
     Fp,
@@ -1086,6 +1119,7 @@ new_curve_impl!(
     (pub(crate)),
     IsoSecp256k1,
     IsoSecp256k1Affine,
+    IsoSecp256k1Compressed,
     Secp256k1,
     Fp,
     Fq,
@@ -1103,6 +1137,7 @@ new_curve_impl!(
     (pub(crate)),
     IsoSecq256k1,
     IsoSecq256k1Affine,
+    IsoSecq256k1Compressed,
     Secq256k1,
     Fq,
     Fp,

@@ -253,24 +253,14 @@ mod tests {
 
         let strategy = SingleVerifier::new(&params);
         let mut ver_transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
-        println!(
-            "{:?}",
-            verify_proof(
-                &params,
-                pk.get_vk(),
-                strategy,
-                &[&[&[a, b, out]]],
-                &mut ver_transcript,
-            )
-        );
-        // assert!(verify_proof(
-        //     &params,
-        //     pk.get_vk(),
-        //     strategy,
-        //     &[&[&[a, b, out]]],
-        //     &mut ver_transcript,
-        // )
-        // .is_ok());
+        assert!(verify_proof(
+            &params,
+            pk.get_vk(),
+            strategy,
+            &[&[&[a, b, out]]],
+            &mut ver_transcript,
+        )
+        .is_ok());
     }
 
     #[cfg(feature = "dev-graph")]
