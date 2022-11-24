@@ -270,7 +270,7 @@ pub fn create_proof<
 
             let mut witness = WitnessCollection {
                 k: params.k,
-                advice: vec![domain.empty_lagrange_assigned(); meta.num_advice_columns],
+                advice: vec![domain.random_lagrange_assigned(&mut rng); meta.num_advice_columns],
                 instances,
                 // The prover will not be allowed to assign values to advice
                 // cells that exist within inactive rows, which include some

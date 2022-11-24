@@ -312,9 +312,11 @@ fn plonk_api() {
              * ]
              */
 
+            let q_lookup = meta.complex_selector();
             meta.lookup(|meta| {
+                let q_lookup = meta.query_selector(q_lookup);
                 let a_ = meta.query_any(a, Rotation::cur());
-                vec![(a_, sl)]
+                vec![(q_lookup * a_, sl)]
             });
 
             meta.create_gate("Combined add-mult", |meta| {
@@ -600,10 +602,10 @@ fn plonk_api() {
         omega: 0x0cc3380dc616f2e1daf29ad1560833ed3baea3393eceb7bc8fa36376929b78cc,
     },
     cs: PinnedConstraintSystem {
-        num_fixed_columns: 7,
+        num_fixed_columns: 8,
         num_advice_columns: 5,
         num_instance_columns: 1,
-        num_selectors: 0,
+        num_selectors: 1,
         gates: [
             Sum(
                 Sum(
@@ -881,6 +883,15 @@ fn plonk_api() {
                     0,
                 ),
             ),
+            (
+                Column {
+                    index: 7,
+                    column_type: Fixed,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
         ],
         permutation: Argument {
             columns: [
@@ -937,13 +948,22 @@ fn plonk_api() {
         lookups: [
             Argument {
                 input_expressions: [
-                    Advice {
-                        query_index: 0,
-                        column_index: 1,
-                        rotation: Rotation(
-                            0,
-                        ),
-                    },
+                    Product(
+                        Fixed {
+                            query_index: 7,
+                            column_index: 7,
+                            rotation: Rotation(
+                                0,
+                            ),
+                        },
+                        Advice {
+                            query_index: 0,
+                            column_index: 1,
+                            rotation: Rotation(
+                                0,
+                            ),
+                        },
+                    ),
                 ],
                 table_expressions: [
                     Fixed {
@@ -967,6 +987,7 @@ fn plonk_api() {
         (0x02e62cd68370b13711139a08cbcdd889e800a272b9ea10acc90880fff9d89199, 0x1a96c468cb0ce77065d3a58f1e55fea9b72d15e44c01bba1e110bd0cbc6e9bc6),
         (0x224ef42758215157d3ee48fb8d769da5bddd35e5929a90a4a89736f5c4b5ae9b, 0x11bc3a1e08eb320cde764f1492ecef956d71e996e2165f7a9a30ad2febb511c1),
         (0x2d5415bf917fcac32bfb705f8ca35cb12d9bad52aa33ccca747350f9235d3a18, 0x2b2921f815fad504052512743963ef20ed5b401d20627793b006413e73fe4dd4),
+        (0x2bbc94ef7b22aebef24f9a4b0cc1831882548b605171366017d45c3e6fd92075, 0x082b801a6e176239943bfb759fb02138f47a5c8cc4aa7fa0af559fde4e3abd97),
     ],
     permutation: VerifyingKey {
         commitments: [
