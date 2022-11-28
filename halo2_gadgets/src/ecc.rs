@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 use halo2_proofs::{
     arithmetic::CurveAffine,
-    circuit::{Chip, Layouter, Value},
+    circuit::{AssignedCell, Chip, Layouter, Value},
     plonk::Error,
 };
 
@@ -405,6 +405,16 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
     ) -> Result<Self, Error> {
         let point = chip.witness_point(&mut layouter, value);
         point.map(|inner| Point { chip, inner })
+    }
+
+    /// Returns `x`-coordinate of point
+    pub fn x(&self) -> AssignedCell<C::Base, C::Base> {
+        todo!()
+    }
+
+    /// Returns `y`-coordinate of point
+    pub fn y(&self) -> AssignedCell<C::Base, C::Base> {
+        todo!()
     }
 
     /// Constrains this point to be equal in value to another point.

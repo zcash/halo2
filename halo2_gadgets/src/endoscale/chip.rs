@@ -88,6 +88,10 @@ where
     const MAX_BITSTRING_LENGTH: usize = 248;
     const NUM_FIXED_BASES: usize = N;
 
+    fn fixed_bases(&self) -> Vec<Self::FixedBases> {
+        todo!()
+    }
+
     fn witness_bitstring(
         &self,
         layouter: &mut impl Layouter<C::Base>,

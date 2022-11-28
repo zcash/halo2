@@ -20,13 +20,16 @@ where
     /// A bitstring up to `MAX_BITSTRING_LENGTH` bits.
     type Bitstring: Clone + Debug;
     /// Enumeration of fixed bases used in endoscaling.
-    type FixedBases;
+    type FixedBases: Clone + Debug;
     /// The maximum number of bits that can be represented by [`Self::Bitstring`].
     /// When endoscaling with a base, each unique base can only support up to
     /// `MAX_BITSTRING_LENGTH` bits.
     const MAX_BITSTRING_LENGTH: usize;
     /// The number of fixed bases available.
     const NUM_FIXED_BASES: usize;
+
+    /// Returns fixed bases
+    fn fixed_bases(&self) -> Vec<Self::FixedBases>;
 
     /// Witnesses a slice of bools as a vector of [`Self::Bitstring`]s.
     fn witness_bitstring(

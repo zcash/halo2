@@ -5,3 +5,7 @@
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
 #![deny(unsafe_code)]
+
+mod accumulator;
+mod prover;
+mod transcript;
