@@ -82,7 +82,7 @@ impl<C: CurveAffine> Params<C> {
         }
         let mut g_lagrange_projective = g_projective;
         best_fft(&mut g_lagrange_projective, alpha_inv, k);
-        let minv = C::Scalar::TWO_INV.pow_vartime(&[k as u64, 0, 0, 0]);
+        let minv = C::Scalar::TWO_INV.pow_vartime([k as u64, 0, 0, 0]);
         parallelize(&mut g_lagrange_projective, |g, _| {
             for g in g.iter_mut() {
                 *g *= minv;

@@ -493,7 +493,7 @@ impl ScalarFixed {
                         .by_vals()
                         .take(FIXED_BASE_WINDOW_SIZE)
                         .rev()
-                        .fold(0, |acc, b| 2 * acc + if b { 1 } else { 0 })
+                        .fold(0, |acc, b| 2 * acc + usize::from(b))
                 })
             })
             .collect::<Vec<_>>()

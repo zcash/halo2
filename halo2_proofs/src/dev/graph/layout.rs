@@ -178,7 +178,7 @@ impl CircuitLayout {
 
         root.draw(&Rectangle::new(
             [(0, 0), (total_columns, view_bottom)],
-            &BLACK,
+            BLACK,
         ))?;
 
         let draw_region = |root: &DrawingArea<_, _>, top_left, bottom_right| {
@@ -194,7 +194,7 @@ impl CircuitLayout {
                 [top_left, bottom_right],
                 ShapeStyle::from(&GREEN.mix(0.2)).filled(),
             ))?;
-            root.draw(&Rectangle::new([top_left, bottom_right], &BLACK))?;
+            root.draw(&Rectangle::new([top_left, bottom_right], BLACK))?;
             Ok(())
         };
 

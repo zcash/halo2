@@ -131,7 +131,7 @@ impl Spec<Fp, 3, 2> for MySpec<3, 2> {
     }
 
     fn sbox(val: Fp) -> Fp {
-        val.pow_vartime(&[5])
+        val.pow_vartime([5])
     }
 
     fn secure_mds() -> usize {
@@ -153,7 +153,7 @@ impl Spec<Fp, 9, 8> for MySpec<9, 8> {
     }
 
     fn sbox(val: Fp) -> Fp {
-        val.pow_vartime(&[5])
+        val.pow_vartime([5])
     }
 
     fn secure_mds() -> usize {
@@ -175,7 +175,7 @@ impl Spec<Fp, 12, 11> for MySpec<12, 11> {
     }
 
     fn sbox(val: Fp) -> Fp {
-        val.pow_vartime(&[5])
+        val.pow_vartime([5])
     }
 
     fn secure_mds() -> usize {
