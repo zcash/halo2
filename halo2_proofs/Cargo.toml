@@ -70,6 +70,10 @@ getrandom = { version = "0.2", features = ["js"] }
 [features]
 default = ["batch"]
 dev-graph = ["plotters", "tabbycat"]
+test-dev-graph = [
+    "dev-graph",
+    "plotters/bitmap_backend",
+]
 gadget-traces = ["backtrace"]
 sanity-checks = []
 batch = ["rand_core/getrandom"]
@@ -79,4 +83,4 @@ bench = false
 
 [[example]]
 name = "circuit-layout"
-required-features = ["dev-graph"]
+required-features = ["test-dev-graph"]
