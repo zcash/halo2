@@ -12,7 +12,7 @@ In the case of Zordle, this code is contained in [wasm.rs](https://github.com/na
 
 ### Prover
 
-```rust
+```rust,ignore
 #[wasm_bindgen]
 pub async fn prove_play(final_word: String, words_js: JsValue, params_ser: JsValue) -> JsValue {
   // Steps:
@@ -34,7 +34,7 @@ The output is a `Vec<u8>` converted to a `JSValue` using Serde. This is later pa
 
 ### Verifier
 
-```rust
+```rust,ignore
 #[wasm_bindgen]
 pub fn verify_play(final_word: String, proof_js: JsValue, diffs_u64_js: JsValue, params_ser: JsValue) -> bool {
   // Steps:
@@ -51,7 +51,7 @@ Similar to the prover, we take in input and output a boolean true/false indicati
 
 Additionally, both the prover and verifier functions input `params_ser`, a serialised form of the public parameters of the polynomial commitment scheme. These are passed in as input (instead of being regenerated in prove/verify functions) as a performance optimisation since these are constant based only on the circuit's value of `K`. We can store these seperately on a static web server and pass them in as input to the WASM. To generate the binary serialised form of these (seperately outside the WASM functions), you can run something like:
 
-```rust
+```rust,ignore
 fn write_params(K: u32) {
     let mut params_file = File::create("params.bin").unwrap();
     let params: Params<EqAffine> = Params::new(K);
