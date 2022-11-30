@@ -6,7 +6,7 @@ use crate::arithmetic::parallelize;
 use crate::plonk::Assigned;
 
 use group::ff::{BatchInvert, Field};
-use pasta_curves::arithmetic::FieldExt;
+
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, RangeFrom, RangeFull};
@@ -132,7 +132,7 @@ impl<F, B> Polynomial<F, B> {
     }
 }
 
-pub(crate) fn batch_invert_assigned<F: FieldExt>(
+pub(crate) fn batch_invert_assigned<F: Field>(
     assigned: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
 ) -> Vec<Polynomial<F, LagrangeCoeff>> {
     let mut assigned_denominators: Vec<_> = assigned

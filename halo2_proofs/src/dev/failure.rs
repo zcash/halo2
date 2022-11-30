@@ -2,7 +2,6 @@ use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 
 use group::ff::Field;
-use pasta_curves::arithmetic::FieldExt;
 
 use super::{
     metadata,
@@ -396,7 +395,7 @@ fn render_constraint_not_satisfied<F: Field>(
 ///     |   x0 = 0x5
 ///     |   x1 = 1
 /// ```
-fn render_lookup<F: FieldExt>(
+fn render_lookup<F: Field>(
     prover: &MockProver<F>,
     lookup_index: usize,
     location: &FailureLocation,
@@ -430,7 +429,7 @@ fn render_lookup<F: FieldExt>(
         )
     });
 
-    fn cell_value<'a, F: FieldExt, Q: Into<AnyQuery> + Copy>(
+    fn cell_value<'a, F: Field, Q: Into<AnyQuery> + Copy>(
         column_type: Any,
         load: impl Fn(Q) -> Value<F> + 'a,
     ) -> impl Fn(Q) -> BTreeMap<metadata::VirtualCell, String> + 'a {
@@ -535,7 +534,7 @@ fn render_lookup<F: FieldExt>(
 
 impl VerifyFailure {
     /// Emits this failure in pretty-printed format to stderr.
-    pub(super) fn emit<F: FieldExt>(&self, prover: &MockProver<F>) {
+    pub(super) fn emit<F: Field>(&self, prover: &MockProver<F>) {
         match self {
             Self::CellNotAssigned {
                 gate,

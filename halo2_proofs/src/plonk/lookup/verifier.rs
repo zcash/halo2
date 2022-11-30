@@ -5,7 +5,7 @@ use super::super::{
 };
 use super::Argument;
 use crate::{
-    arithmetic::{CurveAffine, FieldExt},
+    arithmetic::CurveAffine,
     plonk::{Error, VerifyingKey},
     poly::{multiopen::VerifierQuery, Rotation},
     transcript::{EncodedChallenge, TranscriptRead},
@@ -31,7 +31,7 @@ pub struct Evaluated<C: CurveAffine> {
     permuted_table_eval: C::Scalar,
 }
 
-impl<F: FieldExt> Argument<F> {
+impl<F: Field> Argument<F> {
     pub(in crate::plonk) fn read_permuted_commitments<
         C: CurveAffine,
         E: EncodedChallenge<C>,

@@ -140,7 +140,7 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
         let poly_len = self.polys.first().unwrap().len();
         let (chunk_size, _num_chunks) = get_chunk_params(poly_len);
 
-        struct AstContext<'a, F: FieldExt, B: Basis> {
+        struct AstContext<'a, F: Field, B: Basis> {
             domain: &'a EvaluationDomain<F>,
             poly_len: usize,
             chunk_size: usize,
@@ -442,7 +442,7 @@ impl<E: Clone, F: Field> MulAssign for Ast<E, F, ExtendedLagrangeCoeff> {
 /// Operations which can be performed over a given basis.
 pub(crate) trait BasisOps: Basis {
     fn empty_poly<F: FieldExt>(domain: &EvaluationDomain<F>) -> Polynomial<F, Self>;
-    fn constant_term<F: FieldExt>(
+    fn constant_term<F: Field>(
         poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
@@ -469,7 +469,7 @@ impl BasisOps for Coeff {
         domain.empty_coeff()
     }
 
-    fn constant_term<F: FieldExt>(
+    fn constant_term<F: Field>(
         poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
@@ -520,7 +520,7 @@ impl BasisOps for LagrangeCoeff {
         domain.empty_lagrange()
     }
 
-    fn constant_term<F: FieldExt>(
+    fn constant_term<F: Field>(
         poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
@@ -564,7 +564,7 @@ impl BasisOps for ExtendedLagrangeCoeff {
         domain.empty_extended()
     }
 
-    fn constant_term<F: FieldExt>(
+    fn constant_term<F: Field>(
         poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,

@@ -2,6 +2,7 @@
 #![allow(clippy::op_ref)]
 
 use assert_matches::assert_matches;
+use group::ff::Field;
 use halo2_proofs::arithmetic::{CurveAffine, FieldExt};
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
@@ -44,7 +45,7 @@ fn plonk_api() {
     }
 
     #[allow(clippy::type_complexity)]
-    trait StandardCs<FF: FieldExt> {
+    trait StandardCs<FF: Field> {
         fn raw_multiply<F>(
             &self,
             layouter: &mut impl Layouter<FF>,
@@ -71,17 +72,17 @@ fn plonk_api() {
     }
 
     #[derive(Clone)]
-    struct MyCircuit<F: FieldExt> {
+    struct MyCircuit<F: Field> {
         a: Value<F>,
         lookup_table: Vec<F>,
     }
 
-    struct StandardPlonk<F: FieldExt> {
+    struct StandardPlonk<F: Field> {
         config: PlonkConfig,
         _marker: PhantomData<F>,
     }
 
-    impl<FF: FieldExt> StandardPlonk<FF> {
+    impl<FF: Field> StandardPlonk<FF> {
         fn new(config: PlonkConfig) -> Self {
             StandardPlonk {
                 config,
@@ -90,7 +91,7 @@ fn plonk_api() {
         }
     }
 
-    impl<FF: FieldExt> StandardCs<FF> for StandardPlonk<FF> {
+    impl<FF: Field> StandardCs<FF> for StandardPlonk<FF> {
         fn raw_multiply<F>(
             &self,
             layouter: &mut impl Layouter<FF>,
@@ -265,7 +266,7 @@ fn plonk_api() {
         }
     }
 
-    impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
+    impl<F: Field> Circuit<F> for MyCircuit<F> {
         type Config = PlonkConfig;
         type FloorPlanner = SimpleFloorPlanner;
 

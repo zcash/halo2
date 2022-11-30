@@ -66,7 +66,7 @@ impl Spec<Fq, 3, 2> for P128Pow5T3 {
 
 #[cfg(test)]
 mod tests {
-    use ff::PrimeField;
+    use ff::{Field, PrimeField};
     use std::marker::PhantomData;
 
     use pasta_curves::arithmetic::FieldExt;
@@ -82,9 +82,9 @@ mod tests {
     /// The same Poseidon specification as poseidon::P128Pow5T3, but constructed
     /// such that its constants will be generated at runtime.
     #[derive(Debug)]
-    pub struct P128Pow5T3Gen<F: FieldExt, const SECURE_MDS: usize>(PhantomData<F>);
+    pub struct P128Pow5T3Gen<F: Field, const SECURE_MDS: usize>(PhantomData<F>);
 
-    impl<F: FieldExt, const SECURE_MDS: usize> P128Pow5T3Gen<F, SECURE_MDS> {
+    impl<F: Field, const SECURE_MDS: usize> P128Pow5T3Gen<F, SECURE_MDS> {
         #![allow(dead_code)]
         pub fn new() -> Self {
             P128Pow5T3Gen(PhantomData::default())

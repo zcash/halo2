@@ -9,6 +9,10 @@ and this project adheres to Rust's notion of
 ### Added
 - `halo2_gadgets::poseidon::primitives::generate_constants`
 
+### Changed
+- APIs with `F: pasta_curves::arithmetic::FieldExt` bounds have been changed to
+  use `ff` traits directly.
+
 ## [0.2.0] - 2022-06-23
 ### Added
 - `halo2_gadgets::utilities::RangeConstrained<F, Value<F>>::bitrange_of`

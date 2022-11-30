@@ -9,7 +9,7 @@ use ff::Field;
 
 use crate::plonk::Assigned;
 use crate::{
-    arithmetic::{FieldExt, Group},
+    arithmetic::FieldExt,
     circuit,
     plonk::{
         permutation, Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Expression,
@@ -72,7 +72,7 @@ impl Region {
 
 /// The value of a particular cell within the circuit.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum CellValue<F: Group + Field> {
+enum CellValue<F: Field> {
     // An unassigned cell.
     Unassigned,
     // A cell that has been assigned a value.
@@ -83,12 +83,12 @@ enum CellValue<F: Group + Field> {
 
 /// A value within an expression.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
-enum Value<F: Group + Field> {
+enum Value<F: Field> {
     Real(F),
     Poison,
 }
 
-impl<F: Group + Field> From<CellValue<F>> for Value<F> {
+impl<F: Field> From<CellValue<F>> for Value<F> {
     fn from(value: CellValue<F>) -> Self {
         match value {
             // Cells that haven't been explicitly assigned to, default to zero.
@@ -99,7 +99,7 @@ impl<F: Group + Field> From<CellValue<F>> for Value<F> {
     }
 }
 
-impl<F: Group + Field> Neg for Value<F> {
+impl<F: Field> Neg for Value<F> {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
@@ -110,7 +110,7 @@ impl<F: Group + Field> Neg for Value<F> {
     }
 }
 
-impl<F: Group + Field> Add for Value<F> {
+impl<F: Field> Add for Value<F> {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -121,7 +121,7 @@ impl<F: Group + Field> Add for Value<F> {
     }
 }
 
-impl<F: Group + Field> Mul for Value<F> {
+impl<F: Field> Mul for Value<F> {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -139,7 +139,7 @@ impl<F: Group + Field> Mul for Value<F> {
     }
 }
 
-impl<F: Group + Field> Mul<F> for Value<F> {
+impl<F: Field> Mul<F> for Value<F> {
     type Output = Self;
 
     fn mul(self, rhs: F) -> Self::Output {
@@ -267,7 +267,7 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 /// ));
 /// ```
 #[derive(Debug)]
-pub struct MockProver<F: Group + Field> {
+pub struct MockProver<F: Field> {
     k: u32,
     n: u32,
     cs: ConstraintSystem<F>,
@@ -308,7 +308,7 @@ impl<F: Field> InstanceValue<F> {
     }
 }
 
-impl<F: Field + Group> Assignment<F> for MockProver<F> {
+impl<F: Field> Assignment<F> for MockProver<F> {
     fn enter_region<NR, N>(&mut self, name: N)
     where
         NR: Into<String>,
