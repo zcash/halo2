@@ -21,6 +21,7 @@ use crate::{
 };
 
 /// Measures a circuit to determine its costs, and explain what contributes to them.
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct CircuitCost<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> {
     /// Power-of-2 bound on the number of rows in the circuit.
@@ -54,6 +55,7 @@ pub struct CircuitCost<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> {
 }
 
 /// Region implementation used by Layout
+#[allow(dead_code)]
 #[derive(Debug)]
 pub(crate) struct LayoutRegion {
     /// The name of the region. Not required to be unique.

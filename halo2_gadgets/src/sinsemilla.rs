@@ -166,7 +166,6 @@ pub struct MessagePiece<C: CurveAffine, SinsemillaChip, const K: usize, const MA
 where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
 {
-    chip: SinsemillaChip,
     inner: SinsemillaChip::MessagePiece,
 }
 
@@ -199,7 +198,7 @@ where
         // Each message piece must have at most `floor(C::Base::CAPACITY / K)` words.
         // This ensures that the all-ones bitstring is canonical in the field.
         let piece_max_num_words = C::Base::CAPACITY as usize / K;
-        assert!(num_words <= piece_max_num_words as usize);
+        assert!(num_words <= piece_max_num_words);
 
         // Closure to parse a bitstring (little-endian) into a base field element.
         let to_base_field = |bits: &[Value<bool>]| -> Value<C::Base> {
@@ -227,7 +226,7 @@ where
         num_words: usize,
     ) -> Result<Self, Error> {
         let inner = chip.witness_message_piece(layouter, field_elem, num_words)?;
-        Ok(Self { chip, inner })
+        Ok(Self { inner })
     }
 
     /// Constructs a `MessagePiece` by concatenating a sequence of [`RangeConstrained`]

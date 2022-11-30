@@ -6,6 +6,15 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- The following structs now derive the `Eq` trait:
+  - `halo2_proofs::dev`:
+    - `failure::FailureLocation`
+    - `failure::VerifyFailure`
+    - `metadata::Gate`
+    - `metadata::Constraint`
+    - `metadata::Region`
+  - `halo2_proofs::poly::Rotation`
+
 ### Added
 - `halo2_proofs::arithmetic::FftGroup`
 - `halo2_proofs::circuit::layouter`:

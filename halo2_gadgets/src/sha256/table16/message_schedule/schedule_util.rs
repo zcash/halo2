@@ -40,20 +40,17 @@ pub fn get_word_row(word_idx: usize) -> usize {
     if word_idx == 0 {
         0
     } else if (1..=13).contains(&word_idx) {
-        SUBREGION_0_ROWS + SUBREGION_1_WORD * (word_idx - 1) as usize
+        SUBREGION_0_ROWS + SUBREGION_1_WORD * (word_idx - 1)
     } else if (14..=48).contains(&word_idx) {
         SUBREGION_0_ROWS + SUBREGION_1_ROWS + SUBREGION_2_WORD * (word_idx - 14) + 1
     } else if (49..=61).contains(&word_idx) {
-        SUBREGION_0_ROWS
-            + SUBREGION_1_ROWS
-            + SUBREGION_2_ROWS
-            + SUBREGION_3_WORD * (word_idx - 49) as usize
+        SUBREGION_0_ROWS + SUBREGION_1_ROWS + SUBREGION_2_ROWS + SUBREGION_3_WORD * (word_idx - 49)
     } else {
         SUBREGION_0_ROWS
             + SUBREGION_1_ROWS
             + SUBREGION_2_ROWS
             + SUBREGION_3_ROWS
-            + DECOMPOSE_0_ROWS * (word_idx - 62) as usize
+            + DECOMPOSE_0_ROWS * (word_idx - 62)
     }
 }
 

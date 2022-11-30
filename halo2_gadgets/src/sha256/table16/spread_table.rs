@@ -69,7 +69,7 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadWord<DENSE, SPREAD> {
 /// A variable stored in advice columns corresponding to a row of [`SpreadTableConfig`].
 #[derive(Clone, Debug)]
 pub(super) struct SpreadVar<const DENSE: usize, const SPREAD: usize> {
-    pub tag: Value<u8>,
+    pub _tag: Value<u8>,
     pub dense: AssignedBits<DENSE>,
     pub spread: AssignedBits<SPREAD>,
 }
@@ -98,7 +98,11 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
         let spread =
             AssignedBits::<SPREAD>::assign_bits(region, || "spread", cols.spread, row, spread_val)?;
 
-        Ok(SpreadVar { tag, dense, spread })
+        Ok(SpreadVar {
+            _tag: tag,
+            dense,
+            spread,
+        })
     }
 
     pub(super) fn without_lookup(
@@ -129,7 +133,11 @@ impl<const DENSE: usize, const SPREAD: usize> SpreadVar<DENSE, SPREAD> {
             spread_val,
         )?;
 
-        Ok(SpreadVar { tag, dense, spread })
+        Ok(SpreadVar {
+            _tag: tag,
+            dense,
+            spread,
+        })
     }
 }
 

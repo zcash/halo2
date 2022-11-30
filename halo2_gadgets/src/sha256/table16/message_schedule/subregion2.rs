@@ -15,10 +15,10 @@ pub struct Subregion2Word {
     a: AssignedBits<3>,
     b: AssignedBits<4>,
     c: AssignedBits<3>,
-    d: AssignedBits<7>,
+    _d: AssignedBits<7>,
     e: AssignedBits<1>,
     f: AssignedBits<1>,
-    g: AssignedBits<13>,
+    _g: AssignedBits<13>,
     spread_d: AssignedBits<14>,
     spread_g: AssignedBits<26>,
 }
@@ -261,7 +261,7 @@ impl MessageScheduleConfig {
                 || format!("carry_{}", new_word_idx),
                 a_9,
                 get_word_row(new_word_idx - 16) + 1,
-                || carry.map(|carry| pallas::Base::from(carry as u64)),
+                || carry.map(pallas::Base::from),
             )?;
             let (word, halves) = self.assign_word_and_halves(region, word, new_word_idx)?;
             w.push(MessageWord(word));
@@ -342,10 +342,10 @@ impl MessageScheduleConfig {
             a,
             b: spread_b.dense,
             c,
-            d: spread_d.dense,
+            _d: spread_d.dense,
             e,
             f,
-            g: spread_g.dense,
+            _g: spread_g.dense,
             spread_d: spread_d.spread,
             spread_g: spread_g.spread,
         })

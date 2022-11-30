@@ -81,8 +81,8 @@ impl FloorPlanner for V1 {
 
         // - Determine how many rows our planned circuit will require.
         let first_unassigned_row = column_allocations
-            .iter()
-            .map(|(_, a)| a.unbounded_interval_start())
+            .values()
+            .map(|a| a.unbounded_interval_start())
             .max()
             .unwrap_or(0);
 

@@ -14,8 +14,8 @@ pub struct Subregion1Word {
     index: usize,
     a: AssignedBits<3>,
     b: AssignedBits<4>,
-    c: AssignedBits<11>,
-    d: AssignedBits<14>,
+    _c: AssignedBits<11>,
+    _d: AssignedBits<14>,
     spread_c: AssignedBits<22>,
     spread_d: AssignedBits<28>,
 }
@@ -142,8 +142,8 @@ impl MessageScheduleConfig {
             index,
             a,
             b,
-            c: spread_c.dense,
-            d: spread_d.dense,
+            _c: spread_c.dense,
+            _d: spread_d.dense,
             spread_c: spread_c.spread,
             spread_d: spread_d.spread,
         })

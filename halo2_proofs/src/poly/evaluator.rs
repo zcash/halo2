@@ -540,7 +540,7 @@ impl BasisOps for LagrangeCoeff {
         let omega = domain.get_omega();
         let start = chunk_size * chunk_index;
         (0..cmp::min(chunk_size, poly_len - start))
-            .scan(omega.pow_vartime(&[start as u64]) * scalar, |acc, _| {
+            .scan(omega.pow_vartime([start as u64]) * scalar, |acc, _| {
                 let ret = *acc;
                 *acc *= omega;
                 Some(ret)
@@ -585,7 +585,7 @@ impl BasisOps for ExtendedLagrangeCoeff {
         let start = chunk_size * chunk_index;
         (0..cmp::min(chunk_size, poly_len - start))
             .scan(
-                omega.pow_vartime(&[start as u64]) * F::ZETA * scalar,
+                omega.pow_vartime([start as u64]) * F::ZETA * scalar,
                 |acc, _| {
                     let ret = *acc;
                     *acc *= omega;
