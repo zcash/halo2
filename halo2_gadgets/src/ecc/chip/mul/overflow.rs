@@ -3,14 +3,14 @@ use crate::{
     sinsemilla::primitives as sinsemilla, utilities::lookup_range_check::LookupRangeCheckConfig,
 };
 
+use group::ff::PrimeField;
 use halo2_proofs::circuit::AssignedCell;
 use halo2_proofs::{
     circuit::Layouter,
     plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
-
-use pasta_curves::{arithmetic::FieldExt, pallas};
+use pasta_curves::pallas;
 
 use std::iter;
 

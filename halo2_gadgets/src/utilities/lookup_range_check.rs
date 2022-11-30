@@ -118,7 +118,7 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
             // In the short range check, the word is directly witnessed.
             let short_lookup = {
                 let short_word = z_cur;
-                let q_short = Expression::Constant(F::one()) - q_running;
+                let q_short = Expression::Constant(F::ONE) - q_running;
 
                 q_short * short_word
             };
@@ -285,7 +285,7 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
 
         if strict {
             // Constrain the final `z` to be zero.
-            region.constrain_constant(zs.last().unwrap().cell(), F::zero())?;
+            region.constrain_constant(zs.last().unwrap().cell(), F::ZERO)?;
         }
 
         Ok(RunningSum(zs))
@@ -434,8 +434,8 @@ mod tests {
 
                 // Lookup constraining element to be no longer than num_words * K bits.
                 let elements_and_expected_final_zs = [
-                    (F::from((1 << (self.num_words * K)) - 1), F::zero(), true), // a word that is within self.num_words * K bits long
-                    (F::from(1 << (self.num_words * K)), F::one(), false), // a word that is just over self.num_words * K bits long
+                    (F::from((1 << (self.num_words * K)) - 1), F::ZERO, true), // a word that is within self.num_words * K bits long
+                    (F::from(1 << (self.num_words * K)), F::ONE, false), // a word that is just over self.num_words * K bits long
                 ];
 
                 fn expected_zs<F: PrimeFieldBits, const K: usize>(
@@ -545,7 +545,7 @@ mod tests {
         // Edge case: zero bits
         {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
-                element: Value::known(pallas::Base::zero()),
+                element: Value::known(pallas::Base::ZERO),
                 num_bits: 0,
             };
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();

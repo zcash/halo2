@@ -157,9 +157,7 @@ pub(crate) fn batch_invert_assigned<F: Field>(
     assigned
         .iter()
         .zip(assigned_denominators.into_iter())
-        .map(|(poly, inv_denoms)| {
-            poly.invert(inv_denoms.into_iter().map(|d| d.unwrap_or_else(F::one)))
-        })
+        .map(|(poly, inv_denoms)| poly.invert(inv_denoms.into_iter().map(|d| d.unwrap_or(F::ONE))))
         .collect()
 }
 

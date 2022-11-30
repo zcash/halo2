@@ -138,7 +138,7 @@ pub fn bool_check<F: PrimeField>(value: Expression<F>) -> Expression<F> {
 ///
 /// `a` must be a boolean-constrained expression.
 pub fn ternary<F: Field>(a: Expression<F>, b: Expression<F>, c: Expression<F>) -> Expression<F> {
-    let one_minus_a = Expression::Constant(F::one()) - a.clone();
+    let one_minus_a = Expression::Constant(F::ONE) - a.clone();
     a * b + one_minus_a * c
 }
 
@@ -156,9 +156,9 @@ pub fn bitrange_subset<F: PrimeFieldBits>(field_elem: &F, bitrange: Range<usize>
         .skip(bitrange.start)
         .take(bitrange.end - bitrange.start)
         .rev()
-        .fold(F::zero(), |acc, bit| {
+        .fold(F::ZERO, |acc, bit| {
             if bit {
-                acc.double() + F::one()
+                acc.double() + F::ONE
             } else {
                 acc.double()
             }
@@ -240,14 +240,14 @@ pub fn i2lebsp<const NUM_BITS: usize>(int: u64) -> [bool; NUM_BITS] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use group::ff::{Field, PrimeField};
+    use group::ff::{Field, FromUniformBytes, PrimeField};
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::{FailureLocation, MockProver, VerifyFailure},
         plonk::{Any, Circuit, ConstraintSystem, Constraints, Error, Selector},
         poly::Rotation,
     };
-    use pasta_curves::{arithmetic::FieldExt, pallas};
+    use pasta_curves::pallas;
     use proptest::prelude::*;
     use rand::rngs::OsRng;
     use std::convert::TryInto;
@@ -358,7 +358,7 @@ mod tests {
             let field_elem = pallas::Base::random(rng);
             let bitrange = 0..0;
             let subset = bitrange_subset(&field_elem, bitrange);
-            assert_eq!(pallas::Base::zero(), subset);
+            assert_eq!(pallas::Base::ZERO, subset);
         }
 
         // Closure to decompose field element into pieces using consecutive ranges,
@@ -420,7 +420,7 @@ mod tests {
             // Instead of rejecting out-of-range bytes, let's reduce them.
             let mut buf = [0; 64];
             buf[..32].copy_from_slice(&bytes);
-            pallas::Scalar::from_bytes_wide(&buf)
+            pallas::Scalar::from_uniform_bytes(&buf)
         }
     }
 

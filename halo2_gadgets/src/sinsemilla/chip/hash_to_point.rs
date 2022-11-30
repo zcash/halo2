@@ -5,12 +5,13 @@ use crate::{
     sinsemilla::primitives::{self as sinsemilla, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S},
 };
 
+use ff::Field;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Region, Value},
     plonk::{Assigned, Error},
 };
 
-use group::ff::{Field, PrimeField, PrimeFieldBits};
+use group::ff::{PrimeField, PrimeFieldBits};
 use pasta_curves::{arithmetic::CurveAffine, pallas};
 
 use std::ops::Deref;

@@ -6,6 +6,7 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
 - The following structs now derive the `Eq` trait:
   - `halo2_proofs::dev`:
     - `failure::FailureLocation`
@@ -14,14 +15,13 @@ and this project adheres to Rust's notion of
     - `metadata::Constraint`
     - `metadata::Region`
   - `halo2_proofs::poly::Rotation`
-
-### Added
 - `halo2_proofs::arithmetic::FftGroup`
 - `halo2_proofs::circuit::layouter`:
   - `RegionLayouter::instance_value` method added to provide access to
     instance values within a region.
 
 ### Changed
+- Migrated to `ff 0.13`.
 - APIs with `F: pasta_curves::arithmetic::FieldExt` bounds have been changed to
   use `ff` traits directly.
 - `halo2_proofs::arithmetic`:

@@ -280,7 +280,7 @@ impl<F: Field> Assigned<F> {
     /// Returns the numerator.
     pub fn numerator(&self) -> F {
         match self {
-            Self::Zero => F::zero(),
+            Self::Zero => F::ZERO,
             Self::Trivial(x) => *x,
             Self::Rational(numerator, _) => *numerator,
         }
@@ -341,7 +341,7 @@ impl<F: Field> Assigned<F> {
     pub fn invert(&self) -> Self {
         match self {
             Self::Zero => Self::Zero,
-            Self::Trivial(x) => Self::Rational(F::one(), *x),
+            Self::Trivial(x) => Self::Rational(F::ONE, *x),
             Self::Rational(numerator, denominator) => Self::Rational(*denominator, *numerator),
         }
     }
@@ -352,13 +352,13 @@ impl<F: Field> Assigned<F> {
     /// If the denominator is zero, this returns zero.
     pub fn evaluate(self) -> F {
         match self {
-            Self::Zero => F::zero(),
+            Self::Zero => F::ZERO,
             Self::Trivial(x) => x,
             Self::Rational(numerator, denominator) => {
-                if denominator == F::one() {
+                if denominator == F::ONE {
                     numerator
                 } else {
-                    numerator * denominator.invert().unwrap_or(F::zero())
+                    numerator * denominator.invert().unwrap_or(F::ZERO)
                 }
             }
         }
@@ -367,6 +367,7 @@ impl<F: Field> Assigned<F> {
 
 #[cfg(test)]
 mod tests {
+    use group::ff::Field;
     use pasta_curves::Fp;
 
     use super::Assigned;
@@ -376,7 +377,7 @@ mod tests {
         // a = 2
         // b = (1,0)
         let a = Assigned::Trivial(Fp::from(2));
-        let b = Assigned::Rational(Fp::one(), Fp::zero());
+        let b = Assigned::Rational(Fp::ONE, Fp::ZERO);
 
         // 2 + (1,0) = 2 + 0 = 2
         // This fails if addition is implemented using normal rules for rationals.
@@ -388,8 +389,8 @@ mod tests {
     fn add_rational_to_inv0_rational() {
         // a = (1,2)
         // b = (1,0)
-        let a = Assigned::Rational(Fp::one(), Fp::from(2));
-        let b = Assigned::Rational(Fp::one(), Fp::zero());
+        let a = Assigned::Rational(Fp::ONE, Fp::from(2));
+        let b = Assigned::Rational(Fp::ONE, Fp::ZERO);
 
         // (1,2) + (1,0) = (1,2) + 0 = (1,2)
         // This fails if addition is implemented using normal rules for rationals.
@@ -402,7 +403,7 @@ mod tests {
         // a = 2
         // b = (1,0)
         let a = Assigned::Trivial(Fp::from(2));
-        let b = Assigned::Rational(Fp::one(), Fp::zero());
+        let b = Assigned::Rational(Fp::ONE, Fp::ZERO);
 
         // (1,0) - 2 = 0 - 2 = -2
         // This fails if subtraction is implemented using normal rules for rationals.
@@ -416,8 +417,8 @@ mod tests {
     fn sub_rational_from_inv0_rational() {
         // a = (1,2)
         // b = (1,0)
-        let a = Assigned::Rational(Fp::one(), Fp::from(2));
-        let b = Assigned::Rational(Fp::one(), Fp::zero());
+        let a = Assigned::Rational(Fp::ONE, Fp::from(2));
+        let b = Assigned::Rational(Fp::ONE, Fp::ZERO);
 
         // (1,0) - (1,2) = 0 - (1,2) = -(1,2)
         // This fails if subtraction is implemented using normal rules for rationals.
@@ -431,14 +432,14 @@ mod tests {
     fn mul_rational_by_inv0_rational() {
         // a = (1,2)
         // b = (1,0)
-        let a = Assigned::Rational(Fp::one(), Fp::from(2));
-        let b = Assigned::Rational(Fp::one(), Fp::zero());
+        let a = Assigned::Rational(Fp::ONE, Fp::from(2));
+        let b = Assigned::Rational(Fp::ONE, Fp::ZERO);
 
         // (1,2) * (1,0) = (1,2) * 0 = 0
-        assert_eq!((a * b).evaluate(), Fp::zero());
+        assert_eq!((a * b).evaluate(), Fp::ZERO);
 
         // (1,0) * (1,2) = 0 * (1,2) = 0
-        assert_eq!((b * a).evaluate(), Fp::zero());
+        assert_eq!((b * a).evaluate(), Fp::ZERO);
     }
 }
 
@@ -476,7 +477,7 @@ mod proptests {
         }
 
         fn inv0(&self) -> Self {
-            self.invert().unwrap_or(F::zero())
+            self.invert().unwrap_or(F::ZERO)
         }
     }
 
@@ -578,7 +579,7 @@ mod proptests {
         fn arb_rational()(
             numerator in arb_element(),
             denominator in prop_oneof![
-                1 => Just(Fp::zero()),
+                1 => Just(Fp::ZERO),
                 2 => arb_element(),
             ],
         ) -> Assigned<Fp> {

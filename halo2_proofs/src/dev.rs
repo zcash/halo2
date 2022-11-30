@@ -9,7 +9,6 @@ use ff::Field;
 
 use crate::plonk::Assigned;
 use crate::{
-    arithmetic::FieldExt,
     circuit,
     plonk::{
         permutation, Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Expression,
@@ -92,7 +91,7 @@ impl<F: Field> From<CellValue<F>> for Value<F> {
     fn from(value: CellValue<F>) -> Self {
         match value {
             // Cells that haven't been explicitly assigned to, default to zero.
-            CellValue::Unassigned => Value::Real(F::zero()),
+            CellValue::Unassigned => Value::Real(F::ZERO),
             CellValue::Assigned(v) => Value::Real(v),
             CellValue::Poison(_) => Value::Poison,
         }
@@ -132,7 +131,7 @@ impl<F: Field> Mul for Value<F> {
             (Value::Real(x), Value::Poison) | (Value::Poison, Value::Real(x))
                 if x.is_zero_vartime() =>
             {
-                Value::Real(F::zero())
+                Value::Real(F::ZERO)
             }
             _ => Value::Poison,
         }
@@ -147,7 +146,7 @@ impl<F: Field> Mul<F> for Value<F> {
             Value::Real(lhs) => Value::Real(lhs * rhs),
             // If poison is multiplied by zero, then we treat the poison as unconstrained
             // and we don't propagate it.
-            Value::Poison if rhs.is_zero_vartime() => Value::Real(F::zero()),
+            Value::Poison if rhs.is_zero_vartime() => Value::Real(F::ZERO),
             _ => Value::Poison,
         }
     }
@@ -164,8 +163,8 @@ impl<F: Field> Mul<F> for Value<F> {
 /// # Examples
 ///
 /// ```
+/// use group::ff::PrimeField;
 /// use halo2_proofs::{
-///     arithmetic::FieldExt,
 ///     circuit::{Layouter, SimpleFloorPlanner, Value},
 ///     dev::{FailureLocation, MockProver, VerifyFailure},
 ///     pasta::Fp,
@@ -188,7 +187,7 @@ impl<F: Field> Mul<F> for Value<F> {
 ///     b: Value<u64>,
 /// }
 ///
-/// impl<F: FieldExt> Circuit<F> for MyCircuit {
+/// impl<F: PrimeField> Circuit<F> for MyCircuit {
 ///     type Config = MyConfig;
 ///     type FloorPlanner = SimpleFloorPlanner;
 ///
@@ -303,7 +302,7 @@ impl<F: Field> InstanceValue<F> {
     fn value(&self) -> F {
         match self {
             InstanceValue::Assigned(v) => *v,
-            InstanceValue::Padding => F::zero(),
+            InstanceValue::Padding => F::ZERO,
         }
     }
 }
@@ -477,7 +476,7 @@ impl<F: Field> Assignment<F> for MockProver<F> {
     }
 }
 
-impl<F: FieldExt> MockProver<F> {
+impl<F: Field + Ord> MockProver<F> {
     /// Runs a synthetic keygen-and-prove operation on the given circuit, collecting data
     /// about the constraints and their assignments.
     pub fn run<ConcreteCircuit: Circuit<F>>(
@@ -918,6 +917,7 @@ impl<F: FieldExt> MockProver<F> {
 
 #[cfg(test)]
 mod tests {
+    use group::ff::Field;
     use pasta_curves::Fp;
 
     use super::{FailureLocation, MockProver, VerifyFailure};
@@ -979,7 +979,7 @@ mod tests {
                         config.q.enable(&mut region, 1)?;
 
                         // Assign a = 0.
-                        region.assign_advice(|| "a", config.a, 0, || Value::known(Fp::zero()))?;
+                        region.assign_advice(|| "a", config.a, 0, || Value::known(Fp::ZERO))?;
 
                         // BUG: Forget to assign b = 0! This could go unnoticed during
                         // development, because cell values default to zero, which in this

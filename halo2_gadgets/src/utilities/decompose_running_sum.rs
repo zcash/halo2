@@ -198,7 +198,7 @@ impl<F: PrimeFieldBits, const WINDOW_NUM_BITS: usize> RunningSumConfig<F, WINDOW
 
         if strict {
             // Constrain the final running sum output to be zero.
-            region.constrain_constant(zs.last().unwrap().cell(), F::zero())?;
+            region.constrain_constant(zs.last().unwrap().cell(), F::ZERO)?;
         }
 
         Ok(RunningSum(zs))
@@ -214,7 +214,7 @@ mod tests {
         dev::{FailureLocation, MockProver, VerifyFailure},
         plonk::{Any, Circuit, ConstraintSystem, Error},
     };
-    use pasta_curves::{arithmetic::FieldExt, pallas};
+    use pasta_curves::pallas;
     use rand::rngs::OsRng;
 
     use crate::ecc::chip::{

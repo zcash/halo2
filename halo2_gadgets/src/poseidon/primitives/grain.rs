@@ -3,8 +3,7 @@
 use std::marker::PhantomData;
 
 use bitvec::prelude::*;
-use group::ff::{Field, PrimeField};
-use halo2_proofs::arithmetic::FieldExt;
+use group::ff::{Field, FromUniformBytes, PrimeField};
 
 const STATE: usize = 80;
 
@@ -138,7 +137,7 @@ impl<F: PrimeField> Grain<F> {
     }
 }
 
-impl<F: FieldExt> Grain<F> {
+impl<F: FromUniformBytes<64>> Grain<F> {
     /// Returns the next field element from this Grain instantiation, without using
     /// rejection sampling.
     pub(super) fn next_field_element_without_rejection(&mut self) -> F {
@@ -164,7 +163,7 @@ impl<F: FieldExt> Grain<F> {
             view[i / 8] |= if bit { 1 << (i % 8) } else { 0 };
         }
 
-        F::from_bytes_wide(&bytes)
+        F::from_uniform_bytes(&bytes)
     }
 }
 

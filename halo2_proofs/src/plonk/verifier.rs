@@ -6,7 +6,7 @@ use super::{
     vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
     VerifyingKey,
 };
-use crate::arithmetic::{CurveAffine, FieldExt};
+use crate::arithmetic::CurveAffine;
 use crate::poly::{
     commitment::{Blind, Guard, Params, MSM},
     multiopen::{self, VerifierQuery},
@@ -94,7 +94,7 @@ pub fn verify_proof<
                         return Err(Error::InstanceTooLarge);
                     }
                     let mut poly = instance.to_vec();
-                    poly.resize(params.n as usize, C::Scalar::zero());
+                    poly.resize(params.n as usize, C::Scalar::ZERO);
                     let poly = vk.domain.lagrange_from_vec(poly);
 
                     Ok(params.commit_lagrange(&poly, Blind::default()).to_affine())
@@ -213,7 +213,7 @@ pub fn verify_proof<
         let l_last = l_evals[0];
         let l_blind: C::Scalar = l_evals[1..(1 + blinding_factors)]
             .iter()
-            .fold(C::Scalar::zero(), |acc, eval| acc + eval);
+            .fold(C::Scalar::ZERO, |acc, eval| acc + eval);
         let l_0 = l_evals[1 + blinding_factors];
 
         // Compute the expected value of h(x)

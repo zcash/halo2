@@ -2,8 +2,8 @@
 #![allow(clippy::op_ref)]
 
 use assert_matches::assert_matches;
-use group::ff::Field;
-use halo2_proofs::arithmetic::{CurveAffine, FieldExt};
+use group::ff::{Field, WithSmallOrderMulGroup};
+use halo2_proofs::arithmetic::CurveAffine;
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::pasta::{Eq, EqAffine, Fp};
@@ -138,15 +138,10 @@ fn plonk_api() {
                         || value.unwrap().map(|v| v.2),
                     )?;
 
-                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::zero()))?;
-                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::zero()))?;
-                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
-                    region.assign_fixed(
-                        || "a * b",
-                        self.config.sm,
-                        0,
-                        || Value::known(FF::one()),
-                    )?;
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ZERO))?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ZERO))?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
+                    region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::ONE))?;
                     Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
             )
@@ -197,14 +192,14 @@ fn plonk_api() {
                         || value.unwrap().map(|v| v.2),
                     )?;
 
-                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::one()))?;
-                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::one()))?;
-                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ONE))?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ONE))?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
                     region.assign_fixed(
                         || "a * b",
                         self.config.sm,
                         0,
-                        || Value::known(FF::zero()),
+                        || Value::known(FF::ZERO),
                     )?;
                     Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
@@ -236,7 +231,7 @@ fn plonk_api() {
                         || "public",
                         self.config.sp,
                         0,
-                        || Value::known(FF::one()),
+                        || Value::known(FF::ONE),
                     )?;
 
                     Ok(value.cell())
@@ -374,7 +369,7 @@ fn plonk_api() {
         ) -> Result<(), Error> {
             let cs = StandardPlonk::new(config);
 
-            let _ = cs.public_input(&mut layouter, || Value::known(F::one() + F::one()))?;
+            let _ = cs.public_input(&mut layouter, || Value::known(F::ONE + F::ONE))?;
 
             for _ in 0..10 {
                 let a: Value<Assigned<_>> = self.a.into();
@@ -400,8 +395,8 @@ fn plonk_api() {
     }
 
     let a = Fp::from(2834758237) * Fp::ZETA;
-    let instance = Fp::one() + Fp::one();
-    let lookup_table = vec![instance, a, a, Fp::zero()];
+    let instance = Fp::ONE + Fp::ONE;
+    let lookup_table = vec![instance, a, a, Fp::ZERO];
 
     let empty_circuit: MyCircuit<Fp> = MyCircuit {
         a: Value::unknown(),

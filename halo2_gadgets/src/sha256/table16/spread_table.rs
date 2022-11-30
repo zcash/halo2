@@ -260,34 +260,31 @@ impl<F: PrimeField> SpreadTableChip<F> {
 
 impl SpreadTableConfig {
     fn generate<F: PrimeField>() -> impl Iterator<Item = (F, F, F)> {
-        (1..=(1 << 16)).scan(
-            (F::zero(), F::zero(), F::zero()),
-            |(tag, dense, spread), i| {
-                // We computed this table row in the previous iteration.
-                let res = (*tag, *dense, *spread);
+        (1..=(1 << 16)).scan((F::ZERO, F::ZERO, F::ZERO), |(tag, dense, spread), i| {
+            // We computed this table row in the previous iteration.
+            let res = (*tag, *dense, *spread);
 
-                // i holds the zero-indexed row number for the next table row.
-                match i {
-                    BITS_7 | BITS_10 | BITS_11 | BITS_13 | BITS_14 => *tag += F::one(),
-                    _ => (),
-                }
-                *dense += F::one();
-                if i & 1 == 0 {
-                    // On even-numbered rows we recompute the spread.
-                    *spread = F::zero();
-                    for b in 0..16 {
-                        if (i >> b) & 1 != 0 {
-                            *spread += F::from(1 << (2 * b));
-                        }
+            // i holds the zero-indexed row number for the next table row.
+            match i {
+                BITS_7 | BITS_10 | BITS_11 | BITS_13 | BITS_14 => *tag += F::ONE,
+                _ => (),
+            }
+            *dense += F::ONE;
+            if i & 1 == 0 {
+                // On even-numbered rows we recompute the spread.
+                *spread = F::ZERO;
+                for b in 0..16 {
+                    if (i >> b) & 1 != 0 {
+                        *spread += F::from(1 << (2 * b));
                     }
-                } else {
-                    // On odd-numbered rows we add one.
-                    *spread += F::one();
                 }
+            } else {
+                // On odd-numbered rows we add one.
+                *spread += F::ONE;
+            }
 
-                Some(res)
-            },
-        )
+            Some(res)
+        })
     }
 }
 
@@ -363,20 +360,20 @@ mod tests {
                         };
 
                         // Test the first few small values.
-                        add_row(F::zero(), F::from(0b000), F::from(0b000000))?;
-                        add_row(F::zero(), F::from(0b001), F::from(0b000001))?;
-                        add_row(F::zero(), F::from(0b010), F::from(0b000100))?;
-                        add_row(F::zero(), F::from(0b011), F::from(0b000101))?;
-                        add_row(F::zero(), F::from(0b100), F::from(0b010000))?;
-                        add_row(F::zero(), F::from(0b101), F::from(0b010001))?;
+                        add_row(F::ZERO, F::from(0b000), F::from(0b000000))?;
+                        add_row(F::ZERO, F::from(0b001), F::from(0b000001))?;
+                        add_row(F::ZERO, F::from(0b010), F::from(0b000100))?;
+                        add_row(F::ZERO, F::from(0b011), F::from(0b000101))?;
+                        add_row(F::ZERO, F::from(0b100), F::from(0b010000))?;
+                        add_row(F::ZERO, F::from(0b101), F::from(0b010001))?;
 
                         // Test the tag boundaries:
                         // 7-bit
-                        add_row(F::zero(), F::from(0b1111111), F::from(0b01010101010101))?;
-                        add_row(F::one(), F::from(0b10000000), F::from(0b0100000000000000))?;
+                        add_row(F::ZERO, F::from(0b1111111), F::from(0b01010101010101))?;
+                        add_row(F::ONE, F::from(0b10000000), F::from(0b0100000000000000))?;
                         // - 10-bit
                         add_row(
-                            F::one(),
+                            F::ONE,
                             F::from(0b1111111111),
                             F::from(0b01010101010101010101),
                         )?;

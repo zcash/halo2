@@ -4,13 +4,11 @@
 //! [halo]: https://eprint.iacr.org/2019/1021
 
 use super::{Coeff, LagrangeCoeff, Polynomial};
-use crate::arithmetic::{
-    best_fft, best_multiexp, parallelize, CurveAffine, CurveExt, FieldExt, Group,
-};
+use crate::arithmetic::{best_fft, best_multiexp, parallelize, CurveAffine, CurveExt};
 use crate::helpers::CurveRead;
 
 use ff::{Field, PrimeField};
-use group::{prime::PrimeCurveAffine, Curve, Group as _};
+use group::{prime::PrimeCurveAffine, Curve, Group};
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 
 mod msm;
@@ -208,7 +206,7 @@ pub struct Blind<F>(pub F);
 
 impl<F: Field> Default for Blind<F> {
     fn default() -> Self {
-        Blind(F::one())
+        Blind(F::ONE)
     }
 }
 
@@ -357,7 +355,7 @@ fn test_opening_proof() {
     assert_eq!(v, v_prime);
 
     let mut commitment_msm = params.empty_msm();
-    commitment_msm.append_term(Field::one(), p);
+    commitment_msm.append_term(Field::ONE, p);
     let guard = verify_proof(&params, commitment_msm, &mut transcript, *x, v).unwrap();
     let ch_verifier = transcript.squeeze_challenge();
     assert_eq!(*ch_prover, *ch_verifier);

@@ -228,12 +228,11 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// Selectors are disabled on all rows by default, and must be explicitly enabled on each
 /// row when required:
 /// ```
+/// use group::ff::Field;
 /// use halo2_proofs::{
-///     arithmetic::FieldExt,
 ///     circuit::{Chip, Layouter, Value},
 ///     plonk::{Advice, Column, Error, Selector},
 /// };
-/// # use ff::Field;
 /// # use halo2_proofs::plonk::Fixed;
 ///
 /// struct Config {
@@ -242,12 +241,12 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 ///     s: Selector,
 /// }
 ///
-/// fn circuit_logic<F: FieldExt, C: Chip<F>>(chip: C, mut layouter: impl Layouter<F>) -> Result<(), Error> {
+/// fn circuit_logic<F: Field, C: Chip<F>>(chip: C, mut layouter: impl Layouter<F>) -> Result<(), Error> {
 ///     let config = chip.config();
 ///     # let config: Config = todo!();
 ///     layouter.assign_region(|| "bar", |mut region| {
-///         region.assign_advice(|| "a", config.a, 0, || Value::known(F::one()))?;
-///         region.assign_advice(|| "a", config.b, 1, || Value::known(F::one()))?;
+///         region.assign_advice(|| "a", config.a, 0, || Value::known(F::ONE))?;
+///         region.assign_advice(|| "a", config.b, 1, || Value::known(F::ONE))?;
 ///         config.s.enable(&mut region, 1)
 ///     })?;
 ///     Ok(())
@@ -816,6 +815,7 @@ impl<F: Field> From<Expression<F>> for Vec<Constraint<F>> {
 /// A set of polynomial constraints with a common selector.
 ///
 /// ```
+/// use group::ff::Field;
 /// use halo2_proofs::{pasta::Fp, plonk::{Constraints, Expression}, poly::Rotation};
 /// # use halo2_proofs::plonk::ConstraintSystem;
 ///
@@ -832,7 +832,7 @@ impl<F: Field> From<Expression<F>> for Vec<Constraint<F>> {
 ///     let c = meta.query_advice(c, Rotation::cur());
 ///     let s_ternary = meta.query_selector(s);
 ///
-///     let one_minus_a = Expression::Constant(Fp::one()) - a.clone();
+///     let one_minus_a = Expression::Constant(Fp::ONE) - a.clone();
 ///
 ///     Constraints::with_selector(
 ///         s_ternary,

@@ -1,9 +1,11 @@
-use ff::Field;
-use group::Curve;
+use group::{
+    ff::{Field, PrimeField},
+    Curve,
+};
 
 use super::{Argument, ProvingKey, VerifyingKey};
 use crate::{
-    arithmetic::{CurveAffine, FieldExt},
+    arithmetic::CurveAffine,
     plonk::{Any, Column, Error},
     poly::{
         commitment::{Blind, Params},
@@ -106,7 +108,7 @@ impl Assembly {
         // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
         let mut omega_powers = Vec::with_capacity(params.n as usize);
         {
-            let mut cur = C::Scalar::one();
+            let mut cur = C::Scalar::ONE;
             for _ in 0..params.n {
                 omega_powers.push(cur);
                 cur *= &domain.get_omega();
@@ -116,7 +118,7 @@ impl Assembly {
         // Compute [omega_powers * \delta^0, omega_powers * \delta^1, ..., omega_powers * \delta^m]
         let mut deltaomega = Vec::with_capacity(p.columns.len());
         {
-            let mut cur = C::Scalar::one();
+            let mut cur = C::Scalar::ONE;
             for _ in 0..p.columns.len() {
                 let mut omega_powers = omega_powers.clone();
                 for o in &mut omega_powers {
@@ -159,7 +161,7 @@ impl Assembly {
         // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
         let mut omega_powers = Vec::with_capacity(params.n as usize);
         {
-            let mut cur = C::Scalar::one();
+            let mut cur = C::Scalar::ONE;
             for _ in 0..params.n {
                 omega_powers.push(cur);
                 cur *= &domain.get_omega();
@@ -169,7 +171,7 @@ impl Assembly {
         // Compute [omega_powers * \delta^0, omega_powers * \delta^1, ..., omega_powers * \delta^m]
         let mut deltaomega = Vec::with_capacity(p.columns.len());
         {
-            let mut cur = C::Scalar::one();
+            let mut cur = C::Scalar::ONE;
             for _ in 0..p.columns.len() {
                 let mut omega_powers = omega_powers.clone();
                 for o in &mut omega_powers {
