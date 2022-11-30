@@ -7,7 +7,7 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 ### Added
-- `halo2_gadgets::poseidon::primitives::generate_constants`
+- `halo2_gadgets::poseidon::primitives::{Mds, generate_constants}`
 
 ### Changed
 - APIs with `F: pasta_curves::arithmetic::FieldExt` bounds have been changed to
