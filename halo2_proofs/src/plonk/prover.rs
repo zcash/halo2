@@ -596,7 +596,7 @@ pub fn create_proof<
     )?;
 
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
-    let xn = x.pow(&[params.n as u64, 0, 0, 0]);
+    let xn = x.pow(&[params.n, 0, 0, 0]);
 
     // Compute and hash instance evals for each circuit instance
     for instance in instance.iter() {

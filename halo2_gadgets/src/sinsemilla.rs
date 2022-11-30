@@ -198,7 +198,7 @@ where
         // Each message piece must have at most `floor(C::Base::CAPACITY / K)` words.
         // This ensures that the all-ones bitstring is canonical in the field.
         let piece_max_num_words = C::Base::CAPACITY as usize / K;
-        assert!(num_words <= piece_max_num_words as usize);
+        assert!(num_words <= piece_max_num_words);
 
         // Closure to parse a bitstring (little-endian) into a base field element.
         let to_base_field = |bits: &[Value<bool>]| -> Value<C::Base> {

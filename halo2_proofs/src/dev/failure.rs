@@ -100,11 +100,9 @@ impl FailureLocation {
             })
             .map(|(r_i, r)| FailureLocation::InRegion {
                 region: (r_i, r.name.clone()).into(),
-                offset: failure_row as usize - r.rows.unwrap().0 as usize,
+                offset: failure_row - r.rows.unwrap().0,
             })
-            .unwrap_or_else(|| FailureLocation::OutsideRegion {
-                row: failure_row as usize,
-            })
+            .unwrap_or_else(|| FailureLocation::OutsideRegion { row: failure_row })
     }
 }
 
