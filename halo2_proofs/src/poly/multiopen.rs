@@ -6,10 +6,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::*;
-use crate::{
-    arithmetic::{CurveAffine, FieldExt},
-    transcript::ChallengeScalar,
-};
+use crate::{arithmetic::CurveAffine, transcript::ChallengeScalar};
 
 mod prover;
 mod verifier;
@@ -136,7 +133,7 @@ type IntermediateSets<F, Q> = (
     Vec<Vec<F>>,
 );
 
-fn construct_intermediate_sets<F: FieldExt, I, Q: Query<F>>(queries: I) -> IntermediateSets<F, Q>
+fn construct_intermediate_sets<F: Field + Ord, I, Q: Query<F>>(queries: I) -> IntermediateSets<F, Q>
 where
     I: IntoIterator<Item = Q> + Clone,
 {

@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate criterion;
 
-use halo2_proofs::arithmetic::FieldExt;
+use group::ff::PrimeField;
 use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::plonk::*;
@@ -14,7 +14,7 @@ use criterion::{BenchmarkId, Criterion};
 
 fn criterion_benchmark(c: &mut Criterion) {
     #[derive(Clone, Default)]
-    struct MyCircuit<F: FieldExt> {
+    struct MyCircuit<F: PrimeField> {
         _marker: PhantomData<F>,
     }
 
@@ -25,7 +25,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         advice: Column<Advice>,
     }
 
-    impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
+    impl<F: PrimeField> Circuit<F> for MyCircuit<F> {
         type Config = MyConfig;
         type FloorPlanner = SimpleFloorPlanner;
 

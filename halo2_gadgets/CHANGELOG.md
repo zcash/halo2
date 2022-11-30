@@ -6,6 +6,12 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- `halo2_gadgets::poseidon::primitives::{Mds, generate_constants}`
+
+### Changed
+- APIs with `F: pasta_curves::arithmetic::FieldExt` bounds have been changed to
+  use `ff` traits directly.
 
 ## [0.2.0] - 2022-06-23
 ### Added

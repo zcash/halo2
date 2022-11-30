@@ -5,6 +5,7 @@ use std::fmt;
 use std::iter;
 use std::marker::PhantomData;
 
+use group::ff::Field;
 use halo2_proofs::arithmetic::FieldExt;
 
 pub(crate) mod fp;
@@ -27,10 +28,10 @@ pub(crate) type State<F, const T: usize> = [F; T];
 pub(crate) type SpongeRate<F, const RATE: usize> = [Option<F>; RATE];
 
 /// The type used to hold the MDS matrix and its inverse.
-pub(crate) type Mds<F, const T: usize> = [[F; T]; T];
+pub type Mds<F, const T: usize> = [[F; T]; T];
 
 /// A specification for a Poseidon permutation.
-pub trait Spec<F: FieldExt, const T: usize, const RATE: usize>: fmt::Debug {
+pub trait Spec<F: Field, const T: usize, const RATE: usize>: fmt::Debug {
     /// The number of full rounds for this specification.
     ///
     /// This must be an even number.
@@ -50,33 +51,37 @@ pub trait Spec<F: FieldExt, const T: usize, const RATE: usize>: fmt::Debug {
     fn secure_mds() -> usize;
 
     /// Generates `(round_constants, mds, mds^-1)` corresponding to this specification.
-    fn constants() -> (Vec<[F; T]>, Mds<F, T>, Mds<F, T>) {
-        let r_f = Self::full_rounds();
-        let r_p = Self::partial_rounds();
+    fn constants() -> (Vec<[F; T]>, Mds<F, T>, Mds<F, T>);
+}
 
-        let mut grain = grain::Grain::new(SboxType::Pow, T as u16, r_f as u16, r_p as u16);
+/// Generates `(round_constants, mds, mds^-1)` corresponding to this specification.
+pub fn generate_constants<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>(
+) -> (Vec<[F; T]>, Mds<F, T>, Mds<F, T>) {
+    let r_f = S::full_rounds();
+    let r_p = S::partial_rounds();
 
-        let round_constants = (0..(r_f + r_p))
-            .map(|_| {
-                let mut rc_row = [F::zero(); T];
-                for (rc, value) in rc_row
-                    .iter_mut()
-                    .zip((0..T).map(|_| grain.next_field_element()))
-                {
-                    *rc = value;
-                }
-                rc_row
-            })
-            .collect();
+    let mut grain = grain::Grain::new(SboxType::Pow, T as u16, r_f as u16, r_p as u16);
 
-        let (mds, mds_inv) = mds::generate_mds::<F, T>(&mut grain, Self::secure_mds());
+    let round_constants = (0..(r_f + r_p))
+        .map(|_| {
+            let mut rc_row = [F::zero(); T];
+            for (rc, value) in rc_row
+                .iter_mut()
+                .zip((0..T).map(|_| grain.next_field_element()))
+            {
+                *rc = value;
+            }
+            rc_row
+        })
+        .collect();
 
-        (round_constants, mds, mds_inv)
-    }
+    let (mds, mds_inv) = mds::generate_mds::<F, T>(&mut grain, S::secure_mds());
+
+    (round_constants, mds, mds_inv)
 }
 
 /// Runs the Poseidon permutation on the given state.
-pub(crate) fn permute<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>(
+pub(crate) fn permute<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>(
     state: &mut State<F, T>,
     mds: &Mds<F, T>,
     round_constants: &[[F; T]],
@@ -123,7 +128,7 @@ pub(crate) fn permute<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RA
         });
 }
 
-fn poseidon_sponge<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>(
+fn poseidon_sponge<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>(
     state: &mut State<F, T>,
     input: Option<&Absorbing<F, RATE>>,
     mds_matrix: &Mds<F, T>,
@@ -180,7 +185,7 @@ impl<F: fmt::Debug, const RATE: usize> Absorbing<F, RATE> {
 
 /// A Poseidon sponge.
 pub(crate) struct Sponge<
-    F: FieldExt,
+    F: Field,
     S: Spec<F, T, RATE>,
     M: SpongeMode,
     const T: usize,
@@ -193,7 +198,7 @@ pub(crate) struct Sponge<
     _marker: PhantomData<S>,
 }
 
-impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
+impl<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
     Sponge<F, S, Absorbing<F, RATE>, T, RATE>
 {
     /// Constructs a new sponge for the given Poseidon specification.
@@ -251,7 +256,7 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
     }
 }
 
-impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
+impl<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
     Sponge<F, S, Squeezing<F, RATE>, T, RATE>
 {
     /// Squeezes an element from the sponge.
@@ -275,7 +280,7 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
 }
 
 /// A domain in which a Poseidon hash function is being used.
-pub trait Domain<F: FieldExt, const RATE: usize> {
+pub trait Domain<F: Field, const RATE: usize> {
     /// Iterator that outputs padding field elements.
     type Padding: IntoIterator<Item = F>;
 
@@ -321,7 +326,7 @@ impl<F: FieldExt, const RATE: usize, const L: usize> Domain<F, RATE> for Constan
 
 /// A Poseidon hash function, built around a sponge.
 pub struct Hash<
-    F: FieldExt,
+    F: Field,
     S: Spec<F, T, RATE>,
     D: Domain<F, RATE>,
     const T: usize,
@@ -331,7 +336,7 @@ pub struct Hash<
     _domain: PhantomData<D>,
 }
 
-impl<F: FieldExt, S: Spec<F, T, RATE>, D: Domain<F, RATE>, const T: usize, const RATE: usize>
+impl<F: Field, S: Spec<F, T, RATE>, D: Domain<F, RATE>, const T: usize, const RATE: usize>
     fmt::Debug for Hash<F, S, D, T, RATE>
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -345,7 +350,7 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, D: Domain<F, RATE>, const T: usize, const
     }
 }
 
-impl<F: FieldExt, S: Spec<F, T, RATE>, D: Domain<F, RATE>, const T: usize, const RATE: usize>
+impl<F: Field, S: Spec<F, T, RATE>, D: Domain<F, RATE>, const T: usize, const RATE: usize>
     Hash<F, S, D, T, RATE>
 {
     /// Initializes a new hasher.

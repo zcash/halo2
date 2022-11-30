@@ -1,8 +1,9 @@
-use halo2_proofs::{arithmetic::FieldExt, plonk::Expression};
+use group::ff::PrimeField;
+use halo2_proofs::plonk::Expression;
 
-pub struct Gate<F: FieldExt>(pub Expression<F>);
+pub struct Gate<F: PrimeField>(pub Expression<F>);
 
-impl<F: FieldExt> Gate<F> {
+impl<F: PrimeField> Gate<F> {
     fn ones() -> Expression<F> {
         Expression::Constant(F::one())
     }

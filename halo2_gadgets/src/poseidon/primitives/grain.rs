@@ -3,6 +3,7 @@
 use std::marker::PhantomData;
 
 use bitvec::prelude::*;
+use group::ff::{Field, PrimeField};
 use halo2_proofs::arithmetic::FieldExt;
 
 const STATE: usize = 80;
@@ -43,13 +44,13 @@ impl SboxType {
     }
 }
 
-pub(super) struct Grain<F: FieldExt> {
+pub(super) struct Grain<F: Field> {
     state: BitArr!(for 80, in u8, Msb0),
     next_bit: usize,
     _field: PhantomData<F>,
 }
 
-impl<F: FieldExt> Grain<F> {
+impl<F: PrimeField> Grain<F> {
     pub(super) fn new(sbox: SboxType, t: u16, r_f: u16, r_p: u16) -> Self {
         // Initialize the LFSR state.
         let mut state = bitarr![u8, Msb0; 1; STATE];
@@ -135,7 +136,9 @@ impl<F: FieldExt> Grain<F> {
             }
         }
     }
+}
 
+impl<F: FieldExt> Grain<F> {
     /// Returns the next field element from this Grain instantiation, without using
     /// rejection sampling.
     pub(super) fn next_field_element_without_rejection(&mut self) -> F {
@@ -165,7 +168,7 @@ impl<F: FieldExt> Grain<F> {
     }
 }
 
-impl<F: FieldExt> Iterator for Grain<F> {
+impl<F: PrimeField> Iterator for Grain<F> {
     type Item = bool;
 
     fn next(&mut self) -> Option<Self::Item> {

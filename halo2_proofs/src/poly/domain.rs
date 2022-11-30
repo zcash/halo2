@@ -16,7 +16,7 @@ use std::marker::PhantomData;
 /// performing operations on an evaluation domain of size $2^k$ and an extended
 /// domain of size $2^{k} * j$ with $j \neq 0$.
 #[derive(Clone, Debug)]
-pub struct EvaluationDomain<F: FieldExt> {
+pub struct EvaluationDomain<F: Field> {
     n: u64,
     k: u32,
     extended_k: u32,

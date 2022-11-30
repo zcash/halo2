@@ -1,6 +1,7 @@
 use std::convert::TryInto;
 use std::iter;
 
+use group::ff::Field;
 use halo2_proofs::{
     arithmetic::FieldExt,
     circuit::{AssignedCell, Cell, Chip, Layouter, Region, Value},
@@ -18,7 +19,7 @@ use crate::utilities::Var;
 
 /// Configuration for a [`Pow5Chip`].
 #[derive(Clone, Debug)]
-pub struct Pow5Config<F: FieldExt, const WIDTH: usize, const RATE: usize> {
+pub struct Pow5Config<F: Field, const WIDTH: usize, const RATE: usize> {
     pub(crate) state: [Column<Advice>; WIDTH],
     partial_sbox: Column<Advice>,
     rc_a: [Column<Fixed>; WIDTH],
@@ -40,11 +41,11 @@ pub struct Pow5Config<F: FieldExt, const WIDTH: usize, const RATE: usize> {
 /// The chip is implemented using a single round per row for full rounds, and two rounds
 /// per row for partial rounds.
 #[derive(Debug)]
-pub struct Pow5Chip<F: FieldExt, const WIDTH: usize, const RATE: usize> {
+pub struct Pow5Chip<F: Field, const WIDTH: usize, const RATE: usize> {
     config: Pow5Config<F, WIDTH, RATE>,
 }
 
-impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE> {
+impl<F: Field, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE> {
     /// Configures this chip for use in a circuit.
     ///
     /// # Side-effects
@@ -209,7 +210,7 @@ impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE
     }
 }
 
-impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Chip<F> for Pow5Chip<F, WIDTH, RATE> {
+impl<F: Field, const WIDTH: usize, const RATE: usize> Chip<F> for Pow5Chip<F, WIDTH, RATE> {
     type Config = Pow5Config<F, WIDTH, RATE>;
     type Loaded = ();
 
@@ -403,21 +404,21 @@ impl<
 
 /// A word in the Poseidon state.
 #[derive(Clone, Debug)]
-pub struct StateWord<F: FieldExt>(AssignedCell<F, F>);
+pub struct StateWord<F: Field>(AssignedCell<F, F>);
 
-impl<F: FieldExt> From<StateWord<F>> for AssignedCell<F, F> {
+impl<F: Field> From<StateWord<F>> for AssignedCell<F, F> {
     fn from(state_word: StateWord<F>) -> AssignedCell<F, F> {
         state_word.0
     }
 }
 
-impl<F: FieldExt> From<AssignedCell<F, F>> for StateWord<F> {
+impl<F: Field> From<AssignedCell<F, F>> for StateWord<F> {
     fn from(cell_value: AssignedCell<F, F>) -> StateWord<F> {
         StateWord(cell_value)
     }
 }
 
-impl<F: FieldExt> Var<F> for StateWord<F> {
+impl<F: Field> Var<F> for StateWord<F> {
     fn cell(&self) -> Cell {
         self.0.cell()
     }
@@ -428,7 +429,7 @@ impl<F: FieldExt> Var<F> for StateWord<F> {
 }
 
 #[derive(Debug)]
-struct Pow5State<F: FieldExt, const WIDTH: usize>([StateWord<F>; WIDTH]);
+struct Pow5State<F: Field, const WIDTH: usize>([StateWord<F>; WIDTH]);
 
 impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
     fn full_round<const RATE: usize>(

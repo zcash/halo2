@@ -12,7 +12,7 @@ use halo2_proofs::{
 use pasta_curves::{pallas, vesta};
 
 use halo2_gadgets::poseidon::{
-    primitives::{self as poseidon, ConstantLength, Spec},
+    primitives::{self as poseidon, generate_constants, ConstantLength, Mds, Spec},
     Hash, Pow5Chip, Pow5Config,
 };
 use std::convert::TryInto;
@@ -137,6 +137,10 @@ impl Spec<Fp, 3, 2> for MySpec<3, 2> {
     fn secure_mds() -> usize {
         0
     }
+
+    fn constants() -> (Vec<[Fp; 3]>, Mds<Fp, 3>, Mds<Fp, 3>) {
+        generate_constants::<_, Self, 3, 2>()
+    }
 }
 
 impl Spec<Fp, 9, 8> for MySpec<9, 8> {
@@ -155,6 +159,10 @@ impl Spec<Fp, 9, 8> for MySpec<9, 8> {
     fn secure_mds() -> usize {
         0
     }
+
+    fn constants() -> (Vec<[Fp; 9]>, Mds<Fp, 9>, Mds<Fp, 9>) {
+        generate_constants::<_, Self, 9, 8>()
+    }
 }
 
 impl Spec<Fp, 12, 11> for MySpec<12, 11> {
@@ -172,6 +180,10 @@ impl Spec<Fp, 12, 11> for MySpec<12, 11> {
 
     fn secure_mds() -> usize {
         0
+    }
+
+    fn constants() -> (Vec<[Fp; 12]>, Mds<Fp, 12>, Mds<Fp, 12>) {
+        generate_constants::<_, Self, 12, 11>()
     }
 }
 
