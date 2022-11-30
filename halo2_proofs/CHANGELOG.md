@@ -7,6 +7,7 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 ### Added
+- `halo2_proofs::arithmetic::FftGroup`
 - `halo2_proofs::circuit::layouter`:
   - `RegionLayouter::instance_value` method added to provide access to
     instance values within a region.
@@ -14,6 +15,9 @@ and this project adheres to Rust's notion of
 ### Changed
 - APIs with `F: pasta_curves::arithmetic::FieldExt` bounds have been changed to
   use `ff` traits directly.
+- `halo2_proofs::arithmetic`:
+  - `best_fft, recursive_butterfly_arithmetic` now use the `FftGroup` trait
+    instead of the (now-removed) `pasta_curves::arithmetic::Group` trait.
 
 ## [0.2.0] - 2022-06-23
 ### Added
