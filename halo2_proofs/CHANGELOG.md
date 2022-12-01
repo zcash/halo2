@@ -16,6 +16,9 @@ and this project adheres to Rust's notion of
     - `metadata::Region`
   - `halo2_proofs::poly::Rotation`
 - `halo2_proofs::arithmetic::FftGroup`
+- `halo2_proofs::circuit`:
+  - `FieldValue` and `IntegerValue` helper traits, to provide common constants
+    equivalent to using `Value::known(_)`.
 - `halo2_proofs::circuit::layouter`:
   - `RegionLayouter::instance_value` method added to provide access to
     instance values within a region.

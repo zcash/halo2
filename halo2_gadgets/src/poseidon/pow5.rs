@@ -3,7 +3,7 @@ use std::iter;
 
 use group::ff::Field;
 use halo2_proofs::{
-    circuit::{AssignedCell, Cell, Chip, Layouter, Region, Value},
+    circuit::{AssignedCell, Cell, Chip, FieldValue, Layouter, Region, Value},
     plonk::{
         Advice, Any, Column, ConstraintSystem, Constraints, Error, Expression, Fixed, Selector,
     },
@@ -370,7 +370,7 @@ impl<
                             .get(i)
                             .map(|word| word.0.value().cloned())
                             // The capacity element is never altered by the input.
-                            .unwrap_or_else(|| Value::known(F::ZERO));
+                            .unwrap_or_else(|| FieldValue::ZERO);
                     region
                         .assign_advice(
                             || format!("load output_{}", i),

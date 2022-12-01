@@ -4,7 +4,7 @@ use super::{
     AssignedBits, BlockWord, SpreadInputs, SpreadVar, Table16Assignment, ROUNDS, STATE,
 };
 use halo2_proofs::{
-    circuit::{Layouter, Value},
+    circuit::{IntegerValue, Layouter, Value},
     pasta::pallas,
     plonk::{Advice, Column, ConstraintSystem, Error, Selector},
     poly::Rotation,
@@ -922,7 +922,7 @@ impl CompressionConfig {
         layouter: &mut impl Layouter<pallas::Base>,
         state: State,
     ) -> Result<[BlockWord; DIGEST_SIZE], Error> {
-        let mut digest = [BlockWord(Value::known(0)); DIGEST_SIZE];
+        let mut digest = [BlockWord(IntegerValue::ZERO); DIGEST_SIZE];
         layouter.assign_region(
             || "digest",
             |mut region| {

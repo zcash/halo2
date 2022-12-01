@@ -391,7 +391,7 @@ mod tests {
 
     use ff::{Field, PrimeFieldBits};
     use halo2_proofs::{
-        circuit::{Layouter, SimpleFloorPlanner, Value},
+        circuit::{FieldValue, Layouter, SimpleFloorPlanner, Value},
         dev::{FailureLocation, MockProver, VerifyFailure},
         plonk::{Circuit, ConstraintSystem, Error},
     };
@@ -545,7 +545,7 @@ mod tests {
         // Edge case: zero bits
         {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
-                element: Value::known(pallas::Base::ZERO),
+                element: FieldValue::ZERO,
                 num_bits: 0,
             };
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();

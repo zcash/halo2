@@ -248,7 +248,7 @@ pub mod tests {
     use group::{ff::PrimeField, Curve};
     use halo2_proofs::{
         arithmetic::CurveAffine,
-        circuit::{AssignedCell, Chip, Layouter, Value},
+        circuit::{AssignedCell, Chip, FieldValue, Layouter, Value},
         plonk::{Any, Error},
     };
     use pasta_curves::pallas;
@@ -519,31 +519,31 @@ pub mod tests {
                 // 2^64
                 MyCircuit {
                     magnitude: Value::known(pallas::Base::from_u128(1 << 64)),
-                    sign: Value::known(pallas::Base::one()),
+                    sign: FieldValue::ONE,
                     magnitude_error: Value::known(pallas::Base::from(1 << 1)),
                 },
                 // -2^64
                 MyCircuit {
                     magnitude: Value::known(pallas::Base::from_u128(1 << 64)),
-                    sign: Value::known(-pallas::Base::one()),
+                    sign: -Value::<pallas::Base>::ONE,
                     magnitude_error: Value::known(pallas::Base::from(1 << 1)),
                 },
                 // 2^66
                 MyCircuit {
                     magnitude: Value::known(pallas::Base::from_u128(1 << 66)),
-                    sign: Value::known(pallas::Base::one()),
+                    sign: FieldValue::ONE,
                     magnitude_error: Value::known(pallas::Base::from(1 << 3)),
                 },
                 // -2^66
                 MyCircuit {
                     magnitude: Value::known(pallas::Base::from_u128(1 << 66)),
-                    sign: Value::known(-pallas::Base::one()),
+                    sign: -Value::<pallas::Base>::ONE,
                     magnitude_error: Value::known(pallas::Base::from(1 << 3)),
                 },
                 // 2^254
                 MyCircuit {
                     magnitude: Value::known(pallas::Base::from_u128(1 << 127).square()),
-                    sign: Value::known(pallas::Base::one()),
+                    sign: FieldValue::ONE,
                     magnitude_error: Value::known(
                         pallas::Base::from_u128(1 << 95).square() * pallas::Base::from(2),
                     ),
@@ -551,7 +551,7 @@ pub mod tests {
                 // -2^254
                 MyCircuit {
                     magnitude: Value::known(pallas::Base::from_u128(1 << 127).square()),
-                    sign: Value::known(-pallas::Base::one()),
+                    sign: -Value::<pallas::Base>::ONE,
                     magnitude_error: Value::known(
                         pallas::Base::from_u128(1 << 95).square() * pallas::Base::from(2),
                     ),
@@ -605,7 +605,7 @@ pub mod tests {
             let magnitude_u64 = rand::random::<u64>();
             let circuit = MyCircuit {
                 magnitude: Value::known(pallas::Base::from(magnitude_u64)),
-                sign: Value::known(pallas::Base::zero()),
+                sign: FieldValue::ZERO,
                 magnitude_error: Value::unknown(),
             };
 

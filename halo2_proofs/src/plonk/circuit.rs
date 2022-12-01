@@ -230,7 +230,7 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// ```
 /// use group::ff::Field;
 /// use halo2_proofs::{
-///     circuit::{Chip, Layouter, Value},
+///     circuit::{Chip, FieldValue, Layouter},
 ///     plonk::{Advice, Column, Error, Selector},
 /// };
 /// # use halo2_proofs::plonk::Fixed;
@@ -245,8 +245,8 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 ///     let config = chip.config();
 ///     # let config: Config = todo!();
 ///     layouter.assign_region(|| "bar", |mut region| {
-///         region.assign_advice(|| "a", config.a, 0, || Value::known(F::ONE))?;
-///         region.assign_advice(|| "a", config.b, 1, || Value::known(F::ONE))?;
+///         region.assign_advice(|| "a", config.a, 0, || FieldValue::ONE)?;
+///         region.assign_advice(|| "a", config.b, 1, || FieldValue::ONE)?;
 ///         config.s.enable(&mut region, 1)
 ///     })?;
 ///     Ok(())
