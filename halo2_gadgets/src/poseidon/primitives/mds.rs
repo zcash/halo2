@@ -82,7 +82,8 @@ pub(super) fn generate_mds<F: FieldExt, const T: usize>(
                 acc
             } else {
                 // We can invert freely; by construction, the elements of xs are distinct.
-                acc * (x - x_m) * (x_j - x_m).invert().unwrap()
+                let test: F = x_j - x_m;
+                acc * (x - x_m) * test.invert().unwrap()
             }
         })
     };
