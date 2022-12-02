@@ -3,11 +3,14 @@
 //! the committed polynomials at arbitrary points.
 
 use crate::arithmetic::parallelize;
+use crate::helpers::SerdePrimeField;
 use crate::plonk::Assigned;
 
+use ff::PrimeField;
 use group::ff::{BatchInvert, Field};
 use halo2curves::FieldExt;
 use std::fmt::Debug;
+use std::io;
 use std::marker::PhantomData;
 use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, RangeFrom, RangeFull, Sub};
 
@@ -140,6 +143,32 @@ impl<F, B> Polynomial<F, B> {
     /// coefficients used to describe it.
     pub fn num_coeffs(&self) -> usize {
         self.values.len()
+    }
+}
+
+impl<F: PrimeField, B> Polynomial<F, B> {
+    /// Reads polynomial from buffer using `SerdePrimeField::read`.  
+    pub(crate) fn read<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+        let mut poly_len_be_bytes = [0u8; 4];
+        reader.read_exact(&mut poly_len_be_bytes)?;
+        let poly_len = u32::from_be_bytes(poly_len_be_bytes);
+
+        (0..poly_len)
+            .map(|_| F::read(reader))
+            .collect::<io::Result<Vec<_>>>()
+            .map(|values| Self {
+                values,
+                _marker: PhantomData,
+            })
+    }
+
+    /// Writes polynomial to buffer using `SerdePrimeField::write`.  
+    pub(crate) fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
+        writer.write_all(&(self.values.len() as u32).to_be_bytes())?;
+        for value in self.values.iter() {
+            value.write(writer)?;
+        }
+        Ok(())
     }
 }
 

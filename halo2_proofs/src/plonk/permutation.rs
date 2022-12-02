@@ -1,9 +1,12 @@
 use super::circuit::{Any, Column};
 use crate::{
     arithmetic::CurveAffine,
-    helpers::CurveRead,
+    helpers::{
+        polynomial_slice_byte_length, read_polynomial_vec, write_polynomial_slice, CurveRead,
+    },
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
 };
+use ff::PrimeField;
 
 pub(crate) mod keygen;
 pub(crate) mod prover;
@@ -83,6 +86,25 @@ impl<C: CurveAffine> VerifyingKey<C> {
     pub fn commitments(&self) -> &Vec<C> {
         &self.commitments
     }
+
+    pub(crate) fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
+        for commitment in &self.commitments {
+            writer.write_all(commitment.to_bytes().as_ref())?;
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn read<R: io::Read>(reader: &mut R, argument: &Argument) -> io::Result<Self> {
+        let commitments = (0..argument.columns.len())
+            .map(|_| C::read(reader))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(VerifyingKey { commitments })
+    }
+
+    pub(crate) fn bytes_length(&self) -> usize {
+        self.commitments.len() * C::default().to_bytes().as_ref().len()
+    }
 }
 
 /// The proving key for a single permutation argument.
@@ -91,4 +113,33 @@ pub(crate) struct ProvingKey<C: CurveAffine> {
     permutations: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
     polys: Vec<Polynomial<C::Scalar, Coeff>>,
     pub(super) cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
+}
+
+impl<C: CurveAffine> ProvingKey<C> {
+    /// Reads proving key for a single permutation argument from buffer using `Polynomial::read`.  
+    pub(super) fn read<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+        let permutations = read_polynomial_vec(reader)?;
+        let polys = read_polynomial_vec(reader)?;
+        let cosets = read_polynomial_vec(reader)?;
+        Ok(ProvingKey {
+            permutations,
+            polys,
+            cosets,
+        })
+    }
+
+    /// Writes proving key for a single permutation argument to buffer using `Polynomial::write`.  
+    pub(super) fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
+        write_polynomial_slice(&self.permutations, writer)?;
+        write_polynomial_slice(&self.polys, writer)?;
+        write_polynomial_slice(&self.cosets, writer)?;
+        Ok(())
+    }
+
+    /// Gets the total number of bytes in the serialization of `self`
+    pub(super) fn bytes_length(&self) -> usize {
+        polynomial_slice_byte_length(&self.permutations)
+            + polynomial_slice_byte_length(&self.polys)
+            + polynomial_slice_byte_length(&self.cosets)
+    }
 }
