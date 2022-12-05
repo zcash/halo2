@@ -79,7 +79,7 @@ where
             let combination_assignment = selector
                 .activations
                 .iter()
-                .map(|b| if *b { F::one() } else { F::zero() })
+                .map(|b| if *b { F::ONE } else { F::ZERO })
                 .collect::<Vec<_>>();
             let combination_index = combination_assignments.len();
             combination_assignments.push(combination_assignment);
@@ -177,12 +177,12 @@ where
         }
 
         // Now, compute the selector and combination assignments.
-        let mut combination_assignment = vec![F::zero(); n];
+        let mut combination_assignment = vec![F::ZERO; n];
         let combination_len = combination.len();
         let combination_index = combination_assignments.len();
         let query = allocate_fixed_column();
 
-        let mut assigned_root = F::one();
+        let mut assigned_root = F::ONE;
         selector_assignments.extend(combination.into_iter().map(|selector| {
             // Compute the expression for substitution. This produces an expression of the
             // form
@@ -192,12 +192,12 @@ where
             // `assigned_root`. In particular, rows set to 0 correspond to all selectors
             // being disabled.
             let mut expression = query.clone();
-            let mut root = F::one();
+            let mut root = F::ONE;
             for _ in 0..combination_len {
                 if root != assigned_root {
                     expression = expression * (Expression::Constant(root) - query.clone());
                 }
-                root += F::one();
+                root += F::ONE;
             }
 
             // Update the combination assignment
@@ -212,7 +212,7 @@ where
                 }
             }
 
-            assigned_root += F::one();
+            assigned_root += F::ONE;
 
             SelectorAssignment {
                 selector: selector.selector,

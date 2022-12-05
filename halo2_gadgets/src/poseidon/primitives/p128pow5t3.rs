@@ -66,10 +66,8 @@ impl Spec<Fq, 3, 2> for P128Pow5T3 {
 
 #[cfg(test)]
 mod tests {
-    use ff::{Field, PrimeField};
+    use ff::{Field, FromUniformBytes, PrimeField};
     use std::marker::PhantomData;
-
-    use pasta_curves::arithmetic::FieldExt;
 
     use super::{
         super::{fp, fq},
@@ -91,7 +89,9 @@ mod tests {
         }
     }
 
-    impl<F: FieldExt, const SECURE_MDS: usize> Spec<F, 3, 2> for P128Pow5T3Gen<F, SECURE_MDS> {
+    impl<F: FromUniformBytes<64> + Ord, const SECURE_MDS: usize> Spec<F, 3, 2>
+        for P128Pow5T3Gen<F, SECURE_MDS>
+    {
         fn full_rounds() -> usize {
             8
         }
@@ -115,7 +115,7 @@ mod tests {
 
     #[test]
     fn verify_constants() {
-        fn verify_constants_helper<F: FieldExt>(
+        fn verify_constants_helper<F: FromUniformBytes<64> + Ord>(
             expected_round_constants: [[F; 3]; 64],
             expected_mds: [[F; 3]; 3],
             expected_mds_inv: [[F; 3]; 3],

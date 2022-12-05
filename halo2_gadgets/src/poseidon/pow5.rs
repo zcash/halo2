@@ -3,7 +3,6 @@ use std::iter;
 
 use group::ff::Field;
 use halo2_proofs::{
-    arithmetic::FieldExt,
     circuit::{AssignedCell, Cell, Chip, Layouter, Region, Value},
     plonk::{
         Advice, Any, Column, ConstraintSystem, Constraints, Error, Expression, Fixed, Selector,
@@ -221,7 +220,7 @@ impl<F: Field, const WIDTH: usize, const RATE: usize> Chip<F> for Pow5Chip<F, WI
     }
 }
 
-impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize>
+impl<F: Field, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize>
     PoseidonInstructions<F, S, WIDTH, RATE> for Pow5Chip<F, WIDTH, RATE>
 {
     type Word = StateWord<F>;
@@ -272,7 +271,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
 }
 
 impl<
-        F: FieldExt,
+        F: Field,
         S: Spec<F, WIDTH, RATE>,
         D: Domain<F, RATE>,
         const WIDTH: usize,
@@ -301,7 +300,7 @@ impl<
                 };
 
                 for i in 0..RATE {
-                    load_state_word(i, F::zero())?;
+                    load_state_word(i, F::ZERO)?;
                 }
                 load_state_word(RATE, D::initial_capacity_element())?;
 
@@ -371,7 +370,7 @@ impl<
                             .get(i)
                             .map(|word| word.0.value().cloned())
                             // The capacity element is never altered by the input.
-                            .unwrap_or_else(|| Value::known(F::zero()));
+                            .unwrap_or_else(|| Value::known(F::ZERO));
                     region
                         .assign_advice(
                             || format!("load output_{}", i),
@@ -429,7 +428,7 @@ impl<F: Field> Var<F> for StateWord<F> {
 #[derive(Debug)]
 struct Pow5State<F: Field, const WIDTH: usize>([StateWord<F>; WIDTH]);
 
-impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
+impl<F: Field, const WIDTH: usize> Pow5State<F, WIDTH> {
     fn full_round<const RATE: usize>(
         self,
         region: &mut Region<F>,
@@ -449,7 +448,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                 r.as_ref().map(|r| {
                     r.iter()
                         .enumerate()
-                        .fold(F::zero(), |acc, (j, r_j)| acc + m_i[j] * r_j)
+                        .fold(F::ZERO, |acc, (j, r_j)| acc + m_i[j] * r_j)
                 })
             });
 
@@ -490,7 +489,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                     r.as_ref().map(|r| {
                         m_i.iter()
                             .zip(r.iter())
-                            .fold(F::zero(), |acc, (m_ij, r_j)| acc + *m_ij * r_j)
+                            .fold(F::ZERO, |acc, (m_ij, r_j)| acc + *m_ij * r_j)
                     })
                 })
                 .collect();
@@ -523,7 +522,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                     r_mid.as_ref().map(|r| {
                         m_i.iter()
                             .zip(r.iter())
-                            .fold(F::zero(), |acc, (m_ij, r_j)| acc + *m_ij * r_j)
+                            .fold(F::ZERO, |acc, (m_ij, r_j)| acc + *m_ij * r_j)
                     })
                 })
                 .collect();

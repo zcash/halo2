@@ -1,4 +1,4 @@
-use group::ff::Field;
+use group::ff::{Field, FromUniformBytes};
 use pasta_curves::arithmetic::CurveAffine;
 use rand_core::OsRng;
 
@@ -61,7 +61,12 @@ impl<C: CurveAffine> BatchVerifier<C> {
     pub fn add_proof(&mut self, instances: Vec<Vec<Vec<C::Scalar>>>, proof: Vec<u8>) {
         self.items.push(BatchItem { instances, proof })
     }
+}
 
+impl<C: CurveAffine> BatchVerifier<C>
+where
+    C::Scalar: FromUniformBytes<64>,
+{
     /// Finalizes the batch and checks its validity.
     ///
     /// Returns `false` if *some* proof was invalid. If the caller needs to identify

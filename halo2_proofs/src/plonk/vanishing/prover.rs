@@ -139,9 +139,7 @@ impl<C: CurveAffine> Constructed<C> {
             .h_blinds
             .iter()
             .rev()
-            .fold(Blind(C::Scalar::zero()), |acc, eval| {
-                acc * Blind(xn) + *eval
-            });
+            .fold(Blind(C::Scalar::ZERO), |acc, eval| acc * Blind(xn) + *eval);
 
         let random_eval = eval_polynomial(&self.committed.random_poly, *x);
         transcript.write_scalar(random_eval)?;

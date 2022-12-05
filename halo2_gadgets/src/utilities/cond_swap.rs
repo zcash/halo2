@@ -8,7 +8,6 @@ use halo2_proofs::{
     plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
-
 use std::marker::PhantomData;
 
 /// Instructions for a conditional swap gadget.

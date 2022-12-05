@@ -2,12 +2,13 @@
 //! domain that is of a suitable size for the application.
 
 use crate::{
-    arithmetic::{best_fft, parallelize, FieldExt},
+    arithmetic::{best_fft, parallelize},
     plonk::Assigned,
 };
 
 use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation};
 
+use ff::WithSmallOrderMulGroup;
 use group::ff::{BatchInvert, Field};
 
 use std::marker::PhantomData;
@@ -33,7 +34,7 @@ pub struct EvaluationDomain<F: Field> {
     barycentric_weight: F,
 }
 
-impl<F: FieldExt> EvaluationDomain<F> {
+impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
     /// This constructs a new evaluation domain object based on the provided
     /// values $j, k$.
     pub fn new(j: u32, k: u32) -> Self {
@@ -51,7 +52,7 @@ impl<F: FieldExt> EvaluationDomain<F> {
             extended_k += 1;
         }
 
-        let mut extended_omega = F::root_of_unity();
+        let mut extended_omega = F::ROOT_OF_UNITY;
 
         // Get extended_omega, the 2^{extended_k}'th root of unity
         // The loop computes extended_omega = omega^{2 ^ (S - extended_k)}
@@ -99,7 +100,7 @@ impl<F: FieldExt> EvaluationDomain<F> {
 
             // Subtract 1 from each to give us t_evaluations[i] = t(zeta * extended_omega^i)
             for coeff in &mut t_evaluations {
-                *coeff -= &F::one();
+                *coeff -= &F::ONE;
             }
 
             // Invert, because we're dividing by this polynomial.
@@ -168,7 +169,7 @@ impl<F: FieldExt> EvaluationDomain<F> {
     /// Returns an empty (zero) polynomial in the coefficient basis
     pub fn empty_coeff(&self) -> Polynomial<F, Coeff> {
         Polynomial {
-            values: vec![F::zero(); self.n as usize],
+            values: vec![F::ZERO; self.n as usize],
             _marker: PhantomData,
         }
     }
@@ -176,7 +177,7 @@ impl<F: FieldExt> EvaluationDomain<F> {
     /// Returns an empty (zero) polynomial in the Lagrange coefficient basis
     pub fn empty_lagrange(&self) -> Polynomial<F, LagrangeCoeff> {
         Polynomial {
-            values: vec![F::zero(); self.n as usize],
+            values: vec![F::ZERO; self.n as usize],
             _marker: PhantomData,
         }
     }
@@ -185,7 +186,7 @@ impl<F: FieldExt> EvaluationDomain<F> {
     /// deferred inversions.
     pub(crate) fn empty_lagrange_assigned(&self) -> Polynomial<Assigned<F>, LagrangeCoeff> {
         Polynomial {
-            values: vec![F::zero().into(); self.n as usize],
+            values: vec![F::ZERO.into(); self.n as usize],
             _marker: PhantomData,
         }
     }
@@ -202,7 +203,7 @@ impl<F: FieldExt> EvaluationDomain<F> {
     /// basis
     pub fn empty_extended(&self) -> Polynomial<F, ExtendedLagrangeCoeff> {
         Polynomial {
-            values: vec![F::zero(); self.extended_len()],
+            values: vec![F::ZERO; self.extended_len()],
             _marker: PhantomData,
         }
     }
@@ -241,7 +242,7 @@ impl<F: FieldExt> EvaluationDomain<F> {
         assert_eq!(a.values.len(), 1 << self.k);
 
         self.distribute_powers_zeta(&mut a.values, true);
-        a.values.resize(self.extended_len(), F::zero());
+        a.values.resize(self.extended_len(), F::ZERO);
         best_fft(&mut a.values, self.extended_omega, self.extended_k);
 
         Polynomial {
@@ -452,13 +453,13 @@ impl<F: FieldExt> EvaluationDomain<F> {
             results = Vec::with_capacity(rotations.size_hint().1.unwrap_or(0));
             for rotation in rotations {
                 let rotation = Rotation(rotation);
-                let result = x - self.rotate_omega(F::one(), rotation);
+                let result = x - self.rotate_omega(F::ONE, rotation);
                 results.push(result);
             }
             results.iter_mut().batch_invert();
         }
 
-        let common = (xn - F::one()) * self.barycentric_weight;
+        let common = (xn - F::ONE) * self.barycentric_weight;
         for (rotation, result) in rotations.into_iter().zip(results.iter_mut()) {
             let rotation = Rotation(rotation);
             *result = self.rotate_omega(*result * common, rotation);
@@ -549,7 +550,7 @@ fn test_l_i() {
     }
     for i in 0..8 {
         let mut l_i = vec![Scalar::zero(); 8];
-        l_i[i] = Scalar::one();
+        l_i[i] = Scalar::ONE;
         let l_i = lagrange_interpolate(&points[..], &l_i[..]);
         l.push(l_i);
     }

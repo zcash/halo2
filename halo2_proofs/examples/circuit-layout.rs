@@ -93,10 +93,10 @@ impl<FF: Field> StandardCs<FF> for StandardPlonk<FF> {
         let out =
             region.assign_advice(|| "out", self.config.c, 0, || value.unwrap().map(|v| v.2))?;
 
-        region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::zero()))?;
-        region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::zero()))?;
-        region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
-        region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::one()))?;
+        region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ZERO))?;
+        region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ZERO))?;
+        region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
+        region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::ONE))?;
         Ok((lhs.cell(), rhs.cell(), out.cell()))
     }
     fn raw_add<F>(&self, region: &mut Region<FF>, mut f: F) -> Result<(Cell, Cell, Cell), Error>
@@ -130,10 +130,10 @@ impl<FF: Field> StandardCs<FF> for StandardPlonk<FF> {
         let out =
             region.assign_advice(|| "out", self.config.c, 0, || value.unwrap().map(|v| v.2))?;
 
-        region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::one()))?;
-        region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::one()))?;
-        region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
-        region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::zero()))?;
+        region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ONE))?;
+        region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ONE))?;
+        region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
+        region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::ZERO))?;
         Ok((lhs.cell(), rhs.cell(), out.cell()))
     }
     fn copy(&self, region: &mut Region<FF>, left: Cell, right: Cell) -> Result<(), Error> {
@@ -274,7 +274,7 @@ fn main() {
     // Prepare the circuit you want to render.
     // You don't need to include any witness variables.
     let a = Fp::random(OsRng);
-    let instance = Fp::one() + Fp::one();
+    let instance = Fp::ONE + Fp::ONE;
     let lookup_table = vec![instance, a, a, Fp::zero()];
     let circuit: MyCircuit<Fp> = MyCircuit {
         a: Value::unknown(),

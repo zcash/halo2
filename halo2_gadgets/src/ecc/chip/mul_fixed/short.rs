@@ -251,7 +251,7 @@ pub mod tests {
         circuit::{AssignedCell, Chip, Layouter, Value},
         plonk::{Any, Error},
     };
-    use pasta_curves::{arithmetic::FieldExt, pallas};
+    use pasta_curves::pallas;
 
     use crate::{
         ecc::{

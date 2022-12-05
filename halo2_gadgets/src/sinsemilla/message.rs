@@ -1,7 +1,6 @@
 //! Gadget and chips for the Sinsemilla hash function.
 use ff::{Field, PrimeFieldBits};
 use halo2_proofs::circuit::{AssignedCell, Cell, Value};
-
 use std::fmt::Debug;
 
 /// A [`Message`] composed of several [`MessagePiece`]s.

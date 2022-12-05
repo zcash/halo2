@@ -41,7 +41,7 @@ where
     // Collapse openings at same point sets together into single openings using
     // x_1 challenge.
     let mut q_polys: Vec<Option<Polynomial<C::Scalar, Coeff>>> = vec![None; point_sets.len()];
-    let mut q_blinds = vec![Blind(C::Scalar::zero()); point_sets.len()];
+    let mut q_blinds = vec![Blind(C::Scalar::ZERO); point_sets.len()];
 
     {
         let mut accumulate =
@@ -73,7 +73,7 @@ where
                 .fold(poly.clone().unwrap().values, |poly, point| {
                     kate_division(&poly, *point)
                 });
-            poly.resize(params.n as usize, C::Scalar::zero());
+            poly.resize(params.n as usize, C::Scalar::ZERO);
             let poly = Polynomial {
                 values: poly,
                 _marker: PhantomData,

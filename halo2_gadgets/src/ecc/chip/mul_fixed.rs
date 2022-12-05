@@ -7,7 +7,7 @@ use crate::utilities::decompose_running_sum::RunningSumConfig;
 use std::marker::PhantomData;
 
 use group::{
-    ff::{PrimeField, PrimeFieldBits},
+    ff::{Field, PrimeField, PrimeFieldBits},
     Curve,
 };
 use halo2_proofs::{
@@ -19,10 +19,7 @@ use halo2_proofs::{
     poly::Rotation,
 };
 use lazy_static::lazy_static;
-use pasta_curves::{
-    arithmetic::{CurveAffine, FieldExt},
-    pallas,
-};
+use pasta_curves::{arithmetic::CurveAffine, pallas};
 
 pub mod base_field_elem;
 pub mod full_width;

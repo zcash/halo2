@@ -40,14 +40,14 @@ where
     // Compress the commitments and expected evaluations at x together.
     // using the challenge x_1
     let mut q_commitments: Vec<_> = vec![
-        (params.empty_msm(), C::Scalar::one()); // (accumulator, next x_1 power).
+        (params.empty_msm(), C::Scalar::ONE); // (accumulator, next x_1 power).
         point_sets.len()];
 
     // A vec of vecs of evals. The outer vec corresponds to the point set,
     // while the inner vec corresponds to the points in a particular set.
     let mut q_eval_sets = Vec::with_capacity(point_sets.len());
     for point_set in point_sets.iter() {
-        q_eval_sets.push(vec![C::Scalar::zero(); point_set.len()]);
+        q_eval_sets.push(vec![C::Scalar::ZERO; point_set.len()]);
     }
 
     {
@@ -102,7 +102,7 @@ where
         .zip(q_eval_sets.iter())
         .zip(u.iter())
         .fold(
-            C::Scalar::zero(),
+            C::Scalar::ZERO,
             |msm_eval, ((points, evals), proof_eval)| {
                 let r_poly = lagrange_interpolate(points, evals);
                 let r_eval = eval_polynomial(&r_poly, *x_3);
@@ -118,7 +118,7 @@ where
     let x_4: ChallengeX4<_> = transcript.squeeze_challenge_scalar();
 
     // Compute the final commitment that has to be opened
-    msm.append_term(C::Scalar::one(), q_prime_commitment);
+    msm.append_term(C::Scalar::ONE, q_prime_commitment);
     let (msm, v) = q_commitments.into_iter().zip(u.iter()).fold(
         (msm, msm_eval),
         |(mut msm, msm_eval), ((q_commitment, _), q_eval)| {

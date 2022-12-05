@@ -1,10 +1,13 @@
 use super::EccPoint;
+
+use group::ff::PrimeField;
 use halo2_proofs::{
     circuit::Region,
     plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
-use pasta_curves::{arithmetic::FieldExt, pallas};
+use pasta_curves::pallas;
+
 use std::collections::HashSet;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

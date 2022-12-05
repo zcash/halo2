@@ -85,7 +85,7 @@ pub fn create_proof<
     // `p_prime` and `b` is the evaluation of the polynomial at `x_3`.
     let mut b = Vec::with_capacity(1 << params.k);
     {
-        let mut cur = C::Scalar::one();
+        let mut cur = C::Scalar::ONE;
         for _ in 0..(1 << params.k) {
             b.push(cur);
             cur *= &x_3;

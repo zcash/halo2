@@ -8,7 +8,7 @@ pub struct CompressionGate<F: Field>(PhantomData<F>);
 
 impl<F: PrimeField> CompressionGate<F> {
     fn ones() -> Expression<F> {
-        Expression::Constant(F::one())
+        Expression::Constant(F::ONE)
     }
 
     // Decompose `A,B,C,D` words
@@ -58,16 +58,16 @@ impl<F: PrimeField> CompressionGate<F> {
             + c_mid * F::from(1 << 16)
             + c_hi * F::from(1 << 19)
             + d * F::from(1 << 22)
-            + word_lo * (-F::one())
-            + word_hi * F::from(1 << 16) * (-F::one());
+            + word_lo * (-F::ONE)
+            + word_hi * F::from(1 << 16) * (-F::ONE);
         let spread_check = spread_a
             + spread_b * F::from(1 << 4)
             + spread_c_lo * F::from(1 << 26)
             + spread_c_mid * F::from(1 << 32)
             + spread_c_hi * F::from(1 << 38)
             + spread_d * F::from(1 << 44)
-            + spread_word_lo * (-F::one())
-            + spread_word_hi * F::from(1 << 32) * (-F::one());
+            + spread_word_lo * (-F::ONE)
+            + spread_word_hi * F::from(1 << 32) * (-F::ONE);
 
         Constraints::with_selector(
             s_decompose_abcd,
@@ -129,16 +129,16 @@ impl<F: PrimeField> CompressionGate<F> {
             + b_hi * F::from(1 << 8)
             + c * F::from(1 << 11)
             + d * F::from(1 << 25)
-            + word_lo * (-F::one())
-            + word_hi * F::from(1 << 16) * (-F::one());
+            + word_lo * (-F::ONE)
+            + word_hi * F::from(1 << 16) * (-F::ONE);
         let spread_check = spread_a_lo
             + spread_a_hi * F::from(1 << 6)
             + spread_b_lo * F::from(1 << 12)
             + spread_b_hi * F::from(1 << 16)
             + spread_c * F::from(1 << 22)
             + spread_d * F::from(1 << 50)
-            + spread_word_lo * (-F::one())
-            + spread_word_hi * F::from(1 << 32) * (-F::one());
+            + spread_word_lo * (-F::ONE)
+            + spread_word_hi * F::from(1 << 32) * (-F::ONE);
 
         Constraints::with_selector(
             s_decompose_efgh,
@@ -188,7 +188,7 @@ impl<F: PrimeField> CompressionGate<F> {
             + spread_c_mid * F::from(1 << 52)
             + spread_c_hi * F::from(1 << 58);
         let xor = xor_0 + xor_1 + xor_2;
-        let check = spread_witness + (xor * -F::one());
+        let check = spread_witness + (xor * -F::ONE);
 
         Some(("s_upper_sigma_0", s_upper_sigma_0 * check))
     }
@@ -232,7 +232,7 @@ impl<F: PrimeField> CompressionGate<F> {
             + spread_b_hi * F::from(1 << 30)
             + spread_c * F::from(1 << 36);
         let xor = xor_0 + xor_1 + xor_2;
-        let check = spread_witness + (xor * -F::one());
+        let check = spread_witness + (xor * -F::ONE);
 
         Some(("s_upper_sigma_1", s_upper_sigma_1 * check))
     }
@@ -258,7 +258,7 @@ impl<F: PrimeField> CompressionGate<F> {
         let rhs_odd = spread_p0_odd + spread_p1_odd * F::from(1 << 32);
         let rhs = rhs_even + rhs_odd * F::from(2);
 
-        let check = lhs + rhs * -F::one();
+        let check = lhs + rhs * -F::ONE;
 
         Some(("s_ch", s_ch * check))
     }
@@ -285,9 +285,9 @@ impl<F: PrimeField> CompressionGate<F> {
         let neg_check = {
             let evens = Self::ones() * F::from(MASK_EVEN_32 as u64);
             // evens - spread_e_lo = spread_e_neg_lo
-            let lo_check = spread_e_neg_lo.clone() + spread_e_lo + (evens.clone() * (-F::one()));
+            let lo_check = spread_e_neg_lo.clone() + spread_e_lo + (evens.clone() * (-F::ONE));
             // evens - spread_e_hi = spread_e_neg_hi
-            let hi_check = spread_e_neg_hi.clone() + spread_e_hi + (evens * (-F::one()));
+            let hi_check = spread_e_neg_hi.clone() + spread_e_hi + (evens * (-F::ONE));
 
             std::iter::empty()
                 .chain(Some(("lo_check", lo_check)))

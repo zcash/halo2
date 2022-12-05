@@ -5,8 +5,7 @@ use std::fmt;
 use std::iter;
 use std::marker::PhantomData;
 
-use group::ff::Field;
-use halo2_proofs::arithmetic::FieldExt;
+use group::ff::{Field, FromUniformBytes, PrimeField};
 
 pub(crate) mod fp;
 pub(crate) mod fq;
@@ -55,8 +54,12 @@ pub trait Spec<F: Field, const T: usize, const RATE: usize>: fmt::Debug {
 }
 
 /// Generates `(round_constants, mds, mds^-1)` corresponding to this specification.
-pub fn generate_constants<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>(
-) -> (Vec<[F; T]>, Mds<F, T>, Mds<F, T>) {
+pub fn generate_constants<
+    F: FromUniformBytes<64> + Ord,
+    S: Spec<F, T, RATE>,
+    const T: usize,
+    const RATE: usize,
+>() -> (Vec<[F; T]>, Mds<F, T>, Mds<F, T>) {
     let r_f = S::full_rounds();
     let r_p = S::partial_rounds();
 
@@ -64,7 +67,7 @@ pub fn generate_constants<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, cons
 
     let round_constants = (0..(r_f + r_p))
         .map(|_| {
-            let mut rc_row = [F::zero(); T];
+            let mut rc_row = [F::ZERO; T];
             for (rc, value) in rc_row
                 .iter_mut()
                 .zip((0..T).map(|_| grain.next_field_element()))
@@ -90,7 +93,7 @@ pub(crate) fn permute<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE:
     let r_p = S::partial_rounds();
 
     let apply_mds = |state: &mut State<F, T>| {
-        let mut new_state = [F::zero(); T];
+        let mut new_state = [F::ZERO; T];
         // Matrix multiplication
         #[allow(clippy::needless_range_loop)]
         for i in 0..T {
@@ -206,7 +209,7 @@ impl<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
         let (round_constants, mds_matrix, _) = S::constants();
 
         let mode = Absorbing([None; RATE]);
-        let mut state = [F::zero(); T];
+        let mut state = [F::ZERO; T];
         state[RATE] = initial_capacity_element;
 
         Sponge {
@@ -300,7 +303,7 @@ pub trait Domain<F: Field, const RATE: usize> {
 #[derive(Clone, Copy, Debug)]
 pub struct ConstantLength<const L: usize>;
 
-impl<F: FieldExt, const RATE: usize, const L: usize> Domain<F, RATE> for ConstantLength<L> {
+impl<F: PrimeField, const RATE: usize, const L: usize> Domain<F, RATE> for ConstantLength<L> {
     type Padding = iter::Take<iter::Repeat<F>>;
 
     fn name() -> String {
@@ -320,7 +323,7 @@ impl<F: FieldExt, const RATE: usize, const L: usize> Domain<F, RATE> for Constan
         // Poseidon authors encode the constant length into the capacity element, ensuring
         // that inputs of different lengths do not share the same permutation.
         let k = (L + RATE - 1) / RATE;
-        iter::repeat(F::zero()).take(k * RATE - L)
+        iter::repeat(F::ZERO).take(k * RATE - L)
     }
 }
 
@@ -362,7 +365,7 @@ impl<F: Field, S: Spec<F, T, RATE>, D: Domain<F, RATE>, const T: usize, const RA
     }
 }
 
-impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, const L: usize>
+impl<F: PrimeField, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, const L: usize>
     Hash<F, S, ConstantLength<L>, T, RATE>
 {
     /// Hashes the given input.
@@ -379,7 +382,7 @@ impl<F: FieldExt, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, const 
 
 #[cfg(test)]
 mod tests {
-    use halo2_proofs::arithmetic::FieldExt;
+    use group::ff::PrimeField;
     use pasta_curves::pallas;
 
     use super::{permute, ConstantLength, Hash, P128Pow5T3 as OrchardNullifier, Spec};

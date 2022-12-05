@@ -4,3 +4,7 @@ members = [
     "halo2_gadgets",
     "halo2_proofs",
 ]
+
+[patch.crates-io]
+ff = { git = "https://github.com/zkcrypto/ff.git", rev = "c555625ab4e6e26560ec5323fd99fef6eba18365" }
+pasta_curves = { git = "https://github.com/zcash/pasta_curves.git", rev = "825cb944decfab4b1a64380d15a43eb93899dfad" }

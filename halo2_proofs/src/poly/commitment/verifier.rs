@@ -54,7 +54,7 @@ impl<'a, C: CurveAffine, E: EncodedChallenge<C>> Guard<'a, C, E> {
 
     /// Computes G = ⟨s, params.g⟩
     pub fn compute_g(&self) -> C {
-        let s = compute_s(&self.u, C::Scalar::one());
+        let s = compute_s(&self.u, C::Scalar::ONE);
 
         best_multiexp(&s, &self.msm.params.g).to_affine()
     }
@@ -143,10 +143,10 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
 
 /// Computes $\prod\limits_{i=0}^{k-1} (1 + u_{k - 1 - i} x^{2^i})$.
 fn compute_b<F: Field>(x: F, u: &[F]) -> F {
-    let mut tmp = F::one();
+    let mut tmp = F::ONE;
     let mut cur = x;
     for u_j in u.iter().rev() {
-        tmp *= F::one() + &(*u_j * &cur);
+        tmp *= F::ONE + &(*u_j * &cur);
         cur *= cur;
     }
     tmp
@@ -155,7 +155,7 @@ fn compute_b<F: Field>(x: F, u: &[F]) -> F {
 /// Computes the coefficients of $g(X) = \prod\limits_{i=0}^{k-1} (1 + u_{k - 1 - i} X^{2^i})$.
 fn compute_s<F: Field>(u: &[F], init: F) -> Vec<F> {
     assert!(!u.is_empty());
-    let mut v = vec![F::zero(); 1 << u.len()];
+    let mut v = vec![F::ZERO; 1 << u.len()];
     v[0] = init;
 
     for (len, u_j) in u.iter().rev().enumerate().map(|(i, u_j)| (1 << i, u_j)) {

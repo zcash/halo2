@@ -386,10 +386,11 @@ mod tests {
 
 #[cfg(test)]
 mod proptests {
+    use group::ff::FromUniformBytes;
     use proptest::{collection::vec, prelude::*, sample::select};
 
     use super::construct_intermediate_sets;
-    use pasta_curves::{arithmetic::FieldExt, Fp};
+    use pasta_curves::Fp;
 
     use std::convert::TryFrom;
 
@@ -421,7 +422,7 @@ mod proptests {
         fn arb_point()(
             bytes in vec(any::<u8>(), 64)
         ) -> Fp {
-            Fp::from_bytes_wide(&<[u8; 64]>::try_from(bytes).unwrap())
+            Fp::from_uniform_bytes(&<[u8; 64]>::try_from(bytes).unwrap())
         }
     }
 

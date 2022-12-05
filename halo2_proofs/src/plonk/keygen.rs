@@ -2,7 +2,7 @@
 
 use std::ops::Range;
 
-use ff::Field;
+use ff::{Field, FromUniformBytes};
 use group::Curve;
 
 use super::{
@@ -192,6 +192,7 @@ pub fn keygen_vk<C, ConcreteCircuit>(
 ) -> Result<VerifyingKey<C>, Error>
 where
     C: CurveAffine,
+    C::Scalar: FromUniformBytes<64>,
     ConcreteCircuit: Circuit<C::Scalar>,
 {
     let (domain, cs, config) = create_domain::<C, ConcreteCircuit>(params);
@@ -303,7 +304,7 @@ where
     // Compute l_0(X)
     // TODO: this can be done more efficiently
     let mut l0 = vk.domain.empty_lagrange();
-    l0[0] = C::Scalar::one();
+    l0[0] = C::Scalar::ONE;
     let l0 = vk.domain.lagrange_to_coeff(l0);
     let l0 = vk.domain.coeff_to_extended(l0);
 
@@ -311,7 +312,7 @@ where
     // and 0 otherwise over the domain.
     let mut l_blind = vk.domain.empty_lagrange();
     for evaluation in l_blind[..].iter_mut().rev().take(cs.blinding_factors()) {
-        *evaluation = C::Scalar::one();
+        *evaluation = C::Scalar::ONE;
     }
     let l_blind = vk.domain.lagrange_to_coeff(l_blind);
     let l_blind = vk.domain.coeff_to_extended(l_blind);
@@ -319,7 +320,7 @@ where
     // Compute l_last(X) which evaluates to 1 on the first inactive row (just
     // before the blinding factors) and 0 otherwise over the domain
     let mut l_last = vk.domain.empty_lagrange();
-    l_last[params.n as usize - cs.blinding_factors() - 1] = C::Scalar::one();
+    l_last[params.n as usize - cs.blinding_factors() - 1] = C::Scalar::ONE;
     let l_last = vk.domain.lagrange_to_coeff(l_last);
     let l_last = vk.domain.coeff_to_extended(l_last);
 
