@@ -925,38 +925,67 @@ impl<F: Field> Expression<F> {
         }
     }
 
+    fn write_identifier<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        match self {
+            Expression::Constant(scalar) => write!(writer, "{:?}", scalar),
+            Expression::Selector(selector) => write!(writer, "selector[{}]", selector.0),
+            Expression::Fixed(query) => {
+                write!(
+                    writer,
+                    "fixed[{}][{}]",
+                    query.column_index, query.rotation.0
+                )
+            }
+            Expression::Advice(query) => {
+                write!(
+                    writer,
+                    "advice[{}][{}]",
+                    query.column_index, query.rotation.0
+                )
+            }
+            Expression::Instance(query) => {
+                write!(
+                    writer,
+                    "instance[{}][{}]",
+                    query.column_index, query.rotation.0
+                )
+            }
+            Expression::Challenge(challenge) => {
+                write!(writer, "challenge[{}]", challenge.index())
+            }
+            Expression::Negated(a) => {
+                writer.write_all(b"(-")?;
+                a.write_identifier(writer)?;
+                writer.write_all(b")")
+            }
+            Expression::Sum(a, b) => {
+                writer.write_all(b"(")?;
+                a.write_identifier(writer)?;
+                writer.write_all(b"+")?;
+                b.write_identifier(writer)?;
+                writer.write_all(b")")
+            }
+            Expression::Product(a, b) => {
+                writer.write_all(b"(")?;
+                a.write_identifier(writer)?;
+                writer.write_all(b"*")?;
+                b.write_identifier(writer)?;
+                writer.write_all(b")")
+            }
+            Expression::Scaled(a, f) => {
+                a.write_identifier(writer)?;
+                write!(writer, "*{:?}", f)
+            }
+        }
+    }
+
     /// Identifier for this expression. Expressions with identical identifiers
     /// do the same calculation (but the expressions don't need to be exactly equal
     /// in how they are composed e.g. `1 + 2` and `2 + 1` can have the same identifier).
     pub fn identifier(&self) -> String {
-        match self {
-            Expression::Constant(scalar) => format!("{:?}", scalar),
-            Expression::Selector(selector) => format!("selector[{}]", selector.0),
-            Expression::Fixed(query) => {
-                format!("fixed[{}][{}]", query.column_index, query.rotation.0)
-            }
-            Expression::Advice(query) => {
-                format!("advice[{}][{}]", query.column_index, query.rotation.0)
-            }
-            Expression::Instance(query) => {
-                format!("instance[{}][{}]", query.column_index, query.rotation.0)
-            }
-            Expression::Challenge(challenge) => {
-                format!("challenge[{}]", challenge.index())
-            }
-            Expression::Negated(a) => {
-                format!("(-{})", a.identifier())
-            }
-            Expression::Sum(a, b) => {
-                format!("({}+{})", a.identifier(), b.identifier())
-            }
-            Expression::Product(a, b) => {
-                format!("({}*{})", a.identifier(), b.identifier())
-            }
-            Expression::Scaled(a, f) => {
-                format!("{}*{:?}", a.identifier(), f)
-            }
-        }
+        let mut cursor = std::io::Cursor::new(Vec::new());
+        self.write_identifier(&mut cursor).unwrap();
+        String::from_utf8(cursor.into_inner()).unwrap()
     }
 
     /// Compute the degree of this polynomial

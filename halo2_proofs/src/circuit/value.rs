@@ -612,6 +612,45 @@ impl<F: Field> Mul<F> for Value<&Assigned<F>> {
     }
 }
 
+impl<F: PartialEq> PartialEq<Value<F>> for Value<F> {
+    fn eq(&self, other: &Value<F>) -> bool {
+        if let Some((a, b)) = self.inner.as_ref().zip(other.inner.as_ref()) {
+            a.eq(b)
+        } else {
+            self.inner.is_none() == other.inner.is_none()
+        }
+    }
+}
+impl<F: PartialEq> Eq for Value<F> {}
+
+impl<F: PartialOrd> PartialOrd<Value<F>> for Value<F> {
+    fn partial_cmp(&self, other: &Value<F>) -> Option<std::cmp::Ordering> {
+        match (self.inner.as_ref(), other.inner.as_ref()) {
+            (None, None) => Some(std::cmp::Ordering::Equal),
+            (None, Some(_)) => Some(std::cmp::Ordering::Less),
+            (Some(_), None) => Some(std::cmp::Ordering::Greater),
+            (Some(a), Some(b)) => a.partial_cmp(b),
+        }
+    }
+}
+
+impl<F: PartialOrd> Ord for Value<F> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
+impl<V, E> Value<Result<V, E>> {
+    /// Transposes an `Value` of a [`Result`] into a [`Result`] of an `Value`.
+    pub fn transpose(self) -> Result<Value<V>, E> {
+        match self.inner {
+            Some(Ok(x)) => Ok(Value::known(x)),
+            Some(Err(e)) => Err(e),
+            None => Ok(Value::unknown()),
+        }
+    }
+}
+
 impl<V> Value<V> {
     /// Returns the field element corresponding to this value.
     pub fn to_field<F: Field>(&self) -> Value<Assigned<F>>
