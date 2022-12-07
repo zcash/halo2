@@ -10,6 +10,7 @@ and this project adheres to Rust's notion of
 - `halo2_gadgets::poseidon::primitives::{Mds, generate_constants}`
 
 ### Changed
+- Migrated to `ff 0.13`, `group 0.13`, `pasta_curves 0.5`.
 - APIs with `F: pasta_curves::arithmetic::FieldExt` bounds have been changed to
   use `ff` traits directly.
 

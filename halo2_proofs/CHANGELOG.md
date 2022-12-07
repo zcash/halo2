@@ -21,7 +21,7 @@ and this project adheres to Rust's notion of
     instance values within a region.
 
 ### Changed
-- Migrated to `ff 0.13`.
+- Migrated to `ff 0.13`, `group 0.13`, `pasta_curves 0.5`.
 - APIs with `F: pasta_curves::arithmetic::FieldExt` bounds have been changed to
   use `ff` traits directly.
 - `halo2_proofs::arithmetic`:
