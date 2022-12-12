@@ -1,6 +1,7 @@
 use core::cmp::max;
 use core::ops::{Add, Mul};
 use ff::Field;
+use std::collections::HashMap;
 use std::{
     convert::TryFrom,
     ops::{Neg, Sub},
@@ -348,6 +349,12 @@ pub trait Assignment<F: Field> {
     where
         NR: Into<String>,
         N: FnOnce() -> NR;
+
+    /// TODO: Document
+    fn annotate_column<A, AR>(&mut self, annotation: A, column: Column<Any>)
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>;
 
     /// Exits the current region.
     ///
@@ -958,6 +965,9 @@ pub struct ConstraintSystem<F: Field> {
     // input expressions and a sequence of table expressions involved in the lookup.
     pub(crate) lookups: Vec<lookup::Argument<F>>,
 
+    // List of indexes of Fixed columns which are associated to a `TableColumn` tied to their annotation.
+    pub(crate) lookup_annotations: HashMap<usize, String>,
+
     // Vector of fixed columns, which can be used to store constant values
     // that are copied into advice columns.
     pub(crate) constants: Vec<Column<Fixed>>,
@@ -1008,6 +1018,7 @@ impl<F: Field> Default for ConstraintSystem<F> {
             instance_queries: Vec::new(),
             permutation: permutation::Argument::new(),
             lookups: Vec::new(),
+            lookup_annotations: HashMap::new(),
             constants: vec![],
             minimum_degree: None,
         }
@@ -1364,6 +1375,17 @@ impl<F: Field> ConstraintSystem<F> {
         TableColumn {
             inner: self.fixed_column(),
         }
+    }
+
+    /// Annotate a Lookup column.
+    pub fn annotate_lookup_column<A, AR>(&mut self, column: TableColumn, annotation: A)
+    where
+        A: Fn() -> AR,
+        AR: Into<String>,
+    {
+        // We don't care if the table has already an annotation. If it's the case we keep the original one.
+        self.lookup_annotations
+            .insert(column.inner().index, annotation().into());
     }
 
     /// Allocate a new fixed column
