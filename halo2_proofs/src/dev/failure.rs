@@ -1,13 +1,15 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::fmt;
+use std::fmt::{self, Debug};
 
 use group::ff::Field;
 
+use super::metadata::DebugVirtualCell;
 use super::{
     metadata,
     util::{self, AnyQuery},
     MockProver, Region,
 };
+use crate::dev::metadata::Constraint;
 use crate::{
     dev::Value,
     plonk::{Any, Column, ConstraintSystem, Expression, Gate, Instance},
@@ -16,7 +18,7 @@ use crate::{
 mod emitter;
 
 /// The location within the circuit at which a particular [`VerifyFailure`] occurred.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum FailureLocation<'a> {
     /// A location inside a region.
     InRegion {
@@ -107,7 +109,7 @@ impl<'a> FailureLocation<'a> {
 }
 
 /// The reasons why a particular circuit is not satisfied.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub enum VerifyFailure<'a> {
     /// A cell used in an active gate was not assigned to.
     CellNotAssigned {
@@ -222,9 +224,17 @@ impl<'a> fmt::Display for VerifyFailure<'a> {
                 cell_values,
             } => {
                 writeln!(f, "{} is not satisfied {}", constraint, location)?;
-                for (name, value) in cell_values {
-                    writeln!(f, "- {} = {}", name, value)?;
+                for (dvc, value) in cell_values.iter().map(|(vc, string)| {
+                    let ann_map = match location {
+                        FailureLocation::InRegion { region, offset } => region.column_annotations,
+                        _ => None,
+                    };
+
+                    (DebugVirtualCell::from((vc, ann_map)), string)
+                }) {
+                    writeln!(f, "- {} = {}", dvc, value);
                 }
+
                 Ok(())
             }
             Self::ConstraintPoisoned { constraint } => {
@@ -245,6 +255,43 @@ impl<'a> fmt::Display for VerifyFailure<'a> {
                     column, location
                 )
             }
+        }
+    }
+}
+
+impl<'a> Debug for VerifyFailure<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            VerifyFailure::ConstraintNotSatisfied {
+                constraint,
+                location,
+                cell_values,
+            } => {
+                let constraint: Constraint = constraint.clone();
+                #[derive(Debug)]
+                struct ConstraintCaseDebug<'a> {
+                    constraint: Constraint,
+                    location: FailureLocation<'a>,
+                    cell_values: Vec<(DebugVirtualCell, String)>,
+                }
+
+                let ann_map = match location {
+                    FailureLocation::InRegion { region, offset } => region.column_annotations,
+                    _ => None,
+                };
+
+                let debug = ConstraintCaseDebug {
+                    constraint: constraint.clone(),
+                    location: location.clone(),
+                    cell_values: cell_values
+                        .iter()
+                        .map(|(vc, value)| (DebugVirtualCell::from((vc, ann_map)), value.clone()))
+                        .collect(),
+                };
+
+                write!(f, "{:#?}", debug)
+            }
+            _ => write!(f, "{:#?}", self),
         }
     }
 }

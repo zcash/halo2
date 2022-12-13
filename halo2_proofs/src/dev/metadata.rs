@@ -36,6 +36,42 @@ impl From<plonk::Column<Any>> for Column {
     }
 }
 
+/// A helper structure that allows to print a Column with it's annotation as a single structure.
+#[derive(Debug, Clone)]
+struct DebugColumn {
+    /// The type of the column.
+    column_type: Any,
+    /// The index of the column.
+    index: usize,
+    /// Annotation of the column
+    annotation: String,
+}
+
+impl From<(Column, Option<&HashMap<Column, String>>)> for DebugColumn {
+    fn from(info: (Column, Option<&HashMap<Column, String>>)) -> Self {
+        DebugColumn {
+            column_type: info.0.column_type,
+            index: info.0.index,
+            annotation: info
+                .1
+                .map(|map| map.get(&info.0))
+                .flatten()
+                .cloned()
+                .unwrap_or_else(|| String::new()),
+        }
+    }
+}
+
+impl fmt::Display for DebugColumn {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Column('{:?}', {} - {})",
+            self.column_type, self.index, self.annotation
+        )
+    }
+}
+
 /// A "virtual cell" is a PLONK cell that has been queried at a particular relative offset
 /// within a custom gate.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -85,8 +121,35 @@ impl fmt::Display for VirtualCell {
     }
 }
 
+#[derive(Clone, Debug)]
+pub(super) struct DebugVirtualCell {
+    name: &'static str,
+    column: DebugColumn,
+    rotation: i32,
+}
+
+impl From<(&VirtualCell, Option<&HashMap<Column, String>>)> for DebugVirtualCell {
+    fn from(info: (&VirtualCell, Option<&HashMap<Column, String>>)) -> Self {
+        DebugVirtualCell {
+            name: info.0.name,
+            column: DebugColumn::from((info.0.column, info.1)),
+            rotation: info.0.rotation,
+        }
+    }
+}
+
+impl fmt::Display for DebugVirtualCell {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}@{}", self.column, self.rotation)?;
+        if !self.name.is_empty() {
+            write!(f, "({})", self.name)?;
+        }
+        Ok(())
+    }
+}
+
 /// Metadata about a configured gate within a circuit.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Gate {
     /// The index of the active gate. These indices are assigned in the order in which
     /// `ConstraintSystem::create_gate` is called during `Circuit::configure`.
@@ -109,7 +172,7 @@ impl From<(usize, &'static str)> for Gate {
 }
 
 /// Metadata about a configured constraint within a circuit.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Constraint {
     /// The gate containing the constraint.
     pub(super) gate: Gate,
