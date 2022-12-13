@@ -48,7 +48,10 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
         offset: usize,
     ) -> Result<(), Error>;
 
-    /// Annotate a Column within a Region context.
+    /// Allows the circuit implementor to name/annotate a Column within a Region context.
+    ///
+    /// This is useful in order to improve the amount of information that `prover.verify()`
+    /// and `prover.assert_satisfied()` can provide.
     fn name_column<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),

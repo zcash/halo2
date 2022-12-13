@@ -178,8 +178,6 @@ pub enum VerifyFailure<'a> {
         /// - The input expressions use a column queried at a non-zero `Rotation`, and the
         ///   lookup is active on a row adjacent to an unrelated region.
         location: FailureLocation<'a>,
-        // Maps lookup columns to their annotations from an outside-region perspective.
-        //annotations: Option<&'a HashMap<usize, String>>,
     },
     /// A permutation did not preserve the original value of a cell.
     Permutation {

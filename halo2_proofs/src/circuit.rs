@@ -201,7 +201,10 @@ impl<'r, F: Field> Region<'r, F> {
             .enable_selector(&|| annotation().into(), selector, offset)
     }
 
-    /// Annotates a column.
+    /// Allows the circuit implementor to name/annotate a Column within a Region context.
+    ///
+    /// This is useful in order to improve the amount of information that `prover.verify()`
+    /// and `prover.assert_satisfied()` can provide.
     pub fn name_column<A, AR, T>(&mut self, annotation: A, column: T)
     where
         A: Fn() -> AR,

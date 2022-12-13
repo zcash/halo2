@@ -121,6 +121,7 @@ impl fmt::Display for VirtualCell {
     }
 }
 
+/// Helper structure used to be able to inject Column annotations inside a `Display` or `Debug` call.
 #[derive(Clone, Debug)]
 pub(super) struct DebugVirtualCell {
     name: &'static str,
@@ -217,7 +218,7 @@ pub struct Region<'a> {
     /// The name of the region. This is specified by the region creator (such as a chip
     /// implementation), and is not enforced to be unique.
     pub(super) name: String,
-    /// A reference to the in-Region annotations
+    /// A reference to the annotations of the Columns that exist within this `Region`.
     pub(super) column_annotations: Option<&'a HashMap<ColumnMetadata, String>>,
 }
 

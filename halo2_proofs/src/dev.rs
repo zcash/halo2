@@ -47,7 +47,7 @@ struct Region {
     /// The selectors that have been enabled in this region. All other selectors are by
     /// construction not enabled.
     enabled_selectors: HashMap<Selector, Vec<usize>>,
-    /// Annotations of the columns.
+    /// Annotations given to Advice, Fixed or Instance columns within a region context.
     annotations: HashMap<ColumnMetadata, String>,
     /// The cells assigned in this region. We store this as a `Vec` so that if any cells
     /// are double-assigned, they will be visibly darker.

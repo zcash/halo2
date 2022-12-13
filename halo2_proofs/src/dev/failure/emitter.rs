@@ -89,7 +89,6 @@ pub(super) fn render_cell_layout(
 
     // Print the assigned cells, and their region offset or rotation + the column name at which they're assigned to.
     for ((column, _), &width) in columns.iter().zip(widths.iter()) {
-        //let width = col_width(*cells);
         eprint!(
             "{}|",
             padded(
@@ -125,7 +124,6 @@ pub(super) fn render_cell_layout(
             padded(' ', 8, &(offset.unwrap_or(0) + rotation).to_string())
         );
         for ((col, _), &width) in columns.iter().zip(widths.iter()) {
-            //let width = col_width(*cells);
             eprint!(
                 "{}|",
                 padded(
