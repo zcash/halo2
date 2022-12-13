@@ -1285,13 +1285,19 @@ mod tests {
         let prover = MockProver::run(K, &FaultyCircuit {}, vec![]).unwrap();
         assert_eq!(
             prover.verify(),
-            Err(vec![VerifyFailure::CellNotAssigned {
-                gate: (0, "Equality check").into(),
-                region: (0, "Faulty synthesis".to_owned()).into(),
-                gate_offset: 1,
-                column: Column::new(1, Any::Advice),
-                offset: 1,
-            }])
-        );
+            Err(vec![VerifyFailure::ConstraintNotSatisfied {
+                constraint: ((0, "Equality check").into(), 0, "").into(),
+                location: FailureLocation::InRegion {
+                    region: (1, "Wrong synthesis").into(),
+                    offset: 0,
+                },
+                cell_values: vec![
+                    (((Any::Advice, 0).into(), 0).into(), "1".to_string()),
+                    (((Any::Advice, 1).into(), 0).into(), "0".to_string()),
+                    (((Any::Advice, 2).into(), 0).into(), "0x5".to_string()),
+                    (((Any::Fixed, 0).into(), 0).into(), "0x7".to_string()),
+                ],
+            },])
+        )
     }
 }
