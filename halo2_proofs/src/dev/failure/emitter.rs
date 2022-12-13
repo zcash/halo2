@@ -5,7 +5,7 @@ use group::ff::Field;
 
 use super::FailureLocation;
 use crate::{
-    dev::{metadata, util},
+    dev::{metadata, util, MockProver},
     plonk::{Any, Expression},
 };
 
@@ -99,15 +99,11 @@ pub(super) fn render_cell_layout(
                     "{}",
                     match location {
                         FailureLocation::InRegion { region, offset } => {
-                            if let Some(column_ann) = region.column_annotations {
-                                if let Some(ann) = column_ann.get(&column) {
-                                    format!("{}{}", ann.as_str(), "".to_string())
-                                } else {
-                                    column_type_and_idx(column)
-                                }
-                            } else {
-                                column_type_and_idx(column)
-                            }
+                            region
+                                .column_annotations
+                                .map(|column_ann| column_ann.get(&column).cloned())
+                                .flatten()
+                                .unwrap_or_else(|| column_type_and_idx(column))
                         }
                         FailureLocation::OutsideRegion { row } => {
                             column_type_and_idx(column)

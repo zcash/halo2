@@ -160,11 +160,7 @@ pub struct Region<'a> {
 
 impl<'a> Debug for Region<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Region {} ('{}') with annotations: \n{:#?}",
-            self.index, self.name, self.column_annotations
-        )
+        write!(f, "Region {} ('{}')", self.index, self.name)
     }
 }
 

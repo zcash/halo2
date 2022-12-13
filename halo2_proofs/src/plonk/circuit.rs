@@ -8,6 +8,7 @@ use std::{
 };
 
 use super::{lookup, permutation, Assigned, Error};
+use crate::dev::metadata;
 use crate::{
     circuit::{Layouter, Region, Value},
     poly::Rotation,
@@ -966,7 +967,7 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) lookups: Vec<lookup::Argument<F>>,
 
     // List of indexes of Fixed columns which are associated to a `TableColumn` tied to their annotation.
-    pub(crate) lookup_annotations: HashMap<usize, String>,
+    pub(crate) lookup_annotations: HashMap<metadata::Column, String>,
 
     // Vector of fixed columns, which can be used to store constant values
     // that are copied into advice columns.
@@ -1384,8 +1385,10 @@ impl<F: Field> ConstraintSystem<F> {
         AR: Into<String>,
     {
         // We don't care if the table has already an annotation. If it's the case we keep the original one.
-        self.lookup_annotations
-            .insert(column.inner().index, annotation().into());
+        self.lookup_annotations.insert(
+            metadata::Column::from((Any::Fixed, column.inner().index)),
+            annotation().into(),
+        );
     }
 
     /// Allocate a new fixed column
