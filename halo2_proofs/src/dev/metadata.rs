@@ -146,7 +146,7 @@ impl From<(Gate, usize, &'static str)> for Constraint {
 }
 
 /// Metadata about an assigned region within a circuit.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct Region<'a> {
     /// The index of the region. These indices are assigned in the order in which
     /// `Layouter::assign_region` is called during `Circuit::synthesize`.
@@ -157,6 +157,18 @@ pub struct Region<'a> {
     /// A reference to the in-Region annotations
     pub(super) column_annotations: Option<&'a HashMap<ColumnMetadata, String>>,
 }
+
+impl<'a> PartialEq for Region<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.index == other.index && self.name == other.name {
+            true
+        } else {
+            false
+        }
+    }
+}
+
+impl<'a> Eq for Region<'a> {}
 
 impl<'a> Debug for Region<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
