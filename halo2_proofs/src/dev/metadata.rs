@@ -57,7 +57,7 @@ impl From<(Column, Option<&HashMap<Column, String>>)> for DebugColumn {
                 .map(|map| map.get(&info.0))
                 .flatten()
                 .cloned()
-                .unwrap_or_else(|| String::new()),
+                .unwrap_or_else(String::new),
         }
     }
 }
@@ -223,11 +223,7 @@ pub struct Region<'a> {
 
 impl<'a> PartialEq for Region<'a> {
     fn eq(&self, other: &Self) -> bool {
-        if self.index == other.index && self.name == other.name {
-            true
-        } else {
-            false
-        }
+        self.index == other.index && self.name == other.name
     }
 }
 

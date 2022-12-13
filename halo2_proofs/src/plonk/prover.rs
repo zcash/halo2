@@ -253,12 +253,12 @@ pub fn create_proof<
                     Ok(())
                 }
 
-                fn annotate_column<A, AR>(&mut self, annotation: A, column: Column<Any>)
+                fn annotate_column<A, AR>(&mut self, _annotation: A, _column: Column<Any>)
                 where
                     A: FnOnce() -> AR,
                     AR: Into<String>,
                 {
-                    unimplemented!()
+                    // Do nothing
                 }
 
                 fn push_namespace<NR, N>(&mut self, _: N)

@@ -297,8 +297,8 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
 
     fn name_column<'v>(
         &'v mut self,
-        annotation: &'v (dyn Fn() -> String + 'v),
-        column: Column<Any>,
+        _annotation: &'v (dyn Fn() -> String + 'v),
+        _column: Column<Any>,
     ) {
         // Do nothing
     }

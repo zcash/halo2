@@ -202,7 +202,7 @@ impl<'r, F: Field> Region<'r, F> {
     }
 
     /// Annotates a column.
-    pub(crate) fn name_column<A, AR, T>(&mut self, annotation: A, column: T)
+    pub fn name_column<A, AR, T>(&mut self, annotation: A, column: T)
     where
         A: Fn() -> AR,
         AR: Into<String>,

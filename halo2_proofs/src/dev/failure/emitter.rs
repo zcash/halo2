@@ -5,7 +5,7 @@ use group::ff::Field;
 
 use super::FailureLocation;
 use crate::{
-    dev::{metadata, util, MockProver},
+    dev::{metadata, util},
     plonk::{Any, Expression},
 };
 
@@ -68,9 +68,9 @@ pub(super) fn render_cell_layout(
         .iter()
         .map(|(col, _)| {
             let size = match location {
-                FailureLocation::InRegion { region, offset } => {
+                FailureLocation::InRegion { region, offset: _ } => {
                     if let Some(column_ann) = region.column_annotations {
-                        if let Some(ann) = column_ann.get(&col) {
+                        if let Some(ann) = column_ann.get(col) {
                             ann.len()
                         } else {
                             col_width(column_type_and_idx(col).as_str().len())
@@ -79,7 +79,7 @@ pub(super) fn render_cell_layout(
                         col_width(column_type_and_idx(col).as_str().len())
                     }
                 }
-                FailureLocation::OutsideRegion { row } => {
+                FailureLocation::OutsideRegion { row: _ } => {
                     col_width(column_type_and_idx(col).as_str().len())
                 }
             };
@@ -88,35 +88,33 @@ pub(super) fn render_cell_layout(
         .collect();
 
     // Print the assigned cells, and their region offset or rotation + the column name at which they're assigned to.
-    for ((column, cells), &width) in columns.iter().zip(widths.iter()) {
+    for ((column, _), &width) in columns.iter().zip(widths.iter()) {
         //let width = col_width(*cells);
         eprint!(
             "{}|",
             padded(
                 ' ',
                 width,
-                &format!(
-                    "{}",
-                    match location {
-                        FailureLocation::InRegion { region, offset } => {
-                            region
-                                .column_annotations
-                                .map(|column_ann| column_ann.get(&column).cloned())
-                                .flatten()
-                                .unwrap_or_else(|| column_type_and_idx(column))
-                        }
-                        FailureLocation::OutsideRegion { row } => {
-                            column_type_and_idx(column)
-                        }
+                &match location {
+                    FailureLocation::InRegion { region, offset: _ } => {
+                        region
+                            .column_annotations
+                            .map(|column_ann| column_ann.get(column).cloned())
+                            .flatten()
+                            .unwrap_or_else(|| column_type_and_idx(column))
                     }
-                )
+                    FailureLocation::OutsideRegion { row: _ } => {
+                        column_type_and_idx(column)
+                    }
+                }
+                .to_string()
             )
         );
     }
 
     eprintln!();
     eprint!("{}  +--------+", prefix);
-    for (cells, &width) in columns.values().zip(widths.iter()) {
+    for &width in widths.iter() {
         eprint!("{}+", padded('-', width, ""));
     }
     eprintln!();
@@ -126,7 +124,7 @@ pub(super) fn render_cell_layout(
             prefix,
             padded(' ', 8, &(offset.unwrap_or(0) + rotation).to_string())
         );
-        for ((col, cells), &width) in columns.iter().zip(widths.iter()) {
+        for ((col, _), &width) in columns.iter().zip(widths.iter()) {
             //let width = col_width(*cells);
             eprint!(
                 "{}|",

@@ -484,10 +484,10 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
 
     fn name_column<'v>(
         &'v mut self,
-        annotation: &'v (dyn Fn() -> String + 'v),
-        column: Column<Any>,
+        _annotation: &'v (dyn Fn() -> String + 'v),
+        _column: Column<Any>,
     ) {
-        unimplemented!()
+        // Do nothing
     }
 
     fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error> {
