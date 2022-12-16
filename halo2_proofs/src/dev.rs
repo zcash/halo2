@@ -1274,8 +1274,8 @@ mod tests {
                         // Name Column d
                         region.name_column(|| "This is a Fixed!", config.d);
 
-                        // Note that none of the terms cancel eachother. Therefore we will have a constraint that is non satisfied for
-                        // the `Equalty check` gate.
+                        // Note that none of the terms cancel each other. Therefore we will have a constraint that is not satisfied for
+                        // the `Equality check` gate.
                         Ok(())
                     },
                 )

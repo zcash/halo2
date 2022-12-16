@@ -351,7 +351,7 @@ pub trait Assignment<F: Field> {
         NR: Into<String>,
         N: FnOnce() -> NR;
 
-    /// TODO: Document
+    /// Annotates a column within the current region.
     fn annotate_column<A, AR>(&mut self, annotation: A, column: Column<Any>)
     where
         A: FnOnce() -> AR,

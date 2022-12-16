@@ -67,21 +67,11 @@ pub(super) fn render_cell_layout(
     let widths: Vec<usize> = columns
         .iter()
         .map(|(col, _)| {
-            let size = match location {
-                FailureLocation::InRegion { region, offset: _ } => {
-                    if let Some(column_ann) = region.column_annotations {
-                        if let Some(ann) = column_ann.get(col) {
-                            ann.len()
-                        } else {
-                            col_width(column_type_and_idx(col).as_str().len())
-                        }
-                    } else {
-                        col_width(column_type_and_idx(col).as_str().len())
-                    }
-                }
-                FailureLocation::OutsideRegion { row: _ } => {
-                    col_width(column_type_and_idx(col).as_str().len())
-                }
+            let mut size = col_width(column_type_and_idx(col).as_str().len());
+            if let FailureLocation::InRegion { region, offset: _ } = location {
+                region
+                    .column_annotations
+                    .map(|column_ann| column_ann.get(col).map(|ann| size = ann.len()));
             };
             size
         })
