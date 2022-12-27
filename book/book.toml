@@ -12,3 +12,20 @@ title = "The halo2 Book"
 
 [preprocessor.katex]
 macros = "macros.txt"
+renderers = ["html"]
+
+[output.katex]
+
+[output.html]
+
+[output.html.print]
+# Disable page break
+page-break = false
+
+[output.pdf]
+display-header-footer = true
+header-template = "<span></span>"
+footer-template = "<p style='font-size:10px; margin-left: 48%'><span class='pageNumber'></span> / <span class='totalPages'></span></p>"
+
+[output.pdf-outline]
+like-wkhtmltopdf = false
