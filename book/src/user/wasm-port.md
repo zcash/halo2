@@ -49,7 +49,7 @@ Similar to the prover, we take in input and output a boolean true/false indicati
 
 ### Params
 
-Additionally, both the prover and verifier functions input `params_ser`, a serialised form of the public parameters of the polynomial commitment scheme. These are passed in as input (instead of being regenerated in prove/verify functions) as a performance optimisation since these are constant based only on the circuit's value of `K`. We can store these seperately on a static web server and pass them in as input to the WASM. To generate the binary serialised form of these (seperately outside the WASM functions), you can run something like:
+Additionally, both the prover and verifier functions input `params_ser`, a serialised form of the public parameters of the polynomial commitment scheme. These are passed in as input (instead of being regenerated in prove/verify functions) as a performance optimisation since these are constant based only on the circuit's value of `K`. We can store these separately on a static web server and pass them in as input to the WASM. To generate the binary serialised form of these (separately outside the WASM functions), you can run something like:
 
 ```rust,ignore
 fn write_params(K: u32) {
@@ -68,7 +68,7 @@ Ideally, in future, instead of serialising the parameters we would be able to se
 Typically, Rust code is compiled to WASM using the [`wasm-pack`](https://developer.mozilla.org/en-US/docs/WebAssembly/Rust_to_wasm) tool and is as simple as changing some build commands. In the case of halo2 prover/verifier functions however, we need to make some additional changes to the build process. In particular, there are two main changes:
 
 - **Parallelism**: halo2 uses the `rayon` library for parallelism, which is not directly supported by WASM. However, the Chrome team has an adapter to enable rayon-like parallelism using Web Workers in browser: [`wasm-bindgen-rayon`](https://github.com/GoogleChromeLabs/wasm-bindgen-rayon). We'll use this to enable parallelism in our WASM prover/verifier.
-- **WASM max memory**: The default memory limit for WASM with `wasm-bindgen` is set to 2GB, which is not enough to run the halo2 prover for large circuits (with `K` > 10 or so). We need to increase this limit to the maximum allowed by WASM (4GB!) to support larger circuits (upto `K = 15` or so).
+- **WASM max memory**: The default memory limit for WASM with `wasm-bindgen` is set to 2GB, which is not enough to run the halo2 prover for large circuits (with `K` > 10 or so). We need to increase this limit to the maximum allowed by WASM (4GB!) to support larger circuits (up to `K = 15` or so).
 
 Firstly, add all the dependencies particular to your WASM interfacing functions to your `Cargo.toml` file. You can restrict the dependencies to the WASM compilation by using the WASM target feature flag. In the case of Zordle, [this looks like](https://github.com/nalinbhardwaj/zordle/blob/main/circuits/Cargo.toml#L24):
 
