@@ -13,6 +13,8 @@
   - [Gadgets](user/gadgets.md)
   - [Tips and tricks](user/tips-and-tricks.md)
   - [WASM Guide](user/wasm-port.md)
+- [Developer Documentation](dev.md)
+  - [Feature development](dev/features.md)
 - [Design](design.md)
   - [Proving system](design/proving-system.md)
     - [Lookup argument](design/proving-system/lookup.md)

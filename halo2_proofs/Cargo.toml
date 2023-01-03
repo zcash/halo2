@@ -78,6 +78,15 @@ gadget-traces = ["backtrace"]
 sanity-checks = []
 batch = ["rand_core/getrandom"]
 
+# In-development features
+# See https://zcash.github.io/halo2/dev/features.html
+beta = [
+]
+nightly = [
+    "beta",
+]
+# Add flags for in-development features above this line.
+
 [lib]
 bench = false
 

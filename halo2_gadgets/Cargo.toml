@@ -57,6 +57,17 @@ test-dev-graph = [
 test-dependencies = ["proptest"]
 unstable = []
 
+# In-development features
+# See https://zcash.github.io/halo2/dev/features.html
+beta = [
+    "halo2_proofs/beta",
+]
+nightly = [
+    "beta",
+    "halo2_proofs/nightly",
+]
+# Add flags for in-development features above this line.
+
 [[bench]]
 name = "primitives"
 harness = false
