@@ -49,3 +49,4 @@ Two meta-flags are provided to enable all features at a particular stabilisation
 
 | Feature flag | Stage | Notes |
 | --- | --- | --- |
+| `unstable-sha256-gadget` | `nightly` | The SHA-256 gadget and chip.

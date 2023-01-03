@@ -28,7 +28,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --verbose --release --workspace --features batch,dev-graph,gadget-traces,test-dependencies,unstable ${{ matrix.extra_flags }}
+          args: --verbose --release --workspace --features batch,dev-graph,gadget-traces,test-dependencies ${{ matrix.extra_flags }}
 
   build:
     name: Build target ${{ matrix.target }}
@@ -51,7 +51,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --features batch,dev-graph,gadget-traces,nightly,unstable --target ${{ matrix.target }}
+          args: --features batch,dev-graph,gadget-traces,nightly --target ${{ matrix.target }}
 
   bitrot:
     name: Bitrot check
@@ -112,7 +112,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: tarpaulin
-          args: --features batch,dev-graph,gadget-traces,test-dependencies,nightly,unstable --timeout 600 --out Xml
+          args: --features batch,dev-graph,gadget-traces,test-dependencies,nightly --timeout 600 --out Xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3.1.1
 

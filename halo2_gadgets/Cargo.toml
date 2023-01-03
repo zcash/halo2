@@ -55,7 +55,6 @@ test-dev-graph = [
     "plotters/bitmap_encoder",
 ]
 test-dependencies = ["proptest"]
-unstable = []
 
 # In-development features
 # See https://zcash.github.io/halo2/dev/features.html
@@ -65,7 +64,9 @@ beta = [
 nightly = [
     "beta",
     "halo2_proofs/nightly",
+    "unstable-sha256-gadget",
 ]
+unstable-sha256-gadget = []
 # Add flags for in-development features above this line.
 
 [[bench]]
@@ -79,4 +80,4 @@ harness = false
 [[bench]]
 name = "sha256"
 harness = false
-required-features = ["unstable"]
+required-features = ["unstable-sha256-gadget"]
