@@ -4,11 +4,19 @@ on: [push, pull_request]
 
 jobs:
   test:
-    name: Test on ${{ matrix.os }}
+    name: Test on ${{ matrix.os }}${{ matrix.name_suffix }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        stage: [stable, beta, nightly]
         os: [ubuntu-latest, windows-latest, macOS-latest]
+        include:
+          - stage: beta
+            name_suffix: " with beta features"
+            extra_flags: --features beta
+          - stage: nightly
+            name_suffix: " with nightly features"
+            extra_flags: --features nightly
 
     steps:
       - uses: actions/checkout@v3
@@ -20,7 +28,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --verbose --release --workspace --features batch,dev-graph,gadget-traces,test-dependencies,unstable
+          args: --verbose --release --workspace --features batch,dev-graph,gadget-traces,test-dependencies ${{ matrix.extra_flags }}
 
   build:
     name: Build target ${{ matrix.target }}
@@ -43,7 +51,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --features batch,dev-graph,gadget-traces,unstable --target ${{ matrix.target }}
+          args: --features batch,dev-graph,gadget-traces,nightly --target ${{ matrix.target }}
 
   bitrot:
     name: Bitrot check
@@ -104,7 +112,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: tarpaulin
-          args: --features batch,dev-graph,gadget-traces,test-dependencies,unstable --timeout 600 --out Xml
+          args: --features batch,dev-graph,gadget-traces,test-dependencies,nightly --timeout 600 --out Xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3.1.1
 
