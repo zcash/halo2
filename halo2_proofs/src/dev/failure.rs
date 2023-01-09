@@ -398,18 +398,18 @@ fn render_lookup<F: FieldExt>(
 
     // Recover the fixed columns from the table expressions. We don't allow composite
     // expressions for the table side of lookups.
-    let table_columns = lookup.table_expressions.iter().map(|expr| {
+    let lookup_columns = lookup.table_expressions.iter().map(|expr| {
         expr.evaluate(
             &|_| panic!("no constants in table expressions"),
             &|_| panic!("no selectors in table expressions"),
             &|query| format!("F{}", query.column_index),
-            &|_| panic!("no advice columns in table expressions"),
-            &|_| panic!("no instance columns in table expressions"),
-            &|_| panic!("no challenges in table expressions"),
-            &|_| panic!("no negations in table expressions"),
-            &|_, _| panic!("no sums in table expressions"),
-            &|_, _| panic!("no products in table expressions"),
-            &|_, _| panic!("no scaling in table expressions"),
+            &|query| format! {"A{}", query.column_index},
+            &|query| format! {"I{}", query.column_index},
+            &|challenge| format! {"C{}", challenge.index()},
+            &|query| format! {"-{}", query},
+            &|a, b| format! {"{} + {}", a,b},
+            &|a, b| format! {"{} * {}", a,b},
+            &|a, b| format! {"{} * {:?}", a, b},
         )
     });
 
@@ -441,7 +441,7 @@ fn render_lookup<F: FieldExt>(
         eprint!("{}L{}", if i == 0 { "" } else { ", " }, i);
     }
     eprint!(") ∉ (");
-    for (i, column) in table_columns.enumerate() {
+    for (i, column) in lookup_columns.enumerate() {
         eprint!("{}{}", if i == 0 { "" } else { ", " }, column);
     }
     eprintln!(")");

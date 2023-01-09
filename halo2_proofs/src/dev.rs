@@ -1315,6 +1315,27 @@ impl<F: FieldExt> MockProver<F> {
             panic!("circuit was not satisfied");
         }
     }
+
+    /// Panics if the circuit being checked by this `MockProver` is not satisfied.
+    ///
+    /// Any verification failures will be pretty-printed to stderr before the function
+    /// panics.
+    ///
+    /// Internally, this function uses a parallel aproach in order to verify the `MockProver` contents.
+    ///
+    /// Apart from the stderr output, this method is equivalent to:
+    /// ```ignore
+    /// assert_eq!(prover.verify_par(), Ok(()));
+    /// ```
+    pub fn assert_satisfied_par(&self) {
+        if let Err(errs) = self.verify_par() {
+            for err in errs {
+                err.emit(self);
+                eprintln!();
+            }
+            panic!("circuit was not satisfied");
+        }
+    }
 }
 
 #[cfg(test)]
