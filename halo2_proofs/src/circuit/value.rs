@@ -612,17 +612,6 @@ impl<F: Field> Mul<F> for Value<&Assigned<F>> {
     }
 }
 
-impl<V, E> Value<Result<V, E>> {
-    /// Transposes an `Value` of a [`Result`] into a [`Result`] of an `Value`.
-    pub fn transpose(self) -> Result<Value<V>, E> {
-        match self.inner {
-            Some(Ok(x)) => Ok(Value::known(x)),
-            Some(Err(e)) => Err(e),
-            None => Ok(Value::unknown()),
-        }
-    }
-}
-
 impl<V> Value<V> {
     /// Returns the field element corresponding to this value.
     pub fn to_field<F: Field>(&self) -> Value<Assigned<F>>
