@@ -27,6 +27,12 @@ and this project adheres to Rust's notion of
 - `halo2_proofs::arithmetic`:
   - `best_fft, recursive_butterfly_arithmetic` now use the `FftGroup` trait
     instead of the (now-removed) `pasta_curves::arithmetic::Group` trait.
+- `halo2::proofs::circuit`
+  - `VirtualCells`
+    - `query_any` now panics if a non-`cur` `Rotation` is used with the
+      `Column<Fixed>` variant.
+    - `query_fixed` now no longer takes a `Rotation` argument,
+      and can only be used to query the current rotation.
 
 ## [0.2.0] - 2022-06-23
 ### Added

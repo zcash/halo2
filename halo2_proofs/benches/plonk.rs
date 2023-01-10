@@ -200,10 +200,10 @@ fn criterion_benchmark(c: &mut Criterion) {
                 let b = meta.query_advice(b, Rotation::cur());
                 let c = meta.query_advice(c, Rotation::cur());
 
-                let sa = meta.query_fixed(sa, Rotation::cur());
-                let sb = meta.query_fixed(sb, Rotation::cur());
-                let sc = meta.query_fixed(sc, Rotation::cur());
-                let sm = meta.query_fixed(sm, Rotation::cur());
+                let sa = meta.query_fixed(sa);
+                let sb = meta.query_fixed(sb);
+                let sc = meta.query_fixed(sc);
+                let sm = meta.query_fixed(sm);
 
                 vec![a.clone() * sa + b.clone() * sb + a * b * sm - (c * sc)]
             });
