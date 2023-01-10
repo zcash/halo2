@@ -8,8 +8,8 @@ use crate::{
 use ff::Field;
 use halo2curves::CurveAffine;
 
-pub trait Query<F>: Sized + Clone {
-    type Commitment: PartialEq + Copy;
+pub trait Query<F>: Sized + Clone + Send + Sync {
+    type Commitment: PartialEq + Copy + Send + Sync;
     type Eval: Clone + Default + Debug;
 
     fn get_point(&self) -> F;

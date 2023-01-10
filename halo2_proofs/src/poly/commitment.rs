@@ -99,7 +99,7 @@ pub trait ParamsProver<'params, C: CurveAffine>: Params<'params, C> {
 pub trait ParamsVerifier<'params, C: CurveAffine>: Params<'params, C> {}
 
 /// Multi scalar multiplication engine
-pub trait MSM<C: CurveAffine>: Clone + Debug {
+pub trait MSM<C: CurveAffine>: Clone + Debug + Send + Sync {
     /// Add arbitrary term (the scalar and the point)
     fn append_term(&mut self, scalar: C::Scalar, point: C::CurveExt);
 
