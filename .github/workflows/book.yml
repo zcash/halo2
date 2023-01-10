@@ -22,11 +22,11 @@ jobs:
 
       # mdBook for mdbook-pdf compatibility by fixing broken links in print.html
       # Waiting for https://github.com/rust-lang/mdBook/pull/1738 to get merged
-      - name: Clone patched mdbook source code
-        run: cd .. && git clone https://github.com/HollowMan6/mdBook
-
       - name: Install patched mdbook
-        run: cd ../mdBook && cargo install --path . --force
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: mdbook --git https://github.com/HollowMan6/mdBook.git --rev 62e01b34c23b957579c04ee1b24b57814ed8a4d5
 
       - name: Install mdbook-katex and mdbook-pdf
         uses: actions-rs/cargo@v1
