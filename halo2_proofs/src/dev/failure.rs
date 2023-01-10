@@ -291,7 +291,7 @@ impl<'a> Debug for VerifyFailure<'a> {
 
                 write!(f, "{:#?}", debug)
             }
-            _ => write!(f, "{:#?}", self),
+            _ => write!(f, "{}", self),
         }
     }
 }
