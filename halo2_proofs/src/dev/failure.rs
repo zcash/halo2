@@ -90,6 +90,9 @@ impl FailureLocation {
             .iter()
             .enumerate()
             .find(|(_, r)| {
+                if r.rows.is_none() {
+                    return false;
+                }
                 let (start, end) = r.rows.unwrap();
                 // We match the region if any input columns overlap, rather than all of
                 // them, because matching complex selector columns is hard. As long as
