@@ -11,7 +11,7 @@ use group::ff::Field;
 
 use crate::arithmetic::{CurveAffine, FieldExt};
 use crate::helpers::{
-    polynomial_slice_byte_length, read_polynomial_vec, write_polynomial_slice, CurveRead,
+    polynomial_slice_byte_length, read_polynomial_vec, write_polynomial_slice, SerdeCurveAffine,
     SerdePrimeField,
 };
 use crate::poly::{
@@ -19,6 +19,7 @@ use crate::poly::{
     PinnedEvaluationDomain, Polynomial,
 };
 use crate::transcript::{ChallengeScalar, EncodedChallenge, Transcript};
+use crate::SerdeFormat;
 
 mod assigned;
 mod circuit;
@@ -57,14 +58,26 @@ pub struct VerifyingKey<C: CurveAffine> {
     selectors: Vec<Vec<bool>>,
 }
 
-impl<C: CurveAffine> VerifyingKey<C> {
+impl<C: SerdeCurveAffine> VerifyingKey<C>
+where
+    C::Scalar: SerdePrimeField,
+{
     /// Writes a verifying key to a buffer.
-    pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
+    ///
+    /// Writes a curve element according to `format`:
+    /// - `Processed`: Writes a compressed curve element with coordinates in standard form.
+    /// Writes a field element in standard form, with endianness specified by the
+    /// `PrimeField` implementation.
+    /// - Otherwise: Writes an uncompressed curve element with coordinates in Montgomery form
+    /// Writes a field element into raw bytes in its internal Montgomery representation,
+    /// WITHOUT performing the expensive Montgomery reduction.
+    pub fn write<W: io::Write>(&self, writer: &mut W, format: SerdeFormat) -> io::Result<()> {
+        writer.write_all(&self.domain.k().to_be_bytes())?;
         writer.write_all(&(self.fixed_commitments.len() as u32).to_be_bytes())?;
         for commitment in &self.fixed_commitments {
-            writer.write_all(commitment.to_bytes().as_ref())?;
+            commitment.write(writer, format)?;
         }
-        self.permutation.write(writer)?;
+        self.permutation.write(writer, format)?;
 
         // write self.selectors
         for selector in &self.selectors {
@@ -77,23 +90,35 @@ impl<C: CurveAffine> VerifyingKey<C> {
     }
 
     /// Reads a verification key from a buffer.
-    pub fn read<'params, R: io::Read, ConcreteCircuit: Circuit<C::Scalar>>(
+    ///
+    /// Reads a curve element from the buffer and parses it according to the `format`:
+    /// - `Processed`: Reads a compressed curve element and decompresses it.
+    /// Reads a field element in standard form, with endianness specified by the
+    /// `PrimeField` implementation, and checks that the element is less than the modulus.
+    /// - `RawBytes`: Reads an uncompressed curve element with coordinates in Montgomery form.
+    /// Checks that field elements are less than modulus, and then checks that the point is on the curve.
+    /// - `RawBytesUnchecked`: Reads an uncompressed curve element with coordinates in Montgomery form;
+    /// does not perform any checks
+    pub fn read<R: io::Read, ConcreteCircuit: Circuit<C::Scalar>>(
         reader: &mut R,
-        params: &impl Params<'params, C>,
+        format: SerdeFormat,
     ) -> io::Result<Self> {
-        let (domain, cs, _) = keygen::create_domain::<C, ConcreteCircuit>(params.k());
-        let mut num_fixed_columns_be_bytes = [0u8; 4];
-        reader.read_exact(&mut num_fixed_columns_be_bytes)?;
-        let num_fixed_columns = u32::from_be_bytes(num_fixed_columns_be_bytes);
+        let mut k = [0u8; 4];
+        reader.read_exact(&mut k)?;
+        let k = u32::from_be_bytes(k);
+        let (domain, cs, _) = keygen::create_domain::<C, ConcreteCircuit>(k);
+        let mut num_fixed_columns = [0u8; 4];
+        reader.read_exact(&mut num_fixed_columns)?;
+        let num_fixed_columns = u32::from_be_bytes(num_fixed_columns);
 
         let fixed_commitments: Vec<_> = (0..num_fixed_columns)
-            .map(|_| C::read(reader))
+            .map(|_| C::read(reader, format))
             .collect::<Result<_, _>>()?;
 
-        let permutation = permutation::VerifyingKey::read(reader, &cs.permutation)?;
+        let permutation = permutation::VerifyingKey::read(reader, &cs.permutation, format)?;
 
         // read selectors
-        let selectors: Vec<Vec<bool>> = vec![vec![false; params.n() as usize]; cs.num_selectors]
+        let selectors: Vec<Vec<bool>> = vec![vec![false; 1 << k]; cs.num_selectors]
             .into_iter()
             .map(|mut selector| {
                 let mut selector_bytes = vec![0u8; (selector.len() + 7) / 8];
@@ -103,8 +128,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
                 }
                 Ok(selector)
             })
-            .collect::<io::Result<Vec<Vec<bool>>>>()
-            .unwrap();
+            .collect::<io::Result<_>>()?;
         let (cs, _) = cs.compress_selectors(selectors.clone());
 
         Ok(Self::from_parts(
@@ -116,23 +140,25 @@ impl<C: CurveAffine> VerifyingKey<C> {
         ))
     }
 
-    /// Writes a verifying key to a vector of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    /// Writes a verifying key to a vector of bytes using [`Self::write`].
+    pub fn to_bytes(&self, format: SerdeFormat) -> Vec<u8> {
         let mut bytes = Vec::<u8>::with_capacity(self.bytes_length());
-        Self::write(self, &mut bytes).expect("Writing to vector should not fail");
+        Self::write(self, &mut bytes, format).expect("Writing to vector should not fail");
         bytes
     }
 
-    /// Reads a verification key from a slice of bytes.
-    pub fn from_bytes<'params, ConcreteCircuit: Circuit<C::Scalar>>(
+    /// Reads a verification key from a slice of bytes using [`Self::read`].
+    pub fn from_bytes<ConcreteCircuit: Circuit<C::Scalar>>(
         mut bytes: &[u8],
-        params: &impl Params<'params, C>,
+        format: SerdeFormat,
     ) -> io::Result<Self> {
-        Self::read::<_, ConcreteCircuit>(&mut bytes, params)
+        Self::read::<_, ConcreteCircuit>(&mut bytes, format)
     }
+}
 
+impl<C: CurveAffine> VerifyingKey<C> {
     fn bytes_length(&self) -> usize {
-        4 + (self.fixed_commitments.len() * C::default().to_bytes().as_ref().len())
+        8 + (self.fixed_commitments.len() * C::default().to_bytes().as_ref().len())
             + self.permutation.bytes_length()
             + self.selectors.len()
                 * (self
@@ -251,34 +277,68 @@ impl<C: CurveAffine> ProvingKey<C> {
         &self.vk
     }
 
+    /// Gets the total number of bytes in the serialization of `self`
+    fn bytes_length(&self) -> usize {
+        let scalar_len = C::Scalar::default().to_repr().as_ref().len();
+        self.vk.bytes_length()
+            + 12
+            + scalar_len * (self.l0.len() + self.l_last.len() + self.l_active_row.len())
+            + polynomial_slice_byte_length(&self.fixed_values)
+            + polynomial_slice_byte_length(&self.fixed_polys)
+            + polynomial_slice_byte_length(&self.fixed_cosets)
+            + self.permutation.bytes_length()
+    }
+}
+
+impl<C: SerdeCurveAffine> ProvingKey<C>
+where
+    C::Scalar: SerdePrimeField,
+{
     /// Writes a proving key to a buffer.
+    ///
+    /// Writes a curve element according to `format`:
+    /// - `Processed`: Writes a compressed curve element with coordinates in standard form.
+    /// Writes a field element in standard form, with endianness specified by the
+    /// `PrimeField` implementation.
+    /// - Otherwise: Writes an uncompressed curve element with coordinates in Montgomery form
+    /// Writes a field element into raw bytes in its internal Montgomery representation,
+    /// WITHOUT performing the expensive Montgomery reduction.
     /// Does so by first writing the verifying key and then serializing the rest of the data (in the form of field polynomials)
-    pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
-        self.vk.write(writer)?;
-        self.l0.write(writer)?;
-        self.l_last.write(writer)?;
-        self.l_active_row.write(writer)?;
-        write_polynomial_slice(&self.fixed_values, writer)?;
-        write_polynomial_slice(&self.fixed_polys, writer)?;
-        write_polynomial_slice(&self.fixed_cosets, writer)?;
-        self.permutation.write(writer)?;
+    pub fn write<W: io::Write>(&self, writer: &mut W, format: SerdeFormat) -> io::Result<()> {
+        self.vk.write(writer, format)?;
+        self.l0.write(writer, format)?;
+        self.l_last.write(writer, format)?;
+        self.l_active_row.write(writer, format)?;
+        write_polynomial_slice(&self.fixed_values, writer, format)?;
+        write_polynomial_slice(&self.fixed_polys, writer, format)?;
+        write_polynomial_slice(&self.fixed_cosets, writer, format)?;
+        self.permutation.write(writer, format)?;
         Ok(())
     }
 
     /// Reads a proving key from a buffer.
     /// Does so by reading verification key first, and then deserializing the rest of the file into the remaining proving key data.
-    pub fn read<'params, R: io::Read, ConcreteCircuit: Circuit<C::Scalar>>(
+    ///
+    /// Reads a curve element from the buffer and parses it according to the `format`:
+    /// - `Processed`: Reads a compressed curve element and decompresses it.
+    /// Reads a field element in standard form, with endianness specified by the
+    /// `PrimeField` implementation, and checks that the element is less than the modulus.
+    /// - `RawBytes`: Reads an uncompressed curve element with coordinates in Montgomery form.
+    /// Checks that field elements are less than modulus, and then checks that the point is on the curve.
+    /// - `RawBytesUnchecked`: Reads an uncompressed curve element with coordinates in Montgomery form;
+    /// does not perform any checks
+    pub fn read<R: io::Read, ConcreteCircuit: Circuit<C::Scalar>>(
         reader: &mut R,
-        params: &impl Params<'params, C>,
+        format: SerdeFormat,
     ) -> io::Result<Self> {
-        let vk = VerifyingKey::<C>::read::<R, ConcreteCircuit>(reader, params)?;
-        let l0 = Polynomial::read(reader)?;
-        let l_last = Polynomial::read(reader)?;
-        let l_active_row = Polynomial::read(reader)?;
-        let fixed_values = read_polynomial_vec(reader)?;
-        let fixed_polys = read_polynomial_vec(reader)?;
-        let fixed_cosets = read_polynomial_vec(reader)?;
-        let permutation = permutation::ProvingKey::read(reader)?;
+        let vk = VerifyingKey::<C>::read::<R, ConcreteCircuit>(reader, format)?;
+        let l0 = Polynomial::read(reader, format)?;
+        let l_last = Polynomial::read(reader, format)?;
+        let l_active_row = Polynomial::read(reader, format)?;
+        let fixed_values = read_polynomial_vec(reader, format)?;
+        let fixed_polys = read_polynomial_vec(reader, format)?;
+        let fixed_cosets = read_polynomial_vec(reader, format)?;
+        let permutation = permutation::ProvingKey::read(reader, format)?;
         let ev = Evaluator::new(vk.cs());
         Ok(Self {
             vk,
@@ -293,31 +353,19 @@ impl<C: CurveAffine> ProvingKey<C> {
         })
     }
 
-    /// Writes a proving key to a vector of bytes.
-    pub fn to_bytes(&self) -> Vec<u8> {
+    /// Writes a proving key to a vector of bytes using [`Self::write`].
+    pub fn to_bytes(&self, format: SerdeFormat) -> Vec<u8> {
         let mut bytes = Vec::<u8>::with_capacity(self.bytes_length());
-        Self::write(self, &mut bytes).expect("Writing to vector should not fail");
+        Self::write(self, &mut bytes, format).expect("Writing to vector should not fail");
         bytes
     }
 
-    /// Reads a proving key from a slice of bytes.
-    pub fn from_bytes<'params, ConcreteCircuit: Circuit<C::Scalar>>(
+    /// Reads a proving key from a slice of bytes using [`Self::read`].
+    pub fn from_bytes<ConcreteCircuit: Circuit<C::Scalar>>(
         mut bytes: &[u8],
-        params: &impl Params<'params, C>,
+        format: SerdeFormat,
     ) -> io::Result<Self> {
-        Self::read::<_, ConcreteCircuit>(&mut bytes, params)
-    }
-
-    /// Gets the total number of bytes in the serialization of `self`
-    fn bytes_length(&self) -> usize {
-        let scalar_len = C::Scalar::default().to_repr().as_ref().len();
-        self.vk.bytes_length()
-            + 12
-            + scalar_len * (self.l0.len() + self.l_last.len() + self.l_active_row.len())
-            + polynomial_slice_byte_length(&self.fixed_values)
-            + polynomial_slice_byte_length(&self.fixed_polys)
-            + polynomial_slice_byte_length(&self.fixed_cosets)
-            + self.permutation.bytes_length()
+        Self::read::<_, ConcreteCircuit>(&mut bytes, format)
     }
 }
 

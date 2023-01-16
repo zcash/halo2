@@ -5,7 +5,7 @@ use crate::arithmetic::{
     eval_polynomial, evaluate_vanishing_polynomial, kate_division, lagrange_interpolate,
     parallelize, powers, CurveAffine, FieldExt,
 };
-
+use crate::helpers::SerdeCurveAffine;
 use crate::poly::commitment::{Blind, ParamsProver, Prover};
 use crate::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
 use crate::poly::query::{PolynomialPointer, ProverQuery};
@@ -104,6 +104,9 @@ impl<'a, E: Engine> ProverSHPLONK<'a, E> {
 /// Create a multi-opening proof
 impl<'params, E: Engine + Debug> Prover<'params, KZGCommitmentScheme<E>>
     for ProverSHPLONK<'params, E>
+where
+    E::G1Affine: SerdeCurveAffine,
+    E::G2Affine: SerdeCurveAffine,
 {
     const QUERY_INSTANCE: bool = false;
 

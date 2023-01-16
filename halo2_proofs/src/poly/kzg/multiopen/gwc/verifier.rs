@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 
 use super::{construct_intermediate_sets, ChallengeU, ChallengeV};
 use crate::arithmetic::{eval_polynomial, lagrange_interpolate, powers, CurveAffine, FieldExt};
-
+use crate::helpers::SerdeCurveAffine;
 use crate::poly::commitment::Verifier;
 use crate::poly::commitment::MSM;
 use crate::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
@@ -30,8 +30,11 @@ pub struct VerifierGWC<'params, E: Engine> {
     params: &'params ParamsKZG<E>,
 }
 
-impl<'params, E: MultiMillerLoop + Debug> Verifier<'params, KZGCommitmentScheme<E>>
-    for VerifierGWC<'params, E>
+impl<'params, E> Verifier<'params, KZGCommitmentScheme<E>> for VerifierGWC<'params, E>
+where
+    E: MultiMillerLoop + Debug,
+    E::G1Affine: SerdeCurveAffine,
+    E::G2Affine: SerdeCurveAffine,
 {
     type Guard = GuardKZG<'params, E>;
     type MSMAccumulator = DualMSM<'params, E>;

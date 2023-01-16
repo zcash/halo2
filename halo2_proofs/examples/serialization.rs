@@ -21,6 +21,7 @@ use halo2_proofs::{
     transcript::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
+    SerdeFormat,
 };
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
 use rand_core::OsRng;
@@ -134,12 +135,13 @@ fn main() {
 
     let f = File::create("serialization-test.pk").unwrap();
     let mut writer = BufWriter::new(f);
-    pk.write(&mut writer).unwrap();
+    pk.write(&mut writer, SerdeFormat::RawBytes).unwrap();
     writer.flush().unwrap();
 
     let f = File::open("serialization-test.pk").unwrap();
     let mut reader = BufReader::new(f);
-    let pk = ProvingKey::<G1Affine>::read::<_, StandardPlonk>(&mut reader, &params).unwrap();
+    let pk = ProvingKey::<G1Affine>::read::<_, StandardPlonk>(&mut reader, SerdeFormat::RawBytes)
+        .unwrap();
 
     std::fs::remove_file("serialization-test.pk").unwrap();
 

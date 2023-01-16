@@ -1,6 +1,6 @@
 use super::{construct_intermediate_sets, ChallengeV, Query};
 use crate::arithmetic::{eval_polynomial, kate_division, powers, CurveAffine, FieldExt};
-
+use crate::helpers::SerdeCurveAffine;
 use crate::poly::commitment::ParamsProver;
 use crate::poly::commitment::Prover;
 use crate::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
@@ -27,7 +27,11 @@ pub struct ProverGWC<'params, E: Engine> {
 }
 
 /// Create a multi-opening proof
-impl<'params, E: Engine + Debug> Prover<'params, KZGCommitmentScheme<E>> for ProverGWC<'params, E> {
+impl<'params, E: Engine + Debug> Prover<'params, KZGCommitmentScheme<E>> for ProverGWC<'params, E>
+where
+    E::G1Affine: SerdeCurveAffine,
+    E::G2Affine: SerdeCurveAffine,
+{
     const QUERY_INSTANCE: bool = false;
 
     fn new(params: &'params ParamsKZG<E>) -> Self {
