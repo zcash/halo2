@@ -11,12 +11,17 @@ use crate::{
     },
 };
 
+/// Struct that accumulates all the necessary data in order to construct the permutation argument.
 #[derive(Debug)]
-pub(crate) struct Assembly {
-    columns: Vec<Column<Any>>,
-    pub(crate) mapping: Vec<Vec<(usize, usize)>>,
-    aux: Vec<Vec<(usize, usize)>>,
-    sizes: Vec<Vec<usize>>,
+pub struct Assembly {
+    /// Columns that participate on the copy permutation argument.
+    pub columns: Vec<Column<Any>>,
+    /// Mapping of the actual copies done.
+    pub mapping: Vec<Vec<(usize, usize)>>,
+    /// Some aux data used to swap positions directly when sorting.
+    pub aux: Vec<Vec<(usize, usize)>>,
+    /// More aux data
+    pub sizes: Vec<Vec<usize>>,
 }
 
 impl Assembly {

@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 use blake2b_simd::blake2b;
 use ff::Field;
 
+use crate::plonk::permutation::keygen::Assembly;
 use crate::{
     arithmetic::{FieldExt, Group},
     circuit,
@@ -82,12 +83,12 @@ impl Region {
 
 /// The value of a particular cell within the circuit.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum CellValue<F: Group + Field> {
-    // An unassigned cell.
+pub enum CellValue<F: Group + Field> {
+    /// An unassigned cell.
     Unassigned,
-    // A cell that has been assigned a value.
+    /// A cell that has been assigned a value.
     Assigned(F),
-    // A unique poisoned cell.
+    /// A unique poisoned cell.
     Poison(usize),
 }
 
@@ -1335,6 +1336,16 @@ impl<F: FieldExt> MockProver<F> {
             }
             panic!("circuit was not satisfied");
         }
+    }
+
+    /// Returns the list of Fixed Columns used within a MockProver instance and the associated values contained on each Cell.
+    pub fn fixed(&self) -> &Vec<Vec<CellValue<F>>> {
+        &self.fixed
+    }
+
+    /// Returns the permutation argument (`Assembly`) used within a MockProver instance.
+    pub fn permutation(&self) -> &Assembly {
+        &self.permutation
     }
 }
 
