@@ -1,12 +1,14 @@
 use core::cmp::max;
 use core::ops::{Add, Mul};
 use ff::Field;
+use std::collections::HashMap;
 use std::{
     convert::TryFrom,
     ops::{Neg, Sub},
 };
 
 use super::{lookup, permutation, Assigned, Error};
+use crate::dev::metadata;
 use crate::{
     circuit::{Layouter, Region, Value},
     poly::Rotation,
@@ -523,6 +525,14 @@ pub trait Assignment<F: Field> {
     where
         NR: Into<String>,
         N: FnOnce() -> NR;
+
+    /// Allows the developer to include an annotation for an specific column within a `Region`.
+    ///
+    /// This is usually useful for debugging circuit failures.
+    fn annotate_column<A, AR>(&mut self, annotation: A, column: Column<Any>)
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>;
 
     /// Exits the current region.
     ///
@@ -1373,6 +1383,9 @@ pub struct ConstraintSystem<F: Field> {
     // input expressions and a sequence of table expressions involved in the lookup.
     pub(crate) lookups: Vec<lookup::Argument<F>>,
 
+    // List of indexes of Fixed columns which are associated to a circuit-general Column tied to their annotation.
+    pub(crate) general_column_annotations: HashMap<metadata::Column, String>,
+
     // Vector of fixed columns, which can be used to store constant values
     // that are copied into advice columns.
     pub(crate) constants: Vec<Column<Fixed>>,
@@ -1456,6 +1469,7 @@ impl<F: Field> Default for ConstraintSystem<F> {
             instance_queries: Vec::new(),
             permutation: permutation::Argument::new(),
             lookups: Vec::new(),
+            general_column_annotations: HashMap::new(),
             constants: vec![],
             minimum_degree: None,
         }
@@ -1838,6 +1852,34 @@ impl<F: Field> ConstraintSystem<F> {
         TableColumn {
             inner: self.fixed_column(),
         }
+    }
+
+    /// Annotate a Lookup column.
+    pub fn annotate_lookup_column<A, AR>(&mut self, column: TableColumn, annotation: A)
+    where
+        A: Fn() -> AR,
+        AR: Into<String>,
+    {
+        // We don't care if the table has already an annotation. If it's the case we keep the new one.
+        self.general_column_annotations.insert(
+            metadata::Column::from((Any::Fixed, column.inner().index)),
+            annotation().into(),
+        );
+    }
+
+    /// Annotate an Instance column.
+    pub fn annotate_lookup_any_column<A, AR, T>(&mut self, column: T, annotation: A)
+    where
+        A: Fn() -> AR,
+        AR: Into<String>,
+        T: Into<Column<Any>>,
+    {
+        let col_any = column.into();
+        // We don't care if the table has already an annotation. If it's the case we keep the new one.
+        self.general_column_annotations.insert(
+            metadata::Column::from((col_any.column_type, col_any.index)),
+            annotation().into(),
+        );
     }
 
     /// Allocate a new fixed column

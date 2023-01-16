@@ -279,6 +279,14 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F>
         )
     }
 
+    fn name_column<'v>(
+        &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        column: Column<Any>,
+    ) {
+        self.layouter.cs.annotate_column(annotation, column);
+    }
+
     fn assign_advice<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
