@@ -177,10 +177,9 @@ fn bench_poseidon<S, const WIDTH: usize, const RATE: usize, const L: usize>(
         _spec: PhantomData,
     };
 
-    // Create a proof
-    let mut transcript = Blake2bWrite::<_, EqAffine, Challenge255<_>>::init(vec![]);
-
     c.bench_function(&prover_name, |b| {
+        // Create a proof
+        let mut transcript = Blake2bWrite::<_, EqAffine, Challenge255<_>>::init(vec![]);
         b.iter(|| {
             create_proof::<IPACommitmentScheme<_>, ProverIPA<_>, _, _, _, _>(
                 &params,
@@ -194,6 +193,17 @@ fn bench_poseidon<S, const WIDTH: usize, const RATE: usize, const L: usize>(
         })
     });
 
+    // Create a proof
+    let mut transcript = Blake2bWrite::<_, EqAffine, Challenge255<_>>::init(vec![]);
+    create_proof::<IPACommitmentScheme<_>, ProverIPA<_>, _, _, _, _>(
+        &params,
+        &pk,
+        &[circuit],
+        &[&[&[output]]],
+        &mut rng,
+        &mut transcript,
+    )
+    .expect("proof generation should not fail");
     let proof = transcript.finalize();
 
     c.bench_function(&verifier_name, |b| {
