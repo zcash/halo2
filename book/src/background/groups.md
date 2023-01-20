@@ -12,7 +12,7 @@ base $G$, i.e. finding $x$ such that $P = [x] G$, is hard in general.
 ## Pedersen commitment
 The Pedersen commitment [[P99]] is a way to commit to a secret message in a verifiable
 way. It uses two random public generators $G, H \in \mathbb{G},$ where $\mathbb{G}$ is a
-cryptographic group of order $p$. A random secret $r$ is chosen in $\mathbb{Z}_q$, and the
+cryptographic group of order $q$. A random secret $r$ is chosen in $\mathbb{Z}_q$, and the
 message to commit to $m$ is from any subset of $\mathbb{Z}_q$. The commitment is 
 
 $$c = \text{Commit}(m,r)=[m]G + [r]H.$$ 
