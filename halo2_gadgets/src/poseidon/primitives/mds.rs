@@ -81,8 +81,13 @@ pub(super) fn generate_mds<F: FromUniformBytes<64> + Ord, const T: usize>(
             if m == j {
                 acc
             } else {
+                // We hard-code the type, to avoid spurious "cannot infer type" rustc errors.
+                let denominator: F = x_j - x_m;
+
                 // We can invert freely; by construction, the elements of xs are distinct.
-                acc * (x - x_m) * (x_j - x_m).invert().unwrap()
+                let denominator_inverted: F = denominator.invert().unwrap();
+
+                acc * (x - x_m) * denominator_inverted
             }
         })
     };
