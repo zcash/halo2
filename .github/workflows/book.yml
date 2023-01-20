@@ -50,14 +50,14 @@ jobs:
 
       - name: Move latest rustdocs into book
         run: |
-          mkdir -p ./book/book/rustdoc
-          mv ./target/doc ./book/book/rustdoc/latest
+          mkdir -p ./book/book/html/rustdoc
+          mv ./target/doc ./book/book/html/rustdoc/latest
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./book/book
+          publish_dir: ./book/book/html
 
       - name: Upload PDF File to Artifact
         uses: actions/upload-artifact@v3
