@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_gadgets/src/poseidon/primitives.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>primitives.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-cd23e1e4557aa9dd.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-a21928845c7a186a.css"><link rel="stylesheet" disabled href="../../../static.files/dark-90fc67ff25a42f29.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-d75a8bbde915b8ed.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-458bffc4c06ccf37.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_gadgets/src/poseidon/primitives.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>primitives.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-52c5db6f6f352e54.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,7 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../halo2_gadgets/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -410,6 +410,14 @@
 <a href="#395" id="395">395</a>
 <a href="#396" id="396">396</a>
 <a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
 </pre><pre class="rust"><code><span class="doccomment">//! The Poseidon algebraic hash function.
 
 </span><span class="kw">use </span>std::convert::TryInto;
@@ -417,7 +425,7 @@
 <span class="kw">use </span>std::iter;
 <span class="kw">use </span>std::marker::PhantomData;
 
-<span class="kw">use </span>halo2_proofs::arithmetic::FieldExt;
+<span class="kw">use </span>group::ff::{Field, FromUniformBytes, PrimeField};
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>fp;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>fq;
@@ -439,10 +447,10 @@
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>SpongeRate&lt;F, <span class="kw">const </span>RATE: usize&gt; = [<span class="prelude-ty">Option</span>&lt;F&gt;; RATE];
 
 <span class="doccomment">/// The type used to hold the MDS matrix and its inverse.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>Mds&lt;F, <span class="kw">const </span>T: usize&gt; = [[F; T]; T];
+</span><span class="kw">pub type </span>Mds&lt;F, <span class="kw">const </span>T: usize&gt; = [[F; T]; T];
 
 <span class="doccomment">/// A specification for a Poseidon permutation.
-</span><span class="kw">pub trait </span>Spec&lt;F: FieldExt, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;: fmt::Debug {
+</span><span class="kw">pub trait </span>Spec&lt;F: Field, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;: fmt::Debug {
     <span class="doccomment">/// The number of full rounds for this specification.
     ///
     /// This must be an even number.
@@ -462,33 +470,41 @@
     </span><span class="kw">fn </span>secure_mds() -&gt; usize;
 
     <span class="doccomment">/// Generates `(round_constants, mds, mds^-1)` corresponding to this specification.
-    </span><span class="kw">fn </span>constants() -&gt; (Vec&lt;[F; T]&gt;, Mds&lt;F, T&gt;, Mds&lt;F, T&gt;) {
-        <span class="kw">let </span>r_f = <span class="self">Self</span>::full_rounds();
-        <span class="kw">let </span>r_p = <span class="self">Self</span>::partial_rounds();
+    </span><span class="kw">fn </span>constants() -&gt; (Vec&lt;[F; T]&gt;, Mds&lt;F, T&gt;, Mds&lt;F, T&gt;);
+}
 
-        <span class="kw">let </span><span class="kw-2">mut </span>grain = grain::Grain::new(SboxType::Pow, T <span class="kw">as </span>u16, r_f <span class="kw">as </span>u16, r_p <span class="kw">as </span>u16);
+<span class="doccomment">/// Generates `(round_constants, mds, mds^-1)` corresponding to this specification.
+</span><span class="kw">pub fn </span>generate_constants&lt;
+    F: FromUniformBytes&lt;<span class="number">64</span>&gt; + Ord,
+    S: Spec&lt;F, T, RATE&gt;,
+    <span class="kw">const </span>T: usize,
+    <span class="kw">const </span>RATE: usize,
+&gt;() -&gt; (Vec&lt;[F; T]&gt;, Mds&lt;F, T&gt;, Mds&lt;F, T&gt;) {
+    <span class="kw">let </span>r_f = S::full_rounds();
+    <span class="kw">let </span>r_p = S::partial_rounds();
 
-        <span class="kw">let </span>round_constants = (<span class="number">0</span>..(r_f + r_p))
-            .map(|<span class="kw">_</span>| {
-                <span class="kw">let </span><span class="kw-2">mut </span>rc_row = [F::zero(); T];
-                <span class="kw">for </span>(rc, value) <span class="kw">in </span>rc_row
-                    .iter_mut()
-                    .zip((<span class="number">0</span>..T).map(|<span class="kw">_</span>| grain.next_field_element()))
-                {
-                    <span class="kw-2">*</span>rc = value;
-                }
-                rc_row
-            })
-            .collect();
+    <span class="kw">let </span><span class="kw-2">mut </span>grain = grain::Grain::new(SboxType::Pow, T <span class="kw">as </span>u16, r_f <span class="kw">as </span>u16, r_p <span class="kw">as </span>u16);
 
-        <span class="kw">let </span>(mds, mds_inv) = mds::generate_mds::&lt;F, T&gt;(<span class="kw-2">&amp;mut </span>grain, <span class="self">Self</span>::secure_mds());
+    <span class="kw">let </span>round_constants = (<span class="number">0</span>..(r_f + r_p))
+        .map(|<span class="kw">_</span>| {
+            <span class="kw">let </span><span class="kw-2">mut </span>rc_row = [F::ZERO; T];
+            <span class="kw">for </span>(rc, value) <span class="kw">in </span>rc_row
+                .iter_mut()
+                .zip((<span class="number">0</span>..T).map(|<span class="kw">_</span>| grain.next_field_element()))
+            {
+                <span class="kw-2">*</span>rc = value;
+            }
+            rc_row
+        })
+        .collect();
 
-        (round_constants, mds, mds_inv)
-    }
+    <span class="kw">let </span>(mds, mds_inv) = mds::generate_mds::&lt;F, T&gt;(<span class="kw-2">&amp;mut </span>grain, S::secure_mds());
+
+    (round_constants, mds, mds_inv)
 }
 
 <span class="doccomment">/// Runs the Poseidon permutation on the given state.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>permute&lt;F: FieldExt, S: Spec&lt;F, T, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;(
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>permute&lt;F: Field, S: Spec&lt;F, T, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;(
     state: <span class="kw-2">&amp;mut </span>State&lt;F, T&gt;,
     mds: <span class="kw-2">&amp;</span>Mds&lt;F, T&gt;,
     round_constants: <span class="kw-2">&amp;</span>[[F; T]],
@@ -497,7 +513,7 @@
     <span class="kw">let </span>r_p = S::partial_rounds();
 
     <span class="kw">let </span>apply_mds = |state: <span class="kw-2">&amp;mut </span>State&lt;F, T&gt;| {
-        <span class="kw">let </span><span class="kw-2">mut </span>new_state = [F::zero(); T];
+        <span class="kw">let </span><span class="kw-2">mut </span>new_state = [F::ZERO; T];
         <span class="comment">// Matrix multiplication
         </span><span class="attr">#[allow(clippy::needless_range_loop)]
         </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..T {
@@ -535,7 +551,7 @@
         });
 }
 
-<span class="kw">fn </span>poseidon_sponge&lt;F: FieldExt, S: Spec&lt;F, T, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;(
+<span class="kw">fn </span>poseidon_sponge&lt;F: Field, S: Spec&lt;F, T, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;(
     state: <span class="kw-2">&amp;mut </span>State&lt;F, T&gt;,
     input: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Absorbing&lt;F, RATE&gt;&gt;,
     mds_matrix: <span class="kw-2">&amp;</span>Mds&lt;F, T&gt;,
@@ -592,7 +608,7 @@
 
 <span class="doccomment">/// A Poseidon sponge.
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Sponge&lt;
-    F: FieldExt,
+    F: Field,
     S: Spec&lt;F, T, RATE&gt;,
     M: SpongeMode,
     <span class="kw">const </span>T: usize,
@@ -605,7 +621,7 @@
     _marker: PhantomData&lt;S&gt;,
 }
 
-<span class="kw">impl</span>&lt;F: FieldExt, S: Spec&lt;F, T, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;
+<span class="kw">impl</span>&lt;F: Field, S: Spec&lt;F, T, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;
     Sponge&lt;F, S, Absorbing&lt;F, RATE&gt;, T, RATE&gt;
 {
     <span class="doccomment">/// Constructs a new sponge for the given Poseidon specification.
@@ -613,7 +629,7 @@
         <span class="kw">let </span>(round_constants, mds_matrix, <span class="kw">_</span>) = S::constants();
 
         <span class="kw">let </span>mode = Absorbing([<span class="prelude-val">None</span>; RATE]);
-        <span class="kw">let </span><span class="kw-2">mut </span>state = [F::zero(); T];
+        <span class="kw">let </span><span class="kw-2">mut </span>state = [F::ZERO; T];
         state[RATE] = initial_capacity_element;
 
         Sponge {
@@ -663,7 +679,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;F: FieldExt, S: Spec&lt;F, T, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;
+<span class="kw">impl</span>&lt;F: Field, S: Spec&lt;F, T, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;
     Sponge&lt;F, S, Squeezing&lt;F, RATE&gt;, T, RATE&gt;
 {
     <span class="doccomment">/// Squeezes an element from the sponge.
@@ -687,7 +703,7 @@
 }
 
 <span class="doccomment">/// A domain in which a Poseidon hash function is being used.
-</span><span class="kw">pub trait </span>Domain&lt;F: FieldExt, <span class="kw">const </span>RATE: usize&gt; {
+</span><span class="kw">pub trait </span>Domain&lt;F: Field, <span class="kw">const </span>RATE: usize&gt; {
     <span class="doccomment">/// Iterator that outputs padding field elements.
     </span><span class="kw">type </span>Padding: IntoIterator&lt;Item = F&gt;;
 
@@ -707,7 +723,7 @@
 </span><span class="attr">#[derive(Clone, Copy, Debug)]
 </span><span class="kw">pub struct </span>ConstantLength&lt;<span class="kw">const </span>L: usize&gt;;
 
-<span class="kw">impl</span>&lt;F: FieldExt, <span class="kw">const </span>RATE: usize, <span class="kw">const </span>L: usize&gt; Domain&lt;F, RATE&gt; <span class="kw">for </span>ConstantLength&lt;L&gt; {
+<span class="kw">impl</span>&lt;F: PrimeField, <span class="kw">const </span>RATE: usize, <span class="kw">const </span>L: usize&gt; Domain&lt;F, RATE&gt; <span class="kw">for </span>ConstantLength&lt;L&gt; {
     <span class="kw">type </span>Padding = iter::Take&lt;iter::Repeat&lt;F&gt;&gt;;
 
     <span class="kw">fn </span>name() -&gt; String {
@@ -727,13 +743,13 @@
         // Poseidon authors encode the constant length into the capacity element, ensuring
         // that inputs of different lengths do not share the same permutation.
         </span><span class="kw">let </span>k = (L + RATE - <span class="number">1</span>) / RATE;
-        iter::repeat(F::zero()).take(k * RATE - L)
+        iter::repeat(F::ZERO).take(k * RATE - L)
     }
 }
 
 <span class="doccomment">/// A Poseidon hash function, built around a sponge.
 </span><span class="kw">pub struct </span>Hash&lt;
-    F: FieldExt,
+    F: Field,
     S: Spec&lt;F, T, RATE&gt;,
     D: Domain&lt;F, RATE&gt;,
     <span class="kw">const </span>T: usize,
@@ -743,7 +759,7 @@
     _domain: PhantomData&lt;D&gt;,
 }
 
-<span class="kw">impl</span>&lt;F: FieldExt, S: Spec&lt;F, T, RATE&gt;, D: Domain&lt;F, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;
+<span class="kw">impl</span>&lt;F: Field, S: Spec&lt;F, T, RATE&gt;, D: Domain&lt;F, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;
     fmt::Debug <span class="kw">for </span>Hash&lt;F, S, D, T, RATE&gt;
 {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
@@ -757,7 +773,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;F: FieldExt, S: Spec&lt;F, T, RATE&gt;, D: Domain&lt;F, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;
+<span class="kw">impl</span>&lt;F: Field, S: Spec&lt;F, T, RATE&gt;, D: Domain&lt;F, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize&gt;
     Hash&lt;F, S, D, T, RATE&gt;
 {
     <span class="doccomment">/// Initializes a new hasher.
@@ -769,7 +785,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;F: FieldExt, S: Spec&lt;F, T, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize, <span class="kw">const </span>L: usize&gt;
+<span class="kw">impl</span>&lt;F: PrimeField, S: Spec&lt;F, T, RATE&gt;, <span class="kw">const </span>T: usize, <span class="kw">const </span>RATE: usize, <span class="kw">const </span>L: usize&gt;
     Hash&lt;F, S, ConstantLength&lt;L&gt;, T, RATE&gt;
 {
     <span class="doccomment">/// Hashes the given input.
@@ -786,7 +802,7 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
-    <span class="kw">use </span>halo2_proofs::arithmetic::FieldExt;
+    <span class="kw">use </span>group::ff::PrimeField;
     <span class="kw">use </span>pasta_curves::pallas;
 
     <span class="kw">use super</span>::{permute, ConstantLength, Hash, P128Pow5T3 <span class="kw">as </span>OrchardNullifier, Spec};
@@ -808,4 +824,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_gadgets" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (70f8737b2 2022-11-23)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7e1cf5cc683233f7.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_gadgets" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (4c83bd03a 2023-01-19)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-ab1d4ae2ec52020e.css" ></div></body></html>

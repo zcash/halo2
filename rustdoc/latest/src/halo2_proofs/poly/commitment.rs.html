@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/poly/commitment.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>commitment.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-cd23e1e4557aa9dd.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-a21928845c7a186a.css"><link rel="stylesheet" disabled href="../../../static.files/dark-90fc67ff25a42f29.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-d75a8bbde915b8ed.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-458bffc4c06ccf37.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/poly/commitment.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>commitment.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-52c5db6f6f352e54.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,7 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -387,21 +387,17 @@
 <a href="#372" id="372">372</a>
 <a href="#373" id="373">373</a>
 <a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
 </pre><pre class="rust"><code><span class="doccomment">//! This module contains an implementation of the polynomial commitment scheme
 //! described in the [Halo][halo] paper.
 //!
 //! [halo]: https://eprint.iacr.org/2019/1021
 
 </span><span class="kw">use super</span>::{Coeff, LagrangeCoeff, Polynomial};
-<span class="kw">use </span><span class="kw">crate</span>::arithmetic::{
-    best_fft, best_multiexp, parallelize, CurveAffine, CurveExt, FieldExt, Group,
-};
+<span class="kw">use </span><span class="kw">crate</span>::arithmetic::{best_fft, best_multiexp, parallelize, CurveAffine, CurveExt};
 <span class="kw">use </span><span class="kw">crate</span>::helpers::CurveRead;
 
 <span class="kw">use </span>ff::{Field, PrimeField};
-<span class="kw">use </span>group::{prime::PrimeCurveAffine, Curve, Group <span class="kw">as _</span>};
+<span class="kw">use </span>group::{prime::PrimeCurveAffine, Curve, Group};
 <span class="kw">use </span>std::ops::{Add, AddAssign, Mul, MulAssign};
 
 <span class="kw">mod </span>msm;
@@ -473,7 +469,7 @@
         }
         <span class="kw">let </span><span class="kw-2">mut </span>g_lagrange_projective = g_projective;
         best_fft(<span class="kw-2">&amp;mut </span>g_lagrange_projective, alpha_inv, k);
-        <span class="kw">let </span>minv = C::Scalar::TWO_INV.pow_vartime(<span class="kw-2">&amp;</span>[k <span class="kw">as </span>u64, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
+        <span class="kw">let </span>minv = C::Scalar::TWO_INV.pow_vartime([k <span class="kw">as </span>u64, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
         parallelize(<span class="kw-2">&amp;mut </span>g_lagrange_projective, |g, <span class="kw">_</span>| {
             <span class="kw">for </span>g <span class="kw">in </span>g.iter_mut() {
                 <span class="kw-2">*</span>g <span class="kw-2">*</span>= minv;
@@ -597,13 +593,13 @@
 </span><span class="attr">#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 </span><span class="kw">pub struct </span>Blind&lt;F&gt;(<span class="kw">pub </span>F);
 
-<span class="kw">impl</span>&lt;F: FieldExt&gt; Default <span class="kw">for </span>Blind&lt;F&gt; {
+<span class="kw">impl</span>&lt;F: Field&gt; Default <span class="kw">for </span>Blind&lt;F&gt; {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        Blind(F::one())
+        Blind(F::ONE)
     }
 }
 
-<span class="kw">impl</span>&lt;F: FieldExt&gt; Add <span class="kw">for </span>Blind&lt;F&gt; {
+<span class="kw">impl</span>&lt;F: Field&gt; Add <span class="kw">for </span>Blind&lt;F&gt; {
     <span class="kw">type </span>Output = <span class="self">Self</span>;
 
     <span class="kw">fn </span>add(<span class="self">self</span>, rhs: Blind&lt;F&gt;) -&gt; <span class="self">Self </span>{
@@ -611,7 +607,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;F: FieldExt&gt; Mul <span class="kw">for </span>Blind&lt;F&gt; {
+<span class="kw">impl</span>&lt;F: Field&gt; Mul <span class="kw">for </span>Blind&lt;F&gt; {
     <span class="kw">type </span>Output = <span class="self">Self</span>;
 
     <span class="kw">fn </span>mul(<span class="self">self</span>, rhs: Blind&lt;F&gt;) -&gt; <span class="self">Self </span>{
@@ -619,25 +615,25 @@
     }
 }
 
-<span class="kw">impl</span>&lt;F: FieldExt&gt; AddAssign <span class="kw">for </span>Blind&lt;F&gt; {
+<span class="kw">impl</span>&lt;F: Field&gt; AddAssign <span class="kw">for </span>Blind&lt;F&gt; {
     <span class="kw">fn </span>add_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: Blind&lt;F&gt;) {
         <span class="self">self</span>.<span class="number">0 </span>+= rhs.<span class="number">0</span>;
     }
 }
 
-<span class="kw">impl</span>&lt;F: FieldExt&gt; MulAssign <span class="kw">for </span>Blind&lt;F&gt; {
+<span class="kw">impl</span>&lt;F: Field&gt; MulAssign <span class="kw">for </span>Blind&lt;F&gt; {
     <span class="kw">fn </span>mul_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: Blind&lt;F&gt;) {
         <span class="self">self</span>.<span class="number">0 </span><span class="kw-2">*</span>= rhs.<span class="number">0</span>;
     }
 }
 
-<span class="kw">impl</span>&lt;F: FieldExt&gt; AddAssign&lt;F&gt; <span class="kw">for </span>Blind&lt;F&gt; {
+<span class="kw">impl</span>&lt;F: Field&gt; AddAssign&lt;F&gt; <span class="kw">for </span>Blind&lt;F&gt; {
     <span class="kw">fn </span>add_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: F) {
         <span class="self">self</span>.<span class="number">0 </span>+= rhs;
     }
 }
 
-<span class="kw">impl</span>&lt;F: FieldExt&gt; MulAssign&lt;F&gt; <span class="kw">for </span>Blind&lt;F&gt; {
+<span class="kw">impl</span>&lt;F: Field&gt; MulAssign&lt;F&gt; <span class="kw">for </span>Blind&lt;F&gt; {
     <span class="kw">fn </span>mul_assign(<span class="kw-2">&amp;mut </span><span class="self">self</span>, rhs: F) {
         <span class="self">self</span>.<span class="number">0 </span><span class="kw-2">*</span>= rhs;
     }
@@ -748,7 +744,7 @@
     <span class="macro">assert_eq!</span>(v, v_prime);
 
     <span class="kw">let </span><span class="kw-2">mut </span>commitment_msm = params.empty_msm();
-    commitment_msm.append_term(Field::one(), p);
+    commitment_msm.append_term(Field::ONE, p);
     <span class="kw">let </span>guard = verify_proof(<span class="kw-2">&amp;</span>params, commitment_msm, <span class="kw-2">&amp;mut </span>transcript, <span class="kw-2">*</span>x, v).unwrap();
     <span class="kw">let </span>ch_verifier = transcript.squeeze_challenge();
     <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>ch_prover, <span class="kw-2">*</span>ch_verifier);
@@ -766,4 +762,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (70f8737b2 2022-11-23)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7e1cf5cc683233f7.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (4c83bd03a 2023-01-19)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-ab1d4ae2ec52020e.css" ></div></body></html>

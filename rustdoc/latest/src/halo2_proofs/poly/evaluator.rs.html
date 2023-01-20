@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/poly/evaluator.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>evaluator.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-cd23e1e4557aa9dd.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-a21928845c7a186a.css"><link rel="stylesheet" disabled href="../../../static.files/dark-90fc67ff25a42f29.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-d75a8bbde915b8ed.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-458bffc4c06ccf37.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/poly/evaluator.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>evaluator.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-52c5db6f6f352e54.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,7 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -667,6 +667,15 @@
 <a href="#652" id="652">652</a>
 <a href="#653" id="653">653</a>
 <a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::{
     cmp, fmt,
     hash::{Hash, Hasher},
@@ -675,8 +684,8 @@
     sync::Arc,
 };
 
+<span class="kw">use </span>ff::WithSmallOrderMulGroup;
 <span class="kw">use </span>group::ff::Field;
-<span class="kw">use </span>pasta_curves::arithmetic::FieldExt;
 
 <span class="kw">use super</span>::{
     Basis, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation,
@@ -802,14 +811,14 @@
     ) -&gt; Polynomial&lt;F, B&gt;
     <span class="kw">where
         </span>E: Copy + Send + Sync,
-        F: FieldExt,
+        F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;,
         B: BasisOps,
     {
         <span class="comment">// We&#39;re working in a single basis, so all polynomials are the same length.
         </span><span class="kw">let </span>poly_len = <span class="self">self</span>.polys.first().unwrap().len();
         <span class="kw">let </span>(chunk_size, _num_chunks) = get_chunk_params(poly_len);
 
-        <span class="kw">struct </span>AstContext&lt;<span class="lifetime">&#39;a</span>, F: FieldExt, B: Basis&gt; {
+        <span class="kw">struct </span>AstContext&lt;<span class="lifetime">&#39;a</span>, F: Field, B: Basis&gt; {
             domain: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>EvaluationDomain&lt;F&gt;,
             poly_len: usize,
             chunk_size: usize,
@@ -817,7 +826,7 @@
             polys: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[Polynomial&lt;F, B&gt;],
         }
 
-        <span class="kw">fn </span>recurse&lt;E, F: FieldExt, B: BasisOps&gt;(
+        <span class="kw">fn </span>recurse&lt;E, F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;, B: BasisOps&gt;(
             ast: <span class="kw-2">&amp;</span>Ast&lt;E, F, B&gt;,
             ctx: <span class="kw-2">&amp;</span>AstContext&lt;<span class="lifetime">&#39;_</span>, F, B&gt;,
         ) -&gt; Vec&lt;F&gt; {
@@ -853,7 +862,7 @@
                     lhs
                 }
                 Ast::DistributePowers(terms, base) =&gt; terms.iter().fold(
-                    B::constant_term(ctx.poly_len, ctx.chunk_size, ctx.chunk_index, F::zero()),
+                    B::constant_term(ctx.poly_len, ctx.chunk_size, ctx.chunk_index, F::ZERO),
                     |<span class="kw-2">mut </span>acc, term| {
                         <span class="kw">let </span>term = recurse(term, ctx);
                         <span class="kw">for </span>(acc, term) <span class="kw">in </span>acc.iter_mut().zip(term) {
@@ -968,7 +977,7 @@
 
 <span class="kw">impl</span>&lt;E, F: Field, B: Basis&gt; Ast&lt;E, F, B&gt; {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>one() -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>::ConstantTerm(F::one())
+        <span class="self">Self</span>::ConstantTerm(F::ONE)
     }
 }
 
@@ -976,7 +985,7 @@
     <span class="kw">type </span>Output = Ast&lt;E, F, B&gt;;
 
     <span class="kw">fn </span>neg(<span class="self">self</span>) -&gt; <span class="self">Self</span>::Output {
-        Ast::Scale(Arc::new(<span class="self">self</span>), -F::one())
+        Ast::Scale(Arc::new(<span class="self">self</span>), -F::ONE)
     }
 }
 
@@ -1110,21 +1119,23 @@
 
 <span class="doccomment">/// Operations which can be performed over a given basis.
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">trait </span>BasisOps: Basis {
-    <span class="kw">fn </span>empty_poly&lt;F: FieldExt&gt;(domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;) -&gt; Polynomial&lt;F, <span class="self">Self</span>&gt;;
-    <span class="kw">fn </span>constant_term&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>empty_poly&lt;F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;&gt;(
+        domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
+    ) -&gt; Polynomial&lt;F, <span class="self">Self</span>&gt;;
+    <span class="kw">fn </span>constant_term&lt;F: Field&gt;(
         poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
         scalar: F,
     ) -&gt; Vec&lt;F&gt;;
-    <span class="kw">fn </span>linear_term&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>linear_term&lt;F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;&gt;(
         domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
         poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
         scalar: F,
     ) -&gt; Vec&lt;F&gt;;
-    <span class="kw">fn </span>get_chunk_of_rotated&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>get_chunk_of_rotated&lt;F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;&gt;(
         domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
         chunk_size: usize,
         chunk_index: usize,
@@ -1134,31 +1145,33 @@
 }
 
 <span class="kw">impl </span>BasisOps <span class="kw">for </span>Coeff {
-    <span class="kw">fn </span>empty_poly&lt;F: FieldExt&gt;(domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;) -&gt; Polynomial&lt;F, <span class="self">Self</span>&gt; {
+    <span class="kw">fn </span>empty_poly&lt;F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;&gt;(
+        domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
+    ) -&gt; Polynomial&lt;F, <span class="self">Self</span>&gt; {
         domain.empty_coeff()
     }
 
-    <span class="kw">fn </span>constant_term&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>constant_term&lt;F: Field&gt;(
         poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
         scalar: F,
     ) -&gt; Vec&lt;F&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>chunk = <span class="macro">vec!</span>[F::zero(); cmp::min(chunk_size, poly_len - chunk_size * chunk_index)];
+        <span class="kw">let </span><span class="kw-2">mut </span>chunk = <span class="macro">vec!</span>[F::ZERO; cmp::min(chunk_size, poly_len - chunk_size * chunk_index)];
         <span class="kw">if </span>chunk_index == <span class="number">0 </span>{
             chunk[<span class="number">0</span>] = scalar;
         }
         chunk
     }
 
-    <span class="kw">fn </span>linear_term&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>linear_term&lt;F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;&gt;(
         <span class="kw">_</span>: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
         poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
         scalar: F,
     ) -&gt; Vec&lt;F&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>chunk = <span class="macro">vec!</span>[F::zero(); cmp::min(chunk_size, poly_len - chunk_size * chunk_index)];
+        <span class="kw">let </span><span class="kw-2">mut </span>chunk = <span class="macro">vec!</span>[F::ZERO; cmp::min(chunk_size, poly_len - chunk_size * chunk_index)];
         <span class="comment">// If the chunk size is 1 (e.g. if we have a small k and many threads), then the
         // linear coefficient is the second chunk. Otherwise, the chunk size is greater
         // than one, and the linear coefficient is the second element of the first chunk.
@@ -1173,7 +1186,7 @@
         chunk
     }
 
-    <span class="kw">fn </span>get_chunk_of_rotated&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>get_chunk_of_rotated&lt;F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;&gt;(
         <span class="kw">_</span>: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
         <span class="kw">_</span>: usize,
         <span class="kw">_</span>: usize,
@@ -1185,11 +1198,13 @@
 }
 
 <span class="kw">impl </span>BasisOps <span class="kw">for </span>LagrangeCoeff {
-    <span class="kw">fn </span>empty_poly&lt;F: FieldExt&gt;(domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;) -&gt; Polynomial&lt;F, <span class="self">Self</span>&gt; {
+    <span class="kw">fn </span>empty_poly&lt;F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;&gt;(
+        domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
+    ) -&gt; Polynomial&lt;F, <span class="self">Self</span>&gt; {
         domain.empty_lagrange()
     }
 
-    <span class="kw">fn </span>constant_term&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>constant_term&lt;F: Field&gt;(
         poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
@@ -1198,7 +1213,7 @@
         <span class="macro">vec!</span>[scalar; cmp::min(chunk_size, poly_len - chunk_size * chunk_index)]
     }
 
-    <span class="kw">fn </span>linear_term&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>linear_term&lt;F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;&gt;(
         domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
         poly_len: usize,
         chunk_size: usize,
@@ -1209,7 +1224,7 @@
         </span><span class="kw">let </span>omega = domain.get_omega();
         <span class="kw">let </span>start = chunk_size * chunk_index;
         (<span class="number">0</span>..cmp::min(chunk_size, poly_len - start))
-            .scan(omega.pow_vartime(<span class="kw-2">&amp;</span>[start <span class="kw">as </span>u64]) * scalar, |acc, <span class="kw">_</span>| {
+            .scan(omega.pow_vartime([start <span class="kw">as </span>u64]) * scalar, |acc, <span class="kw">_</span>| {
                 <span class="kw">let </span>ret = <span class="kw-2">*</span>acc;
                 <span class="kw-2">*</span>acc <span class="kw-2">*</span>= omega;
                 <span class="prelude-val">Some</span>(ret)
@@ -1217,7 +1232,7 @@
             .collect()
     }
 
-    <span class="kw">fn </span>get_chunk_of_rotated&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>get_chunk_of_rotated&lt;F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;&gt;(
         <span class="kw">_</span>: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
         chunk_size: usize,
         chunk_index: usize,
@@ -1229,11 +1244,13 @@
 }
 
 <span class="kw">impl </span>BasisOps <span class="kw">for </span>ExtendedLagrangeCoeff {
-    <span class="kw">fn </span>empty_poly&lt;F: FieldExt&gt;(domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;) -&gt; Polynomial&lt;F, <span class="self">Self</span>&gt; {
+    <span class="kw">fn </span>empty_poly&lt;F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;&gt;(
+        domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
+    ) -&gt; Polynomial&lt;F, <span class="self">Self</span>&gt; {
         domain.empty_extended()
     }
 
-    <span class="kw">fn </span>constant_term&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>constant_term&lt;F: Field&gt;(
         poly_len: usize,
         chunk_size: usize,
         chunk_index: usize,
@@ -1242,7 +1259,7 @@
         <span class="macro">vec!</span>[scalar; cmp::min(chunk_size, poly_len - chunk_size * chunk_index)]
     }
 
-    <span class="kw">fn </span>linear_term&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>linear_term&lt;F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;&gt;(
         domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
         poly_len: usize,
         chunk_size: usize,
@@ -1254,7 +1271,7 @@
         <span class="kw">let </span>start = chunk_size * chunk_index;
         (<span class="number">0</span>..cmp::min(chunk_size, poly_len - start))
             .scan(
-                omega.pow_vartime(<span class="kw-2">&amp;</span>[start <span class="kw">as </span>u64]) * F::ZETA * scalar,
+                omega.pow_vartime([start <span class="kw">as </span>u64]) * F::ZETA * scalar,
                 |acc, <span class="kw">_</span>| {
                     <span class="kw">let </span>ret = <span class="kw-2">*</span>acc;
                     <span class="kw-2">*</span>acc <span class="kw-2">*</span>= omega;
@@ -1264,7 +1281,7 @@
             .collect()
     }
 
-    <span class="kw">fn </span>get_chunk_of_rotated&lt;F: FieldExt&gt;(
+    <span class="kw">fn </span>get_chunk_of_rotated&lt;F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;&gt;(
         domain: <span class="kw-2">&amp;</span>EvaluationDomain&lt;F&gt;,
         chunk_size: usize,
         chunk_index: usize,
@@ -1277,6 +1294,7 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
+    <span class="kw">use </span>group::ff::Field;
     <span class="kw">use </span>pasta_curves::pallas;
 
     <span class="kw">use super</span>::{get_chunk_params, new_evaluator, Ast, BasisOps, Evaluator};
@@ -1312,8 +1330,8 @@
             evaluator.register_poly(B::empty_poly(<span class="kw-2">&amp;</span>domain));
 
             <span class="comment">// With the bug present, these will panic.
-            </span><span class="kw">let _ </span>= evaluator.evaluate(<span class="kw-2">&amp;</span>Ast::ConstantTerm(pallas::Base::zero()), <span class="kw-2">&amp;</span>domain);
-            <span class="kw">let _ </span>= evaluator.evaluate(<span class="kw-2">&amp;</span>Ast::LinearTerm(pallas::Base::zero()), <span class="kw-2">&amp;</span>domain);
+            </span><span class="kw">let _ </span>= evaluator.evaluate(<span class="kw-2">&amp;</span>Ast::ConstantTerm(pallas::Base::ZERO), <span class="kw-2">&amp;</span>domain);
+            <span class="kw">let _ </span>= evaluator.evaluate(<span class="kw-2">&amp;</span>Ast::LinearTerm(pallas::Base::ZERO), <span class="kw-2">&amp;</span>domain);
         }
 
         test_case(k, new_evaluator::&lt;<span class="kw">_</span>, <span class="kw">_</span>, Coeff&gt;(|| {}));
@@ -1322,4 +1340,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (70f8737b2 2022-11-23)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7e1cf5cc683233f7.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (4c83bd03a 2023-01-19)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-ab1d4ae2ec52020e.css" ></div></body></html>

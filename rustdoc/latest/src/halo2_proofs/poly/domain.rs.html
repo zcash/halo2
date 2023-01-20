@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/poly/domain.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>domain.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-cd23e1e4557aa9dd.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-a21928845c7a186a.css"><link rel="stylesheet" disabled href="../../../static.files/dark-90fc67ff25a42f29.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-d75a8bbde915b8ed.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-458bffc4c06ccf37.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/poly/domain.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>domain.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-52c5db6f6f352e54.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,7 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -617,19 +617,18 @@
 <a href="#602" id="602">602</a>
 <a href="#603" id="603">603</a>
 <a href="#604" id="604">604</a>
-<a href="#605" id="605">605</a>
-<a href="#606" id="606">606</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Contains utilities for performing polynomial arithmetic over an evaluation
 //! domain that is of a suitable size for the application.
 
 </span><span class="kw">use crate</span>::{
-    arithmetic::{best_fft, parallelize, FieldExt, Group},
+    arithmetic::{best_fft, parallelize},
     plonk::Assigned,
 };
 
 <span class="kw">use super</span>::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation};
 
-<span class="kw">use </span>group::ff::{BatchInvert, Field, PrimeField};
+<span class="kw">use </span>ff::WithSmallOrderMulGroup;
+<span class="kw">use </span>group::ff::{BatchInvert, Field};
 
 <span class="kw">use </span>std::marker::PhantomData;
 
@@ -637,24 +636,24 @@
 /// performing operations on an evaluation domain of size $2^k$ and an extended
 /// domain of size $2^{k} * j$ with $j \neq 0$.
 </span><span class="attr">#[derive(Clone, Debug)]
-</span><span class="kw">pub struct </span>EvaluationDomain&lt;G: Group&gt; {
+</span><span class="kw">pub struct </span>EvaluationDomain&lt;F: Field&gt; {
     n: u64,
     k: u32,
     extended_k: u32,
-    omega: G::Scalar,
-    omega_inv: G::Scalar,
-    extended_omega: G::Scalar,
-    extended_omega_inv: G::Scalar,
-    g_coset: G::Scalar,
-    g_coset_inv: G::Scalar,
+    omega: F,
+    omega_inv: F,
+    extended_omega: F,
+    extended_omega_inv: F,
+    g_coset: F,
+    g_coset_inv: F,
     quotient_poly_degree: u64,
-    ifft_divisor: G::Scalar,
-    extended_ifft_divisor: G::Scalar,
-    t_evaluations: Vec&lt;G::Scalar&gt;,
-    barycentric_weight: G::Scalar,
+    ifft_divisor: F,
+    extended_ifft_divisor: F,
+    t_evaluations: Vec&lt;F&gt;,
+    barycentric_weight: F,
 }
 
-<span class="kw">impl</span>&lt;G: Group&gt; EvaluationDomain&lt;G&gt; {
+<span class="kw">impl</span>&lt;F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;&gt; EvaluationDomain&lt;F&gt; {
     <span class="doccomment">/// This constructs a new evaluation domain object based on the provided
     /// values $j, k$.
     </span><span class="kw">pub fn </span>new(j: u32, k: u32) -&gt; <span class="self">Self </span>{
@@ -672,12 +671,12 @@
             extended_k += <span class="number">1</span>;
         }
 
-        <span class="kw">let </span><span class="kw-2">mut </span>extended_omega = G::Scalar::root_of_unity();
+        <span class="kw">let </span><span class="kw-2">mut </span>extended_omega = F::ROOT_OF_UNITY;
 
         <span class="comment">// Get extended_omega, the 2^{extended_k}&#39;th root of unity
         // The loop computes extended_omega = omega^{2 ^ (S - extended_k)}
         // Notice that extended_omega ^ {2 ^ extended_k} = omega ^ {2^S} = 1.
-        </span><span class="kw">for _ in </span>extended_k..G::Scalar::S {
+        </span><span class="kw">for _ in </span>extended_k..F::S {
             extended_omega = extended_omega.square();
         }
         <span class="kw">let </span>extended_omega = extended_omega;
@@ -699,15 +698,15 @@
         // already.
         // The coset evaluation domain is:
         // zeta {1, extended_omega, extended_omega^2, ..., extended_omega^{(2^extended_k) - 1}}
-        </span><span class="kw">let </span>g_coset = G::Scalar::ZETA;
+        </span><span class="kw">let </span>g_coset = F::ZETA;
         <span class="kw">let </span>g_coset_inv = g_coset.square();
 
         <span class="kw">let </span><span class="kw-2">mut </span>t_evaluations = Vec::with_capacity(<span class="number">1 </span>&lt;&lt; (extended_k - k));
         {
             <span class="comment">// Compute the evaluations of t(X) = X^n - 1 in the coset evaluation domain.
             // We don&#39;t have to compute all of them, because it will repeat.
-            </span><span class="kw">let </span>orig = G::Scalar::ZETA.pow_vartime(<span class="kw-2">&amp;</span>[n <span class="kw">as </span>u64, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
-            <span class="kw">let </span>step = extended_omega.pow_vartime(<span class="kw-2">&amp;</span>[n <span class="kw">as </span>u64, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
+            </span><span class="kw">let </span>orig = F::ZETA.pow_vartime([n, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
+            <span class="kw">let </span>step = extended_omega.pow_vartime([n, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
             <span class="kw">let </span><span class="kw-2">mut </span>cur = orig;
             <span class="kw">loop </span>{
                 t_evaluations.push(cur);
@@ -720,19 +719,19 @@
 
             <span class="comment">// Subtract 1 from each to give us t_evaluations[i] = t(zeta * extended_omega^i)
             </span><span class="kw">for </span>coeff <span class="kw">in </span><span class="kw-2">&amp;mut </span>t_evaluations {
-                <span class="kw-2">*</span>coeff -= <span class="kw-2">&amp;</span>G::Scalar::one();
+                <span class="kw-2">*</span>coeff -= <span class="kw-2">&amp;</span>F::ONE;
             }
 
             <span class="comment">// Invert, because we&#39;re dividing by this polynomial.
             // We invert in a batch, below.
         </span>}
 
-        <span class="kw">let </span><span class="kw-2">mut </span>ifft_divisor = G::Scalar::from(<span class="number">1 </span>&lt;&lt; k); <span class="comment">// Inversion computed later
-        </span><span class="kw">let </span><span class="kw-2">mut </span>extended_ifft_divisor = G::Scalar::from(<span class="number">1 </span>&lt;&lt; extended_k); <span class="comment">// Inversion computed later
+        <span class="kw">let </span><span class="kw-2">mut </span>ifft_divisor = F::from(<span class="number">1 </span>&lt;&lt; k); <span class="comment">// Inversion computed later
+        </span><span class="kw">let </span><span class="kw-2">mut </span>extended_ifft_divisor = F::from(<span class="number">1 </span>&lt;&lt; extended_k); <span class="comment">// Inversion computed later
 
         // The barycentric weight of 1 over the evaluation domain
         // 1 / \prod_{i != 0} (1 - omega^i)
-        </span><span class="kw">let </span><span class="kw-2">mut </span>barycentric_weight = G::Scalar::from(n); <span class="comment">// Inversion computed later
+        </span><span class="kw">let </span><span class="kw-2">mut </span>barycentric_weight = F::from(n); <span class="comment">// Inversion computed later
 
         // Compute batch inversion
         </span>t_evaluations
@@ -765,7 +764,7 @@
     <span class="doccomment">/// Obtains a polynomial in Lagrange form when given a vector of Lagrange
     /// coefficients of size `n`; panics if the provided vector is the wrong
     /// length.
-    </span><span class="kw">pub fn </span>lagrange_from_vec(<span class="kw-2">&amp;</span><span class="self">self</span>, values: Vec&lt;G&gt;) -&gt; Polynomial&lt;G, LagrangeCoeff&gt; {
+    </span><span class="kw">pub fn </span>lagrange_from_vec(<span class="kw-2">&amp;</span><span class="self">self</span>, values: Vec&lt;F&gt;) -&gt; Polynomial&lt;F, LagrangeCoeff&gt; {
         <span class="macro">assert_eq!</span>(values.len(), <span class="self">self</span>.n <span class="kw">as </span>usize);
 
         Polynomial {
@@ -777,7 +776,7 @@
     <span class="doccomment">/// Obtains a polynomial in coefficient form when given a vector of
     /// coefficients of size `n`; panics if the provided vector is the wrong
     /// length.
-    </span><span class="kw">pub fn </span>coeff_from_vec(<span class="kw-2">&amp;</span><span class="self">self</span>, values: Vec&lt;G&gt;) -&gt; Polynomial&lt;G, Coeff&gt; {
+    </span><span class="kw">pub fn </span>coeff_from_vec(<span class="kw-2">&amp;</span><span class="self">self</span>, values: Vec&lt;F&gt;) -&gt; Polynomial&lt;F, Coeff&gt; {
         <span class="macro">assert_eq!</span>(values.len(), <span class="self">self</span>.n <span class="kw">as </span>usize);
 
         Polynomial {
@@ -787,35 +786,32 @@
     }
 
     <span class="doccomment">/// Returns an empty (zero) polynomial in the coefficient basis
-    </span><span class="kw">pub fn </span>empty_coeff(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Polynomial&lt;G, Coeff&gt; {
+    </span><span class="kw">pub fn </span>empty_coeff(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Polynomial&lt;F, Coeff&gt; {
         Polynomial {
-            values: <span class="macro">vec!</span>[G::group_zero(); <span class="self">self</span>.n <span class="kw">as </span>usize],
+            values: <span class="macro">vec!</span>[F::ZERO; <span class="self">self</span>.n <span class="kw">as </span>usize],
             _marker: PhantomData,
         }
     }
 
     <span class="doccomment">/// Returns an empty (zero) polynomial in the Lagrange coefficient basis
-    </span><span class="kw">pub fn </span>empty_lagrange(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Polynomial&lt;G, LagrangeCoeff&gt; {
+    </span><span class="kw">pub fn </span>empty_lagrange(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Polynomial&lt;F, LagrangeCoeff&gt; {
         Polynomial {
-            values: <span class="macro">vec!</span>[G::group_zero(); <span class="self">self</span>.n <span class="kw">as </span>usize],
+            values: <span class="macro">vec!</span>[F::ZERO; <span class="self">self</span>.n <span class="kw">as </span>usize],
             _marker: PhantomData,
         }
     }
 
     <span class="doccomment">/// Returns an empty (zero) polynomial in the Lagrange coefficient basis, with
     /// deferred inversions.
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>empty_lagrange_assigned(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Polynomial&lt;Assigned&lt;G&gt;, LagrangeCoeff&gt;
-    <span class="kw">where
-        </span>G: Field,
-    {
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>empty_lagrange_assigned(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Polynomial&lt;Assigned&lt;F&gt;, LagrangeCoeff&gt; {
         Polynomial {
-            values: <span class="macro">vec!</span>[G::group_zero().into(); <span class="self">self</span>.n <span class="kw">as </span>usize],
+            values: <span class="macro">vec!</span>[F::ZERO.into(); <span class="self">self</span>.n <span class="kw">as </span>usize],
             _marker: PhantomData,
         }
     }
 
     <span class="doccomment">/// Returns a constant polynomial in the Lagrange coefficient basis
-    </span><span class="kw">pub fn </span>constant_lagrange(<span class="kw-2">&amp;</span><span class="self">self</span>, scalar: G) -&gt; Polynomial&lt;G, LagrangeCoeff&gt; {
+    </span><span class="kw">pub fn </span>constant_lagrange(<span class="kw-2">&amp;</span><span class="self">self</span>, scalar: F) -&gt; Polynomial&lt;F, LagrangeCoeff&gt; {
         Polynomial {
             values: <span class="macro">vec!</span>[scalar; <span class="self">self</span>.n <span class="kw">as </span>usize],
             _marker: PhantomData,
@@ -824,16 +820,16 @@
 
     <span class="doccomment">/// Returns an empty (zero) polynomial in the extended Lagrange coefficient
     /// basis
-    </span><span class="kw">pub fn </span>empty_extended(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Polynomial&lt;G, ExtendedLagrangeCoeff&gt; {
+    </span><span class="kw">pub fn </span>empty_extended(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Polynomial&lt;F, ExtendedLagrangeCoeff&gt; {
         Polynomial {
-            values: <span class="macro">vec!</span>[G::group_zero(); <span class="self">self</span>.extended_len()],
+            values: <span class="macro">vec!</span>[F::ZERO; <span class="self">self</span>.extended_len()],
             _marker: PhantomData,
         }
     }
 
     <span class="doccomment">/// Returns a constant polynomial in the extended Lagrange coefficient
     /// basis
-    </span><span class="kw">pub fn </span>constant_extended(<span class="kw-2">&amp;</span><span class="self">self</span>, scalar: G) -&gt; Polynomial&lt;G, ExtendedLagrangeCoeff&gt; {
+    </span><span class="kw">pub fn </span>constant_extended(<span class="kw-2">&amp;</span><span class="self">self</span>, scalar: F) -&gt; Polynomial&lt;F, ExtendedLagrangeCoeff&gt; {
         Polynomial {
             values: <span class="macro">vec!</span>[scalar; <span class="self">self</span>.extended_len()],
             _marker: PhantomData,
@@ -844,7 +840,7 @@
     ///
     /// This function will panic if the provided vector is not the correct
     /// length.
-    </span><span class="kw">pub fn </span>lagrange_to_coeff(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>a: Polynomial&lt;G, LagrangeCoeff&gt;) -&gt; Polynomial&lt;G, Coeff&gt; {
+    </span><span class="kw">pub fn </span>lagrange_to_coeff(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>a: Polynomial&lt;F, LagrangeCoeff&gt;) -&gt; Polynomial&lt;F, Coeff&gt; {
         <span class="macro">assert_eq!</span>(a.values.len(), <span class="number">1 </span>&lt;&lt; <span class="self">self</span>.k);
 
         <span class="comment">// Perform inverse FFT to obtain the polynomial in coefficient form
@@ -860,12 +856,12 @@
     /// evaluation domain, rotating by `rotation` if desired.
     </span><span class="kw">pub fn </span>coeff_to_extended(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut </span>a: Polynomial&lt;G, Coeff&gt;,
-    ) -&gt; Polynomial&lt;G, ExtendedLagrangeCoeff&gt; {
+        <span class="kw-2">mut </span>a: Polynomial&lt;F, Coeff&gt;,
+    ) -&gt; Polynomial&lt;F, ExtendedLagrangeCoeff&gt; {
         <span class="macro">assert_eq!</span>(a.values.len(), <span class="number">1 </span>&lt;&lt; <span class="self">self</span>.k);
 
         <span class="self">self</span>.distribute_powers_zeta(<span class="kw-2">&amp;mut </span>a.values, <span class="bool-val">true</span>);
-        a.values.resize(<span class="self">self</span>.extended_len(), G::group_zero());
+        a.values.resize(<span class="self">self</span>.extended_len(), F::ZERO);
         best_fft(<span class="kw-2">&amp;mut </span>a.values, <span class="self">self</span>.extended_omega, <span class="self">self</span>.extended_k);
 
         Polynomial {
@@ -877,9 +873,9 @@
     <span class="doccomment">/// Rotate the extended domain polynomial over the original domain.
     </span><span class="kw">pub fn </span>rotate_extended(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        poly: <span class="kw-2">&amp;</span>Polynomial&lt;G, ExtendedLagrangeCoeff&gt;,
+        poly: <span class="kw-2">&amp;</span>Polynomial&lt;F, ExtendedLagrangeCoeff&gt;,
         rotation: Rotation,
-    ) -&gt; Polynomial&lt;G, ExtendedLagrangeCoeff&gt; {
+    ) -&gt; Polynomial&lt;F, ExtendedLagrangeCoeff&gt; {
         <span class="kw">let </span>new_rotation = ((<span class="number">1 </span>&lt;&lt; (<span class="self">self</span>.extended_k - <span class="self">self</span>.k)) * rotation.<span class="number">0</span>.abs()) <span class="kw">as </span>usize;
 
         <span class="kw">let </span><span class="kw-2">mut </span>poly = poly.clone();
@@ -905,11 +901,11 @@
     /// ```
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>get_chunk_of_rotated_extended(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        poly: <span class="kw-2">&amp;</span>Polynomial&lt;G, ExtendedLagrangeCoeff&gt;,
+        poly: <span class="kw-2">&amp;</span>Polynomial&lt;F, ExtendedLagrangeCoeff&gt;,
         rotation: Rotation,
         chunk_size: usize,
         chunk_index: usize,
-    ) -&gt; Vec&lt;G&gt; {
+    ) -&gt; Vec&lt;F&gt; {
         <span class="kw">let </span>new_rotation = ((<span class="number">1 </span>&lt;&lt; (<span class="self">self</span>.extended_k - <span class="self">self</span>.k)) * rotation.<span class="number">0</span>.abs()) <span class="kw">as </span>usize;
         poly.get_chunk_of_rotated_helper(rotation.<span class="number">0 </span>&lt; <span class="number">0</span>, new_rotation, chunk_size, chunk_index)
     }
@@ -920,7 +916,7 @@
     /// This function will panic if the provided vector is not the correct
     /// length.
     </span><span class="comment">// TODO/FIXME: caller should be responsible for truncating
-    </span><span class="kw">pub fn </span>extended_to_coeff(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>a: Polynomial&lt;G, ExtendedLagrangeCoeff&gt;) -&gt; Vec&lt;G&gt; {
+    </span><span class="kw">pub fn </span>extended_to_coeff(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw-2">mut </span>a: Polynomial&lt;F, ExtendedLagrangeCoeff&gt;) -&gt; Vec&lt;F&gt; {
         <span class="macro">assert_eq!</span>(a.values.len(), <span class="self">self</span>.extended_len());
 
         <span class="comment">// Inverse FFT
@@ -948,15 +944,15 @@
     /// polynomial of the $2^k$ size domain.
     </span><span class="kw">pub fn </span>divide_by_vanishing_poly(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut </span>a: Polynomial&lt;G, ExtendedLagrangeCoeff&gt;,
-    ) -&gt; Polynomial&lt;G, ExtendedLagrangeCoeff&gt; {
+        <span class="kw-2">mut </span>a: Polynomial&lt;F, ExtendedLagrangeCoeff&gt;,
+    ) -&gt; Polynomial&lt;F, ExtendedLagrangeCoeff&gt; {
         <span class="macro">assert_eq!</span>(a.values.len(), <span class="self">self</span>.extended_len());
 
         <span class="comment">// Divide to obtain the quotient polynomial in the coset evaluation
         // domain.
         </span>parallelize(<span class="kw-2">&amp;mut </span>a.values, |h, <span class="kw-2">mut </span>index| {
             <span class="kw">for </span>h <span class="kw">in </span>h {
-                h.group_scale(<span class="kw-2">&amp;</span><span class="self">self</span>.t_evaluations[index % <span class="self">self</span>.t_evaluations.len()]);
+                <span class="kw-2">*</span>h <span class="kw-2">*</span>= <span class="kw-2">&amp;</span><span class="self">self</span>.t_evaluations[index % <span class="self">self</span>.t_evaluations.len()];
                 index += <span class="number">1</span>;
             }
         });
@@ -974,7 +970,7 @@
     ///
     /// `into_coset` should be set to `true` when moving into the coset,
     /// and `false` when moving out. This toggles the choice of `zeta`.
-    </span><span class="kw">fn </span>distribute_powers_zeta(<span class="kw-2">&amp;</span><span class="self">self</span>, a: <span class="kw-2">&amp;mut </span>[G], into_coset: bool) {
+    </span><span class="kw">fn </span>distribute_powers_zeta(<span class="kw-2">&amp;</span><span class="self">self</span>, a: <span class="kw-2">&amp;mut </span>[F], into_coset: bool) {
         <span class="kw">let </span>coset_powers = <span class="kw">if </span>into_coset {
             [<span class="self">self</span>.g_coset, <span class="self">self</span>.g_coset_inv]
         } <span class="kw">else </span>{
@@ -985,19 +981,19 @@
                 <span class="comment">// Distribute powers to move into/from coset
                 </span><span class="kw">let </span>i = index % (coset_powers.len() + <span class="number">1</span>);
                 <span class="kw">if </span>i != <span class="number">0 </span>{
-                    a.group_scale(<span class="kw-2">&amp;</span>coset_powers[i - <span class="number">1</span>]);
+                    <span class="kw-2">*</span>a <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>coset_powers[i - <span class="number">1</span>];
                 }
                 index += <span class="number">1</span>;
             }
         });
     }
 
-    <span class="kw">fn </span>ifft(a: <span class="kw-2">&amp;mut </span>[G], omega_inv: G::Scalar, log_n: u32, divisor: G::Scalar) {
+    <span class="kw">fn </span>ifft(a: <span class="kw-2">&amp;mut </span>[F], omega_inv: F, log_n: u32, divisor: F) {
         best_fft(a, omega_inv, log_n);
         parallelize(a, |a, <span class="kw">_</span>| {
             <span class="kw">for </span>a <span class="kw">in </span>a {
                 <span class="comment">// Finish iFFT
-                </span>a.group_scale(<span class="kw-2">&amp;</span>divisor);
+                </span><span class="kw-2">*</span>a <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>divisor;
             }
         });
     }
@@ -1008,31 +1004,31 @@
     }
 
     <span class="doccomment">/// Get $\omega$, the generator of the $2^k$ order multiplicative subgroup.
-    </span><span class="kw">pub fn </span>get_omega(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; G::Scalar {
+    </span><span class="kw">pub fn </span>get_omega(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; F {
         <span class="self">self</span>.omega
     }
 
     <span class="doccomment">/// Get $\omega^{-1}$, the inverse of the generator of the $2^k$ order
     /// multiplicative subgroup.
-    </span><span class="kw">pub fn </span>get_omega_inv(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; G::Scalar {
+    </span><span class="kw">pub fn </span>get_omega_inv(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; F {
         <span class="self">self</span>.omega_inv
     }
 
     <span class="doccomment">/// Get the generator of the extended domain&#39;s multiplicative subgroup.
-    </span><span class="kw">pub fn </span>get_extended_omega(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; G::Scalar {
+    </span><span class="kw">pub fn </span>get_extended_omega(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; F {
         <span class="self">self</span>.extended_omega
     }
 
     <span class="doccomment">/// Multiplies a value by some power of $\omega$, essentially rotating over
     /// the domain.
-    </span><span class="kw">pub fn </span>rotate_omega(<span class="kw-2">&amp;</span><span class="self">self</span>, value: G::Scalar, rotation: Rotation) -&gt; G::Scalar {
+    </span><span class="kw">pub fn </span>rotate_omega(<span class="kw-2">&amp;</span><span class="self">self</span>, value: F, rotation: Rotation) -&gt; F {
         <span class="kw">let </span><span class="kw-2">mut </span>point = value;
         <span class="kw">if </span>rotation.<span class="number">0 </span>&gt;= <span class="number">0 </span>{
-            point <span class="kw-2">*</span>= <span class="kw-2">&amp;</span><span class="self">self</span>.get_omega().pow_vartime(<span class="kw-2">&amp;</span>[rotation.<span class="number">0 </span><span class="kw">as </span>u64]);
+            point <span class="kw-2">*</span>= <span class="kw-2">&amp;</span><span class="self">self</span>.get_omega().pow_vartime([rotation.<span class="number">0 </span><span class="kw">as </span>u64]);
         } <span class="kw">else </span>{
             point <span class="kw-2">*</span>= <span class="kw-2">&amp;</span><span class="self">self
                 </span>.get_omega_inv()
-                .pow_vartime(<span class="kw-2">&amp;</span>[(rotation.<span class="number">0 </span><span class="kw">as </span>i64).unsigned_abs()]);
+                .pow_vartime([(rotation.<span class="number">0 </span><span class="kw">as </span>i64).unsigned_abs()]);
         }
         point
     }
@@ -1066,23 +1062,23 @@
     /// which is the barycentric weight of $\omega^i$.
     </span><span class="kw">pub fn </span>l_i_range&lt;I: IntoIterator&lt;Item = i32&gt; + Clone&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        x: G::Scalar,
-        xn: G::Scalar,
+        x: F,
+        xn: F,
         rotations: I,
-    ) -&gt; Vec&lt;G::Scalar&gt; {
+    ) -&gt; Vec&lt;F&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>results;
         {
             <span class="kw">let </span>rotations = rotations.clone().into_iter();
             results = Vec::with_capacity(rotations.size_hint().<span class="number">1</span>.unwrap_or(<span class="number">0</span>));
             <span class="kw">for </span>rotation <span class="kw">in </span>rotations {
                 <span class="kw">let </span>rotation = Rotation(rotation);
-                <span class="kw">let </span>result = x - <span class="self">self</span>.rotate_omega(G::Scalar::one(), rotation);
+                <span class="kw">let </span>result = x - <span class="self">self</span>.rotate_omega(F::ONE, rotation);
                 results.push(result);
             }
             results.iter_mut().batch_invert();
         }
 
-        <span class="kw">let </span>common = (xn - G::Scalar::one()) * <span class="self">self</span>.barycentric_weight;
+        <span class="kw">let </span>common = (xn - F::ONE) * <span class="self">self</span>.barycentric_weight;
         <span class="kw">for </span>(rotation, result) <span class="kw">in </span>rotations.into_iter().zip(results.iter_mut()) {
             <span class="kw">let </span>rotation = Rotation(rotation);
             <span class="kw-2">*</span>result = <span class="self">self</span>.rotate_omega(<span class="kw-2">*</span>result * common, rotation);
@@ -1099,7 +1095,7 @@
     <span class="doccomment">/// Obtain a pinned version of this evaluation domain; a structure with the
     /// minimal parameters needed to determine the rest of the evaluation
     /// domain.
-    </span><span class="kw">pub fn </span>pinned(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PinnedEvaluationDomain&lt;<span class="lifetime">&#39;_</span>, G&gt; {
+    </span><span class="kw">pub fn </span>pinned(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PinnedEvaluationDomain&lt;<span class="lifetime">&#39;_</span>, F&gt; {
         PinnedEvaluationDomain {
             k: <span class="kw-2">&amp;</span><span class="self">self</span>.k,
             extended_k: <span class="kw-2">&amp;</span><span class="self">self</span>.extended_k,
@@ -1111,10 +1107,10 @@
 <span class="doccomment">/// Represents the minimal parameters that determine an `EvaluationDomain`.
 </span><span class="attr">#[allow(dead_code)]
 #[derive(Debug)]
-</span><span class="kw">pub struct </span>PinnedEvaluationDomain&lt;<span class="lifetime">&#39;a</span>, G: Group&gt; {
+</span><span class="kw">pub struct </span>PinnedEvaluationDomain&lt;<span class="lifetime">&#39;a</span>, F: Field&gt; {
     k: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u32,
     extended_k: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>u32,
-    omega: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>G::Scalar,
+    omega: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>F,
 }
 
 <span class="attr">#[test]
@@ -1173,7 +1169,7 @@
     }
     <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">8 </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>l_i = <span class="macro">vec!</span>[Scalar::zero(); <span class="number">8</span>];
-        l_i[i] = Scalar::one();
+        l_i[i] = Scalar::ONE;
         <span class="kw">let </span>l_i = lagrange_interpolate(<span class="kw-2">&amp;</span>points[..], <span class="kw-2">&amp;</span>l_i[..]);
         l.push(l_i);
     }
@@ -1226,4 +1222,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (70f8737b2 2022-11-23)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7e1cf5cc683233f7.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (4c83bd03a 2023-01-19)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-ab1d4ae2ec52020e.css" ></div></body></html>

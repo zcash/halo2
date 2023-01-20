@@ -4,8 +4,10 @@
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>A simple example - The halo2 Book</title>
+
+
         <!-- Custom HTML head -->
-        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
@@ -16,25 +18,28 @@
         <link rel="stylesheet" href="../css/general.css">
         <link rel="stylesheet" href="../css/chrome.css">
         <link rel="stylesheet" href="../css/print.css" media="print">
+
         <!-- Fonts -->
         <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
         <link rel="stylesheet" href="../fonts/fonts.css">
+
         <!-- Highlight.js Stylesheets -->
         <link rel="stylesheet" href="../highlight.css">
         <link rel="stylesheet" href="../tomorrow-night.css">
         <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
+
     </head>
     <body>
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">
+        <script>
             var path_to_root = "../";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
-        <script type="text/javascript">
+        <script>
             try {
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
@@ -50,7 +55,7 @@
         </script>
 
         <!-- Set the theme before any content is loaded, prevents flash -->
-        <script type="text/javascript">
+        <script>
             var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
@@ -62,7 +67,7 @@
         </script>
 
         <!-- Hide / unhide sidebar before it is displayed -->
-        <script type="text/javascript">
+        <script>
             var html = document.querySelector('html');
             var sidebar = 'hidden';
             if (document.body.clientWidth >= 1080) {
@@ -75,7 +80,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">halo2</a></li><li class="chapter-item expanded "><a href="../concepts.html"><strong aria-hidden="true">1.</strong> Concepts</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../concepts/proofs.html"><strong aria-hidden="true">1.1.</strong> Proof systems</a></li><li class="chapter-item expanded "><a href="../concepts/arithmetization.html"><strong aria-hidden="true">1.2.</strong> PLONKish Arithmetization</a></li><li class="chapter-item expanded "><a href="../concepts/chips.html"><strong aria-hidden="true">1.3.</strong> Chips</a></li><li class="chapter-item expanded "><a href="../concepts/gadgets.html"><strong aria-hidden="true">1.4.</strong> Gadgets</a></li></ol></li><li class="chapter-item expanded "><a href="../user.html"><strong aria-hidden="true">2.</strong> User Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../user/dev-tools.html"><strong aria-hidden="true">2.1.</strong> Developer tools</a></li><li class="chapter-item expanded "><a href="../user/simple-example.html" class="active"><strong aria-hidden="true">2.2.</strong> A simple example</a></li><li class="chapter-item expanded "><a href="../user/lookup-tables.html"><strong aria-hidden="true">2.3.</strong> Lookup tables</a></li><li class="chapter-item expanded "><a href="../user/gadgets.html"><strong aria-hidden="true">2.4.</strong> Gadgets</a></li><li class="chapter-item expanded "><a href="../user/tips-and-tricks.html"><strong aria-hidden="true">2.5.</strong> Tips and tricks</a></li><li class="chapter-item expanded "><a href="../user/wasm-port.html"><strong aria-hidden="true">2.6.</strong> WASM Guide</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">3.</strong> Design</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/proving-system.html"><strong aria-hidden="true">3.1.</strong> Proving system</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/proving-system/lookup.html"><strong aria-hidden="true">3.1.1.</strong> Lookup argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/permutation.html"><strong aria-hidden="true">3.1.2.</strong> Permutation argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/circuit-commitments.html"><strong aria-hidden="true">3.1.3.</strong> Circuit commitments</a></li><li class="chapter-item expanded "><a href="../design/proving-system/vanishing.html"><strong aria-hidden="true">3.1.4.</strong> Vanishing argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/multipoint-opening.html"><strong aria-hidden="true">3.1.5.</strong> Multipoint opening argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/inner-product.html"><strong aria-hidden="true">3.1.6.</strong> Inner product argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/comparison.html"><strong aria-hidden="true">3.1.7.</strong> Comparison to other work</a></li></ol></li><li class="chapter-item expanded "><a href="../design/protocol.html"><strong aria-hidden="true">3.2.</strong> Protocol Description</a></li><li class="chapter-item expanded "><a href="../design/implementation.html"><strong aria-hidden="true">3.3.</strong> Implementation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/implementation/proofs.html"><strong aria-hidden="true">3.3.1.</strong> Proofs</a></li><li class="chapter-item expanded "><a href="../design/implementation/fields.html"><strong aria-hidden="true">3.3.2.</strong> Fields</a></li><li class="chapter-item expanded "><a href="../design/implementation/selector-combining.html"><strong aria-hidden="true">3.3.3.</strong> Selector combining</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets.html"><strong aria-hidden="true">3.4.</strong> Gadgets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/ecc.html"><strong aria-hidden="true">3.4.1.</strong> Elliptic curve cryptography</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/ecc/witnessing-points.html"><strong aria-hidden="true">3.4.1.1.</strong> Witnessing points</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/addition.html"><strong aria-hidden="true">3.4.1.2.</strong> Incomplete and complete addition</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/fixed-base-scalar-mul.html"><strong aria-hidden="true">3.4.1.3.</strong> Fixed-base scalar multiplication</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/var-base-scalar-mul.html"><strong aria-hidden="true">3.4.1.4.</strong> Variable-base scalar multiplication</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets/sinsemilla.html"><strong aria-hidden="true">3.4.2.</strong> Sinsemilla</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sinsemilla/merkle-crh.html"><strong aria-hidden="true">3.4.2.1.</strong> MerkleCRH</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets/decomposition.html"><strong aria-hidden="true">3.4.3.</strong> Decomposition</a></li><li class="chapter-item expanded "><a href="../design/gadgets/sha256.html"><strong aria-hidden="true">3.4.4.</strong> SHA-256</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sha256/table16.html"><strong aria-hidden="true">3.4.4.1.</strong> 16-bit table chip</a></li></ol></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../background.html"><strong aria-hidden="true">4.</strong> Background Material</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../background/fields.html"><strong aria-hidden="true">4.1.</strong> Fields</a></li><li class="chapter-item expanded "><a href="../background/polynomials.html"><strong aria-hidden="true">4.2.</strong> Polynomials</a></li><li class="chapter-item expanded "><a href="../background/groups.html"><strong aria-hidden="true">4.3.</strong> Cryptographic groups</a></li><li class="chapter-item expanded "><a href="../background/curves.html"><strong aria-hidden="true">4.4.</strong> Elliptic curves</a></li><li class="chapter-item expanded "><a href="../background/pc-ipa.html"><strong aria-hidden="true">4.5.</strong> Polynomial commitment using inner product argument</a></li><li class="chapter-item expanded "><a href="../background/recursion.html"><strong aria-hidden="true">4.6.</strong> Recursion</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">halo2</a></li><li class="chapter-item expanded "><a href="../concepts.html"><strong aria-hidden="true">1.</strong> Concepts</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../concepts/proofs.html"><strong aria-hidden="true">1.1.</strong> Proof systems</a></li><li class="chapter-item expanded "><a href="../concepts/arithmetization.html"><strong aria-hidden="true">1.2.</strong> PLONKish Arithmetization</a></li><li class="chapter-item expanded "><a href="../concepts/chips.html"><strong aria-hidden="true">1.3.</strong> Chips</a></li><li class="chapter-item expanded "><a href="../concepts/gadgets.html"><strong aria-hidden="true">1.4.</strong> Gadgets</a></li></ol></li><li class="chapter-item expanded "><a href="../user.html"><strong aria-hidden="true">2.</strong> User Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../user/dev-tools.html"><strong aria-hidden="true">2.1.</strong> Developer tools</a></li><li class="chapter-item expanded "><a href="../user/simple-example.html" class="active"><strong aria-hidden="true">2.2.</strong> A simple example</a></li><li class="chapter-item expanded "><a href="../user/lookup-tables.html"><strong aria-hidden="true">2.3.</strong> Lookup tables</a></li><li class="chapter-item expanded "><a href="../user/gadgets.html"><strong aria-hidden="true">2.4.</strong> Gadgets</a></li><li class="chapter-item expanded "><a href="../user/tips-and-tricks.html"><strong aria-hidden="true">2.5.</strong> Tips and tricks</a></li><li class="chapter-item expanded "><a href="../user/wasm-port.html"><strong aria-hidden="true">2.6.</strong> WASM Guide</a></li></ol></li><li class="chapter-item expanded "><a href="../dev.html"><strong aria-hidden="true">3.</strong> Developer Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../dev/features.html"><strong aria-hidden="true">3.1.</strong> Feature development</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">4.</strong> Design</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/proving-system.html"><strong aria-hidden="true">4.1.</strong> Proving system</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/proving-system/lookup.html"><strong aria-hidden="true">4.1.1.</strong> Lookup argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/permutation.html"><strong aria-hidden="true">4.1.2.</strong> Permutation argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/circuit-commitments.html"><strong aria-hidden="true">4.1.3.</strong> Circuit commitments</a></li><li class="chapter-item expanded "><a href="../design/proving-system/vanishing.html"><strong aria-hidden="true">4.1.4.</strong> Vanishing argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/multipoint-opening.html"><strong aria-hidden="true">4.1.5.</strong> Multipoint opening argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/inner-product.html"><strong aria-hidden="true">4.1.6.</strong> Inner product argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/comparison.html"><strong aria-hidden="true">4.1.7.</strong> Comparison to other work</a></li></ol></li><li class="chapter-item expanded "><a href="../design/protocol.html"><strong aria-hidden="true">4.2.</strong> Protocol Description</a></li><li class="chapter-item expanded "><a href="../design/implementation.html"><strong aria-hidden="true">4.3.</strong> Implementation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/implementation/proofs.html"><strong aria-hidden="true">4.3.1.</strong> Proofs</a></li><li class="chapter-item expanded "><a href="../design/implementation/fields.html"><strong aria-hidden="true">4.3.2.</strong> Fields</a></li><li class="chapter-item expanded "><a href="../design/implementation/selector-combining.html"><strong aria-hidden="true">4.3.3.</strong> Selector combining</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets.html"><strong aria-hidden="true">4.4.</strong> Gadgets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/ecc.html"><strong aria-hidden="true">4.4.1.</strong> Elliptic curve cryptography</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/ecc/witnessing-points.html"><strong aria-hidden="true">4.4.1.1.</strong> Witnessing points</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/addition.html"><strong aria-hidden="true">4.4.1.2.</strong> Incomplete and complete addition</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/fixed-base-scalar-mul.html"><strong aria-hidden="true">4.4.1.3.</strong> Fixed-base scalar multiplication</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/var-base-scalar-mul.html"><strong aria-hidden="true">4.4.1.4.</strong> Variable-base scalar multiplication</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets/sinsemilla.html"><strong aria-hidden="true">4.4.2.</strong> Sinsemilla</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sinsemilla/merkle-crh.html"><strong aria-hidden="true">4.4.2.1.</strong> MerkleCRH</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets/decomposition.html"><strong aria-hidden="true">4.4.3.</strong> Decomposition</a></li><li class="chapter-item expanded "><a href="../design/gadgets/sha256.html"><strong aria-hidden="true">4.4.4.</strong> SHA-256</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sha256/table16.html"><strong aria-hidden="true">4.4.4.1.</strong> 16-bit table chip</a></li></ol></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../background.html"><strong aria-hidden="true">5.</strong> Background Material</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../background/fields.html"><strong aria-hidden="true">5.1.</strong> Fields</a></li><li class="chapter-item expanded "><a href="../background/polynomials.html"><strong aria-hidden="true">5.2.</strong> Polynomials</a></li><li class="chapter-item expanded "><a href="../background/groups.html"><strong aria-hidden="true">5.3.</strong> Cryptographic groups</a></li><li class="chapter-item expanded "><a href="../background/curves.html"><strong aria-hidden="true">5.4.</strong> Elliptic curves</a></li><li class="chapter-item expanded "><a href="../background/pc-ipa.html"><strong aria-hidden="true">5.5.</strong> Polynomial commitment using inner product argument</a></li><li class="chapter-item expanded "><a href="../background/recursion.html"><strong aria-hidden="true">5.6.</strong> Recursion</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -83,7 +88,7 @@
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
-                <div id="menu-bar-hover-placeholder"></div>
+                                <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky bordered">
                     <div class="left-buttons">
                         <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
@@ -93,7 +98,7 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
@@ -110,6 +115,7 @@
                         <a href="../print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
+
                     </div>
                 </div>
 
@@ -123,8 +129,9 @@
                         </ul>
                     </div>
                 </div>
+
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
-                <script type="text/javascript">
+                <script>
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
                     document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
                     Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
@@ -137,9 +144,9 @@
                         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
 <h1 id="a-simple-example"><a class="header" href="#a-simple-example">A simple example</a></h1>
 <p>Let's start with a simple circuit, to introduce you to the common APIs and how they are
-used. The circuit will take a public input <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">c</span></span></span></span>, and will prove knowledge of two private
-inputs <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">a</span></span></span></span> and <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">b</span></span></span></span> such that</p>
-<p><span class="katex-display"><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8641079999999999em;vertical-align:0em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641079999999999em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.8641079999999999em;vertical-align:0em;"></span><span class="mord"><span class="mord mathnormal">b</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641079999999999em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal">c</span><span class="mord">.</span></span></span></span></span></p>
+used. The circuit will take a public input <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">c</span></span></span></span>, and will prove knowledge of two private
+inputs <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">a</span></span></span></span> and <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">b</span></span></span></span> such that</p>
+<p><span class="katex-display"><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8641em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8641em;"></span><span class="mord"><span class="mord mathnormal">b</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">c</span><span class="mord">.</span></span></span></span></span></p>
 <h2 id="define-instructions"><a class="header" href="#define-instructions">Define instructions</a></h2>
 <p>Firstly, we need to define the instructions that our circuit will rely on. Instructions
 are the boundary between high-level <a href="../concepts/gadgets.html">gadgets</a> and the low-level
@@ -156,7 +163,7 @@ reusable.</p>
 <p>We also need a type for a variable representing a number. Instruction interfaces provide
 associated types for their inputs and outputs, to allow the implementations to represent
 these in a way that makes the most sense for their optimization goals.</p>
-<pre><code class="language-rust ignore no_run">trait NumericInstructions&lt;F: FieldExt&gt;: Chip&lt;F&gt; {
+<pre><code class="language-rust ignore no_run">trait NumericInstructions&lt;F: Field&gt;: Chip&lt;F&gt; {
     /// Variable representing a number.
     type Num;
 
@@ -181,22 +188,20 @@ these in a way that makes the most sense for their optimization goals.</p>
         num: Self::Num,
         row: usize,
     ) -&gt; Result&lt;(), Error&gt;;
-}
-</code></pre>
+}</code></pre>
 <h2 id="define-a-chip-implementation"><a class="header" href="#define-a-chip-implementation">Define a chip implementation</a></h2>
 <p>For our circuit, we will build a <a href="../concepts/chips.html">chip</a> that provides the above
 numeric instructions for a finite field.</p>
 <pre><code class="language-rust ignore no_run">/// The chip that will implement our instructions! Chips store their own
 /// config, as well as type markers if necessary.
-struct FieldChip&lt;F: FieldExt&gt; {
+struct FieldChip&lt;F: Field&gt; {
     config: FieldConfig,
     _marker: PhantomData&lt;F&gt;,
-}
-</code></pre>
+}</code></pre>
 <p>Every chip needs to implement the <code>Chip</code> trait. This defines the properties of the chip
 that a <code>Layouter</code> may rely on when synthesizing a circuit, as well as enabling any initial
 state that the chip requires to be loaded into the circuit.</p>
-<pre><code class="language-rust ignore no_run">impl&lt;F: FieldExt&gt; Chip&lt;F&gt; for FieldChip&lt;F&gt; {
+<pre><code class="language-rust ignore no_run">impl&lt;F: Field&gt; Chip&lt;F&gt; for FieldChip&lt;F&gt; {
     type Config = FieldConfig;
     type Loaded = ();
 
@@ -207,8 +212,7 @@ state that the chip requires to be loaded into the circuit.</p>
     fn loaded(&amp;self) -&gt; &amp;Self::Loaded {
         &amp;()
     }
-}
-</code></pre>
+}</code></pre>
 <h2 id="configure-the-chip"><a class="header" href="#configure-the-chip">Configure the chip</a></h2>
 <p>The chip needs to be configured with the columns, permutations, and gates that will be
 required to implement all of the desired instructions.</p>
@@ -231,7 +235,7 @@ struct FieldConfig {
     s_mul: Selector,
 }
 
-impl&lt;F: FieldExt&gt; FieldChip&lt;F&gt; {
+impl&lt;F: Field&gt; FieldChip&lt;F&gt; {
     fn construct(config: &lt;Self as Chip&lt;F&gt;&gt;::Config) -&gt; Self {
         Self {
             config,
@@ -288,14 +292,13 @@ impl&lt;F: FieldExt&gt; FieldChip&lt;F&gt; {
             s_mul,
         }
     }
-}
-</code></pre>
+}</code></pre>
 <h2 id="implement-chip-traits"><a class="header" href="#implement-chip-traits">Implement chip traits</a></h2>
 <pre><code class="language-rust ignore no_run">/// A variable representing a number.
 #[derive(Clone)]
-struct Number&lt;F: FieldExt&gt;(AssignedCell&lt;F, F&gt;);
+struct Number&lt;F: Field&gt;(AssignedCell&lt;F, F&gt;);
 
-impl&lt;F: FieldExt&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
+impl&lt;F: Field&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
     type Num = Number&lt;F&gt;;
 
     fn load_private(
@@ -378,8 +381,7 @@ impl&lt;F: FieldExt&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
 
         layouter.constrain_instance(num.0.cell(), config.instance, row)
     }
-}
-</code></pre>
+}</code></pre>
 <h2 id="build-the-circuit"><a class="header" href="#build-the-circuit">Build the circuit</a></h2>
 <p>Now that we have the instructions we need, and a chip that implements them, we can finally
 build our circuit!</p>
@@ -389,13 +391,13 @@ build our circuit!</p>
 /// they won't have any value during key generation. During proving, if any of these
 /// were `None` we would get an error.
 #[derive(Default)]
-struct MyCircuit&lt;F: FieldExt&gt; {
+struct MyCircuit&lt;F: Field&gt; {
     constant: F,
     a: Value&lt;F&gt;,
     b: Value&lt;F&gt;,
 }
 
-impl&lt;F: FieldExt&gt; Circuit&lt;F&gt; for MyCircuit&lt;F&gt; {
+impl&lt;F: Field&gt; Circuit&lt;F&gt; for MyCircuit&lt;F&gt; {
     // Since we are using a single chip for everything, we can just reuse its config.
     type Config = FieldConfig;
     type FloorPlanner = SimpleFloorPlanner;
@@ -450,8 +452,7 @@ impl&lt;F: FieldExt&gt; Circuit&lt;F&gt; for MyCircuit&lt;F&gt; {
         // Expose the result as a public input to the circuit.
         field_chip.expose_public(layouter.namespace(|| &quot;expose c&quot;), c, 0)
     }
-}
-</code></pre>
+}</code></pre>
 <h2 id="testing-the-circuit"><a class="header" href="#testing-the-circuit">Testing the circuit</a></h2>
 <p><code>halo2_proofs::dev::MockProver</code> can be used to test that the circuit is working correctly. The
 private and public inputs to the circuit are constructed as we will do to create a proof,
@@ -485,8 +486,7 @@ in the circuit, and tell us exactly what is failing (if anything).</p>
     // If we try some other public input, the proof will fail!
     public_inputs[0] += Fp::one();
     let prover = MockProver::run(k, &amp;circuit, vec![public_inputs]).unwrap();
-    assert!(prover.verify().is_err());
-</code></pre>
+    assert!(prover.verify().is_err());</code></pre>
 <h2 id="full-example"><a class="header" href="#full-example">Full example</a></h2>
 <p>You can find the source code for this example
 <a href="https://github.com/zcash/halo2/tree/main/halo2_proofs/examples/simple-example.rs">here</a>.</p>
@@ -498,9 +498,11 @@ in the circuit, and tell us exactly what is failing (if anything).</p>
                             <a rel="prev" href="../user/dev-tools.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
+
                             <a rel="next" href="../user/lookup-tables.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
+
                         <div style="clear: both"></div>
                     </nav>
                 </div>
@@ -510,6 +512,7 @@ in the circuit, and tell us exactly what is failing (if anything).</p>
                     <a rel="prev" href="../user/dev-tools.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
+
                     <a rel="next" href="../user/lookup-tables.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
@@ -517,16 +520,24 @@ in the circuit, and tell us exactly what is failing (if anything).</p>
 
         </div>
 
-        <script type="text/javascript">
+
+
+
+        <script>
             window.playground_copyable = true;
         </script>
-        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
-        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
 
         <!-- Custom JS scripts -->
+
+
     </body>
 </html>

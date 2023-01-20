@@ -4,8 +4,10 @@
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>WASM Guide - The halo2 Book</title>
+
+
         <!-- Custom HTML head -->
-        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
@@ -16,25 +18,28 @@
         <link rel="stylesheet" href="../css/general.css">
         <link rel="stylesheet" href="../css/chrome.css">
         <link rel="stylesheet" href="../css/print.css" media="print">
+
         <!-- Fonts -->
         <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
         <link rel="stylesheet" href="../fonts/fonts.css">
+
         <!-- Highlight.js Stylesheets -->
         <link rel="stylesheet" href="../highlight.css">
         <link rel="stylesheet" href="../tomorrow-night.css">
         <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
+
     </head>
     <body>
         <!-- Provide site root to javascript -->
-        <script type="text/javascript">
+        <script>
             var path_to_root = "../";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
-        <script type="text/javascript">
+        <script>
             try {
                 var theme = localStorage.getItem('mdbook-theme');
                 var sidebar = localStorage.getItem('mdbook-sidebar');
@@ -50,7 +55,7 @@
         </script>
 
         <!-- Set the theme before any content is loaded, prevents flash -->
-        <script type="text/javascript">
+        <script>
             var theme;
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
@@ -62,7 +67,7 @@
         </script>
 
         <!-- Hide / unhide sidebar before it is displayed -->
-        <script type="text/javascript">
+        <script>
             var html = document.querySelector('html');
             var sidebar = 'hidden';
             if (document.body.clientWidth >= 1080) {
@@ -75,7 +80,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">halo2</a></li><li class="chapter-item expanded "><a href="../concepts.html"><strong aria-hidden="true">1.</strong> Concepts</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../concepts/proofs.html"><strong aria-hidden="true">1.1.</strong> Proof systems</a></li><li class="chapter-item expanded "><a href="../concepts/arithmetization.html"><strong aria-hidden="true">1.2.</strong> PLONKish Arithmetization</a></li><li class="chapter-item expanded "><a href="../concepts/chips.html"><strong aria-hidden="true">1.3.</strong> Chips</a></li><li class="chapter-item expanded "><a href="../concepts/gadgets.html"><strong aria-hidden="true">1.4.</strong> Gadgets</a></li></ol></li><li class="chapter-item expanded "><a href="../user.html"><strong aria-hidden="true">2.</strong> User Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../user/dev-tools.html"><strong aria-hidden="true">2.1.</strong> Developer tools</a></li><li class="chapter-item expanded "><a href="../user/simple-example.html"><strong aria-hidden="true">2.2.</strong> A simple example</a></li><li class="chapter-item expanded "><a href="../user/lookup-tables.html"><strong aria-hidden="true">2.3.</strong> Lookup tables</a></li><li class="chapter-item expanded "><a href="../user/gadgets.html"><strong aria-hidden="true">2.4.</strong> Gadgets</a></li><li class="chapter-item expanded "><a href="../user/tips-and-tricks.html"><strong aria-hidden="true">2.5.</strong> Tips and tricks</a></li><li class="chapter-item expanded "><a href="../user/wasm-port.html" class="active"><strong aria-hidden="true">2.6.</strong> WASM Guide</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">3.</strong> Design</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/proving-system.html"><strong aria-hidden="true">3.1.</strong> Proving system</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/proving-system/lookup.html"><strong aria-hidden="true">3.1.1.</strong> Lookup argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/permutation.html"><strong aria-hidden="true">3.1.2.</strong> Permutation argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/circuit-commitments.html"><strong aria-hidden="true">3.1.3.</strong> Circuit commitments</a></li><li class="chapter-item expanded "><a href="../design/proving-system/vanishing.html"><strong aria-hidden="true">3.1.4.</strong> Vanishing argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/multipoint-opening.html"><strong aria-hidden="true">3.1.5.</strong> Multipoint opening argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/inner-product.html"><strong aria-hidden="true">3.1.6.</strong> Inner product argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/comparison.html"><strong aria-hidden="true">3.1.7.</strong> Comparison to other work</a></li></ol></li><li class="chapter-item expanded "><a href="../design/protocol.html"><strong aria-hidden="true">3.2.</strong> Protocol Description</a></li><li class="chapter-item expanded "><a href="../design/implementation.html"><strong aria-hidden="true">3.3.</strong> Implementation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/implementation/proofs.html"><strong aria-hidden="true">3.3.1.</strong> Proofs</a></li><li class="chapter-item expanded "><a href="../design/implementation/fields.html"><strong aria-hidden="true">3.3.2.</strong> Fields</a></li><li class="chapter-item expanded "><a href="../design/implementation/selector-combining.html"><strong aria-hidden="true">3.3.3.</strong> Selector combining</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets.html"><strong aria-hidden="true">3.4.</strong> Gadgets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/ecc.html"><strong aria-hidden="true">3.4.1.</strong> Elliptic curve cryptography</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/ecc/witnessing-points.html"><strong aria-hidden="true">3.4.1.1.</strong> Witnessing points</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/addition.html"><strong aria-hidden="true">3.4.1.2.</strong> Incomplete and complete addition</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/fixed-base-scalar-mul.html"><strong aria-hidden="true">3.4.1.3.</strong> Fixed-base scalar multiplication</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/var-base-scalar-mul.html"><strong aria-hidden="true">3.4.1.4.</strong> Variable-base scalar multiplication</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets/sinsemilla.html"><strong aria-hidden="true">3.4.2.</strong> Sinsemilla</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sinsemilla/merkle-crh.html"><strong aria-hidden="true">3.4.2.1.</strong> MerkleCRH</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets/decomposition.html"><strong aria-hidden="true">3.4.3.</strong> Decomposition</a></li><li class="chapter-item expanded "><a href="../design/gadgets/sha256.html"><strong aria-hidden="true">3.4.4.</strong> SHA-256</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sha256/table16.html"><strong aria-hidden="true">3.4.4.1.</strong> 16-bit table chip</a></li></ol></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../background.html"><strong aria-hidden="true">4.</strong> Background Material</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../background/fields.html"><strong aria-hidden="true">4.1.</strong> Fields</a></li><li class="chapter-item expanded "><a href="../background/polynomials.html"><strong aria-hidden="true">4.2.</strong> Polynomials</a></li><li class="chapter-item expanded "><a href="../background/groups.html"><strong aria-hidden="true">4.3.</strong> Cryptographic groups</a></li><li class="chapter-item expanded "><a href="../background/curves.html"><strong aria-hidden="true">4.4.</strong> Elliptic curves</a></li><li class="chapter-item expanded "><a href="../background/pc-ipa.html"><strong aria-hidden="true">4.5.</strong> Polynomial commitment using inner product argument</a></li><li class="chapter-item expanded "><a href="../background/recursion.html"><strong aria-hidden="true">4.6.</strong> Recursion</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">halo2</a></li><li class="chapter-item expanded "><a href="../concepts.html"><strong aria-hidden="true">1.</strong> Concepts</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../concepts/proofs.html"><strong aria-hidden="true">1.1.</strong> Proof systems</a></li><li class="chapter-item expanded "><a href="../concepts/arithmetization.html"><strong aria-hidden="true">1.2.</strong> PLONKish Arithmetization</a></li><li class="chapter-item expanded "><a href="../concepts/chips.html"><strong aria-hidden="true">1.3.</strong> Chips</a></li><li class="chapter-item expanded "><a href="../concepts/gadgets.html"><strong aria-hidden="true">1.4.</strong> Gadgets</a></li></ol></li><li class="chapter-item expanded "><a href="../user.html"><strong aria-hidden="true">2.</strong> User Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../user/dev-tools.html"><strong aria-hidden="true">2.1.</strong> Developer tools</a></li><li class="chapter-item expanded "><a href="../user/simple-example.html"><strong aria-hidden="true">2.2.</strong> A simple example</a></li><li class="chapter-item expanded "><a href="../user/lookup-tables.html"><strong aria-hidden="true">2.3.</strong> Lookup tables</a></li><li class="chapter-item expanded "><a href="../user/gadgets.html"><strong aria-hidden="true">2.4.</strong> Gadgets</a></li><li class="chapter-item expanded "><a href="../user/tips-and-tricks.html"><strong aria-hidden="true">2.5.</strong> Tips and tricks</a></li><li class="chapter-item expanded "><a href="../user/wasm-port.html" class="active"><strong aria-hidden="true">2.6.</strong> WASM Guide</a></li></ol></li><li class="chapter-item expanded "><a href="../dev.html"><strong aria-hidden="true">3.</strong> Developer Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../dev/features.html"><strong aria-hidden="true">3.1.</strong> Feature development</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">4.</strong> Design</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/proving-system.html"><strong aria-hidden="true">4.1.</strong> Proving system</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/proving-system/lookup.html"><strong aria-hidden="true">4.1.1.</strong> Lookup argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/permutation.html"><strong aria-hidden="true">4.1.2.</strong> Permutation argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/circuit-commitments.html"><strong aria-hidden="true">4.1.3.</strong> Circuit commitments</a></li><li class="chapter-item expanded "><a href="../design/proving-system/vanishing.html"><strong aria-hidden="true">4.1.4.</strong> Vanishing argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/multipoint-opening.html"><strong aria-hidden="true">4.1.5.</strong> Multipoint opening argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/inner-product.html"><strong aria-hidden="true">4.1.6.</strong> Inner product argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/comparison.html"><strong aria-hidden="true">4.1.7.</strong> Comparison to other work</a></li></ol></li><li class="chapter-item expanded "><a href="../design/protocol.html"><strong aria-hidden="true">4.2.</strong> Protocol Description</a></li><li class="chapter-item expanded "><a href="../design/implementation.html"><strong aria-hidden="true">4.3.</strong> Implementation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/implementation/proofs.html"><strong aria-hidden="true">4.3.1.</strong> Proofs</a></li><li class="chapter-item expanded "><a href="../design/implementation/fields.html"><strong aria-hidden="true">4.3.2.</strong> Fields</a></li><li class="chapter-item expanded "><a href="../design/implementation/selector-combining.html"><strong aria-hidden="true">4.3.3.</strong> Selector combining</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets.html"><strong aria-hidden="true">4.4.</strong> Gadgets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/ecc.html"><strong aria-hidden="true">4.4.1.</strong> Elliptic curve cryptography</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/ecc/witnessing-points.html"><strong aria-hidden="true">4.4.1.1.</strong> Witnessing points</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/addition.html"><strong aria-hidden="true">4.4.1.2.</strong> Incomplete and complete addition</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/fixed-base-scalar-mul.html"><strong aria-hidden="true">4.4.1.3.</strong> Fixed-base scalar multiplication</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/var-base-scalar-mul.html"><strong aria-hidden="true">4.4.1.4.</strong> Variable-base scalar multiplication</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets/sinsemilla.html"><strong aria-hidden="true">4.4.2.</strong> Sinsemilla</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sinsemilla/merkle-crh.html"><strong aria-hidden="true">4.4.2.1.</strong> MerkleCRH</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets/decomposition.html"><strong aria-hidden="true">4.4.3.</strong> Decomposition</a></li><li class="chapter-item expanded "><a href="../design/gadgets/sha256.html"><strong aria-hidden="true">4.4.4.</strong> SHA-256</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sha256/table16.html"><strong aria-hidden="true">4.4.4.1.</strong> 16-bit table chip</a></li></ol></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../background.html"><strong aria-hidden="true">5.</strong> Background Material</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../background/fields.html"><strong aria-hidden="true">5.1.</strong> Fields</a></li><li class="chapter-item expanded "><a href="../background/polynomials.html"><strong aria-hidden="true">5.2.</strong> Polynomials</a></li><li class="chapter-item expanded "><a href="../background/groups.html"><strong aria-hidden="true">5.3.</strong> Cryptographic groups</a></li><li class="chapter-item expanded "><a href="../background/curves.html"><strong aria-hidden="true">5.4.</strong> Elliptic curves</a></li><li class="chapter-item expanded "><a href="../background/pc-ipa.html"><strong aria-hidden="true">5.5.</strong> Polynomial commitment using inner product argument</a></li><li class="chapter-item expanded "><a href="../background/recursion.html"><strong aria-hidden="true">5.6.</strong> Recursion</a></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -83,7 +88,7 @@
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
-                <div id="menu-bar-hover-placeholder"></div>
+                                <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky bordered">
                     <div class="left-buttons">
                         <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
@@ -93,7 +98,7 @@
                             <i class="fa fa-paint-brush"></i>
                         </button>
                         <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
-                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
                             <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
@@ -110,6 +115,7 @@
                         <a href="../print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
+
                     </div>
                 </div>
 
@@ -123,8 +129,9 @@
                         </ul>
                     </div>
                 </div>
+
                 <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
-                <script type="text/javascript">
+                <script>
                     document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
                     document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
                     Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
@@ -142,9 +149,7 @@
 <p>The first step is to create functions in Rust that will interface with the browser application. In the case of a prover, this will typically input some version of the advice and instance data, use it to generate a complete witness, and then output a proof. In the case of a verifier, this will typically input a proof and some version of the instance, and then output a boolean indicating whether the proof verified correctly or not.</p>
 <p>In the case of Zordle, this code is contained in <a href="https://github.com/nalinbhardwaj/zordle/blob/main/circuits/src/wasm.rs">wasm.rs</a>, and consists of two primary functions:</p>
 <h3 id="prover"><a class="header" href="#prover">Prover</a></h3>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>#[wasm_bindgen]
+<pre><code class="language-rust ignore">#[wasm_bindgen]
 pub async fn prove_play(final_word: String, words_js: JsValue, params_ser: JsValue) -&gt; JsValue {
   // Steps:
   // - Deserialise function parameters
@@ -152,45 +157,35 @@ pub async fn prove_play(final_word: String, words_js: JsValue, params_ser: JsVal
   // - Instantiate the circuit and generate the witness
   // - Generate the proving key from the params
   // - Create a proof
-}
-<span class="boring">}
-</span></code></pre></pre>
+}</code></pre>
 <p>While the specific inputs and their serialisations will depend on your circuit and webapp set up, it's useful to note the format in the specific case of Zordle since your use case will likely be similar:</p>
 <p>This function takes as input the <code>final_word</code> that the user aimed for, and the words they attempted to use (in the form of <code>words_js</code>). It also takes as input the parameters for the circuit, which are serialized in <code>params_ser</code>. We will expand on this in the <a href="#params">Params</a> section below.</p>
 <p>Note that the function parameters are passed in <code>wasm_bindgen</code>-compatible formats: <code>String</code> and <code>JsValue</code>. The <code>JsValue</code> type is a type from the <a href="https://serde.rs"><code>Serde</code></a> library. You can find much more details about this type and how to use it in the documentation <a href="https://rustwasm.github.io/wasm-bindgen/reference/arbitrary-data-with-serde.html#serializing-and-deserializing-arbitrary-data-into-and-from-jsvalue-with-serde">here</a>.</p>
 <p>The output is a <code>Vec&lt;u8&gt;</code> converted to a <code>JSValue</code> using Serde. This is later passed in as input to the the verifier function.</p>
 <h3 id="verifier"><a class="header" href="#verifier">Verifier</a></h3>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>#[wasm_bindgen]
+<pre><code class="language-rust ignore">#[wasm_bindgen]
 pub fn verify_play(final_word: String, proof_js: JsValue, diffs_u64_js: JsValue, params_ser: JsValue) -&gt; bool {
   // Steps:
   // - Deserialise function parameters
   // - Generate the instance columns using the diffs representation of the columns
   // - Generate the verifying key using the params
   // - Verify the proof
-}
-<span class="boring">}
-</span></code></pre></pre>
+}</code></pre>
 <p>Similar to the prover, we take in input and output a boolean true/false indicating the correctness of the proof. The <code>diffs_u64_js</code> object is a 2D JS array consisting of values for each cell that indicate the color: grey, yellow or green. These are used to assemble the instance columns for the circuit.</p>
 <h3 id="params"><a class="header" href="#params">Params</a></h3>
-<p>Additionally, both the prover and verifier functions input <code>params_ser</code>, a serialised form of the public parameters of the polynomial commitment scheme. These are passed in as input (instead of being regenerated in prove/verify functions) as a performance optimisation since these are constant based only on the circuit's value of <code>K</code>. We can store these seperately on a static web server and pass them in as input to the WASM. To generate the binary serialised form of these (seperately outside the WASM functions), you can run something like:</p>
-<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>fn write_params(K: u32) {
+<p>Additionally, both the prover and verifier functions input <code>params_ser</code>, a serialised form of the public parameters of the polynomial commitment scheme. These are passed in as input (instead of being regenerated in prove/verify functions) as a performance optimisation since these are constant based only on the circuit's value of <code>K</code>. We can store these separately on a static web server and pass them in as input to the WASM. To generate the binary serialised form of these (separately outside the WASM functions), you can run something like:</p>
+<pre><code class="language-rust ignore">fn write_params(K: u32) {
     let mut params_file = File::create(&quot;params.bin&quot;).unwrap();
     let params: Params&lt;EqAffine&gt; = Params::new(K);
     params.write(&amp;mut params_file).unwrap();
-}
-<span class="boring">}
-</span></code></pre></pre>
+}</code></pre>
 <p>Later, we can read the <code>params.bin</code> file from the web-server in Javascript in a byte-serialised format as a <code>Uint8Array</code> and pass it to the WASM as <code>params_ser</code>, which can be deserialised in Rust using the <a href="https://docs.rs/js-sys/latest/js_sys/"><code>js_sys</code></a> library.</p>
 <p>Ideally, in future, instead of serialising the parameters we would be able to serialise and work directly with the proving key and the verifying key of the circuit, but that is currently not supported by the library, and tracked as issue <a href="https://github.com/zcash/halo2/issues/449">#449</a> and <a href="https://github.com/zcash/halo2/issues/443">#443</a>.</p>
 <h2 id="rust-and-wasm-environment-setup"><a class="header" href="#rust-and-wasm-environment-setup">Rust and WASM environment setup</a></h2>
 <p>Typically, Rust code is compiled to WASM using the <a href="https://developer.mozilla.org/en-US/docs/WebAssembly/Rust_to_wasm"><code>wasm-pack</code></a> tool and is as simple as changing some build commands. In the case of halo2 prover/verifier functions however, we need to make some additional changes to the build process. In particular, there are two main changes:</p>
 <ul>
 <li><strong>Parallelism</strong>: halo2 uses the <code>rayon</code> library for parallelism, which is not directly supported by WASM. However, the Chrome team has an adapter to enable rayon-like parallelism using Web Workers in browser: <a href="https://github.com/GoogleChromeLabs/wasm-bindgen-rayon"><code>wasm-bindgen-rayon</code></a>. We'll use this to enable parallelism in our WASM prover/verifier.</li>
-<li><strong>WASM max memory</strong>: The default memory limit for WASM with <code>wasm-bindgen</code> is set to 2GB, which is not enough to run the halo2 prover for large circuits (with <code>K</code> &gt; 10 or so). We need to increase this limit to the maximum allowed by WASM (4GB!) to support larger circuits (upto <code>K = 15</code> or so).</li>
+<li><strong>WASM max memory</strong>: The default memory limit for WASM with <code>wasm-bindgen</code> is set to 2GB, which is not enough to run the halo2 prover for large circuits (with <code>K</code> &gt; 10 or so). We need to increase this limit to the maximum allowed by WASM (4GB!) to support larger circuits (up to <code>K = 15</code> or so).</li>
 </ul>
 <p>Firstly, add all the dependencies particular to your WASM interfacing functions to your <code>Cargo.toml</code> file. You can restrict the dependencies to the WASM compilation by using the WASM target feature flag. In the case of Zordle, <a href="https://github.com/nalinbhardwaj/zordle/blob/main/circuits/Cargo.toml#L24">this looks like</a>:</p>
 <pre><code class="language-toml">[target.'cfg(target_family = &quot;wasm&quot;)'.dependencies]
@@ -222,7 +217,7 @@ rustflags = [&quot;-C&quot;, &quot;target-feature=+atomics,+bulk-memory,+mutable
 <p>Zordle and its test-client set the parallelism to the number of cores available on the machine by default. If you would like to reduce this, you can do so by changing the argument to <a href="https://github.com/nalinbhardwaj/zordle/blob/main/test-client/src/halo-worker.ts#L7"><code>initThreadPool</code></a>.</p>
 <p>If you'd prefer to use your own Worker/React setup, the code to <a href="https://github.com/nalinbhardwaj/zordle/blob/main/test-client/src/halo-worker.ts#L13">fetch and serialise parameters</a>, proofs and other instance and advice values may still be useful to look at!</p>
 <h2 id="safari"><a class="header" href="#safari">Safari</a></h2>
-<p>Note that <code>wasm-bindgen-rayon</code> library is not supported by Safari because it spawns Web Workers from inside another Web Worker. Chrome marks the <a href="https://www.chromestatus.com/feature/6080438103703552">status of Safari support as &quot;No Signal&quot;</a> and there has been no activity on the <a href="https://bugs.webkit.org/show_bug.cgi?id=25212">Webkit issue</a> in many years, so if Safari is support is important to you, the only reasonable route is to fork <code>halo2</code> and replace the use of Rayon with single threaded functions.</p>
+<p>Note that <code>wasm-bindgen-rayon</code> library is not supported by Safari because it spawns Web Workers from inside another Web Worker. According to the relevant <a href="https://bugs.webkit.org/show_bug.cgi?id=25212">Webkit issue</a>, support for this feature had made it into Safari Technology Preview by November 2022, and indeed the <a href="https://developer.apple.com/safari/technology-preview/release-notes/#r155">Release Notes for Safari Technology Preview Release 155</a> claim support, so it is worth checking whether this has made it into Safari if that is important to you.</p>
 <h2 id="debugging"><a class="header" href="#debugging">Debugging</a></h2>
 <p>Often, you'll run into issues with your Rust code and see that the WASM execution errors with <code>Uncaught (in promise) RuntimeError: unreachable</code>, a wholly unhelpful error for debugging. This is because the code is compiled in release mode which strips out error messages as a performance optimisation. To debug, you can build the WASM package in debug mode using the flag <code>--dev</code> with <code>wasm-pack build</code>. This will build in debug mode, slowing down execution significantly but allowing you to see any runtime error messages in the browser console. Additionally, you can install the <a href="https://github.com/rustwasm/console_error_panic_hook"><code>console_error_panic_hook</code></a> crate (as is done by Zordle) to also get helpful debug messages for runtime panics.</p>
 <h2 id="credits"><a class="header" href="#credits">Credits</a></h2>
@@ -235,9 +230,11 @@ rustflags = [&quot;-C&quot;, &quot;target-feature=+atomics,+bulk-memory,+mutable
                             <a rel="prev" href="../user/tips-and-tricks.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
-                            <a rel="next" href="../design.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+
+                            <a rel="next" href="../dev.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
+
                         <div style="clear: both"></div>
                     </nav>
                 </div>
@@ -247,23 +244,32 @@ rustflags = [&quot;-C&quot;, &quot;target-feature=+atomics,+bulk-memory,+mutable
                     <a rel="prev" href="../user/tips-and-tricks.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
-                    <a rel="next" href="../design.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+
+                    <a rel="next" href="../dev.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
 
         </div>
 
-        <script type="text/javascript">
+
+
+
+        <script>
             window.playground_copyable = true;
         </script>
-        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
-        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
-        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
-        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
 
         <!-- Custom JS scripts -->
+
+
     </body>
 </html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/arithmetic.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>arithmetic.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-cd23e1e4557aa9dd.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-a21928845c7a186a.css"><link rel="stylesheet" disabled href="../../static.files/dark-90fc67ff25a42f29.css"><link rel="stylesheet" disabled href="../../static.files/ayu-d75a8bbde915b8ed.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-458bffc4c06ccf37.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/arithmetic.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>arithmetic.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-52c5db6f6f352e54.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,7 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../halo2_proofs/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../halo2_proofs/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -450,6 +450,21 @@
 <a href="#435" id="435">435</a>
 <a href="#436" id="436">436</a>
 <a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
 </pre><pre class="rust"><code><span class="doccomment">//! This module provides common utilities, traits and structures for group,
 //! field and polynomial arithmetic.
 
@@ -457,10 +472,25 @@
 <span class="kw">pub use </span>ff::Field;
 <span class="kw">use </span>group::{
     ff::{BatchInvert, PrimeField},
-    Group <span class="kw">as _</span>,
+    Group <span class="kw">as _</span>, GroupOpsOwned, ScalarMulOwned,
 };
 
 <span class="kw">pub use </span>pasta_curves::arithmetic::<span class="kw-2">*</span>;
+
+<span class="doccomment">/// This represents an element of a group with basic operations that can be
+/// performed. This allows an FFT implementation (for example) to operate
+/// generically over either a field or elliptic curve group.
+</span><span class="kw">pub trait </span>FftGroup&lt;Scalar: Field&gt;:
+    Copy + Send + Sync + <span class="lifetime">&#39;static </span>+ GroupOpsOwned + ScalarMulOwned&lt;Scalar&gt;
+{
+}
+
+<span class="kw">impl</span>&lt;T, Scalar&gt; FftGroup&lt;Scalar&gt; <span class="kw">for </span>T
+<span class="kw">where
+    </span>Scalar: Field,
+    T: Copy + Send + Sync + <span class="lifetime">&#39;static </span>+ GroupOpsOwned + ScalarMulOwned&lt;Scalar&gt;,
+{
+}
 
 <span class="kw">fn </span>multiexp_serial&lt;C: CurveAffine&gt;(coeffs: <span class="kw-2">&amp;</span>[C::Scalar], bases: <span class="kw-2">&amp;</span>[C], acc: <span class="kw-2">&amp;mut </span>C::Curve) {
     <span class="kw">let </span>coeffs: Vec&lt;<span class="kw">_</span>&gt; = coeffs.iter().map(|a| a.to_repr()).collect();
@@ -620,7 +650,7 @@
 /// by $n$.
 ///
 /// This will use multithreading if beneficial.
-</span><span class="kw">pub fn </span>best_fft&lt;G: Group&gt;(a: <span class="kw-2">&amp;mut </span>[G], omega: G::Scalar, log_n: u32) {
+</span><span class="kw">pub fn </span>best_fft&lt;Scalar: Field, G: FftGroup&lt;Scalar&gt;&gt;(a: <span class="kw-2">&amp;mut </span>[G], omega: Scalar, log_n: u32) {
     <span class="kw">fn </span>bitreverse(<span class="kw-2">mut </span>n: usize, l: usize) -&gt; usize {
         <span class="kw">let </span><span class="kw-2">mut </span>r = <span class="number">0</span>;
         <span class="kw">for _ in </span><span class="number">0</span>..l {
@@ -632,7 +662,7 @@
 
     <span class="kw">let </span>threads = multicore::current_num_threads();
     <span class="kw">let </span>log_threads = log2_floor(threads);
-    <span class="kw">let </span>n = a.len() <span class="kw">as </span>usize;
+    <span class="kw">let </span>n = a.len();
     <span class="macro">assert_eq!</span>(n, <span class="number">1 </span>&lt;&lt; log_n);
 
     <span class="kw">for </span>k <span class="kw">in </span><span class="number">0</span>..n {
@@ -643,17 +673,17 @@
     }
 
     <span class="comment">// precompute twiddle factors
-    </span><span class="kw">let </span>twiddles: Vec&lt;<span class="kw">_</span>&gt; = (<span class="number">0</span>..(n / <span class="number">2</span>) <span class="kw">as </span>usize)
-        .scan(G::Scalar::one(), |w, <span class="kw">_</span>| {
+    </span><span class="kw">let </span>twiddles: Vec&lt;<span class="kw">_</span>&gt; = (<span class="number">0</span>..(n / <span class="number">2</span>))
+        .scan(Scalar::ONE, |w, <span class="kw">_</span>| {
             <span class="kw">let </span>tw = <span class="kw-2">*</span>w;
-            w.group_scale(<span class="kw-2">&amp;</span>omega);
+            <span class="kw-2">*</span>w <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>omega;
             <span class="prelude-val">Some</span>(tw)
         })
         .collect();
 
     <span class="kw">if </span>log_n &lt;= log_threads {
         <span class="kw">let </span><span class="kw-2">mut </span>chunk = <span class="number">2_usize</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>twiddle_chunk = (n / <span class="number">2</span>) <span class="kw">as </span>usize;
+        <span class="kw">let </span><span class="kw-2">mut </span>twiddle_chunk = n / <span class="number">2</span>;
         <span class="kw">for _ in </span><span class="number">0</span>..log_n {
             a.chunks_mut(chunk).for_each(|coeffs| {
                 <span class="kw">let </span>(left, right) = coeffs.split_at_mut(chunk / <span class="number">2</span>);
@@ -663,18 +693,18 @@
                 <span class="kw">let </span>(b, right) = right.split_at_mut(<span class="number">1</span>);
                 <span class="kw">let </span>t = b[<span class="number">0</span>];
                 b[<span class="number">0</span>] = a[<span class="number">0</span>];
-                a[<span class="number">0</span>].group_add(<span class="kw-2">&amp;</span>t);
-                b[<span class="number">0</span>].group_sub(<span class="kw-2">&amp;</span>t);
+                a[<span class="number">0</span>] += <span class="kw-2">&amp;</span>t;
+                b[<span class="number">0</span>] -= <span class="kw-2">&amp;</span>t;
 
                 left.iter_mut()
                     .zip(right.iter_mut())
                     .enumerate()
                     .for_each(|(i, (a, b))| {
                         <span class="kw">let </span><span class="kw-2">mut </span>t = <span class="kw-2">*</span>b;
-                        t.group_scale(<span class="kw-2">&amp;</span>twiddles[(i + <span class="number">1</span>) * twiddle_chunk]);
+                        t <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>twiddles[(i + <span class="number">1</span>) * twiddle_chunk];
                         <span class="kw-2">*</span>b = <span class="kw-2">*</span>a;
-                        a.group_add(<span class="kw-2">&amp;</span>t);
-                        b.group_sub(<span class="kw-2">&amp;</span>t);
+                        <span class="kw-2">*</span>a += <span class="kw-2">&amp;</span>t;
+                        <span class="kw-2">*</span>b -= <span class="kw-2">&amp;</span>t;
                     });
             });
             chunk <span class="kw-2">*</span>= <span class="number">2</span>;
@@ -686,17 +716,17 @@
 }
 
 <span class="doccomment">/// This perform recursive butterfly arithmetic
-</span><span class="kw">pub fn </span>recursive_butterfly_arithmetic&lt;G: Group&gt;(
+</span><span class="kw">pub fn </span>recursive_butterfly_arithmetic&lt;Scalar: Field, G: FftGroup&lt;Scalar&gt;&gt;(
     a: <span class="kw-2">&amp;mut </span>[G],
     n: usize,
     twiddle_chunk: usize,
-    twiddles: <span class="kw-2">&amp;</span>[G::Scalar],
+    twiddles: <span class="kw-2">&amp;</span>[Scalar],
 ) {
     <span class="kw">if </span>n == <span class="number">2 </span>{
         <span class="kw">let </span>t = a[<span class="number">1</span>];
         a[<span class="number">1</span>] = a[<span class="number">0</span>];
-        a[<span class="number">0</span>].group_add(<span class="kw-2">&amp;</span>t);
-        a[<span class="number">1</span>].group_sub(<span class="kw-2">&amp;</span>t);
+        a[<span class="number">0</span>] += <span class="kw-2">&amp;</span>t;
+        a[<span class="number">1</span>] -= <span class="kw-2">&amp;</span>t;
     } <span class="kw">else </span>{
         <span class="kw">let </span>(left, right) = a.split_at_mut(n / <span class="number">2</span>);
         multicore::join(
@@ -709,18 +739,18 @@
         <span class="kw">let </span>(b, right) = right.split_at_mut(<span class="number">1</span>);
         <span class="kw">let </span>t = b[<span class="number">0</span>];
         b[<span class="number">0</span>] = a[<span class="number">0</span>];
-        a[<span class="number">0</span>].group_add(<span class="kw-2">&amp;</span>t);
-        b[<span class="number">0</span>].group_sub(<span class="kw-2">&amp;</span>t);
+        a[<span class="number">0</span>] += <span class="kw-2">&amp;</span>t;
+        b[<span class="number">0</span>] -= <span class="kw-2">&amp;</span>t;
 
         left.iter_mut()
             .zip(right.iter_mut())
             .enumerate()
             .for_each(|(i, (a, b))| {
                 <span class="kw">let </span><span class="kw-2">mut </span>t = <span class="kw-2">*</span>b;
-                t.group_scale(<span class="kw-2">&amp;</span>twiddles[(i + <span class="number">1</span>) * twiddle_chunk]);
+                t <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>twiddles[(i + <span class="number">1</span>) * twiddle_chunk];
                 <span class="kw-2">*</span>b = <span class="kw-2">*</span>a;
-                a.group_add(<span class="kw-2">&amp;</span>t);
-                b.group_sub(<span class="kw-2">&amp;</span>t);
+                <span class="kw-2">*</span>a += <span class="kw-2">&amp;</span>t;
+                <span class="kw-2">*</span>b -= <span class="kw-2">&amp;</span>t;
             });
     }
 }
@@ -730,7 +760,7 @@
     <span class="comment">// TODO: parallelize?
     </span>poly.iter()
         .rev()
-        .fold(F::zero(), |acc, coeff| acc * point + coeff)
+        .fold(F::ZERO, |acc, coeff| acc * point + coeff)
 }
 
 <span class="doccomment">/// This computes the inner product of two vectors `a` and `b`.
@@ -740,7 +770,7 @@
     <span class="comment">// TODO: parallelize?
     </span><span class="macro">assert_eq!</span>(a.len(), b.len());
 
-    <span class="kw">let </span><span class="kw-2">mut </span>acc = F::zero();
+    <span class="kw">let </span><span class="kw-2">mut </span>acc = F::ZERO;
     <span class="kw">for </span>(a, b) <span class="kw">in </span>a.iter().zip(b.iter()) {
         acc += (<span class="kw-2">*</span>a) * (<span class="kw-2">*</span>b);
     }
@@ -757,9 +787,9 @@
     b = -b;
     <span class="kw">let </span>a = a.into_iter();
 
-    <span class="kw">let </span><span class="kw-2">mut </span>q = <span class="macro">vec!</span>[F::zero(); a.len() - <span class="number">1</span>];
+    <span class="kw">let </span><span class="kw-2">mut </span>q = <span class="macro">vec!</span>[F::ZERO; a.len() - <span class="number">1</span>];
 
-    <span class="kw">let </span><span class="kw-2">mut </span>tmp = F::zero();
+    <span class="kw">let </span><span class="kw-2">mut </span>tmp = F::ZERO;
     <span class="kw">for </span>(q, r) <span class="kw">in </span>q.iter_mut().rev().zip(a.rev()) {
         <span class="kw">let </span><span class="kw-2">mut </span>lead_coeff = <span class="kw-2">*</span>r;
         lead_coeff.sub_assign(<span class="kw-2">&amp;</span>tmp);
@@ -776,9 +806,9 @@
 </span><span class="kw">pub fn </span>parallelize&lt;T: Send, F: Fn(<span class="kw-2">&amp;mut </span>[T], usize) + Send + Sync + Clone&gt;(v: <span class="kw-2">&amp;mut </span>[T], f: F) {
     <span class="kw">let </span>n = v.len();
     <span class="kw">let </span>num_threads = multicore::current_num_threads();
-    <span class="kw">let </span><span class="kw-2">mut </span>chunk = (n <span class="kw">as </span>usize) / num_threads;
+    <span class="kw">let </span><span class="kw-2">mut </span>chunk = n / num_threads;
     <span class="kw">if </span>chunk &lt; num_threads {
-        chunk = n <span class="kw">as </span>usize;
+        chunk = n;
     }
 
     multicore::scope(|scope| {
@@ -807,11 +837,11 @@
 <span class="doccomment">/// Returns coefficients of an n - 1 degree polynomial given a set of n points
 /// and their evaluations. This function will panic if two values in `points`
 /// are the same.
-</span><span class="kw">pub fn </span>lagrange_interpolate&lt;F: FieldExt&gt;(points: <span class="kw-2">&amp;</span>[F], evals: <span class="kw-2">&amp;</span>[F]) -&gt; Vec&lt;F&gt; {
+</span><span class="kw">pub fn </span>lagrange_interpolate&lt;F: Field&gt;(points: <span class="kw-2">&amp;</span>[F], evals: <span class="kw-2">&amp;</span>[F]) -&gt; Vec&lt;F&gt; {
     <span class="macro">assert_eq!</span>(points.len(), evals.len());
     <span class="kw">if </span>points.len() == <span class="number">1 </span>{
         <span class="comment">// Constant polynomial
-        </span><span class="kw">return </span><span class="macro">vec!</span>[evals[<span class="number">0</span>]];
+        </span><span class="macro">vec!</span>[evals[<span class="number">0</span>]]
     } <span class="kw">else </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>denoms = Vec::with_capacity(points.len());
         <span class="kw">for </span>(j, x_j) <span class="kw">in </span>points.iter().enumerate() {
@@ -829,11 +859,11 @@
         <span class="comment">// Compute (x_j - x_k)^(-1) for each j != i
         </span>denoms.iter_mut().flat_map(|v| v.iter_mut()).batch_invert();
 
-        <span class="kw">let </span><span class="kw-2">mut </span>final_poly = <span class="macro">vec!</span>[F::zero(); points.len()];
+        <span class="kw">let </span><span class="kw-2">mut </span>final_poly = <span class="macro">vec!</span>[F::ZERO; points.len()];
         <span class="kw">for </span>(j, (denoms, eval)) <span class="kw">in </span>denoms.into_iter().zip(evals.iter()).enumerate() {
             <span class="kw">let </span><span class="kw-2">mut </span>tmp: Vec&lt;F&gt; = Vec::with_capacity(points.len());
             <span class="kw">let </span><span class="kw-2">mut </span>product = Vec::with_capacity(points.len() - <span class="number">1</span>);
-            tmp.push(F::one());
+            tmp.push(F::ONE);
             <span class="kw">for </span>(x_k, denom) <span class="kw">in </span>points
                 .iter()
                 .enumerate()
@@ -841,11 +871,11 @@
                 .map(|a| a.<span class="number">1</span>)
                 .zip(denoms.into_iter())
             {
-                product.resize(tmp.len() + <span class="number">1</span>, F::zero());
+                product.resize(tmp.len() + <span class="number">1</span>, F::ZERO);
                 <span class="kw">for </span>((a, b), product) <span class="kw">in </span>tmp
                     .iter()
-                    .chain(std::iter::once(<span class="kw-2">&amp;</span>F::zero()))
-                    .zip(std::iter::once(<span class="kw-2">&amp;</span>F::zero()).chain(tmp.iter()))
+                    .chain(std::iter::once(<span class="kw-2">&amp;</span>F::ZERO))
+                    .zip(std::iter::once(<span class="kw-2">&amp;</span>F::ZERO).chain(tmp.iter()))
                     .zip(product.iter_mut())
                 {
                     <span class="kw-2">*</span>product = <span class="kw-2">*</span>a * (-denom * x_k) + <span class="kw-2">*</span>b * denom;
@@ -888,4 +918,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (70f8737b2 2022-11-23)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7e1cf5cc683233f7.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (4c83bd03a 2023-01-19)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-ab1d4ae2ec52020e.css" ></div></body></html>

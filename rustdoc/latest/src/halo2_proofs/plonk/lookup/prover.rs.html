@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/plonk/lookup/prover.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>prover.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-cd23e1e4557aa9dd.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../static.files/light-a21928845c7a186a.css"><link rel="stylesheet" disabled href="../../../../static.files/dark-90fc67ff25a42f29.css"><link rel="stylesheet" disabled href="../../../../static.files/ayu-d75a8bbde915b8ed.css"><script id="default-settings" ></script><script src="../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../static.files/source-script-5cf2e01a42cc9858.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-458bffc4c06ccf37.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/plonk/lookup/prover.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>prover.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-52c5db6f6f352e54.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../../../source-files.js"></script><script defer src="../../../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,7 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+</head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -659,13 +659,14 @@
 <a href="#644" id="644">644</a>
 <a href="#645" id="645">645</a>
 <a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{
     circuit::Expression, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error,
     ProvingKey,
 };
 <span class="kw">use </span><span class="kw">super</span>::Argument;
 <span class="kw">use crate</span>::{
-    arithmetic::{eval_polynomial, parallelize, CurveAffine, FieldExt},
+    arithmetic::{eval_polynomial, parallelize, CurveAffine},
     poly::{
         <span class="self">self</span>,
         commitment::{Blind, Params},
@@ -674,6 +675,7 @@
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
+<span class="kw">use </span>ff::WithSmallOrderMulGroup;
 <span class="kw">use </span>group::{
     ff::{BatchInvert, Field},
     Curve,
@@ -722,7 +724,7 @@
     constructed: Constructed&lt;C&gt;,
 }
 
-<span class="kw">impl</span>&lt;F: FieldExt&gt; Argument&lt;F&gt; {
+<span class="kw">impl</span>&lt;F: WithSmallOrderMulGroup&lt;<span class="number">3</span>&gt;&gt; Argument&lt;F&gt; {
     <span class="doccomment">/// Given a Lookup with input expressions [A_0, A_1, ..., A_{m-1}] and table expressions
     /// [S_0, S_1, ..., S_{m-1}], this method
     /// - constructs A_compressed = \theta^{m-1} A_0 + theta^{m-2} A_1 + ... + \theta A_{m-2} + A_{m-1}
@@ -825,13 +827,13 @@
 
             <span class="comment">// Compressed version of expressions
             </span><span class="kw">let </span>compressed_expression = unpermuted_expressions.iter().fold(
-                poly::Ast::ConstantTerm(C::Scalar::zero()),
+                poly::Ast::ConstantTerm(C::Scalar::ZERO),
                 |acc, expression| <span class="kw-2">&amp;</span>(acc * <span class="kw-2">*</span>theta) + expression,
             );
 
             <span class="comment">// Compressed version of cosets
             </span><span class="kw">let </span>compressed_coset = unpermuted_cosets.iter().fold(
-                poly::Ast::&lt;<span class="kw">_</span>, <span class="kw">_</span>, ExtendedLagrangeCoeff&gt;::ConstantTerm(C::Scalar::zero()),
+                poly::Ast::&lt;<span class="kw">_</span>, <span class="kw">_</span>, ExtendedLagrangeCoeff&gt;::ConstantTerm(C::Scalar::ZERO),
                 |acc, eval| acc * poly::Ast::ConstantTerm(<span class="kw-2">*</span>theta) + eval.clone(),
             );
 
@@ -936,7 +938,7 @@
         // s_j(X) is the jth table expression in this lookup,
         // s&#39;(X) is the compression of the permuted table expressions,
         // and i is the ith row of the expression.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>lookup_product = <span class="macro">vec!</span>[C::Scalar::zero(); params.n <span class="kw">as </span>usize];
+        </span><span class="kw">let </span><span class="kw-2">mut </span>lookup_product = <span class="macro">vec!</span>[C::Scalar::ZERO; params.n <span class="kw">as </span>usize];
         <span class="comment">// Denominator uses the permuted input expression and permuted table expression
         </span>parallelize(<span class="kw-2">&amp;mut </span>lookup_product, |lookup_product, start| {
             <span class="kw">for </span>((lookup_product, permuted_input_value), permuted_table_value) <span class="kw">in </span>lookup_product
@@ -981,9 +983,9 @@
 
         // Compute the evaluations of the lookup product polynomial
         // over our domain, starting with z[0] = 1
-        </span><span class="kw">let </span>z = iter::once(C::Scalar::one())
+        </span><span class="kw">let </span>z = iter::once(C::Scalar::ONE)
             .chain(lookup_product)
-            .scan(C::Scalar::one(), |state, cur| {
+            .scan(C::Scalar::ONE, |state, cur| {
                 <span class="kw-2">*</span>state <span class="kw-2">*</span>= <span class="kw-2">&amp;</span>cur;
                 <span class="prelude-val">Some</span>(<span class="kw-2">*</span>state)
             })
@@ -1004,7 +1006,7 @@
             </span><span class="kw">let </span>u = (params.n <span class="kw">as </span>usize) - (blinding_factors + <span class="number">1</span>);
 
             <span class="comment">// l_0(X) * (1 - z(X)) = 0
-            </span><span class="macro">assert_eq!</span>(z[<span class="number">0</span>], C::Scalar::one());
+            </span><span class="macro">assert_eq!</span>(z[<span class="number">0</span>], C::Scalar::ONE);
 
             <span class="comment">// z(\omega X) (a&#39;(X) + \beta) (s&#39;(X) + \gamma)
             // - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
@@ -1032,7 +1034,7 @@
             <span class="comment">// l_last(X) * (z(X)^2 - z(X)) = 0
             // Assertion will fail only when soundness is broken, in which
             // case this z[u] value will be zero. (bad!)
-            </span><span class="macro">assert_eq!</span>(z[u], C::Scalar::one());
+            </span><span class="macro">assert_eq!</span>(z[u], C::Scalar::ONE);
         }
 
         <span class="kw">let </span>product_blind = Blind(C::Scalar::random(rng));
@@ -1245,7 +1247,7 @@
             <span class="kw-2">*</span>acc.entry(<span class="kw-2">*</span>coeff).or_insert(<span class="number">0</span>) += <span class="number">1</span>;
             acc
         });
-    <span class="kw">let </span><span class="kw-2">mut </span>permuted_table_coeffs = <span class="macro">vec!</span>[C::Scalar::zero(); usable_rows];
+    <span class="kw">let </span><span class="kw-2">mut </span>permuted_table_coeffs = <span class="macro">vec!</span>[C::Scalar::ZERO; usable_rows];
 
     <span class="kw">let </span><span class="kw-2">mut </span>repeated_input_rows = permuted_input_expression
         .iter()
@@ -1274,7 +1276,7 @@
     <span class="comment">// Populate permuted table at unfilled rows with leftover table elements
     </span><span class="kw">for </span>(coeff, count) <span class="kw">in </span>leftover_table_map.iter() {
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="kw-2">*</span>count {
-            permuted_table_coeffs[repeated_input_rows.pop().unwrap() <span class="kw">as </span>usize] = <span class="kw-2">*</span>coeff;
+            permuted_table_coeffs[repeated_input_rows.pop().unwrap()] = <span class="kw-2">*</span>coeff;
         }
     }
     <span class="macro">assert!</span>(repeated_input_rows.is_empty());
@@ -1306,4 +1308,4 @@
     ))
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (70f8737b2 2022-11-23)" data-search-js="search-df80cc3cb87b6482.js" data-settings-js="settings-7e1cf5cc683233f7.js" data-settings-css="settings-af96d9e2fc13e081.css" ></div></body></html>
+</section></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.0-nightly (4c83bd03a 2023-01-19)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-ab1d4ae2ec52020e.css" ></div></body></html>
