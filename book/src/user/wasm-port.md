@@ -116,7 +116,7 @@ If you'd prefer to use your own Worker/React setup, the code to [fetch and seria
 
 ## Safari
 
-Note that `wasm-bindgen-rayon` library is not supported by Safari because it spawns Web Workers from inside another Web Worker. Chrome marks the [status of Safari support as "No Signal"](https://www.chromestatus.com/feature/6080438103703552) and there has been no activity on the [Webkit issue](https://bugs.webkit.org/show_bug.cgi?id=25212) in many years, so if Safari is support is important to you, the only reasonable route is to fork `halo2` and replace the use of Rayon with single threaded functions.
+Note that `wasm-bindgen-rayon` library is not supported by Safari because it spawns Web Workers from inside another Web Worker. According to the relevant [Webkit issue](https://bugs.webkit.org/show_bug.cgi?id=25212), support for this feature had made it into Safari Technology Preview by November 2022, and indeed the [Release Notes for Safari Technology Preview Release 155](https://developer.apple.com/safari/technology-preview/release-notes/#r155) claim support, so it is worth checking whether this has made it into Safari if that is important to you.
 
 ## Debugging
 
