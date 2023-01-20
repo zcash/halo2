@@ -69,7 +69,7 @@ pub(super) fn render_cell_layout(
         .map(|(col, _)| {
             let size = match location {
                 FailureLocation::InRegion { region, offset: _ } => {
-                    if let Some(column_ann) = region.column_annotations {
+                    if let Some(column_ann) = region.column_annotations.as_ref() {
                         if let Some(ann) = column_ann.get(col) {
                             ann.len()
                         } else {
@@ -98,6 +98,7 @@ pub(super) fn render_cell_layout(
                     FailureLocation::InRegion { region, offset: _ } => {
                         region
                             .column_annotations
+                            .as_ref()
                             .and_then(|column_ann| column_ann.get(column).cloned())
                             .unwrap_or_else(|| column_type_and_idx(column))
                     }

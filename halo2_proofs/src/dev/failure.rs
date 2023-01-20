@@ -22,11 +22,11 @@ mod emitter;
 
 /// The location within the circuit at which a particular [`VerifyFailure`] occurred.
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum FailureLocation<'a> {
+pub enum FailureLocation {
     /// A location inside a region.
     InRegion {
         /// The region in which the failure occurred.
-        region: metadata::Region<'a>,
+        region: metadata::Region,
         /// The offset (relative to the start of the region) at which the failure
         /// occurred.
         offset: usize,
@@ -38,7 +38,7 @@ pub enum FailureLocation<'a> {
     },
 }
 
-impl<'a> fmt::Display for FailureLocation<'a> {
+impl fmt::Display for FailureLocation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InRegion { region, offset } => write!(f, "in {} at offset {}", region, offset),
@@ -49,20 +49,20 @@ impl<'a> fmt::Display for FailureLocation<'a> {
     }
 }
 
-impl<'a> FailureLocation<'a> {
+impl FailureLocation {
     /// Returns a `DebugColumn` from Column metadata and `&self`.
     pub(super) fn get_debug_column(&self, metadata: metadata::Column) -> DebugColumn {
         match self {
             Self::InRegion { region, .. } => {
-                DebugColumn::from((metadata, region.column_annotations))
+                DebugColumn::from((metadata, region.column_annotations.as_ref()))
             }
             _ => DebugColumn::from((metadata, None)),
         }
     }
 
-    pub(super) fn find_expressions<F: Field>(
+    pub(super) fn find_expressions<'a, F: Field>(
         cs: &ConstraintSystem<F>,
-        regions: &'a [Region],
+        regions: &[Region],
         failure_row: usize,
         failure_expressions: impl Iterator<Item = &'a Expression<F>>,
     ) -> Self {
@@ -94,7 +94,7 @@ impl<'a> FailureLocation<'a> {
 
     /// Figures out whether the given row and columns overlap an assigned region.
     pub(super) fn find(
-        regions: &'a [Region],
+        regions: &[Region],
         failure_row: usize,
         failure_columns: HashSet<Column<Any>>,
     ) -> Self {
@@ -114,7 +114,7 @@ impl<'a> FailureLocation<'a> {
                 (start..=end).contains(&failure_row) && !failure_columns.is_disjoint(&r.columns)
             })
             .map(|(r_i, r)| FailureLocation::InRegion {
-                region: (r_i, r.name.clone(), &r.annotations).into(),
+                region: (r_i, r.name.clone(), r.annotations.clone()).into(),
                 offset: failure_row - r.rows.unwrap().0,
             })
             .unwrap_or_else(|| FailureLocation::OutsideRegion { row: failure_row })
@@ -123,13 +123,13 @@ impl<'a> FailureLocation<'a> {
 
 /// The reasons why a particular circuit is not satisfied.
 #[derive(PartialEq, Eq)]
-pub enum VerifyFailure<'a> {
+pub enum VerifyFailure {
     /// A cell used in an active gate was not assigned to.
     CellNotAssigned {
         /// The index of the active gate.
         gate: metadata::Gate,
         /// The region in which this cell should be assigned.
-        region: metadata::Region<'a>,
+        region: metadata::Region,
         /// The offset (relative to the start of the region) at which the active gate
         /// queries this cell.
         gate_offset: usize,
@@ -148,7 +148,7 @@ pub enum VerifyFailure<'a> {
         ///
         /// `FailureLocation::OutsideRegion` is usually caused by a constraint that does
         /// not contain a selector, and as a result is active on every row.
-        location: FailureLocation<'a>,
+        location: FailureLocation,
         /// The values of the virtual cells used by this constraint.
         cell_values: Vec<(metadata::VirtualCell, String)>,
     },
@@ -177,18 +177,18 @@ pub enum VerifyFailure<'a> {
         ///   in the table when the lookup is not being used.
         /// - The input expressions use a column queried at a non-zero `Rotation`, and the
         ///   lookup is active on a row adjacent to an unrelated region.
-        location: FailureLocation<'a>,
+        location: FailureLocation,
     },
     /// A permutation did not preserve the original value of a cell.
     Permutation {
         /// The column in which this permutation is not satisfied.
         column: metadata::Column,
         /// The location at which the permutation is not satisfied.
-        location: FailureLocation<'a>,
+        location: FailureLocation,
     },
 }
 
-impl<'a> fmt::Display for VerifyFailure<'a> {
+impl fmt::Display for VerifyFailure {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::CellNotAssigned {
@@ -213,12 +213,12 @@ impl<'a> fmt::Display for VerifyFailure<'a> {
                 for (dvc, value) in cell_values.iter().map(|(vc, string)| {
                     let ann_map = match location {
                         FailureLocation::InRegion { region, offset: _ } => {
-                            region.column_annotations
+                            &region.column_annotations
                         }
-                        _ => None,
+                        _ => &None,
                     };
 
-                    (DebugVirtualCell::from((vc, ann_map)), string)
+                    (DebugVirtualCell::from((vc, ann_map.as_ref())), string)
                 }) {
                     writeln!(f, "- {} = {}", dvc, value)?;
                 }
@@ -254,7 +254,7 @@ impl<'a> fmt::Display for VerifyFailure<'a> {
     }
 }
 
-impl<'a> Debug for VerifyFailure<'a> {
+impl Debug for VerifyFailure {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             VerifyFailure::ConstraintNotSatisfied {
@@ -264,14 +264,16 @@ impl<'a> Debug for VerifyFailure<'a> {
             } => {
                 #[allow(dead_code)]
                 #[derive(Debug)]
-                struct ConstraintCaseDebug<'a> {
+                struct ConstraintCaseDebug {
                     constraint: Constraint,
-                    location: FailureLocation<'a>,
+                    location: FailureLocation,
                     cell_values: Vec<(DebugVirtualCell, String)>,
                 }
 
                 let ann_map = match location {
-                    FailureLocation::InRegion { region, offset: _ } => region.column_annotations,
+                    FailureLocation::InRegion { region, offset: _ } => {
+                        region.column_annotations.clone()
+                    }
                     _ => None,
                 };
 
@@ -280,7 +282,12 @@ impl<'a> Debug for VerifyFailure<'a> {
                     location: location.clone(),
                     cell_values: cell_values
                         .iter()
-                        .map(|(vc, value)| (DebugVirtualCell::from((vc, ann_map)), value.clone()))
+                        .map(|(vc, value)| {
+                            (
+                                DebugVirtualCell::from((vc, ann_map.as_ref())),
+                                value.clone(),
+                            )
+                        })
                         .collect(),
                 };
 
@@ -605,7 +612,7 @@ fn render_lookup<F: FieldExt>(
     }
 }
 
-impl<'a> VerifyFailure<'a> {
+impl VerifyFailure {
     /// Emits this failure in pretty-printed format to stderr.
     pub(super) fn emit<F: FieldExt>(&self, prover: &MockProver<F>) {
         match self {

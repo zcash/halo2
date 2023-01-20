@@ -659,7 +659,7 @@ impl<F: FieldExt> MockProver<F> {
                                 } else {
                                     Some(VerifyFailure::CellNotAssigned {
                                         gate: (gate_index, gate.name()).into(),
-                                        region: (r_i, r.name.clone(), &r.annotations).into(),
+                                        region: (r_i, r.name.clone(), r.annotations.clone()).into(),
                                         gate_offset: *selector_row,
                                         column: cell.column,
                                         offset: cell_row as isize - r.rows.unwrap().0 as isize,
