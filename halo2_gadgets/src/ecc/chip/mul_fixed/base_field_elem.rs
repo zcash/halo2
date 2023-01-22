@@ -184,8 +184,8 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                         NUM_WINDOWS,
                     )?;
                     EccBaseFieldElemFixed {
-                        base_field_elem: running_sum[0].clone(),
-                        running_sum: (*running_sum).as_slice().try_into().unwrap(),
+                        base_field_elem: running_sum.zs()[0].clone(),
+                        running_sum: running_sum.zs().try_into().unwrap(),
                     }
                 };
 
