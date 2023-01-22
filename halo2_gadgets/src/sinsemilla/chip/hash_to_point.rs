@@ -36,7 +36,7 @@ where
         >>::Message,
     ) -> Result<
         (
-            NonIdentityEccPoint,
+            NonIdentityEccPoint<pallas::Affine>,
             Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
         ),
         Error,

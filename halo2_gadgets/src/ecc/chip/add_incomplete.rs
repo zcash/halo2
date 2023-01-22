@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, marker::PhantomData};
 
 use super::NonIdentityEccPoint;
 use halo2_proofs::{
@@ -6,10 +6,10 @@ use halo2_proofs::{
     plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
-use pasta_curves::pallas;
+use pasta_curves::arithmetic::CurveAffine;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct Config {
+pub struct Config<C: CurveAffine> {
     q_add_incomplete: Selector,
     // x-coordinate of P in P + Q = R
     pub x_p: Column<Advice>,
@@ -19,11 +19,12 @@ pub struct Config {
     pub x_qr: Column<Advice>,
     // y-coordinate of Q or R in P + Q = R
     pub y_qr: Column<Advice>,
+    _marker: PhantomData<C>,
 }
 
-impl Config {
+impl<C: CurveAffine> Config<C> {
     pub(super) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystem<C::Base>,
         x_p: Column<Advice>,
         y_p: Column<Advice>,
         x_qr: Column<Advice>,
@@ -40,6 +41,7 @@ impl Config {
             y_p,
             x_qr,
             y_qr,
+            _marker: PhantomData,
         };
 
         config.create_gate(meta);
@@ -53,7 +55,7 @@ impl Config {
             .collect()
     }
 
-    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystem<C::Base>) {
         // https://p.z.cash/halo2-0.1:ecc-incomplete-addition
         meta.create_gate("incomplete addition", |meta| {
             let q_add_incomplete = meta.query_selector(self.q_add_incomplete);
@@ -81,11 +83,11 @@ impl Config {
 
     pub(super) fn assign_region(
         &self,
-        p: &NonIdentityEccPoint,
-        q: &NonIdentityEccPoint,
+        p: &NonIdentityEccPoint<C>,
+        q: &NonIdentityEccPoint<C>,
         offset: usize,
-        region: &mut Region<'_, pallas::Base>,
-    ) -> Result<NonIdentityEccPoint, Error> {
+        region: &mut Region<'_, C::Base>,
+    ) -> Result<NonIdentityEccPoint<C>, Error> {
         // Enable `q_add_incomplete` selector
         self.q_add_incomplete.enable(region, offset)?;
 
