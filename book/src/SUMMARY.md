@@ -32,6 +32,7 @@
   - [Gadgets](design/gadgets.md)
     - [Elliptic curve cryptography](design/gadgets/ecc.md)
       - [Witnessing points](design/gadgets/ecc/witnessing-points.md)
+      - [Point doubling](design/gadgets/ecc/doubling.md)
       - [Incomplete and complete addition](design/gadgets/ecc/addition.md)
       - [Fixed-base scalar multiplication](design/gadgets/ecc/fixed-base-scalar-mul.md)
       - [Variable-base scalar multiplication](design/gadgets/ecc/var-base-scalar-mul.md)
