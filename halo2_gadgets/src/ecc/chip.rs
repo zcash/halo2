@@ -17,9 +17,9 @@ use pasta_curves::{arithmetic::CurveAffine, pallas};
 use std::convert::TryInto;
 
 pub(super) mod add;
-pub(super) mod add_incomplete;
+pub(crate) mod add_incomplete;
 pub mod constants;
-pub(super) mod double;
+pub(crate) mod double;
 pub(super) mod mul;
 pub(super) mod mul_fixed;
 pub(super) mod witness_point;

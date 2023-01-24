@@ -2,6 +2,7 @@
 
 use std::marker::PhantomData;
 
+use ff::PrimeField;
 use halo2_proofs::{
     arithmetic::CurveAffine,
     circuit::{AssignedCell, Region, Value},
@@ -10,7 +11,6 @@ use halo2_proofs::{
     },
     poly::Rotation,
 };
-use ff::PrimeField;
 
 /// A helper struct for implementing single-row double-and-add using incomplete addition.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -65,6 +65,10 @@ impl<F: PrimeField> std::ops::Deref for Y<F> {
 }
 
 impl<C: CurveAffine> DoubleAndAdd<C> {
+    pub(crate) fn advices(&self) -> [Column<Advice>; 4] {
+        [self.x_a, self.x_p, self.lambda_1, self.lambda_2]
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn configure(
         meta: &mut ConstraintSystem<C::Base>,

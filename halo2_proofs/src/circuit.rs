@@ -136,6 +136,16 @@ impl<F: Field> AssignedCell<Assigned<F>, F> {
     }
 }
 
+impl<F: Field> From<AssignedCell<F, F>> for AssignedCell<Assigned<F>, F> {
+    fn from(assigned_cell: AssignedCell<F, F>) -> Self {
+        AssignedCell {
+            value: assigned_cell.value.map(|val| val.into()),
+            cell: assigned_cell.cell,
+            _marker: Default::default(),
+        }
+    }
+}
+
 impl<V: Clone, F: Field> AssignedCell<V, F>
 where
     for<'v> Assigned<F>: From<&'v V>,
