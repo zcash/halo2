@@ -196,6 +196,19 @@ $$
 
 ### $q_2 = 1$ <a name="incomplete-main-loop-gate">
 This gate is used on all rows corresponding to the for loop except the last.
+The $q_2$ selector is also passed to the [double-and-add](../double-and-add.md)
+helper as $\texttt{q\_gradient}$, which means that the double-and-add gradient
+check is activated on each row where $q_2 = 1$:
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+      3       & q_2 \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}\right) = 0 \\\hline
+\end{array}
+$$
+
+Additionally, $q_2 = 1$ activates the following checks:
 
 $$
 \begin{array}{|c|l|}
@@ -205,8 +218,6 @@ $$
 2 & q_2 \cdot \left(y_{T,cur} - y_{T,next}\right) = 0 \\\hline
 3 & q_2 \cdot \BoolCheck{\mathbf{k}_i} = 0, \text{ where } \mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1} \\\hline
 4 & q_2 \cdot \left(\lambda_{1,i} \cdot (x_{A,i} - x_{T,i}) - y_{A,i} + (2\mathbf{k}_i - 1) \cdot y_{T,i}\right) = 0 \\\hline
-3 & q_2 \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - x_{R,i} - x_{A,i}\right) = 0 \\\hline
-3 & q_2 \cdot \left(\lambda_{2,i} \cdot (x_{A,i} - x_{A,i-1}) - y_{A,i} - y_{A,i-1}\right) = 0 \\\hline
 \end{array}
 $$
 where
@@ -215,6 +226,27 @@ $$
 x_{R,i} &= \lambda_{1,i}^2 - x_{A,i} - x_T, \\
 y_{A,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2}, \\
 y_{A,i-1} &= \frac{(\lambda_{1,i-1} + \lambda_{2,i-1}) \cdot (x_{A,i-1} - (\lambda_{1,i-1}^2 - x_{A,i-1} - x_T))}{2}, \\
+\end{aligned}
+$$
+
+### $q_2 + q_3 = 1$
+This composite selector is passed to the [double-and-add](../double-and-add.md)
+helper as $\texttt{q\_secant}$ which means that the double-and-add secant
+check is activated on each row where $q_2 + q_3 = 1$:
+
+$$
+\begin{array}{|c|l|}
+\hline
+\text{Degree} & \text{Constraint} \\\hline
+3 & (q_2 + q_3) \cdot \left(\lambda_{2,i}^2 - x_{A,i-1} - x_{R,i} - x_{A,i}\right) = 0 \\\hline
+\end{array}
+$$
+where
+$$
+\begin{aligned}
+x_{R,i} &= \lambda_{1,i}^2 - x_{A,i} - x_T, \\
+y_{A,i} &= \frac{(\lambda_{1,i} + \lambda_{2,i}) \cdot (x_{A,i} - (\lambda_{1,i}^2 - x_{A,i} - x_T))}{2},\\
+y_{A,i-1}^\text{witnessed} &\text{ is witnessed.}
 \end{aligned}
 $$
 
@@ -269,8 +301,8 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-  & q_\texttt{mul\_decompose\_var} \cdot \BoolCheck{\mathbf{k}_i} = 0 \\\hline
-  & q_\texttt{mul\_decompose\_var} \cdot \Ternary{\mathbf{k}_i}{y_T - y_p}{y_T + y_p} = 0 \\\hline
+       3      & q_\texttt{mul\_decompose\_var} \cdot \BoolCheck{\mathbf{k}_i} = 0 \\\hline
+       3      & q_\texttt{mul\_decompose\_var} \cdot \Ternary{\mathbf{k}_i}{y_T - y_p}{y_T + y_p} = 0 \\\hline
 \end{array}
 $$
 where $\mathbf{k}_i = \mathbf{z}_{i} - 2\mathbf{z}_{i+1}$.
@@ -293,9 +325,9 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-  & q_\texttt{mul\_lsb} \cdot \BoolCheck{\mathbf{k}_0} = 0 \\\hline
-  & q_\texttt{mul\_lsb} \cdot \Ternary{\mathbf{k}_0}{x_p}{x_p - x_T} = 0 \\\hline
-  & q_\texttt{mul\_lsb} \cdot \Ternary{\mathbf{k}_0}{y_p}{y_p + y_T} = 0 \\\hline
+       3      & q_\texttt{mul\_lsb} \cdot \BoolCheck{\mathbf{k}_0} = 0 \\\hline
+       3      & q_\texttt{mul\_lsb} \cdot \Ternary{\mathbf{k}_0}{x_p}{x_p - x_T} = 0 \\\hline
+       3      & q_\texttt{mul\_lsb} \cdot \Ternary{\mathbf{k}_0}{y_p}{y_p + y_T} = 0 \\\hline
 \end{array}
 $$
 where $\mathbf{k}_0 = \mathbf{z}_0 - 2\mathbf{z}_1$.

@@ -3,18 +3,16 @@ use super::{NonIdentityEccPoint, SinsemillaChip};
 use crate::{
     ecc::FixedPoints,
     sinsemilla::primitives::{self as sinsemilla, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S},
+    utilities::double_and_add::{X, Y},
 };
 
-use ff::Field;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Region, Value},
-    plonk::{Assigned, Error},
+    plonk::Error,
 };
 
 use group::ff::{PrimeField, PrimeFieldBits};
 use pasta_curves::{arithmetic::CurveAffine, pallas};
-
-use std::ops::Deref;
 
 impl<Hash, Commit, Fixed> SinsemillaChip<Hash, Commit, Fixed>
 where
@@ -50,7 +48,7 @@ where
 
         // Constrain the initial x_a, lambda_1, lambda_2, x_p using the q_sinsemilla4
         // selector.
-        let mut y_a: Y<pallas::Base> = {
+        let mut y_a = {
             // Enable `q_sinsemilla4` on the first row.
             config.q_sinsemilla4.enable(region, offset)?;
             region.assign_fixed(
@@ -64,7 +62,7 @@ where
         };
 
         // Constrain the initial x_q to equal the x-coordinate of the domain's `Q`.
-        let mut x_a: X<pallas::Base> = {
+        let mut x_a = {
             let x_a = region.assign_advice_from_constant(
                 || "fixed x_q",
                 config.double_and_add.x_a,
@@ -313,103 +311,19 @@ where
             let x_p = gen.map(|gen| gen.0);
             let y_p = gen.map(|gen| gen.1);
 
-            // Assign `x_p`
-            region.assign_advice(|| "x_p", config.double_and_add.x_p, offset + row, || x_p)?;
-
-            // Compute and assign `lambda_1`
-            let lambda_1 = {
-                let lambda_1 = (y_a.0 - y_p) * (x_a.value() - x_p).invert();
-
-                // Assign lambda_1
-                region.assign_advice(
-                    || "lambda_1",
-                    config.double_and_add.lambda_1,
-                    offset + row,
-                    || lambda_1,
-                )?;
-
-                lambda_1
-            };
-
-            // Compute `x_r`
-            let x_r = lambda_1.square() - x_a.value() - x_p;
-
-            // Compute and assign `lambda_2`
-            let lambda_2 = {
-                let lambda_2 =
-                    y_a.0 * pallas::Base::from(2) * (x_a.value() - x_r).invert() - lambda_1;
-
-                region.assign_advice(
-                    || "lambda_2",
-                    config.double_and_add.lambda_2,
-                    offset + row,
-                    || lambda_2,
-                )?;
-
-                lambda_2
-            };
-
-            // Compute and assign `x_a` for the next row.
-            let x_a_new: X<pallas::Base> = {
-                let x_a_new = lambda_2.square() - x_a.value() - x_r;
-
-                let x_a_cell = region.assign_advice(
-                    || "x_a",
-                    config.double_and_add.x_a,
-                    offset + row + 1,
-                    || x_a_new,
-                )?;
-
-                x_a_cell.into()
-            };
-
-            // Compute y_a for the next row.
-            let y_a_new: Y<pallas::Base> =
-                (lambda_2 * (x_a.value() - x_a_new.value()) - y_a.0).into();
+            let new_acc = config.double_and_add.assign_region(
+                region,
+                offset + row,
+                (x_p.map(|v| v.into()), y_p.map(|v| v.into())),
+                x_a,
+                y_a,
+            )?;
 
             // Update the mutable `x_a`, `y_a` variables.
-            x_a = x_a_new;
-            y_a = y_a_new;
+            x_a = new_acc.0;
+            y_a = new_acc.1;
         }
 
         Ok((x_a, y_a, zs))
-    }
-}
-
-/// The x-coordinate of the accumulator in a Sinsemilla hash instance.
-struct X<F: Field>(AssignedCell<Assigned<F>, F>);
-
-impl<F: Field> From<AssignedCell<Assigned<F>, F>> for X<F> {
-    fn from(cell_value: AssignedCell<Assigned<F>, F>) -> Self {
-        X(cell_value)
-    }
-}
-
-impl<F: Field> Deref for X<F> {
-    type Target = AssignedCell<Assigned<F>, F>;
-
-    fn deref(&self) -> &AssignedCell<Assigned<F>, F> {
-        &self.0
-    }
-}
-
-/// The y-coordinate of the accumulator in a Sinsemilla hash instance.
-///
-/// This is never actually witnessed until the last round, since it
-/// can be derived from other variables. Thus it only exists as a field
-/// element, not a `CellValue`.
-struct Y<F: Field>(Value<Assigned<F>>);
-
-impl<F: Field> From<Value<Assigned<F>>> for Y<F> {
-    fn from(value: Value<Assigned<F>>) -> Self {
-        Y(value)
-    }
-}
-
-impl<F: Field> Deref for Y<F> {
-    type Target = Value<Assigned<F>>;
-
-    fn deref(&self) -> &Value<Assigned<F>> {
-        &self.0
     }
 }
