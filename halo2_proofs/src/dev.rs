@@ -436,13 +436,28 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             }
         }
 
-        if self.in_phase(column.column_type().phase) {
-            *self
-                .advice
-                .get_mut(column.index())
-                .and_then(|v| v.get_mut(row))
-                .ok_or(Error::BoundsFailure)? =
-                CellValue::Assigned(to().into_field().evaluate().assign()?);
+        match to().into_field().evaluate().assign() {
+            Ok(to) => {
+                let value = self
+                    .advice
+                    .get_mut(column.index())
+                    .and_then(|v| v.get_mut(row))
+                    .ok_or(Error::BoundsFailure)?;
+                if let CellValue::Assigned(value) = value {
+                    // Inconsistent assignment between different phases.
+                    if value != &to {
+                        return Err(Error::Synthesis);
+                    }
+                } else {
+                    *value = CellValue::Assigned(to);
+                }
+            }
+            Err(err) => {
+                // Propagate `assign` error if the column is in current phase.
+                if self.in_phase(column.column_type().phase) {
+                    return Err(err);
+                }
+            }
         }
 
         Ok(())
