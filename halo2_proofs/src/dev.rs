@@ -962,8 +962,7 @@ impl<F: FieldExt> MockProver<F> {
 
     /// Returns `Ok(())` if this `MockProver` is satisfied, or a list of errors indicating
     /// the reasons that the circuit is not satisfied.
-    /// Constraints are only checked at `gate_row_ids`,
-    /// and lookup inputs are only checked at `lookup_input_row_ids`, parallelly.
+    /// Constraints are only checked at `gate_row_ids`, and lookup inputs are only checked at `lookup_input_row_ids`, parallelly.
     pub fn verify_at_rows_par<I: Clone + Iterator<Item = usize>>(
         &self,
         gate_row_ids: I,
@@ -1351,6 +1350,31 @@ impl<F: FieldExt> MockProver<F> {
     /// ```
     pub fn assert_satisfied_par(&self) {
         if let Err(errs) = self.verify_par() {
+            for err in errs {
+                err.emit(self);
+                eprintln!();
+            }
+            panic!("circuit was not satisfied");
+        }
+    }
+
+    /// Panics if the circuit being checked by this `MockProver` is not satisfied.
+    ///
+    /// Any verification failures will be pretty-printed to stderr before the function
+    /// panics.
+    ///
+    /// Constraints are only checked at `gate_row_ids`, and lookup inputs are only checked at `lookup_input_row_ids`, parallelly.
+    ///
+    /// Apart from the stderr output, this method is equivalent to:
+    /// ```ignore
+    /// assert_eq!(prover.verify_at_rows_par(), Ok(()));
+    /// ```
+    pub fn assert_satisfied_at_rows_par<I: Clone + Iterator<Item = usize>>(
+        &self,
+        gate_row_ids: I,
+        lookup_input_row_ids: I,
+    ) {
+        if let Err(errs) = self.verify_at_rows_par(gate_row_ids, lookup_input_row_ids) {
             for err in errs {
                 err.emit(self);
                 eprintln!();
