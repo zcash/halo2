@@ -76,6 +76,12 @@ pub(crate) mod sealed {
         }
     }
 
+    impl SealedPhase for Phase {
+        fn to_sealed(self) -> Phase {
+            self
+        }
+    }
+
     /// Sealed trait to help keep `Phase` private.
     pub trait SealedPhase {
         fn to_sealed(self) -> Phase;
@@ -496,7 +502,7 @@ impl TableColumn {
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Challenge {
     index: usize,
-    phase: sealed::Phase,
+    pub(crate) phase: sealed::Phase,
 }
 
 impl Challenge {
