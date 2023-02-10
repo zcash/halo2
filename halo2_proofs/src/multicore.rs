@@ -22,9 +22,9 @@ pub trait TryFoldAndReduce<T, E> {
     /// Implements `iter.try_fold().try_reduce()` for `rayon::iter::ParallelIterator`,
     /// falling back on `Iterator::try_fold` when the `multicore` feature flag is
     /// disabled.
-    /// try_fold_and_reduce function can only be called by a iter with
-    /// Result<T,E> item type because the folder_op Fn<T,T>->T must
-    /// meet both trait bound of rayon's try_fold and try_reduce```   
+    /// The `try_fold_and_reduce` function can only be called by a iter with
+    /// `Result<T, E>` item type because the `fold_op` must meet the trait
+    /// bounds of both `try_fold` and `try_reduce` from rayon.   
     fn try_fold_and_reduce(
         self,
         identity: impl Fn() -> T + Send + Sync,
