@@ -13,15 +13,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - id: prepare
+        uses: ./.github/actions/prepare
         with:
           toolchain: beta
-          components: clippy
-          override: true
+          nightly-features: true
+      - run: rustup component add clippy
       - name: Run Clippy (beta)
         uses: actions-rs/clippy-check@v1
         continue-on-error: true
         with:
           name: Clippy (beta)
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --all-targets -- -W clippy::all
+          args: >
+            ${{ steps.prepare.outputs.feature-flags }}
+            --all-targets
+            -- -W clippy::all
