@@ -113,7 +113,7 @@ where
             })
             .try_fold_and_reduce(
                 || params.empty_msm(),
-                |msm, res| msm.and_then(|acc| res.map(|proof_msm| accumulate_msm(acc, proof_msm))),
+                |acc, res| res.map(|proof_msm| accumulate_msm(acc, proof_msm)),
             );
 
         match final_msm {

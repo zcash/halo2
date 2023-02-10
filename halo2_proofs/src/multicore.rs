@@ -28,7 +28,7 @@ pub trait TryFoldAndReduce<T, E> {
     fn try_fold_and_reduce(
         self,
         identity: impl Fn() -> T + Send + Sync,
-        fold_op: impl Fn(Result<T, E>, Result<T, E>) -> Result<T, E> + Send + Sync,
+        fold_op: impl Fn(T, Result<T, E>) -> Result<T, E> + Send + Sync,
     ) -> Result<T, E>;
 }
 
@@ -42,10 +42,10 @@ where
     fn try_fold_and_reduce(
         self,
         identity: impl Fn() -> T + Send + Sync,
-        fold_op: impl Fn(Result<T, E>, Result<T, E>) -> Result<T, E> + Send + Sync,
+        fold_op: impl Fn(T, Result<T, E>) -> Result<T, E> + Send + Sync,
     ) -> Result<T, E> {
-        self.try_fold(&identity, |msm, res| fold_op(Ok(msm), res))
-            .try_reduce(&identity, |a, b| fold_op(Ok(a), Ok(b)))
+        self.try_fold(&identity, &fold_op)
+            .try_reduce(&identity, |a, b| fold_op(a, Ok(b)))
     }
 }
 
@@ -57,8 +57,8 @@ where
     fn try_fold_and_reduce(
         mut self,
         identity: impl Fn() -> T + Send + Sync,
-        fold_op: impl Fn(Result<T, E>, Result<T, E>) -> Result<T, E> + Send + Sync,
+        fold_op: impl Fn(T, Result<T, E>) -> Result<T, E> + Send + Sync,
     ) -> Result<T, E> {
-        self.try_fold(identity(), |acc, res| fold_op(Ok(acc), res))
+        self.try_fold(identity(), fold_op)
     }
 }
