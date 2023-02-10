@@ -1,0 +1,14 @@
+name: 'Prepare Halo 2'
+description: 'Sets up the Rust toolchain'
+inputs:
+  toolchain:
+    description: 'Rust toolchain to use (defaults to MSRV)'
+    required: false
+    default: 1.60.0
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        override: true
