@@ -11,11 +11,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: ./.github/actions/prepare
+      - id: prepare
+        uses: ./.github/actions/prepare
+        with:
+          nightly-features: true
       - run: rustup component add clippy
       - name: Run clippy
         uses: actions-rs/clippy-check@v1
         with:
           name: Clippy (MSRV)
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --all-targets -- -D warnings
+          args: >
+            ${{ steps.prepare.outputs.feature-flags }}
+            --all-targets
+            -- -D warnings
