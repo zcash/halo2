@@ -151,6 +151,9 @@ minor version bump.</p>
 <h2 id="controlling-parallelism"><a class="header" href="#controlling-parallelism">Controlling parallelism</a></h2>
 <p><code>halo2</code> currently uses <a href="https://github.com/rayon-rs/rayon">rayon</a> for parallel computation.
 The <code>RAYON_NUM_THREADS</code> environment variable can be used to set the number of threads.</p>
+<p>You can disable <code>rayon</code> by disabling the <code>&quot;multicore&quot;</code> feature.
+Warning! Halo2 will lose access to parallelism if you disable the <code>&quot;multicore&quot;</code> feature.
+This will significantly degrade performance.</p>
 <h2 id="license"><a class="header" href="#license">License</a></h2>
 <p>Licensed under either of</p>
 <ul>
