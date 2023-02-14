@@ -42,6 +42,7 @@ criterion = "0.3"
 proptest = "1.0.0"
 
 [target.'cfg(unix)'.dev-dependencies]
+inferno = ">=0.11, <0.11.5" # MSRV 1.59
 pprof = { version = "0.8", features = ["criterion", "flamegraph"] } # MSRV 1.56
 
 [lib]
