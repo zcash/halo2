@@ -2,6 +2,15 @@
 //! `halo2`. It's currently just a (very!) thin wrapper around `rayon` but may
 //! be extended in the future to allow for various parallelism strategies.
 
+#[cfg(all(
+    feature = "multicore",
+    target_arch = "wasm32",
+    not(target_feature = "atomics")
+))]
+compile_error!(
+    "The multicore feature flag is not supported on wasm32 architectures without atomics"
+);
+
 pub use maybe_rayon::{
     iter::{IntoParallelIterator, ParallelIterator},
     join, scope, Scope,
