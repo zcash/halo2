@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["create_proof","Create a multi-opening proof"],["verify_proof","Verify a multi-opening proof"]],"struct":[["ProverQuery","A polynomial query at a point"],["VerifierQuery","A polynomial query at a point"]]};
+window.SIDEBAR_ITEMS = {"fn":["create_proof","verify_proof"],"struct":["ProverQuery","VerifierQuery"]};
