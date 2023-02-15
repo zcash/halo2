@@ -15,7 +15,6 @@ use std::{
     io::{prelude::*, BufReader},
     path::Path,
 };
-use std::time::Instant;
 use criterion::{criterion_group, criterion_main, Criterion};
 
 use halo2_gadgets::sha256::{BlockWord, Sha256, Table16Chip, Table16Config, BLOCK_SIZE};
@@ -106,7 +105,6 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
 
     let circuit: MyCircuit = MyCircuit {};
 
-    // let prover_name = name.to_string() + "-prover";
     let verifier_name = name.to_string() + "-verifier";
 
     // Benchmark proof creation
@@ -125,10 +123,8 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
     let proof_path = Path::new("./benches/sha256_assets/sha256_proof");
     if File::open(proof_path).is_err() {
         let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
-        let start = Instant::now();
         create_proof(&params, &pk, &[circuit], &[&[]], OsRng, &mut transcript)
             .expect("proof generation should not fail");
-        println!("Proof creation time: {:?}", start.elapsed());
         let proof: Vec<u8> = transcript.finalize();
         let mut file = File::create(proof_path).expect("Failed to create sha256_proof");
         file.write_all(&proof[..]).expect("Failed to write proof");
