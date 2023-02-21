@@ -100,3 +100,7 @@ bench = false
 [[example]]
 name = "circuit-layout"
 required-features = ["test-dev-graph"]
+
+[[example]]
+name = "dynamic-lookup"
+required-features = ["unstable-dynamic-lookups"]
