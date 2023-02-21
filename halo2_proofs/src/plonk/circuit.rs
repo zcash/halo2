@@ -268,6 +268,17 @@ impl Selector {
     }
 }
 
+/// A dynamic table tag
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct TableTag(pub(crate) usize);
+
+impl TableTag {
+    /// The value of a table tag is the table's `index` + 1
+    fn value(&self) -> u64 {
+        self.0 as u64 + 1
+    }
+}
+
 /// Query of fixed column at a certain relative location
 #[derive(Copy, Clone, Debug)]
 pub struct FixedQuery {
@@ -331,6 +342,36 @@ impl TableColumn {
     /// Enable equality on this TableColumn.
     pub fn enable_equality<F: Field>(&self, meta: &mut ConstraintSystem<F>) {
         meta.enable_equality(self.inner)
+    }
+}
+
+/// `DynamicTable` is used to track the columns and rows comprise a dynamic lookup table.
+/// `DynamicTable`s are constructed in the configuration phase by `create_dynamic_table`.
+/// To include a row of a region in a dynamic table use `add_row_to_table` during synthesize.
+#[cfg_attr(
+    feature = "unstable-dynamic-lookups",
+    derive(Clone, Debug, Eq, PartialEq, Hash)
+)]
+#[cfg(feature = "unstable-dynamic-lookups")]
+pub struct DynamicTable {
+    pub(crate) name: String,
+    pub(crate) index: usize,
+    /// Columns contained in this table, excluding the tag column.
+    pub(crate) columns: Vec<Column<Any>>,
+}
+
+#[cfg(feature = "unstable-dynamic-lookups")]
+impl DynamicTable {
+    pub(crate) fn index(&self) -> usize {
+        self.index
+    }
+
+    pub(crate) fn tag(&self) -> TableTag {
+        TableTag(self.index)
+    }
+
+    pub(crate) fn columns(&self) -> &[Column<Any>] {
+        &self.columns
     }
 }
 
@@ -941,6 +982,12 @@ pub struct ConstraintSystem<F: Field> {
     /// fixed column that they were compressed into. This is just used by dev
     /// tooling right now.
     pub(crate) selector_map: Vec<Column<Fixed>>,
+    /// Like selector_map, but for dynamic tables.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    pub(crate) dynamic_table_tag_map: Vec<Column<Fixed>>,
+
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    pub(crate) dynamic_tables: Vec<DynamicTable>,
 
     pub(crate) gates: Vec<Gate<F>>,
     pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
@@ -1001,6 +1048,10 @@ impl<F: Field> Default for ConstraintSystem<F> {
             num_instance_columns: 0,
             num_selectors: 0,
             selector_map: vec![],
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            dynamic_table_tag_map: vec![],
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            dynamic_tables: vec![],
             gates: vec![],
             fixed_queries: Vec::new(),
             advice_queries: Vec::new(),
