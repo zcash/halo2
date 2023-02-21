@@ -113,6 +113,8 @@ impl CircuitLayout {
             let column: Column<Any> = match column {
                 RegionColumn::Column(col) => col,
                 RegionColumn::Selector(selector) => cs.selector_map[selector.0].into(),
+                #[cfg(feature = "unstable-dynamic-lookups")]
+                RegionColumn::TableTag(tag_col) => cs.dynamic_table_tag_map[tag_col.0].into(),
             };
             column.index()
                 + match column.column_type() {
