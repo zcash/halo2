@@ -345,7 +345,6 @@ impl TableColumn {
     }
 }
 
-/// `DynamicTable` is used to track the columns and rows comprise a dynamic lookup table.
 /// `DynamicTable`s are constructed in the configuration phase by `create_dynamic_table`.
 /// To include a row of a region in a dynamic table use `add_row_to_table` during synthesize.
 #[cfg_attr(
@@ -409,6 +408,10 @@ pub trait Assignment<F: Field> {
     where
         A: FnOnce() -> AR,
         AR: Into<String>;
+
+    /// Adds a row in the provided dynamic lookup table.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fn add_to_lookup(&mut self, table: TableTag, row: usize) -> Result<(), Error>;
 
     /// Queries the cell of an instance column at a particular absolute row.
     ///

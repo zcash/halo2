@@ -95,7 +95,13 @@ impl CircuitLayout {
         // Collect the layout details.
         let mut cs = ConstraintSystem::default();
         let config = ConcreteCircuit::configure(&mut cs);
-        let mut layout = Layout::new(k, n, cs.num_selectors);
+        let mut layout = Layout::new(
+            k,
+            n,
+            cs.num_selectors,
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            cs.dynamic_tables.clone(),
+        );
         ConcreteCircuit::FloorPlanner::synthesize(
             &mut layout,
             circuit,

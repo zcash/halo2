@@ -8,6 +8,8 @@ use std::ops::{Add, Mul, Neg, Range};
 use ff::Field;
 
 use crate::plonk::Assigned;
+#[cfg(feature = "unstable-dynamic-lookups")]
+use crate::plonk::TableTag;
 use crate::{
     circuit,
     plonk::{
@@ -288,6 +290,9 @@ pub struct MockProver<F: Field> {
     instance: Vec<Vec<InstanceValue<F>>>,
 
     selectors: Vec<Vec<bool>>,
+    /// A map between DynamicTable.index, and rows included.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    dynamic_tables: Vec<Vec<bool>>,
 
     permutation: permutation::keygen::Assembly,
 
@@ -350,6 +355,19 @@ impl<F: Field> Assignment<F> for MockProver<F> {
             .push(row);
 
         self.selectors[selector.0][row] = true;
+
+        Ok(())
+    }
+
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fn add_to_lookup(&mut self, table: TableTag, row: usize) -> Result<(), Error> {
+        self.dynamic_tables[table.0][row] = true;
+
+        if let Some(region) = self.current_region.as_mut() {
+            for column in self.cs.dynamic_tables[table.0].columns.iter() {
+                region.update_extent(*column, row);
+            }
+        }
 
         Ok(())
     }
@@ -520,6 +538,8 @@ impl<F: Field + Ord> MockProver<F> {
         // Fixed columns contain no blinding factors.
         let fixed = vec![vec![CellValue::Unassigned; n]; cs.num_fixed_columns];
         let selectors = vec![vec![false; n]; cs.num_selectors];
+        #[cfg(feature = "unstable-dynamic-lookups")]
+        let dynamic_tables = vec![vec![false; n]; cs.dynamic_tables.len()];
         // Advice columns contain blinding factors.
         let blinding_factors = cs.blinding_factors();
         let usable_rows = n - (blinding_factors + 1);
@@ -547,6 +567,8 @@ impl<F: Field + Ord> MockProver<F> {
             advice,
             instance,
             selectors,
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            dynamic_tables,
             permutation,
             usable_rows: 0..usable_rows,
         };
