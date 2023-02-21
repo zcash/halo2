@@ -318,6 +318,8 @@ mod tests {
                     let eval = selector.expression.evaluate(
                         &|c| c,
                         &|_| panic!("should not occur in returned expressions"),
+                        #[cfg(feature = "unstable-dynamic-lookups")]
+                        &|_| panic!("should not occur in returned expressions"),
                         &|query| {
                             // Should be the correct combination in the expression
                             assert_eq!(selector.combination_index, query.index);

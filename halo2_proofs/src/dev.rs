@@ -648,6 +648,8 @@ impl<F: Field + Ord> MockProver<F> {
                             move |(poly_index, poly)| match poly.evaluate(
                                 &|scalar| Value::Real(scalar),
                                 &|_| panic!("virtual selectors are removed during optimization"),
+                                #[cfg(feature = "unstable-dynamic-lookups")]
+                                &|_| panic!("virtual table tags are removed during optimization"),
                                 &util::load(n, row, &self.cs.fixed_queries, &self.fixed),
                                 &util::load(n, row, &self.cs.advice_queries, &self.advice),
                                 &util::load_instance(
@@ -712,6 +714,8 @@ impl<F: Field + Ord> MockProver<F> {
                         expression.evaluate(
                             &|scalar| Value::Real(scalar),
                             &|_| panic!("virtual selectors are removed during optimization"),
+                            #[cfg(feature = "unstable-dynamic-lookups")]
+                            &|_| panic!("virtual table tags are removed during optimization"),
                             &|query| {
                                 let query = self.cs.fixed_queries[query.index];
                                 let column_index = query.0.index();
