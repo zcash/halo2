@@ -236,6 +236,12 @@ impl<'r, F: Field> RegionLayouter<F> for TracingRegion<'r, F> {
         self.0.enable_selector(annotation, selector, offset)
     }
 
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fn add_to_lookup(&mut self, table: TableTag, offset: usize) -> Result<(), Error> {
+        debug!(target: "add_to_lookup", table = ?table, offset = ?offset);
+        self.0.add_to_lookup(table, offset)
+    }
+
     fn assign_advice<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),

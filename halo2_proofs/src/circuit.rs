@@ -4,6 +4,8 @@ use std::{fmt, marker::PhantomData};
 
 use ff::Field;
 
+#[cfg(feature = "unstable-dynamic-lookups")]
+use crate::plonk::TableTag;
 use crate::plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector, TableColumn};
 
 mod value;
@@ -202,6 +204,12 @@ impl<'r, F: Field> Region<'r, F> {
     {
         self.region
             .enable_selector(&|| annotation().into(), selector, offset)
+    }
+
+    /// Enables a dynamic table lookup at the given offset.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    pub fn add_to_lookup(&mut self, table: TableTag, offset: usize) -> Result<(), Error> {
+        self.region.add_to_lookup(table, offset)
     }
 
     /// Assign an advice column value (witness).

@@ -51,6 +51,10 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
         offset: usize,
     ) -> Result<(), Error>;
 
+    /// Enables a dynamic table lookup at the given offset.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fn add_to_lookup(&mut self, table: TableTag, offset: usize) -> Result<(), Error>;
+
     /// Assign an advice column value (witness)
     fn assign_advice<'v>(
         &'v mut self,
@@ -211,6 +215,14 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
     ) -> Result<(), Error> {
         // Track the selector's fixed column as part of the region's shape.
         self.columns.insert((*selector).into());
+        self.row_count = cmp::max(self.row_count, offset + 1);
+        Ok(())
+    }
+
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fn add_to_lookup(&mut self, table: TableTag, offset: usize) -> Result<(), Error> {
+        // Track the tag's fixed column as part of the region's shape.
+        self.columns.insert(table.into());
         self.row_count = cmp::max(self.row_count, offset + 1);
         Ok(())
     }
