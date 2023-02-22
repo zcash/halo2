@@ -973,7 +973,7 @@ impl<F: FieldExt> MockProver<F> {
 
             // Iterate over each column of the permutation
             self.permutation
-                .mapping
+                .mapping()
                 .iter()
                 .enumerate()
                 .flat_map(move |(column, values)| {
@@ -1334,7 +1334,7 @@ impl<F: FieldExt> MockProver<F> {
 
             // Iterate over each column of the permutation
             self.permutation
-                .mapping
+                .mapping()
                 .iter()
                 .enumerate()
                 .flat_map(move |(column, values)| {

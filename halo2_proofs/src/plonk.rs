@@ -27,7 +27,7 @@ mod error;
 mod evaluation;
 mod keygen;
 mod lookup;
-pub(crate) mod permutation;
+pub mod permutation;
 mod vanishing;
 
 mod prover;

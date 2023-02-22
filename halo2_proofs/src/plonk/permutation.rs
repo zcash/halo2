@@ -1,3 +1,5 @@
+//! Implementation of permutation argument.
+
 use super::circuit::{Any, Column};
 use crate::{
     arithmetic::CurveAffine,
@@ -13,6 +15,8 @@ use ff::PrimeField;
 pub(crate) mod keygen;
 pub(crate) mod prover;
 pub(crate) mod verifier;
+
+pub use keygen::Assembly;
 
 use std::io;
 
@@ -72,6 +76,7 @@ impl Argument {
         }
     }
 
+    /// Returns columns that participate on the permutation argument.
     pub fn get_columns(&self) -> Vec<Column<Any>> {
         self.columns.clone()
     }

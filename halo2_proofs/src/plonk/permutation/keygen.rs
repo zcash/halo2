@@ -12,16 +12,16 @@ use crate::{
 };
 
 /// Struct that accumulates all the necessary data in order to construct the permutation argument.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Assembly {
     /// Columns that participate on the copy permutation argument.
-    pub columns: Vec<Column<Any>>,
+    columns: Vec<Column<Any>>,
     /// Mapping of the actual copies done.
-    pub mapping: Vec<Vec<(usize, usize)>>,
+    mapping: Vec<Vec<(usize, usize)>>,
     /// Some aux data used to swap positions directly when sorting.
-    pub aux: Vec<Vec<(usize, usize)>>,
+    aux: Vec<Vec<(usize, usize)>>,
     /// More aux data
-    pub sizes: Vec<Vec<usize>>,
+    sizes: Vec<Vec<usize>>,
 }
 
 impl Assembly {
@@ -238,5 +238,15 @@ impl Assembly {
             polys,
             cosets,
         }
+    }
+
+    /// Returns columns that participate on the permutation argument.
+    pub fn columns(&self) -> &[Column<Any>] {
+        &self.columns
+    }
+
+    /// Returns mappings of the copies.
+    pub fn mapping(&self) -> &[Vec<(usize, usize)>] {
+        &self.mapping
     }
 }
