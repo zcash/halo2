@@ -274,13 +274,15 @@ impl<F: Group + Field> Mul<F> for Value<F> {
 ///     }])
 /// );
 ///
-/// // If we provide a too-small K, we get an error.
-/// assert!(matches!(
-///     MockProver::<Fp>::run(2, &circuit, vec![]).unwrap_err(),
-///     Error::NotEnoughRowsAvailable {
-///         current_k,
-///     } if current_k == 2,
-/// ));
+/// // If we provide a too-small K, we get a panic.
+/// use std::panic;
+/// let result = panic::catch_unwind(|| {
+///     MockProver::<Fp>::run(2, &circuit, vec![]).unwrap_err()
+/// });
+/// assert_eq!(
+///     result.unwrap_err().downcast_ref::<String>().unwrap(),
+///     "n=4, minimum_rows=8, k=2"
+/// );
 /// ```
 #[derive(Debug)]
 pub struct MockProver<F: Group + Field> {
@@ -373,9 +375,13 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             return Ok(());
         }
 
-        if !self.usable_rows.contains(&row) {
-            return Err(Error::not_enough_rows_available(self.k));
-        }
+        assert!(
+            self.usable_rows.contains(&row),
+            "row={} not in usable_rows={:?}, k={}",
+            row,
+            self.usable_rows,
+            self.k,
+        );
 
         // Track that this selector was enabled. We require that all selectors are enabled
         // inside some region (i.e. no floating selectors).
@@ -397,15 +403,20 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         column: Column<Instance>,
         row: usize,
     ) -> Result<circuit::Value<F>, Error> {
-        if !self.usable_rows.contains(&row) {
-            return Err(Error::not_enough_rows_available(self.k));
-        }
+        assert!(
+            self.usable_rows.contains(&row),
+            "row={}, usable_rows={:?}, k={}",
+            row,
+            self.usable_rows,
+            self.k,
+        );
 
-        self.instance
+        Ok(self
+            .instance
             .get(column.index())
             .and_then(|column| column.get(row))
             .map(|v| circuit::Value::known(*v))
-            .ok_or(Error::BoundsFailure)
+            .expect("bound failure"))
     }
 
     fn assign_advice<V, VR, A, AR>(
@@ -422,9 +433,13 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
         AR: Into<String>,
     {
         if self.in_phase(FirstPhase) {
-            if !self.usable_rows.contains(&row) {
-                return Err(Error::not_enough_rows_available(self.k));
-            }
+            assert!(
+                self.usable_rows.contains(&row),
+                "row={}, usable_rows={:?}, k={}",
+                row,
+                self.usable_rows,
+                self.k,
+            );
 
             if let Some(region) = self.current_region.as_mut() {
                 region.update_extent(column.into(), row);
@@ -442,12 +457,10 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
                     .advice
                     .get_mut(column.index())
                     .and_then(|v| v.get_mut(row))
-                    .ok_or(Error::BoundsFailure)?;
+                    .expect("bounds failure");
                 if let CellValue::Assigned(value) = value {
                     // Inconsistent assignment between different phases.
-                    if value != &to {
-                        return Err(Error::Synthesis);
-                    }
+                    assert_eq!(value, &to, "value={:?}, to={:?}", value, &to);
                 } else {
                     *value = CellValue::Assigned(to);
                 }
@@ -480,9 +493,13 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             return Ok(());
         }
 
-        if !self.usable_rows.contains(&row) {
-            return Err(Error::not_enough_rows_available(self.k));
-        }
+        assert!(
+            self.usable_rows.contains(&row),
+            "row={}, usable_rows={:?}, k={}",
+            row,
+            self.usable_rows,
+            self.k,
+        );
 
         if let Some(region) = self.current_region.as_mut() {
             region.update_extent(column.into(), row);
@@ -497,8 +514,7 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             .fixed
             .get_mut(column.index())
             .and_then(|v| v.get_mut(row))
-            .ok_or(Error::BoundsFailure)? =
-            CellValue::Assigned(to().into_field().evaluate().assign()?);
+            .expect("bounds failure") = CellValue::Assigned(to().into_field().evaluate().assign()?);
 
         Ok(())
     }
@@ -514,9 +530,14 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             return Ok(());
         }
 
-        if !self.usable_rows.contains(&left_row) || !self.usable_rows.contains(&right_row) {
-            return Err(Error::not_enough_rows_available(self.k));
-        }
+        assert!(
+            self.usable_rows.contains(&left_row) && self.usable_rows.contains(&right_row),
+            "left_row={}, right_row={}, usable_rows={:?}, k={}",
+            left_row,
+            right_row,
+            self.usable_rows,
+            self.k,
+        );
 
         self.permutation
             .copy(left_column, left_row, right_column, right_row)
@@ -532,9 +553,13 @@ impl<F: Field + Group> Assignment<F> for MockProver<F> {
             return Ok(());
         }
 
-        if !self.usable_rows.contains(&from_row) {
-            return Err(Error::not_enough_rows_available(self.k));
-        }
+        assert!(
+            self.usable_rows.contains(&from_row),
+            "row={}, usable_rows={:?}, k={}",
+            from_row,
+            self.usable_rows,
+            self.k,
+        );
 
         for row in self.usable_rows.clone().skip(from_row) {
             self.assign_fixed(|| "", col, row, || to)?;
@@ -578,25 +603,31 @@ impl<F: FieldExt> MockProver<F> {
         let config = ConcreteCircuit::configure(&mut cs);
         let cs = cs;
 
-        if n < cs.minimum_rows() {
-            return Err(Error::not_enough_rows_available(k));
-        }
+        assert!(
+            n >= cs.minimum_rows(),
+            "n={}, minimum_rows={}, k={}",
+            n,
+            cs.minimum_rows(),
+            k,
+        );
 
-        if instance.len() != cs.num_instance_columns {
-            return Err(Error::InvalidInstances);
-        }
+        assert_eq!(instance.len(), cs.num_instance_columns);
 
         let instance = instance
             .into_iter()
             .map(|mut instance| {
-                if instance.len() > n - (cs.blinding_factors() + 1) {
-                    return Err(Error::InstanceTooLarge);
-                }
+                assert!(
+                    instance.len() <= n - (cs.blinding_factors() + 1),
+                    "instance.len={}, n={}, cs.blinding_factors={}",
+                    instance.len(),
+                    n,
+                    cs.blinding_factors()
+                );
 
                 instance.resize(n, F::zero());
-                Ok(instance)
+                instance
             })
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Vec<_>>();
 
         // Fixed columns contain no blinding factors.
         let fixed = vec![vec![CellValue::Unassigned; n]; cs.num_fixed_columns];
