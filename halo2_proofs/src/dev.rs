@@ -9,7 +9,7 @@ use ff::Field;
 
 use crate::plonk::Assigned;
 #[cfg(feature = "unstable-dynamic-lookups")]
-use crate::plonk::TableTag;
+use crate::plonk::{DynamicTable, TableTag};
 use crate::{
     circuit,
     plonk::{
@@ -916,12 +916,72 @@ impl<F: Field + Ord + From<u64>> MockProver<F> {
                 })
         };
 
-        let mut errors: Vec<_> = iter::empty()
+        // Check that all cell included in dynamic tables are assigned.
+        #[cfg(feature = "unstable-dynamic-lookups")]
+        let dynamic_table_errors = {
+            fn unassigned_error<F: Field>(
+                regions: &[Region],
+                cell: CellValue<F>,
+                dynamic_table: &DynamicTable,
+                column: Column<Any>,
+                row: usize,
+            ) -> Option<VerifyFailure> {
+                match cell {
+                    CellValue::Unassigned => {
+                        if let FailureLocation::InRegion { region, offset } =
+                            FailureLocation::find(regions, row, iter::once(column).collect())
+                        {
+                            Some(VerifyFailure::DynamicTableCellNotAssigned {
+                                dynamic_table: dynamic_table.clone(),
+                                region,
+                                column,
+                                offset,
+                            })
+                        } else {
+                            panic!("Rows cannot be included in a dynamic table outside of a region")
+                        }
+                    }
+                    CellValue::Assigned(_) => None,
+                    CellValue::Poison(_) => panic!("A poisoned cell was used in a dynamic table"),
+                }
+            }
+
+            self.dynamic_tables
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(table_index, virtual_rows)| {
+                        self.fixed[self.cs.dynamic_table_tag_map[table_index].index()]
+                            .iter()
+                            .zip(virtual_rows)
+                            .enumerate()
+                            .filter_map(move |(row, r)| match r {
+                                (CellValue::Assigned(tag), true) => {
+                                    if F::from(table_index as u64 + 1) == *tag {
+                                        let table = &self.cs.dynamic_tables[table_index];
+                                        Some(table.columns.iter().filter_map(move |col| match col.column_type() {
+                                            Any::Advice => unassigned_error(&self.regions, self. advice[col.index()][row], table, *col, row),
+                                            Any::Fixed => unassigned_error(&self.regions, self.fixed[col.index()][row], table, *col, row),
+                                            Any::Instance => panic!("This should be imposible. Instance columns are not yet supported in dynamic tables"),
+                                        }))
+                                    } else {
+                                        panic!("There was an error in dynamic table tag compression, The wrong tag was found in a row")
+                                    }
+                                }
+                                (CellValue::Unassigned, true) => panic!("There was an error in dynamic table tag compression, The tag cell was not assigned."),
+                                (CellValue::Poison(_), true) => panic!("There was an error in dynamic table tag compression, The tag cell was poisoned."),
+                                _ => None,
+                            }).flatten()
+                    })
+        };
+
+        let errors = iter::empty()
             .chain(selector_errors)
             .chain(gate_errors)
             .chain(lookup_errors)
-            .chain(perm_errors)
-            .collect();
+            .chain(perm_errors);
+        #[cfg(feature = "unstable-dynamic-lookups")]
+        let errors = errors.chain(dynamic_table_errors);
+        let mut errors: Vec<_> = errors.collect();
         if errors.is_empty() {
             Ok(())
         } else {
