@@ -89,7 +89,9 @@ beta = [
 ]
 nightly = [
     "beta",
+    "unstable-dynamic-lookups",
 ]
+unstable-dynamic-lookups = []
 # Add flags for in-development features above this line.
 
 [lib]
