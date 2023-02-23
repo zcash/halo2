@@ -497,7 +497,7 @@ impl<F: Field> Assignment<F> for MockProver<F> {
     }
 }
 
-impl<F: Field + Ord> MockProver<F> {
+impl<F: Field + Ord + From<u64>> MockProver<F> {
     /// Runs a synthetic keygen-and-prove operation on the given circuit, collecting data
     /// about the constraints and their assignments.
     pub fn run<ConcreteCircuit: Circuit<F>>(
@@ -584,6 +584,21 @@ impl<F: Field + Ord> MockProver<F> {
             }
             v
         }));
+
+        #[cfg(feature = "unstable-dynamic-lookups")]
+        {
+            let (cs, tag_polys) = prover
+                .cs
+                .compress_dynamic_table_tags(prover.dynamic_tables.clone());
+            prover.cs = cs;
+            prover.fixed.extend(tag_polys.into_iter().map(|poly| {
+                let mut v = vec![CellValue::Unassigned; n];
+                for (v, p) in v.iter_mut().zip(&poly[..]) {
+                    *v = CellValue::Assigned(*p);
+                }
+                v
+            }));
+        }
 
         Ok(prover)
     }
