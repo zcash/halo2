@@ -82,7 +82,7 @@ impl CircuitLayout {
     }
 
     /// Renders the given circuit on the given drawing area.
-    pub fn render<F: Field, ConcreteCircuit: Circuit<F>, DB: DrawingBackend>(
+    pub fn render<F: Field + From<u64>, ConcreteCircuit: Circuit<F>, DB: DrawingBackend>(
         self,
         k: u32,
         circuit: &ConcreteCircuit,
@@ -111,6 +111,9 @@ impl CircuitLayout {
         .unwrap();
         let (cs, selector_polys) = cs.compress_selectors(layout.selectors);
         let non_selector_fixed_columns = cs.num_fixed_columns - selector_polys.len();
+
+        #[cfg(feature = "unstable-dynamic-lookups")]
+        let (cs, _tag_polys) = cs.compress_dynamic_table_tags(layout.dynamic_tables_assignments);
 
         // Figure out what order to render the columns in.
         // TODO: For now, just render them in the order they were configured.
