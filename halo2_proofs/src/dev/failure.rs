@@ -8,6 +8,8 @@ use super::{
     util::{self, AnyQuery},
     MockProver, Region,
 };
+#[cfg(feature = "unstable-dynamic-lookups")]
+use crate::plonk::DynamicTable;
 use crate::{
     dev::Value,
     plonk::{Any, Column, ConstraintSystem, Expression, Gate, Instance},
@@ -112,6 +114,18 @@ impl FailureLocation {
 #[derive(Debug, PartialEq, Eq)]
 pub enum VerifyFailure {
     /// A cell used in an active gate was not assigned to.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    DynamicTableCellNotAssigned {
+        /// The tag of the table containing a unassigned cell.
+        dynamic_table: DynamicTable,
+        /// The region in which this cell should be assigned.
+        region: metadata::Region,
+        /// The column in which this cell should be assigned.
+        column: Column<Any>,
+        /// The offset (relative to the start of the region) at which this cell should be assigned.
+        offset: usize,
+    },
+    /// A cell used in an active gate was not assigned to.
     CellNotAssigned {
         /// The index of the active gate.
         gate: metadata::Gate,
@@ -190,6 +204,19 @@ pub enum VerifyFailure {
 impl fmt::Display for VerifyFailure {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            VerifyFailure::DynamicTableCellNotAssigned {
+                dynamic_table,
+                region,
+                column,
+                offset,
+            } => {
+                write!(
+                    f,
+                    "{:?} includes the row at offset {} in the {}, which requires cell in column {:?} be assigned.",
+                    dynamic_table, offset, region, column
+                )
+            }
             Self::CellNotAssigned {
                 gate,
                 region,
@@ -377,6 +404,7 @@ fn render_constraint_not_satisfied<F: Field>(
     }
 }
 
+// TODO: handle dynamic lookups separately?
 /// Renders `VerifyFailure::Lookup`.
 ///
 /// ```text
@@ -413,8 +441,9 @@ fn render_lookup<F: Field>(
         FailureLocation::OutsideRegion { row } => *row,
     } as i32;
 
-    // Recover the fixed columns from the table expressions. We don't allow composite
-    // expressions for the table side of lookups.
+    // Recover the fixed columns from the table expressions.
+    // We don't allow composite expressions for the table side of fixed lookups.
+    // The table side of Dynamic lookups have a tag column.
     let table_columns = lookup.table_expressions.iter().map(|expr| {
         expr.evaluate(
             &|_| panic!("no constants in table expressions"),
@@ -422,11 +451,11 @@ fn render_lookup<F: Field>(
             #[cfg(feature = "unstable-dynamic-lookups")]
             &|_| panic!("no virtual columns in table expressions"),
             &|query| format!("F{}", query.column_index),
-            &|_| panic!("no advice columns in table expressions"),
+            &|query| format!("A{}", query.column_index),
             &|_| panic!("no instance columns in table expressions"),
             &|_| panic!("no negations in table expressions"),
             &|_, _| panic!("no sums in table expressions"),
-            &|_, _| panic!("no products in table expressions"),
+            &|a, b| format!("{} * {}", a, b),
             &|_, _| panic!("no scaling in table expressions"),
         )
     });
