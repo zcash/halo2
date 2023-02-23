@@ -1,6 +1,8 @@
 use core::cmp::max;
 use core::ops::{Add, Mul};
 use ff::Field;
+#[cfg(feature = "unstable-dynamic-lookups")]
+use ff::PrimeField;
 use std::{
     convert::TryFrom,
     ops::{Neg, Sub},
@@ -1171,6 +1173,69 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
+    /// Add a dynamic lookup argument for some input expressions and table columns.
+    ///
+    /// `table_map` returns a map between input expressions and the table columns
+    /// they need to match.
+    ///
+    /// `table` must contain all table columns used in table_map.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    pub fn lookup_dynamic(
+        &mut self,
+        table: &DynamicTable,
+        table_map: impl FnOnce(
+            &mut VirtualCells<'_, F>,
+        ) -> (Selector, Vec<(Expression<F>, Column<Any>)>),
+    ) -> usize
+    where
+        F: PrimeField,
+    {
+        let mut cells = VirtualCells::new(self);
+        let (selector, table_map) = table_map(&mut cells);
+        let selector = cells.query_selector(selector);
+
+        let non_table_columns: Vec<_> = table_map
+            .iter()
+            .map(|(_, c)| c)
+            .filter(|col| !table.columns.contains(col))
+            .collect();
+        if !non_table_columns.is_empty() {
+            panic!(
+                "{:?} does not contain {:?}. Try adding these columns to the dynamic table.",
+                table,
+                non_table_columns.as_slice()
+            );
+        }
+
+        let mut table_map: Vec<_> = table_map
+            .into_iter()
+            .map(|(input, table)| {
+                if selector.contains_simple_selector() {
+                    panic!("selector expression containing simple selector supplied to lookup argument");
+                }
+
+                // TODO is this needed
+                if input.contains_simple_selector() {
+                    panic!("input expression containing simple selector supplied to lookup argument");
+                }
+
+                let table_query = cells.query_any(table, Rotation::cur());
+                (selector.clone() * input, selector.clone() * table_query)
+            })
+            .collect();
+
+        table_map.push((
+            selector.clone() * Expression::Constant(F::from(table.tag().value())),
+            selector * Expression::TableTag(table.tag()),
+        ));
+
+        let index = self.lookups.len();
+
+        self.lookups.push(lookup::Argument::new(table_map));
+
+        index
+    }
+
     fn query_fixed_index(&mut self, column: Column<Fixed>) -> usize {
         // Return existing query, if it exists
         for (index, fixed_query) in self.fixed_queries.iter().enumerate() {
@@ -1448,6 +1513,32 @@ impl<F: Field> ConstraintSystem<F> {
         let index = self.num_selectors;
         self.num_selectors += 1;
         Selector(index, false)
+    }
+
+    /// Construct a dynamic table consisting of fixed, and advice.
+    /// `name` is solely for debugging.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    pub fn create_dynamic_table(
+        &mut self,
+        name: impl Into<String>,
+        fixed_columns: &[Column<Fixed>],
+        advice_columns: &[Column<Advice>],
+    ) -> DynamicTable {
+        let index = self.dynamic_tables.len();
+        let columns: Vec<_> = fixed_columns
+            .iter()
+            .map(|f| Column::<Any>::from(*f))
+            .chain(advice_columns.iter().map(|f| Column::<Any>::from(*f)))
+            .collect();
+
+        let table = DynamicTable {
+            name: name.into(),
+            index,
+            columns,
+        };
+
+        self.dynamic_tables.push(table.clone());
+        table
     }
 
     /// Allocates a new fixed column that can be used in a lookup table.
