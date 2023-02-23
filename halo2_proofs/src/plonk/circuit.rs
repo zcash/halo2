@@ -372,6 +372,14 @@ impl DynamicTable {
     pub(crate) fn columns(&self) -> &[Column<Any>] {
         &self.columns
     }
+
+    /// Includes a row at `offset` in this dynamic lookup table.
+    pub fn add_row<F>(&self, region: &mut Region<F>, offset: usize) -> Result<(), Error>
+    where
+        F: Field,
+    {
+        region.add_to_lookup(self.tag(), offset)
+    }
 }
 
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
