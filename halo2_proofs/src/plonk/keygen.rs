@@ -244,6 +244,15 @@ where
             .map(|poly| domain.lagrange_from_vec(poly)),
     );
 
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    let (cs, dynamic_table_polys) = cs.compress_dynamic_table_tags(assembly.dynamic_tables);
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fixed.extend(
+        dynamic_table_polys
+            .into_iter()
+            .map(|poly| domain.lagrange_from_vec(poly)),
+    );
+
     let permutation_vk = assembly
         .permutation
         .build_vk(params, &domain, &cs.permutation);
@@ -303,6 +312,15 @@ where
     let (cs, selector_polys) = cs.compress_selectors(assembly.selectors);
     fixed.extend(
         selector_polys
+            .into_iter()
+            .map(|poly| vk.domain.lagrange_from_vec(poly)),
+    );
+
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    let (cs, dynamic_table_polys) = cs.compress_dynamic_table_tags(assembly.dynamic_tables);
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fixed.extend(
+        dynamic_table_polys
             .into_iter()
             .map(|poly| vk.domain.lagrange_from_vec(poly)),
     );
