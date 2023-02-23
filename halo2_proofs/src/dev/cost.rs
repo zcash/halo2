@@ -307,6 +307,8 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
         )
         .unwrap();
         let (cs, _) = cs.compress_selectors(layout.selectors);
+        #[cfg(feature = "unstable-dynamic-lookups")]
+        let (cs, _) = cs.compress_dynamic_table_tags(layout.dynamic_tables_assignments);
 
         assert!((1 << k) >= cs.minimum_rows());
 
