@@ -1,8 +1,6 @@
 use core::cmp::max;
 use core::ops::{Add, Mul};
 use ff::Field;
-#[cfg(feature = "unstable-dynamic-lookups")]
-use ff::PrimeField;
 use std::{
     convert::TryFrom,
     ops::{Neg, Sub},
@@ -15,6 +13,8 @@ use crate::{
 };
 
 mod compress_selectors;
+#[cfg(feature = "unstable-dynamic-lookups")]
+mod compress_table_tags;
 
 /// A column type
 pub trait ColumnType:
@@ -757,7 +757,7 @@ impl<F: std::fmt::Debug> std::fmt::Debug for Expression<F> {
             Expression::Constant(scalar) => f.debug_tuple("Constant").field(scalar).finish(),
             Expression::Selector(selector) => f.debug_tuple("Selector").field(selector).finish(),
             #[cfg(feature = "unstable-dynamic-lookups")]
-            Expression::TableTag(tag) => f.debug_tuple("TableTag").field(tag).finish(),
+            Expression::TableTag(vc) => f.debug_tuple("TableTag").field(vc).finish(),
             // Skip enum variant and print query struct directly to maintain backwards compatibility.
             Expression::Fixed(FixedQuery {
                 index,
@@ -1188,28 +1188,23 @@ impl<F: Field> ConstraintSystem<F> {
         ) -> (Selector, Vec<(Expression<F>, Column<Any>)>),
     ) -> usize
     where
-        F: PrimeField,
+        F: From<u64>,
     {
         let mut cells = VirtualCells::new(self);
         let (selector, table_map) = table_map(&mut cells);
         let selector = cells.query_selector(selector);
 
-        let non_table_columns: Vec<_> = table_map
-            .iter()
-            .map(|(_, c)| c)
-            .filter(|col| !table.columns.contains(col))
-            .collect();
-        if !non_table_columns.is_empty() {
-            panic!(
-                "{:?} does not contain {:?}. Try adding these columns to the dynamic table.",
-                table,
-                non_table_columns.as_slice()
-            );
-        }
-
         let mut table_map: Vec<_> = table_map
             .into_iter()
-            .map(|(input, table)| {
+            .map(|(input, table_col)| {
+                if !table.columns.contains(&table_col) {
+                    panic!(
+                        "{:?} does not contain {:?}. Try adding this column to the dynamic table.",
+                        table,
+                        table_col
+                    );
+                }
+
                 if selector.contains_simple_selector() {
                     panic!("selector expression containing simple selector supplied to lookup argument");
                 }
@@ -1219,7 +1214,7 @@ impl<F: Field> ConstraintSystem<F> {
                     panic!("input expression containing simple selector supplied to lookup argument");
                 }
 
-                let table_query = cells.query_any(table, Rotation::cur());
+                let table_query = cells.query_any(table_col, Rotation::cur());
                 (selector.clone() * input, selector.clone() * table_query)
             })
             .collect();
@@ -1378,6 +1373,80 @@ impl<F: Field> ConstraintSystem<F> {
             queried_selectors,
             queried_cells,
         });
+    }
+
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    pub(crate) fn compress_dynamic_table_tags(
+        mut self,
+        dynamic_tables: Vec<Vec<bool>>,
+    ) -> (Self, Vec<Vec<F>>)
+    where
+        F: From<u64>,
+    {
+        assert!(self.dynamic_table_tag_map.is_empty());
+        assert_eq!(self.dynamic_tables.len(), dynamic_tables.len());
+
+        let mut new_columns = vec![];
+        let (polys, table_tag_assignment) = compress_table_tags::process(
+            dynamic_tables
+                .into_iter()
+                .enumerate()
+                .map(
+                    |(index, activations)| compress_table_tags::TableDescription {
+                        index,
+                        activations,
+                    },
+                )
+                .collect(),
+            || {
+                let column = self.fixed_column();
+                new_columns.push(column);
+                Expression::Fixed(FixedQuery {
+                    index: self.query_fixed_index(column),
+                    column_index: column.index,
+                    rotation: Rotation::cur(),
+                })
+            },
+        );
+
+        let mut table_tag_map = vec![None; table_tag_assignment.len()];
+        let mut table_tag_replacements = vec![None; table_tag_assignment.len()];
+        for assignment in table_tag_assignment {
+            table_tag_replacements[assignment.index] = Some(assignment.expression);
+            table_tag_map[assignment.index] = Some(new_columns[assignment.combination_index]);
+        }
+
+        self.dynamic_table_tag_map = table_tag_map
+            .into_iter()
+            .map(|a| a.unwrap())
+            .collect::<Vec<_>>();
+        let table_tag_replacements = table_tag_replacements
+            .into_iter()
+            .map(|a| a.unwrap())
+            .collect::<Vec<_>>();
+
+        // Substitute virtual tag columns for the real fixed columns in all lookup expressions
+        for expr in self.lookups.iter_mut().flat_map(|lookup| {
+            lookup
+                .input_expressions
+                .iter_mut()
+                .chain(lookup.table_expressions.iter_mut())
+        }) {
+            *expr = expr.evaluate(
+                &|constant| Expression::Constant(constant),
+                &|selector| Expression::Selector(selector),
+                &|table| table_tag_replacements[table.0].clone(),
+                &|query| Expression::Fixed(query),
+                &|query| Expression::Advice(query),
+                &|query| Expression::Instance(query),
+                &|a| -a,
+                &|a, b| a + b,
+                &|a, b| a * b,
+                &|a, f| a * f,
+            );
+        }
+
+        (self, polys)
     }
 
     /// This will compress selectors together depending on their provided
