@@ -1280,7 +1280,7 @@ mod tests {
         }
 
         /// Just like dynamic_lookup, but breaks the table into single row regions.
-        /// TODO refactor
+        /// TODO refactor to remove code duplication
         #[test]
         fn dynamic_lookup_success() {
             struct DynLookupCircuit {}
