@@ -28,6 +28,9 @@ pub use cost::CircuitCost;
 mod gates;
 pub use gates::CircuitGates;
 
+mod tfp;
+pub use tfp::TracingFloorPlanner;
+
 #[cfg(feature = "dev-graph")]
 mod graph;
 
