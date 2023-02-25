@@ -1,9 +1,10 @@
-use std::marker::PhantomData;
+use std::{fmt, marker::PhantomData};
 
 use ff::Field;
+use tracing::{debug, debug_span, span::EnteredSpan};
 
 use crate::{
-    circuit::{layouter::RegionLayouter, Cell, Layouter, Region, Table, Value},
+    circuit::{layouter::RegionLayouter, AssignedCell, Cell, Layouter, Region, Table, Value},
     plonk::{
         Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
         FloorPlanner, Instance, Selector,
@@ -64,10 +65,12 @@ impl<'c, F: Field, C: Circuit<F>> Circuit<F> for TracingCircuit<'c, F, C> {
     }
 
     fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+        let _span = debug_span!("configure").entered();
         C::configure(meta)
     }
 
     fn synthesize(&self, config: Self::Config, layouter: impl Layouter<F>) -> Result<(), Error> {
+        let _span = debug_span!("synthesize").entered();
         self.inner_ref()
             .synthesize(config, TracingLayouter::new(layouter))
     }
@@ -76,6 +79,7 @@ impl<'c, F: Field, C: Circuit<F>> Circuit<F> for TracingCircuit<'c, F, C> {
 /// A helper type that augments a [`Layouter`] with [`tracing`] spans and events.
 struct TracingLayouter<F: Field, L: Layouter<F>> {
     layouter: L,
+    namespace_spans: Vec<EnteredSpan>,
     _phantom: PhantomData<F>,
 }
 
@@ -83,6 +87,7 @@ impl<F: Field, L: Layouter<F>> TracingLayouter<F, L> {
     fn new(layouter: L) -> Self {
         Self {
             layouter,
+            namespace_spans: vec![],
             _phantom: PhantomData,
         }
     }
@@ -97,6 +102,7 @@ impl<F: Field, L: Layouter<F>> Layouter<F> for TracingLayouter<F, L> {
         N: Fn() -> NR,
         NR: Into<String>,
     {
+        let _span = debug_span!("region", name = name().into()).entered();
         self.layouter.assign_region(name, |region| {
             let mut region = TracingRegion(region);
             let region: &mut dyn RegionLayouter<F> = &mut region;
@@ -110,6 +116,7 @@ impl<F: Field, L: Layouter<F>> Layouter<F> for TracingLayouter<F, L> {
         N: Fn() -> NR,
         NR: Into<String>,
     {
+        let _span = debug_span!("table", name = name().into()).entered();
         self.layouter.assign_table(name, assignment)
     }
 
@@ -131,12 +138,22 @@ impl<F: Field, L: Layouter<F>> Layouter<F> for TracingLayouter<F, L> {
         NR: Into<String>,
         N: FnOnce() -> NR,
     {
-        self.layouter.push_namespace(name_fn);
+        let name = name_fn().into();
+        self.namespace_spans.push(debug_span!("ns", name).entered());
+        self.layouter.push_namespace(|| name);
     }
 
     fn pop_namespace(&mut self, gadget_name: Option<String>) {
         self.layouter.pop_namespace(gadget_name);
+        self.namespace_spans.pop();
     }
+}
+
+fn debug_value_and_return_cell<F: Field, V: fmt::Debug>(value: AssignedCell<V, F>) -> Cell {
+    if let Some(v) = value.value().into_option() {
+        debug!(target: "assigned", value = ?v);
+    }
+    value.cell()
 }
 
 /// A helper type that augments a [`Region`] with [`tracing`] spans and events.
@@ -150,6 +167,8 @@ impl<'r, F: Field> RegionLayouter<F> for TracingRegion<'r, F> {
         selector: &Selector,
         offset: usize,
     ) -> Result<(), Error> {
+        let _guard = debug_span!("enable_selector", name = annotation(), offset = offset).entered();
+        debug!(target: "layouter", "Entered");
         self.0.enable_selector(annotation, selector, offset)
     }
 
@@ -160,9 +179,13 @@ impl<'r, F: Field> RegionLayouter<F> for TracingRegion<'r, F> {
         offset: usize,
         to: &'v mut (dyn FnMut() -> Value<Assigned<F>> + 'v),
     ) -> Result<Cell, Error> {
+        let _guard =
+            debug_span!("assign_advice", name = annotation(), column = ?column, offset = offset)
+                .entered();
+        debug!(target: "layouter", "Entered");
         self.0
             .assign_advice(annotation, column, offset, to)
-            .map(|value| value.cell())
+            .map(debug_value_and_return_cell)
     }
 
     fn assign_advice_from_constant<'v>(
@@ -172,9 +195,17 @@ impl<'r, F: Field> RegionLayouter<F> for TracingRegion<'r, F> {
         offset: usize,
         constant: Assigned<F>,
     ) -> Result<Cell, Error> {
+        let _guard = debug_span!("assign_advice_from_constant",
+            name = annotation(),
+            column = ?column,
+            offset = offset,
+            constant = ?constant,
+        )
+        .entered();
+        debug!(target: "layouter", "Entered");
         self.0
             .assign_advice_from_constant(annotation, column, offset, constant)
-            .map(|value| value.cell())
+            .map(debug_value_and_return_cell)
     }
 
     fn assign_advice_from_instance<'v>(
@@ -185,9 +216,23 @@ impl<'r, F: Field> RegionLayouter<F> for TracingRegion<'r, F> {
         advice: Column<Advice>,
         offset: usize,
     ) -> Result<(Cell, Value<F>), Error> {
+        let _guard = debug_span!("assign_advice_from_instance",
+            name = annotation(),
+            instance = ?instance,
+            row = row,
+            advice = ?advice,
+            offset = offset,
+        )
+        .entered();
+        debug!(target: "layouter", "Entered");
         self.0
             .assign_advice_from_instance(annotation, instance, row, advice, offset)
-            .map(|value| (value.cell(), value.value().cloned()))
+            .map(|value| {
+                if let Some(v) = value.value().into_option() {
+                    debug!(target: "assigned", value = ?v);
+                }
+                (value.cell(), value.value().cloned())
+            })
     }
 
     fn instance_value(
@@ -205,16 +250,22 @@ impl<'r, F: Field> RegionLayouter<F> for TracingRegion<'r, F> {
         offset: usize,
         to: &'v mut (dyn FnMut() -> Value<Assigned<F>> + 'v),
     ) -> Result<Cell, Error> {
+        let _guard =
+            debug_span!("assign_fixed", name = annotation(), column = ?column, offset = offset)
+                .entered();
+        debug!(target: "layouter", "Entered");
         self.0
             .assign_fixed(annotation, column, offset, to)
-            .map(|value| value.cell())
+            .map(debug_value_and_return_cell)
     }
 
     fn constrain_constant(&mut self, cell: Cell, constant: Assigned<F>) -> Result<(), Error> {
+        debug!(target: "constrain_constant", cell = ?cell, constant = ?constant);
         self.0.constrain_constant(cell, constant)
     }
 
     fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error> {
+        debug!(target: "constrain_equal", left = ?left, right = ?right);
         self.0.constrain_equal(left, right)
     }
 }
@@ -222,6 +273,7 @@ impl<'r, F: Field> RegionLayouter<F> for TracingRegion<'r, F> {
 /// A helper type that augments an [`Assignment`] with [`tracing`] spans and events.
 struct TracingAssignment<'cs, F: Field, CS: Assignment<F>> {
     cs: &'cs mut CS,
+    in_region: bool,
     _phantom: PhantomData<F>,
 }
 
@@ -229,6 +281,7 @@ impl<'cs, F: Field, CS: Assignment<F>> TracingAssignment<'cs, F, CS> {
     fn new(cs: &'cs mut CS) -> Self {
         Self {
             cs,
+            in_region: false,
             _phantom: PhantomData,
         }
     }
@@ -240,11 +293,13 @@ impl<'cs, F: Field, CS: Assignment<F>> Assignment<F> for TracingAssignment<'cs, 
         NR: Into<String>,
         N: FnOnce() -> NR,
     {
+        self.in_region = true;
         self.cs.enter_region(name_fn);
     }
 
     fn exit_region(&mut self) {
         self.cs.exit_region();
+        self.in_region = false;
     }
 
     fn enable_selector<A, AR>(
@@ -257,10 +312,18 @@ impl<'cs, F: Field, CS: Assignment<F>> Assignment<F> for TracingAssignment<'cs, 
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
-        self.cs.enable_selector(annotation, selector, row)
+        let annotation = annotation().into();
+        if self.in_region {
+            debug!(target: "position", row = row);
+        } else {
+            debug!(target: "enable_selector", name = annotation, row = row);
+        }
+        self.cs.enable_selector(|| annotation, selector, row)
     }
 
     fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Value<F>, Error> {
+        let _guard = debug_span!("positioned").entered();
+        debug!(target: "query_instance", column = ?column, row = row);
         self.cs.query_instance(column, row)
     }
 
@@ -277,7 +340,13 @@ impl<'cs, F: Field, CS: Assignment<F>> Assignment<F> for TracingAssignment<'cs, 
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
-        self.cs.assign_advice(annotation, column, row, to)
+        let annotation = annotation().into();
+        if self.in_region {
+            debug!(target: "position", row = row);
+        } else {
+            debug!(target: "assign_advice", name = annotation, column = ?column, row = row);
+        }
+        self.cs.assign_advice(|| annotation, column, row, to)
     }
 
     fn assign_fixed<V, VR, A, AR>(
@@ -293,7 +362,13 @@ impl<'cs, F: Field, CS: Assignment<F>> Assignment<F> for TracingAssignment<'cs, 
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
-        self.cs.assign_fixed(annotation, column, row, to)
+        let annotation = annotation().into();
+        if self.in_region {
+            debug!(target: "position", row = row);
+        } else {
+            debug!(target: "assign_fixed", name = annotation, column = ?column, row = row);
+        }
+        self.cs.assign_fixed(|| annotation, column, row, to)
     }
 
     fn copy(
@@ -303,6 +378,14 @@ impl<'cs, F: Field, CS: Assignment<F>> Assignment<F> for TracingAssignment<'cs, 
         right_column: Column<Any>,
         right_row: usize,
     ) -> Result<(), Error> {
+        let _guard = debug_span!("positioned").entered();
+        debug!(
+            target: "copy",
+            left_column = ?left_column,
+            left_row = left_row,
+            right_column = ?right_column,
+            right_row = right_row,
+        );
         self.cs.copy(left_column, left_row, right_column, right_row)
     }
 
@@ -312,6 +395,8 @@ impl<'cs, F: Field, CS: Assignment<F>> Assignment<F> for TracingAssignment<'cs, 
         row: usize,
         to: Value<Assigned<F>>,
     ) -> Result<(), Error> {
+        let _guard = debug_span!("positioned").entered();
+        debug!(target: "fill_from_row", column = ?column, row = row);
         self.cs.fill_from_row(column, row, to)
     }
 
@@ -320,10 +405,12 @@ impl<'cs, F: Field, CS: Assignment<F>> Assignment<F> for TracingAssignment<'cs, 
         NR: Into<String>,
         N: FnOnce() -> NR,
     {
+        // We enter namespace spans in TracingLayouter.
         self.cs.push_namespace(name_fn)
     }
 
     fn pop_namespace(&mut self, gadget_name: Option<String>) {
         self.cs.pop_namespace(gadget_name);
+        // We exit namespace spans in TracingLayouter.
     }
 }
