@@ -19,6 +19,11 @@ and this project adheres to Rust's notion of
 - `halo2_proofs::circuit::layouter`:
   - `RegionLayouter::instance_value` method added to provide access to
     instance values within a region.
+  - `RegionLayouter::annotate_column` method added to provide annotation capabilities
+    to the circuit Columns.
+- `halo2_proofs::plonk::circuit`:
+  - `ConstraintSystem::annotate_lookup_column` method added to allow for 
+    `TableColumn` annotation capabilities.
 
 ### Changed
 - Migrated to `ff 0.13`, `group 0.13`, `pasta_curves 0.5`.
