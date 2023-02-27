@@ -1013,10 +1013,10 @@ mod tests {
                         region.assign_advice(|| "a", config.a, 0, || Value::known(Fp::ZERO))?;
 
                         // Name Column a
-                        region.name_column(|| "This is annotated!", config.a);
+                        region.annotate_column(|| "This is annotated!", config.a);
 
                         // Name Column b
-                        region.name_column(|| "This is also annotated!", config.b);
+                        region.annotate_column(|| "This is also annotated!", config.b);
 
                         // BUG: Forget to assign b = 0! This could go unnoticed during
                         // development, because cell values default to zero, which in this
@@ -1061,7 +1061,7 @@ mod tests {
                 let a = meta.advice_column();
                 let q = meta.complex_selector();
                 let table = meta.lookup_table_column();
-                meta.annotate_lookup_column(table, || "Table1");
+                meta.annotate_lookup_column(|| "Table1", table);
 
                 meta.lookup(|cells| {
                     let a = cells.query_advice(a, Rotation::cur());
@@ -1150,7 +1150,7 @@ mod tests {
                             || Value::known(Fp::from(5)),
                         )?;
 
-                        region.name_column(|| "Witness example", config.a);
+                        region.annotate_column(|| "Witness example", config.a);
 
                         Ok(())
                     },
@@ -1262,9 +1262,9 @@ mod tests {
                         region.assign_advice(|| "b", config.b, 0, || Value::known(Fp::zero()))?;
 
                         // Name Column a
-                        region.name_column(|| "This is Advice!", config.a);
+                        region.annotate_column(|| "This is Advice!", config.a);
                         // Name Column b
-                        region.name_column(|| "This is Advice too!", config.b);
+                        region.annotate_column(|| "This is Advice too!", config.b);
 
                         // Assign c = 5.
                         region.assign_advice(
@@ -1282,9 +1282,9 @@ mod tests {
                         )?;
 
                         // Name Column c
-                        region.name_column(|| "Another one!", config.c);
+                        region.annotate_column(|| "Another one!", config.c);
                         // Name Column d
-                        region.name_column(|| "This is a Fixed!", config.d);
+                        region.annotate_column(|| "This is a Fixed!", config.d);
 
                         // Note that none of the terms cancel each other. Therefore we will have a constraint that is not satisfied for
                         // the `Equality check` gate.

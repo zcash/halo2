@@ -50,9 +50,8 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
 
     /// Allows the circuit implementor to name/annotate a Column within a Region context.
     ///
-    /// This is useful in order to improve the amount of information that `prover.verify()`
-    /// and `prover.assert_satisfied()` can provide.
-    fn name_column<'v>(
+    /// This is useful in order to improve the amount of information that [`MockProver::assert_satisfied()`] can provide.
+    fn annotate_column<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Any>,
@@ -298,7 +297,7 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
         })
     }
 
-    fn name_column<'v>(
+    fn annotate_column<'v>(
         &'v mut self,
         _annotation: &'v (dyn Fn() -> String + 'v),
         _column: Column<Any>,

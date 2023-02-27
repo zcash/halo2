@@ -205,14 +205,14 @@ impl<'r, F: Field> Region<'r, F> {
     ///
     /// This is useful in order to improve the amount of information that `prover.verify()`
     /// and `prover.assert_satisfied()` can provide.
-    pub fn name_column<A, AR, T>(&mut self, annotation: A, column: T)
+    pub fn annotate_column<A, AR, T>(&mut self, annotation: A, column: T)
     where
         A: Fn() -> AR,
         AR: Into<String>,
         T: Into<Column<Any>>,
     {
         self.region
-            .name_column(&|| annotation().into(), column.into());
+            .annotate_column(&|| annotation().into(), column.into());
     }
 
     /// Assign an advice column value (witness).

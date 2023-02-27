@@ -1379,7 +1379,7 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Annotate a Lookup column.
-    pub fn annotate_lookup_column<A, AR>(&mut self, column: TableColumn, annotation: A)
+    pub fn annotate_lookup_column<A, AR>(&mut self, annotation: A, column: TableColumn)
     where
         A: Fn() -> AR,
         AR: Into<String>,

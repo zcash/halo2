@@ -482,7 +482,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r
         Ok(())
     }
 
-    fn name_column<'v>(
+    fn annotate_column<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
         column: Column<Any>,
