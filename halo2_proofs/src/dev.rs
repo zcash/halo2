@@ -619,7 +619,11 @@ impl<F: Field + Ord> MockProver<F> {
                                             InstanceValue::Assigned(_) => None,
                                             _ => Some(VerifyFailure::InstanceCellNotAssigned {
                                                 gate: (gate_index, gate.name()).into(),
-                                                region: (r_i, r.name.clone(), &r.annotations)
+                                                region: (
+                                                    r_i,
+                                                    r.name.clone(),
+                                                    r.annotations.clone(),
+                                                )
                                                     .into(),
                                                 gate_offset: *selector_row,
                                                 column: cell.column.try_into().unwrap(),
@@ -634,7 +638,11 @@ impl<F: Field + Ord> MockProver<F> {
                                         } else {
                                             Some(VerifyFailure::CellNotAssigned {
                                                 gate: (gate_index, gate.name()).into(),
-                                                region: (r_i, r.name.clone(), &r.annotations)
+                                                region: (
+                                                    r_i,
+                                                    r.name.clone(),
+                                                    r.annotations.clone(),
+                                                )
                                                     .into(),
                                                 gate_offset: *selector_row,
                                                 column: cell.column,
