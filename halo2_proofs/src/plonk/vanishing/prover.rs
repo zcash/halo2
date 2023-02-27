@@ -10,7 +10,9 @@ use maybe_rayon::{
 #[cfg(feature = "multicore")]
 use rand_chacha::ChaCha20Rng;
 #[cfg(feature = "multicore")]
-use rand_core::{RngCore, SeedableRng};
+use rand_core::SeedableRng;
+
+use rand_core::RngCore;
 
 use super::Argument;
 use crate::{
