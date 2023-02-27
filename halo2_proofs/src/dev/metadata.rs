@@ -54,10 +54,8 @@ impl From<(Column, Option<&HashMap<Column, String>>)> for DebugColumn {
             index: info.0.index,
             annotation: info
                 .1
-                .map(|map| map.get(&info.0))
-                .flatten()
-                .cloned()
-                .unwrap_or_else(String::new),
+                .and_then(|map| map.get(&info.0).cloned())
+                .unwrap_or_default(),
         }
     }
 }

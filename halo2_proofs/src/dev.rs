@@ -1201,7 +1201,7 @@ mod tests {
                     let a = cells.query_advice(a, Rotation::cur());
                     let b = cells.query_advice(b, Rotation::cur());
                     let c = cells.query_advice(c, Rotation::cur());
-                    let d = cells.query_fixed(d, Rotation::cur());
+                    let d = cells.query_fixed(d);
                     let q = cells.query_selector(q);
 
                     // If q is enabled, a and b must be assigned to.
