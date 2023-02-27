@@ -1,10 +1,13 @@
 //! Metadata about circuits.
 
+use super::metadata::Column as ColumnMetadata;
 use crate::plonk::{self, Any};
-use std::fmt;
-
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug},
+};
 /// Metadata about a column within a circuit.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Column {
     /// The type of the column.
     pub(super) column_type: Any,
@@ -30,6 +33,40 @@ impl From<plonk::Column<Any>> for Column {
             column_type: *column.column_type(),
             index: column.index(),
         }
+    }
+}
+
+/// A helper structure that allows to print a Column with it's annotation as a single structure.
+#[derive(Debug, Clone)]
+struct DebugColumn {
+    /// The type of the column.
+    column_type: Any,
+    /// The index of the column.
+    index: usize,
+    /// Annotation of the column
+    annotation: String,
+}
+
+impl From<(Column, Option<&HashMap<Column, String>>)> for DebugColumn {
+    fn from(info: (Column, Option<&HashMap<Column, String>>)) -> Self {
+        DebugColumn {
+            column_type: info.0.column_type,
+            index: info.0.index,
+            annotation: info
+                .1
+                .and_then(|map| map.get(&info.0).cloned())
+                .unwrap_or_default(),
+        }
+    }
+}
+
+impl fmt::Display for DebugColumn {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Column('{:?}', {} - {})",
+            self.column_type, self.index, self.annotation
+        )
     }
 }
 
@@ -83,7 +120,7 @@ impl fmt::Display for VirtualCell {
 }
 
 /// Metadata about a configured gate within a circuit.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Gate {
     /// The index of the active gate. These indices are assigned in the order in which
     /// `ConstraintSystem::create_gate` is called during `Circuit::configure`.
@@ -106,7 +143,7 @@ impl From<(usize, &'static str)> for Gate {
 }
 
 /// Metadata about a configured constraint within a circuit.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Constraint {
     /// The gate containing the constraint.
     pub(super) gate: Gate,
@@ -143,7 +180,7 @@ impl From<(Gate, usize, &'static str)> for Constraint {
 }
 
 /// Metadata about an assigned region within a circuit.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct Region {
     /// The index of the region. These indices are assigned in the order in which
     /// `Layouter::assign_region` is called during `Circuit::synthesize`.
@@ -151,6 +188,22 @@ pub struct Region {
     /// The name of the region. This is specified by the region creator (such as a chip
     /// implementation), and is not enforced to be unique.
     pub(super) name: String,
+    /// A reference to the annotations of the Columns that exist within this `Region`.
+    pub(super) column_annotations: Option<HashMap<ColumnMetadata, String>>,
+}
+
+impl PartialEq for Region {
+    fn eq(&self, other: &Self) -> bool {
+        self.index == other.index && self.name == other.name
+    }
+}
+
+impl Eq for Region {}
+
+impl Debug for Region {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Region {} ('{}')", self.index, self.name)
+    }
 }
 
 impl fmt::Display for Region {
@@ -161,7 +214,11 @@ impl fmt::Display for Region {
 
 impl From<(usize, String)> for Region {
     fn from((index, name): (usize, String)) -> Self {
-        Region { index, name }
+        Region {
+            index,
+            name,
+            column_annotations: None,
+        }
     }
 }
 
@@ -170,6 +227,27 @@ impl From<(usize, &str)> for Region {
         Region {
             index,
             name: name.to_owned(),
+            column_annotations: None,
+        }
+    }
+}
+
+impl From<(usize, String, HashMap<ColumnMetadata, String>)> for Region {
+    fn from((index, name, annotations): (usize, String, HashMap<ColumnMetadata, String>)) -> Self {
+        Region {
+            index,
+            name,
+            column_annotations: Some(annotations),
+        }
+    }
+}
+
+impl From<(usize, &str, HashMap<ColumnMetadata, String>)> for Region {
+    fn from((index, name, annotations): (usize, &str, HashMap<ColumnMetadata, String>)) -> Self {
+        Region {
+            index,
+            name: name.to_owned(),
+            column_annotations: Some(annotations),
         }
     }
 }

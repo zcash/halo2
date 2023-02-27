@@ -48,6 +48,15 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
         offset: usize,
     ) -> Result<(), Error>;
 
+    /// Allows the circuit implementor to name/annotate a Column within a Region context.
+    ///
+    /// This is useful in order to improve the amount of information that [`crate::dev::MockProver::assert_satisfied()`] can provide.
+    fn annotate_column<'v>(
+        &'v mut self,
+        annotation: &'v (dyn Fn() -> String + 'v),
+        column: Column<Any>,
+    );
+
     /// Assign an advice column value (witness)
     fn assign_advice<'v>(
         &'v mut self,
@@ -286,6 +295,14 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
             row_offset: offset,
             column: column.into(),
         })
+    }
+
+    fn annotate_column<'v>(
+        &'v mut self,
+        _annotation: &'v (dyn Fn() -> String + 'v),
+        _column: Column<Any>,
+    ) {
+        // Do nothing
     }
 
     fn constrain_constant(&mut self, _cell: Cell, _constant: Assigned<F>) -> Result<(), Error> {

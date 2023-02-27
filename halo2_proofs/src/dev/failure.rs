@@ -1,12 +1,13 @@
 use std::collections::{BTreeMap, HashSet};
-use std::fmt;
+use std::fmt::{self, Debug};
 
 use group::ff::Field;
 
+use super::MockProver;
 use super::{
     metadata,
     util::{self, AnyQuery},
-    MockProver, Region,
+    Region,
 };
 use crate::{
     dev::Value,
@@ -16,7 +17,7 @@ use crate::{
 mod emitter;
 
 /// The location within the circuit at which a particular [`VerifyFailure`] occurred.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum FailureLocation {
     /// A location inside a region.
     InRegion {
@@ -99,7 +100,7 @@ impl FailureLocation {
                 }
             })
             .map(|(r_i, r)| FailureLocation::InRegion {
-                region: (r_i, r.name.clone()).into(),
+                region: (r_i, r.name.clone(), r.annotations.clone()).into(),
                 offset: failure_row - r.rows.unwrap().0,
             })
             .unwrap_or_else(|| FailureLocation::OutsideRegion { row: failure_row })
@@ -223,6 +224,7 @@ impl fmt::Display for VerifyFailure {
                 for (name, value) in cell_values {
                     writeln!(f, "- {} = {}", name, value)?;
                 }
+
                 Ok(())
             }
             Self::ConstraintPoisoned { constraint } => {
@@ -417,7 +419,7 @@ fn render_lookup<F: Field>(
         expr.evaluate(
             &|_| panic!("no constants in table expressions"),
             &|_| panic!("no selectors in table expressions"),
-            &|query| format!("F{}", query.column_index),
+            &|query| metadata::Column::from((Any::Fixed, query.column_index)),
             &|_| panic!("no advice columns in table expressions"),
             &|_| panic!("no instance columns in table expressions"),
             &|_| panic!("no negations in table expressions"),
@@ -454,9 +456,19 @@ fn render_lookup<F: Field>(
     for i in 0..lookup.input_expressions.len() {
         eprint!("{}L{}", if i == 0 { "" } else { ", " }, i);
     }
+
     eprint!(") ∉ (");
     for (i, column) in table_columns.enumerate() {
-        eprint!("{}{}", if i == 0 { "" } else { ", " }, column);
+        eprint!(
+            "{}{}",
+            if i == 0 { "" } else { ", " },
+            prover
+                .cs
+                .lookup_annotations
+                .get(&column)
+                .cloned()
+                .unwrap_or_else(|| format!("{}", column))
+        );
     }
     eprintln!(")");
 
@@ -515,6 +527,7 @@ fn render_lookup<F: Field>(
             emitter::expression_to_string(input, &layout)
         );
         eprintln!("    ^");
+
         emitter::render_cell_layout("    | ", location, &columns, &layout, |_, rotation| {
             if rotation == 0 {
                 eprint!(" <--{{ Lookup inputs queried here");
