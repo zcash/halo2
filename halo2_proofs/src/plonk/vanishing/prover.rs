@@ -2,7 +2,15 @@ use std::iter;
 
 use ff::Field;
 use group::Curve;
-use rand_core::RngCore;
+#[cfg(feature = "multicore")]
+use maybe_rayon::{
+    current_num_threads,
+    prelude::{IntoParallelRefMutIterator, ParallelIterator},
+};
+#[cfg(feature = "multicore")]
+use rand_chacha::ChaCha20Rng;
+#[cfg(feature = "multicore")]
+use rand_core::{RngCore, SeedableRng};
 
 use super::Argument;
 use crate::{
@@ -42,10 +50,42 @@ impl<C: CurveAffine> Argument<C> {
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
         // Sample a random polynomial of degree n - 1
-        let mut random_poly = domain.empty_coeff();
-        for coeff in random_poly.iter_mut() {
-            *coeff = C::Scalar::random(&mut rng);
-        }
+        #[cfg(feature = "multicore")]
+        let random_poly = {
+            let n_threads = current_num_threads();
+            let needed_scalars = (1usize << domain.k as usize) / n_threads;
+
+            let mut thread_seeds: Vec<ChaCha20Rng> = (0..n_threads)
+                .into_iter()
+                .map(|_| {
+                    let mut seed = [0u8; 32];
+                    rng.fill_bytes(&mut seed);
+                    ChaCha20Rng::from_seed(seed)
+                })
+                .collect();
+
+            let rand_vec: Vec<C::Scalar> = thread_seeds
+                .par_iter_mut()
+                .flat_map(|mut rng| {
+                    (0..needed_scalars)
+                        .into_iter()
+                        .map(|_| C::Scalar::random(&mut rng))
+                        .collect::<Vec<C::Scalar>>()
+                })
+                .collect();
+
+            Polynomial::<C::ScalarExt, Coeff>::from_evals(rand_vec)
+        };
+
+        #[cfg(not(feature = "multicore"))]
+        let random_poly = {
+            let mut random_poly = domain.empty_coeff();
+            for coeff in random_poly.iter_mut() {
+                *coeff = C::Scalar::random(&mut rng);
+            }
+            random_poly
+        };
+
         // Sample a random blinding factor
         let random_blind = Blind(C::Scalar::random(rng));
 
