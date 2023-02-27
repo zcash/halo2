@@ -121,34 +121,6 @@ impl fmt::Display for VirtualCell {
     }
 }
 
-/// Helper structure used to be able to inject Column annotations inside a `Display` or `Debug` call.
-#[derive(Clone, Debug)]
-pub(super) struct DebugVirtualCell {
-    name: &'static str,
-    column: DebugColumn,
-    rotation: i32,
-}
-
-impl From<(&VirtualCell, Option<&HashMap<Column, String>>)> for DebugVirtualCell {
-    fn from(info: (&VirtualCell, Option<&HashMap<Column, String>>)) -> Self {
-        DebugVirtualCell {
-            name: info.0.name,
-            column: DebugColumn::from((info.0.column, info.1)),
-            rotation: info.0.rotation,
-        }
-    }
-}
-
-impl fmt::Display for DebugVirtualCell {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}@{}", self.column, self.rotation)?;
-        if !self.name.is_empty() {
-            write!(f, "({})", self.name)?;
-        }
-        Ok(())
-    }
-}
-
 /// Metadata about a configured gate within a circuit.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Gate {
@@ -211,7 +183,7 @@ impl From<(Gate, usize, &'static str)> for Constraint {
 
 /// Metadata about an assigned region within a circuit.
 #[derive(Clone)]
-pub struct Region<'a> {
+pub struct Region {
     /// The index of the region. These indices are assigned in the order in which
     /// `Layouter::assign_region` is called during `Circuit::synthesize`.
     pub(super) index: usize,
@@ -219,30 +191,30 @@ pub struct Region<'a> {
     /// implementation), and is not enforced to be unique.
     pub(super) name: String,
     /// A reference to the annotations of the Columns that exist within this `Region`.
-    pub(super) column_annotations: Option<&'a HashMap<ColumnMetadata, String>>,
+    pub(super) column_annotations: Option<HashMap<ColumnMetadata, String>>,
 }
 
-impl<'a> PartialEq for Region<'a> {
+impl PartialEq for Region {
     fn eq(&self, other: &Self) -> bool {
         self.index == other.index && self.name == other.name
     }
 }
 
-impl<'a> Eq for Region<'a> {}
+impl Eq for Region {}
 
-impl<'a> Debug for Region<'a> {
+impl Debug for Region {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Region {} ('{}')", self.index, self.name)
     }
 }
 
-impl<'a> fmt::Display for Region<'a> {
+impl fmt::Display for Region {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Region {} ('{}')", self.index, self.name)
     }
 }
 
-impl<'a> From<(usize, String)> for Region<'a> {
+impl From<(usize, String)> for Region {
     fn from((index, name): (usize, String)) -> Self {
         Region {
             index,
@@ -252,7 +224,7 @@ impl<'a> From<(usize, String)> for Region<'a> {
     }
 }
 
-impl<'a> From<(usize, &str)> for Region<'a> {
+impl From<(usize, &str)> for Region {
     fn from((index, name): (usize, &str)) -> Self {
         Region {
             index,
@@ -262,10 +234,8 @@ impl<'a> From<(usize, &str)> for Region<'a> {
     }
 }
 
-impl<'a> From<(usize, String, &'a HashMap<ColumnMetadata, String>)> for Region<'a> {
-    fn from(
-        (index, name, annotations): (usize, String, &'a HashMap<ColumnMetadata, String>),
-    ) -> Self {
+impl From<(usize, String, HashMap<ColumnMetadata, String>)> for Region {
+    fn from((index, name, annotations): (usize, String, HashMap<ColumnMetadata, String>)) -> Self {
         Region {
             index,
             name,
@@ -274,10 +244,8 @@ impl<'a> From<(usize, String, &'a HashMap<ColumnMetadata, String>)> for Region<'
     }
 }
 
-impl<'a> From<(usize, &str, &'a HashMap<ColumnMetadata, String>)> for Region<'a> {
-    fn from(
-        (index, name, annotations): (usize, &str, &'a HashMap<ColumnMetadata, String>),
-    ) -> Self {
+impl From<(usize, &str, HashMap<ColumnMetadata, String>)> for Region {
+    fn from((index, name, annotations): (usize, &str, HashMap<ColumnMetadata, String>)) -> Self {
         Region {
             index,
             name: name.to_owned(),

@@ -71,6 +71,7 @@ pub(super) fn render_cell_layout(
             if let FailureLocation::InRegion { region, offset: _ } = location {
                 region
                     .column_annotations
+                    .as_ref()
                     .map(|column_ann| column_ann.get(col).map(|ann| size = ann.len()));
             };
             size
@@ -88,6 +89,7 @@ pub(super) fn render_cell_layout(
                     FailureLocation::InRegion { region, offset: _ } => {
                         region
                             .column_annotations
+                            .as_ref()
                             .map(|column_ann| column_ann.get(column).cloned())
                             .flatten()
                             .unwrap_or_else(|| column_type_and_idx(column))
