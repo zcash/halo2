@@ -581,6 +581,10 @@ impl<F: Field + Ord> MockProver<F> {
 
     /// Returns `Ok(())` if this `MockProver` is satisfied, or a list of errors indicating
     /// the reasons that the circuit is not satisfied.
+    ///
+    /// ### Note
+    /// This method will not print any annotations (in case they've been placed). If annotation printing is desired
+    /// please use [`MockProver::assert_satisfied`].
     pub fn verify(&self) -> Result<(), Vec<VerifyFailure>> {
         let n = self.n as i32;
 
@@ -924,7 +928,7 @@ impl<F: Field + Ord> MockProver<F> {
     /// Panics if the circuit being checked by this `MockProver` is not satisfied.
     ///
     /// Any verification failures will be pretty-printed to stderr before the function
-    /// panics.
+    /// panics. These will also include annotations (in case they've been placed).
     ///
     /// Apart from the stderr output, this method is equivalent to:
     /// ```ignore
