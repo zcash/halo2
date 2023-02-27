@@ -316,15 +316,15 @@ fn plonk_api() {
             meta.create_gate("Combined add-mult", |meta| {
                 let d = meta.query_advice(d, Rotation::next());
                 let a = meta.query_advice(a, Rotation::cur());
-                let sf = meta.query_fixed(sf, Rotation::cur());
+                let sf = meta.query_fixed(sf);
                 let e = meta.query_advice(e, Rotation::prev());
                 let b = meta.query_advice(b, Rotation::cur());
                 let c = meta.query_advice(c, Rotation::cur());
 
-                let sa = meta.query_fixed(sa, Rotation::cur());
-                let sb = meta.query_fixed(sb, Rotation::cur());
-                let sc = meta.query_fixed(sc, Rotation::cur());
-                let sm = meta.query_fixed(sm, Rotation::cur());
+                let sa = meta.query_fixed(sa);
+                let sb = meta.query_fixed(sb);
+                let sc = meta.query_fixed(sc);
+                let sm = meta.query_fixed(sm);
 
                 vec![a.clone() * sa + b.clone() * sb + a * b * sm - (c * sc) + sf * (d * e)]
             });
@@ -332,7 +332,7 @@ fn plonk_api() {
             meta.create_gate("Public input", |meta| {
                 let a = meta.query_advice(a, Rotation::cur());
                 let p = meta.query_instance(p, Rotation::cur());
-                let sp = meta.query_fixed(sp, Rotation::cur());
+                let sp = meta.query_fixed(sp);
 
                 vec![sp * (a - p)]
             });

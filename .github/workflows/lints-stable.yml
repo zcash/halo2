@@ -5,20 +5,23 @@ on: pull_request
 
 jobs:
   clippy:
-    name: Clippy (1.56.1)
+    name: Clippy (MSRV)
     timeout-minutes: 30
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - id: prepare
+        uses: ./.github/actions/prepare
         with:
-          toolchain: 1.56.1
-          components: clippy
-          override: true
+          nightly-features: true
+      - run: rustup component add clippy
       - name: Run clippy
         uses: actions-rs/clippy-check@v1
         with:
-          name: Clippy (1.56.1)
+          name: Clippy (MSRV)
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --all-targets -- -D warnings
+          args: >
+            ${{ steps.prepare.outputs.feature-flags }}
+            --all-targets
+            -- -D warnings

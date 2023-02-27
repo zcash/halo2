@@ -87,7 +87,7 @@ where
     /// Derives the expression `q_s3 = (q_s2) * (q_s2 - 1)`.
     fn q_s3(&self, meta: &mut VirtualCells<pallas::Base>) -> Expression<pallas::Base> {
         let one = Expression::Constant(pallas::Base::one());
-        let q_s2 = meta.query_fixed(self.q_sinsemilla2, Rotation::cur());
+        let q_s2 = meta.query_fixed(self.q_sinsemilla2);
         q_s2.clone() * (q_s2 - one)
     }
 }
@@ -203,7 +203,7 @@ where
         // https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial
         meta.create_gate("Initial y_Q", |meta| {
             let q_s4 = meta.query_selector(config.q_sinsemilla4);
-            let y_q = meta.query_fixed(config.fixed_y_q, Rotation::cur());
+            let y_q = meta.query_fixed(config.fixed_y_q);
 
             // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
             let Y_A_cur = Y_A(meta, Rotation::cur());

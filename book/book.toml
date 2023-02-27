@@ -23,9 +23,11 @@ renderers = ["html"]
 page-break = false
 
 [output.pdf]
+optional = true
 display-header-footer = true
 header-template = "<span></span>"
 footer-template = "<p style='font-size:10px; margin-left: 48%'><span class='pageNumber'></span> / <span class='totalPages'></span></p>"
 
 [output.pdf-outline]
+optional = true
 like-wkhtmltopdf = false

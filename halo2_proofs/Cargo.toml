@@ -8,7 +8,7 @@ authors = [
     "Jack Grigg <jack@electriccoin.co>",
 ]
 edition = "2021"
-rust-version = "1.56.1"
+rust-version = "1.59"
 description = """
 Fast PLONK-based zero-knowledge proving system with no trusted setup
 """
@@ -45,13 +45,13 @@ harness = false
 
 [dependencies]
 backtrace = { version = "0.3", optional = true }
-rayon = "1.5.1"
 ff = "0.13"
 group = "0.13"
 pasta_curves = "0.5"
 rand_core = { version = "0.6", default-features = false }
 tracing = "0.1"
 blake2b_simd = "1"
+maybe-rayon = {version = "0.1.0", default-features = false}
 
 # Developer tooling dependencies
 plotters = { version = "0.3.0", default-features = false, optional = true }
@@ -68,7 +68,8 @@ rand_core = { version = "0.6", default-features = false, features = ["getrandom"
 getrandom = { version = "0.2", features = ["js"] }
 
 [features]
-default = ["batch"]
+default = ["batch", "multicore"]
+multicore = ["maybe-rayon/threads"]
 dev-graph = ["plotters", "tabbycat"]
 test-dev-graph = [
     "dev-graph",

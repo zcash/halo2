@@ -1,6 +1,6 @@
 # halo2_gadgets [![Crates.io](https://img.shields.io/crates/v/halo2_gadgets.svg)](https://crates.io/crates/halo2_gadgets) #
 
-Requires Rust 1.56.1+.
+Requires Rust 1.60+.
 
 ## Documentation
 

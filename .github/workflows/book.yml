@@ -15,16 +15,27 @@ jobs:
           toolchain: nightly
           override: true
 
-      - name: Setup mdBook
-        uses: peaceiris/actions-mdbook@v1
-        with:
-          mdbook-version: 'latest'
+      # - name: Setup mdBook
+      #   uses: peaceiris/actions-mdbook@v1
+      #   with:
+      #     mdbook-version: 'latest'
 
-      - name: Install mdbook-katex
+      # mdBook for mdbook-pdf compatibility by fixing broken links in print.html
+      # Waiting for https://github.com/rust-lang/mdBook/pull/1738 to get merged
+      - name: Install patched mdbook
         uses: actions-rs/cargo@v1
         with:
           command: install
-          args: mdbook-katex
+          args: mdbook --git https://github.com/HollowMan6/mdBook.git --rev 62e01b34c23b957579c04ee1b24b57814ed8a4d5
+
+      - name: Install mdbook-katex and mdbook-pdf
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: mdbook-katex mdbook-pdf
+
+      - name: Install mdbook-pdf-outline
+        run: pip3 install mdbook-pdf-outline
 
       - name: Build halo2 book
         run: mdbook build book/
@@ -39,11 +50,17 @@ jobs:
 
       - name: Move latest rustdocs into book
         run: |
-          mkdir -p ./book/book/rustdoc
-          mv ./target/doc ./book/book/rustdoc/latest
+          mkdir -p ./book/book/html/rustdoc
+          mv ./target/doc ./book/book/html/rustdoc/latest
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./book/book
+          publish_dir: ./book/book/html
+
+      - name: Upload PDF File to Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: The_halo2_Book
+          path: book/book/pdf-outline/*.pdf

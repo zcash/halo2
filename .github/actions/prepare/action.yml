@@ -1,0 +1,53 @@
+name: 'Prepare Halo 2'
+description: 'Sets up the Rust toolchain and prepares feature flags'
+inputs:
+  toolchain:
+    description: 'Rust toolchain to use (defaults to MSRV)'
+    required: false
+    default: 1.60.0
+  beta-features:
+    description: 'Include beta features'
+    required: false
+    default: false
+  nightly-features:
+    description: 'Include nightly features'
+    required: false
+    default: false
+  test-dependencies:
+    description: 'Include test dependencies'
+    required: false
+    default: true
+outputs:
+  feature-flags:
+    description: 'Feature flags'
+    value: ${{ steps.prepare-flags.outputs.flags }}
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        override: true
+    - id: beta
+      shell: bash
+      run: echo "feature=beta" >> $GITHUB_OUTPUT
+      if: inputs.beta-features == 'true'
+    - id: nightly
+      shell: bash
+      run: echo "feature=nightly" >> $GITHUB_OUTPUT
+      if: inputs.nightly-features == 'true'
+    - id: test
+      shell: bash
+      run: echo "feature=test-dependencies" >> $GITHUB_OUTPUT
+      if: inputs.test-dependencies == 'true'
+    - id: prepare-flags
+      shell: bash
+      run: >
+        echo "flags=--no-default-features --features '
+        batch
+        dev-graph
+        gadget-traces
+        ${{ steps.beta.outputs.feature }}
+        ${{ steps.nightly.outputs.feature }}
+        ${{ steps.test.outputs.feature }}
+        '" >> $GITHUB_OUTPUT
