@@ -28,6 +28,10 @@ name = "arithmetic"
 harness = false
 
 [[bench]]
+name = "commit_zk"
+harness = false
+
+[[bench]]
 name = "hashtocurve"
 harness = false
 
@@ -53,6 +57,7 @@ rand_core = { version = "0.6", default-features = false }
 tracing = "0.1"
 blake2b_simd = "1"
 sha3 = "0.9.1"
+rand_chacha = "0.3"
 
 # Developer tooling dependencies
 plotters = { version = "0.3.0", optional = true }
