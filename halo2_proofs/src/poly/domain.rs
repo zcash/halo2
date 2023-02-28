@@ -19,7 +19,7 @@ use std::marker::PhantomData;
 #[derive(Clone, Debug)]
 pub struct EvaluationDomain<F: Field> {
     n: u64,
-    pub(crate) k: u32,
+    k: u32,
     extended_k: u32,
     omega: F,
     omega_inv: F,
@@ -140,6 +140,11 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
             t_evaluations,
             barycentric_weight,
         }
+    }
+
+    /// Returns the `k` or Degree associated to the domain.
+    pub(crate) fn k(&self) -> usize {
+        self.k as usize
     }
 
     /// Obtains a polynomial in Lagrange form when given a vector of Lagrange

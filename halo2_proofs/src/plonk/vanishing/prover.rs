@@ -2,17 +2,14 @@ use std::iter;
 
 use ff::Field;
 use group::Curve;
+use rand_core::RngCore;
+
 #[cfg(feature = "multicore")]
-use maybe_rayon::{
-    current_num_threads,
-    prelude::{IntoParallelRefMutIterator, ParallelIterator},
-};
+use maybe_rayon::{current_num_threads, prelude::*};
 #[cfg(feature = "multicore")]
 use rand_chacha::ChaCha20Rng;
 #[cfg(feature = "multicore")]
 use rand_core::SeedableRng;
-
-use rand_core::RngCore;
 
 use super::Argument;
 use crate::{
@@ -55,9 +52,11 @@ impl<C: CurveAffine> Argument<C> {
         #[cfg(feature = "multicore")]
         let random_poly = {
             let n_threads = current_num_threads();
-            let needed_scalars = (1usize << domain.k as usize) / n_threads;
+            let n = 1usize << domain.k() as usize;
+            let n_chunks = n_threads + if n % n_threads != 0 { 1 } else { 0 };
+            let mut rand_vec = vec![C::Scalar::ZERO; n];
 
-            let mut thread_seeds: Vec<ChaCha20Rng> = (0..n_threads)
+            let mut thread_seeds: Vec<ChaCha20Rng> = (0..n_chunks)
                 .into_iter()
                 .map(|_| {
                     let mut seed = [0u8; 32];
@@ -66,17 +65,16 @@ impl<C: CurveAffine> Argument<C> {
                 })
                 .collect();
 
-            let rand_vec: Vec<C::Scalar> = thread_seeds
+            thread_seeds
                 .par_iter_mut()
-                .flat_map(|mut rng| {
-                    (0..needed_scalars)
-                        .into_iter()
-                        .map(|_| C::Scalar::random(&mut rng))
-                        .collect::<Vec<C::Scalar>>()
-                })
-                .collect();
+                .zip_eq(rand_vec.par_chunks_mut(n / n_threads))
+                .for_each(|(mut rng, chunk)| {
+                    chunk
+                        .iter_mut()
+                        .for_each(|v| *v = C::Scalar::random(&mut rng))
+                });
 
-            Polynomial::<C::ScalarExt, Coeff>::from_evals(rand_vec)
+            domain.coeff_from_vec(rand_vec)
         };
 
         #[cfg(not(feature = "multicore"))]
