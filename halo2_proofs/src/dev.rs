@@ -699,6 +699,16 @@ impl<F: FieldExt> MockProver<F> {
         Ok(prover)
     }
 
+    /// Return the content of an advice column as assigned by the circuit.
+    pub fn advice_values(&self, column: Column<Advice>) -> &[CellValue<F>] {
+        &self.advice[column.index()]
+    }
+
+    /// Return the content of a fixed column as assigned by the circuit.
+    pub fn fixed_values(&self, column: Column<Fixed>) -> &[CellValue<F>] {
+        &self.fixed[column.index()]
+    }
+
     /// Returns `Ok(())` if this `MockProver` is satisfied, or a list of errors indicating
     /// the reasons that the circuit is not satisfied.
     pub fn verify(&self) -> Result<(), Vec<VerifyFailure>> {
