@@ -52,7 +52,7 @@ impl<C: CurveAffine> Argument<C> {
         #[cfg(feature = "multicore")]
         let random_poly = {
             let n_threads = current_num_threads();
-            let n = 1usize << domain.k() as usize;
+            let n = 1usize << domain.k as usize;
             let n_chunks = n_threads + if n % n_threads != 0 { 1 } else { 0 };
             let mut rand_vec = vec![C::Scalar::ZERO; n];
 
