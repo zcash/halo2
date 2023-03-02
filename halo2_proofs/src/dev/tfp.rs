@@ -12,6 +12,68 @@ use crate::{
 };
 
 /// A helper type that augments a [`FloorPlanner`] with [`tracing`] spans and events.
+///
+/// `TracingFloorPlanner` can be used to instrument your circuit and determine exactly
+/// what is happening during a particular run of keygen or proving. This can be useful for
+/// identifying unexpected non-determinism or changes to a circuit.
+///
+/// # No stability guarantees
+///
+/// The `tracing` output is intended for use during circuit development. It should not be
+/// considered production-stable, and the precise format or data exposed may change at any
+/// time.
+///
+/// # Examples
+///
+/// ```
+/// use ff::Field;
+/// use halo2_proofs::{
+///     circuit::{floor_planner, Layouter, Value},
+///     dev::TracingFloorPlanner,
+///     plonk::{Circuit, ConstraintSystem, Error},
+/// };
+///
+/// # struct MyCircuit<F: Field> {
+/// #     some_witness: Value<F>,
+/// # };
+/// # #[derive(Clone)]
+/// # struct MyConfig;
+/// impl<F: Field> Circuit<F> for MyCircuit<F> {
+///     // Wrap `TracingFloorPlanner` around your existing floor planner of choice.
+///     //type FloorPlanner = floor_planner::V1;
+///     type FloorPlanner = TracingFloorPlanner<floor_planner::V1>;
+///
+///     // The rest of your `Circuit` implementation is unchanged.
+///     type Config = MyConfig;
+///
+///     fn without_witnesses(&self) -> Self {
+///         Self { some_witness: Value::unknown() }
+///     }
+///
+///     fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+///         // ..
+/// #       todo!()
+///     }
+///
+///     fn synthesize(&self, config: Self::Config, layouter: impl Layouter<F>) -> Result<(), Error> {
+///         // ..
+/// #       todo!()
+///     }
+/// }
+///
+/// #[test]
+/// fn some_circuit_test() {
+///     // At the start of your test, enable tracing.
+///     tracing_subscriber::fmt()
+///         .with_max_level(tracing::Level::DEBUG)
+///         .with_ansi(false)
+///         .without_time()
+///         .init();
+///
+///     // Now when the rest of the test runs, you will get `tracing` output for every
+///     // operation that the circuit performs under the hood!
+/// }
+/// ```
 #[derive(Debug)]
 pub struct TracingFloorPlanner<P: FloorPlanner> {
     _phantom: PhantomData<P>,
