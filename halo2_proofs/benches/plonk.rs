@@ -2,7 +2,7 @@
 extern crate criterion;
 
 use group::ff::Field;
-use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
+use halo2_proofs::circuit::{Cell, FieldValue, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::pasta::{EqAffine, Fp};
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::{commitment::Params, Rotation};
@@ -103,10 +103,10 @@ fn criterion_benchmark(c: &mut Criterion) {
                         || value.unwrap().map(|v| v.2),
                     )?;
 
-                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ZERO))?;
-                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ZERO))?;
-                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
-                    region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::ONE))?;
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::<FF>::ZERO)?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::<FF>::ZERO)?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::<FF>::ONE)?;
+                    region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::<FF>::ONE)?;
                     Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
             )
@@ -145,15 +145,10 @@ fn criterion_benchmark(c: &mut Criterion) {
                         || value.unwrap().map(|v| v.2),
                     )?;
 
-                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ONE))?;
-                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ONE))?;
-                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
-                    region.assign_fixed(
-                        || "a * b",
-                        self.config.sm,
-                        0,
-                        || Value::known(FF::ZERO),
-                    )?;
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::<FF>::ONE)?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::<FF>::ONE)?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::<FF>::ONE)?;
+                    region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::<FF>::ZERO)?;
                     Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
             )

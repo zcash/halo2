@@ -917,12 +917,11 @@ impl<F: Field + Ord> MockProver<F> {
 
 #[cfg(test)]
 mod tests {
-    use group::ff::Field;
     use pasta_curves::Fp;
 
     use super::{FailureLocation, MockProver, VerifyFailure};
     use crate::{
-        circuit::{Layouter, SimpleFloorPlanner, Value},
+        circuit::{FieldValue, Layouter, SimpleFloorPlanner, Value},
         plonk::{
             Advice, Any, Circuit, Column, ConstraintSystem, Error, Expression, Selector,
             TableColumn,
@@ -979,7 +978,7 @@ mod tests {
                         config.q.enable(&mut region, 1)?;
 
                         // Assign a = 0.
-                        region.assign_advice(|| "a", config.a, 0, || Value::known(Fp::ZERO))?;
+                        region.assign_advice(|| "a", config.a, 0, || Value::<Fp>::ZERO)?;
 
                         // BUG: Forget to assign b = 0! This could go unnoticed during
                         // development, because cell values default to zero, which in this

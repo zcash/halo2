@@ -3,11 +3,11 @@
 //! [Sinsemilla]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
 use crate::{
     ecc::{self, EccInstructions, FixedPoints},
-    utilities::{FieldValue, RangeConstrained, Var},
+    utilities::{FieldValue as _, RangeConstrained, Var},
 };
 use group::ff::{Field, PrimeField};
 use halo2_proofs::{
-    circuit::{Layouter, Value},
+    circuit::{FieldValue, Layouter, Value},
     plonk::Error,
 };
 use pasta_curves::arithmetic::CurveAffine;
@@ -243,17 +243,17 @@ where
         layouter: impl Layouter<C::Base>,
         subpieces: impl IntoIterator<Item = RangeConstrained<C::Base, Value<C::Base>>>,
     ) -> Result<Self, Error> {
-        let (field_elem, total_bits) = subpieces.into_iter().fold(
-            (Value::known(C::Base::ZERO), 0),
-            |(acc, bits), subpiece| {
-                assert!(bits < 64);
-                let subpiece_shifted = subpiece
-                    .inner()
-                    .value()
-                    .map(|v| C::Base::from(1 << bits) * v);
-                (acc + subpiece_shifted, bits + subpiece.num_bits())
-            },
-        );
+        let (field_elem, total_bits) =
+            subpieces
+                .into_iter()
+                .fold((FieldValue::ZERO, 0), |(acc, bits), subpiece| {
+                    assert!(bits < 64);
+                    let subpiece_shifted = subpiece
+                        .inner()
+                        .value()
+                        .map(|v| C::Base::from(1 << bits) * v);
+                    (acc + subpiece_shifted, bits + subpiece.num_bits())
+                });
 
         // Message must be composed of `K`-bit words.
         assert_eq!(total_bits % K, 0);

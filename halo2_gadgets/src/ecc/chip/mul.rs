@@ -10,7 +10,7 @@ use std::{
 
 use ff::{Field, PrimeField};
 use halo2_proofs::{
-    circuit::{AssignedCell, Layouter, Region, Value},
+    circuit::{AssignedCell, FieldValue, Layouter, Region, Value},
     plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
@@ -358,7 +358,7 @@ impl Config {
             if !lsb {
                 base.x.value().cloned()
             } else {
-                Value::known(Assigned::Zero)
+                FieldValue::ZERO
             }
         });
 
@@ -366,7 +366,7 @@ impl Config {
             if !lsb {
                 -base.y.value()
             } else {
-                Value::known(Assigned::Zero)
+                FieldValue::ZERO
             }
         });
 

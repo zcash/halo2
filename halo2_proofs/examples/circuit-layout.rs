@@ -1,6 +1,6 @@
 use ff::Field;
 use halo2_proofs::{
-    circuit::{Cell, Layouter, Region, SimpleFloorPlanner, Value},
+    circuit::{Cell, FieldValue, Layouter, Region, SimpleFloorPlanner, Value},
     pasta::Fp,
     plonk::{Advice, Assigned, Circuit, Column, ConstraintSystem, Error, Fixed, TableColumn},
     poly::Rotation,
@@ -93,10 +93,10 @@ impl<FF: Field> StandardCs<FF> for StandardPlonk<FF> {
         let out =
             region.assign_advice(|| "out", self.config.c, 0, || value.unwrap().map(|v| v.2))?;
 
-        region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ZERO))?;
-        region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ZERO))?;
-        region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
-        region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::ONE))?;
+        region.assign_fixed(|| "a", self.config.sa, 0, || Value::<FF>::ZERO)?;
+        region.assign_fixed(|| "b", self.config.sb, 0, || Value::<FF>::ZERO)?;
+        region.assign_fixed(|| "c", self.config.sc, 0, || Value::<FF>::ONE)?;
+        region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::<FF>::ONE)?;
         Ok((lhs.cell(), rhs.cell(), out.cell()))
     }
     fn raw_add<F>(&self, region: &mut Region<FF>, mut f: F) -> Result<(Cell, Cell, Cell), Error>
@@ -130,10 +130,10 @@ impl<FF: Field> StandardCs<FF> for StandardPlonk<FF> {
         let out =
             region.assign_advice(|| "out", self.config.c, 0, || value.unwrap().map(|v| v.2))?;
 
-        region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ONE))?;
-        region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ONE))?;
-        region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
-        region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::ZERO))?;
+        region.assign_fixed(|| "a", self.config.sa, 0, || Value::<FF>::ONE)?;
+        region.assign_fixed(|| "b", self.config.sb, 0, || Value::<FF>::ONE)?;
+        region.assign_fixed(|| "c", self.config.sc, 0, || Value::<FF>::ONE)?;
+        region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::<FF>::ZERO)?;
         Ok((lhs.cell(), rhs.cell(), out.cell()))
     }
     fn copy(&self, region: &mut Region<FF>, left: Cell, right: Cell) -> Result<(), Error> {

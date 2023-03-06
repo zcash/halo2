@@ -6,6 +6,7 @@ use crate::{
 };
 
 use ff::Field;
+use halo2_proofs::circuit::FieldValue;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Region, Value},
     plonk::{Assigned, Error},
@@ -108,13 +109,13 @@ where
                     || "dummy lambda2",
                     config.double_and_add.lambda_2,
                     offset,
-                    || Value::known(pallas::Base::zero()),
+                    || Value::<pallas::Base>::ZERO,
                 )?;
                 region.assign_advice(
                     || "dummy x_p",
                     config.double_and_add.x_p,
                     offset,
-                    || Value::known(pallas::Base::zero()),
+                    || Value::<pallas::Base>::ZERO,
                 )?;
             }
 
@@ -211,7 +212,7 @@ where
                     || "q_s2 = 1",
                     config.q_sinsemilla2,
                     offset + row,
-                    || Value::known(pallas::Base::one()),
+                    || Value::<pallas::Base>::ONE,
                 )?;
             }
 

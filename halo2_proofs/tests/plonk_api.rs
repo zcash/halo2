@@ -4,7 +4,7 @@
 use assert_matches::assert_matches;
 use group::ff::{Field, WithSmallOrderMulGroup};
 use halo2_proofs::arithmetic::CurveAffine;
-use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
+use halo2_proofs::circuit::{Cell, FieldValue, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::pasta::{Eq, EqAffine, Fp};
 use halo2_proofs::plonk::{
@@ -138,10 +138,10 @@ fn plonk_api() {
                         || value.unwrap().map(|v| v.2),
                     )?;
 
-                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ZERO))?;
-                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ZERO))?;
-                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
-                    region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::ONE))?;
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::<FF>::ZERO)?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::<FF>::ZERO)?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::<FF>::ONE)?;
+                    region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::<FF>::ONE)?;
                     Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
             )
@@ -192,15 +192,10 @@ fn plonk_api() {
                         || value.unwrap().map(|v| v.2),
                     )?;
 
-                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ONE))?;
-                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ONE))?;
-                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
-                    region.assign_fixed(
-                        || "a * b",
-                        self.config.sm,
-                        0,
-                        || Value::known(FF::ZERO),
-                    )?;
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::<FF>::ONE)?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::<FF>::ONE)?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::<FF>::ONE)?;
+                    region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::<FF>::ZERO)?;
                     Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
             )
@@ -227,12 +222,7 @@ fn plonk_api() {
                 || "public_input",
                 |mut region| {
                     let value = region.assign_advice(|| "value", self.config.a, 0, &mut f)?;
-                    region.assign_fixed(
-                        || "public",
-                        self.config.sp,
-                        0,
-                        || Value::known(FF::ONE),
-                    )?;
+                    region.assign_fixed(|| "public", self.config.sp, 0, || Value::<FF>::ONE)?;
 
                     Ok(value.cell())
                 },

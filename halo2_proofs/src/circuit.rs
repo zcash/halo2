@@ -7,7 +7,7 @@ use ff::Field;
 use crate::plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector, TableColumn};
 
 mod value;
-pub use value::Value;
+pub use value::{FieldValue, IntegerValue, Value};
 
 pub mod floor_planner;
 pub use floor_planner::single_pass::SimpleFloorPlanner;

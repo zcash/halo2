@@ -5,6 +5,11 @@ use group::ff::Field;
 
 use crate::plonk::{Assigned, Error};
 
+mod private {
+    pub trait SealedInteger {}
+    pub trait SealedField {}
+}
+
 /// A value that might exist within a circuit.
 ///
 /// This behaves like `Option<V>` but differs in two key ways:
@@ -15,6 +20,74 @@ use crate::plonk::{Assigned, Error};
 #[derive(Clone, Copy, Debug)]
 pub struct Value<V> {
     inner: Option<V>,
+}
+
+//
+// Constants and constructors
+//
+
+/// Helper trait providing common `Value<T>` constants for integer types.
+///
+/// # Examples
+///
+/// ```
+/// use halo2_proofs::circuit::{IntegerValue, Value};
+///
+/// let a = Value::known(1u64);
+/// let b = IntegerValue::ONE;
+/// a.zip(b).assert_if_known(|(a, b)| a == b);
+/// ```
+pub trait IntegerValue: private::SealedInteger {
+    /// Equivalent to `Value::known(0)`.
+    const ZERO: Self;
+    /// Equivalent to `Value::known(1)`.
+    const ONE: Self;
+}
+
+macro_rules! integer_value {
+    ($($type:ty),+) => {
+        $(
+            impl private::SealedInteger for Value<$type> {}
+            impl IntegerValue for Value<$type> {
+                const ZERO: Value<$type> = Value::known(0);
+                const ONE: Value<$type> = Value::known(1);
+            }
+        )+
+    };
+}
+
+integer_value!(i8, i16, i32, i64, i128, isize);
+integer_value!(u8, u16, u32, u64, u128, usize);
+
+/// Helper trait providing common `Value<F: Field>` constants.
+///
+/// # Examples
+///
+/// ```
+/// use group::ff::Field;
+/// use halo2_proofs::circuit::{FieldValue, Value};
+///
+/// fn my_code<F: Field>() {
+///     let a = Value::known(F::ONE);
+///     let b = FieldValue::ONE;
+///     a.zip(b).assert_if_known(|(a, b)| a == b);
+/// }
+/// ```
+pub trait FieldValue: private::SealedField {
+    /// The zero element of the field, the additive identity.
+    ///
+    /// Equivalent to `Value::known(F::ZERO)` for `F: Field`.
+    const ZERO: Self;
+    /// The one element of the field, the multiplicative identity.
+    ///
+    /// Equivalent to `Value::known(F::ONE)` for `F: Field`.
+    const ONE: Self;
+}
+
+impl<F: Field> private::SealedField for Value<F> {}
+impl<F: Field> FieldValue for Value<F> {
+    const ZERO: Value<F> = Value::known(F::ZERO);
+    const ONE: Value<F> = Value::known(F::ONE);
 }
 
 impl<V> Default for Value<V> {
@@ -495,6 +568,12 @@ where
 //
 // Assigned<Field>
 //
+
+impl<F: Field> private::SealedField for Value<Assigned<F>> {}
+impl<F: Field> FieldValue for Value<Assigned<F>> {
+    const ZERO: Value<Assigned<F>> = Value::known(Assigned::Zero);
+    const ONE: Value<Assigned<F>> = Value::known(Assigned::Trivial(F::ONE));
+}
 
 impl<F: Field> From<Value<F>> for Value<Assigned<F>> {
     fn from(value: Value<F>) -> Self {
