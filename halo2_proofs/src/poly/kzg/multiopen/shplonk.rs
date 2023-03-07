@@ -1,20 +1,20 @@
 mod prover;
 mod verifier;
 
-pub use prover::ProverSHPLONK;
-pub use verifier::VerifierSHPLONK;
-
 use crate::{
-    arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine, FieldExt},
+    arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine},
     poly::{query::Query, Coeff, Polynomial},
     transcript::ChallengeScalar,
 };
+use ff::Field;
+pub use prover::ProverSHPLONK;
 use rayon::prelude::*;
 use std::{
     collections::{btree_map::Entry, BTreeMap, BTreeSet, HashMap, HashSet},
     marker::PhantomData,
     sync::Arc,
 };
+pub use verifier::VerifierSHPLONK;
 
 #[derive(Clone, Copy, Debug)]
 struct U {}
@@ -29,9 +29,9 @@ struct Y {}
 type ChallengeY<F> = ChallengeScalar<F, Y>;
 
 #[derive(Debug, Clone, PartialEq)]
-struct Commitment<F: FieldExt, T: PartialEq + Clone>((T, Vec<F>));
+struct Commitment<F: Field, T: PartialEq + Clone>((T, Vec<F>));
 
-impl<F: FieldExt, T: PartialEq + Clone> Commitment<F, T> {
+impl<F: Field, T: PartialEq + Clone> Commitment<F, T> {
     fn get(&self) -> T {
         self.0 .0.clone()
     }
@@ -42,18 +42,18 @@ impl<F: FieldExt, T: PartialEq + Clone> Commitment<F, T> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct RotationSet<F: FieldExt, T: PartialEq + Clone> {
+struct RotationSet<F: Field, T: PartialEq + Clone> {
     commitments: Vec<Commitment<F, T>>,
     points: Vec<F>,
 }
 
 #[derive(Debug, PartialEq)]
-struct IntermediateSets<F: FieldExt, Q: Query<F>> {
+struct IntermediateSets<F: Field, Q: Query<F>> {
     rotation_sets: Vec<RotationSet<F, Q::Commitment>>,
     super_point_set: BTreeSet<F>,
 }
 
-fn construct_intermediate_sets<F: FieldExt, I, Q: Query<F, Eval = F>>(
+fn construct_intermediate_sets<F: Field + Ord, I, Q: Query<F, Eval = F>>(
     queries: I,
 ) -> IntermediateSets<F, Q>
 where
@@ -157,8 +157,8 @@ mod proptests {
 
     use super::{construct_intermediate_sets, Commitment, IntermediateSets};
     use crate::poly::Rotation;
-    use halo2curves::{pasta::Fp, FieldExt};
-
+    use ff::{Field, FromUniformBytes};
+    use halo2curves::pasta::Fp;
     use std::collections::BTreeMap;
     use std::convert::TryFrom;
 
@@ -190,7 +190,7 @@ mod proptests {
         fn arb_point()(
             bytes in vec(any::<u8>(), 64)
         ) -> Fp {
-            Fp::from_bytes_wide(&<[u8; 64]>::try_from(bytes).unwrap())
+            Fp::from_uniform_bytes(&<[u8; 64]>::try_from(bytes).unwrap())
         }
     }
 

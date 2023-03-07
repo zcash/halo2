@@ -5,7 +5,7 @@ use super::super::{
 };
 use super::Argument;
 use crate::{
-    arithmetic::{CurveAffine, FieldExt},
+    arithmetic::CurveAffine,
     plonk::{Error, VerifyingKey},
     poly::{commitment::MSM, Rotation, VerifierQuery},
     transcript::{EncodedChallenge, TranscriptRead},
@@ -31,7 +31,7 @@ pub struct Evaluated<C: CurveAffine> {
     permuted_table_eval: C::Scalar,
 }
 
-impl<F: FieldExt> Argument<F> {
+impl<F: Field> Argument<F> {
     pub(in crate::plonk) fn read_permuted_commitments<
         C: CurveAffine,
         E: EncodedChallenge<C>,
@@ -104,7 +104,7 @@ impl<C: CurveAffine> Evaluated<C> {
         instance_evals: &[C::Scalar],
         challenges: &[C::Scalar],
     ) -> impl Iterator<Item = C::Scalar> + 'a {
-        let active_rows = C::Scalar::one() - (l_last + l_blind);
+        let active_rows = C::Scalar::ONE - (l_last + l_blind);
 
         let product_expression = || {
             // z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
@@ -130,7 +130,7 @@ impl<C: CurveAffine> Evaluated<C> {
                             &|a, scalar| a * &scalar,
                         )
                     })
-                    .fold(C::Scalar::zero(), |acc, eval| acc * &*theta + &eval)
+                    .fold(C::Scalar::ZERO, |acc, eval| acc * &*theta + &eval)
             };
             let right = self.product_eval
                 * &(compress_expressions(&argument.input_expressions) + &*beta)
@@ -142,7 +142,7 @@ impl<C: CurveAffine> Evaluated<C> {
         std::iter::empty()
             .chain(
                 // l_0(X) * (1 - z'(X)) = 0
-                Some(l_0 * &(C::Scalar::one() - &self.product_eval)),
+                Some(l_0 * &(C::Scalar::ONE - &self.product_eval)),
             )
             .chain(
                 // l_last(X) * (z(X)^2 - z(X)) = 0

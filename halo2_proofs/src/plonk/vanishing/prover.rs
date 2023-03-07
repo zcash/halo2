@@ -8,7 +8,7 @@ use rayon::{current_num_threads, prelude::*};
 
 use super::Argument;
 use crate::{
-    arithmetic::{eval_polynomial, CurveAffine, FieldExt},
+    arithmetic::{eval_polynomial, CurveAffine},
     plonk::{ChallengeX, ChallengeY, Error},
     poly::{
         self,
@@ -52,7 +52,7 @@ impl<C: CurveAffine> Argument<C> {
         let n_threads = current_num_threads();
         let n = 1usize << domain.k() as usize;
         let n_chunks = n_threads + if n % n_threads != 0 { 1 } else { 0 };
-        let mut rand_vec = vec![C::Scalar::zero(); n];
+        let mut rand_vec = vec![C::Scalar::ZERO; n];
 
         let mut thread_seeds: Vec<ChaCha20Rng> = (0..n_chunks)
             .into_iter()
@@ -161,9 +161,7 @@ impl<C: CurveAffine> Constructed<C> {
             .h_blinds
             .iter()
             .rev()
-            .fold(Blind(C::Scalar::zero()), |acc, eval| {
-                acc * Blind(xn) + *eval
-            });
+            .fold(Blind(C::Scalar::ZERO), |acc, eval| acc * Blind(xn) + *eval);
 
         let random_eval = eval_polynomial(&self.committed.random_poly, *x);
         transcript.write_scalar(random_eval)?;

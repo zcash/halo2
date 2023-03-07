@@ -1,10 +1,11 @@
 use super::EccPoint;
+use ff::PrimeField;
 use halo2_proofs::{
     circuit::Region,
     plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
-use halo2curves::{pasta::pallas, FieldExt};
+use halo2curves::pasta::pallas;
 use std::collections::HashSet;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

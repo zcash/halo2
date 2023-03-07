@@ -2,7 +2,6 @@ use std::collections::{BTreeMap, HashSet};
 use std::fmt::{self, Debug};
 
 use group::ff::Field;
-use halo2curves::FieldExt;
 
 use super::metadata::{DebugColumn, DebugVirtualCell};
 use super::MockProver;
@@ -444,7 +443,7 @@ fn render_constraint_not_satisfied<F: Field>(
 ///     |   x0 = 0x5
 ///     |   x1 = 1
 /// ```
-fn render_lookup<F: FieldExt>(
+fn render_lookup<F: Field>(
     prover: &MockProver<F>,
     name: &str,
     lookup_index: usize,
@@ -510,7 +509,7 @@ fn render_lookup<F: FieldExt>(
         )
     });
 
-    fn cell_value<'a, F: FieldExt, Q: Into<AnyQuery> + Copy>(
+    fn cell_value<'a, F: Field, Q: Into<AnyQuery> + Copy>(
         load: impl Fn(Q) -> Value<F> + 'a,
     ) -> impl Fn(Q) -> BTreeMap<metadata::VirtualCell, String> + 'a {
         move |query| {
@@ -614,7 +613,7 @@ fn render_lookup<F: FieldExt>(
 
 impl VerifyFailure {
     /// Emits this failure in pretty-printed format to stderr.
-    pub(super) fn emit<F: FieldExt>(&self, prover: &MockProver<F>) {
+    pub(super) fn emit<F: Field>(&self, prover: &MockProver<F>) {
         match self {
             Self::CellNotAssigned {
                 gate,

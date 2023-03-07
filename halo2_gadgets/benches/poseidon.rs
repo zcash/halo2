@@ -21,7 +21,7 @@ use halo2_proofs::{
 use halo2curves::pasta::{pallas, vesta, EqAffine, Fp};
 
 use halo2_gadgets::poseidon::{
-    primitives::{self as poseidon, ConstantLength, Spec},
+    primitives::{self as poseidon, generate_constants, ConstantLength, Mds, Spec},
     Hash, Pow5Chip, Pow5Config,
 };
 use std::convert::TryInto;
@@ -138,6 +138,10 @@ impl<const WIDTH: usize, const RATE: usize> Spec<Fp, WIDTH, RATE> for MySpec<WID
 
     fn secure_mds() -> usize {
         0
+    }
+
+    fn constants() -> (Vec<[Fp; WIDTH]>, Mds<Fp, WIDTH>, Mds<Fp, WIDTH>) {
+        generate_constants::<_, Self, WIDTH, RATE>()
     }
 }
 

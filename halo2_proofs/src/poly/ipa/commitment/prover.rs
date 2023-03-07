@@ -3,7 +3,7 @@ use rand_core::RngCore;
 
 use super::{Params, ParamsIPA};
 use crate::arithmetic::{
-    best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine, FieldExt,
+    best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine,
 };
 
 use crate::poly::commitment::ParamsProver;
@@ -87,7 +87,7 @@ pub fn create_proof<
     // `p_prime` and `b` is the evaluation of the polynomial at `x_3`.
     let mut b = Vec::with_capacity(1 << params.k);
     {
-        let mut cur = C::Scalar::one();
+        let mut cur = C::Scalar::ONE;
         for _ in 0..(1 << params.k) {
             b.push(cur);
             cur *= &x_3;

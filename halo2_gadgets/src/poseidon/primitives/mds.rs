@@ -1,8 +1,8 @@
-use halo2_proofs::arithmetic::FieldExt;
+use ff::FromUniformBytes;
 
 use super::{grain::Grain, Mds};
 
-pub(super) fn generate_mds<F: FieldExt, const T: usize>(
+pub(super) fn generate_mds<F: FromUniformBytes<64> + Ord, const T: usize>(
     grain: &mut Grain<F>,
     mut select: usize,
 ) -> (Mds<F, T>, Mds<F, T>) {
@@ -48,7 +48,7 @@ pub(super) fn generate_mds<F: FieldExt, const T: usize>(
         // However, the Poseidon paper and reference impl use the positive formulation,
         // and we want to rely on the reference impl for MDS security, so we use the same
         // formulation.
-        let mut mds = [[F::zero(); T]; T];
+        let mut mds = [[F::ZERO; T]; T];
         #[allow(clippy::needless_range_loop)]
         for i in 0..T {
             for j in 0..T {
@@ -74,10 +74,10 @@ pub(super) fn generate_mds<F: FieldExt, const T: usize>(
     // where A_i(x) and B_i(x) are the Lagrange polynomials for xs and ys respectively.
     //
     // We adapt this to the positive Cauchy formulation by negating ys.
-    let mut mds_inv = [[F::zero(); T]; T];
+    let mut mds_inv = [[F::ZERO; T]; T];
     let l = |xs: &[F], j, x: F| {
         let x_j = xs[j];
-        xs.iter().enumerate().fold(F::one(), |acc, (m, x_m)| {
+        xs.iter().enumerate().fold(F::ONE, |acc, (m, x_m)| {
             if m == j {
                 acc
             } else {

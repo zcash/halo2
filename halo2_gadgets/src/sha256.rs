@@ -7,7 +7,7 @@ use std::convert::TryInto;
 use std::fmt;
 
 use halo2_proofs::{
-    arithmetic::FieldExt,
+    arithmetic::Field,
     circuit::{Chip, Layouter},
     plonk::Error,
 };
@@ -22,7 +22,7 @@ pub const BLOCK_SIZE: usize = 16;
 const DIGEST_SIZE: usize = 8;
 
 /// The set of circuit instructions required to use the [`Sha256`] gadget.
-pub trait Sha256Instructions<F: FieldExt>: Chip<F> {
+pub trait Sha256Instructions<F: Field>: Chip<F> {
     /// Variable representing the SHA-256 internal state.
     type State: Clone + fmt::Debug;
     /// Variable representing a 32-bit word of the input block to the SHA-256 compression
@@ -63,14 +63,14 @@ pub struct Sha256Digest<BlockWord>([BlockWord; DIGEST_SIZE]);
 /// A gadget that constrains a SHA-256 invocation. It supports input at a granularity of
 /// 32 bits.
 #[derive(Debug)]
-pub struct Sha256<F: FieldExt, CS: Sha256Instructions<F>> {
+pub struct Sha256<F: Field, CS: Sha256Instructions<F>> {
     chip: CS,
     state: CS::State,
     cur_block: Vec<CS::BlockWord>,
     length: usize,
 }
 
-impl<F: FieldExt, Sha256Chip: Sha256Instructions<F>> Sha256<F, Sha256Chip> {
+impl<F: Field, Sha256Chip: Sha256Instructions<F>> Sha256<F, Sha256Chip> {
     /// Create a new hasher instance.
     pub fn new(chip: Sha256Chip, mut layouter: impl Layouter<F>) -> Result<Self, Error> {
         let state = chip.initialization_vector(&mut layouter)?;

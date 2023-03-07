@@ -1,10 +1,11 @@
-use halo2_proofs::{arithmetic::FieldExt, plonk::Expression};
+use ff::PrimeField;
+use halo2_proofs::{arithmetic::Field, plonk::Expression};
 
-pub struct Gate<F: FieldExt>(pub Expression<F>);
+pub struct Gate<F: Field>(pub Expression<F>);
 
-impl<F: FieldExt> Gate<F> {
+impl<F: PrimeField> Gate<F> {
     fn ones() -> Expression<F> {
-        Expression::Constant(F::one())
+        Expression::Constant(F::ONE)
     }
 
     // Helper gates
@@ -32,7 +33,7 @@ impl<F: FieldExt> Gate<F> {
             for i in 0..deg {
                 let i = i as u64;
                 if i != idx {
-                    expr = expr * (Self::ones() * (-F::one()) * F::from(i) + var.clone());
+                    expr = expr * (Self::ones() * (-F::ONE) * F::from(i) + var.clone());
                 }
             }
             expr * F::from(u64::from(eval))
@@ -46,13 +47,13 @@ impl<F: FieldExt> Gate<F> {
                 }
             }
             if denom < 0 {
-                -F::one() * F::from(factor / (-denom as u64))
+                -F::ONE * F::from(factor / (-denom as u64))
             } else {
                 F::from(factor / (denom as u64))
             }
         };
 
-        let mut expr = Self::ones() * F::zero();
+        let mut expr = Self::ones() * F::ZERO;
         for ((idx, _), eval) in points.iter().enumerate().zip(evals.iter()) {
             expr = expr + numerator(var.clone(), *eval, idx as u64) * denominator(idx as i32)
         }
@@ -63,7 +64,7 @@ impl<F: FieldExt> Gate<F> {
     pub fn range_check(value: Expression<F>, lower_range: u64, upper_range: u64) -> Expression<F> {
         let mut expr = Self::ones();
         for i in lower_range..(upper_range + 1) {
-            expr = expr * (Self::ones() * (-F::one()) * F::from(i) + value.clone())
+            expr = expr * (Self::ones() * (-F::ONE) * F::from(i) + value.clone())
         }
         expr
     }

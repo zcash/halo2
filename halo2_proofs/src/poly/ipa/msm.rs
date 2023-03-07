@@ -191,7 +191,7 @@ impl<'a, C: CurveAffine> MSMIPA<'a, C> {
         if let Some(g_scalars) = self.g_scalars.as_mut() {
             g_scalars[0] += &constant;
         } else {
-            let mut g_scalars = vec![C::Scalar::zero(); self.params.n as usize];
+            let mut g_scalars = vec![C::Scalar::ZERO; self.params.n as usize];
             g_scalars[0] += &constant;
             self.g_scalars = Some(g_scalars);
         }

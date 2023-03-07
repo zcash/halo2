@@ -6,10 +6,9 @@
 //! [plonk]: https://eprint.iacr.org/2019/953
 
 use blake2b_simd::Params as Blake2bParams;
-use ff::PrimeField;
-use group::ff::Field;
+use group::ff::{Field, FromUniformBytes, PrimeField};
 
-use crate::arithmetic::{CurveAffine, FieldExt};
+use crate::arithmetic::CurveAffine;
 use crate::helpers::{
     polynomial_slice_byte_length, read_polynomial_vec, write_polynomial_slice, SerdeCurveAffine,
     SerdePrimeField,
@@ -60,7 +59,7 @@ pub struct VerifyingKey<C: CurveAffine> {
 
 impl<C: SerdeCurveAffine> VerifyingKey<C>
 where
-    C::Scalar: SerdePrimeField,
+    C::Scalar: SerdePrimeField + FromUniformBytes<64>,
 {
     /// Writes a verifying key to a buffer.
     ///
@@ -156,7 +155,10 @@ where
     }
 }
 
-impl<C: CurveAffine> VerifyingKey<C> {
+impl<C: CurveAffine> VerifyingKey<C>
+where
+    C::ScalarExt: FromUniformBytes<64>,
+{
     fn bytes_length(&self) -> usize {
         8 + (self.fixed_commitments.len() * C::default().to_bytes().as_ref().len())
             + self.permutation.bytes_length()
@@ -185,7 +187,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
             cs,
             cs_degree,
             // Temporary, this is not pinned.
-            transcript_repr: C::Scalar::zero(),
+            transcript_repr: C::Scalar::ZERO,
             selectors,
         };
 
@@ -200,7 +202,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
         hasher.update(s.as_bytes());
 
         // Hash in final Blake2bState
-        vk.transcript_repr = C::Scalar::from_bytes_wide(hasher.finalize().as_array());
+        vk.transcript_repr = C::Scalar::from_uniform_bytes(hasher.finalize().as_array());
 
         vk
     }
@@ -271,7 +273,10 @@ pub struct ProvingKey<C: CurveAffine> {
     ev: Evaluator<C>,
 }
 
-impl<C: CurveAffine> ProvingKey<C> {
+impl<C: CurveAffine> ProvingKey<C>
+where
+    C::Scalar: FromUniformBytes<64>,
+{
     /// Get the underlying [`VerifyingKey`].
     pub fn get_vk(&self) -> &VerifyingKey<C> {
         &self.vk
@@ -292,7 +297,7 @@ impl<C: CurveAffine> ProvingKey<C> {
 
 impl<C: SerdeCurveAffine> ProvingKey<C>
 where
-    C::Scalar: SerdePrimeField,
+    C::Scalar: SerdePrimeField + FromUniformBytes<64>,
 {
     /// Writes a proving key to a buffer.
     ///

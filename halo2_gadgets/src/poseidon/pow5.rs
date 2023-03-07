@@ -2,7 +2,7 @@ use std::convert::TryInto;
 use std::iter;
 
 use halo2_proofs::{
-    arithmetic::FieldExt,
+    arithmetic::Field,
     circuit::{AssignedCell, Cell, Chip, Layouter, Region, Value},
     plonk::{
         Advice, Any, Column, ConstraintSystem, Constraints, Error, Expression, Fixed, Selector,
@@ -18,7 +18,7 @@ use crate::utilities::Var;
 
 /// Configuration for a [`Pow5Chip`].
 #[derive(Clone, Debug)]
-pub struct Pow5Config<F: FieldExt, const WIDTH: usize, const RATE: usize> {
+pub struct Pow5Config<F: Field, const WIDTH: usize, const RATE: usize> {
     pub(crate) state: [Column<Advice>; WIDTH],
     partial_sbox: Column<Advice>,
     rc_a: [Column<Fixed>; WIDTH],
@@ -40,11 +40,11 @@ pub struct Pow5Config<F: FieldExt, const WIDTH: usize, const RATE: usize> {
 /// The chip is implemented using a single round per row for full rounds, and two rounds
 /// per row for partial rounds.
 #[derive(Debug)]
-pub struct Pow5Chip<F: FieldExt, const WIDTH: usize, const RATE: usize> {
+pub struct Pow5Chip<F: Field, const WIDTH: usize, const RATE: usize> {
     config: Pow5Config<F, WIDTH, RATE>,
 }
 
-impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE> {
+impl<F: Field, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE> {
     /// Configures this chip for use in a circuit.
     ///
     /// # Side-effects
@@ -209,7 +209,7 @@ impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE
     }
 }
 
-impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Chip<F> for Pow5Chip<F, WIDTH, RATE> {
+impl<F: Field, const WIDTH: usize, const RATE: usize> Chip<F> for Pow5Chip<F, WIDTH, RATE> {
     type Config = Pow5Config<F, WIDTH, RATE>;
     type Loaded = ();
 
@@ -222,7 +222,7 @@ impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Chip<F> for Pow5Chip<F,
     }
 }
 
-impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize>
+impl<F: Field, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize>
     PoseidonInstructions<F, S, WIDTH, RATE> for Pow5Chip<F, WIDTH, RATE>
 {
     type Word = StateWord<F>;
@@ -273,7 +273,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
 }
 
 impl<
-        F: FieldExt,
+        F: Field,
         S: Spec<F, WIDTH, RATE>,
         D: Domain<F, RATE>,
         const WIDTH: usize,
@@ -302,7 +302,7 @@ impl<
                 };
 
                 for i in 0..RATE {
-                    load_state_word(i, F::zero())?;
+                    load_state_word(i, F::ZERO)?;
                 }
                 load_state_word(RATE, D::initial_capacity_element())?;
 
@@ -372,7 +372,7 @@ impl<
                             .get(i)
                             .map(|word| word.0.value().cloned())
                             // The capacity element is never altered by the input.
-                            .unwrap_or_else(|| Value::known(F::zero()));
+                            .unwrap_or_else(|| Value::known(F::ZERO));
                     region
                         .assign_advice(
                             || format!("load output_{}", i),
@@ -403,21 +403,21 @@ impl<
 
 /// A word in the Poseidon state.
 #[derive(Clone, Debug)]
-pub struct StateWord<F: FieldExt>(AssignedCell<F, F>);
+pub struct StateWord<F: Field>(AssignedCell<F, F>);
 
-impl<F: FieldExt> From<StateWord<F>> for AssignedCell<F, F> {
+impl<F: Field> From<StateWord<F>> for AssignedCell<F, F> {
     fn from(state_word: StateWord<F>) -> AssignedCell<F, F> {
         state_word.0
     }
 }
 
-impl<F: FieldExt> From<AssignedCell<F, F>> for StateWord<F> {
+impl<F: Field> From<AssignedCell<F, F>> for StateWord<F> {
     fn from(cell_value: AssignedCell<F, F>) -> StateWord<F> {
         StateWord(cell_value)
     }
 }
 
-impl<F: FieldExt> Var<F> for StateWord<F> {
+impl<F: Field> Var<F> for StateWord<F> {
     fn cell(&self) -> Cell {
         self.0.cell()
     }
@@ -428,9 +428,9 @@ impl<F: FieldExt> Var<F> for StateWord<F> {
 }
 
 #[derive(Debug)]
-struct Pow5State<F: FieldExt, const WIDTH: usize>([StateWord<F>; WIDTH]);
+struct Pow5State<F: Field, const WIDTH: usize>([StateWord<F>; WIDTH]);
 
-impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
+impl<F: Field, const WIDTH: usize> Pow5State<F, WIDTH> {
     fn full_round<const RATE: usize>(
         self,
         region: &mut Region<F>,
@@ -450,7 +450,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                 r.as_ref().map(|r| {
                     r.iter()
                         .enumerate()
-                        .fold(F::zero(), |acc, (j, r_j)| acc + m_i[j] * r_j)
+                        .fold(F::ZERO, |acc, (j, r_j)| acc + m_i[j] * r_j)
                 })
             });
 
@@ -491,7 +491,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                     r.as_ref().map(|r| {
                         m_i.iter()
                             .zip(r.iter())
-                            .fold(F::zero(), |acc, (m_ij, r_j)| acc + *m_ij * r_j)
+                            .fold(F::ZERO, |acc, (m_ij, r_j)| acc + *m_ij * r_j)
                     })
                 })
                 .collect();
@@ -524,7 +524,7 @@ impl<F: FieldExt, const WIDTH: usize> Pow5State<F, WIDTH> {
                     r_mid.as_ref().map(|r| {
                         m_i.iter()
                             .zip(r.iter())
-                            .fold(F::zero(), |acc, (m_ij, r_j)| acc + *m_ij * r_j)
+                            .fold(F::ZERO, |acc, (m_ij, r_j)| acc + *m_ij * r_j)
                     })
                 })
                 .collect();

@@ -27,7 +27,7 @@ impl<E: Engine> MSMKZG<E> {
     /// Prepares all scalars in the MSM to linear combination
     pub fn combine_with_base(&mut self, base: E::Scalar) {
         use ff::Field;
-        let mut acc = E::Scalar::one();
+        let mut acc = E::Scalar::ONE;
         if !self.scalars.is_empty() {
             for scalar in self.scalars.iter_mut().rev() {
                 *scalar *= &acc;

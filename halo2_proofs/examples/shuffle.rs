@@ -1,6 +1,6 @@
-use ff::BatchInvert;
+use ff::{BatchInvert, FromUniformBytes};
 use halo2_proofs::{
-    arithmetic::{CurveAffine, FieldExt},
+    arithmetic::{CurveAffine, Field},
     circuit::{floor_planner::V1, Layouter, Value},
     dev::{metadata, FailureLocation, MockProver, VerifyFailure},
     halo2curves::pasta::EqAffine,
@@ -21,13 +21,11 @@ use halo2_proofs::{
 use rand_core::{OsRng, RngCore};
 use std::iter;
 
-fn rand_2d_array<F: FieldExt, R: RngCore, const W: usize, const H: usize>(
-    rng: &mut R,
-) -> [[F; H]; W] {
+fn rand_2d_array<F: Field, R: RngCore, const W: usize, const H: usize>(rng: &mut R) -> [[F; H]; W] {
     [(); W].map(|_| [(); H].map(|_| F::random(&mut *rng)))
 }
 
-fn shuffled<F: FieldExt, R: RngCore, const W: usize, const H: usize>(
+fn shuffled<F: Field, R: RngCore, const W: usize, const H: usize>(
     original: [[F; H]; W],
     rng: &mut R,
 ) -> [[F; H]; W] {
@@ -56,7 +54,7 @@ struct MyConfig<const W: usize> {
 }
 
 impl<const W: usize> MyConfig<W> {
-    fn configure<F: FieldExt>(meta: &mut ConstraintSystem<F>) -> Self {
+    fn configure<F: Field>(meta: &mut ConstraintSystem<F>) -> Self {
         let [q_shuffle, q_first, q_last] = [(); 3].map(|_| meta.selector());
         // First phase
         let original = [(); W].map(|_| meta.advice_column_in(FirstPhase));
@@ -68,7 +66,7 @@ impl<const W: usize> MyConfig<W> {
         meta.create_gate("z should start with 1", |meta| {
             let q_first = meta.query_selector(q_first);
             let z = meta.query_advice(z, Rotation::cur());
-            let one = Expression::Constant(F::one());
+            let one = Expression::Constant(F::ONE);
 
             vec![q_first * (one - z)]
         });
@@ -76,7 +74,7 @@ impl<const W: usize> MyConfig<W> {
         meta.create_gate("z should end with 1", |meta| {
             let q_last = meta.query_selector(q_last);
             let z = meta.query_advice(z, Rotation::cur());
-            let one = Expression::Constant(F::one());
+            let one = Expression::Constant(F::ONE);
 
             vec![q_last * (one - z)]
         });
@@ -118,12 +116,12 @@ impl<const W: usize> MyConfig<W> {
 }
 
 #[derive(Clone, Default)]
-struct MyCircuit<F: FieldExt, const W: usize, const H: usize> {
+struct MyCircuit<F: Field, const W: usize, const H: usize> {
     original: Value<[[F; H]; W]>,
     shuffled: Value<[[F; H]; W]>,
 }
 
-impl<F: FieldExt, const W: usize, const H: usize> MyCircuit<F, W, H> {
+impl<F: Field, const W: usize, const H: usize> MyCircuit<F, W, H> {
     fn rand<R: RngCore>(rng: &mut R) -> Self {
         let original = rand_2d_array::<F, _, W, H>(rng);
         let shuffled = shuffled(original, rng);
@@ -135,7 +133,7 @@ impl<F: FieldExt, const W: usize, const H: usize> MyCircuit<F, W, H> {
     }
 }
 
-impl<F: FieldExt, const W: usize, const H: usize> Circuit<F> for MyCircuit<F, W, H> {
+impl<F: Field, const W: usize, const H: usize> Circuit<F> for MyCircuit<F, W, H> {
     type Config = MyConfig<W>;
     type FloorPlanner = V1;
 
@@ -200,9 +198,9 @@ impl<F: FieldExt, const W: usize, const H: usize> Circuit<F> for MyCircuit<F, W,
                 // Second phase
                 let z = self.original.zip(self.shuffled).zip(theta).zip(gamma).map(
                     |(((original, shuffled), theta), gamma)| {
-                        let mut product = vec![F::zero(); H];
+                        let mut product = vec![F::ZERO; H];
                         for (idx, product) in product.iter_mut().enumerate() {
-                            let mut compressed = F::zero();
+                            let mut compressed = F::ZERO;
                             for value in shuffled.iter() {
                                 compressed *= theta;
                                 compressed += value[idx];
@@ -214,7 +212,7 @@ impl<F: FieldExt, const W: usize, const H: usize> Circuit<F> for MyCircuit<F, W,
                         product.iter_mut().batch_invert();
 
                         for (idx, product) in product.iter_mut().enumerate() {
-                            let mut compressed = F::zero();
+                            let mut compressed = F::ZERO;
                             for value in original.iter() {
                                 compressed *= theta;
                                 compressed += value[idx];
@@ -224,16 +222,16 @@ impl<F: FieldExt, const W: usize, const H: usize> Circuit<F> for MyCircuit<F, W,
                         }
 
                         #[allow(clippy::let_and_return)]
-                        let z = iter::once(F::one())
+                        let z = iter::once(F::ONE)
                             .chain(product)
-                            .scan(F::one(), |state, cur| {
+                            .scan(F::ONE, |state, cur| {
                                 *state *= &cur;
                                 Some(*state)
                             })
                             .collect::<Vec<_>>();
 
                         #[cfg(feature = "sanity-checks")]
-                        assert_eq!(F::one(), *z.last().unwrap());
+                        assert_eq!(F::ONE, *z.last().unwrap());
 
                         z
                     },
@@ -253,12 +251,12 @@ impl<F: FieldExt, const W: usize, const H: usize> Circuit<F> for MyCircuit<F, W,
     }
 }
 
-fn test_mock_prover<F: FieldExt, const W: usize, const H: usize>(
+fn test_mock_prover<F: Ord + FromUniformBytes<64>, const W: usize, const H: usize>(
     k: u32,
     circuit: MyCircuit<F, W, H>,
     expected: Result<(), Vec<(metadata::Constraint, FailureLocation)>>,
 ) {
-    let prover = MockProver::run::<_>(k, &circuit, vec![]).unwrap();
+    let prover = MockProver::run(k, &circuit, vec![]).unwrap();
     match (prover.verify(), expected) {
         (Ok(_), Ok(_)) => {}
         (Err(err), Err(expected)) => {
@@ -284,7 +282,9 @@ fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
     k: u32,
     circuit: MyCircuit<C::Scalar, W, H>,
     expected: bool,
-) {
+) where
+    C::Scalar: FromUniformBytes<64>,
+{
     let params = ParamsIPA::<C>::new(k);
     let vk = keygen_vk(&params, &circuit).unwrap();
     let pk = keygen_pk(&params, vk, &circuit).unwrap();

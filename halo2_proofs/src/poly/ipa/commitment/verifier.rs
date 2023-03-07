@@ -96,10 +96,10 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
 
 /// Computes $\prod\limits_{i=0}^{k-1} (1 + u_{k - 1 - i} x^{2^i})$.
 fn compute_b<F: Field>(x: F, u: &[F]) -> F {
-    let mut tmp = F::one();
+    let mut tmp = F::ONE;
     let mut cur = x;
     for u_j in u.iter().rev() {
-        tmp *= F::one() + &(*u_j * &cur);
+        tmp *= F::ONE + &(*u_j * &cur);
         cur *= cur;
     }
     tmp

@@ -1,6 +1,5 @@
 use ff::Field;
 use halo2_proofs::{
-    arithmetic::FieldExt,
     circuit::{Cell, Layouter, Region, SimpleFloorPlanner, Value},
     plonk::{Advice, Assigned, Circuit, Column, ConstraintSystem, Error, Fixed, TableColumn},
     poly::Rotation,
@@ -28,7 +27,7 @@ struct PlonkConfig {
     sl: TableColumn,
 }
 
-trait StandardCs<FF: FieldExt> {
+trait StandardCs<FF: Field> {
     fn raw_multiply<F>(&self, region: &mut Region<FF>, f: F) -> Result<(Cell, Cell, Cell), Error>
     where
         F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>;
@@ -39,17 +38,17 @@ trait StandardCs<FF: FieldExt> {
     fn lookup_table(&self, layouter: &mut impl Layouter<FF>, values: &[FF]) -> Result<(), Error>;
 }
 
-struct MyCircuit<F: FieldExt> {
+struct MyCircuit<F: Field> {
     a: Value<F>,
     lookup_table: Vec<F>,
 }
 
-struct StandardPlonk<F: FieldExt> {
+struct StandardPlonk<F: Field> {
     config: PlonkConfig,
     _marker: PhantomData<F>,
 }
 
-impl<FF: FieldExt> StandardPlonk<FF> {
+impl<FF: Field> StandardPlonk<FF> {
     fn new(config: PlonkConfig) -> Self {
         StandardPlonk {
             config,
@@ -58,7 +57,7 @@ impl<FF: FieldExt> StandardPlonk<FF> {
     }
 }
 
-impl<FF: FieldExt> StandardCs<FF> for StandardPlonk<FF> {
+impl<FF: Field> StandardCs<FF> for StandardPlonk<FF> {
     fn raw_multiply<F>(
         &self,
         region: &mut Region<FF>,
@@ -94,10 +93,10 @@ impl<FF: FieldExt> StandardCs<FF> for StandardPlonk<FF> {
         let out =
             region.assign_advice(|| "out", self.config.c, 0, || value.unwrap().map(|v| v.2))?;
 
-        region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::zero()))?;
-        region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::zero()))?;
-        region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
-        region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::one()))?;
+        region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ZERO))?;
+        region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ZERO))?;
+        region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
+        region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::ONE))?;
         Ok((lhs.cell(), rhs.cell(), out.cell()))
     }
     fn raw_add<F>(&self, region: &mut Region<FF>, mut f: F) -> Result<(Cell, Cell, Cell), Error>
@@ -131,10 +130,10 @@ impl<FF: FieldExt> StandardCs<FF> for StandardPlonk<FF> {
         let out =
             region.assign_advice(|| "out", self.config.c, 0, || value.unwrap().map(|v| v.2))?;
 
-        region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::one()))?;
-        region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::one()))?;
-        region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
-        region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::zero()))?;
+        region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ONE))?;
+        region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ONE))?;
+        region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
+        region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::ZERO))?;
         Ok((lhs.cell(), rhs.cell(), out.cell()))
     }
     fn copy(&self, region: &mut Region<FF>, left: Cell, right: Cell) -> Result<(), Error> {
@@ -159,7 +158,7 @@ impl<FF: FieldExt> StandardCs<FF> for StandardPlonk<FF> {
     }
 }
 
-impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
+impl<F: Field> Circuit<F> for MyCircuit<F> {
     type Config = PlonkConfig;
     type FloorPlanner = SimpleFloorPlanner;
 

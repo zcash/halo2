@@ -1,11 +1,10 @@
 //! Utility gadgets.
 
-use ff::{Field, PrimeFieldBits};
+use ff::{Field, PrimeField, PrimeFieldBits};
 use halo2_proofs::{
     circuit::{AssignedCell, Cell, Layouter, Value},
     plonk::{Advice, Column, Error, Expression},
 };
-use halo2curves::FieldExt;
 use std::marker::PhantomData;
 use std::ops::Range;
 
@@ -32,7 +31,7 @@ impl<F: Field> FieldValue<F> for AssignedCell<F, F> {
 }
 
 /// Trait for a variable in the circuit.
-pub trait Var<F: FieldExt>: Clone + std::fmt::Debug + From<AssignedCell<F, F>> {
+pub trait Var<F: Field>: Clone + std::fmt::Debug + From<AssignedCell<F, F>> {
     /// The cell at which this variable was allocated.
     fn cell(&self) -> Cell;
 
@@ -40,7 +39,7 @@ pub trait Var<F: FieldExt>: Clone + std::fmt::Debug + From<AssignedCell<F, F>> {
     fn value(&self) -> Value<F>;
 }
 
-impl<F: FieldExt> Var<F> for AssignedCell<F, F> {
+impl<F: Field> Var<F> for AssignedCell<F, F> {
     fn cell(&self) -> Cell {
         self.cell()
     }
@@ -51,7 +50,7 @@ impl<F: FieldExt> Var<F> for AssignedCell<F, F> {
 }
 
 /// Trait for utilities used across circuits.
-pub trait UtilitiesInstructions<F: FieldExt> {
+pub trait UtilitiesInstructions<F: Field> {
     /// Variable in the circuit.
     type Var: Var<F>;
 
@@ -130,15 +129,15 @@ impl<F: Field> RangeConstrained<F, AssignedCell<F, F>> {
 }
 
 /// Checks that an expression is either 1 or 0.
-pub fn bool_check<F: FieldExt>(value: Expression<F>) -> Expression<F> {
+pub fn bool_check<F: PrimeField>(value: Expression<F>) -> Expression<F> {
     range_check(value, 2)
 }
 
 /// If `a` then `b`, else `c`. Returns (a * b) + (1 - a) * c.
 ///
 /// `a` must be a boolean-constrained expression.
-pub fn ternary<F: FieldExt>(a: Expression<F>, b: Expression<F>, c: Expression<F>) -> Expression<F> {
-    let one_minus_a = Expression::Constant(F::one()) - a.clone();
+pub fn ternary<F: Field>(a: Expression<F>, b: Expression<F>, c: Expression<F>) -> Expression<F> {
+    let one_minus_a = Expression::Constant(F::ONE) - a.clone();
     a * b + one_minus_a * c
 }
 
@@ -156,9 +155,9 @@ pub fn bitrange_subset<F: PrimeFieldBits>(field_elem: &F, bitrange: Range<usize>
         .skip(bitrange.start)
         .take(bitrange.end - bitrange.start)
         .rev()
-        .fold(F::zero(), |acc, bit| {
+        .fold(F::ZERO, |acc, bit| {
             if bit {
-                acc.double() + F::one()
+                acc.double() + F::ONE
             } else {
                 acc.double()
             }
@@ -167,7 +166,7 @@ pub fn bitrange_subset<F: PrimeFieldBits>(field_elem: &F, bitrange: Range<usize>
 
 /// Check that an expression is in the small range [0..range),
 /// i.e. 0 ≤ word < range.
-pub fn range_check<F: FieldExt>(word: Expression<F>, range: usize) -> Expression<F> {
+pub fn range_check<F: PrimeField>(word: Expression<F>, range: usize) -> Expression<F> {
     (1..range).fold(word.clone(), |acc, i| {
         acc * (Expression::Constant(F::from(i as u64)) - word.clone())
     })
@@ -240,6 +239,7 @@ pub fn i2lebsp<const NUM_BITS: usize>(int: u64) -> [bool; NUM_BITS] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ff::FromUniformBytes;
     use group::ff::{Field, PrimeField};
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
@@ -247,7 +247,7 @@ mod tests {
         plonk::{Any, Circuit, ConstraintSystem, Constraints, Error, Selector},
         poly::Rotation,
     };
-    use halo2curves::{pasta::pallas, FieldExt};
+    use halo2curves::pasta::pallas;
     use proptest::prelude::*;
     use rand::rngs::OsRng;
     use std::convert::TryInto;
@@ -420,7 +420,7 @@ mod tests {
             // Instead of rejecting out-of-range bytes, let's reduce them.
             let mut buf = [0; 64];
             buf[..32].copy_from_slice(&bytes);
-            pallas::Scalar::from_bytes_wide(&buf)
+            pallas::Scalar::from_uniform_bytes(&buf)
         }
     }
 

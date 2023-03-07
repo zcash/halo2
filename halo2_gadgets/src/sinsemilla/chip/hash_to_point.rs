@@ -10,8 +10,8 @@ use halo2_proofs::{
     plonk::{Assigned, Error},
 };
 
-use group::ff::{PrimeField, PrimeFieldBits};
-use halo2curves::{pasta::pallas, CurveAffine, FieldExt};
+use group::ff::{Field, PrimeField, PrimeFieldBits};
+use halo2curves::{pasta::pallas, CurveAffine};
 
 use std::ops::Deref;
 
@@ -376,15 +376,15 @@ where
 }
 
 /// The x-coordinate of the accumulator in a Sinsemilla hash instance.
-struct X<F: FieldExt>(AssignedCell<Assigned<F>, F>);
+struct X<F: Field>(AssignedCell<Assigned<F>, F>);
 
-impl<F: FieldExt> From<AssignedCell<Assigned<F>, F>> for X<F> {
+impl<F: Field> From<AssignedCell<Assigned<F>, F>> for X<F> {
     fn from(cell_value: AssignedCell<Assigned<F>, F>) -> Self {
         X(cell_value)
     }
 }
 
-impl<F: FieldExt> Deref for X<F> {
+impl<F: Field> Deref for X<F> {
     type Target = AssignedCell<Assigned<F>, F>;
 
     fn deref(&self) -> &AssignedCell<Assigned<F>, F> {
@@ -397,15 +397,15 @@ impl<F: FieldExt> Deref for X<F> {
 /// This is never actually witnessed until the last round, since it
 /// can be derived from other variables. Thus it only exists as a field
 /// element, not a `CellValue`.
-struct Y<F: FieldExt>(Value<Assigned<F>>);
+struct Y<F: Field>(Value<Assigned<F>>);
 
-impl<F: FieldExt> From<Value<Assigned<F>>> for Y<F> {
+impl<F: Field> From<Value<Assigned<F>>> for Y<F> {
     fn from(value: Value<Assigned<F>>) -> Self {
         Y(value)
     }
 }
 
-impl<F: FieldExt> Deref for Y<F> {
+impl<F: Field> Deref for Y<F> {
     type Target = Value<Assigned<F>>;
 
     fn deref(&self) -> &Value<Assigned<F>> {

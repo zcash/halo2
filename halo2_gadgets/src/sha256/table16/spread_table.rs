@@ -1,6 +1,7 @@
 use super::{util::*, AssignedBits};
+use ff::PrimeField;
 use halo2_proofs::{
-    arithmetic::FieldExt,
+    arithmetic::Field,
     circuit::{Chip, Layouter, Region, Value},
     plonk::{Advice, Column, ConstraintSystem, Error, TableColumn},
     poly::Rotation,
@@ -153,12 +154,12 @@ pub(super) struct SpreadTableConfig {
 }
 
 #[derive(Clone, Debug)]
-pub(super) struct SpreadTableChip<F: FieldExt> {
+pub(super) struct SpreadTableChip<F: Field> {
     config: SpreadTableConfig,
     _marker: PhantomData<F>,
 }
 
-impl<F: FieldExt> Chip<F> for SpreadTableChip<F> {
+impl<F: Field> Chip<F> for SpreadTableChip<F> {
     type Config = SpreadTableConfig;
     type Loaded = ();
 
@@ -171,7 +172,7 @@ impl<F: FieldExt> Chip<F> for SpreadTableChip<F> {
     }
 }
 
-impl<F: FieldExt> SpreadTableChip<F> {
+impl<F: PrimeField> SpreadTableChip<F> {
     pub fn configure(
         meta: &mut ConstraintSystem<F>,
         input_tag: Column<Advice>,
@@ -250,45 +251,42 @@ impl<F: FieldExt> SpreadTableChip<F> {
 }
 
 impl SpreadTableConfig {
-    fn generate<F: FieldExt>() -> impl Iterator<Item = (F, F, F)> {
-        (1..=(1 << 16)).scan(
-            (F::zero(), F::zero(), F::zero()),
-            |(tag, dense, spread), i| {
-                // We computed this table row in the previous iteration.
-                let res = (*tag, *dense, *spread);
+    fn generate<F: PrimeField>() -> impl Iterator<Item = (F, F, F)> {
+        (1..=(1 << 16)).scan((F::ZERO, F::ZERO, F::ZERO), |(tag, dense, spread), i| {
+            // We computed this table row in the previous iteration.
+            let res = (*tag, *dense, *spread);
 
-                // i holds the zero-indexed row number for the next table row.
-                match i {
-                    BITS_7 | BITS_10 | BITS_11 | BITS_13 | BITS_14 => *tag += F::one(),
-                    _ => (),
-                }
-                *dense += F::one();
-                if i & 1 == 0 {
-                    // On even-numbered rows we recompute the spread.
-                    *spread = F::zero();
-                    for b in 0..16 {
-                        if (i >> b) & 1 != 0 {
-                            *spread += F::from(1 << (2 * b));
-                        }
+            // i holds the zero-indexed row number for the next table row.
+            match i {
+                BITS_7 | BITS_10 | BITS_11 | BITS_13 | BITS_14 => *tag += F::ONE,
+                _ => (),
+            }
+            *dense += F::ONE;
+            if i & 1 == 0 {
+                // On even-numbered rows we recompute the spread.
+                *spread = F::ZERO;
+                for b in 0..16 {
+                    if (i >> b) & 1 != 0 {
+                        *spread += F::from(1 << (2 * b));
                     }
-                } else {
-                    // On odd-numbered rows we add one.
-                    *spread += F::one();
                 }
+            } else {
+                // On odd-numbered rows we add one.
+                *spread += F::ONE;
+            }
 
-                Some(res)
-            },
-        )
+            Some(res)
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{get_tag, SpreadTableChip, SpreadTableConfig};
+    use ff::PrimeField;
     use rand::Rng;
 
     use halo2_proofs::{
-        arithmetic::FieldExt,
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
         plonk::{Advice, Circuit, Column, ConstraintSystem, Error},
@@ -303,7 +301,7 @@ mod tests {
 
         struct MyCircuit {}
 
-        impl<F: FieldExt> Circuit<F> for MyCircuit {
+        impl<F: PrimeField> Circuit<F> for MyCircuit {
             type Config = SpreadTableConfig;
             type FloorPlanner = SimpleFloorPlanner;
 
@@ -354,20 +352,20 @@ mod tests {
                         };
 
                         // Test the first few small values.
-                        add_row(F::zero(), F::from(0b000), F::from(0b000000))?;
-                        add_row(F::zero(), F::from(0b001), F::from(0b000001))?;
-                        add_row(F::zero(), F::from(0b010), F::from(0b000100))?;
-                        add_row(F::zero(), F::from(0b011), F::from(0b000101))?;
-                        add_row(F::zero(), F::from(0b100), F::from(0b010000))?;
-                        add_row(F::zero(), F::from(0b101), F::from(0b010001))?;
+                        add_row(F::ZERO, F::from(0b000), F::from(0b000000))?;
+                        add_row(F::ZERO, F::from(0b001), F::from(0b000001))?;
+                        add_row(F::ZERO, F::from(0b010), F::from(0b000100))?;
+                        add_row(F::ZERO, F::from(0b011), F::from(0b000101))?;
+                        add_row(F::ZERO, F::from(0b100), F::from(0b010000))?;
+                        add_row(F::ZERO, F::from(0b101), F::from(0b010001))?;
 
                         // Test the tag boundaries:
                         // 7-bit
-                        add_row(F::zero(), F::from(0b1111111), F::from(0b01010101010101))?;
-                        add_row(F::one(), F::from(0b10000000), F::from(0b0100000000000000))?;
+                        add_row(F::ZERO, F::from(0b1111111), F::from(0b01010101010101))?;
+                        add_row(F::ONE, F::from(0b10000000), F::from(0b0100000000000000))?;
                         // - 10-bit
                         add_row(
-                            F::one(),
+                            F::ONE,
                             F::from(0b1111111111),
                             F::from(0b01010101010101010101),
                         )?;

@@ -203,9 +203,9 @@ where
         let to_base_field = |bits: &[Value<bool>]| -> Value<C::Base> {
             let bits: Value<Vec<bool>> = bits.iter().cloned().collect();
             bits.map(|bits| {
-                bits.into_iter().rev().fold(C::Base::zero(), |acc, bit| {
+                bits.into_iter().rev().fold(C::Base::ZERO, |acc, bit| {
                     if bit {
-                        acc.double() + C::Base::one()
+                        acc.double() + C::Base::ONE
                     } else {
                         acc.double()
                     }
@@ -243,7 +243,7 @@ where
         subpieces: impl IntoIterator<Item = RangeConstrained<C::Base, Value<C::Base>>>,
     ) -> Result<Self, Error> {
         let (field_elem, total_bits) = subpieces.into_iter().fold(
-            (Value::known(C::Base::zero()), 0),
+            (Value::known(C::Base::ZERO), 0),
             |(acc, bits), subpiece| {
                 assert!(bits < 64);
                 let subpiece_shifted = subpiece

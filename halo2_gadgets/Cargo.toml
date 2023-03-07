@@ -24,11 +24,11 @@ rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
 [dependencies]
 arrayvec = "0.7.0"
 bitvec = "1"
-ff = "0.12"
-group = "0.12"
+ff = { version = "0.13", features = ["bits"] }
+group = "0.13"
 halo2_proofs = { version = "0.2", path = "../halo2_proofs" }
 lazy_static = "1"
-halo2curves = { git = 'https://github.com/privacy-scaling-explorations/halo2curves', tag = '0.3.0' }
+halo2curves = { git = 'https://github.com/privacy-scaling-explorations/halo2curves', branch = "main" }
 proptest = { version = "1.0.0", optional = true }
 rand = "0.8"
 subtle = "2.3"

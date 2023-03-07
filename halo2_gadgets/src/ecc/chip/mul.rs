@@ -8,16 +8,15 @@ use std::{
     ops::{Deref, Range},
 };
 
-use ff::PrimeField;
 use halo2_proofs::{
-    arithmetic::FieldExt,
+    arithmetic::Field,
     circuit::{AssignedCell, Layouter, Region, Value},
     plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
-use uint::construct_uint;
-
+use halo2curves::group::ff::PrimeField;
 use halo2curves::pasta::pallas;
+use uint::construct_uint;
 
 mod complete;
 pub(super) mod incomplete;
@@ -389,8 +388,8 @@ impl Config {
 
 #[derive(Clone, Debug)]
 // `x`-coordinate of the accumulator.
-struct X<F: FieldExt>(AssignedCell<Assigned<F>, F>);
-impl<F: FieldExt> Deref for X<F> {
+struct X<F: Field>(AssignedCell<Assigned<F>, F>);
+impl<F: Field> Deref for X<F> {
     type Target = AssignedCell<Assigned<F>, F>;
 
     fn deref(&self) -> &Self::Target {
@@ -400,8 +399,8 @@ impl<F: FieldExt> Deref for X<F> {
 
 #[derive(Clone, Debug)]
 // `y`-coordinate of the accumulator.
-struct Y<F: FieldExt>(AssignedCell<Assigned<F>, F>);
-impl<F: FieldExt> Deref for Y<F> {
+struct Y<F: Field>(AssignedCell<Assigned<F>, F>);
+impl<F: Field> Deref for Y<F> {
     type Target = AssignedCell<Assigned<F>, F>;
 
     fn deref(&self) -> &Self::Target {
@@ -411,8 +410,8 @@ impl<F: FieldExt> Deref for Y<F> {
 
 #[derive(Clone, Debug)]
 // Cumulative sum `z` used to decompose the scalar.
-struct Z<F: FieldExt>(AssignedCell<F, F>);
-impl<F: FieldExt> Deref for Z<F> {
+struct Z<F: Field>(AssignedCell<F, F>);
+impl<F: Field> Deref for Z<F> {
     type Target = AssignedCell<F, F>;
 
     fn deref(&self) -> &Self::Target {

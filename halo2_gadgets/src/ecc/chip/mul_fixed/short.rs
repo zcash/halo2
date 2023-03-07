@@ -209,6 +209,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         // tested at the circuit-level.
         {
             use super::super::FixedPoint;
+            use ff::Field;
             use group::{ff::PrimeField, Curve};
 
             scalar
@@ -228,9 +229,9 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                             let magnitude = pallas::Scalar::from_repr(magnitude.to_repr()).unwrap();
 
                             let sign = if sign == &&pallas::Base::one() {
-                                pallas::Scalar::one()
+                                pallas::Scalar::ONE
                             } else {
-                                -pallas::Scalar::one()
+                                -pallas::Scalar::ONE
                             };
 
                             magnitude * sign
@@ -248,13 +249,16 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 
 #[cfg(test)]
 pub mod tests {
-    use group::{ff::PrimeField, Curve};
+    use group::{
+        ff::{Field, PrimeField},
+        Curve,
+    };
     use halo2_proofs::{
         arithmetic::CurveAffine,
         circuit::{AssignedCell, Chip, Layouter, Value},
         plonk::{Any, Error},
     };
-    use halo2curves::{pasta::pallas, FieldExt};
+    use halo2curves::pasta::pallas;
 
     use crate::{
         ecc::{
@@ -359,9 +363,9 @@ pub mod tests {
             let scalar = {
                 let magnitude = pallas::Scalar::from_repr(magnitude.to_repr()).unwrap();
                 let sign = if *sign == pallas::Base::one() {
-                    pallas::Scalar::one()
+                    pallas::Scalar::ONE
                 } else {
-                    -pallas::Scalar::one()
+                    -pallas::Scalar::ONE
                 };
                 magnitude * sign
             };

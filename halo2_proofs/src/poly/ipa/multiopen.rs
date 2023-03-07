@@ -3,14 +3,10 @@
 //!
 //! [halo]: https://eprint.iacr.org/2019/1021
 
-use std::collections::{BTreeMap, BTreeSet};
-
 use super::*;
-use crate::{
-    arithmetic::{CurveAffine, FieldExt},
-    poly::query::Query,
-    transcript::ChallengeScalar,
-};
+use crate::{arithmetic::CurveAffine, poly::query::Query, transcript::ChallengeScalar};
+use ff::Field;
+use std::collections::{BTreeMap, BTreeSet};
 
 mod prover;
 mod verifier;
@@ -63,7 +59,7 @@ type IntermediateSets<F, Q> = (
     Vec<Vec<F>>,
 );
 
-fn construct_intermediate_sets<F: FieldExt, I, Q: Query<F>>(queries: I) -> IntermediateSets<F, Q>
+fn construct_intermediate_sets<F: Field + Ord, I, Q: Query<F>>(queries: I) -> IntermediateSets<F, Q>
 where
     I: IntoIterator<Item = Q> + Clone,
 {

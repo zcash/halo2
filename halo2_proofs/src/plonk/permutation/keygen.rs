@@ -1,9 +1,9 @@
-use ff::Field;
+use ff::{Field, PrimeField};
 use group::Curve;
 
 use super::{Argument, ProvingKey, VerifyingKey};
 use crate::{
-    arithmetic::{parallelize, CurveAffine, FieldExt},
+    arithmetic::{parallelize, CurveAffine},
     plonk::{Any, Column, Error},
     poly::{
         commitment::{Blind, CommitmentScheme, Params},
@@ -109,7 +109,7 @@ impl Assembly {
         p: &Argument,
     ) -> VerifyingKey<C> {
         // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
-        let mut omega_powers = vec![C::Scalar::zero(); params.n() as usize];
+        let mut omega_powers = vec![C::Scalar::ZERO; params.n() as usize];
         {
             let omega = domain.get_omega();
             parallelize(&mut omega_powers, |o, start| {
@@ -130,7 +130,7 @@ impl Assembly {
                     for v in omega_powers {
                         *v *= &cur;
                     }
-                    cur *= &C::Scalar::DELTA;
+                    cur *= &<C::Scalar as PrimeField>::DELTA;
                 }
             });
         }
@@ -171,7 +171,7 @@ impl Assembly {
         p: &Argument,
     ) -> ProvingKey<C> {
         // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
-        let mut omega_powers = vec![C::Scalar::zero(); params.n() as usize];
+        let mut omega_powers = vec![C::Scalar::ZERO; params.n() as usize];
         {
             let omega = domain.get_omega();
             parallelize(&mut omega_powers, |o, start| {

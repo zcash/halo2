@@ -1,5 +1,5 @@
 use super::{construct_intermediate_sets, ChallengeV, Query};
-use crate::arithmetic::{eval_polynomial, kate_division, powers, CurveAffine, FieldExt};
+use crate::arithmetic::{eval_polynomial, kate_division, powers, CurveAffine};
 use crate::helpers::SerdeCurveAffine;
 use crate::poly::commitment::ParamsProver;
 use crate::poly::commitment::Prover;
@@ -12,7 +12,7 @@ use crate::poly::{
 };
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
-use ff::Field;
+use ff::{Field, PrimeField};
 use group::Curve;
 use halo2curves::pairing::Engine;
 use rand_core::RngCore;
@@ -29,6 +29,7 @@ pub struct ProverGWC<'params, E: Engine> {
 /// Create a multi-opening proof
 impl<'params, E: Engine + Debug> Prover<'params, KZGCommitmentScheme<E>> for ProverGWC<'params, E>
 where
+    E::Scalar: PrimeField,
     E::G1Affine: SerdeCurveAffine,
     E::G2Affine: SerdeCurveAffine,
 {

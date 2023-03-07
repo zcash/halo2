@@ -30,13 +30,12 @@ use halo2_proofs::{
 };
 
 use super::range_check;
-use halo2curves::FieldExt;
 use std::marker::PhantomData;
 
 /// The running sum $[z_0, ..., z_W]$. If created in strict mode, $z_W = 0$.
 #[derive(Debug)]
-pub struct RunningSum<F: FieldExt + PrimeFieldBits>(Vec<AssignedCell<F, F>>);
-impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
+pub struct RunningSum<F: PrimeFieldBits>(Vec<AssignedCell<F, F>>);
+impl<F: PrimeFieldBits> std::ops::Deref for RunningSum<F> {
     type Target = Vec<AssignedCell<F, F>>;
 
     fn deref(&self) -> &Vec<AssignedCell<F, F>> {
@@ -46,15 +45,13 @@ impl<F: FieldExt + PrimeFieldBits> std::ops::Deref for RunningSum<F> {
 
 /// Configuration that provides methods for running sum decomposition.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub struct RunningSumConfig<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize> {
+pub struct RunningSumConfig<F: PrimeFieldBits, const WINDOW_NUM_BITS: usize> {
     q_range_check: Selector,
     z: Column<Advice>,
     _marker: PhantomData<F>,
 }
 
-impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
-    RunningSumConfig<F, WINDOW_NUM_BITS>
-{
+impl<F: PrimeFieldBits, const WINDOW_NUM_BITS: usize> RunningSumConfig<F, WINDOW_NUM_BITS> {
     /// Returns the q_range_check selector of this [`RunningSumConfig`].
     pub(crate) fn q_range_check(&self) -> Selector {
         self.q_range_check
@@ -200,7 +197,7 @@ impl<F: FieldExt + PrimeFieldBits, const WINDOW_NUM_BITS: usize>
 
         if strict {
             // Constrain the final running sum output to be zero.
-            region.constrain_constant(zs.last().unwrap().cell(), F::zero())?;
+            region.constrain_constant(zs.last().unwrap().cell(), F::ZERO)?;
         }
 
         Ok(RunningSum(zs))
@@ -216,7 +213,7 @@ mod tests {
         dev::{FailureLocation, MockProver, VerifyFailure},
         plonk::{Any, Circuit, ConstraintSystem, Error},
     };
-    use halo2curves::{pasta::pallas, FieldExt};
+    use halo2curves::pasta::pallas;
     use rand::rngs::OsRng;
 
     use crate::ecc::chip::{
@@ -228,7 +225,7 @@ mod tests {
     #[test]
     fn test_running_sum() {
         struct MyCircuit<
-            F: FieldExt + PrimeFieldBits,
+            F: PrimeFieldBits,
             const WORD_NUM_BITS: usize,
             const WINDOW_NUM_BITS: usize,
             const NUM_WINDOWS: usize,
@@ -238,7 +235,7 @@ mod tests {
         }
 
         impl<
-                F: FieldExt + PrimeFieldBits,
+                F: PrimeFieldBits,
                 const WORD_NUM_BITS: usize,
                 const WINDOW_NUM_BITS: usize,
                 const NUM_WINDOWS: usize,

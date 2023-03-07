@@ -2,7 +2,6 @@
 extern crate criterion;
 
 use group::ff::Field;
-use halo2_proofs::arithmetic::FieldExt;
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::{commitment::ParamsProver, Rotation};
@@ -43,7 +42,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         sm: Column<Fixed>,
     }
 
-    trait StandardCs<FF: FieldExt> {
+    trait StandardCs<FF: Field> {
         fn raw_multiply<F>(
             &self,
             layouter: &mut impl Layouter<FF>,
@@ -62,17 +61,17 @@ fn criterion_benchmark(c: &mut Criterion) {
     }
 
     #[derive(Clone)]
-    struct MyCircuit<F: FieldExt> {
+    struct MyCircuit<F: Field> {
         a: Value<F>,
         k: u32,
     }
 
-    struct StandardPlonk<F: FieldExt> {
+    struct StandardPlonk<F: Field> {
         config: PlonkConfig,
         _marker: PhantomData<F>,
     }
 
-    impl<FF: FieldExt> StandardPlonk<FF> {
+    impl<FF: Field> StandardPlonk<FF> {
         fn new(config: PlonkConfig) -> Self {
             StandardPlonk {
                 config,
@@ -81,7 +80,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         }
     }
 
-    impl<FF: FieldExt> StandardCs<FF> for StandardPlonk<FF> {
+    impl<FF: Field> StandardCs<FF> for StandardPlonk<FF> {
         fn raw_multiply<F>(
             &self,
             layouter: &mut impl Layouter<FF>,
@@ -116,15 +115,10 @@ fn criterion_benchmark(c: &mut Criterion) {
                         || value.unwrap().map(|v| v.2),
                     )?;
 
-                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::zero()))?;
-                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::zero()))?;
-                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
-                    region.assign_fixed(
-                        || "a * b",
-                        self.config.sm,
-                        0,
-                        || Value::known(FF::one()),
-                    )?;
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ZERO))?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ZERO))?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
+                    region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::ONE))?;
                     Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
             )
@@ -163,14 +157,14 @@ fn criterion_benchmark(c: &mut Criterion) {
                         || value.unwrap().map(|v| v.2),
                     )?;
 
-                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::one()))?;
-                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::one()))?;
-                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ONE))?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ONE))?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
                     region.assign_fixed(
                         || "a * b",
                         self.config.sm,
                         0,
-                        || Value::known(FF::zero()),
+                        || Value::known(FF::ZERO),
                     )?;
                     Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
@@ -186,7 +180,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         }
     }
 
-    impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
+    impl<F: Field> Circuit<F> for MyCircuit<F> {
         type Config = PlonkConfig;
         type FloorPlanner = SimpleFloorPlanner;
 

@@ -1,7 +1,7 @@
 use super::{
     construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4, Query,
 };
-use crate::arithmetic::{eval_polynomial, kate_division, CurveAffine, FieldExt};
+use crate::arithmetic::{eval_polynomial, kate_division, CurveAffine};
 use crate::poly::commitment::ParamsProver;
 use crate::poly::commitment::{Blind, Params, Prover};
 use crate::poly::ipa::commitment::{self, IPACommitmentScheme, ParamsIPA};
@@ -47,7 +47,7 @@ impl<'params, C: CurveAffine> Prover<'params, IPACommitmentScheme<C>> for Prover
         // Collapse openings at same point sets together into single openings using
         // x_1 challenge.
         let mut q_polys: Vec<Option<Polynomial<C::Scalar, Coeff>>> = vec![None; point_sets.len()];
-        let mut q_blinds = vec![Blind(C::Scalar::zero()); point_sets.len()];
+        let mut q_blinds = vec![Blind(C::Scalar::ZERO); point_sets.len()];
 
         {
             let mut accumulate = |set_idx: usize,
@@ -80,7 +80,7 @@ impl<'params, C: CurveAffine> Prover<'params, IPACommitmentScheme<C>> for Prover
                     .fold(poly.clone().unwrap().values, |poly, point| {
                         kate_division(&poly, *point)
                     });
-                poly.resize(self.params.n as usize, C::Scalar::zero());
+                poly.resize(self.params.n as usize, C::Scalar::ZERO);
                 let poly = Polynomial {
                     values: poly,
                     _marker: PhantomData,

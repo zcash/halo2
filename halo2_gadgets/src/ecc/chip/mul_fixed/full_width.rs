@@ -295,7 +295,7 @@ pub mod tests {
 
         // [-1]B is the largest scalar field element.
         {
-            let scalar_fixed = -pallas::Scalar::one();
+            let scalar_fixed = -pallas::Scalar::ONE;
             let neg_1 = ScalarFixed::new(
                 chip.clone(),
                 layouter.namespace(|| "-1"),

@@ -6,7 +6,8 @@ use halo2_proofs::{
 
 use super::{CommitDomains, FixedPoints, HashDomains};
 use crate::sinsemilla::primitives::{self as sinsemilla, SINSEMILLA_S};
-use halo2curves::{pasta::pallas, FieldExt};
+use ff::PrimeField;
+use halo2curves::pasta::pallas;
 
 /// Table containing independent generators S[0..2^k]
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]

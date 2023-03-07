@@ -1,4 +1,4 @@
-use ff::Field;
+use ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use group::Curve;
 use rand_core::RngCore;
 use std::iter;
@@ -7,7 +7,7 @@ use super::{
     vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
     VerifyingKey,
 };
-use crate::arithmetic::{compute_inner_product, CurveAffine, FieldExt};
+use crate::arithmetic::{compute_inner_product, CurveAffine};
 use crate::poly::commitment::{CommitmentScheme, Verifier};
 use crate::poly::VerificationStrategy;
 use crate::poly::{
@@ -37,7 +37,10 @@ pub fn verify_proof<
     strategy: Strategy,
     instances: &[&[&[Scheme::Scalar]]],
     transcript: &mut T,
-) -> Result<Strategy::Output, Error> {
+) -> Result<Strategy::Output, Error>
+where
+    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+{
     // Check that instances matches the expected number of instance columns
     for instances in instances.iter() {
         if instances.len() != vk.cs.num_instance_columns {
@@ -56,7 +59,7 @@ pub fn verify_proof<
                             return Err(Error::InstanceTooLarge);
                         }
                         let mut poly = instance.to_vec();
-                        poly.resize(params.n() as usize, Scheme::Scalar::zero());
+                        poly.resize(params.n() as usize, Scheme::Scalar::ZERO);
                         let poly = vk.domain.lagrange_from_vec(poly);
 
                         Ok(params.commit_lagrange(&poly, Blind::default()).to_affine())
@@ -94,7 +97,7 @@ pub fn verify_proof<
     let (advice_commitments, challenges) = {
         let mut advice_commitments =
             vec![vec![Scheme::Curve::default(); vk.cs.num_advice_columns]; num_proofs];
-        let mut challenges = vec![Scheme::Scalar::zero(); vk.cs.num_challenges];
+        let mut challenges = vec![Scheme::Scalar::ZERO; vk.cs.num_challenges];
 
         for current_phase in vk.cs.phases() {
             for advice_commitments in advice_commitments.iter_mut() {
@@ -253,7 +256,7 @@ pub fn verify_proof<
         let l_last = l_evals[0];
         let l_blind: Scheme::Scalar = l_evals[1..(1 + blinding_factors)]
             .iter()
-            .fold(Scheme::Scalar::zero(), |acc, eval| acc + eval);
+            .fold(Scheme::Scalar::ZERO, |acc, eval| acc + eval);
         let l_0 = l_evals[1 + blinding_factors];
 
         // Compute the expected value of h(x)

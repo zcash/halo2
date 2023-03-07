@@ -1,5 +1,6 @@
 use std::{io, marker::PhantomData};
 
+use ff::FromUniformBytes;
 use group::ff::Field;
 use halo2curves::CurveAffine;
 use rand_core::{OsRng, RngCore};
@@ -67,7 +68,10 @@ pub struct BatchVerifier<C: CurveAffine> {
     items: Vec<BatchItem<C>>,
 }
 
-impl<C: CurveAffine> BatchVerifier<C> {
+impl<C: CurveAffine> BatchVerifier<C>
+where
+    C::Scalar: FromUniformBytes<64>,
+{
     /// Constructs a new batch verifier.
     pub fn new() -> Self {
         Self { items: vec![] }

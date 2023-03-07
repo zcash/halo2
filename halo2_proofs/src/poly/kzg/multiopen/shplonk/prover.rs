@@ -3,7 +3,7 @@ use super::{
 };
 use crate::arithmetic::{
     eval_polynomial, evaluate_vanishing_polynomial, kate_division, lagrange_interpolate,
-    parallelize, powers, CurveAffine, FieldExt,
+    parallelize, powers, CurveAffine,
 };
 use crate::helpers::SerdeCurveAffine;
 use crate::poly::commitment::{Blind, ParamsProver, Prover};
@@ -13,7 +13,7 @@ use crate::poly::Rotation;
 use crate::poly::{commitment::Params, Coeff, Polynomial};
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
-use ff::Field;
+use ff::{Field, PrimeField};
 use group::Curve;
 use halo2curves::pairing::Engine;
 use rand_core::RngCore;
@@ -23,7 +23,7 @@ use std::io::{self, Write};
 use std::marker::PhantomData;
 use std::ops::MulAssign;
 
-fn div_by_vanishing<F: FieldExt>(poly: Polynomial<F, Coeff>, roots: &[F]) -> Vec<F> {
+fn div_by_vanishing<F: Field>(poly: Polynomial<F, Coeff>, roots: &[F]) -> Vec<F> {
     let poly = roots
         .iter()
         .fold(poly.values, |poly, point| kate_division(&poly, *point));
@@ -105,6 +105,7 @@ impl<'a, E: Engine> ProverSHPLONK<'a, E> {
 impl<'params, E: Engine + Debug> Prover<'params, KZGCommitmentScheme<E>>
     for ProverSHPLONK<'params, E>
 where
+    E::Scalar: Ord + PrimeField,
     E::G1Affine: SerdeCurveAffine,
     E::G2Affine: SerdeCurveAffine,
 {
@@ -162,7 +163,7 @@ where
                 // Q_i(X) = N_i(X) / Z_i(X) where
                 // Z_i(X) = (x - r_i_0) * (x - r_i_1) * ...
                 let mut poly = div_by_vanishing(n_x, points);
-                poly.resize(self.params.n as usize, E::Scalar::zero());
+                poly.resize(self.params.n as usize, E::Scalar::ZERO);
 
                 Polynomial {
                     values: poly,
@@ -261,7 +262,7 @@ where
         #[cfg(debug_assertions)]
         {
             let must_be_zero = eval_polynomial(&l_x.values[..], *u);
-            assert_eq!(must_be_zero, E::Scalar::zero());
+            assert_eq!(must_be_zero, E::Scalar::ZERO);
         }
 
         let mut h_x = div_by_vanishing(l_x, &[*u]);

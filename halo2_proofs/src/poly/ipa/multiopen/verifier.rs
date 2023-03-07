@@ -8,7 +8,7 @@ use rand_core::RngCore;
 use super::{
     construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4, Query,
 };
-use crate::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine, FieldExt};
+use crate::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine};
 use crate::poly::commitment::{Params, Verifier, MSM};
 use crate::poly::ipa::commitment::{IPACommitmentScheme, ParamsIPA, ParamsVerifierIPA};
 use crate::poly::ipa::msm::MSMIPA;
@@ -63,7 +63,7 @@ impl<'params, C: CurveAffine> Verifier<'params, IPACommitmentScheme<C>>
         // while the inner vec corresponds to the points in a particular set.
         let mut q_eval_sets = Vec::with_capacity(point_sets.len());
         for point_set in point_sets.iter() {
-            q_eval_sets.push(vec![C::Scalar::zero(); point_set.len()]);
+            q_eval_sets.push(vec![C::Scalar::ZERO; point_set.len()]);
         }
         {
             let mut accumulate = |set_idx: usize,
@@ -72,7 +72,7 @@ impl<'params, C: CurveAffine> Verifier<'params, IPACommitmentScheme<C>>
                 q_commitments[set_idx].scale(*x_1);
                 match new_commitment {
                     CommitmentReference::Commitment(c) => {
-                        q_commitments[set_idx].append_term(C::Scalar::one(), (*c).into());
+                        q_commitments[set_idx].append_term(C::Scalar::ONE, (*c).into());
                     }
                     CommitmentReference::MSM(msm) => {
                         q_commitments[set_idx].add_msm(msm);
@@ -116,7 +116,7 @@ impl<'params, C: CurveAffine> Verifier<'params, IPACommitmentScheme<C>>
             .zip(q_eval_sets.iter())
             .zip(u.iter())
             .fold(
-                C::Scalar::zero(),
+                C::Scalar::ZERO,
                 |msm_eval, ((points, evals), proof_eval)| {
                     let r_poly = lagrange_interpolate(points, evals);
                     let r_eval = eval_polynomial(&r_poly, *x_3);
@@ -132,7 +132,7 @@ impl<'params, C: CurveAffine> Verifier<'params, IPACommitmentScheme<C>>
         let x_4: ChallengeX4<_> = transcript.squeeze_challenge_scalar();
 
         // Compute the final commitment that has to be opened
-        msm.append_term(C::Scalar::one(), q_prime_commitment.into());
+        msm.append_term(C::Scalar::ONE, q_prime_commitment.into());
         let (msm, v) = q_commitments.into_iter().zip(u.iter()).fold(
             (msm, msm_eval),
             |(mut msm, msm_eval), (q_commitment, q_eval)| {

@@ -2,7 +2,8 @@
 #![allow(clippy::op_ref)]
 
 use assert_matches::assert_matches;
-use halo2_proofs::arithmetic::{Field, FieldExt};
+use ff::{FromUniformBytes, WithSmallOrderMulGroup};
+use halo2_proofs::arithmetic::Field;
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::plonk::{
@@ -45,7 +46,7 @@ fn plonk_api() {
     }
 
     #[allow(clippy::type_complexity)]
-    trait StandardCs<FF: FieldExt> {
+    trait StandardCs<FF: Field> {
         fn raw_multiply<F>(
             &self,
             layouter: &mut impl Layouter<FF>,
@@ -72,17 +73,17 @@ fn plonk_api() {
     }
 
     #[derive(Clone)]
-    struct MyCircuit<F: FieldExt> {
+    struct MyCircuit<F: Field> {
         a: Value<F>,
         lookup_table: Vec<F>,
     }
 
-    struct StandardPlonk<F: FieldExt> {
+    struct StandardPlonk<F: Field> {
         config: PlonkConfig,
         _marker: PhantomData<F>,
     }
 
-    impl<FF: FieldExt> StandardPlonk<FF> {
+    impl<FF: Field> StandardPlonk<FF> {
         fn new(config: PlonkConfig) -> Self {
             StandardPlonk {
                 config,
@@ -91,7 +92,7 @@ fn plonk_api() {
         }
     }
 
-    impl<FF: FieldExt> StandardCs<FF> for StandardPlonk<FF> {
+    impl<FF: Field> StandardCs<FF> for StandardPlonk<FF> {
         fn raw_multiply<F>(
             &self,
             layouter: &mut impl Layouter<FF>,
@@ -138,15 +139,10 @@ fn plonk_api() {
                         || value.unwrap().map(|v| v.2),
                     )?;
 
-                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::zero()))?;
-                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::zero()))?;
-                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
-                    region.assign_fixed(
-                        || "a * b",
-                        self.config.sm,
-                        0,
-                        || Value::known(FF::one()),
-                    )?;
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ZERO))?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ZERO))?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
+                    region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::ONE))?;
                     Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
             )
@@ -197,14 +193,14 @@ fn plonk_api() {
                         || value.unwrap().map(|v| v.2),
                     )?;
 
-                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::one()))?;
-                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::one()))?;
-                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::one()))?;
+                    region.assign_fixed(|| "a", self.config.sa, 0, || Value::known(FF::ONE))?;
+                    region.assign_fixed(|| "b", self.config.sb, 0, || Value::known(FF::ONE))?;
+                    region.assign_fixed(|| "c", self.config.sc, 0, || Value::known(FF::ONE))?;
                     region.assign_fixed(
                         || "a * b",
                         self.config.sm,
                         0,
-                        || Value::known(FF::zero()),
+                        || Value::known(FF::ZERO),
                     )?;
                     Ok((lhs.cell(), rhs.cell(), out.cell()))
                 },
@@ -236,7 +232,7 @@ fn plonk_api() {
                         || "public",
                         self.config.sp,
                         0,
-                        || Value::known(FF::one()),
+                        || Value::known(FF::ONE),
                     )?;
 
                     Ok(value.cell())
@@ -266,7 +262,7 @@ fn plonk_api() {
         }
     }
 
-    impl<F: FieldExt> Circuit<F> for MyCircuit<F> {
+    impl<F: Field> Circuit<F> for MyCircuit<F> {
         type Config = PlonkConfig;
         type FloorPlanner = SimpleFloorPlanner;
 
@@ -374,7 +370,7 @@ fn plonk_api() {
         ) -> Result<(), Error> {
             let cs = StandardPlonk::new(config);
 
-            let _ = cs.public_input(&mut layouter, || Value::known(F::one() + F::one()))?;
+            let _ = cs.public_input(&mut layouter, || Value::known(F::ONE + F::ONE))?;
 
             for _ in 0..10 {
                 let a: Value<Assigned<_>> = self.a.into();
@@ -403,14 +399,9 @@ fn plonk_api() {
         ($scheme:ident) => {{
             let a = <$scheme as CommitmentScheme>::Scalar::from(2834758237)
                 * <$scheme as CommitmentScheme>::Scalar::ZETA;
-            let instance = <$scheme as CommitmentScheme>::Scalar::one()
-                + <$scheme as CommitmentScheme>::Scalar::one();
-            let lookup_table = vec![
-                instance,
-                a,
-                a,
-                <$scheme as CommitmentScheme>::Scalar::zero(),
-            ];
+            let instance = <$scheme as CommitmentScheme>::Scalar::ONE
+                + <$scheme as CommitmentScheme>::Scalar::ONE;
+            let lookup_table = vec![instance, a, a, <$scheme as CommitmentScheme>::Scalar::ZERO];
             (a, instance, lookup_table)
         }};
     }
@@ -445,9 +436,10 @@ fn plonk_api() {
         }};
     }
 
-    fn keygen<Scheme: CommitmentScheme>(
-        params: &Scheme::ParamsProver,
-    ) -> ProvingKey<Scheme::Curve> {
+    fn keygen<Scheme: CommitmentScheme>(params: &Scheme::ParamsProver) -> ProvingKey<Scheme::Curve>
+    where
+        Scheme::Scalar: FromUniformBytes<64> + WithSmallOrderMulGroup<3>,
+    {
         let (_, _, lookup_table) = common!(Scheme);
         let empty_circuit: MyCircuit<Scheme::Scalar> = MyCircuit {
             a: Value::unknown(),
@@ -471,7 +463,10 @@ fn plonk_api() {
         rng: R,
         params: &'params Scheme::ParamsProver,
         pk: &ProvingKey<Scheme::Curve>,
-    ) -> Vec<u8> {
+    ) -> Vec<u8>
+    where
+        Scheme::Scalar: Ord + WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
         let (a, instance, lookup_table) = common!(Scheme);
 
         let circuit: MyCircuit<Scheme::Scalar> = MyCircuit {
@@ -513,7 +508,9 @@ fn plonk_api() {
         params_verifier: &'params Scheme::ParamsVerifier,
         vk: &VerifyingKey<Scheme::Curve>,
         proof: &'a [u8],
-    ) {
+    ) where
+        Scheme::Scalar: Ord + WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
         let (_, instance, _) = common!(Scheme);
         let pubinputs = vec![instance];
 

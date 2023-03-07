@@ -1,10 +1,11 @@
 use super::super::Gate;
-use halo2_proofs::{arithmetic::FieldExt, plonk::Expression};
+use ff::PrimeField;
+use halo2_proofs::plonk::Expression;
 use std::marker::PhantomData;
 
-pub struct ScheduleGate<F: FieldExt>(PhantomData<F>);
+pub struct ScheduleGate<F: PrimeField>(PhantomData<F>);
 
-impl<F: FieldExt> ScheduleGate<F> {
+impl<F: PrimeField> ScheduleGate<F> {
     /// s_word for W_16 to W_63
     #[allow(clippy::too_many_arguments)]
     pub fn s_word(
@@ -25,8 +26,8 @@ impl<F: FieldExt> ScheduleGate<F> {
 
         let word_check = lo
             + hi * F::from(1 << 16)
-            + (carry.clone() * F::from(1 << 32) * (-F::one()))
-            + (word * (-F::one()));
+            + (carry.clone() * F::from(1 << 32) * (-F::ONE))
+            + (word * (-F::ONE));
         let carry_check = Gate::range_check(carry, 0, 3);
 
         [("word_check", word_check), ("carry_check", carry_check)]
@@ -58,11 +59,8 @@ impl<F: FieldExt> ScheduleGate<F> {
         tag_d: Expression<F>,
         word: Expression<F>,
     ) -> impl Iterator<Item = (&'static str, Expression<F>)> {
-        let decompose_check = a
-            + b * F::from(1 << 3)
-            + c * F::from(1 << 7)
-            + d * F::from(1 << 18)
-            + word * (-F::one());
+        let decompose_check =
+            a + b * F::from(1 << 3) + c * F::from(1 << 7) + d * F::from(1 << 18) + word * (-F::ONE);
         let range_check_tag_c = Gate::range_check(tag_c, 0, 2);
         let range_check_tag_d = Gate::range_check(tag_d, 0, 4);
 
@@ -99,7 +97,7 @@ impl<F: FieldExt> ScheduleGate<F> {
             + e * F::from(1 << 17)
             + f * F::from(1 << 18)
             + g * F::from(1 << 19)
-            + word * (-F::one());
+            + word * (-F::ONE);
         let range_check_tag_d = Gate::range_check(tag_d, 0, 0);
         let range_check_tag_g = Gate::range_check(tag_g, 0, 3);
 
@@ -129,7 +127,7 @@ impl<F: FieldExt> ScheduleGate<F> {
             + b * F::from(1 << 10)
             + c * F::from(1 << 17)
             + d * F::from(1 << 19)
-            + word * (-F::one());
+            + word * (-F::ONE);
         let range_check_tag_a = Gate::range_check(tag_a, 0, 1);
         let range_check_tag_d = Gate::range_check(tag_d, 0, 3);
 
