@@ -10,18 +10,17 @@ use halo2_proofs::{
 };
 use rand::rngs::OsRng;
 
+use criterion::{criterion_group, criterion_main, Criterion};
 use std::{
-    fs::{File, create_dir_all},
+    fs::{create_dir_all, File},
     io::{prelude::*, BufReader},
     path::Path,
 };
-use criterion::{criterion_group, criterion_main, Criterion};
 
 use halo2_gadgets::sha256::{BlockWord, Sha256, Table16Chip, Table16Config, BLOCK_SIZE};
 
 #[allow(dead_code)]
 fn bench(name: &str, k: u32, c: &mut Criterion) {
-
     #[derive(Default)]
     struct MyCircuit {}
 
