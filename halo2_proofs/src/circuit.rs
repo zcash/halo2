@@ -297,6 +297,19 @@ impl<'r, F: Field> Region<'r, F> {
         })
     }
 
+    /// Returns the value of the instance column's cell at absolute location `row`.
+    ///
+    /// This method is only provided for convenience; it does not create any constraints.
+    /// Callers still need to use [`Self::assign_advice_from_instance`] to constrain the
+    /// instance values in their circuit.
+    pub fn instance_value(
+        &mut self,
+        instance: Column<Instance>,
+        row: usize,
+    ) -> Result<Value<F>, Error> {
+        self.region.instance_value(instance, row)
+    }
+
     /// Assign a fixed value.
     ///
     /// Even though `to` has `FnMut` bounds, it is guaranteed to be called at most once.

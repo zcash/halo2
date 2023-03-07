@@ -16,9 +16,11 @@ and this project adheres to Rust's notion of
     - `metadata::Region`
   - `halo2_proofs::poly::Rotation`
 - `halo2_proofs::arithmetic::FftGroup`
-- `halo2_proofs::circuit::layouter`:
-  - `RegionLayouter::instance_value` method added to provide access to
-    instance values within a region.
+- `halo2_proofs::circuit`:
+  - `Region::instance_value`, to provide access to instance values within a
+    region. This method is only provided for convenience; it does not create any
+    constraints. Callers still need to use `Region::assign_advice_from_instance`
+    to constrain the values in their circuit.
 
 ### Changed
 - Migrated to `ff 0.13`, `group 0.13`, `pasta_curves 0.5`.
@@ -27,7 +29,10 @@ and this project adheres to Rust's notion of
 - `halo2_proofs::arithmetic`:
   - `best_fft, recursive_butterfly_arithmetic` now use the `FftGroup` trait
     instead of the (now-removed) `pasta_curves::arithmetic::Group` trait.
-- `halo2::proofs::circuit`
+- `halo2_proofs::circuit::layouter`:
+  - The `RegionLayouter` trait now requires implementing an `instance_value`
+    method, to back `Region::instance_value`.
+- `halo2_proofs::plonk`
   - `VirtualCells`
     - `query_any` now panics if a non-`cur` `Rotation` is used with the
       `Column<Fixed>` variant.
