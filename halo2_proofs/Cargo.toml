@@ -69,6 +69,7 @@ getrandom = { version = "0.2", features = ["js"] }
 
 [features]
 default = ["batch", "multicore"]
+no_floating_points = []
 multicore = ["maybe-rayon/threads"]
 dev-graph = ["plotters", "tabbycat"]
 test-dev-graph = [

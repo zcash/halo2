@@ -33,7 +33,8 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
     } else if bases.len() < 32 {
         3
     } else {
-        (f64::from(bases.len() as u32)).ln().ceil() as usize
+        let bases_len = bases.len();
+        ln_ceil(bases_len)
     };
 
     fn get_at<F: PrimeField>(segment: usize, c: usize, bytes: &F::Repr) -> usize {
@@ -113,6 +114,67 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
             *acc += &running_sum;
         }
     }
+}
+
+#[cfg(feature = "no_floating_points")]
+const LN_CEIL_LOOKUP_TABLE: &[usize] = &[
+    1,
+    2,
+    3,
+    8,
+    21,
+    55,
+    149,
+    404,
+    1097,
+    2981,
+    8104,
+    22027,
+    59875,
+    162755,
+    442414,
+    1202605,
+    3269018,
+    8886111,
+    24154953,
+    65659970,
+    178482301,
+    485165196,
+    1318815735,
+    3584912847,
+    9744803447,
+    26489122130,
+    72004899338,
+    195729609429,
+    532048240602,
+    1446257064292,
+    3931334297145,
+    10686474581525,
+    29048849665248,
+    78962960182681,
+    214643579785917,
+    583461742527457,
+    1586013452313437,
+    4311231547115211,
+    11719142372802654,
+    31855931757113870,
+    86593400423994057,
+    235385266837020817,
+    639843493530057281,
+    1739274941520507264,
+    4727839468229363200,
+    12851600114359354369,
+];
+
+#[cfg(feature = "no_floating_points")]
+fn ln_ceil(value: usize) -> usize {
+    let idx = LN_CEIL_LOOKUP_TABLE.partition_point(|val| *val <= value);
+    idx.saturating_sub(1)
+}
+
+#[cfg(not(feature = "no_floating_points"))]
+fn ln_ceil(input: usize) -> usize {
+    (input as f64).ln().ceil() as usize
 }
 
 /// Performs a small multi-exponentiation operation.
@@ -431,22 +493,52 @@ use rand_core::OsRng;
 #[cfg(test)]
 use crate::pasta::Fp;
 
-#[test]
-fn test_lagrange_interpolate() {
-    let rng = OsRng;
+#[cfg(test)]
+mod tests {
 
-    let points = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
-    let evals = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
+    use super::*;
 
-    for coeffs in 0..5 {
-        let points = &points[0..coeffs];
-        let evals = &evals[0..coeffs];
+    #[test]
+    fn test_lagrange_interpolate() {
+        let rng = OsRng;
 
-        let poly = lagrange_interpolate(points, evals);
-        assert_eq!(poly.len(), points.len());
+        let points = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
+        let evals = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
 
-        for (point, eval) in points.iter().zip(evals) {
-            assert_eq!(eval_polynomial(&poly, *point), *eval);
+        for coeffs in 0..5 {
+            let points = &points[0..coeffs];
+            let evals = &evals[0..coeffs];
+
+            let poly = lagrange_interpolate(points, evals);
+            assert_eq!(poly.len(), points.len());
+
+            for (point, eval) in points.iter().zip(evals) {
+                assert_eq!(eval_polynomial(&poly, *point), *eval);
+            }
+        }
+    }
+
+    #[cfg(feature = "no_floating_points")]
+    use proptest::prelude::*;
+
+    #[cfg(feature = "no_floating_points")]
+    #[test]
+    fn verify_ln_ceil_lookup_table() {
+        assert_eq!(ln_ceil(LN_CEIL_LOOKUP_TABLE[0]) as usize, 0);
+        assert_eq!(ln_ceil(LN_CEIL_LOOKUP_TABLE[1]) as usize, 1);
+
+        for (exponent, argument) in LN_CEIL_LOOKUP_TABLE.iter().enumerate().skip(2) {
+            assert_eq!(ln_ceil(*argument) as usize, exponent);
+            assert_eq!(ln_ceil(*argument - 1) as usize, exponent - 1);
+            assert_eq!(ln_ceil(*argument + 1) as usize, exponent);
+        }
+    }
+
+    #[cfg(feature = "no_floating_points")]
+    proptest! {
+        #[test]
+        fn logarithm_lookup_table_is_correct(exp: usize) {
+            prop_assert_eq!(ln_ceil(exp), (exp as f64).ln().ceil() as usize);
         }
     }
 }
