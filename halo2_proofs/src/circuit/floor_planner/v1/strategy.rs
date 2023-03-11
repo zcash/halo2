@@ -213,8 +213,9 @@ pub fn slot_in_biggest_advice_first(
         advice_cols * shape.row_count()
     };
 
-    // This used to incorrectly use `sort_unstable_by_key` with non-unique keys, which is
-    // nondeterministic (in particular, it differs between 32-bit and 64-bit platforms).
+    // This used to incorrectly use `sort_unstable_by_key` with non-unique keys, which gave
+    // output that differed between 32-bit and 64-bit platforms, and potentially between Rust
+    // versions.
     // We now use `sort_by_cached_key` with non-unique keys, and rely on `region_shapes`
     // being sorted by region index (which we also rely on below to return `RegionStart`s
     // in the correct order).

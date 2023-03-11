@@ -11,7 +11,7 @@ and this project adheres to Rust's notion of
   standard library's [`slice::sort_unstable_by_key`]; while it is deterministic,
   it is not stable across targets or compiler versions. In particular, an edge
   case within the sorting algorithm differed between 32-bit and 64-bit targets.
-  This meant that some circuits (like the [Orchard circuit]) would be layed out
+  This meant that some circuits (like the [Orchard circuit]) would be laid out
   differently, resulting in incompatible verifying keys. This release makes a
   **breaking change** to the behaviour of `floor_planner::V1` to instead use a
   stable sort.
