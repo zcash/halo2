@@ -6,6 +6,25 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Breaking circuit changes
+- `halo2_proofs::circuit::floor_planner::V1` was relying internally on the Rust
+  standard library's [`slice::sort_unstable_by_key`]; while it is deterministic,
+  it is not stable across targets or compiler versions. In particular, an edge
+  case within the sorting algorithm differed between 32-bit and 64-bit targets.
+  This meant that some circuits (like the [Orchard circuit]) would be laid out
+  differently, resulting in incompatible verifying keys. This release makes a
+  **breaking change** to the behaviour of `floor_planner::V1` to instead use a
+  stable sort.
+  - To retain compatibility with the Orchard circuit as deployed in [Zcash NU5],
+    a new `floor-planner-v1-legacy-pdqsort` feature flag has been added. When
+    enabled, `floor_planner::V1` instead pins its behaviour to the version of
+    `slice::sort_unstable_by_key` from Rust 1.56.1, always matching how that
+    version behaved on 64-bit targets.
+
+[`slice::sort_unstable_by_key`]: https://doc.rust-lang.org/stable/std/primitive.slice.html#method.sort_unstable_by_key
+[Orchard circuit]: https://github.com/zcash/orchard/blob/0.3.0/src/circuit.rs
+[Zcash NU5]: https://zips.z.cash/zip-0252
+
 ### Added
 - The following structs now derive the `Eq` trait:
   - `halo2_proofs::dev`:
