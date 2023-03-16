@@ -180,7 +180,7 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
                     _ => None,
                 }) {
                 Some(Some(len)) => len,
-                _ => return Err(Error::Synthesis), // TODO better error
+                _ => return Err(Error::TableCellsNotAssigned),
             }
         };
 

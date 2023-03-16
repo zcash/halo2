@@ -36,6 +36,8 @@ pub enum Error {
     /// The instance sets up a copy constraint involving a column that has not been
     /// included in the permutation.
     ColumnNotInPermutation(Column<Any>),
+    /// A column in the table has unassigned cells.
+    TableCellsNotAssigned,
 }
 
 impl From<io::Error> for Error {
@@ -78,6 +80,7 @@ impl fmt::Display for Error {
                 "Column {:?} must be included in the permutation. Help: try applying `meta.enable_equalty` on the column",
                 column
             ),
+            Error::TableCellsNotAssigned => write!(f, "Table columns must be the same length")
         }
     }
 }
