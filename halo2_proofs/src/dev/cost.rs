@@ -506,3 +506,38 @@ impl<G: PrimeGroup> From<ProofSize<G>> for usize {
             + proof.polycomm.len(point, scalar)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use pasta_curves::{Eq, Fp};
+
+    use crate::circuit::SimpleFloorPlanner;
+
+    use super::*;
+
+    #[test]
+    fn circuit_cost_without_permutation() {
+        const K: u32 = 4;
+
+        struct MyCircuit;
+        impl Circuit<Fp> for MyCircuit {
+            type Config = ();
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                Self
+            }
+
+            fn configure(_meta: &mut ConstraintSystem<Fp>) -> Self::Config {}
+
+            fn synthesize(
+                &self,
+                _config: Self::Config,
+                _layouter: impl crate::circuit::Layouter<Fp>,
+            ) -> Result<(), Error> {
+                Ok(())
+            }
+        }
+        CircuitCost::<Eq, MyCircuit>::measure(K, &MyCircuit).proof_size(1);
+    }
+}
