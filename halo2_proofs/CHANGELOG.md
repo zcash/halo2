@@ -40,6 +40,8 @@ and this project adheres to Rust's notion of
     region. This method is only provided for convenience; it does not create any
     constraints. Callers still need to use `Region::assign_advice_from_instance`
     to constrain the values in their circuit.
+- `halo2_proofs::plonk`:
+  - `Error::TableCellsNotAssigned`
 
 ### Changed
 - Migrated to `ff 0.13`, `group 0.13`, `pasta_curves 0.5`.
