@@ -362,8 +362,11 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
 
             // Global permutation argument:
             // - chunks commitments per instance
-            // - 2*chunks + (chunks - 1) evals per instance
-            equality: ProofContribution::new(chunks, 3 * chunks - 1),
+            // - 2 * chunks + (chunks - 1) evals per instance
+            equality: ProofContribution::new(
+                chunks,
+                if chunks == 0 { chunks } else { 3 * chunks - 1 },
+            ),
 
             _marker: PhantomData::default(),
         }
