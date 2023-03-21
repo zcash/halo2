@@ -1146,6 +1146,9 @@
 <a href="#1131" id="1131">1131</a>
 <a href="#1132" id="1132">1132</a>
 <a href="#1133" id="1133">1133</a>
+<a href="#1134" id="1134">1134</a>
+<a href="#1135" id="1135">1135</a>
+<a href="#1136" id="1136">1136</a>
 </pre><pre class="rust"><code><span class="doccomment">//! Tools for developing circuits.
 
 </span><span class="kw">use </span>std::collections::HashMap;
@@ -1175,6 +1178,9 @@
 
 <span class="kw">mod </span>gates;
 <span class="kw">pub use </span>gates::CircuitGates;
+
+<span class="kw">mod </span>tfp;
+<span class="kw">pub use </span>tfp::TracingFloorPlanner;
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;dev-graph&quot;</span>)]
 </span><span class="kw">mod </span>graph;

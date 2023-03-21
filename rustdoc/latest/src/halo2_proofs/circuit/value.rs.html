@@ -711,6 +711,11 @@
 <a href="#696" id="696">696</a>
 <a href="#697" id="697">697</a>
 <a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
 </pre><pre class="rust"><code><span class="kw">use </span>std::borrow::Borrow;
 <span class="kw">use </span>std::ops::{Add, Mul, Neg, Sub};
 
@@ -774,6 +779,11 @@
         Value {
             inner: <span class="self">self</span>.inner.as_mut(),
         }
+    }
+
+    <span class="doccomment">/// ONLY FOR INTERNAL CRATE USAGE; DO NOT EXPOSE!
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>into_option(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt; {
+        <span class="self">self</span>.inner
     }
 
     <span class="doccomment">/// Enforces an assertion on the contained value, if known.
