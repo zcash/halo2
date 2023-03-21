@@ -1,10 +1,13 @@
 //! Implementations of common table layouters.
 
-use std::{collections::HashMap, fmt};
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug},
+};
 
 use ff::Field;
 
-use crate::plonk::{Assigned, Assignment, Error, TableColumn};
+use crate::plonk::{Assigned, Assignment, Error, TableColumn, TableError};
 
 use super::Value;
 
@@ -72,7 +75,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
         to: &'v mut (dyn FnMut() -> Value<Assigned<F>> + 'v),
     ) -> Result<(), Error> {
         if self.used_columns.contains(&column) {
-            return Err(Error::Synthesis); // TODO better error
+            return Err(Error::TableError(TableError::UsedColumn(column)));
         }
 
         let entry = self.default_and_assigned.entry(column).or_default();
@@ -94,7 +97,13 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
             (true, 0) => entry.0 = Some(value),
             // Since there is already an existing default value for this table column,
             // the caller should not be attempting to assign another value at offset 0.
-            (false, 0) => return Err(Error::Synthesis), // TODO better error
+            (false, 0) => {
+                return Err(Error::TableError(TableError::OverwriteDefault(
+                    column,
+                    format!("{:?}", entry.0.unwrap()),
+                    format!("{:?}", value),
+                )))
+            }
             _ => (),
         }
         if entry.1.len() <= offset {
@@ -106,23 +115,293 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
     }
 }
 
-pub(crate) fn compute_table_lengths<F>(
+pub(crate) fn compute_table_lengths<F: Debug>(
     default_and_assigned: &HashMap<TableColumn, (DefaultTableValue<F>, Vec<bool>)>,
 ) -> Result<usize, Error> {
-    match default_and_assigned
-        .values()
-        .map(|(_, assigned)| {
+    let column_lengths: Result<Vec<_>, Error> = default_and_assigned
+        .iter()
+        .map(|(col, (default_value, assigned))| {
+            if default_value.is_none() || assigned.is_empty() {
+                return Err(Error::TableError(TableError::ColumnNotAssigned(*col)));
+            }
             if assigned.iter().all(|b| *b) {
-                Some(assigned.len())
+                // All values in the column have been assigned
+                Ok((col, assigned.len()))
             } else {
-                None
+                Err(Error::TableError(TableError::ColumnNotAssigned(*col)))
             }
         })
-        .reduce(|acc, item| match (acc, item) {
-            (Some(a), Some(b)) if a == b => Some(a),
-            _ => None,
-        }) {
-        Some(Some(len)) => Ok(len),
-        _ => return Err(Error::Synthesis), // TODO better error
+        .collect();
+    let column_lengths = column_lengths?;
+    column_lengths
+        .into_iter()
+        .try_fold((None, 0), |acc, (col, col_len)| {
+            if acc.1 == 0 || acc.1 == col_len {
+                Ok((Some(*col), col_len))
+            } else {
+                let mut cols = [(*col, col_len), (acc.0.unwrap(), acc.1)];
+                cols.sort();
+                Err(Error::TableError(TableError::UnevenColumnLengths(
+                    cols[0], cols[1],
+                )))
+            }
+        })
+        .map(|col_len| col_len.1)
+}
+
+#[cfg(test)]
+mod tests {
+    use pasta_curves::Fp;
+
+    use crate::{
+        circuit::{Layouter, SimpleFloorPlanner},
+        dev::MockProver,
+        plonk::{Circuit, ConstraintSystem},
+        poly::Rotation,
+    };
+
+    use super::*;
+
+    #[test]
+    fn table_no_default() {
+        const K: u32 = 4;
+
+        #[derive(Clone)]
+        struct FaultyCircuitConfig {
+            table: TableColumn,
+        }
+
+        struct FaultyCircuit;
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                Self
+            }
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let table = meta.lookup_table_column();
+
+                meta.lookup(|cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+                    vec![(a, table)]
+                });
+
+                Self::Config { table }
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
+            ) -> Result<(), Error> {
+                layouter.assign_table(
+                    || "duplicate assignment",
+                    |mut table| {
+                        table.assign_cell(
+                            || "default",
+                            config.table,
+                            1,
+                            || Value::known(Fp::zero()),
+                        )
+                    },
+                )
+            }
+        }
+
+        let prover = MockProver::run(K, &FaultyCircuit, vec![]);
+        assert_eq!(
+            format!("{}", prover.unwrap_err()),
+            "TableColumn { inner: Column { index: 0, column_type: Fixed } } not fully assigned. Help: assign a value at offset 0."
+        );
+    }
+
+    #[test]
+    fn table_overwrite_default() {
+        const K: u32 = 4;
+
+        #[derive(Clone)]
+        struct FaultyCircuitConfig {
+            table: TableColumn,
+        }
+
+        struct FaultyCircuit;
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                Self
+            }
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let table = meta.lookup_table_column();
+
+                meta.lookup(|cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+                    vec![(a, table)]
+                });
+
+                Self::Config { table }
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
+            ) -> Result<(), Error> {
+                layouter.assign_table(
+                    || "duplicate assignment",
+                    |mut table| {
+                        table.assign_cell(
+                            || "default",
+                            config.table,
+                            0,
+                            || Value::known(Fp::zero()),
+                        )?;
+                        table.assign_cell(
+                            || "duplicate",
+                            config.table,
+                            0,
+                            || Value::known(Fp::zero()),
+                        )
+                    },
+                )
+            }
+        }
+
+        let prover = MockProver::run(K, &FaultyCircuit, vec![]);
+        assert_eq!(
+            format!("{}", prover.unwrap_err()),
+            "Attempted to overwrite default value Value { inner: Some(Trivial(0x0000000000000000000000000000000000000000000000000000000000000000)) } with Value { inner: Some(Trivial(0x0000000000000000000000000000000000000000000000000000000000000000)) } in TableColumn { inner: Column { index: 0, column_type: Fixed } }"
+        );
+    }
+
+    #[test]
+    fn table_reuse_column() {
+        const K: u32 = 4;
+
+        #[derive(Clone)]
+        struct FaultyCircuitConfig {
+            table: TableColumn,
+        }
+
+        struct FaultyCircuit;
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                Self
+            }
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let table = meta.lookup_table_column();
+
+                meta.lookup(|cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+                    vec![(a, table)]
+                });
+
+                Self::Config { table }
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
+            ) -> Result<(), Error> {
+                layouter.assign_table(
+                    || "first assignment",
+                    |mut table| {
+                        table.assign_cell(
+                            || "default",
+                            config.table,
+                            0,
+                            || Value::known(Fp::zero()),
+                        )
+                    },
+                )?;
+
+                layouter.assign_table(
+                    || "reuse",
+                    |mut table| {
+                        table.assign_cell(|| "reuse", config.table, 1, || Value::known(Fp::zero()))
+                    },
+                )
+            }
+        }
+
+        let prover = MockProver::run(K, &FaultyCircuit, vec![]);
+        assert_eq!(
+            format!("{}", prover.unwrap_err()),
+            "TableColumn { inner: Column { index: 0, column_type: Fixed } } has already been used"
+        );
+    }
+
+    #[test]
+    fn table_uneven_columns() {
+        const K: u32 = 4;
+
+        #[derive(Clone)]
+        struct FaultyCircuitConfig {
+            table: (TableColumn, TableColumn),
+        }
+
+        struct FaultyCircuit;
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                Self
+            }
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let table = (meta.lookup_table_column(), meta.lookup_table_column());
+                meta.lookup(|cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+
+                    vec![(a.clone(), table.0), (a, table.1)]
+                });
+
+                Self::Config { table }
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
+            ) -> Result<(), Error> {
+                layouter.assign_table(
+                    || "table with uneven columns",
+                    |mut table| {
+                        table.assign_cell(|| "", config.table.0, 0, || Value::known(Fp::zero()))?;
+                        table.assign_cell(|| "", config.table.0, 1, || Value::known(Fp::zero()))?;
+
+                        table.assign_cell(|| "", config.table.1, 0, || Value::known(Fp::zero()))
+                    },
+                )
+            }
+        }
+
+        let prover = MockProver::run(K, &FaultyCircuit, vec![]);
+        assert_eq!(
+            format!("{}", prover.unwrap_err()),
+            "TableColumn { inner: Column { index: 0, column_type: Fixed } } has length 2 while TableColumn { inner: Column { index: 1, column_type: Fixed } } has length 1"
+        );
     }
 }
