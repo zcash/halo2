@@ -362,8 +362,11 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
 
             // Global permutation argument:
             // - chunks commitments per instance
-            // - 2*chunks + (chunks - 1) evals per instance
-            equality: ProofContribution::new(chunks, 3 * chunks - 1),
+            // - 2 * chunks + (chunks - 1) evals per instance
+            equality: ProofContribution::new(
+                chunks,
+                if chunks == 0 { chunks } else { 3 * chunks - 1 },
+            ),
 
             _marker: PhantomData::default(),
         }
@@ -504,5 +507,40 @@ impl<G: PrimeGroup> From<ProofSize<G>> for usize {
             + proof.vanishing.len(point, scalar)
             + proof.multiopen.len(point, scalar)
             + proof.polycomm.len(point, scalar)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use pasta_curves::{Eq, Fp};
+
+    use crate::circuit::SimpleFloorPlanner;
+
+    use super::*;
+
+    #[test]
+    fn circuit_cost_without_permutation() {
+        const K: u32 = 4;
+
+        struct MyCircuit;
+        impl Circuit<Fp> for MyCircuit {
+            type Config = ();
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                Self
+            }
+
+            fn configure(_meta: &mut ConstraintSystem<Fp>) -> Self::Config {}
+
+            fn synthesize(
+                &self,
+                _config: Self::Config,
+                _layouter: impl crate::circuit::Layouter<Fp>,
+            ) -> Result<(), Error> {
+                Ok(())
+            }
+        }
+        CircuitCost::<Eq, MyCircuit>::measure(K, &MyCircuit).proof_size(1);
     }
 }
