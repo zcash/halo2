@@ -5,7 +5,7 @@ use ff::Field;
 use crate::{
     circuit::{
         layouter::{RegionColumn, RegionLayouter, RegionShape},
-        table_layouter::SimpleTableLayouter,
+        table_layouter::{compute_table_lengths, SimpleTableLayouter},
         Cell, Layouter, Region, RegionIndex, RegionStart, Table, TableLayouter, Value,
     },
     plonk::{
@@ -306,24 +306,7 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> {
 
         // Check that all table columns have the same length `first_unused`,
         // and all cells up to that length are assigned.
-        let first_unused = {
-            match default_and_assigned
-                .values()
-                .map(|(_, assigned)| {
-                    if assigned.iter().all(|b| *b) {
-                        Some(assigned.len())
-                    } else {
-                        None
-                    }
-                })
-                .reduce(|acc, item| match (acc, item) {
-                    (Some(a), Some(b)) if a == b => Some(a),
-                    _ => None,
-                }) {
-                Some(Some(len)) => len,
-                _ => return Err(Error::Synthesis), // TODO better error
-            }
-        };
+        let first_unused = compute_table_lengths(&default_and_assigned)?;
 
         // Record these columns so that we can prevent them from being used again.
         for column in default_and_assigned.keys() {

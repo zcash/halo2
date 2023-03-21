@@ -105,3 +105,24 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
         Ok(())
     }
 }
+
+pub(crate) fn compute_table_lengths<F>(
+    default_and_assigned: &HashMap<TableColumn, (DefaultTableValue<F>, Vec<bool>)>,
+) -> Result<usize, Error> {
+    match default_and_assigned
+        .values()
+        .map(|(_, assigned)| {
+            if assigned.iter().all(|b| *b) {
+                Some(assigned.len())
+            } else {
+                None
+            }
+        })
+        .reduce(|acc, item| match (acc, item) {
+            (Some(a), Some(b)) if a == b => Some(a),
+            _ => None,
+        }) {
+        Some(Some(len)) => Ok(len),
+        _ => return Err(Error::Synthesis), // TODO better error
+    }
+}
