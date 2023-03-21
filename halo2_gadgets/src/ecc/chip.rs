@@ -532,6 +532,24 @@ where
         )
     }
 
+    /// Performs variable-base sign-scalar multiplication, returning `[sign] point`
+    /// `sign` must be in {-1, 1}.
+    fn mul_sign(
+        &self,
+        layouter: &mut impl Layouter<pallas::Base>,
+        sign: &AssignedCell<pallas::Base, pallas::Base>,
+        point: &Self::Point,
+    ) -> Result<Self::Point, Error> {
+        // Multiply point by sign, using the same gate as mul_fixed::short.
+        // This also constrains sign to be in {-1, 1}.
+        let config_short = self.config().mul_fixed_short.clone();
+        config_short.assign_scalar_sign(
+            layouter.namespace(|| "variable-base sign-scalar mul"),
+            sign,
+            point,
+        )
+    }
+
     fn mul(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,
