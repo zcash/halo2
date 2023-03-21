@@ -63,6 +63,11 @@ impl<V> Value<V> {
         }
     }
 
+    /// ONLY FOR INTERNAL CRATE USAGE; DO NOT EXPOSE!
+    pub(crate) fn into_option(self) -> Option<V> {
+        self.inner
+    }
+
     /// Enforces an assertion on the contained value, if known.
     ///
     /// The assertion is ignored if `self` is [`Value::unknown()`]. Do not try to enforce
