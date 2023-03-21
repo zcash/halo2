@@ -57,6 +57,7 @@ and this project adheres to Rust's notion of
       `Column<Fixed>` variant.
     - `query_fixed` now no longer takes a `Rotation` argument,
       and can only be used to query the current rotation.
+  - `Error` is now a [`non_exhaustive`](https://doc.rust-lang.org/reference/attributes/type_system.html) type.
 
 ## [0.2.0] - 2022-06-23
 ### Added
