@@ -6,6 +6,8 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.3.0] - 2023-03-21
 ### Breaking circuit changes
 - `halo2_proofs::circuit::floor_planner::V1` was relying internally on the Rust
   standard library's [`slice::sort_unstable_by_key`]; while it is deterministic,
@@ -28,6 +30,9 @@ and this project adheres to Rust's notion of
 ### Added
 - The following structs now derive the `Eq` trait:
   - `halo2_proofs::dev`:
+    - `TracingFloorPlanner` extension type which is a floor planner that uses
+      `tracing` spans and events for instrumenting your circuit synthesis
+       during keygen and proving.
     - `failure::FailureLocation`
     - `failure::VerifyFailure`
     - `metadata::Gate`
