@@ -46,7 +46,7 @@ pub trait Chip<F: Field>: Sized {
 }
 
 /// Index of a region in a layouter
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RegionIndex(usize);
 
 impl From<usize> for RegionIndex {
@@ -82,7 +82,7 @@ impl std::ops::Deref for RegionStart {
 }
 
 /// A pointer to a cell within a circuit.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Cell {
     /// Identifies the region in which this cell resides.
     region_index: RegionIndex,

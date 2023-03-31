@@ -12,7 +12,7 @@ use crate::plonk::{Assigned, Error};
 ///   helps to ensure that unwitnessed values correctly propagate.
 /// - It provides pass-through implementations of common traits such as `Add` and `Mul`,
 ///   for improved usability.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Value<V> {
     inner: Option<V>,
 }
