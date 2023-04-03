@@ -118,6 +118,17 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
 /// Performs a small multi-exponentiation operation.
 /// Uses the double-and-add algorithm with doublings shared across points.
 pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
+    #[cfg(feature = "counter")]
+    {
+        use crate::MSM_COUNTER;
+        let _ = *MSM_COUNTER
+            .lock()
+            .unwrap()
+            .entry(coeffs.len())
+            .and_modify(|cnt| *cnt += 1)
+            .or_insert(1);
+    }
+
     let coeffs: Vec<_> = coeffs.iter().map(|a| a.to_repr()).collect();
     let mut acc = C::Curve::identity();
 
@@ -145,6 +156,17 @@ pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::C
 ///
 /// This will use multithreading if beneficial.
 pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
+    #[cfg(feature = "counter")]
+    {
+        use crate::MSM_COUNTER;
+        let _ = *MSM_COUNTER
+            .lock()
+            .unwrap()
+            .entry(coeffs.len())
+            .and_modify(|cnt| *cnt += 1)
+            .or_insert(1);
+    }
+
     assert_eq!(coeffs.len(), bases.len());
 
     let num_threads = multicore::current_num_threads();
@@ -184,6 +206,17 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
 ///
 /// This will use multithreading if beneficial.
 pub fn best_fft<Scalar: Field, G: FftGroup<Scalar>>(a: &mut [G], omega: Scalar, log_n: u32) {
+    #[cfg(feature = "counter")]
+    {
+        use crate::FFT_COUNTER;
+        let _ = *FFT_COUNTER
+            .lock()
+            .unwrap()
+            .entry(a.len())
+            .and_modify(|cnt| *cnt += 1)
+            .or_insert(1);
+    }
+
     fn bitreverse(mut n: usize, l: usize) -> usize {
         let mut r = 0;
         for _ in 0..l {
