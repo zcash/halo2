@@ -1188,7 +1188,9 @@ impl<F: Field> ConstraintSystem<F> {
     /// larger amount than actually needed. This can be used, for example, to
     /// force the permutation argument to involve more columns in the same set.
     pub fn set_minimum_degree(&mut self, degree: usize) {
-        self.minimum_degree = Some(degree);
+        self.minimum_degree = self
+            .minimum_degree
+            .map_or(Some(degree), |min_degree| Some(max(min_degree, degree)));
     }
 
     /// Creates a new gate.
