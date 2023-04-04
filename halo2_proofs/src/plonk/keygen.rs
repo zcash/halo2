@@ -210,6 +210,7 @@ where
         _marker: std::marker::PhantomData,
     };
 
+    #[cfg(not(feature = "counter"))]
     // Synthesize the circuit to obtain URS
     ConcreteCircuit::FloorPlanner::synthesize(
         &mut assembly,
@@ -271,6 +272,7 @@ where
         _marker: std::marker::PhantomData,
     };
 
+    #[cfg(not(feature = "counter"))]
     // Synthesize the circuit to obtain URS
     ConcreteCircuit::FloorPlanner::synthesize(
         &mut assembly,

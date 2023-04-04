@@ -165,6 +165,8 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
             .entry(coeffs.len())
             .and_modify(|cnt| *cnt += 1)
             .or_insert(1);
+
+        return C::Curve::generator();
     }
 
     assert_eq!(coeffs.len(), bases.len());
@@ -215,6 +217,8 @@ pub fn best_fft<Scalar: Field, G: FftGroup<Scalar>>(a: &mut [G], omega: Scalar, 
             .entry(a.len())
             .and_modify(|cnt| *cnt += 1)
             .or_insert(1);
+
+        return;
     }
 
     fn bitreverse(mut n: usize, l: usize) -> usize {

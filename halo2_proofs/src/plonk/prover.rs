@@ -290,6 +290,7 @@ pub fn create_proof<
                 _marker: std::marker::PhantomData,
             };
 
+            #[cfg(not(feature = "counter"))]
             // Synthesize the circuit to obtain the witness and other information.
             ConcreteCircuit::FloorPlanner::synthesize(
                 &mut witness,
@@ -741,6 +742,8 @@ pub fn create_proof<
         // reset counters at the end of the proving
         *MSM_COUNTER.lock().unwrap() = BTreeMap::new();
         *FFT_COUNTER.lock().unwrap() = BTreeMap::new();
+
+        return Ok(());
     }
 
     multiopen::create_proof(params, rng, transcript, instances).map_err(|_| Error::Opening)
