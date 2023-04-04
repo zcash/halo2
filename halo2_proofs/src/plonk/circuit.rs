@@ -1209,7 +1209,6 @@ impl<F: Field> ConstraintSystem<F> {
                     panic!("selector expression containing simple selector supplied to lookup argument");
                 }
 
-                // TODO is this needed
                 if input.contains_simple_selector() {
                     panic!("input expression containing simple selector supplied to lookup argument");
                 }
