@@ -6,6 +6,7 @@ use std::fmt;
 
 use ff::Field;
 
+pub use super::table_layouter::TableLayouter;
 use super::{Cell, RegionIndex, Value};
 use crate::plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector};
 
