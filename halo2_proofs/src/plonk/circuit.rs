@@ -311,7 +311,7 @@ pub struct InstanceQuery {
 /// they cannot simultaneously be used as general fixed columns.
 ///
 /// [`Layouter::assign_table`]: crate::circuit::Layouter::assign_table
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct TableColumn {
     /// The fixed column that this table column is stored in.
     ///
