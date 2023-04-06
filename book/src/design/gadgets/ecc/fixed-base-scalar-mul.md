@@ -33,16 +33,29 @@ Decompose the base field element $\alpha$ into three-bit windows, and range-cons
 
 If $k_{0..84}$ is witnessed directly then no issue of canonicity arises. However, because the scalar is given as a base field element here, care must be taken to ensure a canonical representation, since $2^{255} > p$. That is, we must check that $0 \leq \alpha < p,$ where $p$ the is Pallas base field modulus $$p = 2^{254} + t_p = 2^{254} + 45560315531419706090280762371685220353.$$ Note that $t_p < 2^{130}.$
 
-To do this, we decompose $\alpha$ into three pieces: $$\alpha = \alpha_0 \text{ (252 bits) } \,||\, \alpha_1 \text{ (2 bits) } \,||\, \alpha_2 \text{ (1 bit) }.$$
+#### Layout
+
+$$
+\begin{array}{|c|c|c|c|}
+        a_0        &      a_1      &        a_2     & q_\texttt{mul\_fixed\_base\_field} \\\hline
+       \alpha      &               & \alpha_{z[84]} &                    0               \\\hline
+     \alpha'_0     &   \alpha_1    &    \alpha_2    &                    1               \\\hline
+{\alpha'_0}_{z[13]}& \alpha_{z[44]}& \alpha_{z[43]} &                    0               \\\hline
+\end{array}
+$$
+
+
+#### Constraints
+To check the canonicity of $\alpha$, we decompose it into three pieces: $$\alpha = \alpha_0 \text{ (252 bits) } \,||\, \alpha_1 \text{ (2 bits) } \,||\, \alpha_2 \text{ (1 bit) }.$$
 
 We check the correctness of this decomposition by:
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-5 & q_\text{canon-base-field} \cdot \RangeCheck{\alpha_1}{2^2} = 0 \\\hline
-3 & q_\text{canon-base-field} \cdot \BoolCheck{\alpha_2} = 0 \\\hline
-2 & q_\text{canon-base-field} \cdot \left(z_{84} - (\alpha_1 + \alpha_2 \cdot 2^2)\right) = 0 \\\hline
+5 & q_\texttt{canon\_base\_field} \cdot \RangeCheck{\alpha_1}{2^2} = 0 \\\hline
+3 & q_\texttt{canon\_base\_field} \cdot \BoolCheck{\alpha_2} = 0 \\\hline
+2 & q_\texttt{canon\_base\_field} \cdot \left(z_{84} - (\alpha_1 + \alpha_2 \cdot 2^2)\right) = 0 \\\hline
 \end{array}
 $$
 If the MSB $\alpha_2 = 0$ is not set, then $\alpha < 2^{254} < p.$ However, in the case where $\alpha_2 = 1$, we must check:
@@ -67,11 +80,11 @@ $$
 \begin{array}{|c|l|l|}
 \hline
 \text{Degree} & \text{Constraint} & \text{Comment} \\\hline
-2 & q_\text{canon-base-field} \cdot (\alpha_0' - (\alpha_0 + 2^{130} - t_\mathbb{P})) = 0 \\\hline
-3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot \alpha_1 = 0 & \alpha_2 = 1 \implies \alpha_1 = 0 \\\hline
-3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot \textsf{alpha\_0\_hi\_120} = 0 & \text{Constrain $\alpha_0$ to be a $132$-bit value} \\\hline
-4 & q_\text{canon-base-field} \cdot \alpha_2 \cdot \BoolCheck{k_{43}} = 0 & \text{Constrain $\alpha_0[130..\!\!=\!\!131]$ to $0$}  \\\hline
-3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot z_{13}(\texttt{lookup}(\alpha_0', 13)) = 0 & \alpha_2 = 1 \implies 0 \leq \alpha'_0 < 2^{130}\\\hline
+2 & q_\texttt{canon\_base\_field} \cdot (\alpha_0' - (\alpha_0 + 2^{130} - t_\mathbb{P})) = 0 \\\hline
+3 & q_\texttt{canon\_base\_field} \cdot \alpha_2 \cdot \alpha_1 = 0 & \alpha_2 = 1 \implies \alpha_1 = 0 \\\hline
+3 & q_\texttt{canon\_base\_field} \cdot \alpha_2 \cdot \textsf{alpha\_0\_hi\_120} = 0 & \text{Constrain $\alpha_0$ to be a $132$-bit value} \\\hline
+4 & q_\texttt{canon\_base\_field} \cdot \alpha_2 \cdot \BoolCheck{k_{43}} = 0 & \text{Constrain $\alpha_0[130..\!\!=\!\!131]$ to $0$}  \\\hline
+3 & q_\texttt{canon\_base\_field} \cdot \alpha_2 \cdot z_{13}(\texttt{lookup}(\alpha_0', 13)) = 0 & \alpha_2 = 1 \implies 0 \leq \alpha'_0 < 2^{130}\\\hline
 \end{array}
 $$
 ### Short signed scalar
