@@ -1022,7 +1022,7 @@ impl<F: Field + Ord + From<u64>> MockProver<F> {
 #[cfg(test)]
 mod tests {
     use group::ff::Field;
-    use pasta_curves::Fp;
+    use pasta_curves::{EqAffine, Fp};
 
     use super::{FailureLocation, MockProver, VerifyFailure};
     use crate::{
@@ -1827,5 +1827,116 @@ mod tests {
                 .verify()
                 .unwrap();
         }
+    }
+
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    #[test]
+    fn failing() {
+        struct FailingCircuit {}
+        #[derive(Clone)]
+        struct FailingConfig {
+            first_input: Column<Advice>,
+            second_input: Column<Advice>,
+            is_first_table: Selector,
+            is_second_table: Selector,
+            first_table: crate::plonk::DynamicTable,
+            second_table: crate::plonk::DynamicTable,
+        }
+        impl Circuit<Fp> for FailingCircuit {
+            type Config = FailingConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let first_input = meta.advice_column();
+                let second_input = meta.advice_column();
+                let first_table_vals = meta.advice_column();
+                // Reuse table column
+                let second_table_vals = first_table_vals;
+                let is_first_table = meta.complex_selector();
+                let is_second_table = meta.complex_selector();
+                let first_table =
+                    meta.create_dynamic_table("first_table", &[], &[first_table_vals]);
+                let second_table =
+                    meta.create_dynamic_table("second_table", &[], &[second_table_vals]);
+
+                meta.lookup_dynamic(&first_table, |cells| (is_first_table, vec![]));
+
+                meta.lookup_dynamic(&second_table, |cells| (is_second_table, vec![]));
+
+                FailingConfig {
+                    first_input,
+                    second_input,
+                    is_first_table,
+                    is_second_table,
+                    first_table,
+                    second_table,
+                }
+            }
+
+            fn without_witnesses(&self) -> Self {
+                Self {}
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
+            ) -> Result<(), Error> {
+                layouter.assign_region(
+                    || "",
+                    |mut region| {
+                        config.is_first_table.enable(&mut region, 0)?;
+
+                        Ok(())
+                    },
+                )?;
+
+                layouter.assign_region(
+                    || "",
+                    |mut region| {
+                        config.is_second_table.enable(&mut region, 0)?;
+
+                        Ok(())
+                    },
+                )?;
+
+                layouter.assign_region(
+                    || "table",
+                    |mut region| {
+                        region.assign_advice(
+                            || "",
+                            config.first_table.columns()[0].try_into().unwrap(),
+                            0,
+                            || Value::known(Fp::from(1)),
+                        )?;
+                        config.first_table.add_row(&mut region, 0)?;
+
+                        Ok(())
+                    },
+                )?;
+
+                layouter.assign_region(
+                    || "table",
+                    |mut region| {
+                        region.assign_advice(
+                            || "",
+                            config.second_table.columns()[0].try_into().unwrap(),
+                            0,
+                            || Value::known(Fp::from(1)),
+                        )?;
+                        config.second_table.add_row(&mut region, 0)?;
+
+                        Ok(())
+                    },
+                )?;
+
+                Ok(())
+            }
+        }
+
+        const K: u32 = 3;
+        MockProver::run(K, &FailingCircuit {}, vec![])
+            .unwrap()
+            .assert_satisfied();
     }
 }
