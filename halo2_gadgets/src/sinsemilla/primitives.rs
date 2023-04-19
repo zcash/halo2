@@ -200,6 +200,21 @@ impl CommitDomain {
         }
     }
 
+    /// Constructs a new `CommitDomain` from `hash_personalization` a personalization for hashing
+    /// and `blind_personalization` another personalization for blinding.
+    pub fn new_with_two_personalizations(
+        hash_personalization: &str,
+        blind_personalization: &str,
+    ) -> Self {
+        let m_prefix = format!("{}-M", hash_personalization);
+        let r_prefix = format!("{}-r", blind_personalization);
+        let hasher_r = pallas::Point::hash_to_curve(&r_prefix);
+        CommitDomain {
+            M: HashDomain::new(&m_prefix),
+            R: hasher_r(&[]),
+        }
+    }
+
     /// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
     ///
     /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
