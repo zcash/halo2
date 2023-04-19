@@ -184,7 +184,8 @@ impl HashDomain {
 #[derive(Debug)]
 #[allow(non_snake_case)]
 pub struct CommitDomain {
-    M: HashDomain,
+    /// A domain in which $\mathsf{SinsemillaHashToPoint}$ and $\mathsf{SinsemillaHash}$ can be used
+    pub M: HashDomain,
     R: pallas::Point,
 }
 
@@ -227,6 +228,19 @@ impl CommitDomain {
         // We use complete addition for the blinding factor.
         CtOption::<pallas::Point>::from(self.M.hash_to_point_inner(msg))
             .map(|p| p + Wnaf::new().scalar(r).base(self.R))
+    }
+
+    /// Returns `SinsemillaCommit_r(personalization, msg) = hash_point + \[r\]R`
+    /// where `SinsemillaHash(personalization, msg) = hash_point`
+    /// and `R` is derived from the `personalization`.
+    #[allow(non_snake_case)]
+    pub fn commit_from_hash_point(
+        &self,
+        hash_point: CtOption<pallas::Point>,
+        r: &pallas::Scalar,
+    ) -> CtOption<pallas::Point> {
+        // We use complete addition for the blinding factor.
+        hash_point.map(|p| p + Wnaf::new().scalar(r).base(self.R))
     }
 
     /// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
@@ -319,5 +333,33 @@ mod tests {
             let actual = SINSEMILLA_S[j as usize];
             assert_eq!(computed, actual);
         }
+    }
+
+    #[test]
+    fn commit_in_several_steps() {
+        use rand::{rngs::OsRng, Rng};
+
+        use ff::Field;
+
+        use crate::sinsemilla::primitives::CommitDomain;
+
+        let domain = CommitDomain::new("z.cash:ZSA-NoteCommit");
+
+        let mut os_rng = OsRng::default();
+        let msg: Vec<bool> = (0..36).map(|_| os_rng.gen::<bool>()).collect();
+
+        let rcm = pallas::Scalar::random(&mut os_rng);
+
+        // Evaluate the commitment with commit function
+        let commit1 = domain.commit(msg.clone().into_iter(), &rcm);
+
+        // Evaluate the commitment with the following steps
+        // 1. hash msg
+        // 2. evaluate the commitment from the hash point
+        let hash_point = domain.M.hash_to_point(msg.into_iter());
+        let commit2 = domain.commit_from_hash_point(hash_point, &rcm);
+
+        // Test equality
+        assert_eq!(commit1.unwrap(), commit2.unwrap());
     }
 }
