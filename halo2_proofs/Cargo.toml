@@ -79,6 +79,7 @@ dev-graph = ["plotters", "tabbycat"]
 gadget-traces = ["backtrace"]
 sanity-checks = []
 batch = ["rand_core/getrandom"]
+circuit-params = []
 
 [lib]
 bench = false

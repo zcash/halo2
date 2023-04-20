@@ -49,6 +49,7 @@ bench = false
 
 [features]
 dev-graph = ["halo2_proofs/dev-graph", "plotters"]
+circuit-params = ["halo2_proofs/circuit-params"]
 test-dependencies = ["proptest"]
 unstable = []
 

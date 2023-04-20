@@ -410,6 +410,8 @@ mod tests {
         impl<F: PrimeFieldBits> Circuit<F> for MyCircuit<F> {
             type Config = LookupRangeCheckConfig<F, K>;
             type FloorPlanner = SimpleFloorPlanner;
+            #[cfg(feature = "circuit-params")]
+            type Params = ();
 
             fn without_witnesses(&self) -> Self {
                 *self
@@ -506,6 +508,8 @@ mod tests {
         impl<F: PrimeFieldBits> Circuit<F> for MyCircuit<F> {
             type Config = LookupRangeCheckConfig<F, K>;
             type FloorPlanner = SimpleFloorPlanner;
+            #[cfg(feature = "circuit-params")]
+            type Params = ();
 
             fn without_witnesses(&self) -> Self {
                 MyCircuit {

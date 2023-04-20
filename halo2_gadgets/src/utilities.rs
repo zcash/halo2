@@ -271,6 +271,8 @@ mod tests {
         impl<const RANGE: usize> Circuit<pallas::Base> for MyCircuit<RANGE> {
             type Config = Config;
             type FloorPlanner = SimpleFloorPlanner;
+            #[cfg(feature = "circuit-params")]
+            type Params = ();
 
             fn without_witnesses(&self) -> Self {
                 MyCircuit(self.0)

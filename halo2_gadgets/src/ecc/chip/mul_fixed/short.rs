@@ -434,6 +434,8 @@ pub mod tests {
         impl Circuit<pallas::Base> for MyCircuit {
             type Config = EccConfig<TestFixedBases>;
             type FloorPlanner = SimpleFloorPlanner;
+            #[cfg(feature = "circuit-params")]
+            type Params = ();
 
             fn without_witnesses(&self) -> Self {
                 Self::default()
