@@ -201,14 +201,10 @@ impl CommitDomain {
         }
     }
 
-    /// Constructs a new `CommitDomain` from `hash_personalization` a personalization for hashing
-    /// and `blind_personalization` another personalization for blinding.
-    pub fn new_with_two_personalizations(
-        hash_personalization: &str,
-        blind_personalization: &str,
-    ) -> Self {
-        let m_prefix = format!("{}-M", hash_personalization);
-        let r_prefix = format!("{}-r", blind_personalization);
+    /// Constructs a new `CommitDomain` from different values for `hash_domain` and `blind_domain`
+    pub fn new_with_personalization(hash_domain: &str, blind_domain: &str) -> Self {
+        let m_prefix = format!("{}-M", hash_domain);
+        let r_prefix = format!("{}-r", blind_domain);
         let hasher_r = pallas::Point::hash_to_curve(&r_prefix);
         CommitDomain {
             M: HashDomain::new(&m_prefix),
@@ -230,7 +226,7 @@ impl CommitDomain {
             .map(|p| p + Wnaf::new().scalar(r).base(self.R))
     }
 
-    /// Returns `SinsemillaCommit_r(personalization, msg) = hash_point + \[r\]R`
+    /// Returns `SinsemillaCommit_r(personalization, msg) = hash_point + [r]R`
     /// where `SinsemillaHash(personalization, msg) = hash_point`
     /// and `R` is derived from the `personalization`.
     #[allow(non_snake_case)]
