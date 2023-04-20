@@ -159,7 +159,7 @@ pub enum VerifyFailure {
     /// A lookup input did not exist in its corresponding table.
     Lookup {
         /// The name of the lookup that is not satisfied.
-        name: &'static str,
+        name: String,
         /// The index of the lookup that is not satisfied. These indices are assigned in
         /// the order in which `ConstraintSystem::lookup` is called during
         /// `Circuit::configure`.
@@ -277,7 +277,7 @@ impl Debug for VerifyFailure {
                 };
 
                 let debug = ConstraintCaseDebug {
-                    constraint: *constraint,
+                    constraint: constraint.clone(),
                     location: location.clone(),
                     cell_values: cell_values
                         .iter()

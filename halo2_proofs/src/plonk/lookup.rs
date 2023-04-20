@@ -7,7 +7,7 @@ pub(crate) mod verifier;
 
 #[derive(Clone)]
 pub struct Argument<F: Field> {
-    pub(crate) name: &'static str,
+    pub(crate) name: String,
     pub(crate) input_expressions: Vec<Expression<F>>,
     pub(crate) table_expressions: Vec<Expression<F>>,
 }
@@ -25,10 +25,10 @@ impl<F: Field> Argument<F> {
     /// Constructs a new lookup argument.
     ///
     /// `table_map` is a sequence of `(input, table)` tuples.
-    pub fn new(name: &'static str, table_map: Vec<(Expression<F>, Expression<F>)>) -> Self {
+    pub fn new<S: AsRef<str>>(name: S, table_map: Vec<(Expression<F>, Expression<F>)>) -> Self {
         let (input_expressions, table_expressions) = table_map.into_iter().unzip();
         Argument {
-            name,
+            name: name.as_ref().to_string(),
             input_expressions,
             table_expressions,
         }

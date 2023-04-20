@@ -15,14 +15,14 @@ use crate::{
 
 #[derive(Debug)]
 struct Constraint {
-    name: &'static str,
+    name: String,
     expression: String,
     queries: BTreeSet<String>,
 }
 
 #[derive(Debug)]
 struct Gate {
-    name: &'static str,
+    name: String,
     constraints: Vec<Constraint>,
 }
 
@@ -122,13 +122,13 @@ impl CircuitGates {
             .gates
             .iter()
             .map(|gate| Gate {
-                name: gate.name(),
+                name: gate.name().to_string(),
                 constraints: gate
                     .polynomials()
                     .iter()
                     .enumerate()
                     .map(|(i, constraint)| Constraint {
-                        name: gate.constraint_name(i),
+                        name: gate.constraint_name(i).to_string(),
                         expression: constraint.evaluate(
                             &util::format_value,
                             &|selector| format!("S{}", selector.0),
