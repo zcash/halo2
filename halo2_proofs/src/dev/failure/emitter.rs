@@ -153,7 +153,7 @@ pub(super) fn expression_to_string<F: Field>(
                 label.clone()
             } else if query.rotation.0 == 0 {
                 // This is most likely a merged selector
-                format!("S{}", query.index)
+                format!("S{}", query.index.unwrap())
             } else {
                 // No idea how we'd get here...
                 format!("F{}@{}", query.column_index, query.rotation.0)

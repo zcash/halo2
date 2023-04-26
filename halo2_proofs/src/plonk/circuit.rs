@@ -1,19 +1,20 @@
-use core::cmp::max;
-use core::ops::{Add, Mul};
-use ff::Field;
-use std::collections::HashMap;
-use std::{
-    convert::TryFrom,
-    ops::{Neg, Sub},
-};
-
 use super::{lookup, permutation, Assigned, Error};
 use crate::dev::metadata;
 use crate::{
     circuit::{Layouter, Region, Value},
     poly::Rotation,
 };
+use core::cmp::max;
+use core::ops::{Add, Mul};
+use ff::Field;
 use sealed::SealedPhase;
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::fmt::{Debug, Formatter};
+use std::{
+    convert::TryFrom,
+    ops::{Neg, Sub},
+};
 
 mod compress_selectors;
 
@@ -21,6 +22,8 @@ mod compress_selectors;
 pub trait ColumnType:
     'static + Sized + Copy + std::fmt::Debug + PartialEq + Eq + Into<Any>
 {
+    /// Return expression from cell
+    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> Expression<F>;
 }
 
 /// A column with an index and type
@@ -44,6 +47,31 @@ impl<C: ColumnType> Column<C> {
     /// Type of this column.
     pub fn column_type(&self) -> &C {
         &self.column_type
+    }
+
+    /// Return expression from column at a relative position
+    pub fn query_cell<F: Field>(&self, at: Rotation) -> Expression<F> {
+        self.column_type.query_cell(self.index, at)
+    }
+
+    /// Return expression from column at the current row
+    pub fn cur<F: Field>(&self) -> Expression<F> {
+        self.query_cell(Rotation::cur())
+    }
+
+    /// Return expression from column at the next row
+    pub fn next<F: Field>(&self) -> Expression<F> {
+        self.query_cell(Rotation::next())
+    }
+
+    /// Return expression from column at the previous row
+    pub fn prev<F: Field>(&self) -> Expression<F> {
+        self.query_cell(Rotation::prev())
+    }
+
+    /// Return expression from column at the specified rotation
+    pub fn rot<F: Field>(&self, rotation: i32) -> Expression<F> {
+        self.query_cell(Rotation(rotation))
     }
 }
 
@@ -234,10 +262,56 @@ impl PartialOrd for Any {
     }
 }
 
-impl ColumnType for Advice {}
-impl ColumnType for Fixed {}
-impl ColumnType for Instance {}
-impl ColumnType for Any {}
+impl ColumnType for Advice {
+    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> Expression<F> {
+        Expression::Advice(AdviceQuery {
+            index: None,
+            column_index: index,
+            rotation: at,
+            phase: self.phase,
+        })
+    }
+}
+impl ColumnType for Fixed {
+    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> Expression<F> {
+        Expression::Fixed(FixedQuery {
+            index: None,
+            column_index: index,
+            rotation: at,
+        })
+    }
+}
+impl ColumnType for Instance {
+    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> Expression<F> {
+        Expression::Instance(InstanceQuery {
+            index: None,
+            column_index: index,
+            rotation: at,
+        })
+    }
+}
+impl ColumnType for Any {
+    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> Expression<F> {
+        match self {
+            Any::Advice(Advice { phase }) => Expression::Advice(AdviceQuery {
+                index: None,
+                column_index: index,
+                rotation: at,
+                phase: *phase,
+            }),
+            Any::Fixed => Expression::Fixed(FixedQuery {
+                index: None,
+                column_index: index,
+                rotation: at,
+            }),
+            Any::Instance => Expression::Instance(InstanceQuery {
+                index: None,
+                column_index: index,
+                rotation: at,
+            }),
+        }
+    }
+}
 
 impl From<Advice> for Any {
     fn from(advice: Advice) -> Any {
@@ -391,13 +465,18 @@ impl Selector {
     pub fn is_simple(&self) -> bool {
         self.1
     }
+
+    /// Return expression from selector
+    pub fn expr<F: Field>(&self) -> Expression<F> {
+        Expression::Selector(*self)
+    }
 }
 
 /// Query of fixed column at a certain relative location
 #[derive(Copy, Clone, Debug)]
 pub struct FixedQuery {
     /// Query index
-    pub(crate) index: usize,
+    pub(crate) index: Option<usize>,
     /// Column index
     pub(crate) column_index: usize,
     /// Rotation of this query
@@ -420,7 +499,7 @@ impl FixedQuery {
 #[derive(Copy, Clone, Debug)]
 pub struct AdviceQuery {
     /// Query index
-    pub(crate) index: usize,
+    pub(crate) index: Option<usize>,
     /// Column index
     pub(crate) column_index: usize,
     /// Rotation of this query
@@ -450,7 +529,7 @@ impl AdviceQuery {
 #[derive(Copy, Clone, Debug)]
 pub struct InstanceQuery {
     /// Query index
-    pub(crate) index: usize,
+    pub(crate) index: Option<usize>,
     /// Column index
     pub(crate) column_index: usize,
     /// Rotation of this query
@@ -513,6 +592,11 @@ impl Challenge {
     /// Phase of this challenge.
     pub fn phase(&self) -> u8 {
         self.phase.0
+    }
+
+    /// Return Expression
+    pub fn expr<F: Field>(&self) -> Expression<F> {
+        Expression::Challenge(*self)
     }
 }
 
@@ -727,6 +811,59 @@ pub enum Expression<F> {
 }
 
 impl<F: Field> Expression<F> {
+    /// Make side effects
+    pub fn query_cells(&mut self, cells: &mut VirtualCells<'_, F>) {
+        match self {
+            Expression::Constant(_) => (),
+            Expression::Selector(selector) => {
+                if !cells.queried_selectors.contains(selector) {
+                    cells.queried_selectors.push(*selector);
+                }
+            }
+            Expression::Fixed(query) => {
+                if query.index.is_none() {
+                    let col = Column {
+                        index: query.column_index,
+                        column_type: Fixed,
+                    };
+                    cells.queried_cells.push((col, query.rotation).into());
+                    query.index = Some(cells.meta.query_fixed_index(col, query.rotation));
+                }
+            }
+            Expression::Advice(query) => {
+                if query.index.is_none() {
+                    let col = Column {
+                        index: query.column_index,
+                        column_type: Advice { phase: query.phase },
+                    };
+                    cells.queried_cells.push((col, query.rotation).into());
+                    query.index = Some(cells.meta.query_advice_index(col, query.rotation));
+                }
+            }
+            Expression::Instance(query) => {
+                if query.index.is_none() {
+                    let col = Column {
+                        index: query.column_index,
+                        column_type: Instance,
+                    };
+                    cells.queried_cells.push((col, query.rotation).into());
+                    query.index = Some(cells.meta.query_instance_index(col, query.rotation));
+                }
+            }
+            Expression::Challenge(_) => (),
+            Expression::Negated(a) => a.query_cells(cells),
+            Expression::Sum(a, b) => {
+                a.query_cells(cells);
+                b.query_cells(cells);
+            }
+            Expression::Product(a, b) => {
+                a.query_cells(cells);
+                b.query_cells(cells);
+            }
+            Expression::Scaled(a, _) => a.query_cells(cells),
+        };
+    }
+
     /// Evaluate the polynomial using the provided closures to perform the
     /// operations.
     pub fn evaluate<T>(
@@ -1113,43 +1250,43 @@ impl<F: std::fmt::Debug> std::fmt::Debug for Expression<F> {
             Expression::Constant(scalar) => f.debug_tuple("Constant").field(scalar).finish(),
             Expression::Selector(selector) => f.debug_tuple("Selector").field(selector).finish(),
             // Skip enum variant and print query struct directly to maintain backwards compatibility.
-            Expression::Fixed(FixedQuery {
-                index,
-                column_index,
-                rotation,
-            }) => f
-                .debug_struct("Fixed")
-                .field("query_index", index)
-                .field("column_index", column_index)
-                .field("rotation", rotation)
-                .finish(),
-            Expression::Advice(AdviceQuery {
-                index,
-                column_index,
-                rotation,
-                phase,
-            }) => {
-                let mut debug_struct = f.debug_struct("Advice");
+            Expression::Fixed(query) => {
+                let mut debug_struct = f.debug_struct("Fixed");
+                match query.index {
+                    None => debug_struct.field("query_index", &query.index),
+                    Some(idx) => debug_struct.field("query_index", &idx),
+                };
                 debug_struct
-                    .field("query_index", index)
-                    .field("column_index", column_index)
-                    .field("rotation", rotation);
+                    .field("column_index", &query.column_index)
+                    .field("rotation", &query.rotation)
+                    .finish()
+            }
+            Expression::Advice(query) => {
+                let mut debug_struct = f.debug_struct("Advice");
+                match query.index {
+                    None => debug_struct.field("query_index", &query.index),
+                    Some(idx) => debug_struct.field("query_index", &idx),
+                };
+                debug_struct
+                    .field("column_index", &query.column_index)
+                    .field("rotation", &query.rotation);
                 // Only show advice's phase if it's not in first phase.
-                if *phase != FirstPhase.to_sealed() {
-                    debug_struct.field("phase", phase);
+                if query.phase != FirstPhase.to_sealed() {
+                    debug_struct.field("phase", &query.phase);
                 }
                 debug_struct.finish()
             }
-            Expression::Instance(InstanceQuery {
-                index,
-                column_index,
-                rotation,
-            }) => f
-                .debug_struct("Instance")
-                .field("query_index", index)
-                .field("column_index", column_index)
-                .field("rotation", rotation)
-                .finish(),
+            Expression::Instance(query) => {
+                let mut debug_struct = f.debug_struct("Instance");
+                match query.index {
+                    None => debug_struct.field("query_index", &query.index),
+                    Some(idx) => debug_struct.field("query_index", &idx),
+                };
+                debug_struct
+                    .field("column_index", &query.column_index)
+                    .field("rotation", &query.rotation)
+                    .finish()
+            }
             Expression::Challenge(challenge) => {
                 f.debug_tuple("Challenge").field(challenge).finish()
             }
@@ -1567,17 +1704,16 @@ impl<F: Field> ConstraintSystem<F> {
         let mut cells = VirtualCells::new(self);
         let table_map = table_map(&mut cells)
             .into_iter()
-            .map(|(input, table)| {
+            .map(|(mut input, table)| {
                 if input.contains_simple_selector() {
                     panic!("expression containing simple selector supplied to lookup argument");
                 }
-
-                let table = cells.query_fixed(table.inner(), Rotation::cur());
-
+                let mut table = cells.query_fixed(table.inner(), Rotation::cur());
+                input.query_cells(&mut cells);
+                table.query_cells(&mut cells);
                 (input, table)
             })
             .collect();
-
         let index = self.lookups.len();
 
         self.lookups
@@ -1596,8 +1732,14 @@ impl<F: Field> ConstraintSystem<F> {
         table_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, Expression<F>)>,
     ) -> usize {
         let mut cells = VirtualCells::new(self);
-        let table_map = table_map(&mut cells);
-
+        let table_map = table_map(&mut cells)
+            .into_iter()
+            .map(|(mut input, mut table)| {
+                input.query_cells(&mut cells);
+                table.query_cells(&mut cells);
+                (input, table)
+            })
+            .collect();
         let index = self.lookups.len();
 
         self.lookups
@@ -1728,14 +1870,17 @@ impl<F: Field> ConstraintSystem<F> {
     ) {
         let mut cells = VirtualCells::new(self);
         let constraints = constraints(&mut cells);
-        let queried_selectors = cells.queried_selectors;
-        let queried_cells = cells.queried_cells;
-
         let (constraint_names, polys): (_, Vec<_>) = constraints
             .into_iter()
             .map(|c| c.into())
-            .map(|c| (c.name, c.poly))
+            .map(|mut c: Constraint<F>| {
+                c.poly.query_cells(&mut cells);
+                (c.name, c.poly)
+            })
             .unzip();
+
+        let queried_selectors = cells.queried_selectors;
+        let queried_cells = cells.queried_cells;
 
         assert!(
             !polys.is_empty(),
@@ -1797,7 +1942,7 @@ impl<F: Field> ConstraintSystem<F> {
                 let column = self.fixed_column();
                 new_columns.push(column);
                 Expression::Fixed(FixedQuery {
-                    index: self.query_fixed_index(column, Rotation::cur()),
+                    index: Some(self.query_fixed_index(column, Rotation::cur())),
                     column_index: column.index,
                     rotation: Rotation::cur(),
                 })
@@ -2177,7 +2322,7 @@ impl<'a, F: Field> VirtualCells<'a, F> {
     pub fn query_fixed(&mut self, column: Column<Fixed>, at: Rotation) -> Expression<F> {
         self.queried_cells.push((column, at).into());
         Expression::Fixed(FixedQuery {
-            index: self.meta.query_fixed_index(column, at),
+            index: Some(self.meta.query_fixed_index(column, at)),
             column_index: column.index,
             rotation: at,
         })
@@ -2187,7 +2332,7 @@ impl<'a, F: Field> VirtualCells<'a, F> {
     pub fn query_advice(&mut self, column: Column<Advice>, at: Rotation) -> Expression<F> {
         self.queried_cells.push((column, at).into());
         Expression::Advice(AdviceQuery {
-            index: self.meta.query_advice_index(column, at),
+            index: Some(self.meta.query_advice_index(column, at)),
             column_index: column.index,
             rotation: at,
             phase: column.column_type().phase,
@@ -2198,7 +2343,7 @@ impl<'a, F: Field> VirtualCells<'a, F> {
     pub fn query_instance(&mut self, column: Column<Instance>, at: Rotation) -> Expression<F> {
         self.queried_cells.push((column, at).into());
         Expression::Instance(InstanceQuery {
-            index: self.meta.query_instance_index(column, at),
+            index: Some(self.meta.query_instance_index(column, at)),
             column_index: column.index,
             rotation: at,
         })

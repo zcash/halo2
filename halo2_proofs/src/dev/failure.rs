@@ -70,9 +70,9 @@ impl FailureLocation {
                 expression.evaluate(
                     &|_| vec![],
                     &|_| panic!("virtual selectors are removed during optimization"),
-                    &|query| vec![cs.fixed_queries[query.index].0.into()],
-                    &|query| vec![cs.advice_queries[query.index].0.into()],
-                    &|query| vec![cs.instance_queries[query.index].0.into()],
+                    &|query| vec![cs.fixed_queries[query.index.unwrap()].0.into()],
+                    &|query| vec![cs.advice_queries[query.index.unwrap()].0.into()],
+                    &|query| vec![cs.instance_queries[query.index.unwrap()].0.into()],
                     &|_| vec![],
                     &|a| a,
                     &|mut a, mut b| {

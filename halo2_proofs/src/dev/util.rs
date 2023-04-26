@@ -12,7 +12,7 @@ use crate::{
 
 pub(crate) struct AnyQuery {
     /// Query index
-    pub index: usize,
+    pub index: Option<usize>,
     /// Column type
     pub column_type: Any,
     /// Column index
@@ -78,7 +78,7 @@ pub(super) fn load<'a, F: Field, T: ColumnType, Q: Into<AnyQuery> + Copy>(
     cells: &'a [Vec<CellValue<F>>],
 ) -> impl Fn(Q) -> Value<F> + 'a {
     move |query| {
-        let (column, at) = &queries[query.into().index];
+        let (column, at) = &queries[query.into().index.unwrap()];
         let resolved_row = (row + at.0) % n;
         cells[column.index()][resolved_row as usize].into()
     }
@@ -91,7 +91,7 @@ pub(super) fn load_instance<'a, F: Field, T: ColumnType, Q: Into<AnyQuery> + Cop
     cells: &'a [Vec<F>],
 ) -> impl Fn(Q) -> Value<F> + 'a {
     move |query| {
-        let (column, at) = &queries[query.into().index];
+        let (column, at) = &queries[query.into().index.unwrap()];
         let resolved_row = (row + at.0) % n;
         Value::Real(cells[column.index()][resolved_row as usize])
     }

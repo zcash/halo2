@@ -12,7 +12,7 @@ use halo2_proofs::{
             multiopen::{ProverIPA, VerifierIPA},
             strategy::AccumulatorStrategy,
         },
-        Rotation, VerificationStrategy,
+        VerificationStrategy,
     },
     transcript::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
@@ -63,29 +63,23 @@ impl<const W: usize> MyConfig<W> {
         // Second phase
         let z = meta.advice_column_in(SecondPhase);
 
-        meta.create_gate("z should start with 1", |meta| {
-            let q_first = meta.query_selector(q_first);
-            let z = meta.query_advice(z, Rotation::cur());
+        meta.create_gate("z should start with 1", |_| {
             let one = Expression::Constant(F::ONE);
 
-            vec![q_first * (one - z)]
+            vec![q_first.expr() * (one - z.cur())]
         });
 
-        meta.create_gate("z should end with 1", |meta| {
-            let q_last = meta.query_selector(q_last);
-            let z = meta.query_advice(z, Rotation::cur());
+        meta.create_gate("z should end with 1", |_| {
             let one = Expression::Constant(F::ONE);
 
-            vec![q_last * (one - z)]
+            vec![q_last.expr() * (one - z.cur())]
         });
 
-        meta.create_gate("z should have valid transition", |meta| {
-            let q_shuffle = meta.query_selector(q_shuffle);
-            let original = original.map(|advice| meta.query_advice(advice, Rotation::cur()));
-            let shuffled = shuffled.map(|advice| meta.query_advice(advice, Rotation::cur()));
-            let [theta, gamma] = [theta, gamma].map(|challenge| meta.query_challenge(challenge));
-            let [z, z_w] =
-                [Rotation::cur(), Rotation::next()].map(|rotation| meta.query_advice(z, rotation));
+        meta.create_gate("z should have valid transition", |_| {
+            let q_shuffle = q_shuffle.expr();
+            let original = original.map(|advice| advice.cur());
+            let shuffled = shuffled.map(|advice| advice.cur());
+            let [theta, gamma] = [theta, gamma].map(|challenge| challenge.expr());
 
             // Compress
             let original = original
@@ -99,7 +93,7 @@ impl<const W: usize> MyConfig<W> {
                 .reduce(|acc, a| acc * theta.clone() + a)
                 .unwrap();
 
-            vec![q_shuffle * (z * (original + gamma.clone()) - z_w * (shuffled + gamma))]
+            vec![q_shuffle * (z.cur() * (original + gamma.clone()) - z.next() * (shuffled + gamma))]
         });
 
         Self {
