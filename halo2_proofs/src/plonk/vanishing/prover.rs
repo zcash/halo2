@@ -49,12 +49,12 @@ impl<C: CurveAffine> Argument<C> {
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
         // Sample a random polynomial of degree n - 1
-        let n_threads = current_num_threads();
         let n = 1usize << domain.k() as usize;
-        let n_chunks = n_threads + if n % n_threads != 0 { 1 } else { 0 };
+        let chunk_size = (n as f64 / current_num_threads() as f64).ceil() as usize;
+        let num_chunks = (n as f64 / chunk_size as f64).ceil() as usize;
         let mut rand_vec = vec![C::Scalar::ZERO; n];
 
-        let mut thread_seeds: Vec<ChaCha20Rng> = (0..n_chunks)
+        let mut thread_seeds: Vec<ChaCha20Rng> = (0..num_chunks)
             .into_iter()
             .map(|_| {
                 let mut seed = [0u8; 32];
@@ -65,7 +65,7 @@ impl<C: CurveAffine> Argument<C> {
 
         thread_seeds
             .par_iter_mut()
-            .zip_eq(rand_vec.par_chunks_mut(n / n_threads))
+            .zip_eq(rand_vec.par_chunks_mut(chunk_size))
             .for_each(|(mut rng, chunk)| {
                 chunk
                     .iter_mut()
