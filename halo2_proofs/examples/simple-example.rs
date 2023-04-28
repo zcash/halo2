@@ -6,6 +6,7 @@ use halo2_proofs::{
     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed, Instance, Selector},
     poly::Rotation,
 };
+use pasta_curves::EqAffine;
 
 // ANCHOR: instructions
 trait NumericInstructions<F: Field>: Chip<F> {
@@ -237,7 +238,7 @@ impl<F: Field> NumericInstructions<F> for FieldChip<F> {
 /// In this struct we store the private input variables. We use `Option<F>` because
 /// they won't have any value during key generation. During proving, if any of these
 /// were `None` we would get an error.
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 struct MyCircuit<F: Field> {
     constant: F,
     a: Value<F>,
@@ -308,7 +309,7 @@ fn main() {
     // ANCHOR: test-circuit
     // The number of rows in our circuit cannot exceed 2^k. Since our example
     // circuit is very small, we can pick a very small value here.
-    let k = 4;
+    const K: u32 = 4;
 
     // Prepare the private and public inputs to the circuit!
     let constant = Fp::from(7);
@@ -328,12 +329,14 @@ fn main() {
     let mut public_inputs = vec![c];
 
     // Given the correct public input, our circuit will verify.
-    let prover = MockProver::run(k, &circuit, vec![public_inputs.clone()]).unwrap();
+    let prover = MockProver::run(K, &circuit, vec![public_inputs.clone()]).unwrap();
     assert_eq!(prover.verify(), Ok(()));
+
+    assert!(circuit.test_prove_and_verify::<K, EqAffine>(&[&public_inputs]));
 
     // If we try some other public input, the proof will fail!
     public_inputs[0] += Fp::one();
-    let prover = MockProver::run(k, &circuit, vec![public_inputs]).unwrap();
+    let prover = MockProver::run(K, &circuit, vec![public_inputs]).unwrap();
     assert!(prover.verify().is_err());
     // ANCHOR_END: test-circuit
 }
