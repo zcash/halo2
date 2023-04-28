@@ -11,6 +11,7 @@ use crate::{
     circuit::{Layouter, Region, Value},
     poly::Rotation,
 };
+use pasta_curves::arithmetic::CurveAffine;
 
 mod compress_selectors;
 
@@ -482,6 +483,42 @@ pub trait Circuit<F: Field> {
     /// the caller will be different depending on the context, and they may or
     /// may not expect to have a witness present.
     fn synthesize(&self, config: Self::Config, layouter: impl Layouter<F>) -> Result<(), Error>;
+
+    /// Test proof creation and verification for this circuit.
+    fn test_prove_and_verify<const K: u32, C>(self, instance: &[&[C::Scalar]]) -> bool
+    where
+        C: CurveAffine<ScalarExt = F>,
+        C::Scalar: ff::FromUniformBytes<64>,
+        Self: Sized,
+    {
+        use crate::{
+            plonk::{create_proof, keygen_pk, keygen_vk, verify_proof, SingleVerifier},
+            poly::commitment::Params,
+            transcript::{Blake2bRead, Blake2bWrite, Challenge255},
+        };
+
+        let params = Params::<C>::new(K);
+
+        let vk = keygen_vk(&params, &self.without_witnesses()).expect("keygen_vk should not fail");
+        let pk =
+            keygen_pk(&params, vk, &self.without_witnesses()).expect("keygen_pk should not fail");
+
+        let mut transcript = Blake2bWrite::<_, _, Challenge255<C>>::init(vec![]);
+        create_proof(
+            &params,
+            &pk,
+            &[self],
+            &[instance],
+            rand_core::OsRng,
+            &mut transcript,
+        )
+        .expect("proof generation should not fail");
+        let proof: Vec<u8> = transcript.finalize();
+
+        let strategy = SingleVerifier::new(&params);
+        let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+        verify_proof(&params, pk.get_vk(), strategy, &[instance], &mut transcript).is_ok()
+    }
 }
 
 /// Low-degree expression representing an identity that must hold over the committed columns.
