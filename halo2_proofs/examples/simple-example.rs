@@ -238,7 +238,7 @@ impl<F: Field> NumericInstructions<F> for FieldChip<F> {
 /// In this struct we store the private input variables. We use `Option<F>` because
 /// they won't have any value during key generation. During proving, if any of these
 /// were `None` we would get an error.
-#[derive(Default, Copy, Clone)]
+#[derive(Copy, Clone)]
 struct MyCircuit<F: Field> {
     constant: F,
     a: Value<F>,
@@ -251,7 +251,11 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
-        Self::default()
+        Self {
+            constant: self.constant,
+            a: Value::default(),
+            b: Value::default(),
+        }
     }
 
     fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
