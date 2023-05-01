@@ -57,15 +57,19 @@ where
 {
     /// Writes a verifying key to a buffer.
     pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
-        writer.write_all(&(self.fixed_commitments.len() as u32).to_be_bytes())?;
+        // Version byte that will be checked on read.
+        writer.write_all(&[0x01])?;
+
+        writer.write_all(&(u32::try_from(self.fixed_commitments.len()).unwrap()).to_le_bytes())?;
         for commitment in &self.fixed_commitments {
             writer.write_all(commitment.to_bytes().as_ref())?;
         }
         self.permutation.write(writer)?;
 
         // write self.selectors
+        writer.write_all(&(u32::try_from(self.selectors.len()).unwrap()).to_le_bytes())?;
         for selector in &self.selectors {
-            let mut selector_bytes = vec![0u8; selector.len() / 8 + 1];
+            let mut selector_bytes = vec![0u8; (selector.len() + 7) / 8];
             for (i, selector_idx) in selector.iter().enumerate() {
                 let byte_index = i / 8;
                 let bit_index = i % 8;
@@ -83,24 +87,41 @@ where
         params: &Params<C>,
     ) -> io::Result<Self> {
         let (domain, cs, _) = keygen::create_domain::<C, ConcreteCircuit>(params);
-        let mut num_fixed_columns_be_bytes = [0u8; 4];
-        reader.read_exact(&mut num_fixed_columns_be_bytes)?;
-        let num_fixed_columns = u32::from_be_bytes(num_fixed_columns_be_bytes);
+
+        let mut version_byte = [0u8; 1];
+        reader.read_exact(&mut version_byte)?;
+        if 0x01 != version_byte[0] {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "unexpected version byte",
+            ));
+        }
+
+        let mut num_fixed_columns_le_bytes = [0u8; 4];
+        reader.read_exact(&mut num_fixed_columns_le_bytes)?;
+        let num_fixed_columns = u32::from_le_bytes(num_fixed_columns_le_bytes);
 
         let fixed_commitments: Vec<_> = (0..num_fixed_columns)
             .map(|_| C::read(reader))
-            .collect::<Result<_, _>>()?;
+            .collect::<io::Result<_>>()?;
 
         let permutation = permutation::VerifyingKey::read(reader, &cs.permutation)?;
 
         // read selectors
+        let mut num_selectors_le_bytes = [0u8; 4];
+        reader.read_exact(&mut num_selectors_le_bytes)?;
+        let num_selectors = u32::from_le_bytes(num_selectors_le_bytes);
+        if cs.num_selectors != num_selectors.try_into().unwrap() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "unexpected number of selectors",
+            ));
+        }
         let selectors: Vec<Vec<bool>> = vec![vec![false; params.n as usize]; cs.num_selectors]
             .into_iter()
             .map(|mut selector| {
-                let mut selector_bytes = vec![0u8; selector.len() / 8 + 1];
-                reader
-                    .read_exact(&mut selector_bytes)
-                    .expect("unable to read selector bytes");
+                let mut selector_bytes = vec![0u8; (selector.len() + 7) / 8];
+                reader.read_exact(&mut selector_bytes)?;
                 for (i, selector_idx) in selector.iter_mut().enumerate() {
                     let byte_index = i / 8;
                     let bit_index = i % 8;
@@ -108,8 +129,8 @@ where
                 }
                 Ok(selector)
             })
-            .collect::<Result<Vec<Vec<bool>>, &str>>()
-            .unwrap();
+            .collect::<io::Result<_>>()?;
+
         let (cs, _) = cs.compress_selectors(selectors.clone());
 
         Ok(Self::from_parts(
