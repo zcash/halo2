@@ -103,6 +103,10 @@ impl<C: CurveAffine> VerifyingKey<C> {
             .collect::<io::Result<_>>()?;
         Ok(VerifyingKey { commitments })
     }
+
+    pub(crate) fn bytes_length(&self) -> usize {
+        4 + self.commitments.len() * C::default().to_bytes().as_ref().len()
+    }
 }
 
 /// The proving key for a single permutation argument.

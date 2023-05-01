@@ -9,6 +9,7 @@ use blake2b_simd::Params as Blake2bParams;
 use group::ff::{Field, FromUniformBytes, PrimeField};
 
 use crate::arithmetic::CurveAffine;
+use crate::helpers::{pack, unpack, CurveRead};
 use crate::poly::{
     commitment::Params, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff,
     PinnedEvaluationDomain, Polynomial,
@@ -33,7 +34,6 @@ pub use keygen::*;
 pub use prover::*;
 pub use verifier::*;
 
-use crate::helpers::CurveRead;
 use std::io;
 
 /// This is a verifying key which allows for the verification of proofs for a
@@ -69,19 +69,16 @@ where
         // write self.selectors
         writer.write_all(&(u32::try_from(self.selectors.len()).unwrap()).to_le_bytes())?;
         for selector in &self.selectors {
-            let mut selector_bytes = vec![0u8; (selector.len() + 7) / 8];
-            for (i, selector_idx) in selector.iter().enumerate() {
-                let byte_index = i / 8;
-                let bit_index = i % 8;
-                selector_bytes[byte_index] |= (*selector_idx as u8) << bit_index;
+            // since `selector` is filled with `bool`, we pack them 8 at a time into bytes and then write
+            for bits in selector.chunks(8) {
+                writer.write_all(&[pack(bits)])?;
             }
-            writer.write_all(&selector_bytes)?;
         }
 
         Ok(())
     }
 
-    /// Reads a verification key from a buffer.
+    /// Reads a verifying key from a buffer.
     pub fn read<R: io::Read, ConcreteCircuit: Circuit<C::Scalar>>(
         reader: &mut R,
         params: &Params<C>,
@@ -122,10 +119,8 @@ where
             .map(|mut selector| {
                 let mut selector_bytes = vec![0u8; (selector.len() + 7) / 8];
                 reader.read_exact(&mut selector_bytes)?;
-                for (i, selector_idx) in selector.iter_mut().enumerate() {
-                    let byte_index = i / 8;
-                    let bit_index = i % 8;
-                    *selector_idx = (selector_bytes[byte_index] >> bit_index) & 1 == 1;
+                for (bits, byte) in selector.chunks_mut(8).zip(selector_bytes) {
+                    unpack(byte, bits);
                 }
                 Ok(selector)
             })
@@ -140,6 +135,36 @@ where
             cs,
             selectors,
         ))
+    }
+
+    /// Writes a verifying key to a vector of bytes.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::<u8>::with_capacity(self.bytes_length());
+        self.write(&mut bytes)
+            .expect("Writing to vector should not fail");
+        bytes
+    }
+
+    /// Reads a verifying key from a slice of bytes.
+    pub fn from_bytes<ConcreteCircuit: Circuit<C::Scalar>>(
+        mut bytes: &[u8],
+        params: &Params<C>,
+    ) -> io::Result<Self> {
+        Self::read::<_, ConcreteCircuit>(&mut bytes, params)
+    }
+
+    /// Gets the total number of bytes in the serialization of `self`.
+    fn bytes_length(&self) -> usize {
+        1 + 4
+            + self.fixed_commitments.len() * C::default().to_bytes().as_ref().len()
+            + self.permutation.bytes_length()
+            + 4
+            + self.selectors.len()
+                * self
+                    .selectors
+                    .get(0)
+                    .map(|selector| (selector.len() + 7) / 8)
+                    .unwrap_or(0)
     }
 
     fn from_parts(
