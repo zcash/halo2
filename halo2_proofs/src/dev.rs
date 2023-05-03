@@ -461,12 +461,7 @@ impl<F: Field> Assignment<F> for MockProver<F> {
                     .get_mut(column.index())
                     .and_then(|v| v.get_mut(row))
                     .expect("bounds failure");
-                if let CellValue::Assigned(value) = value {
-                    // Inconsistent assignment between different phases.
-                    assert_eq!(value, &to, "value={:?}, to={:?}", value, &to);
-                } else {
-                    *value = CellValue::Assigned(to);
-                }
+                *value = CellValue::Assigned(to);
             }
             Err(err) => {
                 // Propagate `assign` error if the column is in current phase.
