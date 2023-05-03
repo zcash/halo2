@@ -177,7 +177,7 @@ where
                 * (self
                     .selectors
                     .get(0)
-                    .map(|selector| selector.len() / 8 + 1)
+                    .map(|selector| (selector.len() + 7) / 8)
                     .unwrap_or(0))
     }
 
