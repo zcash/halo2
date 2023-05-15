@@ -15,6 +15,17 @@ pub struct Column {
     pub(super) index: usize,
 }
 
+impl Column {
+    /// Return the column type.
+    pub fn column_type(&self) -> Any {
+        self.column_type
+    }
+    /// Return the column index.
+    pub fn index(&self) -> usize {
+        self.index
+    }
+}
+
 impl fmt::Display for Column {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Column('{:?}', {})", self.column_type, self.index)

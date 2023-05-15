@@ -91,4 +91,9 @@ impl<F: Field> Argument<F> {
     pub fn table_expressions(&self) -> &Vec<Expression<F>> {
         &self.table_expressions
     }
+
+    /// Returns name of this argument
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }

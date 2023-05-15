@@ -466,6 +466,11 @@ impl Selector {
         self.1
     }
 
+    /// Returns index of this selector
+    pub fn index(&self) -> usize {
+        self.0
+    }
+
     /// Return expression from selector
     pub fn expr<F: Field>(&self) -> Expression<F> {
         Expression::Selector(*self)
@@ -1498,11 +1503,13 @@ pub struct Gate<F: Field> {
 }
 
 impl<F: Field> Gate<F> {
-    pub(crate) fn name(&self) -> &str {
+    /// Returns the gate name.
+    pub fn name(&self) -> &str {
         self.name.as_str()
     }
 
-    pub(crate) fn constraint_name(&self, constraint_index: usize) -> &str {
+    /// Returns the name of the constraint at index `constraint_index`.
+    pub fn constraint_name(&self, constraint_index: usize) -> &str {
         self.constraint_names[constraint_index].as_str()
     }
 
@@ -1903,7 +1910,7 @@ impl<F: Field> ConstraintSystem<F> {
     /// find which fixed column corresponds with a given `Selector`.
     ///
     /// Do not call this twice. Yes, this should be a builder pattern instead.
-    pub(crate) fn compress_selectors(mut self, selectors: Vec<Vec<bool>>) -> (Self, Vec<Vec<F>>) {
+    pub fn compress_selectors(mut self, selectors: Vec<Vec<bool>>) -> (Self, Vec<Vec<F>>) {
         // The number of provided selector assignments must be the number we
         // counted for this constraint system.
         assert_eq!(selectors.len(), self.num_selectors);
@@ -2240,6 +2247,11 @@ impl<F: Field> ConstraintSystem<F> {
         self.num_instance_columns
     }
 
+    /// Returns number of selectors
+    pub fn num_selectors(&self) -> usize {
+        self.num_selectors
+    }
+
     /// Returns number of challenges
     pub fn num_challenges(&self) -> usize {
         self.num_challenges
@@ -2261,6 +2273,11 @@ impl<F: Field> ConstraintSystem<F> {
     /// Returns gates
     pub fn gates(&self) -> &Vec<Gate<F>> {
         &self.gates
+    }
+
+    /// Returns general column annotations
+    pub fn general_column_annotations(&self) -> &HashMap<metadata::Column, String> {
+        &self.general_column_annotations
     }
 
     /// Returns advice queries
