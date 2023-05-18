@@ -132,6 +132,30 @@ where
         }
     }
 
+    /// Initializes parameters for the curve through existing parameters
+    /// k, g, g_lagrange (optional), g2, s_g2
+    pub fn from_parts(
+        &self,
+        k: u32,
+        g: Vec<E::G1Affine>,
+        g_lagrange: Option<Vec<E::G1Affine>>,
+        g2: E::G2Affine,
+        s_g2: E::G2Affine,
+    ) -> Self {
+        Self {
+            k,
+            n: 1 << k,
+            g_lagrange: if let Some(g_l) = g_lagrange {
+                g_l
+            } else {
+                g_to_lagrange(g.iter().map(PrimeCurveAffine::to_curve).collect(), k)
+            },
+            g,
+            g2,
+            s_g2,
+        }
+    }
+
     /// Returns gernerator on G2
     pub fn g2(&self) -> E::G2Affine {
         self.g2
