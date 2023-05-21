@@ -80,12 +80,6 @@ impl<F: Field> ShuffleChip<F> {
     }
 }
 
-// ANCHOR: circuit
-/// The full circuit implementation.
-///
-/// In this struct we store the private input variables. We use `Option<F>` because
-/// they won't have any value during key generation. During proving, if any of these
-/// were `None` we would get an error.
 #[derive(Default)]
 struct MyCircuit<F: Field> {
     input_0: Vec<Value<F>>,
