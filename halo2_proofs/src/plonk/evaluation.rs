@@ -11,6 +11,7 @@ use crate::{
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
+use core::num;
 use group::prime::PrimeCurve;
 use group::{
     ff::{BatchInvert, Field, PrimeField, WithSmallOrderMulGroup},
@@ -26,7 +27,7 @@ use std::{
     ops::{Index, Mul, MulAssign},
 };
 
-use super::{ConstraintSystem, Expression};
+use super::{shuffle, ConstraintSystem, Expression};
 
 /// Return the index in the polynomial of size `isize` after rotation `rot`.
 fn get_rotation_idx(idx: usize, rot: i32, rot_scale: i32, isize: i32) -> usize {
@@ -186,6 +187,8 @@ pub struct Evaluator<C: CurveAffine> {
     pub custom_gates: GraphEvaluator<C>,
     ///  Lookups evalution
     pub lookups: Vec<GraphEvaluator<C>>,
+    ///  Shuffle evalution
+    pub shuffles: Vec<GraphEvaluator<C>>,
 }
 
 /// GraphEvaluator
@@ -273,6 +276,39 @@ impl<C: CurveAffine> Evaluator<C> {
             ev.lookups.push(graph);
         }
 
+        // Shuffles
+        for shuffle in cs.shuffles.iter() {
+            let evaluate_lc = |expressions: &Vec<Expression<_>>, graph: &mut GraphEvaluator<C>| {
+                let parts = expressions
+                    .iter()
+                    .map(|expr| graph.add_expression(expr))
+                    .collect();
+                graph.add_calculation(Calculation::Horner(
+                    ValueSource::Constant(0),
+                    parts,
+                    ValueSource::Theta(),
+                ))
+            };
+
+            let mut graph_input = GraphEvaluator::default();
+            let compressed_input_coset = evaluate_lc(&shuffle.input_expressions, &mut graph_input);
+            let _ = graph_input.add_calculation(Calculation::Add(
+                compressed_input_coset,
+                ValueSource::Gamma(),
+            ));
+
+            let mut graph_shuffle = GraphEvaluator::default();
+            let compressed_shuffle_coset =
+                evaluate_lc(&shuffle.shuffle_expressions, &mut graph_shuffle);
+            let _ = graph_shuffle.add_calculation(Calculation::Add(
+                compressed_shuffle_coset,
+                ValueSource::Gamma(),
+            ));
+
+            ev.shuffles.push(graph_input);
+            ev.shuffles.push(graph_shuffle);
+        }
+
         ev
     }
 
@@ -288,6 +324,7 @@ impl<C: CurveAffine> Evaluator<C> {
         gamma: C::ScalarExt,
         theta: C::ScalarExt,
         lookups: &[Vec<lookup::prover::Committed<C>>],
+        shuffles: &[Vec<shuffle::prover::Committed<C>>],
         permutations: &[permutation::prover::Committed<C>],
     ) -> Polynomial<C::ScalarExt, ExtendedLagrangeCoeff> {
         let domain = &pk.vk.domain;
@@ -326,10 +363,11 @@ impl<C: CurveAffine> Evaluator<C> {
 
         // Core expression evaluations
         let num_threads = multicore::current_num_threads();
-        for (((advice, instance), lookups), permutation) in advice
+        for ((((advice, instance), lookups), shuffles), permutation) in advice
             .iter()
             .zip(instance.iter())
             .zip(lookups.iter())
+            .zip(shuffles.iter())
             .zip(permutations.iter())
         {
             // Custom gates
@@ -514,6 +552,68 @@ impl<C: CurveAffine> Evaluator<C> {
                             + (a_minus_s
                                 * (permuted_input_coset[idx] - permuted_input_coset[r_prev])
                                 * l_active_row[idx]);
+                    }
+                });
+            }
+
+            // Shuffle constraints
+            for (n, shuffle) in shuffles.iter().enumerate() {
+                let product_coset = pk.vk.domain.coeff_to_extended(shuffle.product_poly.clone());
+
+                // Shuffle constraints
+                parallelize(&mut values, |values, start| {
+                    let input_evaluator = &self.shuffles[2 * n];
+                    let shuffle_evaluator = &self.shuffles[2 * n + 1];
+                    let mut eval_data_input = shuffle_evaluator.instance();
+                    let mut eval_data_shuffle = shuffle_evaluator.instance();
+                    for (i, value) in values.iter_mut().enumerate() {
+                        let idx = start + i;
+
+                        let input_value = input_evaluator.evaluate(
+                            &mut eval_data_input,
+                            fixed,
+                            advice,
+                            instance,
+                            challenges,
+                            &beta,
+                            &gamma,
+                            &theta,
+                            &y,
+                            &C::ScalarExt::ZERO,
+                            idx,
+                            rot_scale,
+                            isize,
+                        );
+
+                        let shuffle_value = shuffle_evaluator.evaluate(
+                            &mut eval_data_shuffle,
+                            fixed,
+                            advice,
+                            instance,
+                            challenges,
+                            &beta,
+                            &gamma,
+                            &theta,
+                            &y,
+                            &C::ScalarExt::ZERO,
+                            idx,
+                            rot_scale,
+                            isize,
+                        );
+
+                        let r_next = get_rotation_idx(idx, 1, rot_scale, isize);
+
+                        // l_0(X) * (1 - z(X)) = 0
+                        *value = *value * y + ((one - product_coset[idx]) * l0[idx]);
+                        // l_last(X) * (z(X)^2 - z(X)) = 0
+                        *value = *value * y
+                            + ((product_coset[idx] * product_coset[idx] - product_coset[idx])
+                                * l_last[idx]);
+                        // (1 - (l_last(X) + l_blind(X))) * (z(\omega X) (s(X) + \gamma) - z(X) (a(X) + \gamma) = 0
+                        *value = *value * y
+                            + l_active_row[idx]
+                                * (product_coset[r_next] * shuffle_value
+                                    - product_coset[idx] * input_value)
                     }
                 });
             }
