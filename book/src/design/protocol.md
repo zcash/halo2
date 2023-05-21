@@ -369,7 +369,7 @@ $$
 15. $\verifier$ responds with challenge $x_3$.
 16. $\prover$ sends $\mathbf{u} \in \field^{n_q}$ such that $\mathbf{u}_i = q_i(x_3)$ for all $i \in [0, n_q)$.
 17. $\verifier$ responds with challenge $x_4$.
-18. $\verifier$ sets $P = Q' + x_4 \sum\limits_{i=0}^{n_q - 1} [x_4^i] Q_i$ and $v = $
+18. $\verifier$ sets $P = [x_4^{n_q}]Q' + \sum\limits_{i=0}^{n_q - 1} [x_4^{n_q - 1 - i}] Q_i$ and $v = $
 $$
 \sum\limits_{i=0}^{n_q - 1}
 \left(
@@ -389,7 +389,7 @@ x_2^i
 +
 x_4 \sum\limits_{i=0}^{n_q - 1} x_4 \mathbf{u}_i
 $$
-19. $\prover$ sets $p(X) = q'(X) + [x_4] \sum\limits_{i=0}^{n_q - 1} x_4^i q_i(X)$.
+19. $\prover$ sets $p(X) = q'(X) \cdot x_4^{n_q} + \sum\limits_{i=0}^{n_q - 1} x_4^{n_q - 1 - i} q_i(X)$.
 20. $\prover$ samples a random polynomial $s(X)$ of degree $n - 1$ with a root at $x_3$ and sends a commitment $S = \innerprod{\mathbf{s}}{\mathbf{G}} + [\cdot] W$ where $\mathbf{s}$ defines the coefficients of $s(X)$.
 21. $\verifier$ responds with challenges $\xi, z$.
 22. $\verifier$ sets $P' = P - [v] \mathbf{G}_0 + [\xi] S$.
