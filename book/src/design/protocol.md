@@ -389,7 +389,7 @@ x_2^i
 +
 x_4 \sum\limits_{i=0}^{n_q - 1} x_4 \mathbf{u}_i
 $$
-19. $\prover$ sets $p(X) = q'(X) \cdot x_4^{n_q} + \sum\limits_{i=0}^{n_q - 1} x_4^{n_q - 1 - i} q_i(X)$.
+19. $\prover$ sets $p(X) = x_4^{n_q} \cdot q'(x) + \sum\limits_{i=0}^{n_q - 1} x_4^{n_q - 1 - i} \cdot q_i(X)$.
 20. $\prover$ samples a random polynomial $s(X)$ of degree $n - 1$ with a root at $x_3$ and sends a commitment $S = \innerprod{\mathbf{s}}{\mathbf{G}} + [\cdot] W$ where $\mathbf{s}$ defines the coefficients of $s(X)$.
 21. $\verifier$ responds with challenges $\xi, z$.
 22. $\verifier$ sets $P' = P - [v] \mathbf{G}_0 + [\xi] S$.
