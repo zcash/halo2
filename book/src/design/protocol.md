@@ -353,7 +353,7 @@ In the following protocol, we take it for granted that each polynomial $a_i(X, \
 14. $\prover$ sends $Q' = \innerprod{\mathbf{q'}}{\mathbf{G}} + [\cdot] W$ where $\mathbf{q'}$ defines the coefficients of the polynomial
 $$q'(X) = \sum\limits_{i=0}^{n_q - 1}
 
-x_2^i
+x_2^{n_q - 1 - i}
   \left(
   \frac
   {q_i(X) - r_i(X)}
@@ -371,9 +371,10 @@ $$
 17. $\verifier$ responds with challenge $x_4$.
 18. $\verifier$ sets $P = [x_4^{n_q}]Q' + \sum\limits_{i=0}^{n_q - 1} [x_4^{n_q - 1 - i}] Q_i$ and $v = $
 $$
+x_4^{n_q} \cdot
 \sum\limits_{i=0}^{n_q - 1}
 \left(
-x_2^i
+x_2^{n_q - 1 - i}
   \left(
   \frac
   { \mathbf{u}_i - r_i(x_3) }
@@ -387,7 +388,7 @@ x_2^i
   \right)
 \right)
 +
-x_4 \sum\limits_{i=0}^{n_q - 1} x_4 \mathbf{u}_i
+\sum\limits_{i=0}^{n_q - 1} x_4^{n_q - 1 - i} \mathbf{u}_i
 $$
 19. $\prover$ sets $p(X) = x_4^{n_q} \cdot q'(x) + \sum\limits_{i=0}^{n_q - 1} x_4^{n_q - 1 - i} \cdot q_i(X)$.
 20. $\prover$ samples a random polynomial $s(X)$ of degree $n - 1$ with a root at $x_3$ and sends a commitment $S = \innerprod{\mathbf{s}}{\mathbf{G}} + [\cdot] W$ where $\mathbf{s}$ defines the coefficients of $s(X)$.
