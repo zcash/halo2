@@ -18,7 +18,7 @@ representations of circuits.
 
 On Debian systems, you will need the following additional packages:
 ```plaintext
-sudo apt install cmake libexpat1-dev libfreetype6-dev
+sudo apt install cmake libexpat1-dev libfreetype6-dev libcairo2-dev
 ```
 
 ### Circuit layout
