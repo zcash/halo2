@@ -246,7 +246,7 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 ///     # let config: Config = todo!();
 ///     layouter.assign_region(|| "bar", |mut region| {
 ///         region.assign_advice(|| "a", config.a, 0, || Value::known(F::ONE))?;
-///         region.assign_advice(|| "a", config.b, 1, || Value::known(F::ONE))?;
+///         region.assign_advice(|| "b", config.b, 1, || Value::known(F::ONE))?;
 ///         config.s.enable(&mut region, 1)
 ///     })?;
 ///     Ok(())
