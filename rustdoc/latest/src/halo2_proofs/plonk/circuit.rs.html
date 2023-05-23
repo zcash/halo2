@@ -1808,7 +1808,7 @@
 ///     # let config: Config = todo!();
 ///     layouter.assign_region(|| &quot;bar&quot;, |mut region| {
 ///         region.assign_advice(|| &quot;a&quot;, config.a, 0, || Value::known(F::ONE))?;
-///         region.assign_advice(|| &quot;a&quot;, config.b, 1, || Value::known(F::ONE))?;
+///         region.assign_advice(|| &quot;b&quot;, config.b, 1, || Value::known(F::ONE))?;
 ///         config.s.enable(&amp;mut region, 1)
 ///     })?;
 ///     Ok(())
