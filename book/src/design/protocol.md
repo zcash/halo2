@@ -390,7 +390,7 @@ x_2^{n_q - 1 - i}
 +
 \sum\limits_{i=0}^{n_q - 1} x_4^{n_q - 1 - i} \mathbf{u}_i
 $$
-19. $\prover$ sets $p(X) = x_4^{n_q} \cdot q'(x) + \sum\limits_{i=0}^{n_q - 1} x_4^{n_q - 1 - i} \cdot q_i(X)$ and $p^* =  x_4^{n_q} \cdot q'^* + \sum\limits_{i=0}^{n_q - 1} x_4^{n_q - 1 - i} \cdot q^*_i$.
+19. $\prover$ sets $p(X) = x_4^{n_q} \cdot q'(X) + \sum\limits_{i=0}^{n_q - 1} x_4^{n_q - 1 - i} \cdot q_i(X)$ and $p^* =  x_4^{n_q} \cdot q'^* + \sum\limits_{i=0}^{n_q - 1} x_4^{n_q - 1 - i} \cdot q^*_i$.
 20. $\prover$ samples a random polynomial $s(X)$ of degree $n - 1$ with a root at $x_3$ and sends a commitment $S = \innerprod{\mathbf{s}}{\mathbf{G}} + [s^{*}] W$ where $\mathbf{s}$ defines the coefficients of $s(X)$ and $s^{*}$ is blinding.
 21. $\verifier$ responds with challenges $\xi, z$.
 22. $\verifier$ sets $P' = P - [v] \mathbf{G}_0 + [\xi] S$.
