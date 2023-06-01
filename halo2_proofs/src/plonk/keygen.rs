@@ -16,7 +16,7 @@ use super::{
 };
 use crate::{
     arithmetic::{parallelize, CurveAffine},
-    circuit::Value,
+    circuit::{layouter::SyncDeps, Value},
     poly::{
         batch_invert_assigned,
         commitment::{Blind, Params, MSM},
@@ -60,6 +60,8 @@ struct Assembly<F: Field> {
     usable_rows: Range<usize>,
     _marker: std::marker::PhantomData<F>,
 }
+
+impl<F: Field> SyncDeps for Assembly<F> {}
 
 impl<F: Field> Assignment<F> for Assembly<F> {
     fn enter_region<NR, N>(&mut self, _: N)

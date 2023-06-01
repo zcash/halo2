@@ -11,7 +11,7 @@ use ff::{Field, PrimeField};
 use group::prime::PrimeGroup;
 
 use crate::{
-    circuit::Value,
+    circuit::{layouter::SyncDeps, Value},
     plonk::{
         Advice, Any, Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error,
         Fixed, FloorPlanner, Instance, Selector,
@@ -45,6 +45,8 @@ pub struct CircuitCost<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> {
 struct Assembly {
     selectors: Vec<Vec<bool>>,
 }
+
+impl SyncDeps for Assembly {}
 
 impl<F: Field> Assignment<F> for Assembly {
     fn enter_region<NR, N>(&mut self, _: N)

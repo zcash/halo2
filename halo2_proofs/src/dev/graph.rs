@@ -80,6 +80,8 @@ struct Graph {
     current_namespace: Vec<usize>,
 }
 
+impl crate::dev::SyncDeps for Graph {}
+
 impl<F: Field> Assignment<F> for Graph {
     fn enter_region<NR, N>(&mut self, _: N)
     where

@@ -355,6 +355,8 @@ struct Layout {
     selectors: Vec<Vec<bool>>,
 }
 
+impl crate::dev::SyncDeps for Layout {}
+
 impl Layout {
     fn new(k: u32, n: usize, num_selectors: usize) -> Self {
         Layout {

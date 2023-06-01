@@ -18,6 +18,7 @@ use super::{
     lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
     ChallengeY, Error, Expression, ProvingKey,
 };
+use crate::circuit::layouter::SyncDeps;
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine},
     circuit::Value,
@@ -152,6 +153,8 @@ where
         usable_rows: RangeTo<usize>,
         _marker: std::marker::PhantomData<F>,
     }
+
+    impl<'a, F: Field> SyncDeps for WitnessCollection<'a, F> {}
 
     impl<'a, F: Field> Assignment<F> for WitnessCollection<'a, F> {
         fn enter_region<NR, N>(&mut self, _: N)

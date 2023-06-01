@@ -1,4 +1,5 @@
 use super::{lookup, permutation, Assigned, Error};
+use crate::circuit::layouter::SyncDeps;
 use crate::dev::metadata;
 use crate::{
     circuit::{Layouter, Region, Value},
@@ -736,7 +737,7 @@ pub trait FloorPlanner {
     /// - Perform any necessary setup or measurement tasks, which may involve one or more
     ///   calls to `Circuit::default().synthesize(config, &mut layouter)`.
     /// - Call `circuit.synthesize(config, &mut layouter)` exactly once.
-    fn synthesize<F: Field, CS: Assignment<F>, C: Circuit<F>>(
+    fn synthesize<F: Field, CS: Assignment<F> + SyncDeps, C: Circuit<F>>(
         cs: &mut CS,
         circuit: &C,
         config: C::Config,

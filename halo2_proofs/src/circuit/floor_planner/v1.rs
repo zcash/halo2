@@ -5,7 +5,7 @@ use ff::Field;
 use crate::{
     circuit::{
         floor_planner::single_pass::SimpleTableLayouter,
-        layouter::{RegionColumn, RegionLayouter, RegionShape, TableLayouter},
+        layouter::{RegionColumn, RegionLayouter, RegionShape, SyncDeps, TableLayouter},
         Cell, Layouter, Region, RegionIndex, RegionStart, Table, Value,
     },
     plonk::{
@@ -43,7 +43,7 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for V1Plan<'a, F, CS> {
     }
 }
 
-impl<'a, F: Field, CS: Assignment<F>> V1Plan<'a, F, CS> {
+impl<'a, F: Field, CS: Assignment<F> + SyncDeps> V1Plan<'a, F, CS> {
     /// Creates a new v1 layouter.
     pub fn new(cs: &'a mut CS) -> Result<Self, Error> {
         let ret = V1Plan {
@@ -57,7 +57,7 @@ impl<'a, F: Field, CS: Assignment<F>> V1Plan<'a, F, CS> {
 }
 
 impl FloorPlanner for V1 {
-    fn synthesize<F: Field, CS: Assignment<F>, C: Circuit<F>>(
+    fn synthesize<F: Field, CS: Assignment<F> + SyncDeps, C: Circuit<F>>(
         cs: &mut CS,
         circuit: &C,
         config: C::Config,
@@ -160,7 +160,7 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> V1Pass<'p, 'a, F, CS> {
     }
 }
 
-impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for V1Pass<'p, 'a, F, CS> {
+impl<'p, 'a, F: Field, CS: Assignment<F> + SyncDeps> Layouter<F> for V1Pass<'p, 'a, F, CS> {
     type Root = Self;
 
     fn assign_region<A, AR, N, NR>(&mut self, name: N, assignment: A) -> Result<AR, Error>
@@ -264,7 +264,7 @@ pub struct AssignmentPass<'p, 'a, F: Field, CS: Assignment<F> + 'a> {
     region_index: usize,
 }
 
-impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> {
+impl<'p, 'a, F: Field, CS: Assignment<F> + SyncDeps> AssignmentPass<'p, 'a, F, CS> {
     fn new(plan: &'p mut V1Plan<'a, F, CS>) -> Self {
         AssignmentPass {
             plan,
@@ -384,7 +384,9 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> V1Region<'r, 'a, F, CS> {
     }
 }
 
-impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> RegionLayouter<F> for V1Region<'r, 'a, F, CS> {
+impl<'r, 'a, F: Field, CS: Assignment<F> + SyncDeps> SyncDeps for V1Region<'r, 'a, F, CS> {}
+
+impl<'r, 'a, F: Field, CS: Assignment<F> + SyncDeps> RegionLayouter<F> for V1Region<'r, 'a, F, CS> {
     fn enable_selector<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
