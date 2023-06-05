@@ -862,6 +862,42 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                     })
                 });
 
+        let load = |expression: &Expression<F>, row| {
+            expression.evaluate_lazy(
+                &|scalar| Value::Real(scalar),
+                &|_| panic!("virtual selectors are removed during optimization"),
+                &|query| {
+                    let query = self.cs.fixed_queries[query.index.unwrap()];
+                    let column_index = query.0.index();
+                    let rotation = query.1 .0;
+                    self.fixed[column_index][(row as i32 + n + rotation) as usize % n as usize]
+                        .into()
+                },
+                &|query| {
+                    let query = self.cs.advice_queries[query.index.unwrap()];
+                    let column_index = query.0.index();
+                    let rotation = query.1 .0;
+                    self.advice[column_index][(row as i32 + n + rotation) as usize % n as usize]
+                        .into()
+                },
+                &|query| {
+                    let query = self.cs.instance_queries[query.index.unwrap()];
+                    let column_index = query.0.index();
+                    let rotation = query.1 .0;
+                    Value::Real(
+                        self.instance[column_index]
+                            [(row as i32 + n + rotation) as usize % n as usize],
+                    )
+                },
+                &|challenge| Value::Real(self.challenges[challenge.index()]),
+                &|a| -a,
+                &|a, b| a + b,
+                &|a, b| a * b,
+                &|a, scalar| a * scalar,
+                &Value::Real(F::ZERO),
+            )
+        };
+
         let mut cached_table = Vec::new();
         let mut cached_table_identifier = Vec::new();
         // Check that all lookups exist in their respective tables.
@@ -871,44 +907,6 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                 .iter()
                 .enumerate()
                 .flat_map(|(lookup_index, lookup)| {
-                    let load = |expression: &Expression<F>, row| {
-                        expression.evaluate_lazy(
-                            &|scalar| Value::Real(scalar),
-                            &|_| panic!("virtual selectors are removed during optimization"),
-                            &|query| {
-                                let query = self.cs.fixed_queries[query.index.unwrap()];
-                                let column_index = query.0.index();
-                                let rotation = query.1 .0;
-                                self.fixed[column_index]
-                                    [(row as i32 + n + rotation) as usize % n as usize]
-                                    .into()
-                            },
-                            &|query| {
-                                let query = self.cs.advice_queries[query.index.unwrap()];
-                                let column_index = query.0.index();
-                                let rotation = query.1 .0;
-                                self.advice[column_index]
-                                    [(row as i32 + n + rotation) as usize % n as usize]
-                                    .into()
-                            },
-                            &|query| {
-                                let query = self.cs.instance_queries[query.index.unwrap()];
-                                let column_index = query.0.index();
-                                let rotation = query.1 .0;
-                                Value::Real(
-                                    self.instance[column_index]
-                                        [(row as i32 + n + rotation) as usize % n as usize],
-                                )
-                            },
-                            &|challenge| Value::Real(self.challenges[challenge.index()]),
-                            &|a| -a,
-                            &|a, b| a + b,
-                            &|a, b| a * b,
-                            &|a, scalar| a * scalar,
-                            &Value::Real(F::ZERO),
-                        )
-                    };
-
                     assert!(lookup.table_expressions.len() == lookup.input_expressions.len());
                     assert!(self.usable_rows.end > 0);
 
@@ -1008,44 +1006,6 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                 .iter()
                 .enumerate()
                 .flat_map(|(shuffle_index, shuffle)| {
-                    let load = |expression: &Expression<F>, row| {
-                        expression.evaluate_lazy(
-                            &|scalar| Value::Real(scalar),
-                            &|_| panic!("virtual selectors are removed during optimization"),
-                            &|query| {
-                                let query = self.cs.fixed_queries[query.index.unwrap()];
-                                let column_index = query.0.index();
-                                let rotation = query.1 .0;
-                                self.fixed[column_index]
-                                    [(row as i32 + n + rotation) as usize % n as usize]
-                                    .into()
-                            },
-                            &|query| {
-                                let query = self.cs.advice_queries[query.index.unwrap()];
-                                let column_index = query.0.index();
-                                let rotation = query.1 .0;
-                                self.advice[column_index]
-                                    [(row as i32 + n + rotation) as usize % n as usize]
-                                    .into()
-                            },
-                            &|query| {
-                                let query = self.cs.instance_queries[query.index.unwrap()];
-                                let column_index = query.0.index();
-                                let rotation = query.1 .0;
-                                Value::Real(
-                                    self.instance[column_index]
-                                        [(row as i32 + n + rotation) as usize % n as usize],
-                                )
-                            },
-                            &|challenge| Value::Real(self.challenges[challenge.index()]),
-                            &|a| -a,
-                            &|a, b| a + b,
-                            &|a, b| a * b,
-                            &|a, scalar| a * scalar,
-                            &Value::Real(F::ZERO),
-                        )
-                    };
-
                     assert!(shuffle.shuffle_expressions.len() == shuffle.input_expressions.len());
                     assert!(self.usable_rows.end > 0);
 
@@ -1337,6 +1297,35 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                 .collect::<Vec<_>>()
             });
 
+        let load = |expression: &Expression<F>, row| {
+            expression.evaluate_lazy(
+                &|scalar| Value::Real(scalar),
+                &|_| panic!("virtual selectors are removed during optimization"),
+                &|query| {
+                    self.fixed[query.column_index]
+                        [(row as i32 + n + query.rotation.0) as usize % n as usize]
+                        .into()
+                },
+                &|query| {
+                    self.advice[query.column_index]
+                        [(row as i32 + n + query.rotation.0) as usize % n as usize]
+                        .into()
+                },
+                &|query| {
+                    Value::Real(
+                        self.instance[query.column_index]
+                            [(row as i32 + n + query.rotation.0) as usize % n as usize],
+                    )
+                },
+                &|challenge| Value::Real(self.challenges[challenge.index()]),
+                &|a| -a,
+                &|a, b| a + b,
+                &|a, b| a * b,
+                &|a, scalar| a * scalar,
+                &Value::Real(F::ZERO),
+            )
+        };
+
         let mut cached_table = Vec::new();
         let mut cached_table_identifier = Vec::new();
         // Check that all lookups exist in their respective tables.
@@ -1346,35 +1335,6 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                 .iter()
                 .enumerate()
                 .flat_map(|(lookup_index, lookup)| {
-                    let load = |expression: &Expression<F>, row| {
-                        expression.evaluate_lazy(
-                            &|scalar| Value::Real(scalar),
-                            &|_| panic!("virtual selectors are removed during optimization"),
-                            &|query| {
-                                self.fixed[query.column_index]
-                                    [(row as i32 + n + query.rotation.0) as usize % n as usize]
-                                    .into()
-                            },
-                            &|query| {
-                                self.advice[query.column_index]
-                                    [(row as i32 + n + query.rotation.0) as usize % n as usize]
-                                    .into()
-                            },
-                            &|query| {
-                                Value::Real(
-                                    self.instance[query.column_index]
-                                        [(row as i32 + n + query.rotation.0) as usize % n as usize],
-                                )
-                            },
-                            &|challenge| Value::Real(self.challenges[challenge.index()]),
-                            &|a| -a,
-                            &|a, b| a + b,
-                            &|a, b| a * b,
-                            &|a, scalar| a * scalar,
-                            &Value::Real(F::ZERO),
-                        )
-                    };
-
                     assert!(lookup.table_expressions.len() == lookup.input_expressions.len());
                     assert!(self.usable_rows.end > 0);
 
@@ -1469,44 +1429,6 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                 .iter()
                 .enumerate()
                 .flat_map(|(shuffle_index, shuffle)| {
-                    let load = |expression: &Expression<F>, row| {
-                        expression.evaluate_lazy(
-                            &|scalar| Value::Real(scalar),
-                            &|_| panic!("virtual selectors are removed during optimization"),
-                            &|query| {
-                                let query = self.cs.fixed_queries[query.index.unwrap()];
-                                let column_index = query.0.index();
-                                let rotation = query.1 .0;
-                                self.fixed[column_index]
-                                    [(row as i32 + n + rotation) as usize % n as usize]
-                                    .into()
-                            },
-                            &|query| {
-                                let query = self.cs.advice_queries[query.index.unwrap()];
-                                let column_index = query.0.index();
-                                let rotation = query.1 .0;
-                                self.advice[column_index]
-                                    [(row as i32 + n + rotation) as usize % n as usize]
-                                    .into()
-                            },
-                            &|query| {
-                                let query = self.cs.instance_queries[query.index.unwrap()];
-                                let column_index = query.0.index();
-                                let rotation = query.1 .0;
-                                Value::Real(
-                                    self.instance[column_index]
-                                        [(row as i32 + n + rotation) as usize % n as usize],
-                                )
-                            },
-                            &|challenge| Value::Real(self.challenges[challenge.index()]),
-                            &|a| -a,
-                            &|a, b| a + b,
-                            &|a, b| a * b,
-                            &|a, scalar| a * scalar,
-                            &Value::Real(F::ZERO),
-                        )
-                    };
-
                     assert!(shuffle.shuffle_expressions.len() == shuffle.input_expressions.len());
                     assert!(self.usable_rows.end > 0);
 
