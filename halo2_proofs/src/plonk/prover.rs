@@ -439,30 +439,6 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let shuffles = instance
-        .iter()
-        .zip(advice.iter())
-        .map(|(instance, advice)| -> Vec<_> {
-            // Compress expressions for each shuffle
-            pk.vk
-                .cs
-                .shuffles
-                .iter()
-                .map(|shuffle| {
-                    shuffle.compress(
-                        pk,
-                        params,
-                        domain,
-                        theta,
-                        &advice.advice_polys,
-                        &pk.fixed_values,
-                        &instance.instance_values,
-                        &challenges,
-                    )
-                })
-                .collect::<Vec<_>>()
-        });
-
     // Sample beta challenge
     let beta: ChallengeBeta<_> = transcript.squeeze_challenge_scalar();
 
@@ -500,13 +476,30 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let shuffles: Vec<Vec<shuffle::prover::Committed<Scheme::Curve>>> = shuffles
-        .into_iter()
-        .map(|shuffles| -> Result<Vec<_>, _> {
-            // Construct and commit to products for each shuffle
-            shuffles
-                .into_iter()
-                .map(|shuffle| shuffle.commit_product(pk, params, gamma, &mut rng, transcript))
+    let shuffles: Vec<Vec<shuffle::prover::Committed<Scheme::Curve>>> = instance
+        .iter()
+        .zip(advice.iter())
+        .map(|(instance, advice)| -> Result<Vec<_>, _> {
+            // Compress expressions for each shuffle
+            pk.vk
+                .cs
+                .shuffles
+                .iter()
+                .map(|shuffle| {
+                    shuffle.commit_product(
+                        pk,
+                        params,
+                        domain,
+                        theta,
+                        gamma,
+                        &advice.advice_polys,
+                        &pk.fixed_values,
+                        &instance.instance_values,
+                        &challenges,
+                        &mut rng,
+                        transcript,
+                    )
+                })
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;

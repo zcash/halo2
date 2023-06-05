@@ -27,9 +27,9 @@ use std::{
 };
 
 #[derive(Debug)]
-pub(in crate::plonk) struct Compressed<C: CurveAffine> {
-    compressed_input_expression: Polynomial<C::Scalar, LagrangeCoeff>,
-    compressed_shuffle_expression: Polynomial<C::Scalar, LagrangeCoeff>,
+struct Compressed<C: CurveAffine> {
+    input_expression: Polynomial<C::Scalar, LagrangeCoeff>,
+    shuffle_expression: Polynomial<C::Scalar, LagrangeCoeff>,
 }
 
 #[derive(Debug)]
@@ -47,7 +47,7 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
     /// [S_0, S_1, ..., S_{m-1}], this method
     /// - constructs A_compressed = \theta^{m-1} A_0 + theta^{m-2} A_1 + ... + \theta A_{m-2} + A_{m-1}
     ///   and S_compressed = \theta^{m-1} S_0 + theta^{m-2} S_1 + ... + \theta S_{m-2} + S_{m-1},
-    pub(in crate::plonk) fn compress<'a, 'params: 'a, C, P: Params<'params, C>>(
+    fn compress<'a, 'params: 'a, C, P: Params<'params, C>>(
         &self,
         pk: &ProvingKey<C>,
         params: &P,
@@ -84,44 +84,65 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
         };
 
         // Get values of input expressions involved in the shuffle and compress them
-        let compressed_input_expression = compress_expressions(&self.input_expressions);
+        let input_expression = compress_expressions(&self.input_expressions);
 
         // Get values of table expressions involved in the shuffle and compress them
-        let compressed_shuffle_expression = compress_expressions(&self.shuffle_expressions);
+        let shuffle_expression = compress_expressions(&self.shuffle_expressions);
 
         Compressed {
-            compressed_input_expression,
-            compressed_shuffle_expression,
+            input_expression,
+            shuffle_expression,
         }
     }
-}
 
-impl<C: CurveAffine> Compressed<C> {
     /// Given a Shuffle with input expressions and table expressions this method
     /// constructs the grand product polynomial over the shuffle.
     /// The grand product polynomial is used to populate the Product<C> struct.
     /// The Product<C> struct is added to the Shuffle and finally returned by the method.
     pub(in crate::plonk) fn commit_product<
-        'params,
+        'a,
+        'params: 'a,
+        C,
         P: Params<'params, C>,
         E: EncodedChallenge<C>,
         R: RngCore,
         T: TranscriptWrite<C, E>,
     >(
-        self,
+        &self,
         pk: &ProvingKey<C>,
         params: &P,
+        domain: &EvaluationDomain<C::Scalar>,
+        theta: ChallengeTheta<C>,
         gamma: ChallengeGamma<C>,
+        advice_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+        fixed_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+        instance_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+        challenges: &'a [C::Scalar],
         mut rng: R,
         transcript: &mut T,
-    ) -> Result<Committed<C>, Error> {
+    ) -> Result<Committed<C>, Error>
+    where
+        C: CurveAffine<ScalarExt = F>,
+        C::Curve: Mul<F, Output = C::Curve> + MulAssign<F>,
+    {
+        let compressed = self.compress(
+            pk,
+            params,
+            domain,
+            theta,
+            advice_values,
+            fixed_values,
+            instance_values,
+            challenges,
+        );
+
         let blinding_factors = pk.vk.cs.blinding_factors();
 
         let mut shuffle_product = vec![C::Scalar::ZERO; params.n() as usize];
         parallelize(&mut shuffle_product, |shuffle_product, start| {
             for (shuffle_product, shuffle_value) in shuffle_product
                 .iter_mut()
-                .zip(self.compressed_shuffle_expression[start..].iter())
+                .zip(compressed.shuffle_expression[start..].iter())
             {
                 *shuffle_product = *gamma + shuffle_value;
             }
@@ -132,7 +153,7 @@ impl<C: CurveAffine> Compressed<C> {
         parallelize(&mut shuffle_product, |product, start| {
             for (i, product) in product.iter_mut().enumerate() {
                 let i = i + start;
-                *product *= &(*gamma + self.compressed_input_expression[i]);
+                *product *= &(*gamma + compressed.input_expression[i]);
             }
         });
 
