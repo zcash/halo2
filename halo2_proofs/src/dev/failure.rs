@@ -654,7 +654,7 @@ fn render_shuffle<F: Field>(
     let cs = &prover.cs;
     let shuffle = &cs.shuffles[shuffle_index];
 
-    // Get the absolute row on which the lookup's inputs are being queried, so we can
+    // Get the absolute row on which the shuffle's inputs are being queried, so we can
     // fetch the input values.
     let row = match location {
         FailureLocation::InRegion { region, offset } => {
