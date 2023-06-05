@@ -178,7 +178,7 @@ pub enum VerifyFailure {
         ///   lookup is active on a row adjacent to an unrelated region.
         location: FailureLocation,
     },
-    /// A lookup input did not exist in its corresponding table.
+    /// A shuffle input did not exist in its corresponding map.
     Shuffle {
         /// The name of the lookup that is not satisfied.
         name: String,
@@ -744,7 +744,7 @@ fn render_shuffle<F: Field>(
     eprintln!();
     eprintln!("  Shuffle '{}' inputs:", name);
     for (i, input) in shuffle.input_expressions.iter().enumerate() {
-        // Fetch the cell values (since we don't store them in VerifyFailure::Lookup).
+        // Fetch the cell values (since we don't store them in VerifyFailure::Shuffle).
         let cell_values = input.evaluate(
             &|_| BTreeMap::default(),
             &|_| panic!("virtual selectors are removed during optimization"),

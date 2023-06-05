@@ -2356,7 +2356,7 @@ impl<F: Field> ConstraintSystem<F> {
         &self.lookups
     }
 
-    /// Returns lookup arguments
+    /// Returns shuffle arguments
     pub fn shuffles(&self) -> &Vec<shuffle::Argument<F>> {
         &self.shuffles
     }

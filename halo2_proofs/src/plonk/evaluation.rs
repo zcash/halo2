@@ -11,7 +11,6 @@ use crate::{
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
-use core::num;
 use group::prime::PrimeCurve;
 use group::{
     ff::{BatchInvert, Field, PrimeField, WithSmallOrderMulGroup},
@@ -609,7 +608,7 @@ impl<C: CurveAffine> Evaluator<C> {
                         *value = *value * y
                             + ((product_coset[idx] * product_coset[idx] - product_coset[idx])
                                 * l_last[idx]);
-                        // (1 - (l_last(X) + l_blind(X))) * (z(\omega X) (s(X) + \gamma) - z(X) (a(X) + \gamma) = 0
+                        // (1 - (l_last(X) + l_blind(X))) * (z(\omega X) (s(X) + \gamma) - z(X) (a(X) + \gamma)) = 0
                         *value = *value * y
                             + l_active_row[idx]
                                 * (product_coset[r_next] * shuffle_value
