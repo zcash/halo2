@@ -1063,7 +1063,8 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                         .collect();
                     shuffle_rows.sort();
 
-                    let mut input_rows: Vec<(Vec<Value<F>>, usize)> = lookup_input_row_ids
+                    let mut input_rows: Vec<(Vec<Value<F>>, usize)> = self
+                        .usable_rows
                         .clone()
                         .into_iter()
                         .map(|input_row| {
