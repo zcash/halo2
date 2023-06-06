@@ -5,8 +5,8 @@ use group::prime::PrimeCurveAffine;
 use halo2_proofs::{
     circuit::{AssignedCell, Region, Value},
     plonk::{
-        Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector,
-        VirtualCells,
+        Advice, Assigned, Column, ConstraintSystemBuilder, Constraints, Error, Expression,
+        Selector, VirtualCells,
     },
     poly::Rotation,
 };
@@ -29,7 +29,7 @@ pub struct Config {
 
 impl Config {
     pub(super) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         x: Column<Advice>,
         y: Column<Advice>,
     ) -> Self {
@@ -45,7 +45,7 @@ impl Config {
         config
     }
 
-    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystemBuilder<pallas::Base>) {
         let curve_eqn = |meta: &mut VirtualCells<pallas::Base>| {
             let x = meta.query_advice(self.x, Rotation::cur());
             let y = meta.query_advice(self.y, Rotation::cur());

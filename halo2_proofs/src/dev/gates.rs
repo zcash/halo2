@@ -7,7 +7,7 @@ use ff::PrimeField;
 
 use crate::{
     dev::util,
-    plonk::{Circuit, ConstraintSystem},
+    plonk::{Circuit, ConstraintSystemBuilder},
 };
 
 #[derive(Debug)]
@@ -51,7 +51,7 @@ struct Gate {
 ///         Self::default()
 ///     }
 ///
-///     fn configure(meta: &mut ConstraintSystem<F>) -> MyConfig {
+///     fn configure(meta: &mut ConstraintSystemBuilder<F>) -> MyConfig {
 ///         let a = meta.advice_column();
 ///         let b = meta.advice_column();
 ///         let c = meta.advice_column();
@@ -102,10 +102,11 @@ impl CircuitGates {
     /// Collects the gates from within the circuit.
     pub fn collect<F: PrimeField, C: Circuit<F>>() -> Self {
         // Collect the graph details.
-        let mut cs = ConstraintSystem::default();
+        let mut cs = ConstraintSystemBuilder::default();
         let _ = C::configure(&mut cs);
 
         let gates = cs
+            .cs
             .gates
             .iter()
             .map(|gate| Gate {
@@ -185,6 +186,7 @@ impl CircuitGates {
             .collect();
 
         let (total_negations, total_additions, total_multiplications) = cs
+            .cs
             .gates
             .iter()
             .flat_map(|gate| {

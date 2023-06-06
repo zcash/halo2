@@ -13,7 +13,7 @@ use group::{
 use halo2_proofs::{
     circuit::{AssignedCell, Region, Value},
     plonk::{
-        Advice, Column, ConstraintSystem, Constraints, Error, Expression, Fixed, Selector,
+        Advice, Column, ConstraintSystemBuilder, Constraints, Error, Expression, Fixed, Selector,
         VirtualCells,
     },
     poly::Rotation,
@@ -54,7 +54,7 @@ pub struct Config<FixedPoints: super::FixedPoints<pallas::Affine>> {
 impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         lagrange_coeffs: [Column<Fixed>; H],
         window: Column<Advice>,
         u: Column<Advice>,
@@ -112,7 +112,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
     /// This gate is not used in the mul_fixed::full_width helper, since the full-width
     /// scalar is witnessed directly as three-bit windows instead of being decomposed
     /// via a running sum.
-    fn running_sum_coords_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn running_sum_coords_gate(&self, meta: &mut ConstraintSystemBuilder<pallas::Base>) {
         meta.create_gate("Running sum coordinates check", |meta| {
             let q_mul_fixed_running_sum =
                 meta.query_selector(self.running_sum_config.q_range_check());

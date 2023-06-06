@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use super::NonIdentityEccPoint;
 use halo2_proofs::{
     circuit::Region,
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
+    plonk::{Advice, Column, ConstraintSystemBuilder, Constraints, Error, Selector},
     poly::Rotation,
 };
 use pasta_curves::pallas;
@@ -23,7 +23,7 @@ pub struct Config {
 
 impl Config {
     pub(super) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         x_p: Column<Advice>,
         y_p: Column<Advice>,
         x_qr: Column<Advice>,
@@ -53,7 +53,7 @@ impl Config {
             .collect()
     }
 
-    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystemBuilder<pallas::Base>) {
         // https://p.z.cash/halo2-0.1:ecc-incomplete-addition
         meta.create_gate("incomplete addition", |meta| {
             let q_add_incomplete = meta.query_selector(self.q_add_incomplete);

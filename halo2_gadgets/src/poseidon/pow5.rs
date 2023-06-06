@@ -5,7 +5,8 @@ use group::ff::Field;
 use halo2_proofs::{
     circuit::{AssignedCell, Cell, Chip, Layouter, Region, Value},
     plonk::{
-        Advice, Any, Column, ConstraintSystem, Constraints, Error, Expression, Fixed, Selector,
+        Advice, Any, Column, ConstraintSystemBuilder, Constraints, Error, Expression, Fixed,
+        Selector,
     },
     poly::Rotation,
 };
@@ -54,7 +55,7 @@ impl<F: Field, const WIDTH: usize, const RATE: usize> Pow5Chip<F, WIDTH, RATE> {
     // needs to be known wherever we implement the hashing gadget, but it isn't strictly
     // necessary for the permutation.
     pub fn configure<S: Spec<F, WIDTH, RATE>>(
-        meta: &mut ConstraintSystem<F>,
+        meta: &mut ConstraintSystemBuilder<F>,
         state: [Column<Advice>; WIDTH],
         partial_sbox: Column<Advice>,
         rc_a: [Column<Fixed>; WIDTH],
@@ -597,7 +598,7 @@ mod tests {
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
         pasta::Fp,
-        plonk::{Circuit, ConstraintSystem, Error},
+        plonk::{Circuit, ConstraintSystemBuilder, Error},
     };
     use pasta_curves::pallas;
     use rand::rngs::OsRng;
@@ -624,7 +625,7 @@ mod tests {
             PermuteCircuit::<S, WIDTH, RATE>(PhantomData)
         }
 
-        fn configure(meta: &mut ConstraintSystem<Fp>) -> Pow5Config<Fp, WIDTH, RATE> {
+        fn configure(meta: &mut ConstraintSystemBuilder<Fp>) -> Pow5Config<Fp, WIDTH, RATE> {
             let state = (0..WIDTH).map(|_| meta.advice_column()).collect::<Vec<_>>();
             let partial_sbox = meta.advice_column();
 
@@ -743,7 +744,7 @@ mod tests {
             }
         }
 
-        fn configure(meta: &mut ConstraintSystem<Fp>) -> Pow5Config<Fp, WIDTH, RATE> {
+        fn configure(meta: &mut ConstraintSystemBuilder<Fp>) -> Pow5Config<Fp, WIDTH, RATE> {
             let state = (0..WIDTH).map(|_| meta.advice_column()).collect::<Vec<_>>();
             let partial_sbox = meta.advice_column();
 

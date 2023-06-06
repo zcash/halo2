@@ -4,7 +4,7 @@ use group::ff::{Field, PrimeField};
 use halo2_proofs::{
     circuit::{Chip, Layouter, Region, Value},
     pasta::pallas,
-    plonk::{Advice, Column, ConstraintSystem, Error, TableColumn},
+    plonk::{Advice, Column, ConstraintSystemBuilder, Error, TableColumn},
     poly::Rotation,
 };
 use std::convert::TryInto;
@@ -182,7 +182,7 @@ impl<F: Field> Chip<F> for SpreadTableChip<F> {
 
 impl<F: PrimeField> SpreadTableChip<F> {
     pub fn configure(
-        meta: &mut ConstraintSystem<F>,
+        meta: &mut ConstraintSystemBuilder<F>,
         input_tag: Column<Advice>,
         input_dense: Column<Advice>,
         input_spread: Column<Advice>,
@@ -298,7 +298,7 @@ mod tests {
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
         pasta::Fp,
-        plonk::{Advice, Circuit, Column, ConstraintSystem, Error},
+        plonk::{Advice, Circuit, Column, ConstraintSystemBuilder, Error},
     };
 
     #[test]
@@ -317,7 +317,7 @@ mod tests {
                 MyCircuit {}
             }
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<F>) -> Self::Config {
                 let input_tag = meta.advice_column();
                 let input_dense = meta.advice_column();
                 let input_spread = meta.advice_column();

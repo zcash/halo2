@@ -7,7 +7,9 @@ use group::ff::PrimeField;
 use halo2_proofs::circuit::AssignedCell;
 use halo2_proofs::{
     circuit::Layouter,
-    plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
+    plonk::{
+        Advice, Assigned, Column, ConstraintSystemBuilder, Constraints, Error, Expression, Selector,
+    },
     poly::Rotation,
 };
 use pasta_curves::pallas;
@@ -26,7 +28,7 @@ pub struct Config {
 
 impl Config {
     pub(super) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
         advices: [Column<Advice>; 3],
     ) -> Self {
@@ -45,7 +47,7 @@ impl Config {
         config
     }
 
-    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystemBuilder<pallas::Base>) {
         // https://p.z.cash/halo2-0.1:ecc-var-mul-overflow
         meta.create_gate("overflow checks", |meta| {
             let q_mul_overflow = meta.query_selector(self.q_mul_overflow);

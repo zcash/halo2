@@ -33,7 +33,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             Self::default()
         }
 
-        fn configure(meta: &mut ConstraintSystem<F>) -> MyConfig {
+        fn configure(meta: &mut ConstraintSystemBuilder<F>) -> MyConfig {
             let config = MyConfig {
                 selector: meta.complex_selector(),
                 table: meta.lookup_table_column(),

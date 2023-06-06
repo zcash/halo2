@@ -456,7 +456,7 @@ pub(crate) mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
-        plonk::{Circuit, ConstraintSystem, Error},
+        plonk::{Circuit, ConstraintSystemBuilder, Error},
     };
     use rand::rngs::OsRng;
 
@@ -532,7 +532,7 @@ pub(crate) mod tests {
         }
 
         #[allow(non_snake_case)]
-        fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+        fn configure(meta: &mut ConstraintSystemBuilder<pallas::Base>) -> Self::Config {
             let advices = [
                 meta.advice_column(),
                 meta.advice_column(),

@@ -45,6 +45,8 @@ pub struct VerifyingKey<C: CurveAffine> {
     cs: ConstraintSystem<C::Scalar>,
     /// Cached maximum degree of `cs` (which doesn't change after construction).
     cs_degree: usize,
+    /// Cached number of blinding factors (which doesn't change after construction).
+    num_blinding_factors: usize,
     /// The representative of this `VerifyingKey` in transcripts.
     transcript_repr: C::Scalar,
 }
@@ -57,17 +59,19 @@ where
         domain: EvaluationDomain<C::Scalar>,
         fixed_commitments: Vec<C>,
         permutation: permutation::VerifyingKey<C>,
-        cs: ConstraintSystem<C::Scalar>,
+        cs: ConstraintSystemBuilder<C::Scalar>,
     ) -> Self {
         // Compute cached values.
         let cs_degree = cs.degree();
+        let num_blinding_factors = cs.blinding_factors();
 
         let mut vk = Self {
             domain,
             fixed_commitments,
             permutation,
-            cs,
+            cs: cs.cs,
             cs_degree,
+            num_blinding_factors,
             // Temporary, this is not pinned.
             transcript_repr: C::Scalar::ZERO,
         };

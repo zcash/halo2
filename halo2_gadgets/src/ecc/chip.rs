@@ -11,7 +11,7 @@ use ff::PrimeField;
 use group::prime::PrimeCurveAffine;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter, Value},
-    plonk::{Advice, Assigned, Column, ConstraintSystem, Error, Fixed},
+    plonk::{Advice, Assigned, Column, ConstraintSystemBuilder, Error, Fixed},
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
 
@@ -261,7 +261,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
     /// All columns in `advices` will be equality-enabled.
     #[allow(non_snake_case)]
     pub fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         advices: [Column<Advice>; 10],
         lagrange_coeffs: [Column<Fixed>; 8],
         range_check: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,

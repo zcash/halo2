@@ -6,7 +6,7 @@ use tracing::{debug, debug_span, span::EnteredSpan};
 use crate::{
     circuit::{layouter::RegionLayouter, AssignedCell, Cell, Layouter, Region, Table, Value},
     plonk::{
-        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
+        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystemBuilder, Error, Fixed,
         FloorPlanner, Instance, Selector,
     },
 };
@@ -50,7 +50,7 @@ use crate::{
 ///         Self { some_witness: Value::unknown() }
 ///     }
 ///
-///     fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+///     fn configure(meta: &mut ConstraintSystemBuilder<F>) -> Self::Config {
 ///         // ..
 /// #       todo!()
 ///     }
@@ -126,7 +126,7 @@ impl<'c, F: Field, C: Circuit<F>> Circuit<F> for TracingCircuit<'c, F, C> {
         Self::owned(self.inner_ref().without_witnesses())
     }
 
-    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+    fn configure(meta: &mut ConstraintSystemBuilder<F>) -> Self::Config {
         let _span = debug_span!("configure").entered();
         C::configure(meta)
     }

@@ -156,7 +156,7 @@ mod tests {
     use crate::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
-        plonk::{Circuit, ConstraintSystem},
+        plonk::{Circuit, ConstraintSystemBuilder},
         poly::Rotation,
     };
 
@@ -182,7 +182,7 @@ mod tests {
                 Self
             }
 
-            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<Fp>) -> Self::Config {
                 let a = meta.advice_column();
                 let table = meta.lookup_table_column();
 
@@ -240,7 +240,7 @@ mod tests {
                 Self
             }
 
-            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<Fp>) -> Self::Config {
                 let a = meta.advice_column();
                 let table = meta.lookup_table_column();
 
@@ -304,7 +304,7 @@ mod tests {
                 Self
             }
 
-            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<Fp>) -> Self::Config {
                 let a = meta.advice_column();
                 let table = meta.lookup_table_column();
 
@@ -369,7 +369,7 @@ mod tests {
                 Self
             }
 
-            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<Fp>) -> Self::Config {
                 let a = meta.advice_column();
                 let table = (meta.lookup_table_column(), meta.lookup_table_column());
                 meta.lookup(|cells| {

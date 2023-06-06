@@ -6,7 +6,8 @@ use group::ff::PrimeField;
 use halo2_proofs::{
     circuit::{Region, Value},
     plonk::{
-        Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector, VirtualCells,
+        Advice, Column, ConstraintSystemBuilder, Constraints, Error, Expression, Selector,
+        VirtualCells,
     },
     poly::Rotation,
 };
@@ -73,7 +74,7 @@ pub(crate) struct Config<const NUM_BITS: usize> {
 
 impl<const NUM_BITS: usize> Config<NUM_BITS> {
     pub(super) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         z: Column<Advice>,
         x_a: Column<Advice>,
         x_p: Column<Advice>,
@@ -104,7 +105,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
     }
 
     // Gate for incomplete addition part of variable-base scalar multiplication.
-    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystemBuilder<pallas::Base>) {
         // Closure to compute x_{R,i} = λ_{1,i}^2 - x_{A,i} - x_{P,i}
         let x_r = |meta: &mut VirtualCells<pallas::Base>, rotation: Rotation| {
             self.double_and_add.x_r(meta, rotation)

@@ -5,7 +5,7 @@ use super::{bool_check, ternary, UtilitiesInstructions};
 use group::ff::{Field, PrimeField};
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter, Value},
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
+    plonk::{Advice, Column, ConstraintSystemBuilder, Constraints, Error, Selector},
     poly::Rotation,
 };
 use std::marker::PhantomData;
@@ -130,7 +130,7 @@ impl<F: PrimeField> CondSwapChip<F> {
     ///
     /// `advices[0]` will be equality-enabled.
     pub fn configure(
-        meta: &mut ConstraintSystem<F>,
+        meta: &mut ConstraintSystemBuilder<F>,
         advices: [Column<Advice>; 5],
     ) -> CondSwapConfig {
         let a = advices[0];
@@ -200,7 +200,7 @@ mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
-        plonk::{Circuit, ConstraintSystem, Error},
+        plonk::{Circuit, ConstraintSystemBuilder, Error},
     };
     use pasta_curves::pallas::Base;
     use rand::rngs::OsRng;
@@ -222,7 +222,7 @@ mod tests {
                 Self::default()
             }
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<F>) -> Self::Config {
                 let advices = [
                     meta.advice_column(),
                     meta.advice_column(),

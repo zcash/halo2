@@ -25,7 +25,7 @@
 use ff::PrimeFieldBits;
 use halo2_proofs::{
     circuit::{AssignedCell, Region, Value},
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
+    plonk::{Advice, Column, ConstraintSystemBuilder, Constraints, Error, Selector},
     poly::Rotation,
 };
 
@@ -68,7 +68,7 @@ impl<F: PrimeFieldBits, const WINDOW_NUM_BITS: usize> RunningSumConfig<F, WINDOW
     ///
     /// `z` will be equality-enabled.
     pub fn configure(
-        meta: &mut ConstraintSystem<F>,
+        meta: &mut ConstraintSystemBuilder<F>,
         q_range_check: Selector,
         z: Column<Advice>,
     ) -> Self {
@@ -212,7 +212,7 @@ mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::{FailureLocation, MockProver, VerifyFailure},
-        plonk::{Any, Circuit, ConstraintSystem, Error},
+        plonk::{Any, Circuit, ConstraintSystemBuilder, Error},
     };
     use pasta_curves::pallas;
     use rand::rngs::OsRng;
@@ -252,7 +252,7 @@ mod tests {
                 }
             }
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<F>) -> Self::Config {
                 let z = meta.advice_column();
                 let q_range_check = meta.selector();
                 let constants = meta.fixed_column();

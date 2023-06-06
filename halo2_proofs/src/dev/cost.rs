@@ -14,7 +14,7 @@ use group::prime::PrimeGroup;
 use crate::{
     circuit::{layouter::RegionColumn, Value},
     plonk::{
-        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
+        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystemBuilder, Error, Fixed,
         FloorPlanner, Instance, Selector,
     },
     poly::Rotation,
@@ -260,14 +260,14 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
     /// Panics if `k` is not large enough for the circuit.
     pub fn measure(k: u32, circuit: &ConcreteCircuit) -> Self {
         // Collect the layout details.
-        let mut cs = ConstraintSystem::default();
+        let mut cs = ConstraintSystemBuilder::default();
         let config = ConcreteCircuit::configure(&mut cs);
-        let mut layout = Layout::new(k, 1 << k, cs.num_selectors);
+        let mut layout = Layout::new(k, 1 << k, cs.cs.num_selectors);
         ConcreteCircuit::FloorPlanner::synthesize(
             &mut layout,
             circuit,
             config,
-            cs.constants.clone(),
+            cs.cs.constants.clone(),
         )
         .unwrap();
         let (cs, _) = cs.compress_selectors(layout.selectors);
@@ -278,14 +278,21 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
         let mut column_queries: HashMap<Column<Any>, HashSet<i32>> = HashMap::new();
         for (c, r) in iter::empty()
             .chain(
-                cs.advice_queries
+                cs.cs
+                    .advice_queries
                     .iter()
                     .map(|(c, r)| (Column::<Any>::from(*c), *r)),
             )
-            .chain(cs.instance_queries.iter().map(|(c, r)| ((*c).into(), *r)))
-            .chain(cs.fixed_queries.iter().map(|(c, r)| ((*c).into(), *r)))
             .chain(
-                cs.permutation
+                cs.cs
+                    .instance_queries
+                    .iter()
+                    .map(|(c, r)| ((*c).into(), *r)),
+            )
+            .chain(cs.cs.fixed_queries.iter().map(|(c, r)| ((*c).into(), *r)))
+            .chain(
+                cs.cs
+                    .permutation
                     .get_columns()
                     .into_iter()
                     .map(|c| (c, Rotation::cur())),
@@ -309,7 +316,7 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
         // Include permutation polynomials in point sets.
         point_sets.insert(vec![0, 1]); // permutation_product_poly
         let max_deg = cs.degree();
-        let permutation_cols = cs.permutation.get_columns().len();
+        let permutation_cols = cs.cs.permutation.get_columns().len();
         if permutation_cols > max_deg - 2 {
             // permutation_product_poly for chaining chunks.
             point_sets.insert(vec![-((cs.blinding_factors() + 1) as i32), 0, 1]);
@@ -318,23 +325,23 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
         CircuitCost {
             k,
             max_deg,
-            advice_columns: cs.num_advice_columns,
-            instance_queries: cs.instance_queries.len(),
-            advice_queries: cs.advice_queries.len(),
-            fixed_queries: cs.fixed_queries.len(),
-            lookups: cs.lookups.len(),
+            advice_columns: cs.cs.num_advice_columns,
+            instance_queries: cs.cs.instance_queries.len(),
+            advice_queries: cs.cs.advice_queries.len(),
+            fixed_queries: cs.cs.fixed_queries.len(),
+            lookups: cs.cs.lookups.len(),
             permutation_cols,
             point_sets: point_sets.len(),
             _marker: PhantomData::default(),
             max_rows: layout.total_rows,
             max_advice_rows: layout.total_advice_rows,
             max_fixed_rows: layout.total_fixed_rows,
-            num_advice_columns: cs.num_advice_columns,
-            num_fixed_columns: cs.num_fixed_columns,
-            num_instance_columns: cs.num_instance_columns,
-            num_total_columns: cs.num_instance_columns
-                + cs.num_advice_columns
-                + cs.num_fixed_columns,
+            num_advice_columns: cs.cs.num_advice_columns,
+            num_fixed_columns: cs.cs.num_fixed_columns,
+            num_instance_columns: cs.cs.num_instance_columns,
+            num_total_columns: cs.cs.num_instance_columns
+                + cs.cs.num_advice_columns
+                + cs.cs.num_fixed_columns,
         }
     }
 
@@ -531,7 +538,7 @@ mod tests {
                 Self
             }
 
-            fn configure(_meta: &mut ConstraintSystem<Fp>) -> Self::Config {}
+            fn configure(_meta: &mut ConstraintSystemBuilder<Fp>) -> Self::Config {}
 
             fn synthesize(
                 &self,

@@ -305,7 +305,7 @@ pub struct InstanceQuery {
 ///
 /// A lookup table can be loaded into this column via [`Layouter::assign_table`]. Columns
 /// can currently only contain a single table, but they may be used in multiple lookup
-/// arguments via [`ConstraintSystem::lookup`].
+/// arguments via [`ConstraintSystemBuilder::lookup`].
 ///
 /// Lookup table columns are always "encumbered" by the lookup arguments they are used in;
 /// they cannot simultaneously be used as general fixed columns.
@@ -329,7 +329,7 @@ impl TableColumn {
     }
 
     /// Enable equality on this TableColumn.
-    pub fn enable_equality<F: Field>(&self, meta: &mut ConstraintSystem<F>) {
+    pub fn enable_equality<F: Field>(&self, meta: &mut ConstraintSystemBuilder<F>) {
         meta.enable_equality(self.inner)
     }
 }
@@ -476,7 +476,7 @@ pub trait Circuit<F: Field> {
 
     /// The circuit is given an opportunity to describe the exact gate
     /// arrangement, column arrangement, etc.
-    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config;
+    fn configure(meta: &mut ConstraintSystemBuilder<F>) -> Self::Config;
 
     /// Given the provided `cs`, synthesize the circuit. The concrete type of
     /// the caller will be different depending on the context, and they may or
@@ -928,6 +928,22 @@ impl<F: Field> Gate<F> {
     }
 }
 
+/// A builder type for a [`ConstraintSystem`].
+#[derive(Debug, Clone, Default)]
+pub struct ConstraintSystemBuilder<F: Field> {
+    pub(crate) cs: ConstraintSystem<F>,
+
+    /// This is a cached vector that maps virtual selectors to the concrete
+    /// fixed column that they were compressed into. This is just used by dev
+    /// tooling right now.
+    pub(crate) selector_map: Vec<Column<Fixed>>,
+
+    // Contains an integer for each advice column
+    // identifying how many distinct queries it has
+    // so far; should be same length as num_advice_columns.
+    num_advice_queries: Vec<usize>,
+}
+
 /// This is a description of the circuit environment, such as the gate, column and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
@@ -937,17 +953,8 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) num_instance_columns: usize,
     pub(crate) num_selectors: usize,
 
-    /// This is a cached vector that maps virtual selectors to the concrete
-    /// fixed column that they were compressed into. This is just used by dev
-    /// tooling right now.
-    pub(crate) selector_map: Vec<Column<Fixed>>,
-
     pub(crate) gates: Vec<Gate<F>>,
     pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
-    // Contains an integer for each advice column
-    // identifying how many distinct queries it has
-    // so far; should be same length as num_advice_columns.
-    num_advice_queries: Vec<usize>,
     pub(crate) instance_queries: Vec<(Column<Instance>, Rotation)>,
     pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
 
@@ -1000,11 +1007,9 @@ impl<F: Field> Default for ConstraintSystem<F> {
             num_advice_columns: 0,
             num_instance_columns: 0,
             num_selectors: 0,
-            selector_map: vec![],
             gates: vec![],
             fixed_queries: Vec::new(),
             advice_queries: Vec::new(),
-            num_advice_queries: Vec::new(),
             instance_queries: Vec::new(),
             permutation: permutation::Argument::new(),
             lookups: Vec::new(),
@@ -1034,15 +1039,17 @@ impl<F: Field> ConstraintSystem<F> {
             minimum_degree: &self.minimum_degree,
         }
     }
+}
 
+impl<F: Field> ConstraintSystemBuilder<F> {
     /// Enables this fixed column to be used for global constant assignments.
     ///
     /// # Side-effects
     ///
     /// The column will be equality-enabled.
     pub fn enable_constant(&mut self, column: Column<Fixed>) {
-        if !self.constants.contains(&column) {
-            self.constants.push(column);
+        if !self.cs.constants.contains(&column) {
+            self.cs.constants.push(column);
             self.enable_equality(column);
         }
     }
@@ -1051,7 +1058,7 @@ impl<F: Field> ConstraintSystem<F> {
     pub fn enable_equality<C: Into<Column<Any>>>(&mut self, column: C) {
         let column = column.into();
         self.query_any_index(column, Rotation::cur());
-        self.permutation.add_column(column);
+        self.cs.permutation.add_column(column);
     }
 
     /// Add a lookup argument for some input expressions and table columns.
@@ -1076,39 +1083,39 @@ impl<F: Field> ConstraintSystem<F> {
             })
             .collect();
 
-        let index = self.lookups.len();
+        let index = self.cs.lookups.len();
 
-        self.lookups.push(lookup::Argument::new(table_map));
+        self.cs.lookups.push(lookup::Argument::new(table_map));
 
         index
     }
 
     fn query_fixed_index(&mut self, column: Column<Fixed>) -> usize {
         // Return existing query, if it exists
-        for (index, fixed_query) in self.fixed_queries.iter().enumerate() {
+        for (index, fixed_query) in self.cs.fixed_queries.iter().enumerate() {
             if fixed_query == &(column, Rotation::cur()) {
                 return index;
             }
         }
 
         // Make a new query
-        let index = self.fixed_queries.len();
-        self.fixed_queries.push((column, Rotation::cur()));
+        let index = self.cs.fixed_queries.len();
+        self.cs.fixed_queries.push((column, Rotation::cur()));
 
         index
     }
 
     pub(crate) fn query_advice_index(&mut self, column: Column<Advice>, at: Rotation) -> usize {
         // Return existing query, if it exists
-        for (index, advice_query) in self.advice_queries.iter().enumerate() {
+        for (index, advice_query) in self.cs.advice_queries.iter().enumerate() {
             if advice_query == &(column, at) {
                 return index;
             }
         }
 
         // Make a new query
-        let index = self.advice_queries.len();
-        self.advice_queries.push((column, at));
+        let index = self.cs.advice_queries.len();
+        self.cs.advice_queries.push((column, at));
         self.num_advice_queries[column.index] += 1;
 
         index
@@ -1116,15 +1123,15 @@ impl<F: Field> ConstraintSystem<F> {
 
     fn query_instance_index(&mut self, column: Column<Instance>, at: Rotation) -> usize {
         // Return existing query, if it exists
-        for (index, instance_query) in self.instance_queries.iter().enumerate() {
+        for (index, instance_query) in self.cs.instance_queries.iter().enumerate() {
             if instance_query == &(column, at) {
                 return index;
             }
         }
 
         // Make a new query
-        let index = self.instance_queries.len();
-        self.instance_queries.push((column, at));
+        let index = self.cs.instance_queries.len();
+        self.cs.instance_queries.push((column, at));
 
         index
     }
@@ -1138,7 +1145,9 @@ impl<F: Field> ConstraintSystem<F> {
             }
         }
     }
+}
 
+impl<F: Field> ConstraintSystem<F> {
     pub(crate) fn get_advice_query_index(&self, column: Column<Advice>, at: Rotation) -> usize {
         for (index, advice_query) in self.advice_queries.iter().enumerate() {
             if advice_query == &(column, at) {
@@ -1183,12 +1192,14 @@ impl<F: Field> ConstraintSystem<F> {
             ),
         }
     }
+}
 
+impl<F: Field> ConstraintSystemBuilder<F> {
     /// Sets the minimum degree required by the circuit, which can be set to a
     /// larger amount than actually needed. This can be used, for example, to
     /// force the permutation argument to involve more columns in the same set.
     pub fn set_minimum_degree(&mut self, degree: usize) {
-        self.minimum_degree = Some(degree);
+        self.cs.minimum_degree = Some(degree);
     }
 
     /// Creates a new gate.
@@ -1218,7 +1229,7 @@ impl<F: Field> ConstraintSystem<F> {
             "Gates must contain at least one constraint."
         );
 
-        self.gates.push(Gate {
+        self.cs.gates.push(Gate {
             name,
             constraint_names,
             polys,
@@ -1237,14 +1248,14 @@ impl<F: Field> ConstraintSystem<F> {
     pub(crate) fn compress_selectors(mut self, selectors: Vec<Vec<bool>>) -> (Self, Vec<Vec<F>>) {
         // The number of provided selector assignments must be the number we
         // counted for this constraint system.
-        assert_eq!(selectors.len(), self.num_selectors);
+        assert_eq!(selectors.len(), self.cs.num_selectors);
 
         // Compute the maximal degree of every selector. We only consider the
         // expressions in gates, as lookup arguments cannot support simple
         // selectors. Selectors that are complex or do not appear in any gates
         // will have degree zero.
         let mut degrees = vec![0; selectors.len()];
-        for expr in self.gates.iter().flat_map(|gate| gate.polys.iter()) {
+        for expr in self.cs.gates.iter().flat_map(|gate| gate.polys.iter()) {
             if let Some(selector) = expr.extract_simple_selector() {
                 degrees[selector.0] = max(degrees[selector.0], expr.degree());
             }
@@ -1324,13 +1335,18 @@ impl<F: Field> ConstraintSystem<F> {
         }
 
         // Substitute selectors for the real fixed columns in all gates
-        for expr in self.gates.iter_mut().flat_map(|gate| gate.polys.iter_mut()) {
+        for expr in self
+            .cs
+            .gates
+            .iter_mut()
+            .flat_map(|gate| gate.polys.iter_mut())
+        {
             replace_selectors(expr, &selector_replacements, false);
         }
 
         // Substitute non-simple selectors for the real fixed columns in all
         // lookup expressions
-        for expr in self.lookups.iter_mut().flat_map(|lookup| {
+        for expr in self.cs.lookups.iter_mut().flat_map(|lookup| {
             lookup
                 .input_expressions
                 .iter_mut()
@@ -1347,16 +1363,16 @@ impl<F: Field> ConstraintSystem<F> {
     /// selectors. Also, simple selectors may not appear in lookup argument
     /// inputs.
     pub fn selector(&mut self) -> Selector {
-        let index = self.num_selectors;
-        self.num_selectors += 1;
+        let index = self.cs.num_selectors;
+        self.cs.num_selectors += 1;
         Selector(index, true)
     }
 
     /// Allocate a new complex selector that can appear anywhere
     /// within expressions.
     pub fn complex_selector(&mut self) -> Selector {
-        let index = self.num_selectors;
-        self.num_selectors += 1;
+        let index = self.cs.num_selectors;
+        self.cs.num_selectors += 1;
         Selector(index, false)
     }
 
@@ -1370,20 +1386,20 @@ impl<F: Field> ConstraintSystem<F> {
     /// Allocate a new fixed column
     pub fn fixed_column(&mut self) -> Column<Fixed> {
         let tmp = Column {
-            index: self.num_fixed_columns,
+            index: self.cs.num_fixed_columns,
             column_type: Fixed,
         };
-        self.num_fixed_columns += 1;
+        self.cs.num_fixed_columns += 1;
         tmp
     }
 
     /// Allocate a new advice column
     pub fn advice_column(&mut self) -> Column<Advice> {
         let tmp = Column {
-            index: self.num_advice_columns,
+            index: self.cs.num_advice_columns,
             column_type: Advice,
         };
-        self.num_advice_columns += 1;
+        self.cs.num_advice_columns += 1;
         self.num_advice_queries.push(0);
         tmp
     }
@@ -1391,10 +1407,10 @@ impl<F: Field> ConstraintSystem<F> {
     /// Allocate a new instance column
     pub fn instance_column(&mut self) -> Column<Instance> {
         let tmp = Column {
-            index: self.num_instance_columns,
+            index: self.cs.num_instance_columns,
             column_type: Instance,
         };
-        self.num_instance_columns += 1;
+        self.cs.num_instance_columns += 1;
         tmp
     }
 
@@ -1403,13 +1419,14 @@ impl<F: Field> ConstraintSystem<F> {
     pub fn degree(&self) -> usize {
         // The permutation argument will serve alongside the gates, so must be
         // accounted for.
-        let mut degree = self.permutation.required_degree();
+        let mut degree = self.cs.permutation.required_degree();
 
         // The lookup argument also serves alongside the gates and must be accounted
         // for.
         degree = std::cmp::max(
             degree,
-            self.lookups
+            self.cs
+                .lookups
                 .iter()
                 .map(|l| l.required_degree())
                 .max()
@@ -1420,14 +1437,15 @@ impl<F: Field> ConstraintSystem<F> {
         // correct degree and that our extended domain is the right size.
         degree = std::cmp::max(
             degree,
-            self.gates
+            self.cs
+                .gates
                 .iter()
                 .flat_map(|gate| gate.polynomials().iter().map(|poly| poly.degree()))
                 .max()
                 .unwrap_or(0),
         );
 
-        std::cmp::max(degree, self.minimum_degree.unwrap_or(1))
+        std::cmp::max(degree, self.cs.minimum_degree.unwrap_or(1))
     }
 
     /// Compute the number of blinding factors necessary to perfectly blind
@@ -1476,13 +1494,13 @@ impl<F: Field> ConstraintSystem<F> {
 /// table.
 #[derive(Debug)]
 pub struct VirtualCells<'a, F: Field> {
-    meta: &'a mut ConstraintSystem<F>,
+    meta: &'a mut ConstraintSystemBuilder<F>,
     queried_selectors: Vec<Selector>,
     queried_cells: Vec<VirtualCell>,
 }
 
 impl<'a, F: Field> VirtualCells<'a, F> {
-    fn new(meta: &'a mut ConstraintSystem<F>) -> Self {
+    fn new(meta: &'a mut ConstraintSystemBuilder<F>) -> Self {
         VirtualCells {
             meta,
             queried_selectors: vec![],
