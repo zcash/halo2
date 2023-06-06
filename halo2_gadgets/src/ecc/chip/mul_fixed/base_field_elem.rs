@@ -10,7 +10,7 @@ use crate::{
 use group::ff::PrimeField;
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter},
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
+    plonk::{Advice, Column, ConstraintSystemBuilder, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
 use pasta_curves::pallas;
@@ -27,7 +27,7 @@ pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
 
 impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
     pub(crate) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         canon_advices: [Column<Advice>; 3],
         lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
         super_config: super::Config<Fixed>,
@@ -56,7 +56,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         config
     }
 
-    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystemBuilder<pallas::Base>) {
         // Check that the base field element is canonical.
         // https://p.z.cash/halo2-0.1:ecc-fixed-mul-base-canonicity
         meta.create_gate("Canonicity checks", |meta| {

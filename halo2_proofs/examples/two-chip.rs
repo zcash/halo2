@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use group::ff::Field;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner, Value},
-    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Instance, Selector},
+    plonk::{Advice, Circuit, Column, ConstraintSystemBuilder, Error, Instance, Selector},
     poly::Rotation,
 };
 
@@ -153,7 +153,7 @@ impl<F: Field> AddChip<F> {
     }
 
     fn configure(
-        meta: &mut ConstraintSystem<F>,
+        meta: &mut ConstraintSystemBuilder<F>,
         advice: [Column<Advice>; 2],
     ) -> <Self as Chip<F>>::Config {
         let s_add = meta.selector();
@@ -255,7 +255,7 @@ impl<F: Field> MulChip<F> {
     }
 
     fn configure(
-        meta: &mut ConstraintSystem<F>,
+        meta: &mut ConstraintSystemBuilder<F>,
         advice: [Column<Advice>; 2],
     ) -> <Self as Chip<F>>::Config {
         for column in &advice {
@@ -376,7 +376,7 @@ impl<F: Field> FieldChip<F> {
     }
 
     fn configure(
-        meta: &mut ConstraintSystem<F>,
+        meta: &mut ConstraintSystemBuilder<F>,
         advice: [Column<Advice>; 2],
         instance: Column<Instance>,
     ) -> <Self as Chip<F>>::Config {
@@ -463,7 +463,7 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
         Self::default()
     }
 
-    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+    fn configure(meta: &mut ConstraintSystemBuilder<F>) -> Self::Config {
         // We create the two advice columns that FieldChip uses for I/O.
         let advice = [meta.advice_column(), meta.advice_column()];
 

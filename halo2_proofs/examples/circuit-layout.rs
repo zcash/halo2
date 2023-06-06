@@ -2,7 +2,9 @@ use ff::Field;
 use halo2_proofs::{
     circuit::{Cell, Layouter, Region, SimpleFloorPlanner, Value},
     pasta::Fp,
-    plonk::{Advice, Assigned, Circuit, Column, ConstraintSystem, Error, Fixed, TableColumn},
+    plonk::{
+        Advice, Assigned, Circuit, Column, ConstraintSystemBuilder, Error, Fixed, TableColumn,
+    },
     poly::Rotation,
 };
 use rand_core::OsRng;
@@ -170,7 +172,7 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
     }
 
     #[allow(clippy::many_single_char_names)]
-    fn configure(meta: &mut ConstraintSystem<F>) -> PlonkConfig {
+    fn configure(meta: &mut ConstraintSystemBuilder<F>) -> PlonkConfig {
         let e = meta.advice_column();
         let a = meta.advice_column();
         let b = meta.advice_column();

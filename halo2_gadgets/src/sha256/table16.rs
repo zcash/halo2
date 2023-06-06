@@ -5,7 +5,7 @@ use super::Sha256Instructions;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter, Region, Value},
     pasta::pallas,
-    plonk::{Advice, Any, Assigned, Column, ConstraintSystem, Error},
+    plonk::{Advice, Any, Assigned, Column, ConstraintSystemBuilder, Error},
 };
 
 mod compression;
@@ -266,7 +266,7 @@ impl Table16Chip {
 
     /// Configures a circuit to include this chip.
     pub fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
     ) -> <Self as Chip<pallas::Base>>::Config {
         // Columns required by this chip:
         let message_schedule = meta.advice_column();
@@ -457,7 +457,7 @@ mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         pasta::pallas,
-        plonk::{Circuit, ConstraintSystem, Error},
+        plonk::{Circuit, ConstraintSystemBuilder, Error},
     };
 
     #[test]
@@ -473,7 +473,7 @@ mod tests {
                 MyCircuit {}
             }
 
-            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<pallas::Base>) -> Self::Config {
                 Table16Chip::configure(meta)
             }
 

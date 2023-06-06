@@ -2,7 +2,7 @@
 
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter, Value},
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
+    plonk::{Advice, Column, ConstraintSystemBuilder, Constraints, Error, Selector},
     poly::Rotation,
 };
 use pasta_curves::pallas;
@@ -86,7 +86,7 @@ where
 {
     /// Configures the [`MerkleChip`].
     pub fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         sinsemilla_config: SinsemillaConfig<Hash, Commit, F>,
     ) -> MerkleConfig<Hash, Commit, F> {
         // All five advice columns are equality-enabled by SinsemillaConfig.

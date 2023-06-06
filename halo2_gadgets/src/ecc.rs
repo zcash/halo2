@@ -583,7 +583,7 @@ pub(crate) mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
-        plonk::{Circuit, ConstraintSystem, Error},
+        plonk::{Circuit, ConstraintSystemBuilder, Error},
     };
     use lazy_static::lazy_static;
     use pasta_curves::pallas;
@@ -736,7 +736,7 @@ pub(crate) mod tests {
             MyCircuit { test_errors: false }
         }
 
-        fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+        fn configure(meta: &mut ConstraintSystemBuilder<pallas::Base>) -> Self::Config {
             let advices = [
                 meta.advice_column(),
                 meta.advice_column(),

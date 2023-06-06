@@ -5,17 +5,14 @@ use std::iter;
 use std::ops::RangeTo;
 
 use super::{
-    circuit::{
-        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
-        Selector,
-    },
+    circuit::{Advice, Any, Assignment, Circuit, Column, Fixed, FloorPlanner, Instance, Selector},
     lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
     ChallengeY, Error, ProvingKey,
 };
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine},
     circuit::Value,
-    plonk::Assigned,
+    plonk::{Assigned, ConstraintSystemBuilder},
     poly::{
         self,
         commitment::{Blind, Params},
@@ -60,7 +57,7 @@ pub fn create_proof<
     pk.vk.hash_into(transcript)?;
 
     let domain = &pk.vk.domain;
-    let mut meta = ConstraintSystem::default();
+    let mut meta = ConstraintSystemBuilder::default();
     let config = ConcreteCircuit::configure(&mut meta);
 
     // Selector optimizations cannot be applied here; use the ConstraintSystem
@@ -81,7 +78,7 @@ pub fn create_proof<
                 .map(|values| {
                     let mut poly = domain.empty_lagrange();
                     assert_eq!(poly.len(), params.n as usize);
-                    if values.len() > (poly.len() - (meta.blinding_factors() + 1)) {
+                    if values.len() > (poly.len() - (pk.vk.num_blinding_factors + 1)) {
                         return Err(Error::InstanceTooLarge);
                     }
                     for (poly, value) in poly.iter_mut().zip(values.iter()) {
@@ -266,7 +263,7 @@ pub fn create_proof<
                 }
             }
 
-            let unusable_rows_start = params.n as usize - (meta.blinding_factors() + 1);
+            let unusable_rows_start = params.n as usize - (pk.vk.num_blinding_factors + 1);
 
             let mut witness = WitnessCollection {
                 k: params.k,
@@ -746,7 +743,7 @@ fn test_create_proof() {
             *self
         }
 
-        fn configure(_meta: &mut ConstraintSystem<F>) -> Self::Config {}
+        fn configure(_meta: &mut ConstraintSystemBuilder<F>) -> Self::Config {}
 
         fn synthesize(
             &self,

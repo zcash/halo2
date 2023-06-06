@@ -5,7 +5,7 @@ use arrayvec::ArrayVec;
 use ff::PrimeField;
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter, Region, Value},
-    plonk::{ConstraintSystem, Constraints, Error, Selector},
+    plonk::{ConstraintSystemBuilder, Constraints, Error, Selector},
     poly::Rotation,
 };
 use pasta_curves::pallas;
@@ -18,7 +18,7 @@ pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
 
 impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
     pub(crate) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         super_config: super::Config<Fixed>,
     ) -> Self {
         let config = Self {
@@ -31,7 +31,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         config
     }
 
-    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystemBuilder<pallas::Base>) {
         // Check that each window `k` is within 3 bits
         // https://p.z.cash/halo2-0.1:ecc-fixed-mul-full-word
         meta.create_gate("Full-width fixed-base scalar mul", |meta| {

@@ -9,7 +9,8 @@ use halo2_proofs::dev::MockProver;
 use halo2_proofs::pasta::{Eq, EqAffine, Fp};
 use halo2_proofs::plonk::{
     create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Assigned, BatchVerifier, Circuit,
-    Column, ConstraintSystem, Error, Fixed, SingleVerifier, TableColumn, VerificationStrategy,
+    Column, ConstraintSystemBuilder, Error, Fixed, SingleVerifier, TableColumn,
+    VerificationStrategy,
 };
 use halo2_proofs::poly::commitment::{Guard, MSM};
 use halo2_proofs::poly::{commitment::Params, Rotation};
@@ -272,7 +273,7 @@ fn plonk_api() {
             }
         }
 
-        fn configure(meta: &mut ConstraintSystem<F>) -> PlonkConfig {
+        fn configure(meta: &mut ConstraintSystemBuilder<F>) -> PlonkConfig {
             let e = meta.advice_column();
             let a = meta.advice_column();
             let b = meta.advice_column();

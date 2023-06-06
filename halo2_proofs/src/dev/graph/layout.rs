@@ -9,7 +9,7 @@ use std::ops::Range;
 use crate::{
     circuit::layouter::RegionColumn,
     dev::cost::Layout,
-    plonk::{Any, Circuit, Column, ConstraintSystem, FloorPlanner},
+    plonk::{Any, Circuit, Column, ConstraintSystemBuilder, FloorPlanner},
 };
 
 /// Graphical renderer for circuit layouts.
@@ -93,23 +93,24 @@ impl CircuitLayout {
 
         let n = 1 << k;
         // Collect the layout details.
-        let mut cs = ConstraintSystem::default();
+        let mut cs = ConstraintSystemBuilder::default();
         let config = ConcreteCircuit::configure(&mut cs);
-        let mut layout = Layout::new(k, n, cs.num_selectors);
+        let mut layout = Layout::new(k, n, cs.cs.num_selectors);
         ConcreteCircuit::FloorPlanner::synthesize(
             &mut layout,
             circuit,
             config,
-            cs.constants.clone(),
+            cs.cs.constants.clone(),
         )
         .unwrap();
         let (cs, selector_polys) = cs.compress_selectors(layout.selectors);
-        let non_selector_fixed_columns = cs.num_fixed_columns - selector_polys.len();
+        let non_selector_fixed_columns = cs.cs.num_fixed_columns - selector_polys.len();
 
         // Figure out what order to render the columns in.
         // TODO: For now, just render them in the order they were configured.
-        let total_columns = cs.num_instance_columns + cs.num_advice_columns + cs.num_fixed_columns;
-        let column_index = |cs: &ConstraintSystem<F>, column: RegionColumn| {
+        let total_columns =
+            cs.cs.num_instance_columns + cs.cs.num_advice_columns + cs.cs.num_fixed_columns;
+        let column_index = |cs: &ConstraintSystemBuilder<F>, column: RegionColumn| {
             let column: Column<Any> = match column {
                 RegionColumn::Column(col) => col,
                 RegionColumn::Selector(selector) => cs.selector_map[selector.0].into(),
@@ -117,8 +118,8 @@ impl CircuitLayout {
             column.index()
                 + match column.column_type() {
                     Any::Instance => 0,
-                    Any::Advice => cs.num_instance_columns,
-                    Any::Fixed => cs.num_instance_columns + cs.num_advice_columns,
+                    Any::Advice => cs.cs.num_instance_columns,
+                    Any::Fixed => cs.cs.num_instance_columns + cs.cs.num_advice_columns,
                 }
         };
 
@@ -140,14 +141,17 @@ impl CircuitLayout {
         ))?;
         root.draw(&Rectangle::new(
             [
-                (cs.num_instance_columns, 0),
-                (cs.num_instance_columns + cs.num_advice_columns, view_bottom),
+                (cs.cs.num_instance_columns, 0),
+                (
+                    cs.cs.num_instance_columns + cs.cs.num_advice_columns,
+                    view_bottom,
+                ),
             ],
             ShapeStyle::from(&RED.mix(0.2)).filled(),
         ))?;
         root.draw(&Rectangle::new(
             [
-                (cs.num_instance_columns + cs.num_advice_columns, 0),
+                (cs.cs.num_instance_columns + cs.cs.num_advice_columns, 0),
                 (total_columns, view_bottom),
             ],
             ShapeStyle::from(&BLUE.mix(0.2)).filled(),
@@ -156,8 +160,8 @@ impl CircuitLayout {
             root.draw(&Rectangle::new(
                 [
                     (
-                        cs.num_instance_columns
-                            + cs.num_advice_columns
+                        cs.cs.num_instance_columns
+                            + cs.cs.num_advice_columns
                             + non_selector_fixed_columns,
                         0,
                     ),

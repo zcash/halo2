@@ -5,7 +5,7 @@ use crate::{ecc::chip::MagnitudeSign, utilities::bool_check};
 
 use halo2_proofs::{
     circuit::{Layouter, Region},
-    plonk::{ConstraintSystem, Constraints, Error, Expression, Selector},
+    plonk::{ConstraintSystemBuilder, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
 use pasta_curves::pallas;
@@ -19,7 +19,7 @@ pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
 
 impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
     pub(crate) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         super_config: super::Config<Fixed>,
     ) -> Self {
         let config = Self {
@@ -32,7 +32,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         config
     }
 
-    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystemBuilder<pallas::Base>) {
         // Gate contains the following constraints:
         // - https://p.z.cash/halo2-0.1:ecc-fixed-mul-short-msb
         // - https://p.z.cash/halo2-0.1:ecc-fixed-mul-short-conditional-neg
@@ -409,7 +409,7 @@ pub mod tests {
         use halo2_proofs::{
             circuit::{Layouter, SimpleFloorPlanner},
             dev::{FailureLocation, MockProver, VerifyFailure},
-            plonk::{Circuit, ConstraintSystem, Error},
+            plonk::{Circuit, ConstraintSystemBuilder, Error},
         };
 
         #[derive(Default)]
@@ -432,7 +432,7 @@ pub mod tests {
                 Self::default()
             }
 
-            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<pallas::Base>) -> Self::Config {
                 let advices = [
                     meta.advice_column(),
                     meta.advice_column(),

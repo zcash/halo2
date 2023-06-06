@@ -3,7 +3,9 @@ use super::EccPoint;
 use group::ff::PrimeField;
 use halo2_proofs::{
     circuit::Region,
-    plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
+    plonk::{
+        Advice, Assigned, Column, ConstraintSystemBuilder, Constraints, Error, Expression, Selector,
+    },
     poly::Rotation,
 };
 use pasta_curves::pallas;
@@ -36,7 +38,7 @@ pub struct Config {
 impl Config {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         x_p: Column<Advice>,
         y_p: Column<Advice>,
         x_qr: Column<Advice>,
@@ -74,7 +76,7 @@ impl Config {
         [self.x_qr, self.y_qr].into_iter().collect()
     }
 
-    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystemBuilder<pallas::Base>) {
         // https://p.z.cash/halo2-0.1:ecc-complete-addition
         meta.create_gate("complete addition", |meta| {
             let q_add = meta.query_selector(self.q_add);

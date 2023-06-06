@@ -179,7 +179,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             }
         }
 
-        fn configure(meta: &mut ConstraintSystem<F>) -> PlonkConfig {
+        fn configure(meta: &mut ConstraintSystemBuilder<F>) -> PlonkConfig {
             meta.set_minimum_degree(5);
 
             let a = meta.advice_column();

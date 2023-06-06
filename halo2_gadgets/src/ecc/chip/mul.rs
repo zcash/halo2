@@ -11,7 +11,7 @@ use std::{
 use ff::{Field, PrimeField};
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter, Region, Value},
-    plonk::{Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Selector},
+    plonk::{Advice, Assigned, Column, ConstraintSystemBuilder, Constraints, Error, Selector},
     poly::Rotation,
 };
 use uint::construct_uint;
@@ -63,7 +63,7 @@ pub struct Config {
 
 impl Config {
     pub(super) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         add_config: add::Config,
         lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
         advices: [Column<Advice>; 10],
@@ -126,7 +126,7 @@ impl Config {
         config
     }
 
-    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystemBuilder<pallas::Base>) {
         // If `lsb` is 0, (x, y) = (x_p, -y_p). If `lsb` is 1, (x, y) = (0,0).
         // https://p.z.cash/halo2-0.1:ecc-var-mul-lsb-gate?partial
         meta.create_gate("LSB check", |meta| {

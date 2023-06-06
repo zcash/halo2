@@ -6,11 +6,9 @@ use ff::{Field, FromUniformBytes};
 use group::Curve;
 
 use super::{
-    circuit::{
-        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
-        Selector,
-    },
-    permutation, Assigned, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
+    circuit::{Advice, Any, Assignment, Circuit, Column, Fixed, FloorPlanner, Instance, Selector},
+    permutation, Assigned, ConstraintSystemBuilder, Error, LagrangeCoeff, Polynomial, ProvingKey,
+    VerifyingKey,
 };
 use crate::{
     arithmetic::CurveAffine,
@@ -26,14 +24,14 @@ pub(crate) fn create_domain<C, ConcreteCircuit>(
     params: &Params<C>,
 ) -> (
     EvaluationDomain<C::Scalar>,
-    ConstraintSystem<C::Scalar>,
+    ConstraintSystemBuilder<C::Scalar>,
     ConcreteCircuit::Config,
 )
 where
     C: CurveAffine,
     ConcreteCircuit: Circuit<C::Scalar>,
 {
-    let mut cs = ConstraintSystem::default();
+    let mut cs = ConstraintSystemBuilder::default();
     let config = ConcreteCircuit::configure(&mut cs);
 
     let degree = cs.degree();
@@ -203,9 +201,9 @@ where
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
         k: params.k,
-        fixed: vec![domain.empty_lagrange_assigned(); cs.num_fixed_columns],
-        permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.permutation),
-        selectors: vec![vec![false; params.n as usize]; cs.num_selectors],
+        fixed: vec![domain.empty_lagrange_assigned(); cs.cs.num_fixed_columns],
+        permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.cs.permutation),
+        selectors: vec![vec![false; params.n as usize]; cs.cs.num_selectors],
         usable_rows: 0..params.n as usize - (cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
     };
@@ -215,7 +213,7 @@ where
         &mut assembly,
         circuit,
         config,
-        cs.constants.clone(),
+        cs.cs.constants.clone(),
     )?;
 
     let mut fixed = batch_invert_assigned(assembly.fixed);
@@ -226,9 +224,11 @@ where
             .map(|poly| domain.lagrange_from_vec(poly)),
     );
 
+    // This is post-optimization.
+
     let permutation_vk = assembly
         .permutation
-        .build_vk(params, &domain, &cs.permutation);
+        .build_vk(params, &domain, &cs.cs.permutation);
 
     let fixed_commitments = fixed
         .iter()
@@ -253,7 +253,7 @@ where
     C: CurveAffine,
     ConcreteCircuit: Circuit<C::Scalar>,
 {
-    let mut cs = ConstraintSystem::default();
+    let mut cs = ConstraintSystemBuilder::default();
     let config = ConcreteCircuit::configure(&mut cs);
 
     let cs = cs;
@@ -264,9 +264,9 @@ where
 
     let mut assembly: Assembly<C::Scalar> = Assembly {
         k: params.k,
-        fixed: vec![vk.domain.empty_lagrange_assigned(); cs.num_fixed_columns],
-        permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.permutation),
-        selectors: vec![vec![false; params.n as usize]; cs.num_selectors],
+        fixed: vec![vk.domain.empty_lagrange_assigned(); cs.cs.num_fixed_columns],
+        permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.cs.permutation),
+        selectors: vec![vec![false; params.n as usize]; cs.cs.num_selectors],
         usable_rows: 0..params.n as usize - (cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
     };
@@ -276,7 +276,7 @@ where
         &mut assembly,
         circuit,
         config,
-        cs.constants.clone(),
+        cs.cs.constants.clone(),
     )?;
 
     let mut fixed = batch_invert_assigned(assembly.fixed);
@@ -299,7 +299,7 @@ where
 
     let permutation_pk = assembly
         .permutation
-        .build_pk(params, &vk.domain, &cs.permutation);
+        .build_pk(params, &vk.domain, &cs.cs.permutation);
 
     // Compute l_0(X)
     // TODO: this can be done more efficiently

@@ -4,7 +4,7 @@ use super::{super::BLOCK_SIZE, AssignedBits, BlockWord, SpreadInputs, Table16Ass
 use halo2_proofs::{
     circuit::Layouter,
     pasta::pallas,
-    plonk::{Advice, Column, ConstraintSystem, Error, Selector},
+    plonk::{Advice, Column, ConstraintSystemBuilder, Error, Selector},
     poly::Rotation,
 };
 
@@ -71,7 +71,7 @@ impl MessageScheduleConfig {
     /// itself.
     #[allow(clippy::many_single_char_names)]
     pub(super) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         lookup: SpreadInputs,
         message_schedule: Column<Advice>,
         extras: [Column<Advice>; 6],
@@ -401,7 +401,7 @@ mod tests {
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
         pasta::pallas,
-        plonk::{Circuit, ConstraintSystem, Error},
+        plonk::{Circuit, ConstraintSystemBuilder, Error},
     };
 
     #[test]
@@ -416,7 +416,7 @@ mod tests {
                 MyCircuit {}
             }
 
-            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<pallas::Base>) -> Self::Config {
                 Table16Chip::configure(meta)
             }
 

@@ -16,7 +16,7 @@ use std::marker::PhantomData;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter, Value},
     plonk::{
-        Advice, Column, ConstraintSystem, Constraints, Error, Expression, Fixed, Selector,
+        Advice, Column, ConstraintSystemBuilder, Constraints, Error, Expression, Fixed, Selector,
         TableColumn, VirtualCells,
     },
     poly::Rotation,
@@ -149,7 +149,7 @@ where
     #[allow(clippy::too_many_arguments)]
     #[allow(non_snake_case)]
     pub fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         advices: [Column<Advice>; 5],
         witness_pieces: Column<Advice>,
         fixed_y_q: Column<Fixed>,

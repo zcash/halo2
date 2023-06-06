@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use group::ff::Field;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner, Value},
-    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed, Instance, Selector},
+    plonk::{Advice, Circuit, Column, ConstraintSystemBuilder, Error, Fixed, Instance, Selector},
     poly::Rotation,
 };
 
@@ -74,7 +74,7 @@ impl<F: Field> FieldChip<F> {
     }
 
     fn configure(
-        meta: &mut ConstraintSystem<F>,
+        meta: &mut ConstraintSystemBuilder<F>,
         advice: [Column<Advice>; 2],
         instance: Column<Instance>,
         constant: Column<Fixed>,
@@ -253,7 +253,7 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
         Self::default()
     }
 
-    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+    fn configure(meta: &mut ConstraintSystemBuilder<F>) -> Self::Config {
         // We create the two advice columns that FieldChip uses for I/O.
         let advice = [meta.advice_column(), meta.advice_column()];
 

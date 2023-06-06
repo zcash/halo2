@@ -90,7 +90,7 @@ pub fn verify_proof<
             instance
                 .iter()
                 .map(|instance| {
-                    if instance.len() > params.n as usize - (vk.cs.blinding_factors() + 1) {
+                    if instance.len() > params.n as usize - (vk.num_blinding_factors + 1) {
                         return Err(Error::InstanceTooLarge);
                     }
                     let mut poly = instance.to_vec();
@@ -205,7 +205,7 @@ pub fn verify_proof<
         // x^n
         let xn = x.pow(&[params.n, 0, 0, 0]);
 
-        let blinding_factors = vk.cs.blinding_factors();
+        let blinding_factors = vk.num_blinding_factors;
         let l_evals = vk
             .domain
             .l_i_range(*x, xn, (-((blinding_factors + 1) as i32))..=0);

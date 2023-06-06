@@ -193,7 +193,7 @@ impl<C: CurveAffine> Evaluated<C> {
         vk: &'r plonk::VerifyingKey<C>,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = VerifierQuery<'r, 'params, C>> + Clone {
-        let blinding_factors = vk.cs.blinding_factors();
+        let blinding_factors = vk.num_blinding_factors;
         let x_next = vk.domain.rotate_omega(*x, Rotation::next());
         let x_last = vk
             .domain

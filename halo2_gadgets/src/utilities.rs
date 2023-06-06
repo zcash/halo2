@@ -244,7 +244,7 @@ mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner},
         dev::{FailureLocation, MockProver, VerifyFailure},
-        plonk::{Any, Circuit, ConstraintSystem, Constraints, Error, Selector},
+        plonk::{Any, Circuit, ConstraintSystemBuilder, Constraints, Error, Selector},
         poly::Rotation,
     };
     use pasta_curves::pallas;
@@ -276,7 +276,7 @@ mod tests {
                 MyCircuit(self.0)
             }
 
-            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<pallas::Base>) -> Self::Config {
                 let selector = meta.selector();
                 let advice = meta.advice_column();
 

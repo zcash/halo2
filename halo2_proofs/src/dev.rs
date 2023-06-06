@@ -11,8 +11,8 @@ use crate::plonk::Assigned;
 use crate::{
     circuit,
     plonk::{
-        permutation, Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Error, Expression,
-        Fixed, FloorPlanner, Instance, Selector,
+        permutation, Advice, Any, Assignment, Circuit, Column, ConstraintSystemBuilder, Error,
+        Expression, Fixed, FloorPlanner, Instance, Selector,
     },
 };
 
@@ -198,7 +198,7 @@ impl<F: Field> Mul<F> for Value<F> {
 ///         Self::default()
 ///     }
 ///
-///     fn configure(meta: &mut ConstraintSystem<F>) -> MyConfig {
+///     fn configure(meta: &mut ConstraintSystemBuilder<F>) -> MyConfig {
 ///         let a = meta.advice_column();
 ///         let b = meta.advice_column();
 ///         let c = meta.advice_column();
@@ -272,7 +272,7 @@ impl<F: Field> Mul<F> for Value<F> {
 pub struct MockProver<F: Field> {
     k: u32,
     n: u32,
-    cs: ConstraintSystem<F>,
+    cs: ConstraintSystemBuilder<F>,
 
     /// The regions in the circuit.
     regions: Vec<Region>,
@@ -489,7 +489,7 @@ impl<F: Field + Ord> MockProver<F> {
     ) -> Result<Self, Error> {
         let n = 1 << k;
 
-        let mut cs = ConstraintSystem::default();
+        let mut cs = ConstraintSystemBuilder::default();
         let config = ConcreteCircuit::configure(&mut cs);
         let cs = cs;
 
@@ -497,7 +497,7 @@ impl<F: Field + Ord> MockProver<F> {
             return Err(Error::not_enough_rows_available(k));
         }
 
-        if instance.len() != cs.num_instance_columns {
+        if instance.len() != cs.cs.num_instance_columns {
             return Err(Error::InvalidInstances);
         }
 
@@ -518,8 +518,8 @@ impl<F: Field + Ord> MockProver<F> {
             .collect::<Result<Vec<_>, _>>()?;
 
         // Fixed columns contain no blinding factors.
-        let fixed = vec![vec![CellValue::Unassigned; n]; cs.num_fixed_columns];
-        let selectors = vec![vec![false; n]; cs.num_selectors];
+        let fixed = vec![vec![CellValue::Unassigned; n]; cs.cs.num_fixed_columns];
+        let selectors = vec![vec![false; n]; cs.cs.num_selectors];
         // Advice columns contain blinding factors.
         let blinding_factors = cs.blinding_factors();
         let usable_rows = n - (blinding_factors + 1);
@@ -532,10 +532,10 @@ impl<F: Field + Ord> MockProver<F> {
                 }
                 column
             };
-            cs.num_advice_columns
+            cs.cs.num_advice_columns
         ];
-        let permutation = permutation::keygen::Assembly::new(n, &cs.permutation);
-        let constants = cs.constants.clone();
+        let permutation = permutation::keygen::Assembly::new(n, &cs.cs.permutation);
+        let constants = cs.cs.constants.clone();
 
         let mut prover = MockProver {
             k,
@@ -577,6 +577,7 @@ impl<F: Field + Ord> MockProver<F> {
             r.enabled_selectors.iter().flat_map(move |(selector, at)| {
                 // Find the gates enabled by this selector
                 self.cs
+                    .cs
                     .gates
                     .iter()
                     // Assume that if a queried selector is enabled, the user wants to use the
@@ -638,6 +639,7 @@ impl<F: Field + Ord> MockProver<F> {
         // Check that all gates are satisfied for all rows.
         let gate_errors =
             self.cs
+                .cs
                 .gates
                 .iter()
                 .enumerate()
@@ -648,12 +650,12 @@ impl<F: Field + Ord> MockProver<F> {
                             move |(poly_index, poly)| match poly.evaluate(
                                 &|scalar| Value::Real(scalar),
                                 &|_| panic!("virtual selectors are removed during optimization"),
-                                &util::load(n, row, &self.cs.fixed_queries, &self.fixed),
-                                &util::load(n, row, &self.cs.advice_queries, &self.advice),
+                                &util::load(n, row, &self.cs.cs.fixed_queries, &self.fixed),
+                                &util::load(n, row, &self.cs.cs.advice_queries, &self.advice),
                                 &util::load_instance(
                                     n,
                                     row,
-                                    &self.cs.instance_queries,
+                                    &self.cs.cs.instance_queries,
                                     &self.instance,
                                 ),
                                 &|a| -a,
@@ -670,7 +672,7 @@ impl<F: Field + Ord> MockProver<F> {
                                     )
                                         .into(),
                                     location: FailureLocation::find_expressions(
-                                        &self.cs,
+                                        &self.cs.cs,
                                         &self.regions,
                                         (row - n) as usize,
                                         Some(poly).into_iter(),
@@ -678,12 +680,17 @@ impl<F: Field + Ord> MockProver<F> {
                                     cell_values: util::cell_values(
                                         gate,
                                         poly,
-                                        &util::load(n, row, &self.cs.fixed_queries, &self.fixed),
-                                        &util::load(n, row, &self.cs.advice_queries, &self.advice),
+                                        &util::load(n, row, &self.cs.cs.fixed_queries, &self.fixed),
+                                        &util::load(
+                                            n,
+                                            row,
+                                            &self.cs.cs.advice_queries,
+                                            &self.advice,
+                                        ),
                                         &util::load_instance(
                                             n,
                                             row,
-                                            &self.cs.instance_queries,
+                                            &self.cs.cs.instance_queries,
                                             &self.instance,
                                         ),
                                     ),
@@ -704,6 +711,7 @@ impl<F: Field + Ord> MockProver<F> {
         // Check that all lookups exist in their respective tables.
         let lookup_errors =
             self.cs
+                .cs
                 .lookups
                 .iter()
                 .enumerate()
@@ -713,7 +721,7 @@ impl<F: Field + Ord> MockProver<F> {
                             &|scalar| Value::Real(scalar),
                             &|_| panic!("virtual selectors are removed during optimization"),
                             &|query| {
-                                let query = self.cs.fixed_queries[query.index];
+                                let query = self.cs.cs.fixed_queries[query.index];
                                 let column_index = query.0.index();
                                 let rotation = query.1 .0;
                                 self.fixed[column_index]
@@ -721,7 +729,7 @@ impl<F: Field + Ord> MockProver<F> {
                                     .into()
                             },
                             &|query| {
-                                let query = self.cs.advice_queries[query.index];
+                                let query = self.cs.cs.advice_queries[query.index];
                                 let column_index = query.0.index();
                                 let rotation = query.1 .0;
                                 self.advice[column_index]
@@ -729,7 +737,7 @@ impl<F: Field + Ord> MockProver<F> {
                                     .into()
                             },
                             &|query| {
-                                let query = self.cs.instance_queries[query.index];
+                                let query = self.cs.cs.instance_queries[query.index];
                                 let column_index = query.0.index();
                                 let rotation = query.1 .0;
                                 Value::Real(
@@ -814,7 +822,7 @@ impl<F: Field + Ord> MockProver<F> {
                                 Some(VerifyFailure::Lookup {
                                     lookup_index,
                                     location: FailureLocation::find_expressions(
-                                        &self.cs,
+                                        &self.cs.cs,
                                         &self.regions,
                                         *input_row,
                                         lookup.input_expressions.iter(),
@@ -832,6 +840,7 @@ impl<F: Field + Ord> MockProver<F> {
             // Original values of columns involved in the permutation.
             let original = |column, row| {
                 self.cs
+                    .cs
                     .permutation
                     .get_columns()
                     .get(column)
@@ -860,7 +869,7 @@ impl<F: Field + Ord> MockProver<F> {
                         if original_cell == permuted_cell {
                             None
                         } else {
-                            let columns = self.cs.permutation.get_columns();
+                            let columns = self.cs.cs.permutation.get_columns();
                             let column = columns.get(column).unwrap();
                             Some(VerifyFailure::Permutation {
                                 column: (*column).into(),
@@ -927,7 +936,7 @@ mod tests {
     use crate::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         plonk::{
-            Advice, Any, Circuit, Column, ConstraintSystem, Error, Expression, Selector,
+            Advice, Any, Circuit, Column, ConstraintSystemBuilder, Error, Expression, Selector,
             TableColumn,
         },
         poly::Rotation,
@@ -949,7 +958,7 @@ mod tests {
             type Config = FaultyCircuitConfig;
             type FloorPlanner = SimpleFloorPlanner;
 
-            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<Fp>) -> Self::Config {
                 let a = meta.advice_column();
                 let b = meta.advice_column();
                 let q = meta.selector();
@@ -1023,7 +1032,7 @@ mod tests {
             type Config = FaultyCircuitConfig;
             type FloorPlanner = SimpleFloorPlanner;
 
-            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<Fp>) -> Self::Config {
                 let a = meta.advice_column();
                 let q = meta.complex_selector();
                 let table = meta.lookup_table_column();

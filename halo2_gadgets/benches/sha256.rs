@@ -2,7 +2,7 @@ use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
     pasta::{pallas, EqAffine},
     plonk::{
-        create_proof, keygen_pk, keygen_vk, verify_proof, Circuit, ConstraintSystem, Error,
+        create_proof, keygen_pk, keygen_vk, verify_proof, Circuit, ConstraintSystemBuilder, Error,
         SingleVerifier,
     },
     poly::commitment::Params,
@@ -32,7 +32,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
             Self::default()
         }
 
-        fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+        fn configure(meta: &mut ConstraintSystemBuilder<pallas::Base>) -> Self::Config {
             Table16Chip::configure(meta)
         }
 

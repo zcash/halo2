@@ -400,7 +400,7 @@ fn render_lookup<F: Field>(
 ) {
     let n = prover.n as i32;
     let cs = &prover.cs;
-    let lookup = &cs.lookups[lookup_index];
+    let lookup = &cs.cs.lookups[lookup_index];
 
     // Get the absolute row on which the lookup's inputs are being queried, so we can
     // fetch the input values.
@@ -469,15 +469,15 @@ fn render_lookup<F: Field>(
             &|_| panic!("virtual selectors are removed during optimization"),
             &cell_value(
                 Any::Fixed,
-                &util::load(n, row, &cs.fixed_queries, &prover.fixed),
+                &util::load(n, row, &cs.cs.fixed_queries, &prover.fixed),
             ),
             &cell_value(
                 Any::Advice,
-                &util::load(n, row, &cs.advice_queries, &prover.advice),
+                &util::load(n, row, &cs.cs.advice_queries, &prover.advice),
             ),
             &cell_value(
                 Any::Instance,
-                &util::load_instance(n, row, &cs.instance_queries, &prover.instance),
+                &util::load_instance(n, row, &cs.cs.instance_queries, &prover.instance),
             ),
             &|a| a,
             &|mut a, mut b| {
@@ -541,7 +541,7 @@ impl VerifyFailure {
                 column,
                 offset,
             } => render_cell_not_assigned(
-                &prover.cs.gates,
+                &prover.cs.cs.gates,
                 gate,
                 region,
                 *gate_offset,
@@ -552,9 +552,12 @@ impl VerifyFailure {
                 constraint,
                 location,
                 cell_values,
-            } => {
-                render_constraint_not_satisfied(&prover.cs.gates, constraint, location, cell_values)
-            }
+            } => render_constraint_not_satisfied(
+                &prover.cs.cs.gates,
+                constraint,
+                location,
+                cell_values,
+            ),
             Self::Lookup {
                 lookup_index,
                 location,

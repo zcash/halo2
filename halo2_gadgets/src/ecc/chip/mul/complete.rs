@@ -4,7 +4,7 @@ use crate::utilities::{bool_check, ternary};
 
 use halo2_proofs::{
     circuit::{Region, Value},
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector},
+    plonk::{Advice, Column, ConstraintSystemBuilder, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
 
@@ -22,7 +22,7 @@ pub struct Config {
 
 impl Config {
     pub(super) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         z_complete: Column<Advice>,
         add_config: add::Config,
     ) -> Self {
@@ -43,7 +43,7 @@ impl Config {
     /// This is used to check the bits used in complete addition, since the incomplete
     /// addition gate (controlled by `q_mul`) already checks scalar decomposition for
     /// the other bits.
-    fn create_gate(&self, meta: &mut ConstraintSystem<pallas::Base>) {
+    fn create_gate(&self, meta: &mut ConstraintSystemBuilder<pallas::Base>) {
         // | y_p | z_complete |
         // --------------------
         // | y_p | z_{i + 1}  |

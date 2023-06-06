@@ -1,7 +1,7 @@
 use group::ff::PrimeField;
 use halo2_proofs::{
     circuit::{Layouter, Value},
-    plonk::{ConstraintSystem, Error, Expression, TableColumn},
+    plonk::{ConstraintSystemBuilder, Error, Expression, TableColumn},
     poly::Rotation,
 };
 
@@ -24,7 +24,7 @@ impl GeneratorTableConfig {
     /// this specific configuration sets up Sinsemilla-specific constraints
     /// controlled by `q_sinsemilla`, and would likely not apply to other chips.
     pub fn configure<Hash, Commit, F>(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         config: super::SinsemillaConfig<Hash, Commit, F>,
     ) where
         Hash: HashDomains<pallas::Affine>,

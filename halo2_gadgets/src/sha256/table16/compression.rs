@@ -6,7 +6,7 @@ use super::{
 use halo2_proofs::{
     circuit::{Layouter, Value},
     pasta::pallas,
-    plonk::{Advice, Column, ConstraintSystem, Error, Selector},
+    plonk::{Advice, Column, ConstraintSystemBuilder, Error, Selector},
     poly::Rotation,
 };
 use std::convert::TryInto;
@@ -457,7 +457,7 @@ impl Table16Assignment for CompressionConfig {}
 
 impl CompressionConfig {
     pub(super) fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
+        meta: &mut ConstraintSystemBuilder<pallas::Base>,
         lookup: SpreadInputs,
         message_schedule: Column<Advice>,
         extras: [Column<Advice>; 6],
@@ -944,7 +944,7 @@ mod tests {
         circuit::{Layouter, SimpleFloorPlanner},
         dev::MockProver,
         pasta::pallas,
-        plonk::{Circuit, ConstraintSystem, Error},
+        plonk::{Circuit, ConstraintSystemBuilder, Error},
     };
 
     #[test]
@@ -959,7 +959,7 @@ mod tests {
                 MyCircuit {}
             }
 
-            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<pallas::Base>) -> Self::Config {
                 Table16Chip::configure(meta)
             }
 

@@ -3,7 +3,7 @@
 
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter, Region},
-    plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector, TableColumn},
+    plonk::{Advice, Column, ConstraintSystemBuilder, Constraints, Error, Selector, TableColumn},
     poly::Rotation,
 };
 use std::{convert::TryInto, marker::PhantomData};
@@ -78,7 +78,7 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
     ///
     /// Both the `running_sum` and `constants` columns will be equality-enabled.
     pub fn configure(
-        meta: &mut ConstraintSystem<F>,
+        meta: &mut ConstraintSystemBuilder<F>,
         running_sum: Column<Advice>,
         table_idx: TableColumn,
     ) -> Self {
@@ -176,7 +176,7 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
     /// Range check on an existing cell that is copied into this helper.
     ///
     /// Returns an error if `element` is not in a column that was passed to
-    /// [`ConstraintSystem::enable_equality`] during circuit configuration.
+    /// [`ConstraintSystemBuilder::enable_equality`] during circuit configuration.
     pub fn copy_check(
         &self,
         mut layouter: impl Layouter<F>,
@@ -393,7 +393,7 @@ mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::{FailureLocation, MockProver, VerifyFailure},
-        plonk::{Circuit, ConstraintSystem, Error},
+        plonk::{Circuit, ConstraintSystemBuilder, Error},
     };
     use pasta_curves::pallas;
 
@@ -415,7 +415,7 @@ mod tests {
                 *self
             }
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<F>) -> Self::Config {
                 let running_sum = meta.advice_column();
                 let table_idx = meta.lookup_table_column();
                 let constants = meta.fixed_column();
@@ -514,7 +514,7 @@ mod tests {
                 }
             }
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            fn configure(meta: &mut ConstraintSystemBuilder<F>) -> Self::Config {
                 let running_sum = meta.advice_column();
                 let table_idx = meta.lookup_table_column();
                 let constants = meta.fixed_column();
