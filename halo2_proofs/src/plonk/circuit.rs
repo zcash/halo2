@@ -1,5 +1,5 @@
-use crate::circuit::layouter::SyncDeps;
 use super::{lookup, permutation, shuffle, Assigned, Error};
+use crate::circuit::layouter::SyncDeps;
 use crate::dev::metadata;
 use crate::{
     circuit::{Layouter, Region, Value},
