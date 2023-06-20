@@ -181,8 +181,8 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
             assert_eq!(z[0], C::Scalar::ONE);
             for i in 0..u {
                 let mut left = z[i + 1];
-                let input_value = &self.compressed_input_expression[i];
-                let shuffle_value = &self.compressed_shuffle_expression[i];
+                let input_value = &compressed.input_expression[i];
+                let shuffle_value = &compressed.shuffle_expression[i];
                 left *= &(*gamma + shuffle_value);
                 let mut right = z[i];
                 right *= &(*gamma + input_value);
