@@ -453,6 +453,18 @@ where
         )
     }
 
+    fn witness_point_from_constant(
+        &self,
+        layouter: &mut impl Layouter<pallas::Base>,
+        value: pallas::Affine,
+    ) -> Result<Self::Point, Error> {
+        let config = self.config().witness_point;
+        layouter.assign_region(
+            || "witness point (constant)",
+            |mut region| config.constant_point(value, 0, &mut region),
+        )
+    }
+
     fn witness_point_non_id(
         &self,
         layouter: &mut impl Layouter<pallas::Base>,

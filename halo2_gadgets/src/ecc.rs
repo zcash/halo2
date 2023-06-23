@@ -60,6 +60,15 @@ pub trait EccInstructions<C: CurveAffine>:
         value: Value<C>,
     ) -> Result<Self::Point, Error>;
 
+    /// Witnesses the given constant point as a private input to the circuit.
+    /// This allows the point to be the identity, mapped to (0, 0) in
+    /// affine coordinates.
+    fn witness_point_from_constant(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        value: C,
+    ) -> Result<Self::Point, Error>;
+
     /// Witnesses the given point as a private input to the circuit.
     /// This returns an error if the point is the identity.
     fn witness_point_non_id(
@@ -396,6 +405,16 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
         value: Value<C>,
     ) -> Result<Self, Error> {
         let point = chip.witness_point(&mut layouter, value);
+        point.map(|inner| Point { chip, inner })
+    }
+
+    /// Constructs a new point with the given fixed value.
+    pub fn new_from_constant(
+        chip: EccChip,
+        mut layouter: impl Layouter<C::Base>,
+        value: C,
+    ) -> Result<Self, Error> {
+        let point = chip.witness_point_from_constant(&mut layouter, value);
         point.map(|inner| Point { chip, inner })
     }
 
