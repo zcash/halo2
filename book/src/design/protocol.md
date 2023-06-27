@@ -330,15 +330,15 @@ In the following protocol, we take it for granted that each polynomial $a_i(X, \
 
 1. $\prover$ and $\verifier$ proceed in the following $n_a$ rounds of interaction, where in round $j$ (starting at $0$)
   * $\prover$ sets $a'_j(X) = a_j(X, c_0, c_1, ..., c_{j - 1}, a_0(X, \cdots), ..., a_{j - 1}(X, \cdots, c_{j - 1}))$
-  * $\prover$ sends a hiding commitment $A_j = \innerprod{\mathbf{a'}}{\mathbf{G}} + [a^*_j] W$ where $\mathbf{a'}$ are the coefficients of the univariate polynomial $a'_j(X)$ and $a^*_j$ is some random, independently sampled blinding factor. (Similar notation is used throughout this protocol description, if the value is not reused we will use $\cdot$ to simplify exposition.)
+  * $\prover$ sends a hiding commitment $A_j = \innerprod{\mathbf{a'}}{\mathbf{G}} + [a^*_j] W$ where $\mathbf{a'}$ are the coefficients of the univariate polynomial $a'_j(X)$ and $a^*_j$ is some fresh (random and independently sampled) blinding factor. Similar notation is used throughout this protocol description.
   * $\verifier$ responds with a challenge $c_j$.
 2. $\prover$ sets $g'(X) = g(X, c_0, c_1, ..., c_{n_a - 1}, \cdots)$.
 3. $\prover$ sends a commitment $R = \innerprod{\mathbf{r}}{\mathbf{G}} + [r^*] W$ where $\mathbf{r} \in \field^n$ are the coefficients of a randomly sampled univariate polynomial $r(X)$ of degree $n - 1$.
 4. $\prover$ computes univariate polynomial $h(X) = \frac{g'(X)}{t(X)}$ of degree $n_g(n - 1) - n$.
 5. $\prover$ computes at most $n - 1$ degree polynomials $h_0(X), h_1(X), ..., h_{n_g - 2}(X)$ such that $h(X) = \sum\limits_{i=0}^{n_g - 2} X^{ni} h_i(X)$.
-6. $\prover$ sends commitments $H_i = \innerprod{\mathbf{h_i}}{\mathbf{G}} + [h^*_i] W$ for all $i$ where $\mathbf{h_i}$ denotes the vector of coefficients for $h_i(X)$.
+6. $\prover$ sends commitments $H_i = \innerprod{\mathbf{h_i}}{\mathbf{G}} + [h^*_i] W$ for all $i$ where $\mathbf{h_i}$ denotes the vector of coefficients for $h_i(X)$, and $h^*_i$ are fresh blinding factors.
 7. $\verifier$ responds with challenge $x$ and computes $H' = \sum\limits_{i=0}^{n_g - 2} [x^{ni}] H_i$.
-8. $\prover$ sets $h'(X) = \sum\limits_{i=0}^{n_g - 2} x^{ni} h_i(X)$, and blinding factor $h'^* = \sum\limits_{i=0}^{n_g - 2} x^{ni} h^*_i$.
+8. $\prover$ sets $h'(X) = \sum\limits_{i=0}^{n_g - 2} x^{ni} h_i(X)$, and synthetic blinding factor $h'^* = \sum\limits_{i=0}^{n_g - 2} x^{ni} h^*_i$.
 9. $\prover$ sends $r = r(x)$ and for all $i \in [0, n_a)$ sends $\mathbf{a_i}$ such that $(\mathbf{a_i})_j = a'_i(\omega^{(\mathbf{p_i})_j} x)$ for all $j \in [0, n_e - 1]$.
 10. For all $i \in [0, n_a)$ $\prover$ and $\verifier$ set $s_i(X)$ to be the lowest degree univariate polynomial defined such that $s_i(\omega^{(\mathbf{p_i})_j} x) = (\mathbf{a_i})_j$ for all $j \in [0, n_e - 1)$.
 11. $\verifier$ responds with challenges $x_1, x_2$ and initializes $Q_0, Q_1, ..., Q_{n_q - 1} = \zero$.
@@ -346,11 +346,11 @@ In the following protocol, we take it for granted that each polynomial $a_i(X, \
   * $\verifier$ finally sets $Q_0 := [x_1^2] Q_0 + [x_1] H' + R$.
 12. $\prover$ initializes $q_0(X), q_1(X), ..., q_{n_q - 1}(X) = 0$ and blinding factors $q^*_0, q^*_1, ..., q^*_{n_q-1} = 0$.
   * Starting at $i=0$ and ending at $n_a - 1$ $\prover$ sets $q_{\sigma(i)} := x_1 q_{\sigma(i)} + a'(X)$ and $q^*_{\sigma(i)} := x_1 q^*_{\sigma(i)} + a^*_i$.
-  * $\prover$ finally sets $q_0(X) := x_1^2 q_0(X) + x_1 h'(X) + r(X)$, and its corresponding blinding factor $q^*_0 := x_1^2 q^*_0 + x_1 h'^* + r^*$.
+  * $\prover$ finally sets $q_0(X) := x_1^2 q_0(X) + x_1 h'(X) + r(X)$, and its corresponding synthetic blinding factor $q^*_0 := x_1^2 q^*_0 + x_1 h'^* + r^*$.
 13. $\prover$ and $\verifier$ initialize $r_0(X), r_1(X), ..., r_{n_q - 1}(X) = 0$.
   * Starting at $i = 0$ and ending at $n_a - 1$ $\prover$ and $\verifier$ set $r_{\sigma(i)}(X) := x_1 r_{\sigma(i)}(X) + s_i(X)$.
   * Finally $\prover$ and $\verifier$ set $r_0 := x_1^2 r_0 + x_1 h + r$ and where $h$ is computed by $\verifier$ as $\frac{g'(x)}{t(x)}$ using the values $r, \mathbf{a}$ provided by $\prover$.
-14. $\prover$ sends $Q' = \innerprod{\mathbf{q'}}{\mathbf{G}} + [q^{\prime *}] W$ where $q^{\prime *}$ is a blinding factor, and $\mathbf{q'}$ defines the coefficients of the polynomial
+14. $\prover$ sends $Q' = \innerprod{\mathbf{q'}}{\mathbf{G}} + [q^{\prime *}] W$ where $q^{\prime *}$ is the synthetic blinding factor calculated in step 12, and $\mathbf{q'}$ defines the coefficients of the polynomial
 $$q'(X) = \sum\limits_{i=0}^{n_q - 1}
 
 x_2^{n_q - 1 - i}
@@ -390,17 +390,17 @@ x_2^{n_q - 1 - i}
 +
 \sum\limits_{i=0}^{n_q - 1} x_4^{n_q - 1 - i} \mathbf{u}_i
 $$
-19. $\prover$ sets $p(X) = x_4^{n_q} \cdot q'(X) + \sum\limits_{i=0}^{n_q - 1} x_4^{n_q - 1 - i} \cdot q_i(X)$ and the corresponding blinding factor $p^* = x_4^{n_q} \cdot q'^* + \sum\limits_{i=0}^{n_q - 1} x_4^{n_q - 1 - i} \cdot q^*_i$.
-20. $\prover$ samples a random polynomial $s(X)$ of degree $n - 1$ with a root at $x_3$ and sends a commitment $S = \innerprod{\mathbf{s}}{\mathbf{G}} + [s^{*}] W$ where $\mathbf{s}$ defines the coefficients of $s(X)$ and $s^{*}$ is a blinding factor.
+19. $\prover$ sets $p(X) = x_4^{n_q} \cdot q'(X) + \sum\limits_{i=0}^{n_q - 1} x_4^{n_q - 1 - i} \cdot q_i(X)$ and the corresponding synthetic blinding factor $p^* = x_4^{n_q} \cdot q'^* + \sum\limits_{i=0}^{n_q - 1} x_4^{n_q - 1 - i} \cdot q^*_i$.
+20. $\prover$ samples a random polynomial $s(X)$ of degree $n - 1$ with a root at $x_3$ and sends a commitment $S = \innerprod{\mathbf{s}}{\mathbf{G}} + [s^{*}] W$ where $\mathbf{s}$ defines the coefficients of $s(X)$ and $s^{*}$ is a fresh blinding factor.
 21. $\verifier$ responds with challenges $\xi, z$.
 22. $\verifier$ sets $P' = P - [v] \mathbf{G}_0 + [\xi] S$.
 23. $\prover$ sets $p'(X) = p(X) - p(x_3) + \xi s(X)$ and $p^{\prime *} = s^* \cdot \xi + p^*$ (where $p(x_3)$ should correspond with the verifier's computed value $v$).
 24. Initialize $\mathbf{p'}$ as the coefficients of $p'(X)$ and $\mathbf{G'} = \mathbf{G}$ and $\mathbf{b} = (x_3^0, x_3^1, ..., x_3^{n - 1})$. $\prover$ and $\verifier$ will interact in the following $k$ rounds, where in the $j$th round starting in round $j=0$ and ending in round $j=k-1$:
-  * $\prover$ sends $L_j = \innerprod{\mathbf{p'}_\hi}{\mathbf{G'}_\lo} + [z \innerprod{\mathbf{p'}_\hi}{\mathbf{b}_\lo}] U + [\ell_j^*] W$ and $R_j = \innerprod{\mathbf{p'}_\lo}{\mathbf{G'}_\hi} + [z \innerprod{\mathbf{p'}_\lo}{\mathbf{b}_\hi}] U + [r_j^*] W$ where $\ell_j^*$ and $r_j^*$ are blinding factors.
+  * $\prover$ sends $L_j = \innerprod{\mathbf{p'}_\hi}{\mathbf{G'}_\lo} + [z \innerprod{\mathbf{p'}_\hi}{\mathbf{b}_\lo}] U + [\ell_j^*] W$ and $R_j = \innerprod{\mathbf{p'}_\lo}{\mathbf{G'}_\hi} + [z \innerprod{\mathbf{p'}_\lo}{\mathbf{b}_\hi}] U + [r_j^*] W$ where $\ell_j^*$ and $r_j^*$ are fresh blinding factors.
   * $\verifier$ responds with challenge $u_j$ chosen such that $1 + u_{k-1-j} x_3^{2^j}$ is nonzero.
   * $\prover$ and $\verifier$ set $\mathbf{G'} := \mathbf{G'}_\lo + u_j \mathbf{G'}_\hi$ and $\mathbf{b} := \mathbf{b}_\lo + u_j \mathbf{b}_\hi$.
   * $\prover$ sets $\mathbf{p'} := \mathbf{p'}_\lo + u_j^{-1} \mathbf{p'}_\hi$.
-25. $\prover$ sends $c = \mathbf{p'}_0$ and synthetic blinding factor $f = p^{\prime *} + \sum_{j=0}^{k - 1}\ell_j^* \cdot u_j^{-1}+r_j^* \cdot u_j$.
+25. $\prover$ sends $c = \mathbf{p'}_0$ and synthetic blinding factor $f = p^{\prime *} + \sum_{j=0}^{k - 1}\left(\ell_j^* \cdot u_j^{-1} + r_j^* \cdot u_j\right)$.
 26. $\verifier$ accepts only if $\sum_{j=0}^{k - 1} [u_j^{-1}] L_j + P' + \sum_{j=0}^{k - 1} [u_j] R_j = [c] \mathbf{G'}_0 + [c \mathbf{b}_0 z] U + [f] W$.
 
 ### Zero-knowledge and Completeness
