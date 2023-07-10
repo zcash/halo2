@@ -1,10 +1,10 @@
 # A simple example
 
 Let's start with a simple circuit, to introduce you to the common APIs and how they are
-used. The circuit will take a public input $c$, and will prove knowledge of two private
-inputs $a$ and $b$ such that
+used. The circuit will take a public input $c$, and will prove knowledge of three private
+inputs $a$, $b$, and a constant $k$ such that
 
-$$a^2 \cdot b^2 = c.$$
+$$k \cdot a^2 \cdot b^2 = c$$
 
 ## Define instructions
 
