@@ -8,7 +8,7 @@ use crate::arithmetic::{best_fft, best_multiexp, parallelize, CurveAffine, Curve
 use crate::helpers::CurveRead;
 
 use ff::{Field, PrimeField};
-use group::{prime::PrimeCurveAffine, Curve, Group};
+use group::{Curve, Group};
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 
 mod msm;
@@ -74,7 +74,7 @@ impl<C: CurveAffine> Params<C> {
 
         // Let's evaluate all of the Lagrange basis polynomials
         // using an inverse FFT.
-        let mut alpha_inv = <<C as PrimeCurveAffine>::Curve as Group>::Scalar::ROOT_OF_UNITY_INV;
+        let mut alpha_inv = <C::Curve as Group>::Scalar::ROOT_OF_UNITY_INV;
         for _ in k..C::Scalar::S {
             alpha_inv = alpha_inv.square();
         }
