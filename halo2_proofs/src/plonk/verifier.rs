@@ -63,7 +63,7 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for SingleVerifie
     }
 }
 
-/// Returns a boolean indicating whether or not the proof is valid
+/// Returns a Result indicating whether or not the proof is valid
 pub fn verify_proof<
     'params,
     C: CurveAffine,
