@@ -52,6 +52,9 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
             extended_k += 1;
         }
 
+        // ensure extended_k <= S
+        assert!(extended_k <= F::S);
+
         let mut extended_omega = F::ROOT_OF_UNITY;
 
         // Get extended_omega, the 2^{extended_k}'th root of unity
