@@ -327,7 +327,7 @@ pub(crate) fn build_pk<'params, C: CurveAffine, P: Params<'params, C>>(
     {
         let omega = domain.get_omega();
         parallelize(&mut omega_powers, |o, start| {
-            let mut cur = omega.pow_vartime(&[start as u64]);
+            let mut cur = omega.pow_vartime([start as u64]);
             for v in o.iter_mut() {
                 *v = cur;
                 cur *= &omega;
@@ -339,7 +339,7 @@ pub(crate) fn build_pk<'params, C: CurveAffine, P: Params<'params, C>>(
     let mut deltaomega = vec![omega_powers; p.columns.len()];
     {
         parallelize(&mut deltaomega, |o, start| {
-            let mut cur = C::Scalar::DELTA.pow_vartime(&[start as u64]);
+            let mut cur = C::Scalar::DELTA.pow_vartime([start as u64]);
             for omega_powers in o.iter_mut() {
                 for v in omega_powers {
                     *v *= &cur;
@@ -403,7 +403,7 @@ pub(crate) fn build_vk<'params, C: CurveAffine, P: Params<'params, C>>(
     {
         let omega = domain.get_omega();
         parallelize(&mut omega_powers, |o, start| {
-            let mut cur = omega.pow_vartime(&[start as u64]);
+            let mut cur = omega.pow_vartime([start as u64]);
             for v in o.iter_mut() {
                 *v = cur;
                 cur *= &omega;
@@ -415,7 +415,7 @@ pub(crate) fn build_vk<'params, C: CurveAffine, P: Params<'params, C>>(
     let mut deltaomega = vec![omega_powers; p.columns.len()];
     {
         parallelize(&mut deltaomega, |o, start| {
-            let mut cur = C::Scalar::DELTA.pow_vartime(&[start as u64]);
+            let mut cur = C::Scalar::DELTA.pow_vartime([start as u64]);
             for omega_powers in o.iter_mut() {
                 for v in omega_powers {
                     *v *= &cur;

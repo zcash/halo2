@@ -444,7 +444,7 @@ impl<F: Field, const WIDTH: usize> Pow5State<F, WIDTH> {
                     .value()
                     .map(|v| *v + config.round_constants[round][idx])
             });
-            let r: Value<Vec<F>> = q.map(|q| q.map(|q| q.pow(&config.alpha))).collect();
+            let r: Value<Vec<F>> = q.map(|q| q.map(|q| q.pow(config.alpha))).collect();
             let m = &config.m_reg;
             let state = m.iter().map(|m_i| {
                 r.as_ref().map(|r| {
@@ -470,7 +470,7 @@ impl<F: Field, const WIDTH: usize> Pow5State<F, WIDTH> {
             let p: Value<Vec<_>> = self.0.iter().map(|word| word.0.value().cloned()).collect();
 
             let r: Value<Vec<_>> = p.map(|p| {
-                let r_0 = (p[0] + config.round_constants[round][0]).pow(&config.alpha);
+                let r_0 = (p[0] + config.round_constants[round][0]).pow(config.alpha);
                 let r_i = p[1..]
                     .iter()
                     .enumerate()
@@ -510,7 +510,7 @@ impl<F: Field, const WIDTH: usize> Pow5State<F, WIDTH> {
             }
 
             let r_mid: Value<Vec<_>> = p_mid.map(|p| {
-                let r_0 = (p[0] + config.round_constants[round + 1][0]).pow(&config.alpha);
+                let r_0 = (p[0] + config.round_constants[round + 1][0]).pow(config.alpha);
                 let r_i = p[1..]
                     .iter()
                     .enumerate()

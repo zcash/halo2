@@ -23,11 +23,10 @@ fn rand_poly_par(mut rng: ChaCha20Rng, domain: usize) -> Vec<Scalar> {
     // Sample a random polynomial of degree n - 1
     let n_threads = current_num_threads();
     let n = 1usize << domain;
-    let n_chunks = n_threads + if n % n_threads != 0 { 1 } else { 0 };
+    let n_chunks = n_threads + usize::from(n % n_threads != 0);
     let mut rand_vec = vec![Scalar::zero(); n];
 
     let mut thread_seeds: Vec<ChaCha20Rng> = (0..n_chunks)
-        .into_iter()
         .map(|_| {
             let mut seed = [0u8; 32];
             rng.fill_bytes(&mut seed);

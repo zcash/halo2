@@ -398,11 +398,12 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a + SyncDeps> RegionLayouter<F>
 ///   witnesses or not.
 type DefaultTableValue<F> = Option<Value<Assigned<F>>>;
 
-pub(crate) struct SimpleTableLayouter<'r, 'a, F: Field, CS: Assignment<F> + 'a> {
+/// A table layouter that can be used to assign values to a table.
+pub struct SimpleTableLayouter<'r, 'a, F: Field, CS: Assignment<F> + 'a> {
     cs: &'a mut CS,
     used_columns: &'r [TableColumn],
-    // maps from a fixed column to a pair (default value, vector saying which rows are assigned)
-    pub(crate) default_and_assigned: HashMap<TableColumn, (DefaultTableValue<F>, Vec<bool>)>,
+    /// maps from a fixed column to a pair (default value, vector saying which rows are assigned)
+    pub default_and_assigned: HashMap<TableColumn, (DefaultTableValue<F>, Vec<bool>)>,
 }
 
 impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for SimpleTableLayouter<'r, 'a, F, CS> {
@@ -415,7 +416,8 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> fmt::Debug for SimpleTableLayoute
 }
 
 impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> SimpleTableLayouter<'r, 'a, F, CS> {
-    pub(crate) fn new(cs: &'a mut CS, used_columns: &'r [TableColumn]) -> Self {
+    /// Returns a new SimpleTableLayouter
+    pub fn new(cs: &'a mut CS, used_columns: &'r [TableColumn]) -> Self {
         SimpleTableLayouter {
             cs,
             used_columns,

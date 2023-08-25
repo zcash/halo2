@@ -250,12 +250,12 @@ where
     C::Scalar: FromUniformBytes<64>,
 {
     fn squeeze_challenge(&mut self) -> Challenge255<C> {
-        self.state.update(&[KECCAK256_PREFIX_CHALLENGE]);
+        self.state.update([KECCAK256_PREFIX_CHALLENGE]);
 
         let mut state_lo = self.state.clone();
         let mut state_hi = self.state.clone();
-        state_lo.update(&[KECCAK256_PREFIX_CHALLENGE_LO]);
-        state_hi.update(&[KECCAK256_PREFIX_CHALLENGE_HI]);
+        state_lo.update([KECCAK256_PREFIX_CHALLENGE_LO]);
+        state_hi.update([KECCAK256_PREFIX_CHALLENGE_HI]);
         let result_lo: [u8; 32] = state_lo.finalize().as_slice().try_into().unwrap();
         let result_hi: [u8; 32] = state_hi.finalize().as_slice().try_into().unwrap();
 
@@ -267,7 +267,7 @@ where
     }
 
     fn common_point(&mut self, point: C) -> io::Result<()> {
-        self.state.update(&[KECCAK256_PREFIX_POINT]);
+        self.state.update([KECCAK256_PREFIX_POINT]);
         let coords: Coordinates<C> = Option::from(point.coordinates()).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::Other,
@@ -281,7 +281,7 @@ where
     }
 
     fn common_scalar(&mut self, scalar: C::Scalar) -> io::Result<()> {
-        self.state.update(&[KECCAK256_PREFIX_SCALAR]);
+        self.state.update([KECCAK256_PREFIX_SCALAR]);
         self.state.update(scalar.to_repr().as_ref());
 
         Ok(())
@@ -424,12 +424,12 @@ where
     C::Scalar: FromUniformBytes<64>,
 {
     fn squeeze_challenge(&mut self) -> Challenge255<C> {
-        self.state.update(&[KECCAK256_PREFIX_CHALLENGE]);
+        self.state.update([KECCAK256_PREFIX_CHALLENGE]);
 
         let mut state_lo = self.state.clone();
         let mut state_hi = self.state.clone();
-        state_lo.update(&[KECCAK256_PREFIX_CHALLENGE_LO]);
-        state_hi.update(&[KECCAK256_PREFIX_CHALLENGE_HI]);
+        state_lo.update([KECCAK256_PREFIX_CHALLENGE_LO]);
+        state_hi.update([KECCAK256_PREFIX_CHALLENGE_HI]);
         let result_lo: [u8; 32] = state_lo.finalize().as_slice().try_into().unwrap();
         let result_hi: [u8; 32] = state_hi.finalize().as_slice().try_into().unwrap();
 
@@ -441,7 +441,7 @@ where
     }
 
     fn common_point(&mut self, point: C) -> io::Result<()> {
-        self.state.update(&[KECCAK256_PREFIX_POINT]);
+        self.state.update([KECCAK256_PREFIX_POINT]);
         let coords: Coordinates<C> = Option::from(point.coordinates()).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::Other,
@@ -455,7 +455,7 @@ where
     }
 
     fn common_scalar(&mut self, scalar: C::Scalar) -> io::Result<()> {
-        self.state.update(&[KECCAK256_PREFIX_SCALAR]);
+        self.state.update([KECCAK256_PREFIX_SCALAR]);
         self.state.update(scalar.to_repr().as_ref());
 
         Ok(())

@@ -55,7 +55,6 @@ impl<C: CurveAffine> Argument<C> {
         let mut rand_vec = vec![C::Scalar::ZERO; n];
 
         let mut thread_seeds: Vec<ChaCha20Rng> = (0..num_chunks)
-            .into_iter()
             .map(|_| {
                 let mut seed = [0u8; 32];
                 rng.fill_bytes(&mut seed);

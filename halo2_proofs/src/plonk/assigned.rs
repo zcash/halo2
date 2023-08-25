@@ -613,7 +613,7 @@ mod proptests {
                 // Ensure that:
                 // - we have at least one value to apply unary operators to.
                 // - we can apply every binary operator pairwise sequentially.
-                cmp::max(if num_unary > 0 { 1 } else { 0 }, num_binary + 1)),
+                cmp::max(usize::from(num_unary > 0), num_binary + 1)),
             operations in arb_operators(num_unary, num_binary).prop_shuffle(),
         ) -> (Vec<Assigned<Fp>>, Vec<Operator>) {
             (values, operations)

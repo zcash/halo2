@@ -88,8 +88,8 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
         {
             // Compute the evaluations of t(X) = X^n - 1 in the coset evaluation domain.
             // We don't have to compute all of them, because it will repeat.
-            let orig = F::ZETA.pow_vartime(&[n as u64, 0, 0, 0]);
-            let step = extended_omega.pow_vartime(&[n as u64, 0, 0, 0]);
+            let orig = F::ZETA.pow_vartime([n, 0, 0, 0]);
+            let step = extended_omega.pow_vartime([n, 0, 0, 0]);
             let mut cur = orig;
             loop {
                 t_evaluations.push(cur);
@@ -396,11 +396,11 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
     pub fn rotate_omega(&self, value: F, rotation: Rotation) -> F {
         let mut point = value;
         if rotation.0 >= 0 {
-            point *= &self.get_omega().pow_vartime(&[rotation.0 as u64]);
+            point *= &self.get_omega().pow_vartime([rotation.0 as u64]);
         } else {
             point *= &self
                 .get_omega_inv()
-                .pow_vartime(&[(rotation.0 as i64).unsigned_abs()]);
+                .pow_vartime([(rotation.0 as i64).unsigned_abs()]);
         }
         point
     }
@@ -537,7 +537,7 @@ fn test_l_i() {
     let mut l = vec![];
     let mut points = vec![];
     for i in 0..8 {
-        points.push(domain.omega.pow(&[i, 0, 0, 0]));
+        points.push(domain.omega.pow([i, 0, 0, 0]));
     }
     for i in 0..8 {
         let mut l_i = vec![Scalar::zero(); 8];
@@ -547,7 +547,7 @@ fn test_l_i() {
     }
 
     let x = Scalar::random(OsRng);
-    let xn = x.pow(&[8, 0, 0, 0]);
+    let xn = x.pow([8, 0, 0, 0]);
 
     let evaluations = domain.l_i_range(x, xn, -7..=7);
     for i in 0..8 {

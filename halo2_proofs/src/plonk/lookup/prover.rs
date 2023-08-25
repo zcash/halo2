@@ -443,7 +443,7 @@ fn permute_expression_pair<'params, C: CurveAffine, P: Params<'params, C>, R: Rn
     // Populate permuted table at unfilled rows with leftover table elements
     for (coeff, count) in leftover_table_map.iter() {
         for _ in 0..*count {
-            permuted_table_coeffs[repeated_input_rows.pop().unwrap() as usize] = *coeff;
+            permuted_table_coeffs[repeated_input_rows.pop().unwrap()] = *coeff;
         }
     }
     assert!(repeated_input_rows.is_empty());

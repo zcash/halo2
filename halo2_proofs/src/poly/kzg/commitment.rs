@@ -75,7 +75,7 @@ where
         let mut g_projective = vec![E::G1::identity(); n as usize];
         parallelize(&mut g_projective, |g, start| {
             let mut current_g: E::G1 = g1.into();
-            current_g *= s.pow_vartime(&[start as u64]);
+            current_g *= s.pow_vartime([start as u64]);
             for g in g.iter_mut() {
                 *g = current_g;
                 current_g *= s;
@@ -97,11 +97,11 @@ where
         }
         let n_inv = Option::<E::Scalar>::from(E::Scalar::from(n).invert())
             .expect("inversion should be ok for n = 1<<k");
-        let multiplier = (s.pow_vartime(&[n as u64]) - E::Scalar::ONE) * n_inv;
+        let multiplier = (s.pow_vartime([n]) - E::Scalar::ONE) * n_inv;
         parallelize(&mut g_lagrange_projective, |g, start| {
             for (idx, g) in g.iter_mut().enumerate() {
                 let offset = start + idx;
-                let root_pow = root.pow_vartime(&[offset as u64]);
+                let root_pow = root.pow_vartime([offset as u64]);
                 let scalar = multiplier * root_pow * (s - root_pow).invert().unwrap();
                 *g = g1 * scalar;
             }
