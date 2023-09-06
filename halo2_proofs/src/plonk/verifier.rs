@@ -1,27 +1,24 @@
 use ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use group::Curve;
-use rand_core::RngCore;
 use std::iter;
 
 use super::{
     vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
     VerifyingKey,
 };
-use crate::arithmetic::{compute_inner_product, CurveAffine};
+use crate::arithmetic::compute_inner_product;
 use crate::poly::commitment::{CommitmentScheme, Verifier};
 use crate::poly::VerificationStrategy;
 use crate::poly::{
-    commitment::{Blind, Params, MSM},
-    Guard, VerifierQuery,
+    commitment::{Blind, Params},
+    VerifierQuery,
 };
-use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
+use crate::transcript::{read_n_scalars, EncodedChallenge, TranscriptRead};
 
 #[cfg(feature = "batch")]
 mod batch;
 #[cfg(feature = "batch")]
 pub use batch::BatchVerifier;
-
-use crate::poly::commitment::ParamsVerifier;
 
 /// Returns a boolean indicating whether or not the proof is valid
 pub fn verify_proof<
@@ -188,7 +185,7 @@ where
             })
             .collect::<Result<Vec<_>, _>>()?
     } else {
-        let xn = x.pow([params.n(), 0, 0, 0]);
+        let xn = x.pow([params.n()]);
         let (min_rotation, max_rotation) =
             vk.cs
                 .instance_queries
@@ -267,7 +264,7 @@ where
     // commitments open to the correct values.
     let vanishing = {
         // x^n
-        let xn = x.pow([params.n(), 0, 0, 0]);
+        let xn = x.pow([params.n()]);
 
         let blinding_factors = vk.cs.blinding_factors();
         let l_evals = vk

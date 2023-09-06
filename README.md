@@ -4,7 +4,7 @@
 
 ## Minimum Supported Rust Version
 
-Requires Rust **1.56.1** or higher.
+Requires Rust **1.65.0** or higher.
 
 Minimum supported Rust version can be changed in the future, but it will be done with a
 minor version bump.
@@ -13,6 +13,10 @@ minor version bump.
 
 `halo2` currently uses [rayon](https://github.com/rayon-rs/rayon) for parallel computation.
 The `RAYON_NUM_THREADS` environment variable can be used to set the number of threads.
+
+You can disable `rayon` by disabling the `"multicore"` feature.
+Warning! Halo2 will lose access to parallelism if you disable the `"multicore"` feature.
+This will significantly degrade performance.
 
 ## License
 

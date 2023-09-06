@@ -11,15 +11,14 @@ use super::{
         Selector,
     },
     evaluation::Evaluator,
-    permutation, Assigned, Challenge, Error, Expression, LagrangeCoeff, Polynomial, ProvingKey,
-    VerifyingKey,
+    permutation, Assigned, Challenge, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
 };
 use crate::{
     arithmetic::{parallelize, CurveAffine},
-    circuit::{layouter::SyncDeps, Value},
+    circuit::Value,
     poly::{
         batch_invert_assigned,
-        commitment::{Blind, Params, MSM},
+        commitment::{Blind, Params},
         EvaluationDomain,
     },
 };
@@ -60,8 +59,6 @@ struct Assembly<F: Field> {
     usable_rows: Range<usize>,
     _marker: std::marker::PhantomData<F>,
 }
-
-impl<F: Field> SyncDeps for Assembly<F> {}
 
 impl<F: Field> Assignment<F> for Assembly<F> {
     fn enter_region<NR, N>(&mut self, _: N)

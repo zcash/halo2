@@ -372,7 +372,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         base: &F,
     ) -> Result<NonIdentityEccPoint, Error> {
         // `scalar = [(k_w + 2) ⋅ 8^w]
-        let scalar = k.map(|k| (k + *TWO_SCALAR) * (*H_SCALAR).pow([w as u64, 0, 0, 0]));
+        let scalar = k.map(|k| (k + *TWO_SCALAR) * (*H_SCALAR).pow([w as u64]));
 
         self.process_window::<_, NUM_WINDOWS>(region, offset, w, k_usize, scalar, base)
     }
@@ -389,12 +389,12 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
 
         // offset_acc = \sum_{j = 0}^{NUM_WINDOWS - 2} 2^{FIXED_BASE_WINDOW_SIZE*j + 1}
         let offset_acc = (0..(NUM_WINDOWS - 1)).fold(pallas::Scalar::zero(), |acc, w| {
-            acc + (*TWO_SCALAR).pow([FIXED_BASE_WINDOW_SIZE as u64 * w as u64 + 1, 0, 0, 0])
+            acc + (*TWO_SCALAR).pow([FIXED_BASE_WINDOW_SIZE as u64 * w as u64 + 1])
         });
 
         // `scalar = [k * 8^(NUM_WINDOWS - 1) - offset_acc]`.
         let scalar = scalar.windows_field()[scalar.windows_field().len() - 1]
-            .map(|k| k * (*H_SCALAR).pow([(NUM_WINDOWS - 1) as u64, 0, 0, 0]) - offset_acc);
+            .map(|k| k * (*H_SCALAR).pow([(NUM_WINDOWS - 1) as u64]) - offset_acc);
 
         self.process_window::<_, NUM_WINDOWS>(
             region,

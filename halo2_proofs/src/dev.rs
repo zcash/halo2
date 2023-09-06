@@ -1,36 +1,29 @@
 //! Tools for developing circuits.
 
-use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fmt;
 use std::iter;
 use std::ops::{Add, Mul, Neg, Range};
-use std::time::{Duration, Instant};
 
 use blake2b_simd::blake2b;
 use ff::Field;
 use ff::FromUniformBytes;
-use group::Group;
 
-use crate::circuit::layouter::SyncDeps;
 use crate::plonk::permutation::keygen::Assembly;
 use crate::{
     circuit,
     plonk::{
         permutation,
         sealed::{self, SealedPhase},
-        Advice, Any, Assigned, Assignment, Challenge, Circuit, Column, ColumnType,
-        ConstraintSystem, Error, Expression, FirstPhase, Fixed, FloorPlanner, Instance, Phase,
-        Selector, VirtualCell,
+        Advice, Any, Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error,
+        Expression, FirstPhase, Fixed, FloorPlanner, Instance, Phase, Selector,
     },
-    poly::Rotation,
 };
-use rayon::{
-    iter::{
-        IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
-    },
-    slice::ParallelSliceMut,
+
+#[cfg(feature = "multicore")]
+use crate::multicore::{
+    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
+    ParallelSliceMut,
 };
 
 pub mod metadata;
@@ -45,6 +38,9 @@ pub use cost::CircuitCost;
 
 mod gates;
 pub use gates::CircuitGates;
+
+mod tfp;
+pub use tfp::TracingFloorPlanner;
 
 #[cfg(feature = "dev-graph")]
 mod graph;
@@ -306,7 +302,7 @@ pub struct MockProver<F: Field> {
     // The advice cells in the circuit, arranged as [column][row].
     advice: Vec<Vec<CellValue<F>>>,
     // The instance cells in the circuit, arranged as [column][row].
-    instance: Vec<Vec<F>>,
+    instance: Vec<Vec<InstanceValue<F>>>,
 
     selectors: Vec<Vec<bool>>,
 
@@ -318,6 +314,21 @@ pub struct MockProver<F: Field> {
     usable_rows: Range<usize>,
 
     current_phase: sealed::Phase,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum InstanceValue<F: Field> {
+    Assigned(F),
+    Padding,
+}
+
+impl<F: Field> InstanceValue<F> {
+    fn value(&self) -> F {
+        match self {
+            InstanceValue::Assigned(v) => *v,
+            InstanceValue::Padding => F::ZERO,
+        }
+    }
 }
 
 impl<F: Field> MockProver<F> {
@@ -420,7 +431,7 @@ impl<F: Field> Assignment<F> for MockProver<F> {
             .instance
             .get(column.index())
             .and_then(|column| column.get(row))
-            .map(|v| circuit::Value::known(*v))
+            .map(|v| circuit::Value::known(v.value()))
             .expect("bound failure"))
     }
 
@@ -618,7 +629,7 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
 
         let instance = instance
             .into_iter()
-            .map(|mut instance| {
+            .map(|instance| {
                 assert!(
                     instance.len() <= n - (cs.blinding_factors() + 1),
                     "instance.len={}, n={}, cs.blinding_factors={}",
@@ -627,8 +638,12 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                     cs.blinding_factors()
                 );
 
-                instance.resize(n, F::ZERO);
-                instance
+                let mut instance_values = vec![InstanceValue::Padding; n];
+                for (idx, value) in instance.into_iter().enumerate() {
+                    instance_values[idx] = InstanceValue::Assigned(value);
+                }
+
+                instance_values
             })
             .collect::<Vec<_>>();
 
@@ -770,17 +785,42 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                                 // Determine where this cell should have been assigned.
                                 let cell_row = ((gate_row + n + cell.rotation.0) % n) as usize;
 
-                                // Check that it was assigned!
-                                if r.cells.get(&(cell.column, cell_row)).is_some() {
-                                    None
-                                } else {
-                                    Some(VerifyFailure::CellNotAssigned {
-                                        gate: (gate_index, gate.name()).into(),
-                                        region: (r_i, r.name.clone(), r.annotations.clone()).into(),
-                                        gate_offset: *selector_row,
-                                        column: cell.column,
-                                        offset: cell_row as isize - r.rows.unwrap().0 as isize,
-                                    })
+                                match cell.column.column_type() {
+                                    Any::Instance => {
+                                        // Handle instance cells, which are not in the region.
+                                        let instance_value =
+                                            &self.instance[cell.column.index()][cell_row];
+                                        match instance_value {
+                                            InstanceValue::Assigned(_) => None,
+                                            _ => Some(VerifyFailure::InstanceCellNotAssigned {
+                                                gate: (gate_index, gate.name()).into(),
+                                                region: (r_i, r.name.clone()).into(),
+                                                gate_offset: *selector_row,
+                                                column: cell.column.try_into().unwrap(),
+                                                row: cell_row,
+                                            }),
+                                        }
+                                    }
+                                    _ => {
+                                        // Check that it was assigned!
+                                        if r.cells.contains_key(&(cell.column, cell_row)) {
+                                            None
+                                        } else {
+                                            Some(VerifyFailure::CellNotAssigned {
+                                                gate: (gate_index, gate.name()).into(),
+                                                region: (
+                                                    r_i,
+                                                    r.name.clone(),
+                                                    r.annotations.clone(),
+                                                )
+                                                    .into(),
+                                                gate_offset: *selector_row,
+                                                column: cell.column,
+                                                offset: cell_row as isize
+                                                    - r.rows.unwrap().0 as isize,
+                                            })
+                                        }
+                                    }
                                 }
                             })
                         })
@@ -882,7 +922,8 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                     let rotation = query.1 .0;
                     Value::Real(
                         self.instance[column_index]
-                            [(row as i32 + n + rotation) as usize % n as usize],
+                            [(row as i32 + n + rotation) as usize % n as usize]
+                            .value(),
                     )
                 },
                 &|challenge| Value::Real(self.challenges[challenge.index()]),
@@ -1067,7 +1108,10 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                     .map(|c: &Column<Any>| match c.column_type() {
                         Any::Advice(_) => self.advice[c.index()][row],
                         Any::Fixed => self.fixed[c.index()][row],
-                        Any::Instance => CellValue::Assigned(self.instance[c.index()][row]),
+                        Any::Instance => {
+                            let cell: &InstanceValue<F> = &self.instance[c.index()][row];
+                            CellValue::Assigned(cell.value())
+                        }
                     })
                     .unwrap()
             };
@@ -1127,6 +1171,7 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
     /// Returns `Ok(())` if this `MockProver` is satisfied, or a list of errors indicating
     /// the reasons that the circuit is not satisfied.
     /// Constraints and lookup are checked at `usable_rows`, parallelly.
+    #[cfg(feature = "multicore")]
     pub fn verify_par(&self) -> Result<(), Vec<VerifyFailure>> {
         self.verify_at_rows_par(self.usable_rows.clone(), self.usable_rows.clone())
     }
@@ -1134,6 +1179,7 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
     /// Returns `Ok(())` if this `MockProver` is satisfied, or a list of errors indicating
     /// the reasons that the circuit is not satisfied.
     /// Constraints are only checked at `gate_row_ids`, and lookup inputs are only checked at `lookup_input_row_ids`, parallelly.
+    #[cfg(feature = "multicore")]
     pub fn verify_at_rows_par<I: Clone + Iterator<Item = usize>>(
         &self,
         gate_row_ids: I,
@@ -1186,23 +1232,44 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                                         let cell_row =
                                             ((gate_row + n + cell.rotation.0) % n) as usize;
 
-                                        // Check that it was assigned!
-                                        if r.cells.contains_key(&(cell.column, cell_row)) {
-                                            None
-                                        } else {
-                                            Some(VerifyFailure::CellNotAssigned {
-                                                gate: (gate_index, gate.name()).into(),
-                                                region: (
-                                                    r_i,
-                                                    r.name.clone(),
-                                                    r.annotations.clone(),
-                                                )
-                                                    .into(),
-                                                gate_offset: *selector_row,
-                                                column: cell.column,
-                                                offset: cell_row as isize
-                                                    - r.rows.unwrap().0 as isize,
-                                            })
+                                        match cell.column.column_type() {
+                                            Any::Instance => {
+                                                // Handle instance cells, which are not in the region.
+                                                let instance_value =
+                                                    &self.instance[cell.column.index()][cell_row];
+                                                match instance_value {
+                                                    InstanceValue::Assigned(_) => None,
+                                                    _ => Some(
+                                                        VerifyFailure::InstanceCellNotAssigned {
+                                                            gate: (gate_index, gate.name()).into(),
+                                                            region: (r_i, r.name.clone()).into(),
+                                                            gate_offset: *selector_row,
+                                                            column: cell.column.try_into().unwrap(),
+                                                            row: cell_row,
+                                                        },
+                                                    ),
+                                                }
+                                            }
+                                            _ => {
+                                                // Check that it was assigned!
+                                                if r.cells.contains_key(&(cell.column, cell_row)) {
+                                                    None
+                                                } else {
+                                                    Some(VerifyFailure::CellNotAssigned {
+                                                        gate: (gate_index, gate.name()).into(),
+                                                        region: (
+                                                            r_i,
+                                                            r.name.clone(),
+                                                            r.annotations.clone(),
+                                                        )
+                                                            .into(),
+                                                        gate_offset: *selector_row,
+                                                        column: cell.column,
+                                                        offset: cell_row as isize
+                                                            - r.rows.unwrap().0 as isize,
+                                                    })
+                                                }
+                                            }
                                         }
                                     })
                                     .collect::<Vec<_>>()
@@ -1308,7 +1375,8 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                 &|query| {
                     Value::Real(
                         self.instance[query.column_index]
-                            [(row as i32 + n + query.rotation.0) as usize % n as usize],
+                            [(row as i32 + n + query.rotation.0) as usize % n as usize]
+                            .value(),
                     )
                 },
                 &|challenge| Value::Real(self.challenges[challenge.index()]),
@@ -1489,7 +1557,10 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                     .map(|c: &Column<Any>| match c.column_type() {
                         Any::Advice(_) => self.advice[c.index()][row],
                         Any::Fixed => self.fixed[c.index()][row],
-                        Any::Instance => CellValue::Assigned(self.instance[c.index()][row]),
+                        Any::Instance => {
+                            let cell: &InstanceValue<F> = &self.instance[c.index()][row];
+                            CellValue::Assigned(cell.value())
+                        }
                     })
                     .unwrap()
             };
@@ -1576,6 +1647,7 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
     /// ```ignore
     /// assert_eq!(prover.verify_par(), Ok(()));
     /// ```
+    #[cfg(feature = "multicore")]
     pub fn assert_satisfied_par(&self) {
         if let Err(errs) = self.verify_par() {
             for err in errs {
@@ -1597,6 +1669,7 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
     /// ```ignore
     /// assert_eq!(prover.verify_at_rows_par(), Ok(()));
     /// ```
+    #[cfg(feature = "multicore")]
     pub fn assert_satisfied_at_rows_par<I: Clone + Iterator<Item = usize>>(
         &self,
         gate_row_ids: I,
@@ -2212,5 +2285,3 @@ mod tests {
         )
     }
 }
-
-impl<F: Field> SyncDeps for MockProver<F> {}

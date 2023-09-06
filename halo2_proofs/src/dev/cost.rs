@@ -1,6 +1,7 @@
 //! Developer tools for investigating the cost of a circuit.
 
 use std::{
+    cmp,
     collections::{HashMap, HashSet},
     iter,
     marker::PhantomData,
@@ -11,7 +12,7 @@ use ff::{Field, PrimeField};
 use group::prime::PrimeGroup;
 
 use crate::{
-    circuit::{layouter::SyncDeps, Value},
+    circuit::{layouter::RegionColumn, Value},
     plonk::{
         Advice, Any, Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error,
         Fixed, FloorPlanner, Instance, Selector,
@@ -20,10 +21,11 @@ use crate::{
 };
 
 /// Measures a circuit to determine its costs, and explain what contributes to them.
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct CircuitCost<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> {
     /// Power-of-2 bound on the number of rows in the circuit.
-    k: usize,
+    k: u32,
     /// Maximum degree of the circuit.
     max_deg: usize,
     /// Number of advice columns.
@@ -38,27 +40,141 @@ pub struct CircuitCost<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> {
     permutation_cols: usize,
     /// Number of distinct sets of points in the multiopening argument.
     point_sets: usize,
+    /// Maximum rows used over all columns
+    max_rows: usize,
+    /// Maximum rows used over all advice columns
+    max_advice_rows: usize,
+    /// Maximum rows used over all fixed columns
+    max_fixed_rows: usize,
+    num_fixed_columns: usize,
+    num_advice_columns: usize,
+    num_instance_columns: usize,
+    num_total_columns: usize,
 
     _marker: PhantomData<(G, ConcreteCircuit)>,
 }
 
-struct Assembly {
-    selectors: Vec<Vec<bool>>,
+/// Region implementation used by Layout
+#[allow(dead_code)]
+#[derive(Debug)]
+pub(crate) struct LayoutRegion {
+    /// The name of the region. Not required to be unique.
+    pub(crate) name: String,
+    /// The columns used by this region.
+    pub(crate) columns: HashSet<RegionColumn>,
+    /// The row that this region starts on, if known.
+    pub(crate) offset: Option<usize>,
+    /// The number of rows that this region takes up.
+    pub(crate) rows: usize,
+    /// The cells assigned in this region.
+    pub(crate) cells: Vec<(RegionColumn, usize)>,
 }
 
-impl SyncDeps for Assembly {}
+/// Cost and graphing layouter
+#[derive(Default, Debug)]
+pub(crate) struct Layout {
+    /// k = 1 << n
+    pub(crate) k: u32,
+    /// Regions of the layout
+    pub(crate) regions: Vec<LayoutRegion>,
+    current_region: Option<usize>,
+    /// Total row count
+    pub(crate) total_rows: usize,
+    /// Total advice rows
+    pub(crate) total_advice_rows: usize,
+    /// Total fixed rows
+    pub(crate) total_fixed_rows: usize,
+    /// Any cells assigned outside of a region.
+    pub(crate) loose_cells: Vec<(RegionColumn, usize)>,
+    /// Pairs of cells between which we have equality constraints.
+    pub(crate) equality: Vec<(Column<Any>, usize, Column<Any>, usize)>,
+    /// Selector assignments used for optimization pass
+    pub(crate) selectors: Vec<Vec<bool>>,
+}
 
-impl<F: Field> Assignment<F> for Assembly {
-    fn enter_region<NR, N>(&mut self, _: N)
+impl Layout {
+    /// Creates a empty layout
+    pub fn new(k: u32, n: usize, num_selectors: usize) -> Self {
+        Layout {
+            k,
+            regions: vec![],
+            current_region: None,
+            total_rows: 0,
+            total_advice_rows: 0,
+            total_fixed_rows: 0,
+            /// Any cells assigned outside of a region.
+            loose_cells: vec![],
+            /// Pairs of cells between which we have equality constraints.
+            equality: vec![],
+            /// Selector assignments used for optimization pass
+            selectors: vec![vec![false; n]; num_selectors],
+        }
+    }
+
+    /// Update layout metadata
+    pub fn update(&mut self, column: RegionColumn, row: usize) {
+        self.total_rows = cmp::max(self.total_rows, row + 1);
+
+        if let RegionColumn::Column(col) = column {
+            match col.column_type() {
+                Any::Advice(_) => {
+                    self.total_advice_rows = cmp::max(self.total_advice_rows, row + 1)
+                }
+                Any::Fixed => self.total_fixed_rows = cmp::max(self.total_fixed_rows, row + 1),
+                _ => {}
+            }
+        }
+
+        if let Some(region) = self.current_region {
+            let region = &mut self.regions[region];
+            region.columns.insert(column);
+
+            // The region offset is the earliest row assigned to.
+            let mut offset = region.offset.unwrap_or(row);
+            if row < offset {
+                // The first row assigned was not at offset 0 within the region.
+                region.rows += offset - row;
+                offset = row;
+            }
+            // The number of rows in this region is the gap between the earliest and
+            // latest rows assigned.
+            region.rows = cmp::max(region.rows, row - offset + 1);
+            region.offset = Some(offset);
+
+            region.cells.push((column, row));
+        } else {
+            self.loose_cells.push((column, row));
+        }
+    }
+}
+
+impl<F: Field> Assignment<F> for Layout {
+    fn enter_region<NR, N>(&mut self, name_fn: N)
     where
         NR: Into<String>,
         N: FnOnce() -> NR,
     {
-        // Do nothing; we don't care about regions in this context.
+        assert!(self.current_region.is_none());
+        self.current_region = Some(self.regions.len());
+        self.regions.push(LayoutRegion {
+            name: name_fn().into(),
+            columns: HashSet::default(),
+            offset: None,
+            rows: 0,
+            cells: vec![],
+        })
+    }
+
+    fn annotate_column<A, AR>(&mut self, _: A, _: Column<Any>)
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
     }
 
     fn exit_region(&mut self) {
-        // Do nothing; we don't care about regions in this context.
+        assert!(self.current_region.is_some());
+        self.current_region = None;
     }
 
     fn enable_selector<A, AR>(&mut self, _: A, selector: &Selector, row: usize) -> Result<(), Error>
@@ -66,8 +182,13 @@ impl<F: Field> Assignment<F> for Assembly {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
-        self.selectors[selector.0][row] = true;
+        if let Some(cell) = self.selectors[selector.0].get_mut(row) {
+            *cell = true;
+        } else {
+            return Err(Error::not_enough_rows_available(self.k));
+        }
 
+        self.update((*selector).into(), row);
         Ok(())
     }
 
@@ -78,8 +199,8 @@ impl<F: Field> Assignment<F> for Assembly {
     fn assign_advice<V, VR, A, AR>(
         &mut self,
         _: A,
-        _: Column<Advice>,
-        _: usize,
+        column: Column<Advice>,
+        row: usize,
         _: V,
     ) -> Result<(), Error>
     where
@@ -88,14 +209,15 @@ impl<F: Field> Assignment<F> for Assembly {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
+        self.update(Column::<Any>::from(column).into(), row);
         Ok(())
     }
 
     fn assign_fixed<V, VR, A, AR>(
         &mut self,
         _: A,
-        _: Column<Fixed>,
-        _: usize,
+        column: Column<Fixed>,
+        row: usize,
         _: V,
     ) -> Result<(), Error>
     where
@@ -104,10 +226,18 @@ impl<F: Field> Assignment<F> for Assembly {
         A: FnOnce() -> AR,
         AR: Into<String>,
     {
+        self.update(Column::<Any>::from(column).into(), row);
         Ok(())
     }
 
-    fn copy(&mut self, _: Column<Any>, _: usize, _: Column<Any>, _: usize) -> Result<(), Error> {
+    fn copy(
+        &mut self,
+        l_col: Column<Any>,
+        l_row: usize,
+        r_col: Column<Any>,
+        r_row: usize,
+    ) -> Result<(), crate::plonk::Error> {
+        self.equality.push((l_col, l_row, r_col, r_row));
         Ok(())
     }
 
@@ -122,14 +252,6 @@ impl<F: Field> Assignment<F> for Assembly {
 
     fn get_challenge(&self, _: Challenge) -> Value<F> {
         Value::unknown()
-    }
-
-    fn annotate_column<A, AR>(&mut self, _annotation: A, _column: Column<Any>)
-    where
-        A: FnOnce() -> AR,
-        AR: Into<String>,
-    {
-        // Do nothing
     }
 
     fn push_namespace<NR, N>(&mut self, _: N)
@@ -149,24 +271,19 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
     /// Measures a circuit with parameter constant `k`.
     ///
     /// Panics if `k` is not large enough for the circuit.
-    pub fn measure(k: usize, circuit: &ConcreteCircuit) -> Self {
+    pub fn measure(k: u32, circuit: &ConcreteCircuit) -> Self {
         // Collect the layout details.
         let mut cs = ConstraintSystem::default();
-        #[cfg(feature = "circuit-params")]
-        let config = ConcreteCircuit::configure_with_params(&mut cs, circuit.params());
-        #[cfg(not(feature = "circuit-params"))]
         let config = ConcreteCircuit::configure(&mut cs);
-        let mut assembly = Assembly {
-            selectors: vec![vec![false; 1 << k]; cs.num_selectors],
-        };
+        let mut layout = Layout::new(k, 1 << k, cs.num_selectors);
         ConcreteCircuit::FloorPlanner::synthesize(
-            &mut assembly,
+            &mut layout,
             circuit,
             config,
             cs.constants.clone(),
         )
         .unwrap();
-        let (cs, _) = cs.compress_selectors(assembly.selectors);
+        let (cs, _) = cs.compress_selectors(layout.selectors);
 
         assert!((1 << k) >= cs.minimum_rows());
 
@@ -222,6 +339,15 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
             permutation_cols,
             point_sets: point_sets.len(),
             _marker: PhantomData::default(),
+            max_rows: layout.total_rows,
+            max_advice_rows: layout.total_advice_rows,
+            max_fixed_rows: layout.total_fixed_rows,
+            num_advice_columns: cs.num_advice_columns,
+            num_fixed_columns: cs.num_fixed_columns,
+            num_instance_columns: cs.num_instance_columns,
+            num_total_columns: cs.num_instance_columns
+                + cs.num_advice_columns
+                + cs.num_fixed_columns,
         }
     }
 
@@ -249,8 +375,11 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
 
             // Global permutation argument:
             // - chunks commitments per instance
-            // - 2*chunks + (chunks - 1) evals per instance
-            equality: ProofContribution::new(chunks, 3 * chunks - 1),
+            // - 2 * chunks + (chunks - 1) evals per instance
+            equality: ProofContribution::new(
+                chunks,
+                if chunks == 0 { chunks } else { 3 * chunks - 1 },
+            ),
 
             _marker: PhantomData::default(),
         }
@@ -293,7 +422,7 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
             // - inner product argument (2 * k round commitments)
             // - a
             // - xi
-            polycomm: ProofContribution::new(1 + 2 * self.k, 2),
+            polycomm: ProofContribution::new((1 + 2 * self.k).try_into().unwrap(), 2),
 
             _marker: PhantomData::default(),
         }
@@ -391,5 +520,42 @@ impl<G: PrimeGroup> From<ProofSize<G>> for usize {
             + proof.vanishing.len(point, scalar)
             + proof.multiopen.len(point, scalar)
             + proof.polycomm.len(point, scalar)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use halo2curves::pasta::{Eq, Fp};
+
+    use crate::circuit::SimpleFloorPlanner;
+
+    use super::*;
+
+    #[test]
+    fn circuit_cost_without_permutation() {
+        const K: u32 = 4;
+
+        struct MyCircuit;
+        impl Circuit<Fp> for MyCircuit {
+            type Config = ();
+            type FloorPlanner = SimpleFloorPlanner;
+            #[cfg(feature = "circuit-params")]
+            type Params = ();
+
+            fn without_witnesses(&self) -> Self {
+                Self
+            }
+
+            fn configure(_meta: &mut ConstraintSystem<Fp>) -> Self::Config {}
+
+            fn synthesize(
+                &self,
+                _config: Self::Config,
+                _layouter: impl crate::circuit::Layouter<Fp>,
+            ) -> Result<(), Error> {
+                Ok(())
+            }
+        }
+        CircuitCost::<Eq, MyCircuit>::measure(K, &MyCircuit).proof_size(1);
     }
 }

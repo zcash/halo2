@@ -1,11 +1,5 @@
-use halo2curves::CurveAffine;
-use rand_core::RngCore;
-
-use super::commitment::{CommitmentScheme, Verifier, MSM};
-use crate::{
-    plonk::Error,
-    transcript::{EncodedChallenge, TranscriptRead},
-};
+use super::commitment::{CommitmentScheme, Verifier};
+use crate::plonk::Error;
 
 /// Guards is unfinished verification result. Implement this to construct various
 /// verification strategies such as aggregation and recursion.

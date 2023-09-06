@@ -8,7 +8,7 @@ use halo2curves::pasta::{pallas, EqAffine};
 use rand::rngs::OsRng;
 
 use std::{
-    fs::File,
+    fs::{create_dir_all, File},
     io::{prelude::*, BufReader},
     path::Path,
 };
@@ -88,6 +88,9 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
         }
     }
 
+    // Create parent directory for assets
+    create_dir_all("./benches/sha256_assets").expect("Failed to create sha256_assets directory");
+
     // Initialize the polynomial commitment parameters
     let params_path = Path::new("./benches/sha256_assets/sha256_params");
     if File::open(params_path).is_err() {
@@ -134,7 +137,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
             &params,
             &pk,
             &[circuit],
-            &[],
+            &[&[]],
             OsRng,
             &mut transcript,
         )
@@ -159,7 +162,7 @@ fn bench(name: &str, k: u32, c: &mut Criterion) {
                 &params,
                 pk.get_vk(),
                 strategy,
-                &[],
+                &[&[]],
                 &mut transcript,
             )
             .unwrap();

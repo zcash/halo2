@@ -1,9 +1,5 @@
-use super::commitment::{IPACommitmentScheme, ParamsIPA};
-use crate::arithmetic::{best_multiexp, parallelize, CurveAffine};
-use crate::poly::{
-    commitment::{CommitmentScheme, Params, MSM},
-    ipa::commitment::ParamsVerifierIPA,
-};
+use crate::arithmetic::{best_multiexp, CurveAffine};
+use crate::poly::{commitment::MSM, ipa::commitment::ParamsVerifierIPA};
 use ff::Field;
 use group::Group;
 use std::collections::BTreeMap;
@@ -222,13 +218,10 @@ impl<'a, C: CurveAffine> MSMIPA<'a, C> {
 
 #[cfg(test)]
 mod tests {
-    use super::ParamsIPA;
-    use crate::poly::commitment::ParamsProver;
     use crate::poly::{
-        commitment::{Params, MSM},
-        ipa::msm::MSMIPA,
+        commitment::{ParamsProver, MSM},
+        ipa::{commitment::ParamsIPA, msm::MSMIPA},
     };
-    use group::Curve;
     use halo2curves::{
         pasta::{Ep, EpAffine, Fp, Fq},
         CurveAffine,

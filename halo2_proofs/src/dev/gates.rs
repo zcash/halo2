@@ -7,10 +7,7 @@ use ff::PrimeField;
 
 use crate::{
     dev::util,
-    plonk::{
-        sealed::{self, SealedPhase},
-        Circuit, ConstraintSystem, FirstPhase,
-    },
+    plonk::{sealed::SealedPhase, Circuit, ConstraintSystem, FirstPhase},
 };
 
 #[derive(Debug)]

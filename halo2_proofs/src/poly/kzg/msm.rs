@@ -1,8 +1,8 @@
 use std::fmt::Debug;
 
-use super::commitment::{KZGCommitmentScheme, ParamsKZG};
+use super::commitment::ParamsKZG;
 use crate::{
-    arithmetic::{best_multiexp, parallelize, CurveAffine},
+    arithmetic::{best_multiexp, parallelize},
     poly::commitment::MSM,
 };
 use group::{Curve, Group};
@@ -92,8 +92,6 @@ impl<E: Engine + Debug> PreMSM<E> {
     }
 
     pub(crate) fn normalize(self) -> MSMKZG<E> {
-        use group::prime::PrimeCurveAffine;
-
         let (scalars, bases) = self
             .projectives_msms
             .into_iter()

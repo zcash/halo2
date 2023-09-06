@@ -49,7 +49,6 @@ harness = false
 
 [dependencies]
 backtrace = { version = "0.3", optional = true }
-rayon = "1.5.1"
 ff = "0.13"
 group = "0.13"
 halo2curves = { version = "0.1.0" }
@@ -58,10 +57,14 @@ tracing = "0.1"
 blake2b_simd = "1"
 sha3 = "0.9.1"
 rand_chacha = "0.3"
+maybe-rayon = { version = "0.1.0", default-features = false }
 
 # Developer tooling dependencies
-plotters = { version = "0.3.0", optional = true }
+plotters = { version = "0.3.0", default-features = false, optional = true }
 tabbycat = { version = "0.1", features = ["attributes"], optional = true }
+
+# Legacy circuit compatibility
+halo2_legacy_pdqsort = { version = "0.1.0", optional = true }
 
 [dev-dependencies]
 assert_matches = "1.5"
@@ -74,8 +77,15 @@ rand_core = { version = "0.6", default-features = false, features = ["getrandom"
 getrandom = { version = "0.2", features = ["js"] }
 
 [features]
-default = ["batch"]
+default = ["batch", "multicore"]
+multicore = ["maybe-rayon/threads"]
 dev-graph = ["plotters", "tabbycat"]
+test-dev-graph = [
+    "dev-graph",
+    "plotters/bitmap_backend",
+    "plotters/bitmap_encoder",
+    "plotters/ttf",
+]
 gadget-traces = ["backtrace"]
 thread-safe-region = []
 sanity-checks = []
@@ -87,6 +97,4 @@ bench = false
 
 [[example]]
 name = "circuit-layout"
-required-features = ["dev-graph"]
-
-
+required-features = ["test-dev-graph"]

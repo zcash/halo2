@@ -1,18 +1,9 @@
-use std::io::Read;
-
-use group::{
-    ff::{BatchInvert, Field},
-    Curve,
-};
+use group::ff::{BatchInvert, Field};
 
 use super::ParamsIPA;
-use crate::poly::ipa::commitment::{IPACommitmentScheme, ParamsVerifierIPA};
+use crate::{arithmetic::CurveAffine, poly::ipa::strategy::GuardIPA};
 use crate::{
-    arithmetic::{best_multiexp, CurveAffine},
-    poly::ipa::strategy::GuardIPA,
-};
-use crate::{
-    poly::{commitment::MSM, ipa::msm::MSMIPA, strategy::Guard, Error},
+    poly::{commitment::MSM, ipa::msm::MSMIPA, Error},
     transcript::{EncodedChallenge, TranscriptRead},
 };
 
@@ -75,6 +66,9 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
     //   P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
     //   + [-c] G'_0 + [-cbz] U + [-f] W
     //   = 0
+    //
+    // Note that the guard returned from this function does not include
+    // the [-c]G'_0 term.
 
     let c = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
     let neg_c = -c;

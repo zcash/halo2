@@ -1,30 +1,11 @@
 use crate::multicore;
-use crate::plonk::lookup::prover::Committed;
-use crate::plonk::permutation::Argument;
-use crate::plonk::{lookup, permutation, AdviceQuery, Any, FixedQuery, InstanceQuery, ProvingKey};
+use crate::plonk::{lookup, permutation, Any, ProvingKey};
 use crate::poly::Basis;
 use crate::{
-    arithmetic::{eval_polynomial, parallelize, CurveAffine},
-    poly::{
-        commitment::Params, Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff,
-        Polynomial, ProverQuery, Rotation,
-    },
-    transcript::{EncodedChallenge, TranscriptWrite},
+    arithmetic::{parallelize, CurveAffine},
+    poly::{Coeff, ExtendedLagrangeCoeff, Polynomial, Rotation},
 };
-use group::prime::PrimeCurve;
-use group::{
-    ff::{BatchInvert, Field, PrimeField, WithSmallOrderMulGroup},
-    Curve,
-};
-use std::any::TypeId;
-use std::convert::TryInto;
-use std::num::ParseIntError;
-use std::slice;
-use std::{
-    collections::BTreeMap,
-    iter,
-    ops::{Index, Mul, MulAssign},
-};
+use group::ff::{Field, PrimeField, WithSmallOrderMulGroup};
 
 use super::{shuffle, ConstraintSystem, Expression};
 
@@ -68,6 +49,7 @@ impl Default for ValueSource {
 
 impl ValueSource {
     /// Get the value for this source
+    #[allow(clippy::too_many_arguments)]
     pub fn get<F: Field, B: Basis>(
         &self,
         rotations: &[usize],
@@ -128,6 +110,7 @@ pub enum Calculation {
 
 impl Calculation {
     /// Get the resulting value of this calculation
+    #[allow(clippy::too_many_arguments)]
     pub fn evaluate<F: Field, B: Basis>(
         &self,
         rotations: &[usize],
@@ -312,6 +295,7 @@ impl<C: CurveAffine> Evaluator<C> {
     }
 
     /// Evaluate h poly
+    #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn evaluate_h(
         &self,
         pk: &ProvingKey<C>,
@@ -796,6 +780,7 @@ impl<C: CurveAffine> GraphEvaluator<C> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn evaluate<B: Basis>(
         &self,
         data: &mut EvaluationData<C>,

@@ -1,10 +1,9 @@
 use std::fmt::Debug;
-use std::io::Read;
 
 use super::ChallengeY;
 use super::{construct_intermediate_sets, ChallengeU, ChallengeV};
 use crate::arithmetic::{
-    eval_polynomial, evaluate_vanishing_polynomial, lagrange_interpolate, powers, CurveAffine,
+    eval_polynomial, evaluate_vanishing_polynomial, lagrange_interpolate, powers,
 };
 use crate::helpers::SerdeCurveAffine;
 use crate::poly::commitment::Verifier;
@@ -12,19 +11,12 @@ use crate::poly::commitment::MSM;
 use crate::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
 use crate::poly::kzg::msm::DualMSM;
 use crate::poly::kzg::msm::{PreMSM, MSMKZG};
-use crate::poly::kzg::strategy::{AccumulatorStrategy, GuardKZG, SingleStrategy};
-use crate::poly::query::Query;
+use crate::poly::kzg::strategy::GuardKZG;
 use crate::poly::query::{CommitmentReference, VerifierQuery};
-use crate::poly::strategy::VerificationStrategy;
-use crate::poly::{
-    commitment::{Params, ParamsVerifier},
-    Error,
-};
+use crate::poly::Error;
 use crate::transcript::{EncodedChallenge, TranscriptRead};
 use ff::{Field, PrimeField};
-use group::Group;
-use halo2curves::pairing::{Engine, MillerLoopResult, MultiMillerLoop};
-use rand_core::OsRng;
+use halo2curves::pairing::{Engine, MultiMillerLoop};
 use std::ops::MulAssign;
 
 /// Concrete KZG multiopen verifier with SHPLONK variant

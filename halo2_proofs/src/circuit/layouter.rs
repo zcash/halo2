@@ -6,16 +6,23 @@ use std::fmt;
 
 use ff::Field;
 
+pub use super::table_layouter::TableLayouter;
 use super::{Cell, RegionIndex, Value};
-use crate::plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector, TableColumn};
+use crate::plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector};
 
 /// Intermediate trait requirements for [`RegionLayouter`] when thread-safe regions are enabled.
 #[cfg(feature = "thread-safe-region")]
 pub trait SyncDeps: Send + Sync {}
 
+#[cfg(feature = "thread-safe-region")]
+impl<T: Send + Sync> SyncDeps for T {}
+
 /// Intermediate trait requirements for [`RegionLayouter`].
 #[cfg(not(feature = "thread-safe-region"))]
 pub trait SyncDeps {}
+
+#[cfg(not(feature = "thread-safe-region"))]
+impl<T> SyncDeps for T {}
 
 /// Helper trait for implementing a custom [`Layouter`].
 ///
@@ -92,7 +99,8 @@ pub trait RegionLayouter<F: Field>: fmt::Debug + SyncDeps {
     /// Assign the value of the instance column's cell at absolute location
     /// `row` to the column `advice` at `offset` within this region.
     ///
-    /// Returns the advice cell, and its value if known.
+    /// Returns the advice cell that has been equality-constrained to the
+    /// instance cell, and its value if known.
     fn assign_advice_from_instance<'v>(
         &mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
@@ -102,7 +110,11 @@ pub trait RegionLayouter<F: Field>: fmt::Debug + SyncDeps {
         offset: usize,
     ) -> Result<(Cell, Value<F>), Error>;
 
-    /// Assign a fixed value
+    /// Returns the value of the instance column's cell at absolute location `row`.
+    fn instance_value(&mut self, instance: Column<Instance>, row: usize)
+        -> Result<Value<F>, Error>;
+
+    /// Assigns a fixed value
     fn assign_fixed<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
@@ -122,24 +134,6 @@ pub trait RegionLayouter<F: Field>: fmt::Debug + SyncDeps {
     fn constrain_equal(&mut self, left: Cell, right: Cell) -> Result<(), Error>;
 }
 
-/// Helper trait for implementing a custom [`Layouter`].
-///
-/// This trait is used for implementing table assignments.
-///
-/// [`Layouter`]: super::Layouter
-pub trait TableLayouter<F: Field>: fmt::Debug {
-    /// Assigns a fixed value to a table cell.
-    ///
-    /// Returns an error if the table cell has already been assigned to.
-    fn assign_cell<'v>(
-        &'v mut self,
-        annotation: &'v (dyn Fn() -> String + 'v),
-        column: TableColumn,
-        offset: usize,
-        to: &'v mut (dyn FnMut() -> Value<Assigned<F>> + 'v),
-    ) -> Result<(), Error>;
-}
-
 /// The shape of a region. For a region at a certain index, we track
 /// the set of columns it uses as well as the number of rows it uses.
 #[derive(Clone, Debug)]
@@ -148,8 +142,6 @@ pub struct RegionShape {
     pub(super) columns: HashSet<RegionColumn>,
     pub(super) row_count: usize,
 }
-
-impl SyncDeps for RegionShape {}
 
 /// The virtual column involved in a region. This includes concrete columns,
 /// as well as selectors that are not concrete columns at this stage.
@@ -276,6 +268,14 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
             },
             Value::unknown(),
         ))
+    }
+
+    fn instance_value(
+        &mut self,
+        _instance: Column<Instance>,
+        _row: usize,
+    ) -> Result<Value<F>, Error> {
+        Ok(Value::unknown())
     }
 
     fn assign_fixed<'v>(

@@ -1,10 +1,6 @@
-use std::marker::PhantomData;
-
-use super::commitment::{IPACommitmentScheme, ParamsIPA, ParamsVerifierIPA};
+use super::commitment::{IPACommitmentScheme, ParamsIPA};
 use super::msm::MSMIPA;
 use super::multiopen::VerifierIPA;
-use crate::poly::commitment::CommitmentScheme;
-use crate::transcript::TranscriptRead;
 use crate::{
     arithmetic::best_multiexp,
     plonk::Error,
@@ -12,12 +8,11 @@ use crate::{
         commitment::MSM,
         strategy::{Guard, VerificationStrategy},
     },
-    transcript::EncodedChallenge,
 };
 use ff::Field;
 use group::Curve;
 use halo2curves::CurveAffine;
-use rand_core::{OsRng, RngCore};
+use rand_core::OsRng;
 
 /// Wrapper for verification accumulator
 #[derive(Debug, Clone)]

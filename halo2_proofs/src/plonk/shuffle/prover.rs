@@ -1,6 +1,5 @@
 use super::super::{
-    circuit::Expression, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error,
-    ProvingKey,
+    circuit::Expression, ChallengeGamma, ChallengeTheta, ChallengeX, Error, ProvingKey,
 };
 use super::Argument;
 use crate::plonk::evaluation::evaluate;
@@ -8,20 +7,14 @@ use crate::{
     arithmetic::{eval_polynomial, parallelize, CurveAffine},
     poly::{
         commitment::{Blind, Params},
-        Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, ProverQuery,
-        Rotation,
+        Coeff, EvaluationDomain, LagrangeCoeff, Polynomial, ProverQuery, Rotation,
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
 use ff::WithSmallOrderMulGroup;
-use group::{
-    ff::{BatchInvert, Field},
-    Curve,
-};
+use group::{ff::BatchInvert, Curve};
 use rand_core::RngCore;
-use std::{any::TypeId, convert::TryInto, num::ParseIntError, ops::Index};
 use std::{
-    collections::BTreeMap,
     iter,
     ops::{Mul, MulAssign},
 };
@@ -47,6 +40,7 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
     /// [S_0, S_1, ..., S_{m-1}], this method
     /// - constructs A_compressed = \theta^{m-1} A_0 + theta^{m-2} A_1 + ... + \theta A_{m-2} + A_{m-1}
     ///   and S_compressed = \theta^{m-1} S_0 + theta^{m-2} S_1 + ... + \theta S_{m-2} + S_{m-1},
+    #[allow(clippy::too_many_arguments)]
     fn compress<'a, 'params: 'a, C, P: Params<'params, C>>(
         &self,
         pk: &ProvingKey<C>,
@@ -99,6 +93,7 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
     /// constructs the grand product polynomial over the shuffle.
     /// The grand product polynomial is used to populate the Product<C> struct.
     /// The Product<C> struct is added to the Shuffle and finally returned by the method.
+    #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn commit_product<
         'a,
         'params: 'a,

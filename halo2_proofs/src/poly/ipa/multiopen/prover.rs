@@ -1,9 +1,7 @@
-use super::{
-    construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4, Query,
-};
+use super::{construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4};
 use crate::arithmetic::{eval_polynomial, kate_division, CurveAffine};
 use crate::poly::commitment::ParamsProver;
-use crate::poly::commitment::{Blind, Params, Prover};
+use crate::poly::commitment::{Blind, Prover};
 use crate::poly::ipa::commitment::{self, IPACommitmentScheme, ParamsIPA};
 use crate::poly::query::ProverQuery;
 use crate::poly::{Coeff, Polynomial};

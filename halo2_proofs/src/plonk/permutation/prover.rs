@@ -12,7 +12,6 @@ use crate::{
     arithmetic::{eval_polynomial, parallelize, CurveAffine},
     plonk::{self, Error},
     poly::{
-        self,
         commitment::{Blind, Params},
         Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, ProverQuery, Rotation,
     },
@@ -43,6 +42,7 @@ pub(crate) struct Evaluated<C: CurveAffine> {
 }
 
 impl Argument {
+    #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn commit<
         'params,
         C: CurveAffine,

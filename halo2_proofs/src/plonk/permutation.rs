@@ -10,7 +10,6 @@ use crate::{
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
     SerdeFormat,
 };
-use ff::PrimeField;
 
 pub(crate) mod keygen;
 pub(crate) mod prover;

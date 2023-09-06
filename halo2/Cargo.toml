@@ -19,7 +19,7 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
 
 [dependencies]
-halo2_proofs = { version = "0.2", path = "../halo2_proofs" }
+halo2_proofs = { version = "0.2", path = "../halo2_proofs", default-features = false }
 
 [lib]
 bench = false

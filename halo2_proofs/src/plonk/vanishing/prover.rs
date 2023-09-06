@@ -1,17 +1,16 @@
-use std::iter;
+use std::{collections::HashMap, iter};
 
-use ff::{Field, PrimeField};
+use ff::Field;
 use group::Curve;
 use rand_chacha::ChaCha20Rng;
 use rand_core::{RngCore, SeedableRng};
-use rayon::{current_num_threads, prelude::*};
 
 use super::Argument;
 use crate::{
-    arithmetic::{eval_polynomial, CurveAffine},
-    plonk::{ChallengeX, ChallengeY, Error},
+    arithmetic::{eval_polynomial, parallelize, CurveAffine},
+    multicore::current_num_threads,
+    plonk::{ChallengeX, Error},
     poly::{
-        self,
         commitment::{Blind, ParamsProver},
         Coeff, EvaluationDomain, ExtendedLagrangeCoeff, Polynomial, ProverQuery,
     },
@@ -50,26 +49,33 @@ impl<C: CurveAffine> Argument<C> {
     ) -> Result<Committed<C>, Error> {
         // Sample a random polynomial of degree n - 1
         let n = 1usize << domain.k() as usize;
-        let chunk_size = (n as f64 / current_num_threads() as f64).ceil() as usize;
-        let num_chunks = (n as f64 / chunk_size as f64).ceil() as usize;
         let mut rand_vec = vec![C::Scalar::ZERO; n];
 
-        let mut thread_seeds: Vec<ChaCha20Rng> = (0..num_chunks)
-            .map(|_| {
+        let num_threads = current_num_threads();
+        let chunk_size = n / num_threads;
+        let thread_seeds = (0..)
+            .step_by(chunk_size + 1)
+            .take(n % num_threads)
+            .chain(
+                (chunk_size != 0)
+                    .then(|| ((n % num_threads) * (chunk_size + 1)..).step_by(chunk_size))
+                    .into_iter()
+                    .flatten(),
+            )
+            .take(num_threads)
+            .zip(iter::repeat_with(|| {
                 let mut seed = [0u8; 32];
                 rng.fill_bytes(&mut seed);
                 ChaCha20Rng::from_seed(seed)
-            })
-            .collect();
+            }))
+            .collect::<HashMap<_, _>>();
 
-        thread_seeds
-            .par_iter_mut()
-            .zip_eq(rand_vec.par_chunks_mut(chunk_size))
-            .for_each(|(mut rng, chunk)| {
-                chunk
-                    .iter_mut()
-                    .for_each(|v| *v = C::Scalar::random(&mut rng))
-            });
+        parallelize(&mut rand_vec, |chunk, offset| {
+            let mut rng = thread_seeds[&offset].clone();
+            chunk
+                .iter_mut()
+                .for_each(|v| *v = C::Scalar::random(&mut rng));
+        });
 
         let random_poly: Polynomial<C::Scalar, Coeff> = domain.coeff_from_vec(rand_vec);
 

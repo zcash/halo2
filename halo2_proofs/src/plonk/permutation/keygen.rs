@@ -1,21 +1,21 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-
 use ff::{Field, PrimeField};
 use group::Curve;
-use rayon::prelude::{
-    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator,
-    IntoParallelRefMutIterator, ParallelIterator, ParallelSliceMut,
-};
 
 use super::{Argument, ProvingKey, VerifyingKey};
 use crate::{
     arithmetic::{parallelize, CurveAffine},
     plonk::{Any, Column, Error},
     poly::{
-        commitment::{Blind, CommitmentScheme, Params},
+        commitment::{Blind, Params},
         EvaluationDomain,
     },
 };
+
+#[cfg(feature = "multicore")]
+use crate::multicore::{IndexedParallelIterator, ParallelIterator};
+
+#[cfg(feature = "thread-safe-region")]
+use std::collections::{BTreeSet, HashMap};
 
 #[cfg(not(feature = "thread-safe-region"))]
 /// Struct that accumulates all the necessary data in order to construct the permutation argument.
@@ -133,11 +133,20 @@ impl Assembly {
         &self.columns
     }
 
+    #[cfg(feature = "multicore")]
     /// Returns mappings of the copies.
     pub fn mapping(
         &self,
     ) -> impl Iterator<Item = impl IndexedParallelIterator<Item = (usize, usize)> + '_> {
+        use crate::multicore::IntoParallelRefIterator;
+
         self.mapping.iter().map(|c| c.par_iter().copied())
+    }
+
+    #[cfg(not(feature = "multicore"))]
+    /// Returns mappings of the copies.
+    pub fn mapping(&self) -> impl Iterator<Item = impl Iterator<Item = (usize, usize)> + '_> {
+        self.mapping.iter().map(|c| c.iter().copied())
     }
 }
 
@@ -239,6 +248,8 @@ impl Assembly {
     /// Builds the ordered mapping of the cycles.
     /// This will only get executed once.
     pub fn build_ordered_mapping(&mut self) {
+        use crate::multicore::IntoParallelRefMutIterator;
+
         // will only get called once
         if self.ordered_cycles.is_empty() && !self.cycles.is_empty() {
             self.ordered_cycles = self
@@ -304,15 +315,24 @@ impl Assembly {
         &self.columns
     }
 
+    #[cfg(feature = "multicore")]
     /// Returns mappings of the copies.
     pub fn mapping(
         &self,
     ) -> impl Iterator<Item = impl IndexedParallelIterator<Item = (usize, usize)> + '_> {
+        use crate::multicore::IntoParallelIterator;
+
         (0..self.num_cols).map(move |i| {
             (0..self.col_len)
                 .into_par_iter()
                 .map(move |j| self.mapping_at_idx(i, j))
         })
+    }
+
+    #[cfg(not(feature = "multicore"))]
+    /// Returns mappings of the copies.
+    pub fn mapping(&self) -> impl Iterator<Item = impl Iterator<Item = (usize, usize)> + '_> {
+        (0..self.num_cols).map(move |i| (0..self.col_len).map(move |j| self.mapping_at_idx(i, j)))
     }
 }
 

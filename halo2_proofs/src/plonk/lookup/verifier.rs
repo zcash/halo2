@@ -90,6 +90,7 @@ impl<C: CurveAffine> Committed<C> {
 }
 
 impl<C: CurveAffine> Evaluated<C> {
+    #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn expressions<'a>(
         &'a self,
         l_0: C::Scalar,
@@ -141,7 +142,7 @@ impl<C: CurveAffine> Evaluated<C> {
 
         std::iter::empty()
             .chain(
-                // l_0(X) * (1 - z'(X)) = 0
+                // l_0(X) * (1 - z(X)) = 0
                 Some(l_0 * &(C::Scalar::ONE - &self.product_eval)),
             )
             .chain(

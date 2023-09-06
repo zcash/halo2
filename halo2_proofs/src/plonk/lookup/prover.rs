@@ -8,8 +8,7 @@ use crate::{
     arithmetic::{eval_polynomial, parallelize, CurveAffine},
     poly::{
         commitment::{Blind, Params},
-        Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, ProverQuery,
-        Rotation,
+        Coeff, EvaluationDomain, LagrangeCoeff, Polynomial, ProverQuery, Rotation,
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
@@ -19,7 +18,6 @@ use group::{
     Curve,
 };
 use rand_core::RngCore;
-use std::{any::TypeId, convert::TryInto, num::ParseIntError, ops::Index};
 use std::{
     collections::BTreeMap,
     iter,
@@ -62,6 +60,7 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
     /// - constructs Permuted<C> struct using permuted_input_value = A', and
     ///   permuted_table_expression = S'.
     /// The Permuted<C> struct is used to update the Lookup, and is then returned.
+    #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn commit_permuted<
         'a,
         'params: 'a,

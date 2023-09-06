@@ -450,7 +450,7 @@ trait Table16Assignment {
 }
 
 #[cfg(test)]
-#[cfg(feature = "dev-graph")]
+#[cfg(feature = "test-dev-graph")]
 mod tests {
     use super::super::{Sha256, BLOCK_SIZE};
     use super::{message_schedule::msg_schedule_test_input, Table16Chip, Table16Config};

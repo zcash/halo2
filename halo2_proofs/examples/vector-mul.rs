@@ -180,7 +180,7 @@ impl<F: Field> NumericInstructions<F> for FieldChip<F> {
 
         #[cfg(feature = "thread-safe-region")]
         {
-            use rayon::prelude::{
+            use maybe_rayon::prelude::{
                 IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator,
             };
             layouter.assign_region(

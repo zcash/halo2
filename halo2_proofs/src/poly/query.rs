@@ -1,11 +1,10 @@
-use std::{fmt::Debug, ops::Deref};
+use std::fmt::Debug;
 
-use super::commitment::{Blind, CommitmentScheme, Params, MSM};
+use super::commitment::{Blind, MSM};
 use crate::{
     arithmetic::eval_polynomial,
-    poly::{commitment, Coeff, Polynomial},
+    poly::{Coeff, Polynomial},
 };
-use ff::Field;
 use halo2curves::CurveAffine;
 
 pub trait Query<F>: Sized + Clone + Send + Sync {
@@ -100,6 +99,7 @@ impl<'com, C: CurveAffine, M: MSM<C>> Clone for VerifierQuery<'com, C, M> {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Debug)]
 pub enum CommitmentReference<'r, C: CurveAffine, M: MSM<C>> {
     Commitment(&'r C),

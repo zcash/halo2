@@ -14,7 +14,6 @@ use crate::dev::metadata::Constraint;
 use crate::{
     dev::{Instance, Value},
     plonk::{Any, Column, ConstraintSystem, Expression, Gate},
-    poly::Rotation,
 };
 
 mod emitter;
@@ -101,16 +100,17 @@ impl FailureLocation {
             .iter()
             .enumerate()
             .find(|(_, r)| {
-                if r.rows.is_none() {
-                    return false;
+                if let Some((start, end)) = r.rows {
+                    // We match the region if any input columns overlap, rather than all of
+                    // them, because matching complex selector columns is hard. As long as
+                    // regions are rectangles, and failures occur due to assignments entirely
+                    // within single regions, "any" will be equivalent to "all". If these
+                    // assumptions change, we'll start getting bug reports from users :)
+                    (start..=end).contains(&failure_row) && !failure_columns.is_disjoint(&r.columns)
+                } else {
+                    // Zero-area region
+                    false
                 }
-                let (start, end) = r.rows.unwrap();
-                // We match the region if any input columns overlap, rather than all of
-                // them, because matching complex selector columns is hard. As long as
-                // regions are rectangles, and failures occur due to assignments entirely
-                // within single regions, "any" will be equivalent to "all". If these
-                // assumptions change, we'll start getting bug reports from users :)
-                (start..=end).contains(&failure_row) && !failure_columns.is_disjoint(&r.columns)
             })
             .map(|(r_i, r)| FailureLocation::InRegion {
                 region: (r_i, r.name.clone(), r.annotations.clone()).into(),
@@ -138,6 +138,20 @@ pub enum VerifyFailure {
         /// assigned. This may be negative (for example, if a selector enables a gate at
         /// offset 0, but the gate uses `Rotation::prev()`).
         offset: isize,
+    },
+    /// An instance cell used in an active gate was not assigned to.
+    InstanceCellNotAssigned {
+        /// The index of the active gate.
+        gate: metadata::Gate,
+        /// The region in which this gate was activated.
+        region: metadata::Region,
+        /// The offset (relative to the start of the region) at which the active gate
+        /// queries this cell.
+        gate_offset: usize,
+        /// The column in which this cell should be assigned.
+        column: Column<Instance>,
+        /// The absolute row at which this cell should be assigned.
+        row: usize,
     },
     /// A constraint was not satisfied for a particular row.
     ConstraintNotSatisfied {
@@ -223,6 +237,19 @@ impl fmt::Display for VerifyFailure {
                     f,
                     "{} uses {} at offset {}, which requires cell in column {:?} at offset {} with annotation {:?} to be assigned.",
                     region, gate, gate_offset, column, offset, region.get_column_annotation((*column).into())
+                )
+            }
+            Self::InstanceCellNotAssigned {
+                gate,
+                region,
+                gate_offset,
+                column,
+                row,
+            } => {
+                write!(
+                    f,
+                    "{} uses {} at offset {}, which requires cell in instance column {:?} at row {} to be assigned.",
+                    region, gate, gate_offset, column, row
                 )
             }
             Self::ConstraintNotSatisfied {

@@ -4,7 +4,7 @@
 //! [halo]: https://eprint.iacr.org/2019/1021
 
 use super::*;
-use crate::{arithmetic::CurveAffine, poly::query::Query, transcript::ChallengeScalar};
+use crate::{poly::query::Query, transcript::ChallengeScalar};
 use ff::Field;
 use std::collections::{BTreeMap, BTreeSet};
 

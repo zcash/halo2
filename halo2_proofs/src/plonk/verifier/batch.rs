@@ -1,14 +1,11 @@
-use std::{io, marker::PhantomData};
-
 use ff::FromUniformBytes;
 use group::ff::Field;
 use halo2curves::CurveAffine;
-use rand_core::{OsRng, RngCore};
-use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+use rand_core::OsRng;
 
 use super::{verify_proof, VerificationStrategy};
 use crate::{
-    multicore,
+    multicore::{IntoParallelIterator, TryFoldAndReduce},
     plonk::{Error, VerifyingKey},
     poly::{
         commitment::{Params, MSM},
@@ -21,6 +18,9 @@ use crate::{
     },
     transcript::{Blake2bRead, TranscriptReadBuffer},
 };
+
+#[cfg(feature = "multicore")]
+use crate::multicore::{IndexedParallelIterator, ParallelIterator};
 
 /// A proof verification strategy that returns the proof's MSM.
 ///
@@ -123,11 +123,10 @@ where
                     e
                 })
             })
-            .try_fold(
+            .try_fold_and_reduce(
                 || params.empty_msm(),
-                |msm, res| res.map(|proof_msm| accumulate_msm(msm, proof_msm)),
-            )
-            .try_reduce(|| params.empty_msm(), |a, b| Ok(accumulate_msm(a, b)));
+                |acc, res| res.map(|proof_msm| accumulate_msm(acc, proof_msm)),
+            );
 
         match final_msm {
             Ok(msm) => msm.check(),
