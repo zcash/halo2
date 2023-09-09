@@ -1,0 +1,52 @@
+name: halo2 docs ghpages
+# Setup docs for ghpages
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+
+            - name: Install mdbook-katex and mdbook-pdf
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: mdbook-katex mdbook-pdf
+
+      - name: Install mdbook-pdf-outline
+        run: pip3 install mdbook-pdf-outline
+
+      - name: Build halo2 book
+        run: mdbook build book/
+
+      - name: Build latest rustdocs
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --no-deps --workspace --all-features
+        env:
+          RUSTDOCFLAGS: -Z unstable-options --enable-index-page --cfg docsrs --html-in-header ${{ github.workspace }}/halo2_proofs/katex-header.html
+
+      - name: Create the required index page and move the latest rustdocs into docs
+        run: |
+          echo "<meta http-equiv=\"refresh\" content=\"0; url=build_wheel\">" > ./target/doc/index.html
+          mkdir -p ./docs
+          mv ./target/doc ./docs
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+
+
