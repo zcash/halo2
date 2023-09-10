@@ -1,5 +1,5 @@
 name: halo2 docs ghpages
-# Setup docs for ghpages
+# Host the docs on github pages 
 
 on:
   push:
