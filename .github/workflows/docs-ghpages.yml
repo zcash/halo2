@@ -17,18 +17,6 @@ jobs:
           override: true
 
 
-            - name: Install mdbook-katex and mdbook-pdf
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: mdbook-katex mdbook-pdf
-
-      - name: Install mdbook-pdf-outline
-        run: pip3 install mdbook-pdf-outline
-
-      - name: Build halo2 book
-        run: mdbook build book/
-
       - name: Build latest rustdocs
         uses: actions-rs/cargo@v1
         with:
