@@ -29,7 +29,7 @@ fn rand_poly_serial(mut rng: ChaCha20Rng, domain: usize) -> Vec<Scalar> {
 
 fn rand_poly_par(mut rng: ChaCha20Rng, domain: usize) -> Vec<Scalar> {
     // Sample a random polynomial of degree n - 1
-    let n = 1usize << domain as usize;
+    let n = 1usize << domain;
     let mut random_poly = vec![Scalar::ZERO; n];
 
     let num_threads = current_num_threads();

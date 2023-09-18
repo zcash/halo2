@@ -338,7 +338,6 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
             lookups: cs.lookups.len(),
             permutation_cols,
             point_sets: point_sets.len(),
-            _marker: PhantomData::default(),
             max_rows: layout.total_rows,
             max_advice_rows: layout.total_advice_rows,
             max_fixed_rows: layout.total_fixed_rows,
@@ -348,6 +347,7 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
             num_total_columns: cs.num_instance_columns
                 + cs.num_advice_columns
                 + cs.num_fixed_columns,
+            _marker: PhantomData,
         }
     }
 
@@ -381,7 +381,7 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
                 if chunks == 0 { chunks } else { 3 * chunks - 1 },
             ),
 
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
         }
     }
 
@@ -424,7 +424,7 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
             // - xi
             polycomm: ProofContribution::new((1 + 2 * self.k).try_into().unwrap(), 2),
 
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
         }
     }
 }

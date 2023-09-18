@@ -84,7 +84,7 @@ mod tests {
 
     impl<F: Field, const SECURE_MDS: usize> P128Pow5T3Gen<F, SECURE_MDS> {
         pub fn new() -> Self {
-            P128Pow5T3Gen(PhantomData::default())
+            P128Pow5T3Gen(PhantomData)
         }
     }
 

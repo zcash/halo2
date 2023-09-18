@@ -199,7 +199,7 @@ pub(crate) fn batch_invert_assigned<F: Field>(
 
     assigned
         .iter()
-        .zip(assigned_denominators.into_iter())
+        .zip(assigned_denominators)
         .map(|(poly, inv_denoms)| poly.invert(inv_denoms.into_iter().map(|d| d.unwrap_or(F::ONE))))
         .collect()
 }
@@ -214,7 +214,7 @@ impl<F: Field> Polynomial<Assigned<F>, LagrangeCoeff> {
             values: self
                 .values
                 .iter()
-                .zip(inv_denoms.into_iter())
+                .zip(inv_denoms)
                 .map(|(a, inv_den)| a.numerator() * inv_den)
                 .collect(),
             _marker: self._marker,

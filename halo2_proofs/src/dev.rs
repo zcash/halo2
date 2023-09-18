@@ -837,7 +837,7 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                 .flat_map(|(gate_index, gate)| {
                     let blinding_rows =
                         (self.n as usize - (self.cs.blinding_factors() + 1))..(self.n as usize);
-                    (gate_row_ids.clone().chain(blinding_rows.into_iter())).flat_map(move |row| {
+                    (gate_row_ids.clone().chain(blinding_rows)).flat_map(move |row| {
                         let row = row as i32 + n;
                         gate.polynomials().iter().enumerate().filter_map(
                             move |(poly_index, poly)| match poly.evaluate_lazy(
@@ -2028,7 +2028,7 @@ mod tests {
                                     || Value::known(Fp::from(2 * i as u64)),
                                 )
                             })
-                            .fold(Ok(()), |acc, res| acc.and(res))
+                            .try_fold((), |_, res| res)
                     },
                 )?;
 

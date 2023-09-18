@@ -107,7 +107,7 @@ impl<'params, C: CurveAffine> Prover<'params, IPACommitmentScheme<C>> for Prover
 
         let x_4: ChallengeX4<_> = transcript.squeeze_challenge_scalar();
 
-        let (p_poly, p_poly_blind) = q_polys.into_iter().zip(q_blinds.into_iter()).fold(
+        let (p_poly, p_poly_blind) = q_polys.into_iter().zip(q_blinds).fold(
             (q_prime_poly, q_prime_blind),
             |(q_prime_poly, q_prime_blind), (poly, blind)| {
                 (

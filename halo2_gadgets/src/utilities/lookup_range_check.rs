@@ -49,7 +49,7 @@ impl<F: PrimeFieldBits> RangeConstrained<F, AssignedCell<F, F>> {
             .map(|inner| Self {
                 inner,
                 num_bits,
-                _phantom: PhantomData::default(),
+                _phantom: PhantomData,
             })
     }
 }

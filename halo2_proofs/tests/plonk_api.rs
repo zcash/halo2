@@ -514,7 +514,7 @@ fn plonk_api() {
         Scheme::Scalar: Ord + WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     {
         let (_, instance, _) = common!(Scheme);
-        let pubinputs = vec![instance];
+        let pubinputs = [instance];
 
         let mut transcript = T::init(proof);
 

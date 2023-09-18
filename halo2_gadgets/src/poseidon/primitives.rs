@@ -220,7 +220,7 @@ impl<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
             state,
             mds_matrix,
             round_constants,
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
         }
     }
 
@@ -257,7 +257,7 @@ impl<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
             state: self.state,
             mds_matrix: self.mds_matrix,
             round_constants: self.round_constants,
-            _marker: PhantomData::default(),
+            _marker: PhantomData,
         }
     }
 }
@@ -364,7 +364,7 @@ impl<F: Field, S: Spec<F, T, RATE>, D: Domain<F, RATE>, const T: usize, const RA
     pub fn init() -> Self {
         Hash {
             sponge: Sponge::new(D::initial_capacity_element()),
-            _domain: PhantomData::default(),
+            _domain: PhantomData,
         }
     }
 }

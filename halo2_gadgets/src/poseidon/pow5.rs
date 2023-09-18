@@ -240,30 +240,25 @@ impl<F: Field, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize>
                 // Load the initial state into this region.
                 let state = Pow5State::load(&mut region, config, initial_state)?;
 
-                let state = (0..config.half_full_rounds).fold(Ok(state), |res, r| {
-                    res.and_then(|state| state.full_round(&mut region, config, r, r))
+                let state = (0..config.half_full_rounds)
+                    .try_fold(state, |res, r| res.full_round(&mut region, config, r, r))?;
+
+                let state = (0..config.half_partial_rounds).try_fold(state, |res, r| {
+                    res.partial_round(
+                        &mut region,
+                        config,
+                        config.half_full_rounds + 2 * r,
+                        config.half_full_rounds + r,
+                    )
                 })?;
 
-                let state = (0..config.half_partial_rounds).fold(Ok(state), |res, r| {
-                    res.and_then(|state| {
-                        state.partial_round(
-                            &mut region,
-                            config,
-                            config.half_full_rounds + 2 * r,
-                            config.half_full_rounds + r,
-                        )
-                    })
-                })?;
-
-                let state = (0..config.half_full_rounds).fold(Ok(state), |res, r| {
-                    res.and_then(|state| {
-                        state.full_round(
-                            &mut region,
-                            config,
-                            config.half_full_rounds + 2 * config.half_partial_rounds + r,
-                            config.half_full_rounds + config.half_partial_rounds + r,
-                        )
-                    })
+                let state = (0..config.half_full_rounds).try_fold(state, |res, r| {
+                    res.full_round(
+                        &mut region,
+                        config,
+                        config.half_full_rounds + 2 * config.half_partial_rounds + r,
+                        config.half_full_rounds + config.half_partial_rounds + r,
+                    )
                 })?;
 
                 Ok(state.0)
