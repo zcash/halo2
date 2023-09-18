@@ -8,7 +8,7 @@ authors = [
     "Jack Grigg <jack@electriccoin.co>",
 ]
 edition = "2021"
-rust-version = "1.56.1"
+rust-version = "1.66.0"
 description = """
 Fast PLONK-based zero-knowledge proving system with no trusted setup
 """
@@ -54,7 +54,7 @@ group = "0.13"
 halo2curves = { version = "0.1.0" }
 rand_core = { version = "0.6", default-features = false }
 tracing = "0.1"
-blake2b_simd = "1"
+blake2b_simd = "1" # MSRV 1.66.0
 sha3 = "0.9.1"
 rand_chacha = "0.3"
 maybe-rayon = { version = "0.1.0", default-features = false }
