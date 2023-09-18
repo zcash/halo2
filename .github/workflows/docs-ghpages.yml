@@ -1,0 +1,41 @@
+name: halo2 docs ghpages
+# Setup docs for ghpages
+
+on:
+  push:
+    branches:
+      - main
+permissions:
+  contents: write
+  
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Build latest rustdocs
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --no-deps --all-features --workspace
+        env:
+          RUSTDOCFLAGS: -Z unstable-options --enable-index-page --cfg docsrs --html-in-header ${{ github.workspace }}/halo2_proofs/katex-header.html
+
+      - name: Create the required index page and move the latest rustdocs into docs
+        run: |
+          rm -rf ./docs
+          cp -R ./target/doc ./docs
+          echo "<meta http-equiv=\"refresh\" content=\"0; url=pse_halo2\">" > ./docs/index.html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+
