@@ -31,7 +31,7 @@ jobs:
         run: |
           rm -rf ./docs
           cp -R ./target/doc ./docs
-          echo "<meta http-equiv=\"refresh\" content=\"0; url=pse_halo2\">" > ./docs/index.html
+          echo "<meta http-equiv=\"refresh\" content=\"0; url=halo2_proofs\">" > ./docs/index.html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
