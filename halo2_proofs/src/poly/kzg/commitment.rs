@@ -88,11 +88,12 @@ where
         };
 
         let mut g_lagrange_projective = vec![E::G1::identity(); n as usize];
-        let mut root = E::Scalar::ROOT_OF_UNITY_INV.invert().unwrap();
+        let mut root = E::Scalar::ROOT_OF_UNITY;
         for _ in k..E::Scalar::S {
             root = root.square();
         }
-        let n_inv = Option::<E::Scalar>::from(E::Scalar::from(n).invert())
+        let n_inv = E::Scalar::from(n)
+            .invert()
             .expect("inversion should be ok for n = 1<<k");
         let multiplier = (s.pow_vartime([n]) - E::Scalar::ONE) * n_inv;
         parallelize(&mut g_lagrange_projective, |g, start| {
@@ -106,11 +107,9 @@ where
 
         let g_lagrange = {
             let mut g_lagrange = vec![E::G1Affine::identity(); n as usize];
-            parallelize(&mut g_lagrange, |g_lagrange, starts| {
-                E::G1::batch_normalize(
-                    &g_lagrange_projective[starts..(starts + g_lagrange.len())],
-                    g_lagrange,
-                );
+            parallelize(&mut g_lagrange, |g_lagrange, start| {
+                let end = start + g_lagrange.len();
+                E::G1::batch_normalize(&g_lagrange_projective[start..end], g_lagrange);
             });
             drop(g_lagrange_projective);
             g_lagrange
@@ -142,10 +141,9 @@ where
         Self {
             k,
             n: 1 << k,
-            g_lagrange: if let Some(g_l) = g_lagrange {
-                g_l
-            } else {
-                g_to_lagrange(g.iter().map(PrimeCurveAffine::to_curve).collect(), k)
+            g_lagrange: match g_lagrange {
+                Some(g_l) => g_l,
+                None => g_to_lagrange(g.iter().map(PrimeCurveAffine::to_curve).collect(), k),
             },
             g,
             g2,
