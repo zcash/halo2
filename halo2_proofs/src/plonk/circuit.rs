@@ -11,6 +11,7 @@ use ff::Field;
 use sealed::SealedPhase;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::iter::{Product, Sum};
 use std::{
     convert::TryFrom,
     ops::{Neg, Sub},
@@ -478,7 +479,7 @@ impl Selector {
 }
 
 /// Query of fixed column at a certain relative location
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct FixedQuery {
     /// Query index
     pub(crate) index: Option<usize>,
@@ -501,7 +502,7 @@ impl FixedQuery {
 }
 
 /// Query of advice column at a certain relative location
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct AdviceQuery {
     /// Query index
     pub(crate) index: Option<usize>,
@@ -531,7 +532,7 @@ impl AdviceQuery {
 }
 
 /// Query of instance column at a certain relative location
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct InstanceQuery {
     /// Query index
     pub(crate) index: Option<usize>,
@@ -792,7 +793,7 @@ pub trait Circuit<F: Field> {
 }
 
 /// Low-degree expression representing an identity that must hold over the committed columns.
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Expression<F> {
     /// This is a constant polynomial
     Constant(F),
@@ -1349,6 +1350,20 @@ impl<F: Field> Mul<F> for Expression<F> {
     type Output = Expression<F>;
     fn mul(self, rhs: F) -> Expression<F> {
         Expression::Scaled(Box::new(self), rhs)
+    }
+}
+
+impl<F: Field> Sum<Self> for Expression<F> {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.reduce(|acc, x| acc + x)
+            .unwrap_or(Expression::Constant(F::ZERO))
+    }
+}
+
+impl<F: Field> Product<Self> for Expression<F> {
+    fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.reduce(|acc, x| acc * x)
+            .unwrap_or(Expression::Constant(F::ONE))
     }
 }
 
@@ -2437,5 +2452,49 @@ impl<'a, F: Field> VirtualCells<'a, F> {
     /// Query a challenge
     pub fn query_challenge(&mut self, challenge: Challenge) -> Expression<F> {
         Expression::Challenge(challenge)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Expression;
+    use halo2curves::bn256::Fr;
+
+    #[test]
+    fn iter_sum() {
+        let exprs: Vec<Expression<Fr>> = vec![
+            Expression::Constant(1.into()),
+            Expression::Constant(2.into()),
+            Expression::Constant(3.into()),
+        ];
+        let happened: Expression<Fr> = exprs.into_iter().sum();
+        let expected: Expression<Fr> = Expression::Sum(
+            Box::new(Expression::Sum(
+                Box::new(Expression::Constant(1.into())),
+                Box::new(Expression::Constant(2.into())),
+            )),
+            Box::new(Expression::Constant(3.into())),
+        );
+
+        assert_eq!(happened, expected);
+    }
+
+    #[test]
+    fn iter_product() {
+        let exprs: Vec<Expression<Fr>> = vec![
+            Expression::Constant(1.into()),
+            Expression::Constant(2.into()),
+            Expression::Constant(3.into()),
+        ];
+        let happened: Expression<Fr> = exprs.into_iter().product();
+        let expected: Expression<Fr> = Expression::Product(
+            Box::new(Expression::Product(
+                Box::new(Expression::Constant(1.into())),
+                Box::new(Expression::Constant(2.into())),
+            )),
+            Box::new(Expression::Constant(3.into())),
+        );
+
+        assert_eq!(happened, expected);
     }
 }
