@@ -60,8 +60,11 @@ pub struct LookupRangeCheckConfig<F: PrimeFieldBits, const K: usize> {
     q_lookup: Selector,
     q_running: Selector,
     q_bitshift: Selector,
+    q_range_check_4: Selector,
+    q_range_check_5: Selector,
     running_sum: Column<Advice>,
     table_idx: TableColumn,
+    table_range_check_tag: TableColumn,
     _marker: PhantomData<F>,
 }
 
@@ -81,18 +84,24 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
         meta: &mut ConstraintSystem<F>,
         running_sum: Column<Advice>,
         table_idx: TableColumn,
+        table_range_check_tag: TableColumn,
     ) -> Self {
         meta.enable_equality(running_sum);
 
         let q_lookup = meta.complex_selector();
         let q_running = meta.complex_selector();
         let q_bitshift = meta.selector();
+        let q_range_check_4 = meta.complex_selector();
+        let q_range_check_5 = meta.complex_selector();
         let config = LookupRangeCheckConfig {
             q_lookup,
             q_running,
             q_bitshift,
+            q_range_check_4,
+            q_range_check_5,
             running_sum,
             table_idx,
+            table_range_check_tag,
             _marker: PhantomData,
         };
 
@@ -100,7 +109,10 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
         meta.lookup(|meta| {
             let q_lookup = meta.query_selector(config.q_lookup);
             let q_running = meta.query_selector(config.q_running);
+            let q_range_check_4 = meta.query_selector(config.q_range_check_4);
+            let q_range_check_5 = meta.query_selector(config.q_range_check_5);
             let z_cur = meta.query_advice(config.running_sum, Rotation::cur());
+            let one = Expression::Constant(F::ONE);
 
             // In the case of a running sum decomposition, we recover the word from
             // the difference of the running sums:
@@ -117,17 +129,40 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
 
             // In the short range check, the word is directly witnessed.
             let short_lookup = {
-                let short_word = z_cur;
-                let q_short = Expression::Constant(F::ONE) - q_running;
+                let short_word = z_cur.clone();
+                let q_short = one.clone() - q_running;
 
                 q_short * short_word
             };
 
+            // q_range_check is equal to
+            // - 1 if q_range_check_4 = 1 or q_range_check_5 = 1
+            // - 0 otherwise
+            let q_range_check = one.clone()
+                - (one.clone() - q_range_check_4.clone()) * (one.clone() - q_range_check_5.clone());
+
+            // num_bits is equal to
+            // - 5 if q_range_check_5 = 1
+            // - 4 if q_range_check_4 = 1 and q_range_check_5 = 0
+            // - 0 otherwise
+            let num_bits = q_range_check_5.clone() * Expression::Constant(F::from(5_u64))
+                + (one.clone() - q_range_check_5)
+                    * q_range_check_4
+                    * Expression::Constant(F::from(4_u64));
+
             // Combine the running sum and short lookups:
-            vec![(
-                q_lookup * (running_sum_lookup + short_lookup),
-                config.table_idx,
-            )]
+            vec![
+                (
+                    q_lookup.clone()
+                        * ((one - q_range_check.clone()) * (running_sum_lookup + short_lookup)
+                            + q_range_check.clone() * z_cur),
+                    config.table_idx,
+                ),
+                (
+                    q_lookup * q_range_check * num_bits,
+                    config.table_range_check_tag,
+                ),
+            ]
         });
 
         // For short lookups, check that the word has been shifted by the correct number of bits.
@@ -152,9 +187,9 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
     }
 
     #[cfg(test)]
-    // Loads the values [0..2^K) into `table_idx`. This is only used in testing
-    // for now, since the Sinsemilla chip provides a pre-loaded table in the
-    // Orchard context.
+    // Fill `table_idx` and `table_range_check_tag`.
+    // This is only used in testing for now, since the Sinsemilla chip provides a pre-loaded table
+    // in the Orchard context.
     pub fn load(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error> {
         layouter.assign_table(
             || "table_idx",
@@ -166,6 +201,42 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
                         self.table_idx,
                         index,
                         || Value::known(F::from(index as u64)),
+                    )?;
+                    table.assign_cell(
+                        || "table_range_check_tag",
+                        self.table_range_check_tag,
+                        index,
+                        || Value::known(F::ZERO),
+                    )?;
+                }
+                for index in 0..(1 << 4) {
+                    let new_index = index + (1 << K);
+                    table.assign_cell(
+                        || "table_idx",
+                        self.table_idx,
+                        new_index,
+                        || Value::known(F::from(index as u64)),
+                    )?;
+                    table.assign_cell(
+                        || "table_range_check_tag",
+                        self.table_range_check_tag,
+                        new_index,
+                        || Value::known(F::from(4_u64)),
+                    )?;
+                }
+                for index in 0..(1 << 5) {
+                    let new_index = index + (1 << K) + (1 << 4);
+                    table.assign_cell(
+                        || "table_idx",
+                        self.table_idx,
+                        new_index,
+                        || Value::known(F::from(index as u64)),
+                    )?;
+                    table.assign_cell(
+                        || "table_range_check_tag",
+                        self.table_range_check_tag,
+                        new_index,
+                        || Value::known(F::from(5_u64)),
                     )?;
                 }
                 Ok(())
@@ -350,33 +421,43 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
         element: AssignedCell<F, F>,
         num_bits: usize,
     ) -> Result<(), Error> {
-        // Enable lookup for `element`, to constrain it to 10 bits.
+        // Enable lookup for `element`.
         self.q_lookup.enable(region, 0)?;
 
-        // Enable lookup for shifted element, to constrain it to 10 bits.
-        self.q_lookup.enable(region, 1)?;
+        match num_bits {
+            4 => {
+                self.q_range_check_4.enable(region, 0)?;
+            }
+            5 => {
+                self.q_range_check_5.enable(region, 0)?;
+            }
+            _ => {
+                // Enable lookup for shifted element, to constrain it to 10 bits.
+                self.q_lookup.enable(region, 1)?;
 
-        // Check element has been shifted by the correct number of bits.
-        self.q_bitshift.enable(region, 1)?;
+                // Check element has been shifted by the correct number of bits.
+                self.q_bitshift.enable(region, 1)?;
 
-        // Assign shifted `element * 2^{K - num_bits}`
-        let shifted = element.value().into_field() * F::from(1 << (K - num_bits));
+                // Assign shifted `element * 2^{K - num_bits}`
+                let shifted = element.value().into_field() * F::from(1 << (K - num_bits));
 
-        region.assign_advice(
-            || format!("element * 2^({}-{})", K, num_bits),
-            self.running_sum,
-            1,
-            || shifted,
-        )?;
+                region.assign_advice(
+                    || format!("element * 2^({}-{})", K, num_bits),
+                    self.running_sum,
+                    1,
+                    || shifted,
+                )?;
 
-        // Assign 2^{-num_bits} from a fixed column.
-        let inv_two_pow_s = F::from(1 << num_bits).invert().unwrap();
-        region.assign_advice_from_constant(
-            || format!("2^(-{})", num_bits),
-            self.running_sum,
-            2,
-            inv_two_pow_s,
-        )?;
+                // Assign 2^{-num_bits} from a fixed column.
+                let inv_two_pow_s = F::from(1 << num_bits).invert().unwrap();
+                region.assign_advice_from_constant(
+                    || format!("2^(-{})", num_bits),
+                    self.running_sum,
+                    2,
+                    inv_two_pow_s,
+                )?;
+            }
+        }
 
         Ok(())
     }
@@ -418,10 +499,16 @@ mod tests {
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 let running_sum = meta.advice_column();
                 let table_idx = meta.lookup_table_column();
+                let table_range_check_tag = meta.lookup_table_column();
                 let constants = meta.fixed_column();
                 meta.enable_constant(constants);
 
-                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, table_idx)
+                LookupRangeCheckConfig::<F, K>::configure(
+                    meta,
+                    running_sum,
+                    table_idx,
+                    table_range_check_tag,
+                )
             }
 
             fn synthesize(
@@ -517,10 +604,16 @@ mod tests {
             fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
                 let running_sum = meta.advice_column();
                 let table_idx = meta.lookup_table_column();
+                let table_range_check_tag = meta.lookup_table_column();
                 let constants = meta.fixed_column();
                 meta.enable_constant(constants);
 
-                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, table_idx)
+                LookupRangeCheckConfig::<F, K>::configure(
+                    meta,
+                    running_sum,
+                    table_idx,
+                    table_range_check_tag,
+                )
             }
 
             fn synthesize(
@@ -641,6 +734,35 @@ mod tests {
                     lookup_index: 0,
                     location: FailureLocation::InRegion {
                         region: (1, "Range check 6 bits").into(),
+                        offset: 0,
+                    },
+                }])
+            );
+        }
+
+        // Element within 4 bits
+        {
+            let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                element: Value::known(pallas::Base::from((1 << 4) - 1)),
+                num_bits: 4,
+            };
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(prover.verify(), Ok(()));
+        }
+
+        // Element larger than 5 bits
+        {
+            let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                element: Value::known(pallas::Base::from(1 << 5)),
+                num_bits: 5,
+            };
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(
+                prover.verify(),
+                Err(vec![VerifyFailure::Lookup {
+                    lookup_index: 0,
+                    location: FailureLocation::InRegion {
+                        region: (1, "Range check 5 bits").into(),
                         offset: 0,
                     },
                 }])

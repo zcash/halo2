@@ -153,7 +153,7 @@ where
         advices: [Column<Advice>; 5],
         witness_pieces: Column<Advice>,
         fixed_y_q: Column<Fixed>,
-        lookup: (TableColumn, TableColumn, TableColumn),
+        lookup: (TableColumn, TableColumn, TableColumn, TableColumn),
         range_check: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     ) -> <Self as Chip<pallas::Base>>::Config {
         // Enable equality on all advice columns
@@ -178,6 +178,7 @@ where
                 table_idx: lookup.0,
                 table_x: lookup.1,
                 table_y: lookup.2,
+                table_range_check_tag: lookup.3,
             },
             lookup_config: range_check,
             _marker: PhantomData,

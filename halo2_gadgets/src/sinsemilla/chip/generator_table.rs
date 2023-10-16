@@ -6,7 +6,7 @@ use halo2_proofs::{
 };
 
 use super::{CommitDomains, FixedPoints, HashDomains};
-use crate::sinsemilla::primitives::{self as sinsemilla, SINSEMILLA_S};
+use crate::sinsemilla::primitives::{self as sinsemilla, K, SINSEMILLA_S};
 use pasta_curves::pallas;
 
 /// Table containing independent generators S[0..2^k]
@@ -15,6 +15,7 @@ pub struct GeneratorTableConfig {
     pub table_idx: TableColumn,
     pub table_x: TableColumn,
     pub table_y: TableColumn,
+    pub table_range_check_tag: TableColumn,
 }
 
 impl GeneratorTableConfig {
@@ -90,6 +91,66 @@ impl GeneratorTableConfig {
                     )?;
                     table.assign_cell(|| "table_x", self.table_x, index, || Value::known(*x))?;
                     table.assign_cell(|| "table_y", self.table_y, index, || Value::known(*y))?;
+                    table.assign_cell(
+                        || "table_range_check_tag",
+                        self.table_range_check_tag,
+                        index,
+                        || Value::known(pallas::Base::zero()),
+                    )?;
+                    if index < (1 << 4) {
+                        let new_index = index + (1 << K);
+                        table.assign_cell(
+                            || "table_idx",
+                            self.table_idx,
+                            new_index,
+                            || Value::known(pallas::Base::from(index as u64)),
+                        )?;
+                        table.assign_cell(
+                            || "table_x",
+                            self.table_x,
+                            new_index,
+                            || Value::known(*x),
+                        )?;
+                        table.assign_cell(
+                            || "table_y",
+                            self.table_y,
+                            new_index,
+                            || Value::known(*y),
+                        )?;
+                        table.assign_cell(
+                            || "table_range_check_tag",
+                            self.table_range_check_tag,
+                            new_index,
+                            || Value::known(pallas::Base::from(4_u64)),
+                        )?;
+                    }
+                    if index < (1 << 5) {
+                        let new_index = index + (1 << 10) + (1 << 4);
+                        table.assign_cell(
+                            || "table_idx",
+                            self.table_idx,
+                            new_index,
+                            || Value::known(pallas::Base::from(index as u64)),
+                        )?;
+                        table.assign_cell(
+                            || "table_x",
+                            self.table_x,
+                            new_index,
+                            || Value::known(*x),
+                        )?;
+                        table.assign_cell(
+                            || "table_y",
+                            self.table_y,
+                            new_index,
+                            || Value::known(*y),
+                        )?;
+                        table.assign_cell(
+                            || "table_range_check_tag",
+                            self.table_range_check_tag,
+                            new_index,
+                            || Value::known(pallas::Base::from(5_u64)),
+                        )?;
+                    }
                 }
                 Ok(())
             },

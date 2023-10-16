@@ -246,9 +246,11 @@ pub mod tests {
                 meta.lookup_table_column(),
                 meta.lookup_table_column(),
                 meta.lookup_table_column(),
+                meta.lookup_table_column(),
             );
 
-            let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup.0);
+            let range_check =
+                LookupRangeCheckConfig::configure(meta, advices[9], lookup.0, lookup.3);
 
             let sinsemilla_config_1 = SinsemillaChip::configure(
                 meta,

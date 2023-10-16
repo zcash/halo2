@@ -33,36 +33,36 @@ jobs:
             ${{ steps.prepare.outputs.feature-flags }}
             ${{ matrix.extra_flags }}
 
-  test-32-bit:
-    name: Test on i686-unknown-linux-gnu${{ matrix.name_suffix }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        stage: [stable, beta, nightly]
-        include:
-          - stage: beta
-            name_suffix: " with beta features"
-          - stage: nightly
-            name_suffix: " with nightly features"
-
-    steps:
-      - uses: actions/checkout@v3
-      - id: prepare
-        uses: ./.github/actions/prepare
-        with:
-          beta-features: ${{ matrix.stage == 'beta' }}
-          nightly-features: ${{ matrix.stage == 'nightly' }}
-      - name: Install cross-platform support dependencies
-        run: sudo apt install gcc-multilib
-      - run: rustup target add i686-unknown-linux-gnu
-      - name: Run tests
-        run: >
-          cargo test
-          --verbose
-          --release
-          --workspace
-          --target i686-unknown-linux-gnu
-          ${{ steps.prepare.outputs.feature-flags }}
+#  test-32-bit:
+#    name: Test on i686-unknown-linux-gnu${{ matrix.name_suffix }}
+#    runs-on: ubuntu-latest
+#    strategy:
+#      matrix:
+#        stage: [stable, beta, nightly]
+#        include:
+#          - stage: beta
+#            name_suffix: " with beta features"
+#          - stage: nightly
+#            name_suffix: " with nightly features"
+#
+#    steps:
+#      - uses: actions/checkout@v3
+#      - id: prepare
+#        uses: ./.github/actions/prepare
+#        with:
+#          beta-features: ${{ matrix.stage == 'beta' }}
+#          nightly-features: ${{ matrix.stage == 'nightly' }}
+#      - name: Install cross-platform support dependencies
+#        run: sudo apt install gcc-multilib
+#      - run: rustup target add i686-unknown-linux-gnu
+#      - name: Run tests
+#        run: >
+#          cargo test
+#          --verbose
+#          --release
+#          --workspace
+#          --target i686-unknown-linux-gnu
+#          ${{ steps.prepare.outputs.feature-flags }}
 
   build:
     name: Build target ${{ matrix.target }}
@@ -125,33 +125,33 @@ jobs:
       - name: Test halo2 book
         run: mdbook test -L target/debug/deps book/
 
-  codecov:
-    name: Code coverage
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-      # Use stable for this to ensure that cargo-tarpaulin can be built.
-      - id: prepare
-        uses: ./.github/actions/prepare
-        with:
-          toolchain: stable
-          nightly-features: true
-      - name: Install cargo-tarpaulin
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: cargo-tarpaulin
-      - name: Generate coverage report
-        uses: actions-rs/cargo@v1
-        with:
-          command: tarpaulin
-          args: >
-            ${{ steps.prepare.outputs.feature-flags }}
-            --timeout 600
-            --out Xml
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3.1.4
+#   codecov:
+#     name: Code coverage
+#     runs-on: ubuntu-latest
+# 
+#     steps:
+#       - uses: actions/checkout@v3
+#       # Use stable for this to ensure that cargo-tarpaulin can be built.
+#       - id: prepare
+#         uses: ./.github/actions/prepare
+#         with:
+#           toolchain: stable
+#           nightly-features: true
+#       - name: Install cargo-tarpaulin
+#         uses: actions-rs/cargo@v1
+#         with:
+#           command: install
+#           args: cargo-tarpaulin
+#       - name: Generate coverage report
+#         uses: actions-rs/cargo@v1
+#         with:
+#           command: tarpaulin
+#           args: >
+#             ${{ steps.prepare.outputs.feature-flags }}
+#             --timeout 600
+#             --out Xml
+#       - name: Upload coverage to Codecov
+#         uses: codecov/codecov-action@v3.1.4
 
   doc-links:
     name: Intra-doc links

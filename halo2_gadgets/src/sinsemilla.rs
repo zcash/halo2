@@ -586,6 +586,7 @@ pub(crate) mod tests {
             meta.enable_constant(constants);
 
             let table_idx = meta.lookup_table_column();
+            let table_range_check_tag = meta.lookup_table_column();
             let lagrange_coeffs = [
                 meta.fixed_column(),
                 meta.fixed_column(),
@@ -602,9 +603,15 @@ pub(crate) mod tests {
                 table_idx,
                 meta.lookup_table_column(),
                 meta.lookup_table_column(),
+                table_range_check_tag,
             );
 
-            let range_check = LookupRangeCheckConfig::configure(meta, advices[9], table_idx);
+            let range_check = LookupRangeCheckConfig::configure(
+                meta,
+                advices[9],
+                table_idx,
+                table_range_check_tag,
+            );
 
             let ecc_config =
                 EccChip::<TestFixedBases>::configure(meta, advices, lagrange_coeffs, range_check);
