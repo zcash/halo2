@@ -12,6 +12,7 @@ use std::ops::Range;
 pub mod cond_swap;
 pub mod decompose_running_sum;
 pub mod lookup_range_check;
+pub mod mux;
 
 /// A type that has a value at either keygen or proving time.
 pub trait FieldValue<F: Field> {

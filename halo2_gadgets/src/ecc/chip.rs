@@ -48,7 +48,7 @@ impl EccPoint {
     /// Constructs a point from its coordinates, without checking they are on the curve.
     ///
     /// This is an internal API that we only use where we know we have a valid curve point.
-    pub fn from_coordinates_unchecked(
+    pub(crate) fn from_coordinates_unchecked(
         x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
         y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
     ) -> Self {
