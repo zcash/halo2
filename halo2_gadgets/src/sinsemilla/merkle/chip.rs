@@ -523,6 +523,19 @@ where
         chip.hash_to_point(layouter, Q, message)
     }
 
+    #[allow(non_snake_case)]
+    #[allow(clippy::type_complexity)]
+    fn hash_to_point_with_private_init(
+        &self,
+        layouter: impl Layouter<pallas::Base>,
+        Q: &Self::NonIdentityPoint,
+        message: Self::Message,
+    ) -> Result<(Self::NonIdentityPoint, Vec<Vec<Self::CellValue>>), Error> {
+        let config = self.config().sinsemilla_config.clone();
+        let chip = SinsemillaChip::<Hash, Commit, F>::construct(config);
+        chip.hash_to_point_with_private_init(layouter, Q, message)
+    }
+
     fn extract(point: &Self::NonIdentityPoint) -> Self::X {
         SinsemillaChip::<Hash, Commit, F>::extract(point)
     }
