@@ -87,7 +87,7 @@ pub trait TranscriptReadBuffer<R: Read, C: CurveAffine, E: EncodedChallenge<C>>:
     fn init(reader: R) -> Self;
 }
 
-/// Manages begining and finising of transcript pipeline.
+/// Manages beginning and finishing of transcript pipeline.
 pub trait TranscriptWriterBuffer<W: Write, C: CurveAffine, E: EncodedChallenge<C>>:
     TranscriptWrite<C, E>
 {

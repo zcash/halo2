@@ -94,7 +94,7 @@ pub trait ParamsProver<'params, C: CurveAffine>: Params<'params, C> {
     fn verifier_params(&'params self) -> &'params Self::ParamsVerifier;
 }
 
-/// Verifier specific functionality with circuit constaints
+/// Verifier specific functionality with circuit constraints
 pub trait ParamsVerifier<'params, C: CurveAffine>: Params<'params, C> {}
 
 /// Multi scalar multiplication engine
