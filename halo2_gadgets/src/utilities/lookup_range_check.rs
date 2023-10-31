@@ -213,7 +213,7 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
     }
 
     /// If `strict` is set to "true", the field element must fit into
-    /// `num_words * K` bits. In other words, the the final cumulative sum `z_{num_words}`
+    /// `num_words * K` bits. In other words, the final cumulative sum `z_{num_words}`
     /// must be zero.
     ///
     /// If `strict` is set to "false", the final `z_{num_words}` is not constrained.
