@@ -40,7 +40,7 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
         let skip_bits = segment * c;
         let skip_bytes = skip_bits / 8;
 
-        if skip_bytes >= 32 {
+        if skip_bytes >= (F::NUM_BITS as usize + 7) / 8 {
             return 0;
         }
 
@@ -56,7 +56,7 @@ fn multiexp_serial<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C], acc: &mut 
         tmp as usize
     }
 
-    let segments = (256 / c) + 1;
+    let segments = (C::Scalar::NUM_BITS as usize / c) + 1;
 
     for current_segment in (0..segments).rev() {
         for _ in 0..c {
@@ -122,7 +122,7 @@ pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::C
     let mut acc = C::Curve::identity();
 
     // for byte idx
-    for byte_idx in (0..32).rev() {
+    for byte_idx in (0..((C::Scalar::NUM_BITS as usize + 7) / 8)).rev() {
         // for bit idx
         for bit_idx in (0..8).rev() {
             acc = acc.double();
