@@ -1,7 +1,7 @@
 use ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use group::Curve;
 use rand_core::RngCore;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 use std::ops::RangeTo;
 use std::{collections::HashMap, iter};
 
@@ -147,6 +147,7 @@ where
         k: u32,
         current_phase: sealed::Phase,
         advice: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
+        unblinded_advice: HashSet<usize>,
         challenges: &'a HashMap<usize, F>,
         instances: &'a [&'a [F]],
         usable_rows: RangeTo<usize>,
@@ -319,6 +320,7 @@ where
                     k: params.k(),
                     current_phase,
                     advice: vec![domain.empty_lagrange_assigned(); meta.num_advice_columns],
+                    unblinded_advice: HashSet::from_iter(meta.unblinded_advice_columns.clone()),
                     instances,
                     challenges: &challenges,
                     // The prover will not be allowed to assign values to advice
@@ -353,16 +355,29 @@ where
                 );
 
                 // Add blinding factors to advice columns
-                for advice_values in &mut advice_values {
-                    for cell in &mut advice_values[unusable_rows_start..] {
-                        *cell = Scheme::Scalar::random(&mut rng);
+                for (column_index, advice_values) in column_indices.iter().zip(&mut advice_values) {
+                    if !witness.unblinded_advice.contains(column_index) {
+                        for cell in &mut advice_values[unusable_rows_start..] {
+                            *cell = Scheme::Scalar::random(&mut rng);
+                        }
+                    } else {
+                        #[cfg(feature = "sanity-checks")]
+                        for cell in &advice_values[unusable_rows_start..] {
+                            assert_eq!(*cell, Scheme::Scalar::ZERO);
+                        }
                     }
                 }
 
                 // Compute commitments to advice column polynomials
-                let blinds: Vec<_> = advice_values
+                let blinds: Vec<_> = column_indices
                     .iter()
-                    .map(|_| Blind(Scheme::Scalar::random(&mut rng)))
+                    .map(|i| {
+                        if witness.unblinded_advice.contains(i) {
+                            Blind::default()
+                        } else {
+                            Blind(Scheme::Scalar::random(&mut rng))
+                        }
+                    })
                     .collect();
                 let advice_commitments_projective: Vec<_> = advice_values
                     .iter()

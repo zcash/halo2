@@ -1555,6 +1555,9 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) num_selectors: usize,
     pub(crate) num_challenges: usize,
 
+    /// Contains the index of each advice column that is left unblinded.
+    pub(crate) unblinded_advice_columns: Vec<usize>,
+
     /// Contains the phase for each advice column. Should have same length as num_advice_columns.
     pub(crate) advice_column_phase: Vec<sealed::Phase>,
     /// Contains the phase for each challenge. Should have same length as num_challenges.
@@ -1662,6 +1665,7 @@ impl<F: Field> Default for ConstraintSystem<F> {
             num_instance_columns: 0,
             num_selectors: 0,
             num_challenges: 0,
+            unblinded_advice_columns: Vec::new(),
             advice_column_phase: Vec::new(),
             challenge_phase: Vec::new(),
             selector_map: vec![],
@@ -2139,9 +2143,36 @@ impl<F: Field> ConstraintSystem<F> {
         tmp
     }
 
+    /// Allocate a new unblinded advice column at `FirstPhase`
+    pub fn unblinded_advice_column(&mut self) -> Column<Advice> {
+        self.unblinded_advice_column_in(FirstPhase)
+    }
+
     /// Allocate a new advice column at `FirstPhase`
     pub fn advice_column(&mut self) -> Column<Advice> {
         self.advice_column_in(FirstPhase)
+    }
+
+    /// Allocate a new unblinded advice column in given phase. This allows for the generation of deterministic commitments to advice columns
+    /// which can be used to split large circuits into smaller ones, whose proofs can then be "joined" together by their common witness commitments.
+    pub fn unblinded_advice_column_in<P: Phase>(&mut self, phase: P) -> Column<Advice> {
+        let phase = phase.to_sealed();
+        if let Some(previous_phase) = phase.prev() {
+            self.assert_phase_exists(
+                previous_phase,
+                format!("Column<Advice> in later phase {:?}", phase).as_str(),
+            );
+        }
+
+        let tmp = Column {
+            index: self.num_advice_columns,
+            column_type: Advice { phase },
+        };
+        self.unblinded_advice_columns.push(tmp.index);
+        self.num_advice_columns += 1;
+        self.num_advice_queries.push(0);
+        self.advice_column_phase.push(phase);
+        tmp
     }
 
     /// Allocate a new advice column in given phase
