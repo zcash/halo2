@@ -117,8 +117,11 @@ impl<C: CurveAffine> VerifyingKey<C> {
         Ok(VerifyingKey { commitments })
     }
 
-    pub(crate) fn bytes_length(&self) -> usize {
-        self.commitments.len() * C::default().to_bytes().as_ref().len()
+    pub(crate) fn bytes_length(&self, format: SerdeFormat) -> usize
+    where
+        C: SerdeCurveAffine,
+    {
+        self.commitments.len() * C::byte_length(format)
     }
 }
 

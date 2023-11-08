@@ -2023,7 +2023,45 @@ impl<F: Field> ConstraintSystem<F> {
             .into_iter()
             .map(|a| a.unwrap())
             .collect::<Vec<_>>();
+        self.replace_selectors_with_fixed(&selector_replacements);
 
+        (self, polys)
+    }
+
+    /// Does not combine selectors and directly replaces them everywhere with fixed columns.
+    pub fn directly_convert_selectors_to_fixed(
+        mut self,
+        selectors: Vec<Vec<bool>>,
+    ) -> (Self, Vec<Vec<F>>) {
+        // The number of provided selector assignments must be the number we
+        // counted for this constraint system.
+        assert_eq!(selectors.len(), self.num_selectors);
+
+        let (polys, selector_replacements): (Vec<_>, Vec<_>) = selectors
+            .into_iter()
+            .map(|selector| {
+                let poly = selector
+                    .iter()
+                    .map(|b| if *b { F::ONE } else { F::ZERO })
+                    .collect::<Vec<_>>();
+                let column = self.fixed_column();
+                let rotation = Rotation::cur();
+                let expr = Expression::Fixed(FixedQuery {
+                    index: Some(self.query_fixed_index(column, rotation)),
+                    column_index: column.index,
+                    rotation,
+                });
+                (poly, expr)
+            })
+            .unzip();
+
+        self.replace_selectors_with_fixed(&selector_replacements);
+        self.num_selectors = 0;
+
+        (self, polys)
+    }
+
+    fn replace_selectors_with_fixed(&mut self, selector_replacements: &[Expression<F>]) {
         fn replace_selectors<F: Field>(
             expr: &mut Expression<F>,
             selector_replacements: &[Expression<F>],
@@ -2054,7 +2092,7 @@ impl<F: Field> ConstraintSystem<F> {
 
         // Substitute selectors for the real fixed columns in all gates
         for expr in self.gates.iter_mut().flat_map(|gate| gate.polys.iter_mut()) {
-            replace_selectors(expr, &selector_replacements, false);
+            replace_selectors(expr, selector_replacements, false);
         }
 
         // Substitute non-simple selectors for the real fixed columns in all
@@ -2065,7 +2103,7 @@ impl<F: Field> ConstraintSystem<F> {
                 .iter_mut()
                 .chain(lookup.table_expressions.iter_mut())
         }) {
-            replace_selectors(expr, &selector_replacements, true);
+            replace_selectors(expr, selector_replacements, true);
         }
 
         for expr in self.shuffles.iter_mut().flat_map(|shuffle| {
@@ -2074,10 +2112,8 @@ impl<F: Field> ConstraintSystem<F> {
                 .iter_mut()
                 .chain(shuffle.shuffle_expressions.iter_mut())
         }) {
-            replace_selectors(expr, &selector_replacements, true);
+            replace_selectors(expr, selector_replacements, true);
         }
-
-        (self, polys)
     }
 
     /// Allocate a new (simple) selector. Simple selectors cannot be added to

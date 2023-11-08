@@ -55,6 +55,14 @@ pub trait SerdeCurveAffine: CurveAffine + SerdeObject {
             _ => self.write_raw(writer),
         }
     }
+
+    /// Byte length of an affine curve element according to `format`.
+    fn byte_length(format: SerdeFormat) -> usize {
+        match format {
+            SerdeFormat::Processed => Self::default().to_bytes().as_ref().len(),
+            _ => Self::Repr::default().as_ref().len() * 2,
+        }
+    }
 }
 impl<C: CurveAffine + SerdeObject> SerdeCurveAffine for C {}
 

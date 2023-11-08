@@ -203,9 +203,27 @@ impl<F: Field> Assignment<F> for Assembly<F> {
 }
 
 /// Generate a `VerifyingKey` from an instance of `Circuit`.
+/// By default, selector compression is turned **off**.
 pub fn keygen_vk<'params, C, P, ConcreteCircuit>(
     params: &P,
     circuit: &ConcreteCircuit,
+) -> Result<VerifyingKey<C>, Error>
+where
+    C: CurveAffine,
+    P: Params<'params, C>,
+    ConcreteCircuit: Circuit<C::Scalar>,
+    C::Scalar: FromUniformBytes<64>,
+{
+    keygen_vk_custom(params, circuit, true)
+}
+
+/// Generate a `VerifyingKey` from an instance of `Circuit`.
+///
+/// The selector compression optimization is turned on only if `compress_selectors` is `true`.
+pub fn keygen_vk_custom<'params, C, P, ConcreteCircuit>(
+    params: &P,
+    circuit: &ConcreteCircuit,
+    compress_selectors: bool,
 ) -> Result<VerifyingKey<C>, Error>
 where
     C: CurveAffine,
@@ -241,7 +259,13 @@ where
     )?;
 
     let mut fixed = batch_invert_assigned(assembly.fixed);
-    let (cs, selector_polys) = cs.compress_selectors(assembly.selectors.clone());
+    let (cs, selector_polys) = if compress_selectors {
+        cs.compress_selectors(assembly.selectors.clone())
+    } else {
+        // After this, the ConstraintSystem should not have any selectors: `verify` does not need them, and `keygen_pk` regenerates `cs` from scratch anyways.
+        let selectors = std::mem::take(&mut assembly.selectors);
+        cs.directly_convert_selectors_to_fixed(selectors)
+    };
     fixed.extend(
         selector_polys
             .into_iter()
@@ -263,6 +287,7 @@ where
         permutation_vk,
         cs,
         assembly.selectors,
+        compress_selectors,
     ))
 }
 
@@ -307,7 +332,11 @@ where
     )?;
 
     let mut fixed = batch_invert_assigned(assembly.fixed);
-    let (cs, selector_polys) = cs.compress_selectors(assembly.selectors);
+    let (cs, selector_polys) = if vk.compress_selectors {
+        cs.compress_selectors(assembly.selectors)
+    } else {
+        cs.directly_convert_selectors_to_fixed(assembly.selectors)
+    };
     fixed.extend(
         selector_polys
             .into_iter()
