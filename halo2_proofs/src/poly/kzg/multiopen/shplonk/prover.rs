@@ -135,7 +135,7 @@ where
         R: RngCore,
     {
         // TODO: explore if it is safe to use same challenge
-        // for different sets that are already combined with anoter challenge
+        // for different sets that are already combined with another challenge
         let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
 
         let quotient_contribution = |rotation_set: &RotationSetExtension<E::G1Affine>| {
@@ -151,7 +151,7 @@ where
             // define numerator polynomial as
             // N_i_j(X) = (P_i_j(X) - R_i_j(X))
             // and combine polynomials with same evaluation point set
-            // N_i(X) = linear_combinination(y, N_i_j(X))
+            // N_i(X) = linear_combination(y, N_i_j(X))
             // where y is random scalar to combine numerator polynomials
             let n_x = numerators
                 .into_iter()
@@ -223,7 +223,7 @@ where
             // calculate difference vanishing polynomial evaluation
             let z_i = evaluate_vanishing_polynomial(&diffs[..], *u);
 
-            // inner linearisation contibutions are
+            // inner linearisation contributions are
             // [P_i_0(X) - r_i_0, P_i_1(X) - r_i_1, ... ] where
             // r_i_j = R_i_j(u) is the evaluation of low degree equivalent polynomial
             // where u is random evaluation point
@@ -238,8 +238,8 @@ where
             // define inner contributor polynomial as
             // L_i_j(X) = (P_i_j(X) - r_i_j)
             // and combine polynomials with same evaluation point set
-            // L_i(X) = linear_combinination(y, L_i_j(X))
-            // where y is random scalar to combine inner contibutors
+            // L_i(X) = linear_combination(y, L_i_j(X))
+            // where y is random scalar to combine inner contributors
             let l_x: Polynomial<E::Scalar, Coeff> = inner_contributions
                 .into_iter()
                 .zip(powers(*y))
@@ -252,7 +252,7 @@ where
         };
 
         #[allow(clippy::type_complexity)]
-        let (linearisation_contibutions, z_diffs): (
+        let (linearisation_contributions, z_diffs): (
             Vec<Polynomial<E::Scalar, Coeff>>,
             Vec<E::Scalar>,
         ) = rotation_sets
@@ -260,7 +260,7 @@ where
             .map(linearisation_contribution)
             .unzip();
 
-        let l_x: Polynomial<E::Scalar, Coeff> = linearisation_contibutions
+        let l_x: Polynomial<E::Scalar, Coeff> = linearisation_contributions
             .into_iter()
             .zip(powers(*v))
             .map(|(poly, power_of_v)| poly * power_of_v)
