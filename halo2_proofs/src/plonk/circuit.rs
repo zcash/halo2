@@ -1640,7 +1640,11 @@ impl<'a, F: Field> std::fmt::Debug for PinnedConstraintSystem<'a, F> {
             .field("instance_queries", self.instance_queries)
             .field("fixed_queries", self.fixed_queries)
             .field("permutation", self.permutation)
-            .field("lookups", self.lookups)
+            .field("lookups", self.lookups);
+        if !self.shuffles.is_empty() {
+            debug_struct.field("shuffles", self.shuffles);
+        }
+        debug_struct
             .field("constants", self.constants)
             .field("minimum_degree", self.minimum_degree);
         debug_struct.finish()
@@ -1771,6 +1775,12 @@ impl<F: Field> ConstraintSystem<F> {
         let table_map = table_map(&mut cells)
             .into_iter()
             .map(|(mut input, mut table)| {
+                if input.contains_simple_selector() {
+                    panic!("expression containing simple selector supplied to lookup argument");
+                }
+                if table.contains_simple_selector() {
+                    panic!("expression containing simple selector supplied to lookup argument");
+                }
                 input.query_cells(&mut cells);
                 table.query_cells(&mut cells);
                 (input, table)
@@ -2212,6 +2222,10 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Allocate a new advice column in given phase
+    ///
+    /// # Panics
+    ///
+    /// It panics if previous phase before the given one doesn't have advice column allocated.
     pub fn advice_column_in<P: Phase>(&mut self, phase: P) -> Column<Advice> {
         let phase = phase.to_sealed();
         if let Some(previous_phase) = phase.prev() {
@@ -2242,6 +2256,10 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Requests a challenge that is usable after the given phase.
+    ///
+    /// # Panics
+    ///
+    /// It panics if the given phase doesn't have advice column allocated.
     pub fn challenge_usable_after<P: Phase>(&mut self, phase: P) -> Challenge {
         let phase = phase.to_sealed();
         self.assert_phase_exists(

@@ -12,6 +12,7 @@
   - [Lookup tables](user/lookup-tables.md)
   - [Gadgets](user/gadgets.md)
   - [Tips and tricks](user/tips-and-tricks.md)
+  - [Experimental features](user/experimental-features.md)
 - [Design](design.md)
   - [Proving system](design/proving-system.md)
     - [Lookup argument](design/proving-system/lookup.md)

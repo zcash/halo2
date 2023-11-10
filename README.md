@@ -1,6 +1,8 @@
 # halo2 [![Crates.io](https://img.shields.io/crates/v/halo2.svg)](https://crates.io/crates/halo2) #
 
-## [Documentation](https://docs.rs/halo2)
+## [Documentation](https://privacy-scaling-explorations.github.io/halo2/halo2_proofs)
+
+For experimental features `privacy-scaling-explorations/halo2` fork adds, please refer to [`experimental-features.md`](./book/src/user/experimental-features.md).
 
 ## Minimum Supported Rust Version
 
