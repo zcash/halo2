@@ -4,7 +4,7 @@ version = "0.3.0"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
     "Jack Grigg <jack@electriccoin.co>",
-    "Daira Hopwood <daira@jacaranda.org>",
+    "Daira Emma Hopwood <daira@jacaranda.org>",
     "Ying Tong Lai <yingtong@electriccoin.co>",
     "Kris Nuttycombe <kris@electriccoin.co>",
 ]
