@@ -4,5 +4,4 @@
 **/.*.swp
 **/*.rs.bk
 .vscode
-**/*.html
 .DS_Store
