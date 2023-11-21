@@ -5,3 +5,4 @@
 **/*.rs.bk
 .vscode
 .DS_Store
+/book/book
