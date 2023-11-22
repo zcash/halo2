@@ -53,6 +53,9 @@ tracing = "0.1"
 blake2b_simd = "1"
 maybe-rayon = {version = "0.1.0", default-features = false}
 
+# Indirect dependencies, pin for now to preserve MSRV.
+rayon = { version = ">=0.1, <1.8.0", default-features = false, optional = true } # via maybe-rayon; rayon 1.8.0 has MSRV 1.63
+
 # Developer tooling dependencies
 plotters = { version = "0.3.0", default-features = false, optional = true }
 tabbycat = { version = "0.1", features = ["attributes"], optional = true }
@@ -77,7 +80,7 @@ getrandom = { version = "0.2", features = ["js"] }
 
 [features]
 default = ["batch", "multicore"]
-multicore = ["maybe-rayon/threads"]
+multicore = ["maybe-rayon/threads", "rayon"]
 dev-graph = ["plotters", "tabbycat"]
 test-dev-graph = [
     "dev-graph",
