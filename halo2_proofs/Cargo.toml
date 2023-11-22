@@ -8,7 +8,7 @@ authors = [
     "Jack Grigg <jack@electriccoin.co>",
 ]
 edition = "2021"
-rust-version = "1.59"
+rust-version = "1.60"
 description = """
 Fast PLONK-based zero-knowledge proving system with no trusted setup
 """
