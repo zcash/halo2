@@ -82,6 +82,8 @@ dev-graph = ["plotters", "tabbycat"]
 test-dev-graph = [
     "dev-graph",
     "plotters/bitmap_backend",
+    "plotters/bitmap_encoder",
+    "plotters/ttf",
 ]
 gadget-traces = ["backtrace"]
 sanity-checks = []

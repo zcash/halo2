@@ -54,6 +54,7 @@ test-dev-graph = [
     "plotters",
     "plotters/bitmap_backend",
     "plotters/bitmap_encoder",
+    "plotters/ttf",
 ]
 test-dependencies = ["proptest"]
 
