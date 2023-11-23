@@ -253,9 +253,6 @@ where
 
     #[allow(clippy::type_complexity)]
     /// Hash `message` from the initial point `Q`.
-    ///
-    /// Before this call to `hash_all_pieces()`, `x_Q` and `y_Q` MUST have been already assigned
-    /// within this region.
     fn hash_all_pieces(
         &self,
         region: &mut Region<'_, pallas::Base>,

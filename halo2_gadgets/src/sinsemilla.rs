@@ -442,9 +442,8 @@ where
     }
 
     #[allow(clippy::type_complexity)]
-    /// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
-    ///
-    /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
+    /// Evaluates the Sinsemilla hash of `message` from the public initial point `Q` stored
+    /// into `CommitDomain`.
     pub fn hash(
         &self,
         layouter: impl Layouter<C::Base>,
@@ -462,9 +461,7 @@ where
 
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
-    /// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
-    ///
-    /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
+    /// Evaluates the Sinsemilla hash of `message` from the private initial point `Q`.
     pub fn hash_with_private_init(
         &self,
         layouter: impl Layouter<C::Base>,
@@ -482,17 +479,13 @@ where
     }
 
     #[allow(clippy::type_complexity)]
-    /// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
-    ///
-    /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
+    /// Returns the public initial point `Q` stored into `CommitDomain`.
     pub fn q_init(&self) -> C {
         self.M.Q
     }
 
     #[allow(clippy::type_complexity)]
-    /// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
-    ///
-    /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
+    /// Evaluates the blinding factor equal to $\[r\] R$ where `r` is stored in the `CommitDomain`.
     pub fn blinding_factor(
         &self,
         mut layouter: impl Layouter<C::Base>,

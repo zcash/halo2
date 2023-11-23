@@ -78,6 +78,22 @@ impl GeneratorTableConfig {
         });
     }
 
+    /// Load the generator table into the circuit.
+    ///
+    /// | table_idx |     table_x    |     table_y    | table_range_check_tag |
+    /// -------------------------------------------------------------------
+    /// |     0     |    X(S\[0\])   |    Y(S\[0\])   |           0           |
+    /// |     1     |    X(S\[1\])   |    Y(S\[1\])   |           0           |
+    /// |    ...    |      ...       |       ...      |           0           |
+    /// |   2^10-1  | X(S\[2^10-1\]) | Y(S\[2^10-1\]) |           0           |
+    /// |     0     |    X(S\[0\])   |    Y(S\[0\])   |           4           |
+    /// |     1     |    X(S\[1\])   |    Y(S\[1\])   |           4           |
+    /// |    ...    |       ...      |       ...      |           4           |
+    /// |   2^4-1   | X(S\[2^4-1\])  | Y(S\[2^4-1\])  |           4           |
+    /// |     0     |    X(S\[0\])   |    Y(S\[0\])   |           5           |
+    /// |     1     |    X(S\[1\])   |    Y(S\[1\])   |           5           |
+    /// |    ...    |       ...      |       ...      |           5           |
+    /// |   2^5-1   | X(S\[2^5-1\])  | Y(S\[2^5-1\])  |           5           |
     pub fn load(&self, layouter: &mut impl Layouter<pallas::Base>) -> Result<(), Error> {
         layouter.assign_table(
             || "generator_table",

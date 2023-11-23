@@ -150,7 +150,7 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
                     * q_range_check_4
                     * Expression::Constant(F::from(4_u64));
 
-            // Combine the running sum and short lookups:
+            // Combine the running sum, short lookups and optimized range checks:
             vec![
                 (
                     q_lookup.clone()
