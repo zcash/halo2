@@ -17,14 +17,28 @@ pub trait Query<F>: Sized + Clone + Send + Sync {
 }
 
 /// A polynomial query at a point
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct ProverQuery<'com, C: CurveAffine> {
-    /// point at which polynomial is queried
+    /// Point at which polynomial is queried
     pub(crate) point: C::Scalar,
-    /// coefficients of polynomial
+    /// Coefficients of polynomial
     pub(crate) poly: &'com Polynomial<C::Scalar, Coeff>,
-    /// blinding factor of polynomial
+    /// Blinding factor of polynomial
     pub(crate) blind: Blind<C::Scalar>,
+}
+
+impl<'com, C> ProverQuery<'com, C>
+where
+    C: CurveAffine,
+{
+    /// Create a new prover query based on a polynomial
+    pub fn new(
+        point: C::Scalar,
+        poly: &'com Polynomial<C::Scalar, Coeff>,
+        blind: Blind<C::Scalar>,
+    ) -> Self {
+        ProverQuery { point, poly, blind }
+    }
 }
 
 #[doc(hidden)]
@@ -79,22 +93,31 @@ impl<'com, C: CurveAffine, M: MSM<C>> VerifierQuery<'com, C, M> {
 }
 
 /// A polynomial query at a point
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct VerifierQuery<'com, C: CurveAffine, M: MSM<C>> {
-    /// point at which polynomial is queried
+    /// Point at which polynomial is queried
     pub(crate) point: C::Scalar,
-    /// commitment to polynomial
+    /// Commitment to polynomial
     pub(crate) commitment: CommitmentReference<'com, C, M>,
-    /// evaluation of polynomial at query point
+    /// Evaluation of polynomial at query point
     pub(crate) eval: C::Scalar,
 }
 
-impl<'com, C: CurveAffine, M: MSM<C>> Clone for VerifierQuery<'com, C, M> {
-    fn clone(&self) -> Self {
-        Self {
-            point: self.point,
-            commitment: self.commitment,
-            eval: self.eval,
+impl<'com, C, M> VerifierQuery<'com, C, M>
+where
+    C: CurveAffine,
+    M: MSM<C>,
+{
+    /// Create a new verifier query based on a commitment
+    pub fn new(
+        point: C::Scalar,
+        commitment: CommitmentReference<'com, C, M>,
+        eval: C::Scalar,
+    ) -> Self {
+        VerifierQuery {
+            point,
+            commitment,
+            eval,
         }
     }
 }
