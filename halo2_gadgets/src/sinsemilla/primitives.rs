@@ -185,7 +185,7 @@ impl HashDomain {
 #[allow(non_snake_case)]
 pub struct CommitDomain {
     /// A domain in which $\mathsf{SinsemillaHashToPoint}$ and $\mathsf{SinsemillaHash}$ can be used
-    pub M: HashDomain,
+    M: HashDomain,
     R: pallas::Point,
 }
 
@@ -224,6 +224,13 @@ impl CommitDomain {
         // We use complete addition for the blinding factor.
         CtOption::<pallas::Point>::from(self.M.hash_to_point_inner(msg))
             .map(|p| p + Wnaf::new().scalar(r).base(self.R))
+    }
+
+    /// $\mathsf{SinsemillaHashToPoint}$ from [§ 5.4.1.9][concretesinsemillahash].
+    ///
+    /// [concretesinsemillahash]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash
+    pub fn hash_to_point(&self, msg: impl Iterator<Item = bool>) -> CtOption<pallas::Point> {
+        self.M.hash_to_point(msg)
     }
 
     /// Returns `SinsemillaCommit_r(personalization, msg) = hash_point + [r]R`

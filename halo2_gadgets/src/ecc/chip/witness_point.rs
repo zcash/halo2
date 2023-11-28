@@ -102,7 +102,7 @@ impl Config {
         Ok((x_var, y_var))
     }
 
-    fn assign_xy_constant(
+    fn assign_xy_from_constant(
         &self,
         value: (Assigned<pallas::Base>, Assigned<pallas::Base>),
         offset: usize,
@@ -159,7 +159,7 @@ impl Config {
             (value.x().into(), value.y().into())
         };
 
-        self.assign_xy_constant(value, offset, region)
+        self.assign_xy_from_constant(value, offset, region)
             .map(|(x, y)| EccPoint::from_coordinates_unchecked(x, y))
     }
 
