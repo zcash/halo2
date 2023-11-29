@@ -8,7 +8,7 @@ authors = [
     "Jack Grigg <jack@electriccoin.co>",
 ]
 edition = "2021"
-rust-version = "1.59"
+rust-version = "1.60"
 description = """
 Fast PLONK-based zero-knowledge proving system with no trusted setup
 """
@@ -82,6 +82,8 @@ dev-graph = ["plotters", "tabbycat"]
 test-dev-graph = [
     "dev-graph",
     "plotters/bitmap_backend",
+    "plotters/bitmap_encoder",
+    "plotters/ttf",
 ]
 gadget-traces = ["backtrace"]
 sanity-checks = []
