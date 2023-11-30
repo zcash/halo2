@@ -43,11 +43,8 @@ where
     /// q_sinsemilla2 is used to define a synthetic selector,
     ///         q_sinsemilla3 = (q_sinsemilla2) ⋅ (q_sinsemilla2 - 1)
     /// Simple selector used to constrain hash initialization to be consistent with
-    /// the y-coordinate of the domain $Q$ when $y_Q$ is a public constant.
+    /// the y-coordinate of the domain $Q$.
     q_sinsemilla4: Selector,
-    /// Simple selector used to constrain hash initialization to be consistent with
-    /// the y-coordinate of the domain $Q$ when $y_Q$ is a private value.
-    q_sinsemilla4_private: Selector,
     /// Fixed column used to load the y-coordinate of the domain $Q$.
     fixed_y_q: Column<Fixed>,
     /// Logic specific to merged double-and-add.
@@ -168,7 +165,6 @@ where
             q_sinsemilla1: meta.complex_selector(),
             q_sinsemilla2: meta.fixed_column(),
             q_sinsemilla4: meta.selector(),
-            q_sinsemilla4_private: meta.selector(),
             fixed_y_q,
             double_and_add: DoubleAndAdd {
                 x_a: advices[0],
@@ -206,23 +202,8 @@ where
 
         // Check that the initial x_A, x_P, lambda_1, lambda_2 are consistent with y_Q.
         // https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial
-        meta.create_gate("Initial y_Q (public)", |meta| {
+        meta.create_gate("Initial y_Q", |meta| {
             let q_s4 = meta.query_selector(config.q_sinsemilla4);
-            let y_q = meta.query_fixed(config.fixed_y_q);
-
-            // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
-            let Y_A_cur = Y_A(meta, Rotation::cur());
-
-            // 2 * y_q - Y_{A,0} = 0
-            let init_y_q_check = y_q * two - Y_A_cur;
-
-            Constraints::with_selector(q_s4, Some(("init_y_q_check", init_y_q_check)))
-        });
-
-        // Check that the initial x_A, x_P, lambda_1, lambda_2 are consistent with y_Q.
-        // https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial
-        meta.create_gate("Initial y_Q (private)", |meta| {
-            let q_s4 = meta.query_selector(config.q_sinsemilla4_private);
             let y_q = meta.query_advice(config.double_and_add.x_p, Rotation::prev());
 
             // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)

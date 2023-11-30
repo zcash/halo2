@@ -168,16 +168,17 @@ where
     #[allow(non_snake_case)]
     /// Assign the coordinates of the initial public point `Q`
     ///
-    /// | offset | x_A | q_sinsemilla4 | fixed_y_Q |
-    /// --------------------------------------------
-    /// |   0    | x_Q |       1       |    y_Q    |
+    /// | offset | x_A | x_P | q_sinsemilla4 |
+    /// --------------------------------------
+    /// |   0    |     | y_Q |               |
+    /// |   1    | x_Q |     |       1       |
     fn public_initialization(
         &self,
         region: &mut Region<'_, pallas::Base>,
         Q: pallas::Affine,
     ) -> Result<(usize, X<pallas::Base>, Y<pallas::Base>), Error> {
         let config = self.config().clone();
-        let offset = 0;
+        let mut offset = 0;
 
         // Get the `x`- and `y`-coordinates of the starting `Q` base.
         let x_q = *Q.coordinates().unwrap().x();
@@ -186,17 +187,19 @@ where
         // Constrain the initial x_a, lambda_1, lambda_2, x_p using the q_sinsemilla4
         // selector.
         let y_a: Y<pallas::Base> = {
-            // Enable `q_sinsemilla4` on the first row.
-            config.q_sinsemilla4.enable(region, offset)?;
-            region.assign_fixed(
-                || "fixed y_q",
-                config.fixed_y_q,
-                offset,
-                || Value::known(y_q),
-            )?;
+            // Enable `q_sinsemilla4` on the second row.
+            config.q_sinsemilla4.enable(region, offset + 1)?;
+            let y_a: AssignedCell<Assigned<pallas::Base>, pallas::Base> = region
+                .assign_advice_from_constant(
+                    || "fixed y_q",
+                    config.double_and_add.x_p,
+                    offset,
+                    y_q.into(),
+                )?;
 
-            Value::known(y_q.into()).into()
+            y_a.value_field().into()
         };
+        offset += 1;
 
         // Constrain the initial x_q to equal the x-coordinate of the domain's `Q`.
         let x_a: X<pallas::Base> = {
@@ -216,10 +219,10 @@ where
     #[allow(non_snake_case)]
     /// Assign the coordinates of the initial private point `Q`
     ///
-    /// | offset | x_A | x_P | q_sinsemilla4_private |
-    /// -----------------------------------------------
-    /// |   0    |     | y_Q |                       |
-    /// |   1    | x_Q |     |         1             |
+    /// | offset | x_A | x_P | q_sinsemilla4 |
+    /// --------------------------------------
+    /// |   0    |     | y_Q |               |
+    /// |   1    | x_Q |     |         1     |
     fn private_initialization(
         &self,
         region: &mut Region<'_, pallas::Base>,
@@ -229,10 +232,10 @@ where
         let mut offset = 0;
 
         // Assign `x_Q` and `y_Q` in the region and constrain the initial x_a, lambda_1, lambda_2,
-        // x_p, y_Q using the q_sinsemilla4_private selector.
+        // x_p, y_Q using the q_sinsemilla4 selector.
         let y_a: Y<pallas::Base> = {
-            // Enable `q_sinsemilla4_private` on the first row.
-            config.q_sinsemilla4_private.enable(region, offset + 1)?;
+            // Enable `q_sinsemilla4` on the second row.
+            config.q_sinsemilla4.enable(region, offset + 1)?;
             let q_y: AssignedCell<Assigned<pallas::Base>, pallas::Base> = Q.y().into();
             let y_a: AssignedCell<Assigned<pallas::Base>, pallas::Base> =
                 q_y.copy_advice(|| "fixed y_q", region, config.double_and_add.x_p, offset)?;
