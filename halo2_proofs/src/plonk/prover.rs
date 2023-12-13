@@ -8,11 +8,11 @@ use std::{collections::HashMap, iter};
 use super::{
     circuit::{
         sealed::{self},
-        Advice, Any, Assignment, Challenge, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner,
-        Instance, Selector,
+        Advice, Any, Assignment, Challenge, Circuit, Column, CompiledCircuitV2, ConstraintSystem,
+        Fixed, FloorPlanner, Instance, Selector,
     },
     lookup, permutation, shuffle, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta,
-    ChallengeX, ChallengeY, Error, ProvingKey,
+    ChallengeX, ChallengeY, Error, ProvingKey, ProvingKeyV2,
 };
 
 use crate::{
@@ -29,6 +29,117 @@ use crate::{
     transcript::{EncodedChallenge, TranscriptWrite},
 };
 use group::prime::PrimeCurveAffine;
+
+struct InstanceSingle<C: CurveAffine> {
+    pub instance_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
+    pub instance_polys: Vec<Polynomial<C::Scalar, Coeff>>,
+}
+
+pub struct ProverV2<
+    'params,
+    Scheme: CommitmentScheme,
+    P: Prover<'params, Scheme>,
+    E: EncodedChallenge<Scheme::Curve>,
+    R: RngCore,
+    T: TranscriptWrite<Scheme::Curve, E>,
+> {
+    params: &'params Scheme::ParamsProver,
+    instance: Vec<InstanceSingle<Scheme::Curve>>,
+    _marker: std::marker::PhantomData<(Scheme, P, E, R, T)>,
+}
+
+impl<
+        'params,
+        Scheme: CommitmentScheme,
+        P: Prover<'params, Scheme>,
+        E: EncodedChallenge<Scheme::Curve>,
+        R: RngCore,
+        T: TranscriptWrite<Scheme::Curve, E>,
+    > ProverV2<'params, Scheme, P, E, R, T>
+{
+    pub fn new(
+        params: &'params Scheme::ParamsProver,
+        pk: &ProvingKeyV2<Scheme::Curve>,
+        circuit: &CompiledCircuitV2<Scheme::Scalar>,
+        instance: &[&[Scheme::Scalar]],
+        mut rng: R,
+        mut transcript: T,
+    ) -> Result<Self, Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        if instance.len() != pk.vk.cs.num_instance_columns {
+            return Err(Error::InvalidInstances);
+        }
+
+        // Hash verification key into transcript
+        pk.vk.hash_into(&mut transcript)?;
+
+        let meta = &circuit.cs;
+
+        let domain = &pk.vk.domain;
+
+        let instance: Vec<InstanceSingle<Scheme::Curve>> = iter::once(instance)
+            .map(|instance| -> Result<InstanceSingle<Scheme::Curve>, Error> {
+                let instance_values = instance
+                    .iter()
+                    .map(|values| {
+                        let mut poly = domain.empty_lagrange();
+                        assert_eq!(poly.len(), params.n() as usize);
+                        if values.len() > (poly.len() - (meta.blinding_factors() + 1)) {
+                            return Err(Error::InstanceTooLarge);
+                        }
+                        for (poly, value) in poly.iter_mut().zip(values.iter()) {
+                            if !P::QUERY_INSTANCE {
+                                transcript.common_scalar(*value)?;
+                            }
+                            *poly = *value;
+                        }
+                        Ok(poly)
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                if P::QUERY_INSTANCE {
+                    let instance_commitments_projective: Vec<_> = instance_values
+                        .iter()
+                        .map(|poly| params.commit_lagrange(poly, Blind::default()))
+                        .collect();
+                    let mut instance_commitments =
+                        vec![Scheme::Curve::identity(); instance_commitments_projective.len()];
+                    <Scheme::Curve as CurveAffine>::CurveExt::batch_normalize(
+                        &instance_commitments_projective,
+                        &mut instance_commitments,
+                    );
+                    let instance_commitments = instance_commitments;
+                    drop(instance_commitments_projective);
+
+                    for commitment in &instance_commitments {
+                        transcript.common_point(*commitment)?;
+                    }
+                }
+
+                let instance_polys: Vec<_> = instance_values
+                    .iter()
+                    .map(|poly| {
+                        let lagrange_vec = domain.lagrange_from_vec(poly.to_vec());
+                        domain.lagrange_to_coeff(lagrange_vec)
+                    })
+                    .collect();
+
+                Ok(InstanceSingle {
+                    instance_values,
+                    instance_polys,
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(ProverV2 {
+            params,
+            instance,
+            _marker: std::marker::PhantomData {},
+        })
+    }
+}
 
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was

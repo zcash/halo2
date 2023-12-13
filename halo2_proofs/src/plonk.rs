@@ -100,6 +100,16 @@ impl<C: CurveAffine> VerifyingKeyV2<C> {
 
         vk
     }
+
+    /// Hashes a verification key into a transcript.
+    pub fn hash_into<E: EncodedChallenge<C>, T: Transcript<C, E>>(
+        &self,
+        transcript: &mut T,
+    ) -> io::Result<()> {
+        transcript.common_scalar(self.transcript_repr)?;
+
+        Ok(())
+    }
 }
 
 /// This is a verifying key which allows for the verification of proofs for a
@@ -388,6 +398,21 @@ pub struct ProvingKeyV2<C: CurveAffine> {
     permutation: permutation::ProvingKey<C>,
     ev: Evaluator<C>,
 }
+
+// impl<C: CurveAffine> ProvingKeyV2<C>
+// where
+//     C::Scalar: FromUniformBytes<64>,
+// {
+//     /// Hashes a verification key into a transcript.
+//     pub fn hash_into<E: EncodedChallenge<C>, T: Transcript<C, E>>(
+//         &self,
+//         transcript: &mut T,
+//     ) -> io::Result<()> {
+//         transcript.common_scalar(self.transcript_repr)?;
+//
+//         Ok(())
+//     }
+// }
 
 /// This is a proving key which allows for the creation of proofs for a
 /// particular circuit.
