@@ -3,7 +3,7 @@ use crate::circuit::layouter::SyncDeps;
 use crate::dev::metadata;
 use crate::{
     circuit::{Layouter, Region, Value},
-    poly::Rotation,
+    poly::{LagrangeCoeff, Polynomial, Rotation},
 };
 use core::cmp::max;
 use core::ops::{Add, Mul};
@@ -1542,6 +1542,161 @@ impl<F: Field> Gate<F> {
 
     pub(crate) fn queried_cells(&self) -> &[VirtualCell] {
         &self.queried_cells
+    }
+}
+
+/// Data that needs to be preprocessed from a circuit
+#[derive(Debug, Clone)]
+pub struct PreprocessingV2<F: Field> {
+    // TODO(Edu): Can we replace this by a simpler structure?
+    pub(crate) permutation: permutation::keygen::Assembly,
+    // TODO(Edu): Replace this by Vec<Vec<F>>
+    pub(crate) fixed: Vec<Polynomial<F, LagrangeCoeff>>,
+}
+
+/// This is a description of a low level Plonkish compiled circuit.  Contains the Constraint System
+/// as well as the fixed columns and copy constraints information.
+#[derive(Debug, Clone)]
+pub struct CompiledCircuitV2<F: Field> {
+    pub(crate) preprocessing: PreprocessingV2<F>,
+    pub(crate) cs: ConstraintSystemV2Backend<F>,
+}
+
+/// This is a description of the circuit environment, such as the gate, column and
+/// permutation arrangements.
+#[derive(Debug, Clone)]
+pub struct ConstraintSystemV2Backend<F: Field> {
+    pub(crate) num_fixed_columns: usize,
+    pub(crate) num_advice_columns: usize,
+    pub(crate) num_instance_columns: usize,
+    // pub(crate) num_selectors: usize,
+    pub(crate) num_challenges: usize,
+
+    /// Contains the index of each advice column that is left unblinded.
+    pub(crate) unblinded_advice_columns: Vec<usize>,
+
+    /// Contains the phase for each advice column. Should have same length as num_advice_columns.
+    pub(crate) advice_column_phase: Vec<sealed::Phase>,
+    /// Contains the phase for each challenge. Should have same length as num_challenges.
+    pub(crate) challenge_phase: Vec<sealed::Phase>,
+
+    /// This is a cached vector that maps virtual selectors to the concrete
+    /// fixed column that they were compressed into. This is just used by dev
+    /// tooling right now.
+    // pub(crate) selector_map: Vec<Column<Fixed>>,
+    pub(crate) gates: Vec<Gate<F>>,
+    // pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
+    // Contains an integer for each advice column
+    // identifying how many distinct queries it has
+    // so far; should be same length as num_advice_columns.
+    num_advice_queries: Vec<usize>,
+    // pub(crate) instance_queries: Vec<(Column<Instance>, Rotation)>,
+    // pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
+
+    // Permutation argument for performing equality constraints
+    pub(crate) permutation: permutation::Argument,
+
+    // Vector of lookup arguments, where each corresponds to a sequence of
+    // input expressions and a sequence of table expressions involved in the lookup.
+    pub(crate) lookups: Vec<lookup::Argument<F>>,
+
+    // Vector of shuffle arguments, where each corresponds to a sequence of
+    // input expressions and a sequence of shuffle expressions involved in the shuffle.
+    pub(crate) shuffles: Vec<shuffle::Argument<F>>,
+
+    // List of indexes of Fixed columns which are associated to a circuit-general Column tied to their annotation.
+    pub(crate) general_column_annotations: HashMap<metadata::Column, String>,
+    // Vector of fixed columns, which can be used to store constant values
+    // that are copied into advice columns.
+    // pub(crate) constants: Vec<Column<Fixed>>,
+
+    // pub(crate) minimum_degree: Option<usize>,
+}
+
+impl<F: Field> ConstraintSystemV2Backend<F> {
+    /// Compute the degree of the constraint system (the maximum degree of all
+    /// constraints).
+    pub fn degree(&self) -> usize {
+        // The permutation argument will serve alongside the gates, so must be
+        // accounted for.
+        let mut degree = self.permutation.required_degree();
+
+        // The lookup argument also serves alongside the gates and must be accounted
+        // for.
+        degree = std::cmp::max(
+            degree,
+            self.lookups
+                .iter()
+                .map(|l| l.required_degree())
+                .max()
+                .unwrap_or(1),
+        );
+
+        // The lookup argument also serves alongside the gates and must be accounted
+        // for.
+        degree = std::cmp::max(
+            degree,
+            self.shuffles
+                .iter()
+                .map(|l| l.required_degree())
+                .max()
+                .unwrap_or(1),
+        );
+
+        // Account for each gate to ensure our quotient polynomial is the
+        // correct degree and that our extended domain is the right size.
+        degree = std::cmp::max(
+            degree,
+            self.gates
+                .iter()
+                .flat_map(|gate| gate.polynomials().iter().map(|poly| poly.degree()))
+                .max()
+                .unwrap_or(0),
+        );
+
+        // std::cmp::max(degree, self.minimum_degree.unwrap_or(1))
+        degree
+    }
+
+    /// Returns the minimum necessary rows that need to exist in order to
+    /// account for e.g. blinding factors.
+    pub fn minimum_rows(&self) -> usize {
+        self.blinding_factors() // m blinding factors
+            + 1 // for l_{-(m + 1)} (l_last)
+            + 1 // for l_0 (just for extra breathing room for the permutation
+                // argument, to essentially force a separation in the
+                // permutation polynomial between the roles of l_last, l_0
+                // and the interstitial values.)
+            + 1 // for at least one row
+    }
+
+    /// Compute the number of blinding factors necessary to perfectly blind
+    /// each of the prover's witness polynomials.
+    pub fn blinding_factors(&self) -> usize {
+        // All of the prover's advice columns are evaluated at no more than
+        let factors = *self.num_advice_queries.iter().max().unwrap_or(&1);
+        // distinct points during gate checks.
+
+        // - The permutation argument witness polynomials are evaluated at most 3 times.
+        // - Each lookup argument has independent witness polynomials, and they are
+        //   evaluated at most 2 times.
+        let factors = std::cmp::max(3, factors);
+
+        // Each polynomial is evaluated at most an additional time during
+        // multiopen (at x_3 to produce q_evals):
+        let factors = factors + 1;
+
+        // h(x) is derived by the other evaluations so it does not reveal
+        // anything; in fact it does not even appear in the proof.
+
+        // h(x_3) is also not revealed; the verifier only learns a single
+        // evaluation of a polynomial in x_1 which has h(x_3) and another random
+        // polynomial evaluated at x_3 as coefficients -- this random polynomial
+        // is "random_poly" in the vanishing argument.
+
+        // Add an additional blinding factor as a slight defense against
+        // off-by-one errors.
+        factors + 1
     }
 }
 

@@ -46,6 +46,65 @@ use std::io;
 /// This is a verifying key which allows for the verification of proofs for a
 /// particular circuit.
 #[derive(Clone, Debug)]
+pub struct VerifyingKeyV2<C: CurveAffine> {
+    domain: EvaluationDomain<C::Scalar>,
+    fixed_commitments: Vec<C>,
+    permutation: permutation::VerifyingKey<C>,
+    cs: ConstraintSystemV2Backend<C::Scalar>,
+    /// Cached maximum degree of `cs` (which doesn't change after construction).
+    cs_degree: usize,
+    /// The representative of this `VerifyingKey` in transcripts.
+    transcript_repr: C::Scalar,
+}
+
+impl<C: CurveAffine> VerifyingKeyV2<C> {
+    fn from_parts(
+        domain: EvaluationDomain<C::Scalar>,
+        fixed_commitments: Vec<C>,
+        permutation: permutation::VerifyingKey<C>,
+        cs: ConstraintSystemV2Backend<C::Scalar>,
+    ) -> Self
+    where
+        C::ScalarExt: FromUniformBytes<64>,
+    {
+        // Compute cached values.
+        let cs_degree = cs.degree();
+
+        let mut vk = Self {
+            domain,
+            fixed_commitments,
+            permutation,
+            cs,
+            cs_degree,
+            // Temporary, this is not pinned.
+            transcript_repr: C::Scalar::ZERO,
+        };
+
+        let mut hasher = Blake2bParams::new()
+            .hash_length(64)
+            .personal(b"Halo2-Verify-Key")
+            .to_state();
+
+        // let s = format!("{:?}", vk.pinned());
+        // TODO(Edu): Is it Ok to not use the pinned Vk here?  We removed a lot of stuff from Vk
+        // and Cs, so maybe we already have the same as in PinnedVerificationKey?
+        // TODO(Edu): We removed queries information from the ConstraintSystem, so this output will
+        // definitely be a breaking change.
+        let s = format!("{:?}", vk);
+
+        hasher.update(&(s.len() as u64).to_le_bytes());
+        hasher.update(s.as_bytes());
+
+        // Hash in final Blake2bState
+        vk.transcript_repr = C::Scalar::from_uniform_bytes(hasher.finalize().as_array());
+
+        vk
+    }
+}
+
+/// This is a verifying key which allows for the verification of proofs for a
+/// particular circuit.
+#[derive(Clone, Debug)]
 pub struct VerifyingKey<C: CurveAffine> {
     domain: EvaluationDomain<C::Scalar>,
     fixed_commitments: Vec<C>,

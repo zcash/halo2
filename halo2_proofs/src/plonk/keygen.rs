@@ -7,11 +7,12 @@ use group::Curve;
 
 use super::{
     circuit::{
-        Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
-        Selector,
+        Advice, Any, Assignment, Circuit, Column, CompiledCircuitV2, ConstraintSystem, Fixed,
+        FloorPlanner, Instance, Selector,
     },
     evaluation::Evaluator,
     permutation, Assigned, Challenge, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
+    VerifyingKeyV2,
 };
 use crate::{
     arithmetic::{parallelize, CurveAffine},
@@ -200,6 +201,81 @@ impl<F: Field> Assignment<F> for Assembly<F> {
     fn pop_namespace(&mut self, _: Option<String>) {
         // Do nothing; we don't care about namespaces in this context.
     }
+}
+
+/// Generate a `VerifyingKey` from an instance of `CompiledCircuit`.
+pub fn keygen_vk_v2<'params, C, P>(
+    params: &P,
+    circuit: &CompiledCircuitV2<C::Scalar>,
+) -> Result<VerifyingKeyV2<C>, Error>
+where
+    C: CurveAffine,
+    P: Params<'params, C>,
+    C::Scalar: FromUniformBytes<64>,
+{
+    let cs = &circuit.cs;
+    let domain = EvaluationDomain::new(cs.degree() as u32, params.k());
+    // let (domain, cs, config) = create_domain::<C, ConcreteCircuit>(
+    //     params.k(),
+    //     #[cfg(feature = "circuit-params")]
+    //     circuit.params(),
+    // );
+
+    if (params.n() as usize) < cs.minimum_rows() {
+        return Err(Error::not_enough_rows_available(params.k()));
+    }
+
+    // let mut assembly: Assembly<C::Scalar> = Assembly {
+    //     k: params.k(),
+    //     fixed: vec![domain.empty_lagrange_assigned(); cs.num_fixed_columns],
+    //     permutation: permutation::keygen::Assembly::new(params.n() as usize, &cs.permutation),
+    //     // selectors: vec![vec![false; params.n() as usize]; cs.num_selectors],
+    //     usable_rows: 0..params.n() as usize - (cs.blinding_factors() + 1),
+    //     _marker: std::marker::PhantomData,
+    // };
+
+    // Synthesize the circuit to obtain URS
+    // ConcreteCircuit::FloorPlanner::synthesize(
+    //     &mut assembly,
+    //     circuit,
+    //     config,
+    //     cs.constants.clone(),
+    // )?;
+
+    // let mut fixed = batch_invert_assigned(assembly.fixed);
+    // let (cs, selector_polys) = if compress_selectors {
+    //     cs.compress_selectors(assembly.selectors.clone())
+    // } else {
+    //     // After this, the ConstraintSystem should not have any selectors: `verify` does not need them, and `keygen_pk` regenerates `cs` from scratch anyways.
+    //     let selectors = std::mem::take(&mut assembly.selectors);
+    //     cs.directly_convert_selectors_to_fixed(selectors)
+    // };
+    // fixed.extend(
+    //     selector_polys
+    //         .into_iter()
+    //         .map(|poly| domain.lagrange_from_vec(poly)),
+    // );
+
+    let permutation_vk =
+        circuit
+            .preprocessing
+            .permutation
+            .clone()
+            .build_vk(params, &domain, &cs.permutation);
+
+    let fixed_commitments = circuit
+        .preprocessing
+        .fixed
+        .iter()
+        .map(|poly| params.commit_lagrange(poly, Blind::default()).to_affine())
+        .collect();
+
+    Ok(VerifyingKeyV2::from_parts(
+        domain,
+        fixed_commitments,
+        permutation_vk,
+        cs.clone(),
+    ))
 }
 
 /// Generate a `VerifyingKey` from an instance of `Circuit`.
