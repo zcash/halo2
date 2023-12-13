@@ -373,6 +373,22 @@ pub struct PinnedVerificationKey<'a, C: CurveAffine> {
     fixed_commitments: &'a Vec<C>,
     permutation: &'a permutation::VerifyingKey<C>,
 }
+
+/// This is a proving key which allows for the creation of proofs for a
+/// particular circuit.
+#[derive(Clone, Debug)]
+pub struct ProvingKeyV2<C: CurveAffine> {
+    vk: VerifyingKeyV2<C>,
+    l0: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    l_last: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    l_active_row: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    fixed_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
+    fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
+    fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
+    permutation: permutation::ProvingKey<C>,
+    ev: Evaluator<C>,
+}
+
 /// This is a proving key which allows for the creation of proofs for a
 /// particular circuit.
 #[derive(Clone, Debug)]

@@ -11,8 +11,8 @@ use super::{
         FloorPlanner, Instance, Selector,
     },
     evaluation::Evaluator,
-    permutation, Assigned, Challenge, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
-    VerifyingKeyV2,
+    permutation, Assigned, Challenge, Error, LagrangeCoeff, Polynomial, ProvingKey, ProvingKeyV2,
+    VerifyingKey, VerifyingKeyV2,
 };
 use crate::{
     arithmetic::{parallelize, CurveAffine},
@@ -215,46 +215,10 @@ where
 {
     let cs = &circuit.cs;
     let domain = EvaluationDomain::new(cs.degree() as u32, params.k());
-    // let (domain, cs, config) = create_domain::<C, ConcreteCircuit>(
-    //     params.k(),
-    //     #[cfg(feature = "circuit-params")]
-    //     circuit.params(),
-    // );
 
     if (params.n() as usize) < cs.minimum_rows() {
         return Err(Error::not_enough_rows_available(params.k()));
     }
-
-    // let mut assembly: Assembly<C::Scalar> = Assembly {
-    //     k: params.k(),
-    //     fixed: vec![domain.empty_lagrange_assigned(); cs.num_fixed_columns],
-    //     permutation: permutation::keygen::Assembly::new(params.n() as usize, &cs.permutation),
-    //     // selectors: vec![vec![false; params.n() as usize]; cs.num_selectors],
-    //     usable_rows: 0..params.n() as usize - (cs.blinding_factors() + 1),
-    //     _marker: std::marker::PhantomData,
-    // };
-
-    // Synthesize the circuit to obtain URS
-    // ConcreteCircuit::FloorPlanner::synthesize(
-    //     &mut assembly,
-    //     circuit,
-    //     config,
-    //     cs.constants.clone(),
-    // )?;
-
-    // let mut fixed = batch_invert_assigned(assembly.fixed);
-    // let (cs, selector_polys) = if compress_selectors {
-    //     cs.compress_selectors(assembly.selectors.clone())
-    // } else {
-    //     // After this, the ConstraintSystem should not have any selectors: `verify` does not need them, and `keygen_pk` regenerates `cs` from scratch anyways.
-    //     let selectors = std::mem::take(&mut assembly.selectors);
-    //     cs.directly_convert_selectors_to_fixed(selectors)
-    // };
-    // fixed.extend(
-    //     selector_polys
-    //         .into_iter()
-    //         .map(|poly| domain.lagrange_from_vec(poly)),
-    // );
 
     let permutation_vk =
         circuit
@@ -365,6 +329,90 @@ where
         assembly.selectors,
         compress_selectors,
     ))
+}
+
+/// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `CompiledCircuit`.
+pub fn keygen_pk_v2<'params, C, P>(
+    params: &P,
+    vk: VerifyingKeyV2<C>,
+    circuit: &CompiledCircuitV2<C::Scalar>,
+) -> Result<ProvingKeyV2<C>, Error>
+where
+    C: CurveAffine,
+    P: Params<'params, C>,
+{
+    let cs = &circuit.cs;
+
+    if (params.n() as usize) < cs.minimum_rows() {
+        return Err(Error::not_enough_rows_available(params.k()));
+    }
+
+    let fixed_polys: Vec<_> = circuit
+        .preprocessing
+        .fixed
+        .iter()
+        .map(|poly| vk.domain.lagrange_to_coeff(poly.clone()))
+        .collect();
+
+    let fixed_cosets = fixed_polys
+        .iter()
+        .map(|poly| vk.domain.coeff_to_extended(poly.clone()))
+        .collect();
+
+    let permutation_pk =
+        circuit
+            .preprocessing
+            .permutation
+            .clone()
+            .build_pk(params, &vk.domain, &cs.permutation);
+
+    // Compute l_0(X)
+    // TODO: this can be done more efficiently
+    let mut l0 = vk.domain.empty_lagrange();
+    l0[0] = C::Scalar::ONE;
+    let l0 = vk.domain.lagrange_to_coeff(l0);
+    let l0 = vk.domain.coeff_to_extended(l0);
+
+    // Compute l_blind(X) which evaluates to 1 for each blinding factor row
+    // and 0 otherwise over the domain.
+    let mut l_blind = vk.domain.empty_lagrange();
+    for evaluation in l_blind[..].iter_mut().rev().take(cs.blinding_factors()) {
+        *evaluation = C::Scalar::ONE;
+    }
+    let l_blind = vk.domain.lagrange_to_coeff(l_blind);
+    let l_blind = vk.domain.coeff_to_extended(l_blind);
+
+    // Compute l_last(X) which evaluates to 1 on the first inactive row (just
+    // before the blinding factors) and 0 otherwise over the domain
+    let mut l_last = vk.domain.empty_lagrange();
+    l_last[params.n() as usize - cs.blinding_factors() - 1] = C::Scalar::ONE;
+    let l_last = vk.domain.lagrange_to_coeff(l_last);
+    let l_last = vk.domain.coeff_to_extended(l_last);
+
+    // Compute l_active_row(X)
+    let one = C::Scalar::ONE;
+    let mut l_active_row = vk.domain.empty_extended();
+    parallelize(&mut l_active_row, |values, start| {
+        for (i, value) in values.iter_mut().enumerate() {
+            let idx = i + start;
+            *value = one - (l_last[idx] + l_blind[idx]);
+        }
+    });
+
+    // Compute the optimized evaluation data structure
+    let ev = Evaluator::new_v2(&vk.cs);
+
+    Ok(ProvingKeyV2 {
+        vk,
+        l0,
+        l_last,
+        l_active_row,
+        fixed_values: circuit.preprocessing.fixed.clone(),
+        fixed_polys,
+        fixed_cosets,
+        permutation: permutation_pk,
+        ev,
+    })
 }
 
 /// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `Circuit`.
