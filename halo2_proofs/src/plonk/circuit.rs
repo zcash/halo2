@@ -1550,7 +1550,8 @@ impl<F: Field> Gate<F> {
 pub struct PreprocessingV2<F: Field> {
     // TODO(Edu): Can we replace this by a simpler structure?
     pub(crate) permutation: permutation::keygen::Assembly,
-    // TODO(Edu): Replace this by Vec<Vec<F>>
+    // TODO(Edu): Replace this by Vec<Vec<F>>.  Requires some methods of Polynomial to take Vec<F>
+    // instead
     pub(crate) fixed: Vec<Polynomial<F, LagrangeCoeff>>,
 }
 
@@ -1576,9 +1577,9 @@ pub struct ConstraintSystemV2Backend<F: Field> {
     pub(crate) unblinded_advice_columns: Vec<usize>,
 
     /// Contains the phase for each advice column. Should have same length as num_advice_columns.
-    pub(crate) advice_column_phase: Vec<sealed::Phase>,
+    pub(crate) advice_column_phase: Vec<u8>,
     /// Contains the phase for each challenge. Should have same length as num_challenges.
-    pub(crate) challenge_phase: Vec<sealed::Phase>,
+    pub(crate) challenge_phase: Vec<u8>,
 
     /// This is a cached vector that maps virtual selectors to the concrete
     /// fixed column that they were compressed into. This is just used by dev
@@ -1697,6 +1698,16 @@ impl<F: Field> ConstraintSystemV2Backend<F> {
         // Add an additional blinding factor as a slight defense against
         // off-by-one errors.
         factors + 1
+    }
+
+    pub(crate) fn phases(&self) -> Vec<u8> {
+        let max_phase = self
+            .advice_column_phase
+            .iter()
+            .max()
+            .map(|phase| phase.0)
+            .unwrap_or_default();
+        (0..=max_phase).collect()
     }
 }
 

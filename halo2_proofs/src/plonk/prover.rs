@@ -9,7 +9,7 @@ use super::{
     circuit::{
         sealed::{self},
         Advice, Any, Assignment, Challenge, Circuit, Column, CompiledCircuitV2, ConstraintSystem,
-        Fixed, FloorPlanner, Instance, Selector,
+        ConstraintSystemV2Backend, Fixed, FloorPlanner, Instance, Selector,
     },
     lookup, permutation, shuffle, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta,
     ChallengeX, ChallengeY, Error, ProvingKey, ProvingKeyV2,
@@ -21,7 +21,7 @@ use crate::{
     plonk::Assigned,
     poly::{
         commitment::{Blind, CommitmentScheme, Params, Prover},
-        Basis, Coeff, LagrangeCoeff, Polynomial, ProverQuery,
+        Basis, Coeff, LagrangeCoeff, Polynomial, ProverQuery, Rotation,
     },
 };
 use crate::{
@@ -30,12 +30,23 @@ use crate::{
 };
 use group::prime::PrimeCurveAffine;
 
+#[derive(Debug)]
 struct InstanceSingle<C: CurveAffine> {
     pub instance_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
     pub instance_polys: Vec<Polynomial<C::Scalar, Coeff>>,
 }
 
+#[derive(Debug, Clone)]
+struct AdviceSingle<C: CurveAffine, B: Basis> {
+    pub advice_polys: Vec<Polynomial<C::Scalar, B>>,
+    pub advice_blinds: Vec<Blind<C::Scalar>>,
+}
+
+/// The prover object used to create proofs interactively by passing the witnesses to commit at
+/// each phase.
+#[derive(Debug)]
 pub struct ProverV2<
+    'a,
     'params,
     Scheme: CommitmentScheme,
     P: Prover<'params, Scheme>,
@@ -44,25 +55,38 @@ pub struct ProverV2<
     T: TranscriptWrite<Scheme::Curve, E>,
 > {
     params: &'params Scheme::ParamsProver,
+    pk: &'a ProvingKeyV2<Scheme::Curve>,
+    cs: &'a ConstraintSystemV2Backend<Scheme::Scalar>,
+    advice_queries: Vec<(Column<Advice>, Rotation)>,
+    instance_queries: Vec<(Column<Instance>, Rotation)>,
+    fixed_queries: Vec<(Column<Fixed>, Rotation)>,
+    phases: Vec<u8>,
     instance: Vec<InstanceSingle<Scheme::Curve>>,
+    rng: R,
+    transcript: T,
+    advice: AdviceSingle<Scheme::Curve, LagrangeCoeff>,
+    challenges: HashMap<usize, Scheme::Scalar>,
+    next_phase_index: usize,
     _marker: std::marker::PhantomData<(Scheme, P, E, R, T)>,
 }
 
 impl<
+        'a,
         'params,
         Scheme: CommitmentScheme,
         P: Prover<'params, Scheme>,
         E: EncodedChallenge<Scheme::Curve>,
         R: RngCore,
         T: TranscriptWrite<Scheme::Curve, E>,
-    > ProverV2<'params, Scheme, P, E, R, T>
+    > ProverV2<'a, 'params, Scheme, P, E, R, T>
 {
+    /// Create a new prover object
     pub fn new(
         params: &'params Scheme::ParamsProver,
-        pk: &ProvingKeyV2<Scheme::Curve>,
-        circuit: &CompiledCircuitV2<Scheme::Scalar>,
+        pk: &'a ProvingKeyV2<Scheme::Curve>,
+        circuit: &'a CompiledCircuitV2<Scheme::Scalar>,
         instance: &[&[Scheme::Scalar]],
-        mut rng: R,
+        rng: R,
         mut transcript: T,
     ) -> Result<Self, Error>
     where
@@ -72,10 +96,14 @@ impl<
             return Err(Error::InvalidInstances);
         }
 
+        // TODO(Edu): Calculate advice_queries, fixed_queries, instance_queries from the gates and
+        // lookup expressions.
+
         // Hash verification key into transcript
         pk.vk.hash_into(&mut transcript)?;
 
         let meta = &circuit.cs;
+        let phases = circuit.cs.phases();
 
         let domain = &pk.vk.domain;
 
@@ -133,11 +161,153 @@ impl<
             })
             .collect::<Result<Vec<_>, _>>()?;
 
+        let advice = AdviceSingle::<Scheme::Curve, LagrangeCoeff> {
+            advice_polys: vec![domain.empty_lagrange(); meta.num_advice_columns],
+            advice_blinds: vec![Blind::default(); meta.num_advice_columns],
+        };
+        let challenges = HashMap::<usize, Scheme::Scalar>::with_capacity(meta.num_challenges);
+
         Ok(ProverV2 {
             params,
+            cs: &circuit.cs,
+            pk,
+            advice_queries: todo!(),
+            instance_queries: todo!(),
+            fixed_queries: todo!(),
+            phases,
             instance,
+            rng,
+            transcript,
+            advice,
+            challenges,
+            next_phase_index: 0,
             _marker: std::marker::PhantomData {},
         })
+    }
+
+    /// Commit the `witness` at `phase` and return the challenges after `phase`.
+    pub fn commit_phase(
+        &mut self,
+        phase: u8,
+        // TODO: Turn this into Vec<Option<Vec<F>>>.  Requires batch_invert_assigned to work with
+        // Vec<F>
+        witness: Vec<Option<Polynomial<Assigned<Scheme::Scalar>, LagrangeCoeff>>>,
+    ) -> Result<HashMap<usize, Scheme::Scalar>, Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        let current_phase = match self.phases.get(self.next_phase_index) {
+            Some(phase) => phase,
+            None => {
+                panic!("TODO: Return Error instead.  All phases already commited");
+            }
+        };
+        if phase != *current_phase {
+            panic!("TODO: Return Error instead. Committing invalid phase");
+        }
+
+        let params = self.params;
+        let meta = self.cs;
+        let domain = self.pk.vk.domain;
+
+        let mut transcript = self.transcript;
+        let mut rng = self.rng;
+
+        let mut advice = self.advice;
+        let mut challenges = self.challenges;
+
+        let column_indices = meta
+            .advice_column_phase
+            .iter()
+            .enumerate()
+            .filter_map(|(column_index, phase)| {
+                if current_phase == phase {
+                    Some(column_index)
+                } else {
+                    None
+                }
+            })
+            .collect::<BTreeSet<_>>();
+
+        // TODO: Check that witness.len() is the expected number of advice columns.
+
+        // Check that all current_phase advice columns are Some
+        for (column_index, advice_column) in witness.iter().enumerate() {
+            if column_indices.contains(&column_index) {
+                // TODO: Check that column_index in witness is Some
+                // TODO: Check that the column length is `params.n()`
+            } else {
+                // TODO: Check that column_index in witness is None
+            };
+        }
+        let mut advice_values =
+            batch_invert_assigned::<Scheme::Scalar>(witness.into_iter().flatten().collect());
+        let unblinded_advice = HashSet::from_iter(meta.unblinded_advice_columns.clone());
+        let unusable_rows_start = params.n() as usize - (meta.blinding_factors() + 1);
+
+        // Add blinding factors to advice columns
+        for (column_index, advice_values) in column_indices.iter().zip(&mut advice_values) {
+            if !unblinded_advice.contains(column_index) {
+                for cell in &mut advice_values[unusable_rows_start..] {
+                    *cell = Scheme::Scalar::random(&mut rng);
+                }
+            } else {
+                #[cfg(feature = "sanity-checks")]
+                for cell in &advice_values[unusable_rows_start..] {
+                    assert_eq!(*cell, Scheme::Scalar::ZERO);
+                }
+            }
+        }
+
+        // Compute commitments to advice column polynomials
+        let blinds: Vec<_> = column_indices
+            .iter()
+            .map(|i| {
+                if unblinded_advice.contains(i) {
+                    Blind::default()
+                } else {
+                    Blind(Scheme::Scalar::random(&mut rng))
+                }
+            })
+            .collect();
+        let advice_commitments_projective: Vec<_> = advice_values
+            .iter()
+            .zip(blinds.iter())
+            .map(|(poly, blind)| params.commit_lagrange(poly, *blind))
+            .collect();
+        let mut advice_commitments =
+            vec![Scheme::Curve::identity(); advice_commitments_projective.len()];
+        <Scheme::Curve as CurveAffine>::CurveExt::batch_normalize(
+            &advice_commitments_projective,
+            &mut advice_commitments,
+        );
+        let advice_commitments = advice_commitments;
+        drop(advice_commitments_projective);
+
+        for commitment in &advice_commitments {
+            transcript.write_point(*commitment)?;
+        }
+        for ((column_index, advice_values), blind) in
+            column_indices.iter().zip(advice_values).zip(blinds)
+        {
+            advice.advice_polys[*column_index] = advice_values;
+            advice.advice_blinds[*column_index] = blind;
+        }
+
+        for (index, phase) in meta.challenge_phase.iter().enumerate() {
+            if current_phase == phase {
+                let existing =
+                    challenges.insert(index, *transcript.squeeze_challenge_scalar::<()>());
+                assert!(existing.is_none());
+            }
+        }
+
+        self.next_phase_index += 1;
+        Ok(challenges.clone())
+    }
+
+    pub fn create_proof(self) -> Result<T, Error> {
+        todo!()
     }
 }
 
