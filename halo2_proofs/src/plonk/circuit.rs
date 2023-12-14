@@ -1704,8 +1704,8 @@ impl<F: Field> ConstraintSystemV2Backend<F> {
         let max_phase = self
             .advice_column_phase
             .iter()
+            .cloned()
             .max()
-            .map(|phase| phase.0)
             .unwrap_or_default();
         (0..=max_phase).collect()
     }
