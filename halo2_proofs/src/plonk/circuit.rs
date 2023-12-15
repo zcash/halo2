@@ -1,4 +1,4 @@
-use super::{lookup, permutation, shuffle, Assigned, Error};
+use super::{lookup, permutation, shuffle, Assigned, Error, Queries};
 use crate::circuit::layouter::SyncDeps;
 use crate::dev::metadata;
 use crate::{
@@ -9,6 +9,7 @@ use core::cmp::max;
 use core::ops::{Add, Mul};
 use ff::Field;
 use sealed::SealedPhase;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::iter::{Product, Sum};
@@ -1587,6 +1588,48 @@ pub struct CompiledCircuitV2<F: Field> {
     pub(crate) cs: ConstraintSystemV2Backend<F>,
 }
 
+struct QueriesSet {
+    advice: BTreeSet<(Column<Advice>, Rotation)>,
+    instance: BTreeSet<(Column<Instance>, Rotation)>,
+    fixed: BTreeSet<(Column<Fixed>, Rotation)>,
+}
+
+fn collect_queries<F: Field>(expr: &Expression<F>, queries: &mut QueriesSet) {
+    match expr {
+        Expression::Constant(_) => (),
+        Expression::Selector(_selector) => {
+            panic!("no Selector should arrive to the Backend");
+        }
+        Expression::Fixed(query) => {
+            queries
+                .fixed
+                .insert((Column::new(query.column_index, Fixed), query.rotation));
+        }
+        Expression::Advice(query) => {
+            queries.advice.insert((
+                Column::new(query.column_index, Advice { phase: query.phase }),
+                query.rotation,
+            ));
+        }
+        Expression::Instance(query) => {
+            queries
+                .instance
+                .insert((Column::new(query.column_index, Instance), query.rotation));
+        }
+        Expression::Challenge(_) => (),
+        Expression::Negated(a) => collect_queries(a, queries),
+        Expression::Sum(a, b) => {
+            collect_queries(a, queries);
+            collect_queries(b, queries);
+        }
+        Expression::Product(a, b) => {
+            collect_queries(a, queries);
+            collect_queries(b, queries);
+        }
+        Expression::Scaled(a, _) => collect_queries(a, queries),
+    };
+}
+
 /// This is a description of the circuit environment, such as the gate, column and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
@@ -1611,10 +1654,6 @@ pub struct ConstraintSystemV2Backend<F: Field> {
     // pub(crate) selector_map: Vec<Column<Fixed>>,
     pub(crate) gates: Vec<GateV2Backend<F>>,
     // pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
-    // Contains an integer for each advice column
-    // identifying how many distinct queries it has
-    // so far; should be same length as num_advice_columns.
-    num_advice_queries: Vec<usize>,
     // pub(crate) instance_queries: Vec<(Column<Instance>, Rotation)>,
     // pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
 
@@ -1683,47 +1722,6 @@ impl<F: Field> ConstraintSystemV2Backend<F> {
         degree
     }
 
-    /// Returns the minimum necessary rows that need to exist in order to
-    /// account for e.g. blinding factors.
-    pub fn minimum_rows(&self) -> usize {
-        self.blinding_factors() // m blinding factors
-            + 1 // for l_{-(m + 1)} (l_last)
-            + 1 // for l_0 (just for extra breathing room for the permutation
-                // argument, to essentially force a separation in the
-                // permutation polynomial between the roles of l_last, l_0
-                // and the interstitial values.)
-            + 1 // for at least one row
-    }
-
-    /// Compute the number of blinding factors necessary to perfectly blind
-    /// each of the prover's witness polynomials.
-    pub fn blinding_factors(&self) -> usize {
-        // All of the prover's advice columns are evaluated at no more than
-        let factors = *self.num_advice_queries.iter().max().unwrap_or(&1);
-        // distinct points during gate checks.
-
-        // - The permutation argument witness polynomials are evaluated at most 3 times.
-        // - Each lookup argument has independent witness polynomials, and they are
-        //   evaluated at most 2 times.
-        let factors = std::cmp::max(3, factors);
-
-        // Each polynomial is evaluated at most an additional time during
-        // multiopen (at x_3 to produce q_evals):
-        let factors = factors + 1;
-
-        // h(x) is derived by the other evaluations so it does not reveal
-        // anything; in fact it does not even appear in the proof.
-
-        // h(x_3) is also not revealed; the verifier only learns a single
-        // evaluation of a polynomial in x_1 which has h(x_3) and another random
-        // polynomial evaluated at x_3 as coefficients -- this random polynomial
-        // is "random_poly" in the vanishing argument.
-
-        // Add an additional blinding factor as a slight defense against
-        // off-by-one errors.
-        factors + 1
-    }
-
     pub(crate) fn phases(&self) -> Vec<u8> {
         let max_phase = self
             .advice_column_phase
@@ -1732,6 +1730,50 @@ impl<F: Field> ConstraintSystemV2Backend<F> {
             .max()
             .unwrap_or_default();
         (0..=max_phase).collect()
+    }
+
+    pub(crate) fn collect_queries(&self) -> Queries {
+        let mut queries = QueriesSet {
+            advice: BTreeSet::new(),
+            instance: BTreeSet::new(),
+            fixed: BTreeSet::new(),
+        };
+        let mut num_advice_queries = vec![0; self.num_advice_columns];
+
+        for gate in &self.gates {
+            for expr in gate.polynomials() {
+                collect_queries(expr, &mut queries);
+            }
+        }
+        for lookup in &self.lookups {
+            for expr in lookup
+                .input_expressions
+                .iter()
+                .chain(lookup.table_expressions.iter())
+            {
+                collect_queries(expr, &mut queries);
+            }
+        }
+        for shuffle in &self.shuffles {
+            for expr in shuffle
+                .input_expressions
+                .iter()
+                .chain(shuffle.shuffle_expressions.iter())
+            {
+                collect_queries(expr, &mut queries);
+            }
+        }
+
+        for (column, _) in queries.advice.iter() {
+            num_advice_queries[column.index()] += 1;
+        }
+
+        Queries {
+            advice: queries.advice.into_iter().collect(),
+            instance: queries.instance.into_iter().collect(),
+            fixed: queries.fixed.into_iter().collect(),
+            num_advice_queries,
+        }
     }
 }
 

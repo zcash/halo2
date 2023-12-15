@@ -166,6 +166,7 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
     /// - constructs Permuted<C> struct using permuted_input_value = A', and
     ///   permuted_table_expression = S'.
     /// The Permuted<C> struct is used to update the Lookup, and is then returned.
+    // TODO: Remove
     #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn commit_permuted<
         'a,
@@ -286,7 +287,7 @@ impl<C: CurveAffine> Permuted<C> {
         mut rng: R,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
-        let blinding_factors = pk.vk.cs.blinding_factors();
+        let blinding_factors = pk.vk.queries.blinding_factors();
         // Goal is to compute the products of fractions
         //
         // Numerator: (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
@@ -587,6 +588,7 @@ impl<C: CurveAffine> Committed<C> {
         Ok(Evaluated { constructed: self })
     }
 
+    // TODO: Remove
     pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
         self,
         pk: &ProvingKey<C>,
@@ -661,6 +663,7 @@ impl<C: CurveAffine> Evaluated<C> {
             }))
     }
 
+    // TODO: Remove
     pub(in crate::plonk) fn open<'a>(
         &'a self,
         pk: &'a ProvingKey<C>,
@@ -720,7 +723,7 @@ fn permute_expression_pair_v2<'params, C: CurveAffine, P: Params<'params, C>, R:
     input_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
     table_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
 ) -> Result<ExpressionPair<C::Scalar>, Error> {
-    let blinding_factors = pk.vk.cs.blinding_factors();
+    let blinding_factors = pk.vk.queries.blinding_factors();
     let usable_rows = params.n() as usize - (blinding_factors + 1);
 
     let mut permuted_input_expression: Vec<C::Scalar> = input_expression.to_vec();
@@ -804,6 +807,7 @@ fn permute_expression_pair_v2<'params, C: CurveAffine, P: Params<'params, C>, R:
 /// - the first row in a sequence of like values in A' is the row
 ///   that has the corresponding value in S'.
 /// This method returns (A', S') if no errors are encountered.
+// TODO: Remove
 fn permute_expression_pair<'params, C: CurveAffine, P: Params<'params, C>, R: RngCore>(
     pk: &ProvingKey<C>,
     params: &P,

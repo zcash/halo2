@@ -295,6 +295,7 @@ impl<C: CurveAffine> Evaluator<C> {
     }
 
     /// Creates a new evaluation structure
+    // TODO: Remove
     pub fn new(cs: &ConstraintSystem<C::ScalarExt>) -> Self {
         let mut ev = Evaluator::default();
 
@@ -475,7 +476,7 @@ impl<C: CurveAffine> Evaluator<C> {
             // Permutations
             let sets = &permutation.sets;
             if !sets.is_empty() {
-                let blinding_factors = pk.vk.cs.blinding_factors();
+                let blinding_factors = pk.vk.queries.blinding_factors();
                 let last_rotation = Rotation(-((blinding_factors + 1) as i32));
                 let chunk_len = pk.vk.cs.degree() - 2;
                 let delta_start = beta * &C::Scalar::ZETA;
@@ -695,6 +696,7 @@ impl<C: CurveAffine> Evaluator<C> {
     }
 
     /// Evaluate h poly
+    // TODO: Remove
     #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn evaluate_h(
         &self,

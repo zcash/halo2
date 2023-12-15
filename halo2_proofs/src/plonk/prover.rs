@@ -8,8 +8,8 @@ use std::{collections::HashMap, iter};
 use super::{
     circuit::{
         sealed::{self},
-        Advice, Any, Assignment, Challenge, Circuit, Column, ConstraintSystem,
-        ConstraintSystemV2Backend, Expression, Fixed, FloorPlanner, Instance, Selector,
+        Advice, Any, Assignment, Challenge, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner,
+        Instance, Selector,
     },
     lookup, permutation, shuffle, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta,
     ChallengeX, ChallengeY, Error, ProvingKey, ProvingKeyV2,
@@ -21,7 +21,7 @@ use crate::{
     plonk::Assigned,
     poly::{
         commitment::{Blind, CommitmentScheme, Params, Prover},
-        Basis, Coeff, LagrangeCoeff, Polynomial, ProverQuery, Rotation,
+        Basis, Coeff, LagrangeCoeff, Polynomial, ProverQuery,
     },
 };
 use crate::{
@@ -58,9 +58,9 @@ pub struct ProverV2<
     // Circuit and setup fields
     params: &'params Scheme::ParamsProver,
     pk: &'a ProvingKeyV2<Scheme::Curve>,
-    advice_queries: Vec<(Column<Advice>, Rotation)>,
-    instance_queries: Vec<(Column<Instance>, Rotation)>,
-    fixed_queries: Vec<(Column<Fixed>, Rotation)>,
+    // advice_queries: Vec<(Column<Advice>, Rotation)>,
+    // instance_queries: Vec<(Column<Instance>, Rotation)>,
+    // fixed_queries: Vec<(Column<Fixed>, Rotation)>,
     phases: Vec<u8>,
     // State
     instance: Vec<InstanceSingle<Scheme::Curve>>,
@@ -70,92 +70,6 @@ pub struct ProverV2<
     rng: R,
     transcript: T,
     _marker: std::marker::PhantomData<(P, E)>,
-}
-
-struct Queries {
-    advice: Vec<(Column<Advice>, Rotation)>,
-    instance: Vec<(Column<Instance>, Rotation)>,
-    fixed: Vec<(Column<Fixed>, Rotation)>,
-}
-
-struct QueriesSet {
-    advice: BTreeSet<(Column<Advice>, Rotation)>,
-    instance: BTreeSet<(Column<Instance>, Rotation)>,
-    fixed: BTreeSet<(Column<Fixed>, Rotation)>,
-}
-
-fn collect_queries<F: Field>(expr: &Expression<F>, queries: &mut QueriesSet) {
-    match expr {
-        Expression::Constant(_) => (),
-        Expression::Selector(_selector) => {
-            panic!("no Selector should arrive to the Backend");
-        }
-        Expression::Fixed(query) => {
-            queries
-                .fixed
-                .insert((Column::new(query.column_index, Fixed), query.rotation));
-        }
-        Expression::Advice(query) => {
-            queries.advice.insert((
-                Column::new(query.column_index, Advice { phase: query.phase }),
-                query.rotation,
-            ));
-        }
-        Expression::Instance(query) => {
-            queries
-                .instance
-                .insert((Column::new(query.column_index, Instance), query.rotation));
-        }
-        Expression::Challenge(_) => (),
-        Expression::Negated(a) => collect_queries(a, queries),
-        Expression::Sum(a, b) => {
-            collect_queries(a, queries);
-            collect_queries(b, queries);
-        }
-        Expression::Product(a, b) => {
-            collect_queries(a, queries);
-            collect_queries(b, queries);
-        }
-        Expression::Scaled(a, _) => collect_queries(a, queries),
-    };
-}
-
-fn get_all_queries<F: Field>(cs: &ConstraintSystemV2Backend<F>) -> Queries {
-    let mut queries = QueriesSet {
-        advice: BTreeSet::new(),
-        instance: BTreeSet::new(),
-        fixed: BTreeSet::new(),
-    };
-
-    for gate in &cs.gates {
-        for expr in gate.polynomials() {
-            collect_queries(expr, &mut queries);
-        }
-    }
-    for lookup in &cs.lookups {
-        for expr in lookup
-            .input_expressions
-            .iter()
-            .chain(lookup.table_expressions.iter())
-        {
-            collect_queries(expr, &mut queries);
-        }
-    }
-    for shuffle in &cs.shuffles {
-        for expr in shuffle
-            .input_expressions
-            .iter()
-            .chain(shuffle.shuffle_expressions.iter())
-        {
-            collect_queries(expr, &mut queries);
-        }
-    }
-
-    Queries {
-        advice: queries.advice.into_iter().collect(),
-        instance: queries.instance.into_iter().collect(),
-        fixed: queries.fixed.into_iter().collect(),
-    }
 }
 
 impl<
@@ -186,12 +100,11 @@ impl<
             }
         }
 
-        let queries = get_all_queries(&pk.vk.cs);
-
         // Hash verification key into transcript
         pk.vk.hash_into(&mut transcript)?;
 
         let meta = &pk.vk.cs;
+        let queries = &pk.vk.queries;
         let phases = meta.phases();
 
         let domain = &pk.vk.domain;
@@ -204,7 +117,7 @@ impl<
                     .map(|values| {
                         let mut poly = domain.empty_lagrange();
                         assert_eq!(poly.len(), params.n() as usize);
-                        if values.len() > (poly.len() - (meta.blinding_factors() + 1)) {
+                        if values.len() > (poly.len() - (queries.blinding_factors() + 1)) {
                             return Err(Error::InstanceTooLarge);
                         }
                         for (poly, value) in poly.iter_mut().zip(values.iter()) {
@@ -266,9 +179,6 @@ impl<
         Ok(ProverV2 {
             params,
             pk,
-            advice_queries: queries.advice,
-            instance_queries: queries.instance,
-            fixed_queries: queries.fixed,
             phases,
             instance,
             rng,
@@ -303,6 +213,7 @@ impl<
 
         let params = self.params;
         let meta = &self.pk.vk.cs;
+        let queries = &self.pk.vk.queries;
 
         let transcript = &mut self.transcript;
         let mut rng = &mut self.rng;
@@ -348,7 +259,7 @@ impl<
             Option<Polynomial<Assigned<Scheme::Scalar>, LagrangeCoeff>>,
         >|
          -> Result<(), Error> {
-            let unusable_rows_start = params.n() as usize - (meta.blinding_factors() + 1);
+            let unusable_rows_start = params.n() as usize - (queries.blinding_factors() + 1);
             let mut advice_values =
                 batch_invert_assigned::<Scheme::Scalar>(witness.into_iter().flatten().collect());
             let unblinded_advice: HashSet<usize> =
@@ -428,6 +339,7 @@ impl<
     {
         let params = self.params;
         let meta = &self.pk.vk.cs;
+        let queries = &self.pk.vk.queries;
         let pk = self.pk;
         let domain = &self.pk.vk.domain;
 
@@ -598,8 +510,8 @@ impl<
             // Compute and hash instance evals for the circuit instance
             for instance in instance.iter() {
                 // Evaluate polynomials at omega^i x
-                let instance_evals: Vec<_> = self
-                    .instance_queries
+                let instance_evals: Vec<_> = queries
+                    .instance
                     .iter()
                     .map(|&(column, at)| {
                         eval_polynomial(
@@ -619,8 +531,8 @@ impl<
         // Compute and hash advice evals for the circuit instance
         for advice in advice.iter() {
             // Evaluate polynomials at omega^i x
-            let advice_evals: Vec<_> = self
-                .advice_queries
+            let advice_evals: Vec<_> = queries
+                .advice
                 .iter()
                 .map(|&(column, at)| {
                     eval_polynomial(
@@ -637,8 +549,8 @@ impl<
         }
 
         // Compute and hash fixed evals
-        let fixed_evals: Vec<_> = self
-            .fixed_queries
+        let fixed_evals: Vec<_> = queries
+            .fixed
             .iter()
             .map(|&(column, at)| {
                 eval_polynomial(&pk.fixed_polys[column.index()], domain.rotate_omega(*x, at))
@@ -695,7 +607,7 @@ impl<
                 iter::empty()
                     .chain(
                         P::QUERY_INSTANCE
-                            .then_some(self.instance_queries.iter().map(move |&(column, at)| {
+                            .then_some(queries.instance.iter().map(move |&(column, at)| {
                                 ProverQuery {
                                     point: domain.rotate_omega(*x, at),
                                     poly: &instance.instance_polys[column.index()],
@@ -705,20 +617,16 @@ impl<
                             .into_iter()
                             .flatten(),
                     )
-                    .chain(
-                        self.advice_queries
-                            .iter()
-                            .map(move |&(column, at)| ProverQuery {
-                                point: domain.rotate_omega(*x, at),
-                                poly: &advice.advice_polys[column.index()],
-                                blind: advice.advice_blinds[column.index()],
-                            }),
-                    )
+                    .chain(queries.advice.iter().map(move |&(column, at)| ProverQuery {
+                        point: domain.rotate_omega(*x, at),
+                        poly: &advice.advice_polys[column.index()],
+                        blind: advice.advice_blinds[column.index()],
+                    }))
                     .chain(permutation.open_v2(pk, x))
                     .chain(lookups.iter().flat_map(move |p| p.open_v2(pk, x)))
                     .chain(shuffles.iter().flat_map(move |p| p.open_v2(pk, x)))
             })
-            .chain(self.fixed_queries.iter().map(|&(column, at)| ProverQuery {
+            .chain(queries.fixed.iter().map(|&(column, at)| ProverQuery {
                 point: domain.rotate_omega(*x, at),
                 poly: &pk.fixed_polys[column.index()],
                 blind: Blind::default(),
@@ -740,6 +648,7 @@ impl<
 /// parameters `params` and the proving key [`ProvingKey`] that was
 /// generated previously for the same circuit. The provided `instances`
 /// are zero-padded internally.
+// TODO: Remove
 pub fn create_proof<
     'params,
     Scheme: CommitmentScheme,

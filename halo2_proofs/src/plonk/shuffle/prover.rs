@@ -95,6 +95,7 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
     /// [S_0, S_1, ..., S_{m-1}], this method
     /// - constructs A_compressed = \theta^{m-1} A_0 + theta^{m-2} A_1 + ... + \theta A_{m-2} + A_{m-1}
     ///   and S_compressed = \theta^{m-1} S_0 + theta^{m-2} S_1 + ... + \theta S_{m-2} + S_{m-1},
+    // TODO: Remove
     #[allow(clippy::too_many_arguments)]
     fn compress<'a, 'params: 'a, C, P: Params<'params, C>>(
         &self,
@@ -187,7 +188,7 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
             challenges,
         );
 
-        let blinding_factors = pk.vk.cs.blinding_factors();
+        let blinding_factors = pk.vk.queries.blinding_factors();
 
         let mut shuffle_product = vec![C::Scalar::ZERO; params.n() as usize];
         parallelize(&mut shuffle_product, |shuffle_product, start| {
@@ -259,6 +260,7 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
     /// constructs the grand product polynomial over the shuffle.
     /// The grand product polynomial is used to populate the Product<C> struct.
     /// The Product<C> struct is added to the Shuffle and finally returned by the method.
+    // TODO: Remove
     #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn commit_product<
         'a,
@@ -391,6 +393,7 @@ impl<C: CurveAffine> Committed<C> {
         Ok(Evaluated { constructed: self })
     }
 
+    // TODO: Remove
     pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
         self,
         pk: &ProvingKey<C>,
@@ -439,6 +442,7 @@ impl<C: CurveAffine> Evaluated<C> {
             }))
     }
 
+    // TODO: Remove
     pub(in crate::plonk) fn open<'a>(
         &'a self,
         pk: &'a ProvingKey<C>,
