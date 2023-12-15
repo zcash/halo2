@@ -62,10 +62,10 @@ pub struct ProverV2<
     instance_queries: Vec<(Column<Instance>, Rotation)>,
     fixed_queries: Vec<(Column<Fixed>, Rotation)>,
     phases: Vec<u8>,
-    instance: InstanceSingle<Scheme::Curve>,
+    instance: Vec<InstanceSingle<Scheme::Curve>>,
     rng: R,
     transcript: T,
-    advice: AdviceSingle<Scheme::Curve, LagrangeCoeff>,
+    advice: Vec<AdviceSingle<Scheme::Curve, LagrangeCoeff>>,
     challenges: HashMap<usize, Scheme::Scalar>,
     next_phase_index: usize,
     _marker: std::marker::PhantomData<(Scheme, P, E, R, T)>,
@@ -86,7 +86,7 @@ impl<
         params: &'params Scheme::ParamsProver,
         pk: &'a ProvingKeyV2<Scheme::Curve>,
         circuit: &'a CompiledCircuitV2<Scheme::Scalar>,
-        instance: &[&[Scheme::Scalar]],
+        instances: &[&[&[Scheme::Scalar]]],
         rng: R,
         mut transcript: T,
     ) -> Result<Self, Error>
@@ -96,8 +96,10 @@ impl<
     {
         // TODO: We have cs duplicated in circuit.cs and pk.vk.cs.  Can we dedup them?
 
-        if instance.len() != pk.vk.cs.num_instance_columns {
-            return Err(Error::InvalidInstances);
+        for instance in instances.iter() {
+            if instance.len() != pk.vk.cs.num_instance_columns {
+                return Err(Error::InvalidInstances);
+            }
         }
 
         // TODO(Edu): Calculate advice_queries, fixed_queries, instance_queries from the gates and
@@ -111,62 +113,71 @@ impl<
 
         let domain = &pk.vk.domain;
 
-        let instance: InstanceSingle<Scheme::Curve> = {
-            let instance_values = instance
-                .iter()
-                .map(|values| {
-                    let mut poly = domain.empty_lagrange();
-                    assert_eq!(poly.len(), params.n() as usize);
-                    if values.len() > (poly.len() - (meta.blinding_factors() + 1)) {
-                        return Err(Error::InstanceTooLarge);
-                    }
-                    for (poly, value) in poly.iter_mut().zip(values.iter()) {
-                        if !P::QUERY_INSTANCE {
-                            transcript.common_scalar(*value)?;
-                        }
-                        *poly = *value;
-                    }
-                    Ok(poly)
-                })
-                .collect::<Result<Vec<_>, _>>()?;
-
-            if P::QUERY_INSTANCE {
-                let instance_commitments_projective: Vec<_> = instance_values
+        // TODO: Name this better
+        let mut instance_fn =
+            |instance: &[&[Scheme::Scalar]]| -> Result<InstanceSingle<Scheme::Curve>, Error> {
+                let instance_values = instance
                     .iter()
-                    .map(|poly| params.commit_lagrange(poly, Blind::default()))
-                    .collect();
-                let mut instance_commitments =
-                    vec![Scheme::Curve::identity(); instance_commitments_projective.len()];
-                <Scheme::Curve as CurveAffine>::CurveExt::batch_normalize(
-                    &instance_commitments_projective,
-                    &mut instance_commitments,
-                );
-                let instance_commitments = instance_commitments;
-                drop(instance_commitments_projective);
+                    .map(|values| {
+                        let mut poly = domain.empty_lagrange();
+                        assert_eq!(poly.len(), params.n() as usize);
+                        if values.len() > (poly.len() - (meta.blinding_factors() + 1)) {
+                            return Err(Error::InstanceTooLarge);
+                        }
+                        for (poly, value) in poly.iter_mut().zip(values.iter()) {
+                            if !P::QUERY_INSTANCE {
+                                transcript.common_scalar(*value)?;
+                            }
+                            *poly = *value;
+                        }
+                        Ok(poly)
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
 
-                for commitment in &instance_commitments {
-                    transcript.common_point(*commitment)?;
+                if P::QUERY_INSTANCE {
+                    let instance_commitments_projective: Vec<_> = instance_values
+                        .iter()
+                        .map(|poly| params.commit_lagrange(poly, Blind::default()))
+                        .collect();
+                    let mut instance_commitments =
+                        vec![Scheme::Curve::identity(); instance_commitments_projective.len()];
+                    <Scheme::Curve as CurveAffine>::CurveExt::batch_normalize(
+                        &instance_commitments_projective,
+                        &mut instance_commitments,
+                    );
+                    let instance_commitments = instance_commitments;
+                    drop(instance_commitments_projective);
+
+                    for commitment in &instance_commitments {
+                        transcript.common_point(*commitment)?;
+                    }
                 }
-            }
 
-            let instance_polys: Vec<_> = instance_values
-                .iter()
-                .map(|poly| {
-                    let lagrange_vec = domain.lagrange_from_vec(poly.to_vec());
-                    domain.lagrange_to_coeff(lagrange_vec)
+                let instance_polys: Vec<_> = instance_values
+                    .iter()
+                    .map(|poly| {
+                        let lagrange_vec = domain.lagrange_from_vec(poly.to_vec());
+                        domain.lagrange_to_coeff(lagrange_vec)
+                    })
+                    .collect();
+
+                Ok(InstanceSingle {
+                    instance_values,
+                    instance_polys,
                 })
-                .collect();
+            };
+        let instance: Vec<InstanceSingle<Scheme::Curve>> = instances
+            .iter()
+            .map(|instance| instance_fn(instance))
+            .collect::<Result<Vec<_>, _>>()?;
 
-            InstanceSingle {
-                instance_values,
-                instance_polys,
-            }
-        };
-
-        let advice = AdviceSingle::<Scheme::Curve, LagrangeCoeff> {
-            advice_polys: vec![domain.empty_lagrange(); meta.num_advice_columns],
-            advice_blinds: vec![Blind::default(); meta.num_advice_columns],
-        };
+        let advice = vec![
+            AdviceSingle::<Scheme::Curve, LagrangeCoeff> {
+                advice_polys: vec![domain.empty_lagrange(); meta.num_advice_columns],
+                advice_blinds: vec![Blind::default(); meta.num_advice_columns],
+            };
+            instances.len()
+        ];
         let challenges = HashMap::<usize, Scheme::Scalar>::with_capacity(meta.num_challenges);
 
         Ok(ProverV2 {
@@ -193,7 +204,7 @@ impl<
         phase: u8,
         // TODO: Turn this into Vec<Option<Vec<F>>>.  Requires batch_invert_assigned to work with
         // Vec<F>
-        witness: Vec<Option<Polynomial<Assigned<Scheme::Scalar>, LagrangeCoeff>>>,
+        witness: Vec<Vec<Option<Polynomial<Assigned<Scheme::Scalar>, LagrangeCoeff>>>>,
     ) -> Result<HashMap<usize, Scheme::Scalar>, Error>
     where
         Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
@@ -231,6 +242,14 @@ impl<
             .collect::<BTreeSet<_>>();
 
         // TODO: Check that witness.len() is the expected number of advice columns.
+        if witness.len() != self.instance.len() {
+            return Err(Error::Other(format!("witness.len() != instance.len()")));
+        }
+        for witness in witness.iter() {
+            if witness.len() != meta.num_instance_columns {
+                return Err(Error::InvalidInstances);
+            }
+        }
 
         // Check that all current_phase advice columns are Some
         for (column_index, advice_column) in witness.iter().enumerate() {
@@ -241,59 +260,72 @@ impl<
                 // TODO: Check that column_index in witness is None
             };
         }
-        let mut advice_values =
-            batch_invert_assigned::<Scheme::Scalar>(witness.into_iter().flatten().collect());
-        let unblinded_advice: HashSet<usize> =
-            HashSet::from_iter(meta.unblinded_advice_columns.clone());
-        let unusable_rows_start = params.n() as usize - (meta.blinding_factors() + 1);
 
-        // Add blinding factors to advice columns
-        for (column_index, advice_values) in column_indices.iter().zip(&mut advice_values) {
-            if !unblinded_advice.contains(column_index) {
-                for cell in &mut advice_values[unusable_rows_start..] {
-                    *cell = Scheme::Scalar::random(&mut rng);
-                }
-            } else {
-                #[cfg(feature = "sanity-checks")]
-                for cell in &advice_values[unusable_rows_start..] {
-                    assert_eq!(*cell, Scheme::Scalar::ZERO);
+        let mut commit_phase_fn = |advice: &mut AdviceSingle<Scheme::Curve, LagrangeCoeff>,
+                                   challenges: &mut HashMap<usize, Scheme::Scalar>,
+                                   witness: Vec<
+            Option<Polynomial<Assigned<Scheme::Scalar>, LagrangeCoeff>>,
+        >|
+         -> Result<(), Error> {
+            let unusable_rows_start = params.n() as usize - (meta.blinding_factors() + 1);
+            let mut advice_values =
+                batch_invert_assigned::<Scheme::Scalar>(witness.into_iter().flatten().collect());
+            let unblinded_advice: HashSet<usize> =
+                HashSet::from_iter(meta.unblinded_advice_columns.clone());
+
+            // Add blinding factors to advice columns
+            for (column_index, advice_values) in column_indices.iter().zip(&mut advice_values) {
+                if !unblinded_advice.contains(column_index) {
+                    for cell in &mut advice_values[unusable_rows_start..] {
+                        *cell = Scheme::Scalar::random(&mut rng);
+                    }
+                } else {
+                    #[cfg(feature = "sanity-checks")]
+                    for cell in &advice_values[unusable_rows_start..] {
+                        assert_eq!(*cell, Scheme::Scalar::ZERO);
+                    }
                 }
             }
-        }
 
-        // Compute commitments to advice column polynomials
-        let blinds: Vec<_> = column_indices
-            .iter()
-            .map(|i| {
-                if unblinded_advice.contains(i) {
-                    Blind::default()
-                } else {
-                    Blind(Scheme::Scalar::random(&mut rng))
-                }
-            })
-            .collect();
-        let advice_commitments_projective: Vec<_> = advice_values
-            .iter()
-            .zip(blinds.iter())
-            .map(|(poly, blind)| params.commit_lagrange(poly, *blind))
-            .collect();
-        let mut advice_commitments =
-            vec![Scheme::Curve::identity(); advice_commitments_projective.len()];
-        <Scheme::Curve as CurveAffine>::CurveExt::batch_normalize(
-            &advice_commitments_projective,
-            &mut advice_commitments,
-        );
-        let advice_commitments = advice_commitments;
-        drop(advice_commitments_projective);
+            // Compute commitments to advice column polynomials
+            let blinds: Vec<_> = column_indices
+                .iter()
+                .map(|i| {
+                    if unblinded_advice.contains(i) {
+                        Blind::default()
+                    } else {
+                        Blind(Scheme::Scalar::random(&mut rng))
+                    }
+                })
+                .collect();
+            let advice_commitments_projective: Vec<_> = advice_values
+                .iter()
+                .zip(blinds.iter())
+                .map(|(poly, blind)| params.commit_lagrange(poly, *blind))
+                .collect();
+            let mut advice_commitments =
+                vec![Scheme::Curve::identity(); advice_commitments_projective.len()];
+            <Scheme::Curve as CurveAffine>::CurveExt::batch_normalize(
+                &advice_commitments_projective,
+                &mut advice_commitments,
+            );
+            let advice_commitments = advice_commitments;
+            drop(advice_commitments_projective);
 
-        for commitment in &advice_commitments {
-            transcript.write_point(*commitment)?;
-        }
-        for ((column_index, advice_values), blind) in
-            column_indices.iter().zip(advice_values).zip(blinds)
-        {
-            advice.advice_polys[*column_index] = advice_values;
-            advice.advice_blinds[*column_index] = blind;
+            for commitment in &advice_commitments {
+                transcript.write_point(*commitment)?;
+            }
+            for ((column_index, advice_values), blind) in
+                column_indices.iter().zip(advice_values).zip(blinds)
+            {
+                advice.advice_polys[*column_index] = advice_values;
+                advice.advice_blinds[*column_index] = blind;
+            }
+            Ok(())
+        };
+
+        for (witness, advice) in witness.into_iter().zip(advice.iter_mut()) {
+            commit_phase_fn(advice, challenges, witness)?;
         }
 
         for (index, phase) in meta.challenge_phase.iter().enumerate() {
@@ -321,20 +353,8 @@ impl<
         let mut transcript = self.transcript;
         let mut rng = self.rng;
 
-        let instance = std::mem::replace(
-            &mut self.instance,
-            InstanceSingle {
-                instance_values: Vec::new(),
-                instance_polys: Vec::new(),
-            },
-        );
-        let advice = std::mem::replace(
-            &mut self.advice,
-            AdviceSingle {
-                advice_polys: Vec::new(),
-                advice_blinds: Vec::new(),
-            },
-        );
+        let instance = std::mem::replace(&mut self.instance, Vec::new());
+        let advice = std::mem::replace(&mut self.advice, Vec::new());
         let mut challenges = self.challenges;
 
         assert_eq!(challenges.len(), meta.num_challenges);
@@ -345,25 +365,36 @@ impl<
         // Sample theta challenge for keeping lookup columns linearly independent
         let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
 
-        // Construct and commit to permuted values for each lookup
-        let lookups: Vec<lookup::prover::Permuted<Scheme::Curve>> = pk
-            .vk
-            .cs
-            .lookups
+        let mut lookups_fn =
+            |instance: &InstanceSingle<Scheme::Curve>,
+             advice: &AdviceSingle<Scheme::Curve, LagrangeCoeff>|
+             -> Result<Vec<lookup::prover::Permuted<Scheme::Curve>>, Error> {
+                pk.vk
+                    .cs
+                    .lookups
+                    .iter()
+                    .map(|lookup| {
+                        lookup.commit_permuted_v2(
+                            pk,
+                            params,
+                            &domain,
+                            theta,
+                            &advice.advice_polys,
+                            &pk.fixed_values,
+                            &instance.instance_values,
+                            &challenges,
+                            &mut rng,
+                            &mut transcript,
+                        )
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+            };
+        let lookups: Vec<Vec<lookup::prover::Permuted<Scheme::Curve>>> = instance
             .iter()
-            .map(|lookup| {
-                lookup.commit_permuted_v2(
-                    pk,
-                    params,
-                    &domain,
-                    theta,
-                    &advice.advice_polys,
-                    &pk.fixed_values,
-                    &instance.instance_values,
-                    &challenges,
-                    &mut rng,
-                    &mut transcript,
-                )
+            .zip(advice.iter())
+            .map(|(instance, advice)| -> Result<Vec<_>, Error> {
+                // Construct and commit to permuted values for each lookup
+                lookups_fn(instance, advice)
             })
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -374,49 +405,65 @@ impl<
         let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();
 
         // Commit to permutation.
-        let permutation = [pk.vk.cs.permutation.commit_v2(
-            params,
-            pk,
-            &pk.permutation,
-            &advice.advice_polys,
-            &pk.fixed_values,
-            &instance.instance_values,
-            beta,
-            gamma,
-            &mut rng,
-            &mut transcript,
-        )?];
-
-        // Construct and commit to products for each lookup
-        let lookups: [Vec<lookup::prover::Committed<Scheme::Curve>>; 1] = [lookups
-            .into_iter()
-            .map(|lookup| {
-                lookup.commit_product_v2(pk, params, beta, gamma, &mut rng, &mut transcript)
-            })
-            .collect::<Result<Vec<_>, _>>()?];
-
-        // Compress expressions for each shuffle
-        let shuffles: [Vec<shuffle::prover::Committed<Scheme::Curve>>; 1] = [pk
-            .vk
-            .cs
-            .shuffles
+        let permutations: Vec<permutation::prover::Committed<Scheme::Curve>> = instance
             .iter()
-            .map(|shuffle| {
-                shuffle.commit_product_v2(
-                    pk,
+            .zip(advice.iter())
+            .map(|(instance, advice)| {
+                pk.vk.cs.permutation.commit_v2(
                     params,
-                    domain,
-                    theta,
-                    gamma,
+                    pk,
+                    &pk.permutation,
                     &advice.advice_polys,
                     &pk.fixed_values,
                     &instance.instance_values,
-                    &challenges,
+                    beta,
+                    gamma,
                     &mut rng,
                     &mut transcript,
                 )
             })
-            .collect::<Result<Vec<_>, _>>()?];
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let lookups: Vec<Vec<lookup::prover::Committed<Scheme::Curve>>> = lookups
+            .into_iter()
+            .map(|lookups| -> Result<Vec<_>, _> {
+                // Construct and commit to products for each lookup
+                lookups
+                    .into_iter()
+                    .map(|lookup| {
+                        lookup.commit_product_v2(pk, params, beta, gamma, &mut rng, &mut transcript)
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let shuffles: Vec<Vec<shuffle::prover::Committed<Scheme::Curve>>> = instance
+            .iter()
+            .zip(advice.iter())
+            .map(|(instance, advice)| -> Result<Vec<_>, _> {
+                // Compress expressions for each shuffle
+                pk.vk
+                    .cs
+                    .shuffles
+                    .iter()
+                    .map(|shuffle| {
+                        shuffle.commit_product_v2(
+                            pk,
+                            params,
+                            domain,
+                            theta,
+                            gamma,
+                            &advice.advice_polys,
+                            &pk.fixed_values,
+                            &instance.instance_values,
+                            &challenges,
+                            &mut rng,
+                            &mut transcript,
+                        )
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .collect::<Result<Vec<_>, _>>()?;
 
         // Commit to the vanishing argument's random polynomial for blinding h(x_3)
         let vanishing = vanishing::Argument::commit(params, domain, &mut rng, &mut transcript)?;
@@ -425,20 +472,35 @@ impl<
         let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
 
         // Calculate the advice polys
-        let advice: AdviceSingle<Scheme::Curve, Coeff> = AdviceSingle {
-            advice_polys: advice
-                .advice_polys
-                .into_iter()
-                .map(|poly| domain.lagrange_to_coeff(poly))
-                .collect::<Vec<_>>(),
-            advice_blinds: advice.advice_blinds,
-        };
+        let advice: Vec<AdviceSingle<Scheme::Curve, Coeff>> = advice
+            .into_iter()
+            .map(
+                |AdviceSingle {
+                     advice_polys,
+                     advice_blinds,
+                 }| {
+                    AdviceSingle {
+                        advice_polys: advice_polys
+                            .into_iter()
+                            .map(|poly| domain.lagrange_to_coeff(poly))
+                            .collect::<Vec<_>>(),
+                        advice_blinds,
+                    }
+                },
+            )
+            .collect();
 
         // Evaluate the h(X) polynomial
         let h_poly = pk.ev.evaluate_h_v2(
             pk,
-            &[advice.advice_polys.as_slice()],
-            &[instance.instance_polys.as_slice()],
+            &advice
+                .iter()
+                .map(|a| a.advice_polys.as_slice())
+                .collect::<Vec<_>>(),
+            &instance
+                .iter()
+                .map(|i| i.instance_polys.as_slice())
+                .collect::<Vec<_>>(),
             &challenges,
             *y,
             *beta,
@@ -446,7 +508,7 @@ impl<
             *theta,
             &lookups,
             &shuffles,
-            &permutation,
+            &permutations,
         );
 
         // Construct the vanishing argument's h(X) commitments
@@ -457,40 +519,44 @@ impl<
 
         if P::QUERY_INSTANCE {
             // Compute and hash instance evals for the circuit instance
+            for instance in instance.iter() {
+                // Evaluate polynomials at omega^i x
+                let instance_evals: Vec<_> = self
+                    .instance_queries
+                    .iter()
+                    .map(|&(column, at)| {
+                        eval_polynomial(
+                            &instance.instance_polys[column.index()],
+                            domain.rotate_omega(*x, at),
+                        )
+                    })
+                    .collect();
+
+                // Hash each instance column evaluation
+                for eval in instance_evals.iter() {
+                    transcript.write_scalar(*eval)?;
+                }
+            }
+        }
+
+        // Compute and hash advice evals for the circuit instance
+        for advice in advice.iter() {
             // Evaluate polynomials at omega^i x
-            let instance_evals: Vec<_> = self
-                .instance_queries
+            let advice_evals: Vec<_> = self
+                .advice_queries
                 .iter()
                 .map(|&(column, at)| {
                     eval_polynomial(
-                        &instance.instance_polys[column.index()],
+                        &advice.advice_polys[column.index()],
                         domain.rotate_omega(*x, at),
                     )
                 })
                 .collect();
 
-            // Hash each instance column evaluation
-            for eval in instance_evals.iter() {
+            // Hash each advice column evaluation
+            for eval in advice_evals.iter() {
                 transcript.write_scalar(*eval)?;
             }
-        }
-
-        // Compute and hash advice evals for the circuit instance
-        // Evaluate polynomials at omega^i x
-        let advice_evals: Vec<_> = self
-            .advice_queries
-            .iter()
-            .map(|&(column, at)| {
-                eval_polynomial(
-                    &advice.advice_polys[column.index()],
-                    domain.rotate_omega(*x, at),
-                )
-            })
-            .collect();
-
-        // Hash each advice column evaluation
-        for eval in advice_evals.iter() {
-            transcript.write_scalar(*eval)?;
         }
 
         // Compute and hash fixed evals
@@ -512,63 +578,77 @@ impl<
         // Evaluate common permutation data
         pk.permutation.evaluate(x, &mut transcript)?;
 
-        let [permutation] = permutation;
-        let [lookups] = lookups;
-        let [shuffles] = shuffles;
-
         // Evaluate the permutations, if any, at omega^i x.
-        let permutation = permutation
-            .construct()
-            .evaluate_v2(pk, x, &mut transcript)?;
+        let permutations: Vec<permutation::prover::Evaluated<Scheme::Curve>> = permutations
+            .into_iter()
+            .map(|permutation| -> Result<_, _> {
+                permutation.construct().evaluate_v2(pk, x, &mut transcript)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
 
         // Evaluate the lookups, if any, at omega^i x.
-        let lookups: Vec<lookup::prover::Evaluated<Scheme::Curve>> = lookups
+        let lookups: Vec<Vec<lookup::prover::Evaluated<Scheme::Curve>>> = lookups
             .into_iter()
-            .map(|p| p.evaluate_v2(pk, x, &mut transcript))
+            .map(|lookups| -> Result<Vec<_>, _> {
+                lookups
+                    .into_iter()
+                    .map(|p| p.evaluate_v2(pk, x, &mut transcript))
+                    .collect::<Result<Vec<_>, _>>()
+            })
             .collect::<Result<Vec<_>, _>>()?;
 
         // Evaluate the shuffles, if any, at omega^i x.
-        let shuffles: Vec<shuffle::prover::Evaluated<Scheme::Curve>> = shuffles
+        let shuffles: Vec<Vec<shuffle::prover::Evaluated<Scheme::Curve>>> = shuffles
             .into_iter()
-            .map(|p| p.evaluate_v2(pk, x, &mut transcript))
+            .map(|shuffles| -> Result<Vec<_>, _> {
+                shuffles
+                    .into_iter()
+                    .map(|p| p.evaluate_v2(pk, x, &mut transcript))
+                    .collect::<Result<Vec<_>, _>>()
+            })
             .collect::<Result<Vec<_>, _>>()?;
 
-        let instance_ref = &instance;
-        let advice_ref = &advice;
-        let instances =
-            iter::empty()
-                .chain(
-                    P::QUERY_INSTANCE
-                        .then_some(self.instance_queries.iter().map(move |&(column, at)| {
-                            ProverQuery {
+        let instances = instance
+            .iter()
+            .zip(advice.iter())
+            .zip(permutations.iter())
+            .zip(lookups.iter())
+            .zip(shuffles.iter())
+            .flat_map(|((((instance, advice), permutation), lookups), shuffles)| {
+                iter::empty()
+                    .chain(
+                        P::QUERY_INSTANCE
+                            .then_some(self.instance_queries.iter().map(move |&(column, at)| {
+                                ProverQuery {
+                                    point: domain.rotate_omega(*x, at),
+                                    poly: &instance.instance_polys[column.index()],
+                                    blind: Blind::default(),
+                                }
+                            }))
+                            .into_iter()
+                            .flatten(),
+                    )
+                    .chain(
+                        self.advice_queries
+                            .iter()
+                            .map(move |&(column, at)| ProverQuery {
                                 point: domain.rotate_omega(*x, at),
-                                poly: &instance_ref.instance_polys[column.index()],
-                                blind: Blind::default(),
-                            }
-                        }))
-                        .into_iter()
-                        .flatten(),
-                )
-                .chain(
-                    self.advice_queries
-                        .iter()
-                        .map(move |&(column, at)| ProverQuery {
-                            point: domain.rotate_omega(*x, at),
-                            poly: &advice_ref.advice_polys[column.index()],
-                            blind: advice_ref.advice_blinds[column.index()],
-                        }),
-                )
-                .chain(permutation.open_v2(pk, x))
-                .chain(lookups.iter().flat_map(move |p| p.open_v2(pk, x)))
-                .chain(shuffles.iter().flat_map(move |p| p.open_v2(pk, x)))
-                .chain(self.fixed_queries.iter().map(|&(column, at)| ProverQuery {
-                    point: domain.rotate_omega(*x, at),
-                    poly: &pk.fixed_polys[column.index()],
-                    blind: Blind::default(),
-                }))
-                .chain(pk.permutation.open(x))
-                // We query the h(X) polynomial at x
-                .chain(vanishing.open(x));
+                                poly: &advice.advice_polys[column.index()],
+                                blind: advice.advice_blinds[column.index()],
+                            }),
+                    )
+                    .chain(permutation.open_v2(pk, x))
+                    .chain(lookups.iter().flat_map(move |p| p.open_v2(pk, x)))
+                    .chain(shuffles.iter().flat_map(move |p| p.open_v2(pk, x)))
+            })
+            .chain(self.fixed_queries.iter().map(|&(column, at)| ProverQuery {
+                point: domain.rotate_omega(*x, at),
+                poly: &pk.fixed_polys[column.index()],
+                blind: Blind::default(),
+            }))
+            .chain(pk.permutation.open(x))
+            // We query the h(X) polynomial at x
+            .chain(vanishing.open(x));
 
         let prover = P::new(params);
         prover

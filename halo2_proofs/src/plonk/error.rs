@@ -39,6 +39,8 @@ pub enum Error {
     ColumnNotInPermutation(Column<Any>),
     /// An error relating to a lookup table.
     TableError(TableError),
+    /// Generic error not covered by previous cases
+    Other(String),
 }
 
 impl From<io::Error> for Error {
@@ -81,7 +83,8 @@ impl fmt::Display for Error {
                 "Column {:?} must be included in the permutation. Help: try applying `meta.enable_equalty` on the column",
                 column
             ),
-            Error::TableError(error) => write!(f, "{}", error)
+            Error::TableError(error) => write!(f, "{}", error),
+            Error::Other(error) => write!(f, "Other: {}", error),
         }
     }
 }
