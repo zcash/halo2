@@ -8,8 +8,8 @@ use std::{collections::HashMap, iter};
 use super::{
     circuit::{
         sealed::{self},
-        Advice, Any, Assignment, Challenge, Circuit, Column, CompiledCircuitV2, ConstraintSystem,
-        ConstraintSystemV2Backend, Fixed, FloorPlanner, Instance, Selector,
+        Advice, Any, Assignment, Challenge, Circuit, Column, ConstraintSystem,
+        ConstraintSystemV2Backend, Expression, Fixed, FloorPlanner, Instance, Selector,
     },
     lookup, permutation, shuffle, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta,
     ChallengeX, ChallengeY, Error, ProvingKey, ProvingKeyV2,
@@ -55,20 +55,107 @@ pub struct ProverV2<
     R: RngCore,
     T: TranscriptWrite<Scheme::Curve, E>,
 > {
+    // Circuit and setup fields
     params: &'params Scheme::ParamsProver,
     pk: &'a ProvingKeyV2<Scheme::Curve>,
-    cs: &'a ConstraintSystemV2Backend<Scheme::Scalar>,
     advice_queries: Vec<(Column<Advice>, Rotation)>,
     instance_queries: Vec<(Column<Instance>, Rotation)>,
     fixed_queries: Vec<(Column<Fixed>, Rotation)>,
     phases: Vec<u8>,
+    // State
     instance: Vec<InstanceSingle<Scheme::Curve>>,
-    rng: R,
-    transcript: T,
     advice: Vec<AdviceSingle<Scheme::Curve, LagrangeCoeff>>,
     challenges: HashMap<usize, Scheme::Scalar>,
     next_phase_index: usize,
-    _marker: std::marker::PhantomData<(Scheme, P, E, R, T)>,
+    rng: R,
+    transcript: T,
+    _marker: std::marker::PhantomData<(P, E)>,
+}
+
+struct Queries {
+    advice: Vec<(Column<Advice>, Rotation)>,
+    instance: Vec<(Column<Instance>, Rotation)>,
+    fixed: Vec<(Column<Fixed>, Rotation)>,
+}
+
+struct QueriesSet {
+    advice: BTreeSet<(Column<Advice>, Rotation)>,
+    instance: BTreeSet<(Column<Instance>, Rotation)>,
+    fixed: BTreeSet<(Column<Fixed>, Rotation)>,
+}
+
+fn collect_queries<F: Field>(expr: &Expression<F>, queries: &mut QueriesSet) {
+    match expr {
+        Expression::Constant(_) => (),
+        Expression::Selector(_selector) => {
+            panic!("no Selector should arrive to the Backend");
+        }
+        Expression::Fixed(query) => {
+            queries
+                .fixed
+                .insert((Column::new(query.column_index, Fixed), query.rotation));
+        }
+        Expression::Advice(query) => {
+            queries.advice.insert((
+                Column::new(query.column_index, Advice { phase: query.phase }),
+                query.rotation,
+            ));
+        }
+        Expression::Instance(query) => {
+            queries
+                .instance
+                .insert((Column::new(query.column_index, Instance), query.rotation));
+        }
+        Expression::Challenge(_) => (),
+        Expression::Negated(a) => collect_queries(a, queries),
+        Expression::Sum(a, b) => {
+            collect_queries(a, queries);
+            collect_queries(b, queries);
+        }
+        Expression::Product(a, b) => {
+            collect_queries(a, queries);
+            collect_queries(b, queries);
+        }
+        Expression::Scaled(a, _) => collect_queries(a, queries),
+    };
+}
+
+fn get_all_queries<F: Field>(cs: &ConstraintSystemV2Backend<F>) -> Queries {
+    let mut queries = QueriesSet {
+        advice: BTreeSet::new(),
+        instance: BTreeSet::new(),
+        fixed: BTreeSet::new(),
+    };
+
+    for gate in &cs.gates {
+        for expr in gate.polynomials() {
+            collect_queries(expr, &mut queries);
+        }
+    }
+    for lookup in &cs.lookups {
+        for expr in lookup
+            .input_expressions
+            .iter()
+            .chain(lookup.table_expressions.iter())
+        {
+            collect_queries(expr, &mut queries);
+        }
+    }
+    for shuffle in &cs.shuffles {
+        for expr in shuffle
+            .input_expressions
+            .iter()
+            .chain(shuffle.shuffle_expressions.iter())
+        {
+            collect_queries(expr, &mut queries);
+        }
+    }
+
+    Queries {
+        advice: queries.advice.into_iter().collect(),
+        instance: queries.instance.into_iter().collect(),
+        fixed: queries.fixed.into_iter().collect(),
+    }
 }
 
 impl<
@@ -85,7 +172,6 @@ impl<
     pub fn new(
         params: &'params Scheme::ParamsProver,
         pk: &'a ProvingKeyV2<Scheme::Curve>,
-        circuit: &'a CompiledCircuitV2<Scheme::Scalar>,
         instances: &[&[&[Scheme::Scalar]]],
         rng: R,
         mut transcript: T,
@@ -94,22 +180,19 @@ impl<
     where
         Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     {
-        // TODO: We have cs duplicated in circuit.cs and pk.vk.cs.  Can we dedup them?
-
         for instance in instances.iter() {
             if instance.len() != pk.vk.cs.num_instance_columns {
                 return Err(Error::InvalidInstances);
             }
         }
 
-        // TODO(Edu): Calculate advice_queries, fixed_queries, instance_queries from the gates and
-        // lookup expressions.
+        let queries = get_all_queries(&pk.vk.cs);
 
         // Hash verification key into transcript
         pk.vk.hash_into(&mut transcript)?;
 
-        let meta = &circuit.cs;
-        let phases = circuit.cs.phases();
+        let meta = &pk.vk.cs;
+        let phases = meta.phases();
 
         let domain = &pk.vk.domain;
 
@@ -182,11 +265,10 @@ impl<
 
         Ok(ProverV2 {
             params,
-            cs: &circuit.cs,
             pk,
-            advice_queries: todo!(),
-            instance_queries: todo!(),
-            fixed_queries: todo!(),
+            advice_queries: queries.advice,
+            instance_queries: queries.instance,
+            fixed_queries: queries.fixed,
             phases,
             instance,
             rng,
@@ -220,7 +302,7 @@ impl<
         }
 
         let params = self.params;
-        let meta = self.cs;
+        let meta = &self.pk.vk.cs;
 
         let transcript = &mut self.transcript;
         let mut rng = &mut self.rng;
@@ -262,7 +344,6 @@ impl<
         }
 
         let mut commit_phase_fn = |advice: &mut AdviceSingle<Scheme::Curve, LagrangeCoeff>,
-                                   challenges: &mut HashMap<usize, Scheme::Scalar>,
                                    witness: Vec<
             Option<Polynomial<Assigned<Scheme::Scalar>, LagrangeCoeff>>,
         >|
@@ -325,7 +406,7 @@ impl<
         };
 
         for (witness, advice) in witness.into_iter().zip(advice.iter_mut()) {
-            commit_phase_fn(advice, challenges, witness)?;
+            commit_phase_fn(advice, witness)?;
         }
 
         for (index, phase) in meta.challenge_phase.iter().enumerate() {
@@ -346,7 +427,7 @@ impl<
         Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     {
         let params = self.params;
-        let meta = self.cs;
+        let meta = &self.pk.vk.cs;
         let pk = self.pk;
         let domain = &self.pk.vk.domain;
 
@@ -369,9 +450,7 @@ impl<
             |instance: &InstanceSingle<Scheme::Curve>,
              advice: &AdviceSingle<Scheme::Curve, LagrangeCoeff>|
              -> Result<Vec<lookup::prover::Permuted<Scheme::Curve>>, Error> {
-                pk.vk
-                    .cs
-                    .lookups
+                meta.lookups
                     .iter()
                     .map(|lookup| {
                         lookup.commit_permuted_v2(
@@ -409,7 +488,7 @@ impl<
             .iter()
             .zip(advice.iter())
             .map(|(instance, advice)| {
-                pk.vk.cs.permutation.commit_v2(
+                meta.permutation.commit_v2(
                     params,
                     pk,
                     &pk.permutation,
@@ -442,9 +521,7 @@ impl<
             .zip(advice.iter())
             .map(|(instance, advice)| -> Result<Vec<_>, _> {
                 // Compress expressions for each shuffle
-                pk.vk
-                    .cs
-                    .shuffles
+                meta.shuffles
                     .iter()
                     .map(|shuffle| {
                         shuffle.commit_product_v2(

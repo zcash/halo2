@@ -35,7 +35,6 @@ pub struct Column<C: ColumnType> {
 }
 
 impl<C: ColumnType> Column<C> {
-    #[cfg(test)]
     pub(crate) fn new(index: usize, column_type: C) -> Self {
         Column { index, column_type }
     }
@@ -1508,6 +1507,31 @@ impl<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> IntoIterato
     }
 }
 
+/// GateV2Backend
+#[derive(Clone, Debug)]
+pub struct GateV2Backend<F: Field> {
+    name: String,
+    constraint_names: Vec<String>,
+    polys: Vec<Expression<F>>,
+}
+
+impl<F: Field> GateV2Backend<F> {
+    /// Returns the gate name.
+    pub fn name(&self) -> &str {
+        self.name.as_str()
+    }
+
+    /// Returns the name of the constraint at index `constraint_index`.
+    pub fn constraint_name(&self, constraint_index: usize) -> &str {
+        self.constraint_names[constraint_index].as_str()
+    }
+
+    /// Returns constraints of this gate
+    pub fn polynomials(&self) -> &[Expression<F>] {
+        &self.polys
+    }
+}
+
 /// Gate
 #[derive(Clone, Debug)]
 pub struct Gate<F: Field> {
@@ -1585,7 +1609,7 @@ pub struct ConstraintSystemV2Backend<F: Field> {
     /// fixed column that they were compressed into. This is just used by dev
     /// tooling right now.
     // pub(crate) selector_map: Vec<Column<Fixed>>,
-    pub(crate) gates: Vec<Gate<F>>,
+    pub(crate) gates: Vec<GateV2Backend<F>>,
     // pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
     // Contains an integer for each advice column
     // identifying how many distinct queries it has
