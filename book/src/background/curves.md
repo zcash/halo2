@@ -105,7 +105,7 @@ $$
 
 Our original curve is just this curve at the restriction $Z = 1$. If we allow the affine
 point $(x, y)$ to be represented by $X = xZ$, $Y = yZ$ and $Z \neq 0$ then we have the
-[homogenous projective curve](https://en.wikipedia.org/wiki/Homogeneous_coordinates)
+[homogeneous projective curve](https://en.wikipedia.org/wiki/Homogeneous_coordinates)
 
 $$
 Y^2 Z = X^3 + Z^3 b.
@@ -185,7 +185,7 @@ Important notes:
   $(x, y) = (xZ^2, yZ^3, Z)$ where the curve is rescaled by $Z^6$ instead of $Z^3$, and
   this representation has even more efficient arithmetic but no unified/complete formulae.
 * We can easily compare two curve points $(X_1, Y_1, Z_1)$ and $(X_2, Y_2, Z_2)$ for
-  equality in the homogenous projective coordinate space by "homogenizing" their
+  equality in the homogeneous projective coordinate space by "homogenizing" their
   Z-coordinates; the checks become $X_1 Z_2 = X_2 Z_1$ and $Y_1 Z_2 = Y_2 Z_1$.
 
 ## Curve endomorphisms
