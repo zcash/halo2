@@ -193,8 +193,6 @@ impl<C: CurveAffine> VerifyingKeyV2<C> {
         // let s = format!("{:?}", vk.pinned());
         // TODO(Edu): Is it Ok to not use the pinned Vk here?  We removed a lot of stuff from Vk
         // and Cs, so maybe we already have the same as in PinnedVerificationKey?
-        // TODO(Edu): We removed queries information from the ConstraintSystem, so this output will
-        // definitely be a breaking change.
         let s = format!("{:?}", vk);
 
         hasher.update(&(s.len() as u64).to_le_bytes());
