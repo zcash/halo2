@@ -15,8 +15,9 @@ use crate::poly::kzg::strategy::GuardKZG;
 use crate::poly::query::{CommitmentReference, VerifierQuery};
 use crate::poly::Error;
 use crate::transcript::{EncodedChallenge, TranscriptRead};
-use ff::{Field, PrimeField};
+use ff::Field;
 use halo2curves::pairing::{Engine, MultiMillerLoop};
+use halo2curves::CurveExt;
 use std::ops::MulAssign;
 
 /// Concrete KZG multiopen verifier with SHPLONK variant
@@ -28,8 +29,9 @@ pub struct VerifierSHPLONK<'params, E: Engine> {
 impl<'params, E> Verifier<'params, KZGCommitmentScheme<E>> for VerifierSHPLONK<'params, E>
 where
     E: MultiMillerLoop + Debug,
-    E::Scalar: PrimeField + Ord,
-    E::G1Affine: SerdeCurveAffine,
+    E::Fr: Ord,
+    E::G1Affine: SerdeCurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
+    E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
     type Guard = GuardKZG<'params, E>;
@@ -69,10 +71,10 @@ where
         let u: ChallengeU<_> = transcript.squeeze_challenge_scalar();
         let h2 = transcript.read_point().map_err(|_| Error::SamplingError)?;
 
-        let (mut z_0_diff_inverse, mut z_0) = (E::Scalar::ZERO, E::Scalar::ZERO);
-        let (mut outer_msm, mut r_outer_acc) = (PreMSM::<E>::new(), E::Scalar::ZERO);
+        let (mut z_0_diff_inverse, mut z_0) = (E::Fr::ZERO, E::Fr::ZERO);
+        let (mut outer_msm, mut r_outer_acc) = (PreMSM::<E>::new(), E::Fr::ZERO);
         for (i, (rotation_set, power_of_v)) in rotation_sets.iter().zip(powers(*v)).enumerate() {
-            let diffs: Vec<E::Scalar> = super_point_set
+            let diffs: Vec<E::Fr> = super_point_set
                 .iter()
                 .filter(|point| !rotation_set.points.contains(point))
                 .copied()
@@ -83,7 +85,7 @@ where
             if i == 0 {
                 z_0 = evaluate_vanishing_polynomial(&rotation_set.points[..], *u);
                 z_0_diff_inverse = z_diff_i.invert().unwrap();
-                z_diff_i = E::Scalar::ONE;
+                z_diff_i = E::Fr::ONE;
             } else {
                 z_diff_i.mul_assign(z_0_diff_inverse);
             }
@@ -129,7 +131,7 @@ where
         outer_msm.append_term(-z_0, h1.into());
         outer_msm.append_term(*u, h2.into());
 
-        msm_accumulator.left.append_term(E::Scalar::ONE, h2.into());
+        msm_accumulator.left.append_term(E::Fr::ONE, h2.into());
 
         msm_accumulator.right.add_msm(&outer_msm);
 

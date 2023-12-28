@@ -13,9 +13,10 @@ use crate::poly::{Coeff, Polynomial};
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use crate::multicore::IntoParallelIterator;
-use ff::{Field, PrimeField};
+use ff::Field;
 use group::Curve;
 use halo2curves::pairing::Engine;
+use halo2curves::CurveExt;
 use rand_core::RngCore;
 use std::fmt::Debug;
 use std::io;
@@ -107,8 +108,9 @@ impl<'a, E: Engine> ProverSHPLONK<'a, E> {
 impl<'params, E: Engine + Debug> Prover<'params, KZGCommitmentScheme<E>>
     for ProverSHPLONK<'params, E>
 where
-    E::Scalar: Ord + PrimeField,
-    E::G1Affine: SerdeCurveAffine,
+    E::Fr: Ord,
+    E::G1Affine: SerdeCurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
+    E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
     const QUERY_INSTANCE: bool = false;
@@ -166,7 +168,7 @@ where
             // Q_i(X) = N_i(X) / Z_i(X) where
             // Z_i(X) = (x - r_i_0) * (x - r_i_1) * ...
             let mut poly = div_by_vanishing(n_x, points);
-            poly.resize(self.params.n as usize, E::Scalar::ZERO);
+            poly.resize(self.params.n as usize, E::Fr::ZERO);
 
             Polynomial {
                 values: poly,
@@ -202,7 +204,7 @@ where
             .map(quotient_contribution)
             .collect::<Vec<_>>();
 
-        let h_x: Polynomial<E::Scalar, Coeff> = quotient_polynomials
+        let h_x: Polynomial<E::Fr, Coeff> = quotient_polynomials
             .into_iter()
             .zip(powers(*v))
             .map(|(poly, power_of_v)| poly * power_of_v)
@@ -240,7 +242,7 @@ where
             // and combine polynomials with same evaluation point set
             // L_i(X) = linear_combination(y, L_i_j(X))
             // where y is random scalar to combine inner contributors
-            let l_x: Polynomial<E::Scalar, Coeff> = inner_contributions
+            let l_x: Polynomial<E::Fr, Coeff> = inner_contributions
                 .into_iter()
                 .zip(powers(*y))
                 .map(|(poly, power_of_y)| poly * power_of_y)
@@ -253,14 +255,14 @@ where
 
         #[allow(clippy::type_complexity)]
         let (linearisation_contributions, z_diffs): (
-            Vec<Polynomial<E::Scalar, Coeff>>,
-            Vec<E::Scalar>,
+            Vec<Polynomial<E::Fr, Coeff>>,
+            Vec<E::Fr>,
         ) = rotation_sets
             .into_par_iter()
             .map(linearisation_contribution)
             .unzip();
 
-        let l_x: Polynomial<E::Scalar, Coeff> = linearisation_contributions
+        let l_x: Polynomial<E::Fr, Coeff> = linearisation_contributions
             .into_iter()
             .zip(powers(*v))
             .map(|(poly, power_of_v)| poly * power_of_v)
@@ -275,7 +277,7 @@ where
         #[cfg(debug_assertions)]
         {
             let must_be_zero = eval_polynomial(&l_x.values[..], *u);
-            assert_eq!(must_be_zero, E::Scalar::ZERO);
+            assert_eq!(must_be_zero, E::Fr::ZERO);
         }
 
         let mut h_x = div_by_vanishing(l_x, &[*u]);
