@@ -51,14 +51,14 @@ where
 
 /// Assembly to be used in circuit synthesis.
 #[derive(Debug)]
-struct Assembly<F: Field> {
-    k: u32,
-    fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
-    permutation: permutation::keygen::Assembly,
-    selectors: Vec<Vec<bool>>,
+pub(crate) struct Assembly<F: Field> {
+    pub(crate) k: u32,
+    pub(crate) fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
+    pub(crate) permutation: permutation::keygen::Assembly,
+    pub(crate) selectors: Vec<Vec<bool>>,
     // A range of available rows for assignment and copies.
-    usable_rows: Range<usize>,
-    _marker: std::marker::PhantomData<F>,
+    pub(crate) usable_rows: Range<usize>,
+    pub(crate) _marker: std::marker::PhantomData<F>,
 }
 
 impl<F: Field> Assignment<F> for Assembly<F> {

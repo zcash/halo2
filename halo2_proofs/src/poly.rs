@@ -65,8 +65,29 @@ impl Basis for ExtendedLagrangeCoeff {}
 /// basis.
 #[derive(Clone, Debug)]
 pub struct Polynomial<F, B> {
-    values: Vec<F>,
-    _marker: PhantomData<B>,
+    pub(crate) values: Vec<F>,
+    pub(crate) _marker: PhantomData<B>,
+}
+
+impl<F: Clone, B> Polynomial<F, B> {
+    pub(crate) fn new_empty(size: usize, zero: F) -> Self {
+        Polynomial {
+            values: vec![zero; size],
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl<F: Clone> Polynomial<F, LagrangeCoeff> {
+    /// Obtains a polynomial in Lagrange form when given a vector of Lagrange
+    /// coefficients of size `n`; panics if the provided vector is the wrong
+    /// length.
+    pub(crate) fn new_lagrange_from_vec(values: Vec<F>) -> Polynomial<F, LagrangeCoeff> {
+        Polynomial {
+            values,
+            _marker: PhantomData,
+        }
+    }
 }
 
 impl<F, B> Index<usize> for Polynomial<F, B> {

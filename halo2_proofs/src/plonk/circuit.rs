@@ -3,7 +3,7 @@ use crate::circuit::layouter::SyncDeps;
 use crate::dev::metadata;
 use crate::{
     circuit::{Layouter, Region, Value},
-    poly::{LagrangeCoeff, Polynomial, Rotation},
+    poly::{batch_invert_assigned, LagrangeCoeff, Polynomial, Rotation},
 };
 use core::cmp::max;
 use core::ops::{Add, Mul};
@@ -1675,6 +1675,88 @@ pub struct ConstraintSystemV2Backend<F: Field> {
     // pub(crate) constants: Vec<Column<Fixed>>,
 
     // pub(crate) minimum_degree: Option<usize>,
+}
+
+/// TODO: Document. Frontend function
+pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
+    k: u32,
+    circuit: &ConcreteCircuit,
+    compress_selectors: bool,
+) -> Result<CompiledCircuitV2<F>, Error> {
+    let n = 2usize.pow(k);
+    let mut cs = ConstraintSystem::default();
+    #[cfg(feature = "circuit-params")]
+    let config = ConcreteCircuit::configure_with_params(&mut cs, circuit.params());
+    #[cfg(not(feature = "circuit-params"))]
+    let config = ConcreteCircuit::configure(&mut cs);
+    let cs = cs;
+
+    if n < cs.minimum_rows() {
+        return Err(Error::not_enough_rows_available(k));
+    }
+
+    let mut assembly = crate::plonk::keygen::Assembly {
+        k,
+        fixed: vec![Polynomial::new_empty(n, F::ZERO.into()); cs.num_fixed_columns],
+        permutation: permutation::keygen::Assembly::new(n, &cs.permutation),
+        selectors: vec![vec![false; n as usize]; cs.num_selectors],
+        usable_rows: 0..n as usize - (cs.blinding_factors() + 1),
+        _marker: std::marker::PhantomData,
+    };
+
+    // Synthesize the circuit to obtain URS
+    ConcreteCircuit::FloorPlanner::synthesize(
+        &mut assembly,
+        circuit,
+        config,
+        cs.constants.clone(),
+    )?;
+
+    let mut fixed = batch_invert_assigned(assembly.fixed);
+    let (cs, selector_polys) = if compress_selectors {
+        cs.compress_selectors(assembly.selectors.clone())
+    } else {
+        // After this, the ConstraintSystem should not have any selectors: `verify` does not need them, and `keygen_pk` regenerates `cs` from scratch anyways.
+        let selectors = std::mem::take(&mut assembly.selectors);
+        cs.directly_convert_selectors_to_fixed(selectors)
+    };
+    fixed.extend(
+        selector_polys
+            .into_iter()
+            .map(|poly| Polynomial::new_lagrange_from_vec(poly)),
+    );
+
+    let cs2 = ConstraintSystemV2Backend {
+        num_fixed_columns: cs.num_fixed_columns,
+        num_advice_columns: cs.num_advice_columns,
+        num_instance_columns: cs.num_instance_columns,
+        num_challenges: cs.num_challenges,
+        unblinded_advice_columns: cs.unblinded_advice_columns,
+        advice_column_phase: cs.advice_column_phase.iter().map(|p| p.0).collect(),
+        challenge_phase: cs.challenge_phase.iter().map(|p| p.0).collect(),
+        gates: cs
+            .gates
+            .iter()
+            .map(|g| GateV2Backend {
+                name: g.name.clone(),
+                constraint_names: g.constraint_names.clone(),
+                polys: g.polys.clone(),
+            })
+            .collect(),
+        permutation: cs.permutation,
+        lookups: cs.lookups,
+        shuffles: cs.shuffles,
+        general_column_annotations: cs.general_column_annotations,
+    };
+    let preprocessing = PreprocessingV2 {
+        permutation: assembly.permutation,
+        fixed,
+    };
+
+    Ok(CompiledCircuitV2 {
+        cs: cs2,
+        preprocessing,
+    })
 }
 
 impl<F: Field> ConstraintSystemV2Backend<F> {

@@ -7,9 +7,10 @@ use halo2_proofs::arithmetic::Field;
 use halo2_proofs::circuit::{AssignedCell, Cell, Layouter, Region, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::plonk::{
-    create_proof as create_plonk_proof, keygen_pk, keygen_vk, verify_proof as verify_plonk_proof,
-    Advice, Assigned, Circuit, Column, ConstraintSystem, Error, Expression, Fixed, Instance,
-    ProvingKey, Selector, TableColumn, VerifyingKey,
+    compile_circuit, create_proof, keygen_pk, keygen_pk_v2, keygen_vk, keygen_vk_v2, verify_proof,
+    Advice, Assigned, Challenge, Circuit, Column, CompiledCircuitV2, ConstraintSystem,
+    ConstraintSystemV2Backend, Error, Expression, FirstPhase, Fixed, Instance, ProvingKey,
+    SecondPhase, Selector, TableColumn, VerifyingKey,
 };
 use halo2_proofs::poly::commitment::{CommitmentScheme, ParamsProver, Prover, Verifier};
 use halo2_proofs::poly::Rotation;
@@ -41,28 +42,91 @@ struct MyCircuitConfig {
     s_shuffle: Column<Fixed>,
     s_stable: Column<Fixed>,
 
-    // Instance
+    // A FirstPhase challenge and SecondPhase column.  We define the following gates:
+    // s_rlc * (a[0] + challenge * b[0] - e[0])
+    // s_rlc * (c[0] + challenge * d[0] - e[0])
+    s_rlc: Selector,
+    e: Column<Advice>,
+    challenge: Challenge,
+
+    // Instance with a gate: s_instance * (a[0] - instance[0])
+    s_instance: Selector,
     instance: Column<Instance>,
 }
 
+impl MyCircuitConfig {
+    fn assign_gate<F: Field + From<u64>>(
+        &self,
+        region: &mut Region<'_, F>,
+        offset: &mut usize,
+        a_assigned: Option<AssignedCell<F, F>>,
+        abcd: [u64; 4],
+    ) -> Result<(AssignedCell<F, F>, [AssignedCell<F, F>; 4]), Error> {
+        let [a, b, c, d] = abcd;
+        self.s_gate.enable(region, *offset)?;
+        let a_assigned = if let Some(a_assigned) = a_assigned {
+            a_assigned
+        } else {
+            region.assign_advice(|| "", self.a, *offset, || Value::known(F::from(a)))?
+        };
+        let a = a_assigned.value();
+        let [b, c, d] = [b, c, d].map(|v| Value::known(F::from(v)));
+        let b_assigned = region.assign_advice(|| "", self.b, *offset, || b)?;
+        let c_assigned = region.assign_advice(|| "", self.c, *offset, || c)?;
+        let d_assigned = region.assign_fixed(|| "", self.d, *offset, || d)?;
+        *offset += 1;
+        // let res = a + b * c * d;
+        let res = a
+            .zip(b.zip(c.zip(d)))
+            .map(|(a, (b, (c, d)))| *a + b * c * d);
+        let res_assigned = region.assign_advice(|| "", self.a, *offset, || res)?;
+        Ok((
+            res_assigned,
+            [a_assigned, b_assigned, c_assigned, d_assigned],
+        ))
+    }
+}
+
 #[derive(Clone)]
-struct MyCircuit<F: Field> {
+struct MyCircuit<F: Field, const WIDTH_FACTOR: usize> {
+    k: u32,
+    input: u64,
     _marker: std::marker::PhantomData<F>,
 }
 
-impl<F: Field + From<u64>> Circuit<F> for MyCircuit<F> {
-    type Config = MyCircuitConfig;
-    type FloorPlanner = SimpleFloorPlanner;
-    #[cfg(feature = "circuit-params")]
-    type Params = ();
-
-    fn without_witnesses(&self) -> Self {
+impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> MyCircuit<F, WIDTH_FACTOR> {
+    fn new(k: u32, input: u64) -> Self {
         Self {
+            k,
+            input,
             _marker: std::marker::PhantomData {},
         }
     }
 
-    fn configure(meta: &mut ConstraintSystem<F>) -> MyCircuitConfig {
+    fn instance(&self) -> Vec<F> {
+        let mut instance = Vec::new();
+        let res = F::from(self.input);
+        instance.push(res);
+        let (b, c, d) = (3, 4, 1);
+        let res = res + F::from(b) * F::from(c) * F::from(d);
+        instance.push(res);
+        let (b, c, d) = (6, 7, 1);
+        let res = res + F::from(b) * F::from(c) * F::from(d);
+        instance.push(res);
+        let (b, c, d) = (8, 9, 1);
+        let res = res + F::from(b) * F::from(c) * F::from(d);
+        instance.push(res);
+        instance.push(F::from(2));
+        instance.push(F::from(2));
+        instance
+    }
+
+    fn instances(&self) -> Vec<Vec<F>> {
+        let instance = self.instance();
+        (0..WIDTH_FACTOR).map(|_| instance.clone()).collect()
+    }
+
+    fn configure_single(meta: &mut ConstraintSystem<F>) -> MyCircuitConfig {
         let s_gate = meta.selector();
         let a = meta.advice_column();
         let b = meta.advice_column();
@@ -79,6 +143,11 @@ impl<F: Field + From<u64>> Circuit<F> for MyCircuit<F> {
         let s_shuffle = meta.fixed_column();
         let s_stable = meta.fixed_column();
 
+        let s_rlc = meta.selector();
+        let e = meta.advice_column_in(SecondPhase);
+        let challenge = meta.challenge_usable_after(FirstPhase);
+
+        let s_instance = meta.selector();
         let instance = meta.instance_column();
         meta.enable_equality(instance);
 
@@ -117,6 +186,21 @@ impl<F: Field + From<u64>> Circuit<F> for MyCircuit<F> {
             lhs.into_iter().zip(rhs.into_iter()).collect()
         });
 
+        meta.create_gate("gate_rlc", |meta| {
+            let s_rlc = meta.query_selector(s_rlc);
+            let a = meta.query_advice(a, Rotation::cur());
+            let b = meta.query_advice(b, Rotation::cur());
+            let c = meta.query_advice(c, Rotation::cur());
+            let d = meta.query_fixed(d, Rotation::cur());
+            let e = meta.query_advice(e, Rotation::cur());
+            let challenge = meta.query_challenge(challenge);
+
+            vec![
+                s_rlc.clone() * (a + challenge.clone() * b - e.clone()),
+                s_rlc * (c + challenge * d - e),
+            ]
+        });
+
         MyCircuitConfig {
             s_gate,
             a,
@@ -125,65 +209,53 @@ impl<F: Field + From<u64>> Circuit<F> for MyCircuit<F> {
             d,
             s_lookup,
             s_ltable,
+            s_rlc,
+            e,
+            challenge,
             s_shuffle,
             s_stable,
+            s_instance,
             instance,
         }
     }
 
-    fn synthesize(
+    fn synthesize_unit(
         &self,
-        config: MyCircuitConfig,
-        mut layouter: impl Layouter<F>,
-    ) -> Result<(), Error> {
-        let assign_gate = |region: &mut Region<'_, F>,
-                           offset: &mut usize,
-                           a_assigned: Option<AssignedCell<F, F>>,
-                           abcd: [u64; 4]|
-         -> Result<(AssignedCell<F, F>, [AssignedCell<F, F>; 4]), Error> {
-            let [a, b, c, d] = abcd;
-            config.s_gate.enable(region, *offset);
-            let a_assigned = if let Some(a_assigned) = a_assigned {
-                a_assigned
-            } else {
-                region.assign_advice(|| "", config.a, *offset, || Value::known(F::from(a)))?
-            };
-            let a = a_assigned.value();
-            let [b, c, d] = [b, c, d].map(|v| Value::known(F::from(b)));
-            let b_assigned = region.assign_advice(|| "", config.b, *offset, || b)?;
-            let c_assigned = region.assign_advice(|| "", config.c, *offset, || c)?;
-            let d_assigned = region.assign_fixed(|| "", config.d, *offset, || d)?;
-            *offset += 1;
-            let res = a
-                .zip(b.zip(c.zip(d)))
-                .map(|(a, (b, (c, d)))| *a + b * c * d);
-            // let res = a + b * c * d;
-            let res_assigned = region.assign_advice(|| "", config.a, *offset, || res)?;
-            Ok((
-                res_assigned,
-                [a_assigned, b_assigned, c_assigned, d_assigned],
-            ))
-        };
-
-        let instances = layouter.assign_region(
-            || "single",
+        config: &MyCircuitConfig,
+        layouter: &mut impl Layouter<F>,
+    ) -> Result<(usize, Vec<AssignedCell<F, F>>), Error> {
+        let challenge = layouter.get_challenge(config.challenge);
+        let (rows, instance_copy) = layouter.assign_region(
+            || "unit",
             |mut region| {
                 let mut offset = 0;
-                let mut instances = Vec::new();
+                let mut instance_copy = Vec::new();
+                // First "a" value comes from instance
+                config.s_instance.enable(&mut region, offset);
+                let res = region.assign_advice_from_instance(
+                    || "",
+                    config.instance,
+                    0,
+                    config.a,
+                    offset,
+                )?;
                 // Enable the gate on a few consecutive rows with rotations
-                let (res, _) = assign_gate(&mut region, &mut offset, None, [2, 3, 4, 1])?;
-                instances.push(res.clone());
-                let (res, _) = assign_gate(&mut region, &mut offset, Some(res), [0, 6, 7, 1])?;
-                instances.push(res.clone());
-                let (res, _) = assign_gate(&mut region, &mut offset, Some(res), [0, 8, 9, 1])?;
-                instances.push(res.clone());
-                let (res, _) = assign_gate(
+                let (res, _) =
+                    config.assign_gate(&mut region, &mut offset, Some(res), [0, 3, 4, 1])?;
+                instance_copy.push(res.clone());
+                let (res, _) =
+                    config.assign_gate(&mut region, &mut offset, Some(res), [0, 6, 7, 1])?;
+                instance_copy.push(res.clone());
+                let (res, _) =
+                    config.assign_gate(&mut region, &mut offset, Some(res), [0, 8, 9, 1])?;
+                instance_copy.push(res.clone());
+                let (res, _) = config.assign_gate(
                     &mut region,
                     &mut offset,
                     Some(res),
                     [0, 0xffffffff, 0xdeadbeef, 1],
                 )?;
-                let _ = assign_gate(
+                let _ = config.assign_gate(
                     &mut region,
                     &mut offset,
                     Some(res),
@@ -192,23 +264,29 @@ impl<F: Field + From<u64>> Circuit<F> for MyCircuit<F> {
                 offset += 1;
 
                 // Enable the gate on non-consecutive rows with advice-advice copy constraints enabled
-                let (_, abcd1) = assign_gate(&mut region, &mut offset, None, [5, 2, 1, 1])?;
+                let (_, abcd1) =
+                    config.assign_gate(&mut region, &mut offset, None, [5, 2, 1, 1])?;
                 offset += 1;
-                let (_, abcd2) = assign_gate(&mut region, &mut offset, None, [2, 3, 1, 1])?;
+                let (_, abcd2) =
+                    config.assign_gate(&mut region, &mut offset, None, [2, 3, 1, 1])?;
                 offset += 1;
-                let (_, abcd3) = assign_gate(&mut region, &mut offset, None, [4, 2, 1, 1])?;
+                let (_, abcd3) =
+                    config.assign_gate(&mut region, &mut offset, None, [4, 2, 1, 1])?;
                 offset += 1;
                 region.constrain_equal(abcd1[1].cell(), abcd2[0].cell())?;
                 region.constrain_equal(abcd2[0].cell(), abcd3[1].cell())?;
-                instances.push(abcd1[1].clone());
-                instances.push(abcd2[0].clone());
+                instance_copy.push(abcd1[1].clone());
+                instance_copy.push(abcd2[0].clone());
 
                 // Enable the gate on non-consecutive rows with advice-fixed copy constraints enabled
-                let (_, abcd1) = assign_gate(&mut region, &mut offset, None, [5, 9, 1, 9])?;
+                let (_, abcd1) =
+                    config.assign_gate(&mut region, &mut offset, None, [5, 9, 1, 9])?;
                 offset += 1;
-                let (_, abcd2) = assign_gate(&mut region, &mut offset, None, [2, 9, 1, 1])?;
+                let (_, abcd2) =
+                    config.assign_gate(&mut region, &mut offset, None, [2, 9, 1, 1])?;
                 offset += 1;
-                let (_, abcd3) = assign_gate(&mut region, &mut offset, None, [9, 2, 1, 1])?;
+                let (_, abcd3) =
+                    config.assign_gate(&mut region, &mut offset, None, [9, 2, 1, 1])?;
                 offset += 1;
                 region.constrain_equal(abcd1[1].cell(), abcd1[3].cell())?;
                 region.constrain_equal(abcd2[1].cell(), abcd1[3].cell())?;
@@ -234,6 +312,17 @@ impl<F: Field + From<u64>> Circuit<F> for MyCircuit<F> {
                     offset += 1;
                 }
 
+                // Enable RLC gate 3 times
+                for abcd in [[3, 5, 3, 5], [8, 9, 8, 9], [111, 222, 111, 222]] {
+                    config.s_rlc.enable(&mut region, offset)?;
+                    let (_, abcd1) = config.assign_gate(&mut region, &mut offset, None, abcd)?;
+                    let rlc = challenge
+                        .zip(abcd1[0].value().zip(abcd1[1].value()))
+                        .map(|(ch, (a, b))| *a + ch * b);
+                    region.assign_advice(|| "", config.e, offset - 1, || rlc)?;
+                    offset += 1;
+                }
+
                 // Enable a dynamic shuffle (sequence from 0 to 15)
                 let table: Vec<_> = (0u64..16).collect();
                 let shuffle = [0u64, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15];
@@ -254,34 +343,149 @@ impl<F: Field + From<u64>> Circuit<F> for MyCircuit<F> {
                     offset += 1;
                 }
 
-                Ok(instances)
+                Ok((offset, instance_copy))
             },
         )?;
 
-        println!("DBG instances: {:?}", instances);
-        for (i, instance) in instances.iter().enumerate() {
-            layouter.constrain_instance(instance.cell(), config.instance, i)?;
-        }
+        Ok((rows, instance_copy))
+    }
+}
 
+impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> Circuit<F> for MyCircuit<F, WIDTH_FACTOR> {
+    type Config = Vec<MyCircuitConfig>;
+    type FloorPlanner = SimpleFloorPlanner;
+    #[cfg(feature = "circuit-params")]
+    type Params = ();
+
+    fn without_witnesses(&self) -> Self {
+        self.clone()
+    }
+
+    fn configure(meta: &mut ConstraintSystem<F>) -> Vec<MyCircuitConfig> {
+        assert!(WIDTH_FACTOR > 0);
+        (0..WIDTH_FACTOR)
+            .map(|_| Self::configure_single(meta))
+            .collect()
+    }
+
+    fn synthesize(
+        &self,
+        config: Vec<MyCircuitConfig>,
+        mut layouter: impl Layouter<F>,
+    ) -> Result<(), Error> {
+        // 2 queries from first gate, 3 for permutation argument, 1 for multipoen, 1 for off-by-one
+        //   errors, 1 for off-by-two errors?
+        let unusable_rows = 2 + 3 + 1 + 1 + 1;
+        let max_rows = 2usize.pow(self.k) - unusable_rows;
+        for config in &config {
+            let mut total_rows = 0;
+            loop {
+                let (rows, instance_copy) = self.synthesize_unit(config, &mut layouter)?;
+                if total_rows == 0 {
+                    for (i, instance) in instance_copy.iter().enumerate() {
+                        layouter.constrain_instance(instance.cell(), config.instance, 1 + i)?;
+                    }
+                }
+                total_rows += rows;
+                if total_rows + rows > max_rows {
+                    break;
+                }
+            }
+            assert!(total_rows <= max_rows);
+        }
         Ok(())
     }
 }
 
-use halo2curves::bn256::Fr;
+use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG, ParamsVerifierKZG};
+use halo2_proofs::poly::kzg::multiopen::{ProverSHPLONK, VerifierSHPLONK};
+use halo2_proofs::poly::kzg::strategy::SingleStrategy;
+use halo2curves::bn256::{Bn256, Fr, G1Affine};
+use rand_core::block::BlockRng;
+use rand_core::block::BlockRngCore;
+
+// One number generator, that can be used as a deterministic Rng, outputing fixed values.
+struct OneNg {}
+
+impl BlockRngCore for OneNg {
+    type Item = u32;
+    type Results = [u32; 16];
+
+    fn generate(&mut self, results: &mut Self::Results) {
+        for elem in results.iter_mut() {
+            *elem = 1;
+        }
+    }
+}
 
 #[test]
-fn test_mycircuit() {
-    let k = 8;
-    let circuit: MyCircuit<Fr> = MyCircuit {
-        _marker: std::marker::PhantomData {},
-    };
-    let instance = vec![
-        Fr::from(0x1d),
-        Fr::from(0xf5),
-        Fr::from(0x2f5),
-        Fr::from(0x2),
-        Fr::from(0x2),
-    ];
-    let prover = MockProver::run(k, &circuit, vec![instance]).unwrap();
+fn test_mycircuit_mock() {
+    let k = 6;
+    const WIDTH_FACTOR: usize = 2;
+    let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
+    let instances = circuit.instances();
+    let prover = MockProver::run(k, &circuit, instances).unwrap();
     prover.assert_satisfied();
+}
+
+#[test]
+fn test_mycircuit_full_legacy() {
+    let k = 6;
+    const WIDTH_FACTOR: usize = 1;
+    let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
+
+    // Setup
+    let params = ParamsKZG::<Bn256>::new(k);
+    let verifier_params = params.verifier_params();
+    let vk = keygen_vk(&params, &circuit).expect("keygen_vk should not fail");
+    let pk = keygen_pk(&params, vk.clone(), &circuit).expect("keygen_pk should not fail");
+
+    // Proving
+    let instances = circuit.instances();
+    let instances_slice: &[&[Fr]] = &(instances
+        .iter()
+        .map(|instance| instance.as_slice())
+        .collect::<Vec<_>>());
+
+    let rng = BlockRng::new(OneNg {});
+    let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
+    create_proof::<KZGCommitmentScheme<Bn256>, ProverSHPLONK<'_, Bn256>, _, _, _, _>(
+        &params,
+        &pk,
+        &[circuit.clone()],
+        &[instances_slice],
+        rng,
+        &mut transcript,
+    )
+    .expect("proof generation should not fail");
+    let proof = transcript.finalize();
+
+    // Verify
+    let mut verifier_transcript =
+        Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
+    let strategy = SingleStrategy::new(&verifier_params);
+
+    verify_proof::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<'_, Bn256>, _, _, _>(
+        &params,
+        &vk,
+        strategy,
+        &[instances_slice],
+        &mut verifier_transcript,
+    )
+    .expect("verify succeeds");
+}
+
+#[test]
+fn test_mycircuit_full_split() {
+    let k = 6;
+    const WIDTH_FACTOR: usize = 1;
+    let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
+    let compiled_circuit = compile_circuit(k, &circuit, false).unwrap();
+
+    // Setup
+    let params = ParamsKZG::<Bn256>::new(k);
+    let verifier_params = params.verifier_params();
+    let vk = keygen_vk_v2(&params, &compiled_circuit).expect("keygen_vk should not fail");
+    let pk =
+        keygen_pk_v2(&params, vk.clone(), &compiled_circuit).expect("keygen_pk should not fail");
 }
