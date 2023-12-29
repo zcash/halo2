@@ -7,10 +7,10 @@ use halo2_proofs::arithmetic::Field;
 use halo2_proofs::circuit::{AssignedCell, Cell, Layouter, Region, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::plonk::{
-    compile_circuit, create_proof, keygen_pk, keygen_pk_v2, keygen_vk, keygen_vk_v2, verify_proof,
-    Advice, Assigned, Challenge, Circuit, Column, CompiledCircuitV2, ConstraintSystem,
-    ConstraintSystemV2Backend, Error, Expression, FirstPhase, Fixed, Instance, ProvingKey,
-    SecondPhase, Selector, TableColumn, VerifyingKey,
+    calc_witness, compile_circuit, create_proof, keygen_pk, keygen_pk_v2, keygen_vk, keygen_vk_v2,
+    verify_proof, verify_proof_v2, Advice, Assigned, Challenge, Circuit, Column, CompiledCircuitV2,
+    ConstraintSystem, ConstraintSystemV2Backend, Error, Expression, FirstPhase, Fixed, Instance,
+    ProverV2, ProvingKey, SecondPhase, Selector, TableColumn, VerifyingKey, WitnessCalculator,
 };
 use halo2_proofs::poly::commitment::{CommitmentScheme, ParamsProver, Prover, Verifier};
 use halo2_proofs::poly::Rotation;
@@ -20,6 +20,7 @@ use halo2_proofs::transcript::{
     TranscriptWriterBuffer,
 };
 use rand_core::{OsRng, RngCore};
+use std::collections::HashMap;
 use std::marker::PhantomData;
 
 #[derive(Clone)]
@@ -480,7 +481,7 @@ fn test_mycircuit_full_split() {
     let k = 6;
     const WIDTH_FACTOR: usize = 1;
     let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
-    let compiled_circuit = compile_circuit(k, &circuit, false).unwrap();
+    let (compiled_circuit, config, cs) = compile_circuit(k, &circuit, false).unwrap();
 
     // Setup
     let params = ParamsKZG::<Bn256>::new(k);
@@ -488,4 +489,44 @@ fn test_mycircuit_full_split() {
     let vk = keygen_vk_v2(&params, &compiled_circuit).expect("keygen_vk should not fail");
     let pk =
         keygen_pk_v2(&params, vk.clone(), &compiled_circuit).expect("keygen_pk should not fail");
+
+    // Proving
+    let instances = circuit.instances();
+    let instances_slice: &[&[Fr]] = &(instances
+        .iter()
+        .map(|instance| instance.as_slice())
+        .collect::<Vec<_>>());
+    let mut witness_calc = WitnessCalculator::new(k, &circuit, &config, &cs, instances_slice);
+
+    let rng = BlockRng::new(OneNg {});
+    let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
+    let mut prover =
+        ProverV2::<KZGCommitmentScheme<Bn256>, ProverSHPLONK<'_, Bn256>, _, _, _>::new(
+            &params,
+            &pk,
+            &[instances_slice],
+            rng,
+            transcript,
+        )
+        .unwrap();
+    let witness_phase0 = witness_calc.calc(0, &HashMap::new()).unwrap();
+    let challenges_phase0 = prover.commit_phase(0, vec![witness_phase0]).unwrap();
+    let witness_phase1 = witness_calc.calc(1, &challenges_phase0).unwrap();
+    let _challenges_phase1 = prover.commit_phase(1, vec![witness_phase1]).unwrap();
+    let mut transcript = prover.create_proof().unwrap();
+    let proof = transcript.finalize();
+
+    // Verify
+    let mut verifier_transcript =
+        Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
+    let strategy = SingleStrategy::new(&verifier_params);
+
+    verify_proof_v2::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<'_, Bn256>, _, _, _>(
+        &params,
+        &vk,
+        strategy,
+        &[instances_slice],
+        &mut verifier_transcript,
+    )
+    .expect("verify succeeds");
 }

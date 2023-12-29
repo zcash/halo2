@@ -1,6 +1,7 @@
 use super::{lookup, permutation, shuffle, Assigned, Error, Queries};
 use crate::circuit::layouter::SyncDeps;
 use crate::dev::metadata;
+use crate::plonk::WitnessCollection;
 use crate::{
     circuit::{Layouter, Region, Value},
     poly::{batch_invert_assigned, LagrangeCoeff, Polynomial, Rotation},
@@ -11,6 +12,7 @@ use ff::Field;
 use sealed::SealedPhase;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::iter::{Product, Sum};
 use std::{
@@ -1677,12 +1679,194 @@ pub struct ConstraintSystemV2Backend<F: Field> {
     // pub(crate) minimum_degree: Option<usize>,
 }
 
+/// Witness calculator.  Frontend function
+#[derive(Debug)]
+pub struct WitnessCalculator<'a, F: Field, ConcreteCircuit: Circuit<F>> {
+    k: u32,
+    n: usize,
+    unusable_rows_start: usize,
+    circuit: &'a ConcreteCircuit,
+    config: &'a ConcreteCircuit::Config,
+    cs: &'a ConstraintSystem<F>,
+    instances: &'a [&'a [F]],
+    next_phase: u8,
+}
+
+impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, ConcreteCircuit> {
+    /// Create a new WitnessCalculator
+    pub fn new(
+        k: u32,
+        circuit: &'a ConcreteCircuit,
+        config: &'a ConcreteCircuit::Config,
+        cs: &'a ConstraintSystem<F>,
+        instances: &'a [&'a [F]],
+    ) -> Self {
+        let n = 2usize.pow(k);
+        let unusable_rows_start = n - (cs.blinding_factors() + 1);
+        Self {
+            k,
+            n,
+            unusable_rows_start,
+            circuit,
+            config,
+            cs,
+            instances,
+            next_phase: 0,
+        }
+    }
+
+    /// Calculate witness at phase
+    pub fn calc(
+        &mut self,
+        phase: u8,
+        challenges: &HashMap<usize, F>,
+    ) -> Result<Vec<Option<Polynomial<Assigned<F>, LagrangeCoeff>>>, Error> {
+        if phase != self.next_phase {
+            return Err(Error::Other(format!(
+                "Expected phase {}, got {}",
+                self.next_phase, phase
+            )));
+        }
+        let current_phase = match phase {
+            0 => FirstPhase.to_sealed(),
+            1 => SecondPhase.to_sealed(),
+            2 => ThirdPhase.to_sealed(),
+            _ => unreachable!("only phase [0..2] supported"),
+        };
+        let mut witness = WitnessCollection {
+            k: self.k,
+            current_phase,
+            advice: vec![Polynomial::new_empty(self.n, F::ZERO.into()); self.cs.num_advice_columns],
+            unblinded_advice: HashSet::from_iter(self.cs.unblinded_advice_columns.clone()),
+            instances: self.instances,
+            challenges,
+            // The prover will not be allowed to assign values to advice
+            // cells that exist within inactive rows, which include some
+            // number of blinding factors and an extra row for use in the
+            // permutation argument.
+            usable_rows: ..self.unusable_rows_start,
+            _marker: std::marker::PhantomData,
+        };
+
+        // Synthesize the circuit to obtain the witness and other information.
+        ConcreteCircuit::FloorPlanner::synthesize(
+            &mut witness,
+            self.circuit,
+            self.config.clone(),
+            self.cs.constants.clone(),
+        )?;
+
+        let column_indices = self
+            .cs
+            .advice_column_phase
+            .iter()
+            .enumerate()
+            .filter_map(|(column_index, phase)| {
+                if current_phase == *phase {
+                    Some(column_index)
+                } else {
+                    None
+                }
+            })
+            .collect::<BTreeSet<_>>();
+
+        self.next_phase += 1;
+        Ok(witness
+            .advice
+            .into_iter()
+            .enumerate()
+            .map(|(column_index, advice)| {
+                if column_indices.contains(&column_index) {
+                    Some(advice)
+                } else {
+                    None
+                }
+            })
+            .collect())
+    }
+}
+
+/// Calculate witness at phase.  Frontend function
+pub fn calc_witness<F: Field, ConcreteCircuit: Circuit<F>>(
+    k: u32,
+    circuit: &ConcreteCircuit,
+    config: &ConcreteCircuit::Config,
+    cs: &ConstraintSystem<F>,
+    instances: &[&[F]],
+    phase: u8,
+    challenges: &HashMap<usize, F>,
+) -> Result<Vec<Option<Polynomial<Assigned<F>, LagrangeCoeff>>>, Error> {
+    let n = 2usize.pow(k);
+    let unusable_rows_start = n - (cs.blinding_factors() + 1);
+    let phase = match phase {
+        0 => FirstPhase.to_sealed(),
+        1 => SecondPhase.to_sealed(),
+        2 => ThirdPhase.to_sealed(),
+        _ => unreachable!("only phase [0..2] supported"),
+    };
+    let mut witness = WitnessCollection {
+        k,
+        current_phase: phase,
+        advice: vec![Polynomial::new_empty(n, F::ZERO.into()); cs.num_advice_columns],
+        unblinded_advice: HashSet::from_iter(cs.unblinded_advice_columns.clone()),
+        instances,
+        challenges,
+        // The prover will not be allowed to assign values to advice
+        // cells that exist within inactive rows, which include some
+        // number of blinding factors and an extra row for use in the
+        // permutation argument.
+        usable_rows: ..unusable_rows_start,
+        _marker: std::marker::PhantomData,
+    };
+
+    // Synthesize the circuit to obtain the witness and other information.
+    ConcreteCircuit::FloorPlanner::synthesize(
+        &mut witness,
+        circuit,
+        config.clone(),
+        cs.constants.clone(),
+    )?;
+
+    let column_indices = cs
+        .advice_column_phase
+        .iter()
+        .enumerate()
+        .filter_map(|(column_index, phase)| {
+            if witness.current_phase == *phase {
+                Some(column_index)
+            } else {
+                None
+            }
+        })
+        .collect::<BTreeSet<_>>();
+
+    Ok(witness
+        .advice
+        .into_iter()
+        .enumerate()
+        .map(|(column_index, advice)| {
+            if column_indices.contains(&column_index) {
+                Some(advice)
+            } else {
+                None
+            }
+        })
+        .collect())
+}
+
 /// TODO: Document. Frontend function
 pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
     k: u32,
     circuit: &ConcreteCircuit,
     compress_selectors: bool,
-) -> Result<CompiledCircuitV2<F>, Error> {
+) -> Result<
+    (
+        CompiledCircuitV2<F>,
+        ConcreteCircuit::Config,
+        ConstraintSystem<F>,
+    ),
+    Error,
+> {
     let n = 2usize.pow(k);
     let mut cs = ConstraintSystem::default();
     #[cfg(feature = "circuit-params")]
@@ -1708,7 +1892,7 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
     ConcreteCircuit::FloorPlanner::synthesize(
         &mut assembly,
         circuit,
-        config,
+        config.clone(),
         cs.constants.clone(),
     )?;
 
@@ -1731,7 +1915,7 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
         num_advice_columns: cs.num_advice_columns,
         num_instance_columns: cs.num_instance_columns,
         num_challenges: cs.num_challenges,
-        unblinded_advice_columns: cs.unblinded_advice_columns,
+        unblinded_advice_columns: cs.unblinded_advice_columns.clone(),
         advice_column_phase: cs.advice_column_phase.iter().map(|p| p.0).collect(),
         challenge_phase: cs.challenge_phase.iter().map(|p| p.0).collect(),
         gates: cs
@@ -1743,20 +1927,24 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
                 polys: g.polys.clone(),
             })
             .collect(),
-        permutation: cs.permutation,
-        lookups: cs.lookups,
-        shuffles: cs.shuffles,
-        general_column_annotations: cs.general_column_annotations,
+        permutation: cs.permutation.clone(),
+        lookups: cs.lookups.clone(),
+        shuffles: cs.shuffles.clone(),
+        general_column_annotations: cs.general_column_annotations.clone(),
     };
     let preprocessing = PreprocessingV2 {
         permutation: assembly.permutation,
         fixed,
     };
 
-    Ok(CompiledCircuitV2 {
-        cs: cs2,
-        preprocessing,
-    })
+    Ok((
+        CompiledCircuitV2 {
+            cs: cs2,
+            preprocessing,
+        },
+        config,
+        cs,
+    ))
 }
 
 impl<F: Field> ConstraintSystemV2Backend<F> {
