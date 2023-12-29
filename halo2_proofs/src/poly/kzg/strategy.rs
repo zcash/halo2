@@ -102,7 +102,7 @@ where
         self.msm_accumulator.scale(E::Scalar::random(OsRng));
 
         // Guard is updated with new msm contributions
-        let guard = f(self.msm_accumulator)?;
+        let guard = f(self.msm_accumulator).expect("todo");
         Ok(Self {
             msm_accumulator: guard.msm_accumulator,
         })
@@ -144,6 +144,7 @@ where
         if msm.check() {
             Ok(())
         } else {
+            println!("OH NO");
             Err(Error::ConstraintSystemFailure)
         }
     }

@@ -7,8 +7,8 @@ use halo2_proofs::arithmetic::Field;
 use halo2_proofs::circuit::{AssignedCell, Cell, Layouter, Region, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::plonk::{
-    calc_witness, compile_circuit, create_proof, keygen_pk, keygen_pk_v2, keygen_vk, keygen_vk_v2,
-    verify_proof, verify_proof_v2, Advice, Assigned, Challenge, Circuit, Column, CompiledCircuitV2,
+    compile_circuit, create_proof, keygen_pk, keygen_pk_v2, keygen_vk, keygen_vk_v2, verify_proof,
+    verify_proof_v2, Advice, Assigned, Challenge, Circuit, Column, CompiledCircuitV2,
     ConstraintSystem, ConstraintSystemV2Backend, Error, Expression, FirstPhase, Fixed, Instance,
     ProverV2, ProvingKey, SecondPhase, Selector, TableColumn, VerifyingKey, WitnessCalculator,
 };
@@ -316,10 +316,11 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> MyCircuit<F, WIDTH_FACTOR>
                 // Enable RLC gate 3 times
                 for abcd in [[3, 5, 3, 5], [8, 9, 8, 9], [111, 222, 111, 222]] {
                     config.s_rlc.enable(&mut region, offset)?;
-                    let (_, abcd1) = config.assign_gate(&mut region, &mut offset, None, abcd)?;
-                    let rlc = challenge
-                        .zip(abcd1[0].value().zip(abcd1[1].value()))
-                        .map(|(ch, (a, b))| *a + ch * b);
+                    let (_, _) = config.assign_gate(&mut region, &mut offset, None, abcd)?;
+                    let rlc = challenge.map(|ch| {
+                        let [a, b, ..] = abcd;
+                        F::from(a) + ch * F::from(b)
+                    });
                     region.assign_advice(|| "", config.e, offset - 1, || rlc)?;
                     offset += 1;
                 }
@@ -381,7 +382,8 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> Circuit<F> for MyCircuit<F
         for config in &config {
             let mut total_rows = 0;
             loop {
-                let (rows, instance_copy) = self.synthesize_unit(config, &mut layouter)?;
+                let (rows, instance_copy) =
+                    self.synthesize_unit(config, &mut layouter).expect("todo");
                 if total_rows == 0 {
                     for (i, instance) in instance_copy.iter().enumerate() {
                         layouter.constrain_instance(instance.cell(), config.instance, 1 + i)?;

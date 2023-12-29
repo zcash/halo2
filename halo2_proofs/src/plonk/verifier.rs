@@ -434,11 +434,14 @@ where
     // polynomial commitments open to the correct values.
 
     let verifier = V::new(params);
-    strategy.process(|msm| {
-        verifier
-            .verify_proof(transcript, queries, msm)
-            .map_err(|_| Error::Opening)
-    })
+    Ok(strategy
+        .process(|msm| {
+            println!("ONE");
+            verifier
+                .verify_proof(transcript, queries, msm)
+                .map_err(|_| Error::Opening)
+        })
+        .expect("todo"))
 }
 
 // TODO: Remove

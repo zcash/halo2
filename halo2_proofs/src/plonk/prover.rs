@@ -239,11 +239,24 @@ impl<
         if witness.len() != advice.len() {
             return Err(Error::Other(format!("witness.len() != advice.len()")));
         }
-        for witness in witness.iter() {
-            if witness.len() != self.params.n() as usize {
+        for witness_circuit in witness.iter() {
+            if witness_circuit.len() != meta.num_advice_columns {
                 return Err(Error::Other(format!(
-                    "unexpected length in witness columns"
+                    "unexpected length in witness_circuitk.  Got {}, expected {}",
+                    witness_circuit.len(),
+                    meta.num_advice_columns,
                 )));
+            }
+            for witness_column in witness_circuit {
+                if let Some(witness_column) = witness_column {
+                    if witness_column.len() != self.params.n() as usize {
+                        return Err(Error::Other(format!(
+                            "unexpected length in witness_column.  Got {}, expected {}",
+                            witness_column.len(),
+                            self.params.n()
+                        )));
+                    }
+                }
             }
         }
 

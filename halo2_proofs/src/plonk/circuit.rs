@@ -1754,7 +1754,8 @@ impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concret
             self.circuit,
             self.config.clone(),
             self.cs.constants.clone(),
-        )?;
+        )
+        .expect("todo");
 
         let column_indices = self
             .cs
@@ -1784,74 +1785,6 @@ impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concret
             })
             .collect())
     }
-}
-
-/// Calculate witness at phase.  Frontend function
-pub fn calc_witness<F: Field, ConcreteCircuit: Circuit<F>>(
-    k: u32,
-    circuit: &ConcreteCircuit,
-    config: &ConcreteCircuit::Config,
-    cs: &ConstraintSystem<F>,
-    instances: &[&[F]],
-    phase: u8,
-    challenges: &HashMap<usize, F>,
-) -> Result<Vec<Option<Polynomial<Assigned<F>, LagrangeCoeff>>>, Error> {
-    let n = 2usize.pow(k);
-    let unusable_rows_start = n - (cs.blinding_factors() + 1);
-    let phase = match phase {
-        0 => FirstPhase.to_sealed(),
-        1 => SecondPhase.to_sealed(),
-        2 => ThirdPhase.to_sealed(),
-        _ => unreachable!("only phase [0..2] supported"),
-    };
-    let mut witness = WitnessCollection {
-        k,
-        current_phase: phase,
-        advice: vec![Polynomial::new_empty(n, F::ZERO.into()); cs.num_advice_columns],
-        unblinded_advice: HashSet::from_iter(cs.unblinded_advice_columns.clone()),
-        instances,
-        challenges,
-        // The prover will not be allowed to assign values to advice
-        // cells that exist within inactive rows, which include some
-        // number of blinding factors and an extra row for use in the
-        // permutation argument.
-        usable_rows: ..unusable_rows_start,
-        _marker: std::marker::PhantomData,
-    };
-
-    // Synthesize the circuit to obtain the witness and other information.
-    ConcreteCircuit::FloorPlanner::synthesize(
-        &mut witness,
-        circuit,
-        config.clone(),
-        cs.constants.clone(),
-    )?;
-
-    let column_indices = cs
-        .advice_column_phase
-        .iter()
-        .enumerate()
-        .filter_map(|(column_index, phase)| {
-            if witness.current_phase == *phase {
-                Some(column_index)
-            } else {
-                None
-            }
-        })
-        .collect::<BTreeSet<_>>();
-
-    Ok(witness
-        .advice
-        .into_iter()
-        .enumerate()
-        .map(|(column_index, advice)| {
-            if column_indices.contains(&column_index) {
-                Some(advice)
-            } else {
-                None
-            }
-        })
-        .collect())
 }
 
 /// TODO: Document. Frontend function
@@ -2032,6 +1965,19 @@ impl<F: Field> ConstraintSystemV2Backend<F> {
             {
                 collect_queries(expr, &mut queries);
             }
+        }
+        for column in self.permutation.get_columns() {
+            match column.column_type {
+                Any::Instance => queries
+                    .instance
+                    .insert((Column::new(column.index(), Instance), Rotation::cur())),
+                Any::Fixed => queries
+                    .fixed
+                    .insert((Column::new(column.index(), Fixed), Rotation::cur())),
+                Any::Advice(advice) => queries
+                    .advice
+                    .insert((Column::new(column.index(), advice), Rotation::cur())),
+            };
         }
 
         for (column, _) in queries.advice.iter() {
