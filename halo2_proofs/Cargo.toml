@@ -58,6 +58,8 @@ blake2b_simd = "1" # MSRV 1.66.0
 sha3 = "0.9.1"
 rand_chacha = "0.3"
 maybe-rayon = { version = "0.1.0", default-features = false }
+serde = { version = "1", optional = true, features = ["derive"] }
+serde_derive = { version = "1", optional = true}
 
 # Developer tooling dependencies
 plotters = { version = "0.3.0", default-features = false, optional = true }
@@ -72,6 +74,7 @@ criterion = "0.3"
 gumdrop = "0.8"
 proptest = "1"
 rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
+serde_json = "1"
 
 [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
 getrandom = { version = "0.2", features = ["js"] }
@@ -91,6 +94,7 @@ thread-safe-region = []
 sanity-checks = []
 batch = ["rand_core/getrandom"]
 circuit-params = []
+cost-estimator = ["serde", "serde_derive"]
 
 [lib]
 bench = false
@@ -98,3 +102,7 @@ bench = false
 [[example]]
 name = "circuit-layout"
 required-features = ["test-dev-graph"]
+
+[[example]]
+name = "proof-size"
+required-features = ["cost-estimator"]
