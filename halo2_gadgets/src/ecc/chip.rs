@@ -385,6 +385,23 @@ impl EccBaseFieldElemFixed {
     }
 }
 
+#[derive(Clone, Debug)]
+/// A full-width scalar used for variable-base scalar multiplication.
+/// This is represented as a tuple of (alpha_{254}, alpha_{253}, alpha_{rest}),
+/// where alpha_rest = alpha[252..=0].
+pub struct EccScalarVarFullWidth<C: CurveAffine> {
+    value: Value<C::Scalar>,
+    alpha_254: AssignedCell<bool, C::Base>,
+    alpha_253: AssignedCell<bool, C::Base>,
+    alpha_rest: AssignedCell<C::Base, C::Base>
+}
+
+impl<C: CurveAffine> EccScalarVarFullWidth<C> {
+    pub(crate) fn value(&self) -> Value<C::Scalar> {
+        self.value
+    }
+}
+
 /// An enumeration of the possible types of scalars used in variable-base
 /// multiplication.
 #[derive(Clone, Debug)]
@@ -403,8 +420,10 @@ pub enum ScalarVar {
     ///
     /// [orchardkeycomponents]: https://zips.z.cash/protocol/protocol.pdf#orchardkeycomponents
     BaseFieldElem(AssignedCell<pallas::Base, pallas::Base>),
-    /// A full-width scalar. This is unimplemented for halo2_gadgets v0.1.0.
-    FullWidth,
+    /// A full-width scalar used for variable-base scalar multiplication.
+    /// This is represented as a tuple of (alpha_{254}, alpha_{253}, alpha_{rest}),
+    /// where alpha_rest = alpha[252..=0].
+    FullWidth(EccScalarVarFullWidth<pallas::Affine>)
 }
 
 impl<Fixed: FixedPoints<pallas::Affine>> EccInstructions<pallas::Affine> for EccChip<Fixed>
@@ -540,14 +559,16 @@ where
     ) -> Result<(Self::Point, Self::ScalarVar), Error> {
         let config = self.config().mul;
         match scalar {
-            ScalarVar::BaseFieldElem(scalar) => config.assign(
-                layouter.namespace(|| "variable-base scalar mul"),
+            ScalarVar::BaseFieldElem(scalar) => config.assign_base_field(
+                layouter.namespace(|| "variable-base scalar mul with base-field element"),
                 scalar.clone(),
                 base,
             ),
-            ScalarVar::FullWidth => {
-                todo!()
-            }
+            ScalarVar::FullWidth(scalar) => config.assign_full_width(
+                layouter.namespace(|| "variable-base scalar mul with full-width scalar"),
+                scalar.clone(),
+                base,
+            )
         }
     }
 
