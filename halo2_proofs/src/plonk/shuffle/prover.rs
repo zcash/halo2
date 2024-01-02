@@ -188,7 +188,7 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
             challenges,
         );
 
-        let blinding_factors = pk.vk.queries.blinding_factors();
+        let blinding_factors = pk.vk.cs.blinding_factors();
 
         let mut shuffle_product = vec![C::Scalar::ZERO; params.n() as usize];
         parallelize(&mut shuffle_product, |shuffle_product, start| {

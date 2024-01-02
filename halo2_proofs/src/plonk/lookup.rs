@@ -1,9 +1,16 @@
-use super::circuit::Expression;
+use super::circuit::{Expression, ExpressionMid};
 use ff::Field;
 use std::fmt::{self, Debug};
 
 pub(crate) mod prover;
 pub(crate) mod verifier;
+
+#[derive(Clone, Debug)]
+pub struct ArgumentV2<F: Field> {
+    pub(crate) name: String,
+    pub(crate) input_expressions: Vec<ExpressionMid<F>>,
+    pub(crate) table_expressions: Vec<ExpressionMid<F>>,
+}
 
 #[derive(Clone)]
 pub struct Argument<F: Field> {

@@ -72,7 +72,7 @@ impl Argument {
         // 3 circuit for the permutation argument.
         assert!(pk.vk.cs_degree >= 3);
         let chunk_len = pk.vk.cs_degree - 2;
-        let blinding_factors = pk.vk.queries.blinding_factors();
+        let blinding_factors = pk.vk.cs.blinding_factors();
 
         // Each column gets its own delta power.
         let mut deltaomega = C::Scalar::ONE;
@@ -393,7 +393,7 @@ impl<C: CurveAffine> Constructed<C> {
         transcript: &mut T,
     ) -> Result<Evaluated<C>, Error> {
         let domain = &pk.vk.domain;
-        let blinding_factors = pk.vk.queries.blinding_factors();
+        let blinding_factors = pk.vk.cs.blinding_factors();
 
         {
             let mut sets = self.sets.iter();
@@ -485,7 +485,7 @@ impl<C: CurveAffine> Evaluated<C> {
         pk: &'a plonk::ProvingKeyV2<C>,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = ProverQuery<'a, C>> + Clone {
-        let blinding_factors = pk.vk.queries.blinding_factors();
+        let blinding_factors = pk.vk.cs.blinding_factors();
         let x_next = pk.vk.domain.rotate_omega(*x, Rotation::next());
         let x_last = pk
             .vk

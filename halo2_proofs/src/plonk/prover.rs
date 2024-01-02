@@ -61,7 +61,7 @@ pub struct ProverV2<
     // advice_queries: Vec<(Column<Advice>, Rotation)>,
     // instance_queries: Vec<(Column<Instance>, Rotation)>,
     // fixed_queries: Vec<(Column<Fixed>, Rotation)>,
-    phases: Vec<u8>,
+    phases: Vec<sealed::Phase>,
     // State
     instance: Vec<InstanceSingle<Scheme::Curve>>,
     advice: Vec<AdviceSingle<Scheme::Curve, LagrangeCoeff>>,
@@ -95,6 +95,7 @@ impl<
     where
         Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     {
+        // println!("DBG prove vk.queries.advices {:?}", pk.vk.queries.advice);
         for instance in instances.iter() {
             if instance.len() != pk.vk.cs.num_instance_columns {
                 return Err(Error::InvalidInstances);
@@ -105,8 +106,8 @@ impl<
         pk.vk.hash_into(&mut transcript)?;
 
         let meta = &pk.vk.cs;
-        let queries = &pk.vk.queries;
-        let phases = meta.phases();
+        // let queries = &pk.vk.queries;
+        let phases = meta.phases().collect();
 
         let domain = &pk.vk.domain;
 
@@ -118,11 +119,12 @@ impl<
                     .map(|values| {
                         let mut poly = domain.empty_lagrange();
                         assert_eq!(poly.len(), params.n() as usize);
-                        if values.len() > (poly.len() - (queries.blinding_factors() + 1)) {
+                        if values.len() > (poly.len() - (meta.blinding_factors() + 1)) {
                             return Err(Error::InstanceTooLarge);
                         }
                         for (poly, value) in poly.iter_mut().zip(values.iter()) {
                             if !P::QUERY_INSTANCE {
+                                // dbg!(1, value);
                                 transcript.common_scalar(*value)?;
                             }
                             *poly = *value;
@@ -146,6 +148,7 @@ impl<
                     drop(instance_commitments_projective);
 
                     for commitment in &instance_commitments {
+                        // dbg!(2, commitment);
                         transcript.common_point(*commitment)?;
                     }
                 }
@@ -208,13 +211,13 @@ impl<
                 panic!("TODO: Return Error instead.  All phases already commited");
             }
         };
-        if phase != *current_phase {
+        if phase != current_phase.0 {
             panic!("TODO: Return Error instead. Committing invalid phase");
         }
 
         let params = self.params;
         let meta = &self.pk.vk.cs;
-        let queries = &self.pk.vk.queries;
+        // let queries = &self.pk.vk.queries;
 
         let transcript = &mut self.transcript;
         let mut rng = &mut self.rng;
@@ -275,7 +278,7 @@ impl<
             Option<Polynomial<Assigned<Scheme::Scalar>, LagrangeCoeff>>,
         >|
          -> Result<(), Error> {
-            let unusable_rows_start = params.n() as usize - (queries.blinding_factors() + 1);
+            let unusable_rows_start = params.n() as usize - (meta.blinding_factors() + 1);
             let mut advice_values =
                 batch_invert_assigned::<Scheme::Scalar>(witness.into_iter().flatten().collect());
             let unblinded_advice: HashSet<usize> =
@@ -355,7 +358,7 @@ impl<
     {
         let params = self.params;
         let meta = &self.pk.vk.cs;
-        let queries = &self.pk.vk.queries;
+        // let queries = &self.pk.vk.queries;
         let pk = self.pk;
         let domain = &self.pk.vk.domain;
 
@@ -526,8 +529,8 @@ impl<
             // Compute and hash instance evals for the circuit instance
             for instance in instance.iter() {
                 // Evaluate polynomials at omega^i x
-                let instance_evals: Vec<_> = queries
-                    .instance
+                let instance_evals: Vec<_> = meta
+                    .instance_queries
                     .iter()
                     .map(|&(column, at)| {
                         eval_polynomial(
@@ -547,8 +550,8 @@ impl<
         // Compute and hash advice evals for the circuit instance
         for advice in advice.iter() {
             // Evaluate polynomials at omega^i x
-            let advice_evals: Vec<_> = queries
-                .advice
+            let advice_evals: Vec<_> = meta
+                .advice_queries
                 .iter()
                 .map(|&(column, at)| {
                     eval_polynomial(
@@ -557,6 +560,7 @@ impl<
                     )
                 })
                 .collect();
+            dbg!(&advice_evals);
 
             // Hash each advice column evaluation
             for eval in advice_evals.iter() {
@@ -565,8 +569,8 @@ impl<
         }
 
         // Compute and hash fixed evals
-        let fixed_evals: Vec<_> = queries
-            .fixed
+        let fixed_evals: Vec<_> = meta
+            .fixed_queries
             .iter()
             .map(|&(column, at)| {
                 eval_polynomial(&pk.fixed_polys[column.index()], domain.rotate_omega(*x, at))
@@ -623,7 +627,7 @@ impl<
                 iter::empty()
                     .chain(
                         P::QUERY_INSTANCE
-                            .then_some(queries.instance.iter().map(move |&(column, at)| {
+                            .then_some(meta.instance_queries.iter().map(move |&(column, at)| {
                                 ProverQuery {
                                     point: domain.rotate_omega(*x, at),
                                     poly: &instance.instance_polys[column.index()],
@@ -633,16 +637,20 @@ impl<
                             .into_iter()
                             .flatten(),
                     )
-                    .chain(queries.advice.iter().map(move |&(column, at)| ProverQuery {
-                        point: domain.rotate_omega(*x, at),
-                        poly: &advice.advice_polys[column.index()],
-                        blind: advice.advice_blinds[column.index()],
-                    }))
+                    .chain(
+                        meta.advice_queries
+                            .iter()
+                            .map(move |&(column, at)| ProverQuery {
+                                point: domain.rotate_omega(*x, at),
+                                poly: &advice.advice_polys[column.index()],
+                                blind: advice.advice_blinds[column.index()],
+                            }),
+                    )
                     .chain(permutation.open_v2(pk, x))
                     .chain(lookups.iter().flat_map(move |p| p.open_v2(pk, x)))
                     .chain(shuffles.iter().flat_map(move |p| p.open_v2(pk, x)))
             })
-            .chain(queries.fixed.iter().map(|&(column, at)| ProverQuery {
+            .chain(meta.fixed_queries.iter().map(|&(column, at)| ProverQuery {
                 point: domain.rotate_omega(*x, at),
                 poly: &pk.fixed_polys[column.index()],
                 blind: Blind::default(),
@@ -652,6 +660,7 @@ impl<
             .chain(vanishing.open(x));
 
         let prover = P::new(params);
+        println!("DBG create_proof");
         prover
             .create_proof(rng, &mut transcript, instances)
             .map_err(|_| Error::ConstraintSystemFailure)?;
@@ -925,6 +934,7 @@ where
 
         let unusable_rows_start = params.n() as usize - (meta.blinding_factors() + 1);
         for current_phase in pk.vk.cs.phases() {
+            println!("DBG phase {:?}", current_phase);
             let column_indices = meta
                 .advice_column_phase
                 .iter()
@@ -1004,17 +1014,23 @@ where
                         }
                     })
                     .collect();
+                // println!("DBG blinds: {:?}", blinds);
                 let advice_commitments_projective: Vec<_> = advice_values
                     .iter()
                     .zip(blinds.iter())
                     .map(|(poly, blind)| params.commit_lagrange(poly, *blind))
                     .collect();
+                // println!(
+                //     "DBG advice_commitments_projective: {:?}",
+                //     advice_commitments_projective
+                // );
                 let mut advice_commitments =
                     vec![Scheme::Curve::identity(); advice_commitments_projective.len()];
                 <Scheme::Curve as CurveAffine>::CurveExt::batch_normalize(
                     &advice_commitments_projective,
                     &mut advice_commitments,
                 );
+                // println!("DBG advice_commitments: {:?}", advice_commitments);
                 let advice_commitments = advice_commitments;
                 drop(advice_commitments_projective);
 

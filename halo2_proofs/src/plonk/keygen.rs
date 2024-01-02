@@ -213,11 +213,12 @@ where
     P: Params<'params, C>,
     C::Scalar: FromUniformBytes<64>,
 {
-    let cs = &circuit.cs;
-    let queries = cs.collect_queries();
+    let cs2 = &circuit.cs;
+    let cs: ConstraintSystem<C::Scalar> = cs2.clone().into();
+    // let queries = cs.collect_queries();
     let domain = EvaluationDomain::new(cs.degree() as u32, params.k());
 
-    if (params.n() as usize) < queries.minimum_rows() {
+    if (params.n() as usize) < cs.minimum_rows() {
         return Err(Error::not_enough_rows_available(params.k()));
     }
 
@@ -239,7 +240,7 @@ where
         domain,
         fixed_commitments,
         permutation_vk,
-        cs.clone(),
+        cs,
     ))
 }
 
@@ -344,7 +345,7 @@ where
 {
     let cs = &circuit.cs;
 
-    if (params.n() as usize) < vk.queries.minimum_rows() {
+    if (params.n() as usize) < vk.cs.minimum_rows() {
         return Err(Error::not_enough_rows_available(params.k()));
     }
 
@@ -377,11 +378,7 @@ where
     // Compute l_blind(X) which evaluates to 1 for each blinding factor row
     // and 0 otherwise over the domain.
     let mut l_blind = vk.domain.empty_lagrange();
-    for evaluation in l_blind[..]
-        .iter_mut()
-        .rev()
-        .take(vk.queries.blinding_factors())
-    {
+    for evaluation in l_blind[..].iter_mut().rev().take(vk.cs.blinding_factors()) {
         *evaluation = C::Scalar::ONE;
     }
     let l_blind = vk.domain.lagrange_to_coeff(l_blind);
@@ -390,7 +387,7 @@ where
     // Compute l_last(X) which evaluates to 1 on the first inactive row (just
     // before the blinding factors) and 0 otherwise over the domain
     let mut l_last = vk.domain.empty_lagrange();
-    l_last[params.n() as usize - vk.queries.blinding_factors() - 1] = C::Scalar::ONE;
+    l_last[params.n() as usize - vk.cs.blinding_factors() - 1] = C::Scalar::ONE;
     let l_last = vk.domain.lagrange_to_coeff(l_last);
     let l_last = vk.domain.coeff_to_extended(l_last);
 
@@ -405,7 +402,7 @@ where
     });
 
     // Compute the optimized evaluation data structure
-    let ev = Evaluator::new_v2(&vk.cs);
+    let ev = Evaluator::new(&vk.cs);
 
     Ok(ProvingKeyV2 {
         vk,
@@ -466,6 +463,15 @@ where
     } else {
         cs.directly_convert_selectors_to_fixed(assembly.selectors)
     };
+    // println!(
+    //     "DBG configure queries:\n{:#?}",
+    //     (
+    //         &cs.advice_queries,
+    //         &cs.instance_queries,
+    //         &cs.fixed_queries,
+    //         &cs.num_advice_queries
+    //     )
+    // );
     fixed.extend(
         selector_polys
             .into_iter()

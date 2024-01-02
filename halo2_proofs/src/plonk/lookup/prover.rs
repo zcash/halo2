@@ -287,7 +287,7 @@ impl<C: CurveAffine> Permuted<C> {
         mut rng: R,
         transcript: &mut T,
     ) -> Result<Committed<C>, Error> {
-        let blinding_factors = pk.vk.queries.blinding_factors();
+        let blinding_factors = pk.vk.cs.blinding_factors();
         // Goal is to compute the products of fractions
         //
         // Numerator: (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
@@ -723,7 +723,7 @@ fn permute_expression_pair_v2<'params, C: CurveAffine, P: Params<'params, C>, R:
     input_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
     table_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
 ) -> Result<ExpressionPair<C::Scalar>, Error> {
-    let blinding_factors = pk.vk.queries.blinding_factors();
+    let blinding_factors = pk.vk.cs.blinding_factors();
     let usable_rows = params.n() as usize - (blinding_factors + 1);
 
     let mut permuted_input_expression: Vec<C::Scalar> = input_expression.to_vec();

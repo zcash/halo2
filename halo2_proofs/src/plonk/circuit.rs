@@ -99,7 +99,7 @@ impl<C: ColumnType> PartialOrd for Column<C> {
 pub(crate) mod sealed {
     /// Phase of advice column
     #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-    pub struct Phase(pub(super) u8);
+    pub struct Phase(pub(crate) u8);
 
     impl Phase {
         pub fn prev(&self) -> Option<Phase> {
@@ -482,6 +482,15 @@ impl Selector {
 
 /// Query of fixed column at a certain relative location
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct FixedQueryMid {
+    /// Column index
+    pub column_index: usize,
+    /// Rotation of this query
+    pub rotation: Rotation,
+}
+
+/// Query of fixed column at a certain relative location
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct FixedQuery {
     /// Query index
     pub(crate) index: Option<usize>,
@@ -501,6 +510,17 @@ impl FixedQuery {
     pub fn rotation(&self) -> Rotation {
         self.rotation
     }
+}
+
+/// Query of advice column at a certain relative location
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct AdviceQueryMid {
+    /// Column index
+    pub column_index: usize,
+    /// Rotation of this query
+    pub rotation: Rotation,
+    /// Phase of this advice column
+    pub phase: sealed::Phase,
 }
 
 /// Query of advice column at a certain relative location
@@ -531,6 +551,15 @@ impl AdviceQuery {
     pub fn phase(&self) -> u8 {
         self.phase.0
     }
+}
+
+/// Query of instance column at a certain relative location
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct InstanceQueryMid {
+    /// Column index
+    pub column_index: usize,
+    /// Rotation of this query
+    pub rotation: Rotation,
 }
 
 /// Query of instance column at a certain relative location
@@ -795,6 +824,47 @@ pub trait Circuit<F: Field> {
 }
 
 /// Low-degree expression representing an identity that must hold over the committed columns.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ExpressionMid<F> {
+    /// This is a constant polynomial
+    Constant(F),
+    /// This is a fixed column queried at a certain relative location
+    Fixed(FixedQueryMid),
+    /// This is an advice (witness) column queried at a certain relative location
+    Advice(AdviceQueryMid),
+    /// This is an instance (external) column queried at a certain relative location
+    Instance(InstanceQueryMid),
+    /// This is a challenge
+    Challenge(Challenge),
+    /// This is a negated polynomial
+    Negated(Box<ExpressionMid<F>>),
+    /// This is the sum of two polynomials
+    Sum(Box<ExpressionMid<F>>, Box<ExpressionMid<F>>),
+    /// This is the product of two polynomials
+    Product(Box<ExpressionMid<F>>, Box<ExpressionMid<F>>),
+    /// This is a scaled polynomial
+    Scaled(Box<ExpressionMid<F>>, F),
+}
+
+impl<F: Field> ExpressionMid<F> {
+    /// Compute the degree of this polynomial
+    pub fn degree(&self) -> usize {
+        use ExpressionMid::*;
+        match self {
+            Constant(_) => 0,
+            Fixed(_) => 1,
+            Advice(_) => 1,
+            Instance(_) => 1,
+            Challenge(_) => 0,
+            Negated(poly) => poly.degree(),
+            Sum(a, b) => max(a.degree(), b.degree()),
+            Product(a, b) => a.degree() + b.degree(),
+            Scaled(poly, _) => poly.degree(),
+        }
+    }
+}
+
+/// Low-degree expression representing an identity that must hold over the committed columns.
 #[derive(Clone, PartialEq, Eq)]
 pub enum Expression<F> {
     /// This is a constant polynomial
@@ -817,6 +887,50 @@ pub enum Expression<F> {
     Product(Box<Expression<F>>, Box<Expression<F>>),
     /// This is a scaled polynomial
     Scaled(Box<Expression<F>>, F),
+}
+
+impl<F> Into<ExpressionMid<F>> for Expression<F> {
+    fn into(self) -> ExpressionMid<F> {
+        match self {
+            Expression::Constant(c) => ExpressionMid::Constant(c),
+            Expression::Selector(_) => unreachable!(),
+            Expression::Fixed(FixedQuery {
+                column_index,
+                rotation,
+                ..
+            }) => ExpressionMid::Fixed(FixedQueryMid {
+                column_index,
+                rotation,
+            }),
+            Expression::Advice(AdviceQuery {
+                column_index,
+                rotation,
+                phase,
+                ..
+            }) => ExpressionMid::Advice(AdviceQueryMid {
+                column_index,
+                rotation,
+                phase,
+            }),
+            Expression::Instance(InstanceQuery {
+                column_index,
+                rotation,
+                ..
+            }) => ExpressionMid::Instance(InstanceQueryMid {
+                column_index,
+                rotation,
+            }),
+            Expression::Challenge(c) => ExpressionMid::Challenge(c),
+            Expression::Negated(e) => ExpressionMid::Negated(Box::new((*e).into())),
+            Expression::Sum(lhs, rhs) => {
+                ExpressionMid::Sum(Box::new((*lhs).into()), Box::new((*rhs).into()))
+            }
+            Expression::Product(lhs, rhs) => {
+                ExpressionMid::Product(Box::new((*lhs).into()), Box::new((*rhs).into()))
+            }
+            Expression::Scaled(e, c) => ExpressionMid::Scaled(Box::new((*e).into()), c),
+        }
+    }
 }
 
 impl<F: Field> Expression<F> {
@@ -1515,7 +1629,7 @@ impl<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> IntoIterato
 pub struct GateV2Backend<F: Field> {
     name: String,
     constraint_names: Vec<String>,
-    polys: Vec<Expression<F>>,
+    polys: Vec<ExpressionMid<F>>,
 }
 
 impl<F: Field> GateV2Backend<F> {
@@ -1530,7 +1644,7 @@ impl<F: Field> GateV2Backend<F> {
     }
 
     /// Returns constraints of this gate
-    pub fn polynomials(&self) -> &[Expression<F>] {
+    pub fn polynomials(&self) -> &[ExpressionMid<F>] {
         &self.polys
     }
 }
@@ -1596,41 +1710,91 @@ struct QueriesSet {
     fixed: BTreeSet<(Column<Fixed>, Rotation)>,
 }
 
-fn collect_queries<F: Field>(expr: &Expression<F>, queries: &mut QueriesSet) {
+fn collect_queries<F: Field>(expr: &ExpressionMid<F>, queries: &mut QueriesSet) {
     match expr {
-        Expression::Constant(_) => (),
-        Expression::Selector(_selector) => {
-            panic!("no Selector should arrive to the Backend");
-        }
-        Expression::Fixed(query) => {
+        ExpressionMid::Constant(_) => (),
+        ExpressionMid::Fixed(query) => {
             queries
                 .fixed
                 .insert((Column::new(query.column_index, Fixed), query.rotation));
         }
-        Expression::Advice(query) => {
+        ExpressionMid::Advice(query) => {
             queries.advice.insert((
                 Column::new(query.column_index, Advice { phase: query.phase }),
                 query.rotation,
             ));
         }
-        Expression::Instance(query) => {
+        ExpressionMid::Instance(query) => {
             queries
                 .instance
                 .insert((Column::new(query.column_index, Instance), query.rotation));
         }
-        Expression::Challenge(_) => (),
-        Expression::Negated(a) => collect_queries(a, queries),
-        Expression::Sum(a, b) => {
+        ExpressionMid::Challenge(_) => (),
+        ExpressionMid::Negated(a) => collect_queries(a, queries),
+        ExpressionMid::Sum(a, b) => {
             collect_queries(a, queries);
             collect_queries(b, queries);
         }
-        Expression::Product(a, b) => {
+        ExpressionMid::Product(a, b) => {
             collect_queries(a, queries);
             collect_queries(b, queries);
         }
-        Expression::Scaled(a, _) => collect_queries(a, queries),
+        ExpressionMid::Scaled(a, _) => collect_queries(a, queries),
     };
 }
+
+/*
+/// This is a description of the circuit environment, such as the gate, column and
+/// permutation arrangements.
+#[derive(Debug, Clone)]
+pub struct ConstraintSystemV2BackendQueries<F: Field> {
+    pub(crate) num_fixed_columns: usize,
+    pub(crate) num_advice_columns: usize,
+    pub(crate) num_instance_columns: usize,
+    // pub(crate) num_selectors: usize,
+    pub(crate) num_challenges: usize,
+
+    /// Contains the index of each advice column that is left unblinded.
+    pub(crate) unblinded_advice_columns: Vec<usize>,
+
+    /// Contains the phase for each advice column. Should have same length as num_advice_columns.
+    pub(crate) advice_column_phase: Vec<u8>,
+    /// Contains the phase for each challenge. Should have same length as num_challenges.
+    pub(crate) challenge_phase: Vec<u8>,
+
+    /// This is a cached vector that maps virtual selectors to the concrete
+    /// fixed column that they were compressed into. This is just used by dev
+    /// tooling right now.
+    // pub(crate) selector_map: Vec<Column<Fixed>>,
+    pub(crate) gates: Vec<GateV2Backend<F>>,
+    pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
+    // Contains an integer for each advice column
+    // identifying how many distinct queries it has
+    // so far; should be same length as num_advice_columns.
+    pub(crate) num_advice_queries: Vec<usize>,
+    pub(crate) instance_queries: Vec<(Column<Instance>, Rotation)>,
+    pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
+
+    // Permutation argument for performing equality constraints
+    pub(crate) permutation: permutation::Argument,
+
+    // Vector of lookup arguments, where each corresponds to a sequence of
+    // input expressions and a sequence of table expressions involved in the lookup.
+    pub(crate) lookups: Vec<lookup::Argument<F>>,
+
+    // Vector of shuffle arguments, where each corresponds to a sequence of
+    // input expressions and a sequence of shuffle expressions involved in the shuffle.
+    pub(crate) shuffles: Vec<shuffle::Argument<F>>,
+
+    // List of indexes of Fixed columns which are associated to a circuit-general Column tied to their annotation.
+    pub(crate) general_column_annotations: HashMap<metadata::Column, String>,
+    // Vector of fixed columns, which can be used to store constant values
+    // that are copied into advice columns.
+    // pub(crate) constants: Vec<Column<Fixed>>,
+
+    // pub(crate) minimum_degree: Option<usize>,
+}
+*/
 
 /// This is a description of the circuit environment, such as the gate, column and
 /// permutation arrangements.
@@ -1664,11 +1828,11 @@ pub struct ConstraintSystemV2Backend<F: Field> {
 
     // Vector of lookup arguments, where each corresponds to a sequence of
     // input expressions and a sequence of table expressions involved in the lookup.
-    pub(crate) lookups: Vec<lookup::Argument<F>>,
+    pub(crate) lookups: Vec<lookup::ArgumentV2<F>>,
 
     // Vector of shuffle arguments, where each corresponds to a sequence of
     // input expressions and a sequence of shuffle expressions involved in the shuffle.
-    pub(crate) shuffles: Vec<shuffle::Argument<F>>,
+    pub(crate) shuffles: Vec<shuffle::ArgumentV2<F>>,
 
     // List of indexes of Fixed columns which are associated to a circuit-general Column tied to their annotation.
     pub(crate) general_column_annotations: HashMap<metadata::Column, String>,
@@ -1851,18 +2015,55 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
         unblinded_advice_columns: cs.unblinded_advice_columns.clone(),
         advice_column_phase: cs.advice_column_phase.iter().map(|p| p.0).collect(),
         challenge_phase: cs.challenge_phase.iter().map(|p| p.0).collect(),
+        // TODO: Clean up all the Expression -> Expression conversions
         gates: cs
             .gates
             .iter()
             .map(|g| GateV2Backend {
                 name: g.name.clone(),
                 constraint_names: g.constraint_names.clone(),
-                polys: g.polys.clone(),
+                polys: g.polys.clone().into_iter().map(|e| e.into()).collect(),
             })
             .collect(),
         permutation: cs.permutation.clone(),
-        lookups: cs.lookups.clone(),
-        shuffles: cs.shuffles.clone(),
+        lookups: cs
+            .lookups
+            .iter()
+            .map(|l| lookup::ArgumentV2 {
+                name: l.name.clone(),
+                input_expressions: l
+                    .input_expressions
+                    .clone()
+                    .into_iter()
+                    .map(|e| e.into())
+                    .collect(),
+                table_expressions: l
+                    .table_expressions
+                    .clone()
+                    .into_iter()
+                    .map(|e| e.into())
+                    .collect(),
+            })
+            .collect(),
+        shuffles: cs
+            .shuffles
+            .iter()
+            .map(|s| shuffle::ArgumentV2 {
+                name: s.name.clone(),
+                input_expressions: s
+                    .input_expressions
+                    .clone()
+                    .into_iter()
+                    .map(|e| e.into())
+                    .collect(),
+                shuffle_expressions: s
+                    .shuffle_expressions
+                    .clone()
+                    .into_iter()
+                    .map(|e| e.into())
+                    .collect(),
+            })
+            .collect(),
         general_column_annotations: cs.general_column_annotations.clone(),
     };
     let preprocessing = PreprocessingV2 {
@@ -1881,6 +2082,7 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
 }
 
 impl<F: Field> ConstraintSystemV2Backend<F> {
+    /*
     /// Compute the degree of the constraint system (the maximum degree of all
     /// constraints).
     pub fn degree(&self) -> usize {
@@ -1924,6 +2126,7 @@ impl<F: Field> ConstraintSystemV2Backend<F> {
         // std::cmp::max(degree, self.minimum_degree.unwrap_or(1))
         degree
     }
+    */
 
     pub(crate) fn phases(&self) -> Vec<u8> {
         let max_phase = self
@@ -1984,12 +2187,14 @@ impl<F: Field> ConstraintSystemV2Backend<F> {
             num_advice_queries[column.index()] += 1;
         }
 
-        Queries {
+        let queries = Queries {
             advice: queries.advice.into_iter().collect(),
             instance: queries.instance.into_iter().collect(),
             fixed: queries.fixed.into_iter().collect(),
             num_advice_queries,
-        }
+        };
+        // println!("DBG collected queries\n{:#?}", queries);
+        queries
     }
 }
 
@@ -2021,7 +2226,7 @@ pub struct ConstraintSystem<F: Field> {
     // Contains an integer for each advice column
     // identifying how many distinct queries it has
     // so far; should be same length as num_advice_columns.
-    num_advice_queries: Vec<usize>,
+    pub(crate) num_advice_queries: Vec<usize>,
     pub(crate) instance_queries: Vec<(Column<Instance>, Rotation)>,
     pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
 
@@ -2044,6 +2249,12 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) constants: Vec<Column<Fixed>>,
 
     pub(crate) minimum_degree: Option<usize>,
+}
+
+impl<F: Field> From<ConstraintSystemV2Backend<F>> for ConstraintSystem<F> {
+    fn from(circuit: ConstraintSystemV2Backend<F>) -> Self {
+        todo!()
+    }
 }
 
 /// Represents the minimal parameters that determine a `ConstraintSystem`.

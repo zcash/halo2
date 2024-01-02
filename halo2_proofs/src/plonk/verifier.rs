@@ -38,6 +38,7 @@ pub fn verify_proof_v2<
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
 {
+    // println!("DBG verify vk.cs.advice_queriess {:?}", vk.cs.advice_queries);
     // Check that instances matches the expected number of instance columns
     for instances in instances.iter() {
         if instances.len() != vk.cs.num_instance_columns {
@@ -52,9 +53,7 @@ where
                 instance
                     .iter()
                     .map(|instance| {
-                        if instance.len()
-                            > params.n() as usize - (vk.queries.blinding_factors() + 1)
-                        {
+                        if instance.len() > params.n() as usize - (vk.cs.blinding_factors() + 1) {
                             return Err(Error::InstanceTooLarge);
                         }
                         let mut poly = instance.to_vec();
@@ -79,6 +78,7 @@ where
         for instance_commitments in instance_commitments.iter() {
             // Hash the instance (external) commitments into the transcript
             for commitment in instance_commitments {
+                // dbg!(2, commitment);
                 transcript.common_point(*commitment)?
             }
         }
@@ -86,6 +86,7 @@ where
         for instance in instances.iter() {
             for instance in instance.iter() {
                 for value in instance.iter() {
+                    // dbg!(1, value);
                     transcript.common_scalar(*value)?;
                 }
             }
@@ -184,13 +185,15 @@ where
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
     let instance_evals = if V::QUERY_INSTANCE {
         (0..num_proofs)
-            .map(|_| -> Result<Vec<_>, _> { read_n_scalars(transcript, vk.queries.instance.len()) })
+            .map(|_| -> Result<Vec<_>, _> {
+                read_n_scalars(transcript, vk.cs.instance_queries.len())
+            })
             .collect::<Result<Vec<_>, _>>()?
     } else {
         let xn = x.pow([params.n()]);
         let (min_rotation, max_rotation) =
-            vk.queries
-                .instance
+            vk.cs
+                .instance_queries
                 .iter()
                 .fold((0, 0), |(min, max), (_, rotation)| {
                     if rotation.0 < min {
@@ -214,8 +217,8 @@ where
         instances
             .iter()
             .map(|instances| {
-                vk.queries
-                    .instance
+                vk.cs
+                    .instance_queries
                     .iter()
                     .map(|(column, rotation)| {
                         let instances = instances[column.index()];
@@ -228,10 +231,11 @@ where
     };
 
     let advice_evals = (0..num_proofs)
-        .map(|_| -> Result<Vec<_>, _> { read_n_scalars(transcript, vk.queries.advice.len()) })
+        .map(|_| -> Result<Vec<_>, _> { read_n_scalars(transcript, vk.cs.advice_queries.len()) })
         .collect::<Result<Vec<_>, _>>()?;
+    dbg!(&advice_evals);
 
-    let fixed_evals = read_n_scalars(transcript, vk.queries.fixed.len())?;
+    let fixed_evals = read_n_scalars(transcript, vk.cs.fixed_queries.len())?;
 
     let vanishing = vanishing.evaluate_after_x(transcript)?;
 
@@ -268,7 +272,7 @@ where
         // x^n
         let xn = x.pow([params.n()]);
 
-        let blinding_factors = vk.queries.blinding_factors();
+        let blinding_factors = vk.cs.blinding_factors();
         let l_evals = vk
             .domain
             .l_i_range(*x, xn, (-((blinding_factors + 1) as i32))..=0);
@@ -388,7 +392,7 @@ where
                 iter::empty()
                     .chain(
                         V::QUERY_INSTANCE
-                            .then_some(vk.queries.instance.iter().enumerate().map(
+                            .then_some(vk.cs.instance_queries.iter().enumerate().map(
                                 move |(query_index, &(column, at))| {
                                     VerifierQuery::new_commitment(
                                         &instance_commitments[column.index()],
@@ -400,7 +404,7 @@ where
                             .into_iter()
                             .flatten(),
                     )
-                    .chain(vk.queries.advice.iter().enumerate().map(
+                    .chain(vk.cs.advice_queries.iter().enumerate().map(
                         move |(query_index, &(column, at))| {
                             VerifierQuery::new_commitment(
                                 &advice_commitments[column.index()],
@@ -415,8 +419,8 @@ where
             },
         )
         .chain(
-            vk.queries
-                .fixed
+            vk.cs
+                .fixed_queries
                 .iter()
                 .enumerate()
                 .map(|(query_index, &(column, at))| {
@@ -785,6 +789,8 @@ where
 
         vanishing.verify(params, expressions, y, xn)
     };
+
+    // println!("DBG verify fixed_queries:\n{:#?}", vk.cs.fixed_queries);
 
     let queries = instance_commitments
         .iter()

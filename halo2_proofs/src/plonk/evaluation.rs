@@ -205,94 +205,96 @@ pub struct CalculationInfo {
 }
 
 impl<C: CurveAffine> Evaluator<C> {
-    /// Creates a new evaluation structure
-    pub fn new_v2(cs: &ConstraintSystemV2Backend<C::ScalarExt>) -> Self {
-        let mut ev = Evaluator::default();
+    /*
+        /// Creates a new evaluation structure
+        pub fn new_v2(cs: &ConstraintSystemV2Backend<C::ScalarExt>) -> Self {
+            let mut ev = Evaluator::default();
 
-        // Custom gates
-        let mut parts = Vec::new();
-        for gate in cs.gates.iter() {
-            parts.extend(
-                gate.polynomials()
-                    .iter()
-                    .map(|poly| ev.custom_gates.add_expression(poly)),
-            );
+            // Custom gates
+            let mut parts = Vec::new();
+            for gate in cs.gates.iter() {
+                parts.extend(
+                    gate.polynomials()
+                        .iter()
+                        .map(|poly| ev.custom_gates.add_expression(poly)),
+                );
+            }
+            ev.custom_gates.add_calculation(Calculation::Horner(
+                ValueSource::PreviousValue(),
+                parts,
+                ValueSource::Y(),
+            ));
+
+            // Lookups
+            for lookup in cs.lookups.iter() {
+                let mut graph = GraphEvaluator::default();
+
+                let mut evaluate_lc = |expressions: &Vec<Expression<_>>| {
+                    let parts = expressions
+                        .iter()
+                        .map(|expr| graph.add_expression(expr))
+                        .collect();
+                    graph.add_calculation(Calculation::Horner(
+                        ValueSource::Constant(0),
+                        parts,
+                        ValueSource::Theta(),
+                    ))
+                };
+
+                // Input coset
+                let compressed_input_coset = evaluate_lc(&lookup.input_expressions);
+                // table coset
+                let compressed_table_coset = evaluate_lc(&lookup.table_expressions);
+                // z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
+                let right_gamma = graph.add_calculation(Calculation::Add(
+                    compressed_table_coset,
+                    ValueSource::Gamma(),
+                ));
+                let lc = graph.add_calculation(Calculation::Add(
+                    compressed_input_coset,
+                    ValueSource::Beta(),
+                ));
+                graph.add_calculation(Calculation::Mul(lc, right_gamma));
+
+                ev.lookups.push(graph);
+            }
+
+            // Shuffles
+            for shuffle in cs.shuffles.iter() {
+                let evaluate_lc = |expressions: &Vec<Expression<_>>, graph: &mut GraphEvaluator<C>| {
+                    let parts = expressions
+                        .iter()
+                        .map(|expr| graph.add_expression(expr))
+                        .collect();
+                    graph.add_calculation(Calculation::Horner(
+                        ValueSource::Constant(0),
+                        parts,
+                        ValueSource::Theta(),
+                    ))
+                };
+
+                let mut graph_input = GraphEvaluator::default();
+                let compressed_input_coset = evaluate_lc(&shuffle.input_expressions, &mut graph_input);
+                let _ = graph_input.add_calculation(Calculation::Add(
+                    compressed_input_coset,
+                    ValueSource::Gamma(),
+                ));
+
+                let mut graph_shuffle = GraphEvaluator::default();
+                let compressed_shuffle_coset =
+                    evaluate_lc(&shuffle.shuffle_expressions, &mut graph_shuffle);
+                let _ = graph_shuffle.add_calculation(Calculation::Add(
+                    compressed_shuffle_coset,
+                    ValueSource::Gamma(),
+                ));
+
+                ev.shuffles.push(graph_input);
+                ev.shuffles.push(graph_shuffle);
+            }
+
+            ev
         }
-        ev.custom_gates.add_calculation(Calculation::Horner(
-            ValueSource::PreviousValue(),
-            parts,
-            ValueSource::Y(),
-        ));
-
-        // Lookups
-        for lookup in cs.lookups.iter() {
-            let mut graph = GraphEvaluator::default();
-
-            let mut evaluate_lc = |expressions: &Vec<Expression<_>>| {
-                let parts = expressions
-                    .iter()
-                    .map(|expr| graph.add_expression(expr))
-                    .collect();
-                graph.add_calculation(Calculation::Horner(
-                    ValueSource::Constant(0),
-                    parts,
-                    ValueSource::Theta(),
-                ))
-            };
-
-            // Input coset
-            let compressed_input_coset = evaluate_lc(&lookup.input_expressions);
-            // table coset
-            let compressed_table_coset = evaluate_lc(&lookup.table_expressions);
-            // z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
-            let right_gamma = graph.add_calculation(Calculation::Add(
-                compressed_table_coset,
-                ValueSource::Gamma(),
-            ));
-            let lc = graph.add_calculation(Calculation::Add(
-                compressed_input_coset,
-                ValueSource::Beta(),
-            ));
-            graph.add_calculation(Calculation::Mul(lc, right_gamma));
-
-            ev.lookups.push(graph);
-        }
-
-        // Shuffles
-        for shuffle in cs.shuffles.iter() {
-            let evaluate_lc = |expressions: &Vec<Expression<_>>, graph: &mut GraphEvaluator<C>| {
-                let parts = expressions
-                    .iter()
-                    .map(|expr| graph.add_expression(expr))
-                    .collect();
-                graph.add_calculation(Calculation::Horner(
-                    ValueSource::Constant(0),
-                    parts,
-                    ValueSource::Theta(),
-                ))
-            };
-
-            let mut graph_input = GraphEvaluator::default();
-            let compressed_input_coset = evaluate_lc(&shuffle.input_expressions, &mut graph_input);
-            let _ = graph_input.add_calculation(Calculation::Add(
-                compressed_input_coset,
-                ValueSource::Gamma(),
-            ));
-
-            let mut graph_shuffle = GraphEvaluator::default();
-            let compressed_shuffle_coset =
-                evaluate_lc(&shuffle.shuffle_expressions, &mut graph_shuffle);
-            let _ = graph_shuffle.add_calculation(Calculation::Add(
-                compressed_shuffle_coset,
-                ValueSource::Gamma(),
-            ));
-
-            ev.shuffles.push(graph_input);
-            ev.shuffles.push(graph_shuffle);
-        }
-
-        ev
-    }
+    */
 
     /// Creates a new evaluation structure
     // TODO: Remove
@@ -476,7 +478,7 @@ impl<C: CurveAffine> Evaluator<C> {
             // Permutations
             let sets = &permutation.sets;
             if !sets.is_empty() {
-                let blinding_factors = pk.vk.queries.blinding_factors();
+                let blinding_factors = pk.vk.cs.blinding_factors();
                 let last_rotation = Rotation(-((blinding_factors + 1) as i32));
                 let chunk_len = pk.vk.cs.degree() - 2;
                 let delta_start = beta * &C::Scalar::ZETA;

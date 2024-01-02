@@ -186,16 +186,14 @@ impl<C: CurveAffine> Evaluated<C> {
                             .iter()
                             .map(|&column| match column.column_type() {
                                 Any::Advice(_) => {
-                                    advice_evals
-                                        [vk.queries.get_any_query_index(column, Rotation::cur())]
+                                    advice_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
                                 }
                                 Any::Fixed => {
-                                    fixed_evals
-                                        [vk.queries.get_any_query_index(column, Rotation::cur())]
+                                    fixed_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
                                 }
                                 Any::Instance => {
                                     instance_evals
-                                        [vk.queries.get_any_query_index(column, Rotation::cur())]
+                                        [vk.cs.get_any_query_index(column, Rotation::cur())]
                                 }
                             })
                             .zip(permutation_evals.iter())
@@ -209,15 +207,13 @@ impl<C: CurveAffine> Evaluated<C> {
                                 .pow_vartime([(chunk_index * chunk_len) as u64]));
                         for eval in columns.iter().map(|&column| match column.column_type() {
                             Any::Advice(_) => {
-                                advice_evals
-                                    [vk.queries.get_any_query_index(column, Rotation::cur())]
+                                advice_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
                             }
                             Any::Fixed => {
-                                fixed_evals[vk.queries.get_any_query_index(column, Rotation::cur())]
+                                fixed_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
                             }
                             Any::Instance => {
-                                instance_evals
-                                    [vk.queries.get_any_query_index(column, Rotation::cur())]
+                                instance_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
                             }
                         }) {
                             right *= &(eval + &current_delta + &*gamma);
@@ -338,7 +334,7 @@ impl<C: CurveAffine> Evaluated<C> {
         vk: &'r plonk::VerifyingKeyV2<C>,
         x: ChallengeX<C>,
     ) -> impl Iterator<Item = VerifierQuery<'r, C, M>> + Clone {
-        let blinding_factors = vk.queries.blinding_factors();
+        let blinding_factors = vk.cs.blinding_factors();
         let x_next = vk.domain.rotate_omega(*x, Rotation::next());
         let x_last = vk
             .domain

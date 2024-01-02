@@ -145,6 +145,7 @@ impl Queries {
     }
 }
 
+// TODO: Remove in favour of VerifyingKey
 /// This is a verifying key which allows for the verification of proofs for a
 /// particular circuit.
 #[derive(Clone, Debug)]
@@ -152,8 +153,8 @@ pub struct VerifyingKeyV2<C: CurveAffine> {
     domain: EvaluationDomain<C::Scalar>,
     fixed_commitments: Vec<C>,
     permutation: permutation::VerifyingKey<C>,
-    cs: ConstraintSystemV2Backend<C::Scalar>,
-    queries: Queries,
+    cs: ConstraintSystem<C::Scalar>,
+    // queries: Queries,
     /// Cached maximum degree of `cs` (which doesn't change after construction).
     cs_degree: usize,
     /// The representative of this `VerifyingKey` in transcripts.
@@ -165,21 +166,21 @@ impl<C: CurveAffine> VerifyingKeyV2<C> {
         domain: EvaluationDomain<C::Scalar>,
         fixed_commitments: Vec<C>,
         permutation: permutation::VerifyingKey<C>,
-        cs: ConstraintSystemV2Backend<C::Scalar>,
+        cs: ConstraintSystem<C::Scalar>,
     ) -> Self
     where
         C::ScalarExt: FromUniformBytes<64>,
     {
         // Compute cached values.
         let cs_degree = cs.degree();
-        let queries = cs.collect_queries();
+        // let queries = cs.collect_queries();
 
         let mut vk = Self {
             domain,
             fixed_commitments,
             permutation,
             cs,
-            queries,
+            // queries,
             cs_degree,
             // Temporary, this is not pinned.
             transcript_repr: C::Scalar::ZERO,
@@ -199,7 +200,9 @@ impl<C: CurveAffine> VerifyingKeyV2<C> {
         hasher.update(s.as_bytes());
 
         // Hash in final Blake2bState
-        vk.transcript_repr = C::Scalar::from_uniform_bytes(hasher.finalize().as_array());
+        // TODO: Uncomment
+        // vk.transcript_repr = C::Scalar::from_uniform_bytes(hasher.finalize().as_array());
+        dbg!(&vk.transcript_repr);
 
         vk
     }
@@ -425,7 +428,8 @@ impl<C: CurveAffine> VerifyingKey<C> {
         hasher.update(s.as_bytes());
 
         // Hash in final Blake2bState
-        vk.transcript_repr = C::Scalar::from_uniform_bytes(hasher.finalize().as_array());
+        // TODO: Uncomment
+        // vk.transcript_repr = C::Scalar::from_uniform_bytes(hasher.finalize().as_array());
 
         vk
     }
