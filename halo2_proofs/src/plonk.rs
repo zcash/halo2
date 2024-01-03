@@ -101,78 +101,6 @@ impl Queries {
     }
 }
 
-// TODO: Remove in favour of VerifyingKey
-/// This is a verifying key which allows for the verification of proofs for a
-/// particular circuit.
-#[derive(Clone, Debug)]
-pub struct VerifyingKeyV2<C: CurveAffine> {
-    domain: EvaluationDomain<C::Scalar>,
-    fixed_commitments: Vec<C>,
-    permutation: permutation::VerifyingKey<C>,
-    cs: ConstraintSystem<C::Scalar>,
-    // queries: Queries,
-    /// Cached maximum degree of `cs` (which doesn't change after construction).
-    cs_degree: usize,
-    /// The representative of this `VerifyingKey` in transcripts.
-    transcript_repr: C::Scalar,
-}
-
-impl<C: CurveAffine> VerifyingKeyV2<C> {
-    fn from_parts(
-        domain: EvaluationDomain<C::Scalar>,
-        fixed_commitments: Vec<C>,
-        permutation: permutation::VerifyingKey<C>,
-        cs: ConstraintSystem<C::Scalar>,
-    ) -> Self
-    where
-        C::ScalarExt: FromUniformBytes<64>,
-    {
-        // Compute cached values.
-        let cs_degree = cs.degree();
-        // let queries = cs.collect_queries();
-
-        let mut vk = Self {
-            domain,
-            fixed_commitments,
-            permutation,
-            cs,
-            // queries,
-            cs_degree,
-            // Temporary, this is not pinned.
-            transcript_repr: C::Scalar::ZERO,
-        };
-
-        let mut hasher = Blake2bParams::new()
-            .hash_length(64)
-            .personal(b"Halo2-Verify-Key")
-            .to_state();
-
-        // let s = format!("{:?}", vk.pinned());
-        // TODO(Edu): Is it Ok to not use the pinned Vk here?  We removed a lot of stuff from Vk
-        // and Cs, so maybe we already have the same as in PinnedVerificationKey?
-        let s = format!("{:?}", vk);
-
-        hasher.update(&(s.len() as u64).to_le_bytes());
-        hasher.update(s.as_bytes());
-
-        // Hash in final Blake2bState
-        vk.transcript_repr = C::Scalar::from_uniform_bytes(hasher.finalize().as_array());
-        // dbg!(&vk.transcript_repr);
-
-        vk
-    }
-
-    /// Hashes a verification key into a transcript.
-    pub fn hash_into<E: EncodedChallenge<C>, T: Transcript<C, E>>(
-        &self,
-        transcript: &mut T,
-    ) -> io::Result<()> {
-        transcript.common_scalar(self.transcript_repr)?;
-
-        Ok(())
-    }
-}
-
 /// This is a verifying key which allows for the verification of proofs for a
 /// particular circuit.
 #[derive(Clone, Debug)]
@@ -444,36 +372,6 @@ pub struct PinnedVerificationKey<'a, C: CurveAffine> {
     fixed_commitments: &'a Vec<C>,
     permutation: &'a permutation::VerifyingKey<C>,
 }
-
-/// This is a proving key which allows for the creation of proofs for a
-/// particular circuit.
-#[derive(Clone, Debug)]
-pub struct ProvingKeyV2<C: CurveAffine> {
-    vk: VerifyingKeyV2<C>,
-    l0: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
-    l_last: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
-    l_active_row: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
-    fixed_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
-    fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
-    fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
-    permutation: permutation::ProvingKey<C>,
-    ev: Evaluator<C>,
-}
-
-// impl<C: CurveAffine> ProvingKeyV2<C>
-// where
-//     C::Scalar: FromUniformBytes<64>,
-// {
-//     /// Hashes a verification key into a transcript.
-//     pub fn hash_into<E: EncodedChallenge<C>, T: Transcript<C, E>>(
-//         &self,
-//         transcript: &mut T,
-//     ) -> io::Result<()> {
-//         transcript.common_scalar(self.transcript_repr)?;
-//
-//         Ok(())
-//     }
-// }
 
 /// This is a proving key which allows for the creation of proofs for a
 /// particular circuit.

@@ -8,9 +8,9 @@ use halo2_proofs::circuit::{AssignedCell, Cell, Layouter, Region, SimpleFloorPla
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::plonk::{
     compile_circuit, create_proof, keygen_pk, keygen_pk_v2, keygen_vk, keygen_vk_v2, verify_proof,
-    verify_proof_v2, Advice, Assigned, Challenge, Circuit, Column, CompiledCircuitV2,
-    ConstraintSystem, ConstraintSystemV2Backend, Error, Expression, FirstPhase, Fixed, Instance,
-    ProverV2, ProvingKey, SecondPhase, Selector, TableColumn, VerifyingKey, WitnessCalculator,
+    Advice, Assigned, Challenge, Circuit, Column, CompiledCircuitV2, ConstraintSystem,
+    ConstraintSystemV2Backend, Error, Expression, FirstPhase, Fixed, Instance, ProverV2,
+    ProvingKey, SecondPhase, Selector, TableColumn, VerifyingKey, WitnessCalculator,
 };
 use halo2_proofs::poly::commitment::{CommitmentScheme, ParamsProver, Prover, Verifier};
 use halo2_proofs::poly::Rotation;
@@ -577,7 +577,7 @@ fn test_mycircuit_full_split() {
         Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
     let strategy = SingleStrategy::new(&verifier_params);
 
-    verify_proof_v2::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<'_, Bn256>, _, _, _>(
+    verify_proof::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<'_, Bn256>, _, _, _>(
         &params,
         &vk,
         strategy,

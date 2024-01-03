@@ -12,7 +12,7 @@ use super::{
         Instance, Selector,
     },
     lookup, permutation, shuffle, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta,
-    ChallengeX, ChallengeY, Error, ProvingKey, ProvingKeyV2,
+    ChallengeX, ChallengeY, Error, ProvingKey,
 };
 
 use crate::{
@@ -57,7 +57,7 @@ pub struct ProverV2<
 > {
     // Circuit and setup fields
     params: &'params Scheme::ParamsProver,
-    pk: &'a ProvingKeyV2<Scheme::Curve>,
+    pk: &'a ProvingKey<Scheme::Curve>,
     // advice_queries: Vec<(Column<Advice>, Rotation)>,
     // instance_queries: Vec<(Column<Instance>, Rotation)>,
     // fixed_queries: Vec<(Column<Fixed>, Rotation)>,
@@ -85,7 +85,7 @@ impl<
     /// Create a new prover object
     pub fn new(
         params: &'params Scheme::ParamsProver,
-        pk: &'a ProvingKeyV2<Scheme::Curve>,
+        pk: &'a ProvingKey<Scheme::Curve>,
         // TODO: If this was a vector the usage would be simpler
         instances: &[&[&[Scheme::Scalar]]],
         rng: R,
@@ -384,7 +384,7 @@ impl<
                 meta.lookups
                     .iter()
                     .map(|lookup| {
-                        lookup.commit_permuted_v2(
+                        lookup.commit_permuted(
                             pk,
                             params,
                             &domain,
@@ -419,7 +419,7 @@ impl<
             .iter()
             .zip(advice.iter())
             .map(|(instance, advice)| {
-                meta.permutation.commit_v2(
+                meta.permutation.commit(
                     params,
                     pk,
                     &pk.permutation,
@@ -441,7 +441,7 @@ impl<
                 lookups
                     .into_iter()
                     .map(|lookup| {
-                        lookup.commit_product_v2(pk, params, beta, gamma, &mut rng, &mut transcript)
+                        lookup.commit_product(pk, params, beta, gamma, &mut rng, &mut transcript)
                     })
                     .collect::<Result<Vec<_>, _>>()
             })
@@ -455,7 +455,7 @@ impl<
                 meta.shuffles
                     .iter()
                     .map(|shuffle| {
-                        shuffle.commit_product_v2(
+                        shuffle.commit_product(
                             pk,
                             params,
                             domain,
@@ -499,7 +499,7 @@ impl<
             .collect();
 
         // Evaluate the h(X) polynomial
-        let h_poly = pk.ev.evaluate_h_v2(
+        let h_poly = pk.ev.evaluate_h(
             pk,
             &advice
                 .iter()
@@ -591,7 +591,7 @@ impl<
         let permutations: Vec<permutation::prover::Evaluated<Scheme::Curve>> = permutations
             .into_iter()
             .map(|permutation| -> Result<_, _> {
-                permutation.construct().evaluate_v2(pk, x, &mut transcript)
+                permutation.construct().evaluate(pk, x, &mut transcript)
             })
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -601,7 +601,7 @@ impl<
             .map(|lookups| -> Result<Vec<_>, _> {
                 lookups
                     .into_iter()
-                    .map(|p| p.evaluate_v2(pk, x, &mut transcript))
+                    .map(|p| p.evaluate(pk, x, &mut transcript))
                     .collect::<Result<Vec<_>, _>>()
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -612,7 +612,7 @@ impl<
             .map(|shuffles| -> Result<Vec<_>, _> {
                 shuffles
                     .into_iter()
-                    .map(|p| p.evaluate_v2(pk, x, &mut transcript))
+                    .map(|p| p.evaluate(pk, x, &mut transcript))
                     .collect::<Result<Vec<_>, _>>()
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -646,9 +646,9 @@ impl<
                                 blind: advice.advice_blinds[column.index()],
                             }),
                     )
-                    .chain(permutation.open_v2(pk, x))
-                    .chain(lookups.iter().flat_map(move |p| p.open_v2(pk, x)))
-                    .chain(shuffles.iter().flat_map(move |p| p.open_v2(pk, x)))
+                    .chain(permutation.open(pk, x))
+                    .chain(lookups.iter().flat_map(move |p| p.open(pk, x)))
+                    .chain(shuffles.iter().flat_map(move |p| p.open(pk, x)))
             })
             .chain(meta.fixed_queries.iter().map(|&(column, at)| ProverQuery {
                 point: domain.rotate_omega(*x, at),

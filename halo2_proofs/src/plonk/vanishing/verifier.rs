@@ -4,7 +4,7 @@ use ff::Field;
 
 use crate::{
     arithmetic::CurveAffine,
-    plonk::{Error, VerifyingKey, VerifyingKeyV2},
+    plonk::{Error, VerifyingKey},
     poly::{
         commitment::{Params, MSM},
         VerifierQuery,
@@ -53,22 +53,6 @@ impl<C: CurveAffine> Argument<C> {
 }
 
 impl<C: CurveAffine> Committed<C> {
-    pub(in crate::plonk) fn read_commitments_after_y_v2<
-        E: EncodedChallenge<C>,
-        T: TranscriptRead<C, E>,
-    >(
-        self,
-        vk: &VerifyingKeyV2<C>,
-        transcript: &mut T,
-    ) -> Result<Constructed<C>, Error> {
-        // Obtain a commitment to h(X) in the form of multiple pieces of degree n - 1
-        let h_commitments = read_n_points(transcript, vk.domain.get_quotient_poly_degree())?;
-
-        Ok(Constructed {
-            h_commitments,
-            random_poly_commitment: self.random_poly_commitment,
-        })
-    }
     pub(in crate::plonk) fn read_commitments_after_y<
         E: EncodedChallenge<C>,
         T: TranscriptRead<C, E>,

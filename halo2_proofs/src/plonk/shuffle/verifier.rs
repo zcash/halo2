@@ -4,7 +4,7 @@ use super::super::{circuit::Expression, ChallengeGamma, ChallengeTheta, Challeng
 use super::Argument;
 use crate::{
     arithmetic::CurveAffine,
-    plonk::{Error, VerifyingKey, VerifyingKeyV2},
+    plonk::{Error, VerifyingKey},
     poly::{commitment::MSM, Rotation, VerifierQuery},
     transcript::{EncodedChallenge, TranscriptRead},
 };
@@ -114,30 +114,6 @@ impl<C: CurveAffine> Evaluated<C> {
             )
     }
 
-    // NOTE: Copy of queries with VerifyingKeyV2
-    pub(in crate::plonk) fn queries_v2<'r, M: MSM<C> + 'r>(
-        &'r self,
-        vk: &'r VerifyingKeyV2<C>,
-        x: ChallengeX<C>,
-    ) -> impl Iterator<Item = VerifierQuery<'r, C, M>> + Clone {
-        let x_next = vk.domain.rotate_omega(*x, Rotation::next());
-
-        iter::empty()
-            // Open shuffle product commitment at x
-            .chain(Some(VerifierQuery::new_commitment(
-                &self.committed.product_commitment,
-                *x,
-                self.product_eval,
-            )))
-            // Open shuffle product commitment at \omega x
-            .chain(Some(VerifierQuery::new_commitment(
-                &self.committed.product_commitment,
-                x_next,
-                self.product_next_eval,
-            )))
-    }
-
-    // TODO: Remove
     pub(in crate::plonk) fn queries<'r, M: MSM<C> + 'r>(
         &'r self,
         vk: &'r VerifyingKey<C>,

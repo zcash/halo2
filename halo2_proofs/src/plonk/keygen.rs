@@ -11,8 +11,7 @@ use super::{
         FloorPlanner, Instance, Selector,
     },
     evaluation::Evaluator,
-    permutation, Assigned, Challenge, Error, LagrangeCoeff, Polynomial, ProvingKey, ProvingKeyV2,
-    VerifyingKey, VerifyingKeyV2,
+    permutation, Assigned, Challenge, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
 };
 use crate::{
     arithmetic::{parallelize, CurveAffine},
@@ -207,7 +206,7 @@ impl<F: Field> Assignment<F> for Assembly<F> {
 pub fn keygen_vk_v2<'params, C, P>(
     params: &P,
     circuit: &CompiledCircuitV2<C::Scalar>,
-) -> Result<VerifyingKeyV2<C>, Error>
+) -> Result<VerifyingKey<C>, Error>
 where
     C: CurveAffine,
     P: Params<'params, C>,
@@ -236,11 +235,13 @@ where
         .map(|poly| params.commit_lagrange(poly, Blind::default()).to_affine())
         .collect();
 
-    Ok(VerifyingKeyV2::from_parts(
+    Ok(VerifyingKey::from_parts(
         domain,
         fixed_commitments,
         permutation_vk,
         cs,
+        Vec::new(),
+        false,
     ))
 }
 
@@ -336,9 +337,9 @@ where
 /// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `CompiledCircuit`.
 pub fn keygen_pk_v2<'params, C, P>(
     params: &P,
-    vk: VerifyingKeyV2<C>,
+    vk: VerifyingKey<C>,
     circuit: &CompiledCircuitV2<C::Scalar>,
-) -> Result<ProvingKeyV2<C>, Error>
+) -> Result<ProvingKey<C>, Error>
 where
     C: CurveAffine,
     P: Params<'params, C>,
@@ -404,7 +405,7 @@ where
     // Compute the optimized evaluation data structure
     let ev = Evaluator::new(&vk.cs);
 
-    Ok(ProvingKeyV2 {
+    Ok(ProvingKey {
         vk,
         l0,
         l_last,
