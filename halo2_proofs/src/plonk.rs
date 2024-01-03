@@ -200,9 +200,8 @@ impl<C: CurveAffine> VerifyingKeyV2<C> {
         hasher.update(s.as_bytes());
 
         // Hash in final Blake2bState
-        // TODO: Uncomment
-        // vk.transcript_repr = C::Scalar::from_uniform_bytes(hasher.finalize().as_array());
-        dbg!(&vk.transcript_repr);
+        vk.transcript_repr = C::Scalar::from_uniform_bytes(hasher.finalize().as_array());
+        // dbg!(&vk.transcript_repr);
 
         vk
     }

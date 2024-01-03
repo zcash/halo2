@@ -233,7 +233,7 @@ where
     let advice_evals = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> { read_n_scalars(transcript, vk.cs.advice_queries.len()) })
         .collect::<Result<Vec<_>, _>>()?;
-    dbg!(&advice_evals);
+    // dbg!(&advice_evals);
 
     let fixed_evals = read_n_scalars(transcript, vk.cs.fixed_queries.len())?;
 

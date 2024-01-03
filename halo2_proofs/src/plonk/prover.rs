@@ -560,7 +560,7 @@ impl<
                     )
                 })
                 .collect();
-            dbg!(&advice_evals);
+            // dbg!(&advice_evals);
 
             // Hash each advice column evaluation
             for eval in advice_evals.iter() {

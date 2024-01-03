@@ -48,7 +48,7 @@ struct MyCircuitConfig {
     // s_rlc * (c[0] + challenge * d[0] - e[0])
     s_rlc: Selector,
     e: Column<Advice>,
-    // challenge: Challenge,
+    challenge: Challenge,
 
     // Instance with a gate: s_instance * (a[0] - instance[0])
     s_instance: Selector,
@@ -134,9 +134,9 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> MyCircuit<F, WIDTH_FACTOR>
         let c = meta.advice_column();
         let d = meta.fixed_column();
 
-        // meta.enable_equality(a);
-        // meta.enable_equality(b);
-        // meta.enable_equality(d);
+        meta.enable_equality(a);
+        meta.enable_equality(b);
+        meta.enable_equality(d);
 
         let s_lookup = meta.fixed_column();
         let s_ltable = meta.fixed_column();
@@ -144,16 +144,13 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> MyCircuit<F, WIDTH_FACTOR>
         let s_shuffle = meta.fixed_column();
         let s_stable = meta.fixed_column();
 
-        // let s_rlc = meta.selector();
-        let s_rlc = s_gate.clone();
-        // let e = meta.advice_column_in(SecondPhase);
-        let e = c.clone();
-        // let challenge = meta.challenge_usable_after(FirstPhase);
+        let s_rlc = meta.selector();
+        let e = meta.advice_column_in(SecondPhase);
+        let challenge = meta.challenge_usable_after(FirstPhase);
 
-        // let s_instance = meta.selector();
-        let s_instance = s_gate.clone();
+        let s_instance = meta.selector();
         let instance = meta.instance_column();
-        // meta.enable_equality(instance);
+        meta.enable_equality(instance);
 
         let one = Expression::Constant(F::ONE);
 
@@ -168,43 +165,42 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> MyCircuit<F, WIDTH_FACTOR>
             vec![s_gate * (a0 + b * c * d - a1)]
         });
 
-        // meta.lookup_any("lookup", |meta| {
-        //     let s_lookup = meta.query_fixed(s_lookup, Rotation::cur());
-        //     let s_ltable = meta.query_fixed(s_ltable, Rotation::cur());
-        //     let a = meta.query_advice(a, Rotation::cur());
-        //     let b = meta.query_advice(b, Rotation::cur());
-        //     let c = meta.query_advice(c, Rotation::cur());
-        //     let d = meta.query_fixed(d, Rotation::cur());
-        //     let lhs = [one.clone(), a, b].map(|c| c * s_lookup.clone());
-        //     let rhs = [one.clone(), d, c].map(|c| c * s_ltable.clone());
-        //     lhs.into_iter().zip(rhs.into_iter()).collect()
-        // });
+        meta.lookup_any("lookup", |meta| {
+            let s_lookup = meta.query_fixed(s_lookup, Rotation::cur());
+            let s_ltable = meta.query_fixed(s_ltable, Rotation::cur());
+            let a = meta.query_advice(a, Rotation::cur());
+            let b = meta.query_advice(b, Rotation::cur());
+            let c = meta.query_advice(c, Rotation::cur());
+            let d = meta.query_fixed(d, Rotation::cur());
+            let lhs = [one.clone(), a, b].map(|c| c * s_lookup.clone());
+            let rhs = [one.clone(), d, c].map(|c| c * s_ltable.clone());
+            lhs.into_iter().zip(rhs.into_iter()).collect()
+        });
 
-        // NOTE: This works
-        // meta.shuffle("shuffle", |meta| {
-        //     let s_shuffle = meta.query_fixed(s_shuffle, Rotation::cur());
-        //     let s_stable = meta.query_fixed(s_stable, Rotation::cur());
-        //     let a = meta.query_advice(a, Rotation::cur());
-        //     let b = meta.query_advice(b, Rotation::cur());
-        //     let lhs = [one.clone(), a].map(|c| c * s_shuffle.clone());
-        //     let rhs = [one.clone(), b].map(|c| c * s_stable.clone());
-        //     lhs.into_iter().zip(rhs.into_iter()).collect()
-        // });
+        meta.shuffle("shuffle", |meta| {
+            let s_shuffle = meta.query_fixed(s_shuffle, Rotation::cur());
+            let s_stable = meta.query_fixed(s_stable, Rotation::cur());
+            let a = meta.query_advice(a, Rotation::cur());
+            let b = meta.query_advice(b, Rotation::cur());
+            let lhs = [one.clone(), a].map(|c| c * s_shuffle.clone());
+            let rhs = [one.clone(), b].map(|c| c * s_stable.clone());
+            lhs.into_iter().zip(rhs.into_iter()).collect()
+        });
 
-        // meta.create_gate("gate_rlc", |meta| {
-        //     let s_rlc = meta.query_selector(s_rlc);
-        //     let a = meta.query_advice(a, Rotation::cur());
-        //     let b = meta.query_advice(b, Rotation::cur());
-        //     let c = meta.query_advice(c, Rotation::cur());
-        //     let d = meta.query_fixed(d, Rotation::cur());
-        //     let e = meta.query_advice(e, Rotation::cur());
-        //     let challenge = meta.query_challenge(challenge);
+        meta.create_gate("gate_rlc", |meta| {
+            let s_rlc = meta.query_selector(s_rlc);
+            let a = meta.query_advice(a, Rotation::cur());
+            let b = meta.query_advice(b, Rotation::cur());
+            let c = meta.query_advice(c, Rotation::cur());
+            let d = meta.query_fixed(d, Rotation::cur());
+            let e = meta.query_advice(e, Rotation::cur());
+            let challenge = meta.query_challenge(challenge);
 
-        //     vec![
-        //         s_rlc.clone() * (a + challenge.clone() * b - e.clone()),
-        //         s_rlc * (c + challenge * d - e),
-        //     ]
-        // });
+            vec![
+                s_rlc.clone() * (a + challenge.clone() * b - e.clone()),
+                s_rlc * (c + challenge * d - e),
+            ]
+        });
 
         MyCircuitConfig {
             s_gate,
@@ -216,7 +212,7 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> MyCircuit<F, WIDTH_FACTOR>
             s_ltable,
             s_rlc,
             e,
-            // challenge,
+            challenge,
             s_shuffle,
             s_stable,
             s_instance,
@@ -229,7 +225,7 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> MyCircuit<F, WIDTH_FACTOR>
         config: &MyCircuitConfig,
         layouter: &mut impl Layouter<F>,
     ) -> Result<(usize, Vec<AssignedCell<F, F>>), Error> {
-        // let challenge = layouter.get_challenge(config.challenge);
+        let challenge = layouter.get_challenge(config.challenge);
         let (rows, instance_copy) = layouter.assign_region(
             || "unit",
             |mut region| {
@@ -237,17 +233,17 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> MyCircuit<F, WIDTH_FACTOR>
                 let mut instance_copy = Vec::new();
                 // First "a" value comes from instance
                 config.s_instance.enable(&mut region, offset).expect("todo");
-                // let res = region
-                //     .assign_advice_from_instance(|| "", config.instance, 0, config.a, offset)
-                //     .expect("todo");
                 let res = region
-                    .assign_advice(
-                        || "",
-                        config.a,
-                        offset,
-                        || Value::known(F::from(self.input)),
-                    )
+                    .assign_advice_from_instance(|| "", config.instance, 0, config.a, offset)
                     .expect("todo");
+                // let res = region
+                //     .assign_advice(
+                //         || "",
+                //         config.a,
+                //         offset,
+                //         || Value::known(F::from(self.input)),
+                //     )
+                //     .expect("todo");
                 // Enable the gate on a few consecutive rows with rotations
                 let (res, _) = config
                     .assign_gate(&mut region, &mut offset, Some(res), [0, 3, 4, 1])
@@ -292,8 +288,12 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> MyCircuit<F, WIDTH_FACTOR>
                     .assign_gate(&mut region, &mut offset, None, [4, 2, 1, 1])
                     .expect("todo");
                 offset += 1;
-                // region.constrain_equal(abcd1[1].cell(), abcd2[0].cell()).expect("todo");
-                // region.constrain_equal(abcd2[0].cell(), abcd3[1].cell()).expect("todo");
+                region
+                    .constrain_equal(abcd1[1].cell(), abcd2[0].cell())
+                    .expect("todo");
+                region
+                    .constrain_equal(abcd2[0].cell(), abcd3[1].cell())
+                    .expect("todo");
                 instance_copy.push(abcd1[1].clone());
                 instance_copy.push(abcd2[0].clone());
 
@@ -310,9 +310,15 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> MyCircuit<F, WIDTH_FACTOR>
                     .assign_gate(&mut region, &mut offset, None, [9, 2, 1, 1])
                     .expect("todo");
                 offset += 1;
-                // region.constrain_equal(abcd1[1].cell(), abcd1[3].cell()).expect("todo");
-                // region.constrain_equal(abcd2[1].cell(), abcd1[3].cell()).expect("todo");
-                // region.constrain_equal(abcd3[0].cell(), abcd1[3].cell()).expect("todo");
+                region
+                    .constrain_equal(abcd1[1].cell(), abcd1[3].cell())
+                    .expect("todo");
+                region
+                    .constrain_equal(abcd2[1].cell(), abcd1[3].cell())
+                    .expect("todo");
+                region
+                    .constrain_equal(abcd3[0].cell(), abcd1[3].cell())
+                    .expect("todo");
 
                 // Enable a dynamic lookup (powers of two)
                 let table: Vec<_> = (0u64..=10).map(|exp| (exp, 2u64.pow(exp as u32))).collect();
@@ -347,20 +353,20 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> MyCircuit<F, WIDTH_FACTOR>
                 }
 
                 // Enable RLC gate 3 times
-                // for abcd in [[3, 5, 3, 5], [8, 9, 8, 9], [111, 222, 111, 222]] {
-                //     config.s_rlc.enable(&mut region, offset)?;
-                //     let (_, _) = config
-                //         .assign_gate(&mut region, &mut offset, None, abcd)
-                //         .expect("todo");
-                //     let rlc = challenge.map(|ch| {
-                //         let [a, b, ..] = abcd;
-                //         F::from(a) + ch * F::from(b)
-                //     });
-                //     region
-                //         .assign_advice(|| "", config.e, offset - 1, || rlc)
-                //         .expect("todo");
-                //     offset += 1;
-                // }
+                for abcd in [[3, 5, 3, 5], [8, 9, 8, 9], [111, 222, 111, 222]] {
+                    config.s_rlc.enable(&mut region, offset)?;
+                    let (_, _) = config
+                        .assign_gate(&mut region, &mut offset, None, abcd)
+                        .expect("todo");
+                    let rlc = challenge.map(|ch| {
+                        let [a, b, ..] = abcd;
+                        F::from(a) + ch * F::from(b)
+                    });
+                    region
+                        .assign_advice(|| "", config.e, offset - 1, || rlc)
+                        .expect("todo");
+                    offset += 1;
+                }
 
                 // Enable a dynamic shuffle (sequence from 0 to 15)
                 let table: Vec<_> = (0u64..16).collect();
@@ -502,10 +508,10 @@ fn test_mycircuit_full_legacy() {
     )
     .expect("proof generation should not fail");
     let proof = transcript.finalize();
-    println!("DBG proof.len={} ", proof.len());
-    for word in proof.chunks(32) {
-        println!("  {:02x?}", word);
-    }
+    // println!("DBG proof.len={} ", proof.len());
+    // for word in proof.chunks(32) {
+    //     println!("  {:02x?}", word);
+    // }
 
     // Verify
     let mut verifier_transcript =
@@ -534,7 +540,7 @@ fn test_mycircuit_full_split() {
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let verifier_params = params.verifier_params();
     let vk = keygen_vk_v2(&params, &compiled_circuit).expect("keygen_vk should not fail");
-    println!("vk: {:#?}", vk);
+    // println!("vk: {:#?}", vk);
     let pk =
         keygen_pk_v2(&params, vk.clone(), &compiled_circuit).expect("keygen_pk should not fail");
 
@@ -558,8 +564,8 @@ fn test_mycircuit_full_split() {
         )
         .unwrap();
     let mut challenges = HashMap::new();
-    // for phase in [0, 1] {
-    for phase in [0] {
+    for phase in [0, 1] {
+        // for phase in [0] {
         println!("DBG phase {}", phase);
         let witness = witness_calc.calc(phase, &challenges).unwrap();
         // println!("DBG witness: {:?}", witness);
@@ -568,10 +574,10 @@ fn test_mycircuit_full_split() {
     }
     let mut transcript = prover.create_proof().unwrap();
     let proof = transcript.finalize();
-    println!("DBG proof.len={} ", proof.len());
-    for word in proof.chunks(32) {
-        println!("  {:02x?}", word);
-    }
+    // println!("DBG proof.len={} ", proof.len());
+    // for word in proof.chunks(32) {
+    //     println!("  {:02x?}", word);
+    // }
 
     // Verify
     println!("DBG Verifying...");

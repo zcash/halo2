@@ -1704,43 +1704,84 @@ pub struct CompiledCircuitV2<F: Field> {
     pub(crate) cs: ConstraintSystemV2Backend<F>,
 }
 
-struct QueriesSet {
-    advice: BTreeSet<(Column<Advice>, Rotation)>,
-    instance: BTreeSet<(Column<Instance>, Rotation)>,
-    fixed: BTreeSet<(Column<Fixed>, Rotation)>,
+struct QueriesMap {
+    advice_map: HashMap<(Column<Advice>, Rotation), usize>,
+    instance_map: HashMap<(Column<Instance>, Rotation), usize>,
+    fixed_map: HashMap<(Column<Fixed>, Rotation), usize>,
+    advice: Vec<(Column<Advice>, Rotation)>,
+    instance: Vec<(Column<Instance>, Rotation)>,
+    fixed: Vec<(Column<Fixed>, Rotation)>,
 }
 
-fn collect_queries<F: Field>(expr: &ExpressionMid<F>, queries: &mut QueriesSet) {
-    match expr {
-        ExpressionMid::Constant(_) => (),
-        ExpressionMid::Fixed(query) => {
-            queries
-                .fixed
-                .insert((Column::new(query.column_index, Fixed), query.rotation));
+impl QueriesMap {
+    fn add_advice(&mut self, col: Column<Advice>, rot: Rotation) -> usize {
+        *self.advice_map.entry((col, rot)).or_insert_with(|| {
+            self.advice.push((col, rot));
+            self.advice.len() - 1
+        })
+    }
+    fn add_instance(&mut self, col: Column<Instance>, rot: Rotation) -> usize {
+        *self.instance_map.entry((col, rot)).or_insert_with(|| {
+            self.instance.push((col, rot));
+            self.instance.len() - 1
+        })
+    }
+    fn add_fixed(&mut self, col: Column<Fixed>, rot: Rotation) -> usize {
+        *self.fixed_map.entry((col, rot)).or_insert_with(|| {
+            self.fixed.push((col, rot));
+            self.fixed.len() - 1
+        })
+    }
+}
+
+impl QueriesMap {
+    fn to_expression<F: Field>(&mut self, expr: &ExpressionMid<F>) -> Expression<F> {
+        match expr {
+            ExpressionMid::Constant(c) => Expression::Constant(*c),
+            ExpressionMid::Fixed(query) => {
+                let (col, rot) = (Column::new(query.column_index, Fixed), query.rotation);
+                let index = self.add_fixed(col, rot);
+                Expression::Fixed(FixedQuery {
+                    index: Some(index),
+                    column_index: query.column_index,
+                    rotation: query.rotation,
+                })
+            }
+            ExpressionMid::Advice(query) => {
+                let (col, rot) = (
+                    Column::new(query.column_index, Advice { phase: query.phase }),
+                    query.rotation,
+                );
+                let index = self.add_advice(col, rot);
+                Expression::Advice(AdviceQuery {
+                    index: Some(index),
+                    column_index: query.column_index,
+                    rotation: query.rotation,
+                    phase: query.phase,
+                })
+            }
+            ExpressionMid::Instance(query) => {
+                let (col, rot) = (Column::new(query.column_index, Instance), query.rotation);
+                let index = self.add_instance(col, rot);
+                Expression::Instance(InstanceQuery {
+                    index: Some(index),
+                    column_index: query.column_index,
+                    rotation: query.rotation,
+                })
+            }
+            ExpressionMid::Challenge(c) => Expression::Challenge(*c),
+            ExpressionMid::Negated(e) => Expression::Negated(Box::new(self.to_expression(e))),
+            ExpressionMid::Sum(lhs, rhs) => Expression::Sum(
+                Box::new(self.to_expression(lhs)),
+                Box::new(self.to_expression(rhs)),
+            ),
+            ExpressionMid::Product(lhs, rhs) => Expression::Product(
+                Box::new(self.to_expression(lhs)),
+                Box::new(self.to_expression(rhs)),
+            ),
+            ExpressionMid::Scaled(e, c) => Expression::Scaled(Box::new(self.to_expression(e)), *c),
         }
-        ExpressionMid::Advice(query) => {
-            queries.advice.insert((
-                Column::new(query.column_index, Advice { phase: query.phase }),
-                query.rotation,
-            ));
-        }
-        ExpressionMid::Instance(query) => {
-            queries
-                .instance
-                .insert((Column::new(query.column_index, Instance), query.rotation));
-        }
-        ExpressionMid::Challenge(_) => (),
-        ExpressionMid::Negated(a) => collect_queries(a, queries),
-        ExpressionMid::Sum(a, b) => {
-            collect_queries(a, queries);
-            collect_queries(b, queries);
-        }
-        ExpressionMid::Product(a, b) => {
-            collect_queries(a, queries);
-            collect_queries(b, queries);
-        }
-        ExpressionMid::Scaled(a, _) => collect_queries(a, queries),
-    };
+    }
 }
 
 /*
@@ -2138,63 +2179,100 @@ impl<F: Field> ConstraintSystemV2Backend<F> {
         (0..=max_phase).collect()
     }
 
-    pub(crate) fn collect_queries(&self) -> Queries {
-        let mut queries = QueriesSet {
-            advice: BTreeSet::new(),
-            instance: BTreeSet::new(),
-            fixed: BTreeSet::new(),
+    pub(crate) fn collect_queries(
+        &self,
+    ) -> (
+        Queries,
+        Vec<Gate<F>>,
+        Vec<lookup::Argument<F>>,
+        Vec<shuffle::Argument<F>>,
+    ) {
+        let mut queries = QueriesMap {
+            advice_map: HashMap::new(),
+            instance_map: HashMap::new(),
+            fixed_map: HashMap::new(),
+            advice: Vec::new(),
+            instance: Vec::new(),
+            fixed: Vec::new(),
         };
-        let mut num_advice_queries = vec![0; self.num_advice_columns];
 
-        for gate in &self.gates {
-            for expr in gate.polynomials() {
-                collect_queries(expr, &mut queries);
-            }
-        }
-        for lookup in &self.lookups {
-            for expr in lookup
-                .input_expressions
-                .iter()
-                .chain(lookup.table_expressions.iter())
-            {
-                collect_queries(expr, &mut queries);
-            }
-        }
-        for shuffle in &self.shuffles {
-            for expr in shuffle
-                .input_expressions
-                .iter()
-                .chain(shuffle.shuffle_expressions.iter())
-            {
-                collect_queries(expr, &mut queries);
-            }
-        }
+        let gates: Vec<_> = self
+            .gates
+            .iter()
+            .map(|gate| Gate {
+                name: gate.name.clone(),
+                constraint_names: gate.constraint_names.clone(),
+                polys: gate
+                    .polynomials()
+                    .iter()
+                    .map(|e| queries.to_expression(e))
+                    .collect(),
+                queried_selectors: Vec::new(), // Unused?
+                queried_cells: Vec::new(),     // Unused?
+            })
+            .collect();
+        let lookups: Vec<_> = self
+            .lookups
+            .iter()
+            .map(|lookup| lookup::Argument {
+                name: lookup.name.clone(),
+                input_expressions: lookup
+                    .input_expressions
+                    .iter()
+                    .map(|e| queries.to_expression(e))
+                    .collect(),
+                table_expressions: lookup
+                    .table_expressions
+                    .iter()
+                    .map(|e| queries.to_expression(e))
+                    .collect(),
+            })
+            .collect();
+        let shuffles: Vec<_> = self
+            .shuffles
+            .iter()
+            .map(|shuffle| shuffle::Argument {
+                name: shuffle.name.clone(),
+                input_expressions: shuffle
+                    .input_expressions
+                    .iter()
+                    .map(|e| queries.to_expression(e))
+                    .collect(),
+                shuffle_expressions: shuffle
+                    .shuffle_expressions
+                    .iter()
+                    .map(|e| queries.to_expression(e))
+                    .collect(),
+            })
+            .collect();
+
         for column in self.permutation.get_columns() {
             match column.column_type {
-                Any::Instance => queries
-                    .instance
-                    .insert((Column::new(column.index(), Instance), Rotation::cur())),
-                Any::Fixed => queries
-                    .fixed
-                    .insert((Column::new(column.index(), Fixed), Rotation::cur())),
-                Any::Advice(advice) => queries
-                    .advice
-                    .insert((Column::new(column.index(), advice), Rotation::cur())),
+                Any::Instance => {
+                    queries.add_instance(Column::new(column.index(), Instance), Rotation::cur())
+                }
+                Any::Fixed => {
+                    queries.add_fixed(Column::new(column.index(), Fixed), Rotation::cur())
+                }
+                Any::Advice(advice) => {
+                    queries.add_advice(Column::new(column.index(), advice), Rotation::cur())
+                }
             };
         }
 
+        let mut num_advice_queries = vec![0; self.num_advice_columns];
         for (column, _) in queries.advice.iter() {
             num_advice_queries[column.index()] += 1;
         }
 
         let queries = Queries {
-            advice: queries.advice.into_iter().collect(),
-            instance: queries.instance.into_iter().collect(),
-            fixed: queries.fixed.into_iter().collect(),
+            advice: queries.advice,
+            instance: queries.instance,
+            fixed: queries.fixed,
             num_advice_queries,
         };
         // println!("DBG collected queries\n{:#?}", queries);
-        queries
+        (queries, gates, lookups, shuffles)
     }
 }
 
@@ -2252,8 +2330,38 @@ pub struct ConstraintSystem<F: Field> {
 }
 
 impl<F: Field> From<ConstraintSystemV2Backend<F>> for ConstraintSystem<F> {
-    fn from(circuit: ConstraintSystemV2Backend<F>) -> Self {
-        todo!()
+    fn from(cs2: ConstraintSystemV2Backend<F>) -> Self {
+        let (queries, gates, lookups, shuffles) = cs2.collect_queries();
+        ConstraintSystem {
+            num_fixed_columns: cs2.num_fixed_columns,
+            num_advice_columns: cs2.num_advice_columns,
+            num_instance_columns: cs2.num_instance_columns,
+            num_selectors: 0,
+            num_challenges: cs2.num_challenges,
+            unblinded_advice_columns: cs2.unblinded_advice_columns,
+            advice_column_phase: cs2
+                .advice_column_phase
+                .into_iter()
+                .map(|p| sealed::Phase(p))
+                .collect(),
+            challenge_phase: cs2
+                .challenge_phase
+                .into_iter()
+                .map(|p| sealed::Phase(p))
+                .collect(),
+            selector_map: Vec::new(),
+            gates,
+            advice_queries: queries.advice,
+            num_advice_queries: queries.num_advice_queries,
+            instance_queries: queries.instance,
+            fixed_queries: queries.fixed,
+            permutation: cs2.permutation,
+            lookups,
+            shuffles,
+            general_column_annotations: cs2.general_column_annotations,
+            constants: Vec::new(),
+            minimum_degree: None,
+        }
     }
 }
 
