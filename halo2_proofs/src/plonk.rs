@@ -60,6 +60,11 @@ pub struct VerifyingKey<C: CurveAffine> {
     compress_selectors: bool,
 }
 
+// Current version of the VK
+const VERSION: u8 = 0x03;
+// Maximum allowed value for parameter `k`, the log-size of the circuit.
+const MAX_CIRCUIT_SIZE: u8 = 32;
+
 impl<C: SerdeCurveAffine> VerifyingKey<C>
 where
     C::Scalar: SerdePrimeField + FromUniformBytes<64>,
@@ -75,8 +80,11 @@ where
     /// WITHOUT performing the expensive Montgomery reduction.
     pub fn write<W: io::Write>(&self, writer: &mut W, format: SerdeFormat) -> io::Result<()> {
         // Version byte that will be checked on read.
-        writer.write_all(&[0x02])?;
-        writer.write_all(&self.domain.k().to_le_bytes())?;
+        writer.write_all(&[VERSION])?;
+        let k = &self.domain.k();
+        assert!(*k <= MAX_CIRCUIT_SIZE as u32);
+        // k value fits in 1 byte
+        writer.write_all(&[k.to_le_bytes()[0]])?;
         writer.write_all(&[self.compress_selectors as u8])?;
         writer.write_all(&(self.fixed_commitments.len() as u32).to_le_bytes())?;
         for commitment in &self.fixed_commitments {
@@ -114,18 +122,16 @@ where
     ) -> io::Result<Self> {
         let mut version_byte = [0u8; 1];
         reader.read_exact(&mut version_byte)?;
-        if 0x02 != version_byte[0] {
+        if VERSION != version_byte[0] {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "unexpected version byte",
             ));
         }
-        // Maximum allowed value for parameter `k`, the log-size of the circuit.
-        const MAX_CIRCUIT_SIZE: u32 = 32;
 
-        let mut k = [0u8; 4];
+        let mut k = [0u8; 1];
         reader.read_exact(&mut k)?;
-        let k = u32::from_be_bytes(k);
+        let k = u8::from_le_bytes(k);
         if k > MAX_CIRCUIT_SIZE {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
@@ -145,7 +151,7 @@ where
         }
         let compress_selectors = compress_selectors[0] == 1;
         let (domain, cs, _) = keygen::create_domain::<C, ConcreteCircuit>(
-            k,
+            k as u32,
             #[cfg(feature = "circuit-params")]
             params,
         );
