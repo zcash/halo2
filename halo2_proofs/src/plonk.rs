@@ -120,9 +120,21 @@ where
                 "unexpected version byte",
             ));
         }
+        // Maximum allowed value for parameter `k`, the log-size of the circuit.
+        const MAX_CIRCUIT_SIZE: u32 = 32;
+
         let mut k = [0u8; 4];
         reader.read_exact(&mut k)?;
-        let k = u32::from_le_bytes(k);
+        let k = u32::from_be_bytes(k);
+        if k > MAX_CIRCUIT_SIZE {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "circuit size value (k): {} exceeds maxium: {}",
+                    k, MAX_CIRCUIT_SIZE
+                ),
+            ));
+        }
         let mut compress_selectors = [0u8; 1];
         reader.read_exact(&mut compress_selectors)?;
         if compress_selectors[0] != 0 && compress_selectors[0] != 1 {
