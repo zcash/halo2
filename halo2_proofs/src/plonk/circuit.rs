@@ -1936,7 +1936,7 @@ impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concret
             0 => FirstPhase.to_sealed(),
             1 => SecondPhase.to_sealed(),
             2 => ThirdPhase.to_sealed(),
-            _ => unreachable!("only phase [0..2] supported"),
+            _ => unreachable!("only phase [0,2] supported"),
         };
         let mut witness = WitnessCollection {
             k: self.k,

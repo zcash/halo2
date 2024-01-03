@@ -1,6 +1,10 @@
 #![allow(clippy::many_single_char_names)]
 #![allow(clippy::op_ref)]
 
+#[cfg(feature = "dhat-heap")]
+#[global_allocator]
+static ALLOC: dhat::Alloc = dhat::Alloc;
+
 use assert_matches::assert_matches;
 use ff::{FromUniformBytes, WithSmallOrderMulGroup};
 use halo2_proofs::arithmetic::Field;
@@ -469,18 +473,27 @@ fn test_mycircuit_mock() {
     prover.assert_satisfied();
 }
 
+use std::time::Instant;
+
+const K: u32 = 16;
+const WIDTH_FACTOR: usize = 4;
+
 #[test]
 fn test_mycircuit_full_legacy() {
-    let k = 6;
-    const WIDTH_FACTOR: usize = 1;
+    #[cfg(feature = "dhat-heap")]
+    let _profiler = dhat::Profiler::new_heap();
+
+    let k = K;
     let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
 
     // Setup
     let mut rng = BlockRng::new(OneNg {});
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let verifier_params = params.verifier_params();
+    let start = Instant::now();
     let vk = keygen_vk(&params, &circuit).expect("keygen_vk should not fail");
     let pk = keygen_pk(&params, vk.clone(), &circuit).expect("keygen_pk should not fail");
+    println!("Keygen: {:?}", start.elapsed());
 
     // Proving
     let instances = circuit.instances();
@@ -489,6 +502,7 @@ fn test_mycircuit_full_legacy() {
         .map(|instance| instance.as_slice())
         .collect::<Vec<_>>());
 
+    let start = Instant::now();
     let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
     create_proof::<KZGCommitmentScheme<Bn256>, ProverSHPLONK<'_, Bn256>, _, _, _, _>(
         &params,
@@ -504,8 +518,10 @@ fn test_mycircuit_full_legacy() {
     // for word in proof.chunks(32) {
     //     println!("  {:02x?}", word);
     // }
+    println!("Prove: {:?}", start.elapsed());
 
     // Verify
+    let start = Instant::now();
     let mut verifier_transcript =
         Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
     let strategy = SingleStrategy::new(&verifier_params);
@@ -518,12 +534,15 @@ fn test_mycircuit_full_legacy() {
         &mut verifier_transcript,
     )
     .expect("verify succeeds");
+    println!("Verify: {:?}", start.elapsed());
 }
 
 #[test]
 fn test_mycircuit_full_split() {
-    let k = 6;
-    const WIDTH_FACTOR: usize = 1;
+    #[cfg(feature = "dhat-heap")]
+    let _profiler = dhat::Profiler::new_heap();
+
+    let k = K;
     let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
     let (compiled_circuit, config, cs) = compile_circuit(k, &circuit, false).unwrap();
 
@@ -531,10 +550,13 @@ fn test_mycircuit_full_split() {
     let mut rng = BlockRng::new(OneNg {});
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let verifier_params = params.verifier_params();
+    let start = Instant::now();
     let vk = keygen_vk_v2(&params, &compiled_circuit).expect("keygen_vk should not fail");
     // println!("vk: {:#?}", vk);
     let pk =
         keygen_pk_v2(&params, vk.clone(), &compiled_circuit).expect("keygen_pk should not fail");
+    println!("Keygen: {:?}", start.elapsed());
+    drop(compiled_circuit);
 
     // Proving
     println!("DBG Proving...");
@@ -543,8 +565,9 @@ fn test_mycircuit_full_split() {
         .iter()
         .map(|instance| instance.as_slice())
         .collect::<Vec<_>>());
-    let mut witness_calc = WitnessCalculator::new(k, &circuit, &config, &cs, instances_slice);
 
+    let start = Instant::now();
+    let mut witness_calc = WitnessCalculator::new(k, &circuit, &config, &cs, instances_slice);
     let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
     let mut prover =
         ProverV2::<KZGCommitmentScheme<Bn256>, ProverSHPLONK<'_, Bn256>, _, _, _>::new(
@@ -570,8 +593,10 @@ fn test_mycircuit_full_split() {
     // for word in proof.chunks(32) {
     //     println!("  {:02x?}", word);
     // }
+    println!("Prove: {:?}", start.elapsed());
 
     // Verify
+    let start = Instant::now();
     println!("DBG Verifying...");
     let mut verifier_transcript =
         Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
@@ -585,4 +610,5 @@ fn test_mycircuit_full_split() {
         &mut verifier_transcript,
     )
     .expect("verify succeeds");
+    println!("Verify: {:?}", start.elapsed());
 }

@@ -72,6 +72,7 @@ criterion = "0.3"
 gumdrop = "0.8"
 proptest = "1"
 rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
+dhat = "0.3.2"
 
 [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
 getrandom = { version = "0.2", features = ["js"] }
@@ -91,6 +92,7 @@ thread-safe-region = []
 sanity-checks = []
 batch = ["rand_core/getrandom"]
 circuit-params = []
+dhat-heap = []
 
 [lib]
 bench = false
