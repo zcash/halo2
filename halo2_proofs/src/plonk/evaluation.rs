@@ -7,7 +7,7 @@ use crate::{
 };
 use group::ff::{Field, PrimeField, WithSmallOrderMulGroup};
 
-use super::{shuffle, ConstraintSystem, ConstraintSystemV2Backend, Expression};
+use super::{shuffle, ConstraintSystem, Expression};
 
 /// Return the index in the polynomial of size `isize` after rotation `rot`.
 fn get_rotation_idx(idx: usize, rot: i32, rot_scale: i32, isize: i32) -> usize {

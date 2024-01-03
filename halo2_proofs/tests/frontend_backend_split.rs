@@ -236,14 +236,6 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> MyCircuit<F, WIDTH_FACTOR>
                 let res = region
                     .assign_advice_from_instance(|| "", config.instance, 0, config.a, offset)
                     .expect("todo");
-                // let res = region
-                //     .assign_advice(
-                //         || "",
-                //         config.a,
-                //         offset,
-                //         || Value::known(F::from(self.input)),
-                //     )
-                //     .expect("todo");
                 // Enable the gate on a few consecutive rows with rotations
                 let (res, _) = config
                     .assign_gate(&mut region, &mut offset, Some(res), [0, 3, 4, 1])

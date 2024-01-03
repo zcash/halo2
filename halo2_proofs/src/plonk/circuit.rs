@@ -2123,62 +2123,6 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
 }
 
 impl<F: Field> ConstraintSystemV2Backend<F> {
-    /*
-    /// Compute the degree of the constraint system (the maximum degree of all
-    /// constraints).
-    pub fn degree(&self) -> usize {
-        // The permutation argument will serve alongside the gates, so must be
-        // accounted for.
-        let mut degree = self.permutation.required_degree();
-
-        // The lookup argument also serves alongside the gates and must be accounted
-        // for.
-        degree = std::cmp::max(
-            degree,
-            self.lookups
-                .iter()
-                .map(|l| l.required_degree())
-                .max()
-                .unwrap_or(1),
-        );
-
-        // The lookup argument also serves alongside the gates and must be accounted
-        // for.
-        degree = std::cmp::max(
-            degree,
-            self.shuffles
-                .iter()
-                .map(|l| l.required_degree())
-                .max()
-                .unwrap_or(1),
-        );
-
-        // Account for each gate to ensure our quotient polynomial is the
-        // correct degree and that our extended domain is the right size.
-        degree = std::cmp::max(
-            degree,
-            self.gates
-                .iter()
-                .flat_map(|gate| gate.polynomials().iter().map(|poly| poly.degree()))
-                .max()
-                .unwrap_or(0),
-        );
-
-        // std::cmp::max(degree, self.minimum_degree.unwrap_or(1))
-        degree
-    }
-    */
-
-    pub(crate) fn phases(&self) -> Vec<u8> {
-        let max_phase = self
-            .advice_column_phase
-            .iter()
-            .cloned()
-            .max()
-            .unwrap_or_default();
-        (0..=max_phase).collect()
-    }
-
     pub(crate) fn collect_queries(
         &self,
     ) -> (

@@ -99,50 +99,6 @@ impl Queries {
         // off-by-one errors.
         factors + 1
     }
-
-    pub(crate) fn get_advice_query_index(&self, column: Column<Advice>, at: Rotation) -> usize {
-        for (index, advice_query) in self.advice.iter().enumerate() {
-            if advice_query == &(column, at) {
-                return index;
-            }
-        }
-
-        panic!("get_advice_query_index called for non-existent query");
-    }
-
-    pub(crate) fn get_fixed_query_index(&self, column: Column<Fixed>, at: Rotation) -> usize {
-        for (index, fixed_query) in self.fixed.iter().enumerate() {
-            if fixed_query == &(column, at) {
-                return index;
-            }
-        }
-
-        panic!("get_fixed_query_index called for non-existent query");
-    }
-
-    pub(crate) fn get_instance_query_index(&self, column: Column<Instance>, at: Rotation) -> usize {
-        for (index, instance_query) in self.instance.iter().enumerate() {
-            if instance_query == &(column, at) {
-                return index;
-            }
-        }
-
-        panic!("get_instance_query_index called for non-existent query");
-    }
-
-    pub(crate) fn get_any_query_index(&self, column: Column<Any>, at: Rotation) -> usize {
-        match column.column_type() {
-            Any::Advice(_) => {
-                self.get_advice_query_index(Column::<Advice>::try_from(column).unwrap(), at)
-            }
-            Any::Fixed => {
-                self.get_fixed_query_index(Column::<Fixed>::try_from(column).unwrap(), at)
-            }
-            Any::Instance => {
-                self.get_instance_query_index(Column::<Instance>::try_from(column).unwrap(), at)
-            }
-        }
-    }
 }
 
 // TODO: Remove in favour of VerifyingKey
@@ -427,8 +383,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
         hasher.update(s.as_bytes());
 
         // Hash in final Blake2bState
-        // TODO: Uncomment
-        // vk.transcript_repr = C::Scalar::from_uniform_bytes(hasher.finalize().as_array());
+        vk.transcript_repr = C::Scalar::from_uniform_bytes(hasher.finalize().as_array());
 
         vk
     }
