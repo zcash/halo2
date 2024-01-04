@@ -12,9 +12,10 @@ use halo2_proofs::circuit::{AssignedCell, Cell, Layouter, Region, SimpleFloorPla
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::plonk::{
     compile_circuit, create_proof, keygen_pk, keygen_pk_v2, keygen_vk, keygen_vk_v2, verify_proof,
-    Advice, Assigned, Challenge, Circuit, Column, CompiledCircuitV2, ConstraintSystem,
-    ConstraintSystemV2Backend, Error, Expression, FirstPhase, Fixed, Instance, ProverV2,
-    ProvingKey, SecondPhase, Selector, TableColumn, VerifyingKey, WitnessCalculator,
+    verify_proof_single, Advice, Assigned, Challenge, Circuit, Column, CompiledCircuitV2,
+    ConstraintSystem, ConstraintSystemV2Backend, Error, Expression, FirstPhase, Fixed, Instance,
+    ProverV2Single, ProvingKey, SecondPhase, Selector, TableColumn, VerifyingKey,
+    WitnessCalculator,
 };
 use halo2_proofs::poly::commitment::{CommitmentScheme, ParamsProver, Prover, Verifier};
 use halo2_proofs::poly::Rotation;
@@ -475,13 +476,18 @@ fn test_mycircuit_mock() {
 
 use std::time::Instant;
 
-const K: u32 = 16;
-const WIDTH_FACTOR: usize = 4;
+const K: u32 = 8;
+const WIDTH_FACTOR: usize = 1;
 
 #[test]
 fn test_mycircuit_full_legacy() {
     #[cfg(feature = "dhat-heap")]
     let _profiler = dhat::Profiler::new_heap();
+
+    use halo2_proofs::plonk::{
+        create_proof_legacy as create_proof, keygen_pk_legacy as keygen_pk,
+        keygen_vk_legacy as keygen_vk,
+    };
 
     let k = K;
     let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
@@ -570,12 +576,12 @@ fn test_mycircuit_full_split() {
     let mut witness_calc = WitnessCalculator::new(k, &circuit, &config, &cs, instances_slice);
     let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
     let mut prover =
-        ProverV2::<KZGCommitmentScheme<Bn256>, ProverSHPLONK<'_, Bn256>, _, _, _>::new(
+        ProverV2Single::<KZGCommitmentScheme<Bn256>, ProverSHPLONK<'_, Bn256>, _, _, _>::new(
             &params,
             &pk,
-            &[instances_slice],
+            instances_slice,
             &mut rng,
-            transcript,
+            &mut transcript,
         )
         .unwrap();
     let mut challenges = HashMap::new();
@@ -584,10 +590,10 @@ fn test_mycircuit_full_split() {
         println!("DBG phase {}", phase);
         let witness = witness_calc.calc(phase, &challenges).unwrap();
         // println!("DBG witness: {:?}", witness);
-        challenges = prover.commit_phase(phase, vec![witness]).unwrap();
+        challenges = prover.commit_phase(phase, witness).unwrap();
         // println!("DBG challenges {:?}", challenges);
     }
-    let mut transcript = prover.create_proof().unwrap();
+    prover.create_proof().unwrap();
     let proof = transcript.finalize();
     // println!("DBG proof.len={} ", proof.len());
     // for word in proof.chunks(32) {
@@ -602,11 +608,11 @@ fn test_mycircuit_full_split() {
         Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
     let strategy = SingleStrategy::new(&verifier_params);
 
-    verify_proof::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<'_, Bn256>, _, _, _>(
+    verify_proof_single::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<'_, Bn256>, _, _, _>(
         &params,
         &vk,
         strategy,
-        &[instances_slice],
+        instances_slice,
         &mut verifier_transcript,
     )
     .expect("verify succeeds");

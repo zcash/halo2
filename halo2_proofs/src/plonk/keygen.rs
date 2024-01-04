@@ -7,8 +7,8 @@ use group::Curve;
 
 use super::{
     circuit::{
-        Advice, Any, Assignment, Circuit, Column, CompiledCircuitV2, ConstraintSystem, Fixed,
-        FloorPlanner, Instance, Selector,
+        compile_circuit, Advice, Any, Assignment, Circuit, Column, CompiledCircuitV2,
+        ConstraintSystem, Fixed, FloorPlanner, Instance, Selector,
     },
     evaluation::Evaluator,
     permutation, Assigned, Challenge, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
@@ -247,6 +247,40 @@ where
 
 /// Generate a `VerifyingKey` from an instance of `Circuit`.
 /// By default, selector compression is turned **off**.
+pub fn keygen_vk_legacy<'params, C, P, ConcreteCircuit>(
+    params: &P,
+    circuit: &ConcreteCircuit,
+) -> Result<VerifyingKey<C>, Error>
+where
+    C: CurveAffine,
+    P: Params<'params, C>,
+    ConcreteCircuit: Circuit<C::Scalar>,
+    C::Scalar: FromUniformBytes<64>,
+{
+    keygen_vk_custom_legacy(params, circuit, true)
+}
+
+/// Generate a `VerifyingKey` from an instance of `Circuit`.
+///
+/// The selector compression optimization is turned on only if `compress_selectors` is `true`.
+pub fn keygen_vk_custom_legacy<'params, C, P, ConcreteCircuit>(
+    params: &P,
+    circuit: &ConcreteCircuit,
+    compress_selectors: bool,
+) -> Result<VerifyingKey<C>, Error>
+where
+    C: CurveAffine,
+    P: Params<'params, C>,
+    ConcreteCircuit: Circuit<C::Scalar>,
+    C::Scalar: FromUniformBytes<64>,
+{
+    let (compiled_circuit, _, _) = compile_circuit(params.k(), circuit, compress_selectors)?;
+    keygen_vk_v2(params, &compiled_circuit)
+}
+
+// TODO: Remove
+/// Generate a `VerifyingKey` from an instance of `Circuit`.
+/// By default, selector compression is turned **off**.
 pub fn keygen_vk<'params, C, P, ConcreteCircuit>(
     params: &P,
     circuit: &ConcreteCircuit,
@@ -260,6 +294,7 @@ where
     keygen_vk_custom(params, circuit, true)
 }
 
+// TODO: Remove
 /// Generate a `VerifyingKey` from an instance of `Circuit`.
 ///
 /// The selector compression optimization is turned on only if `compress_selectors` is `true`.
@@ -418,6 +453,22 @@ where
     })
 }
 
+/// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `Circuit`.
+pub fn keygen_pk_legacy<'params, C, P, ConcreteCircuit>(
+    params: &P,
+    vk: VerifyingKey<C>,
+    circuit: &ConcreteCircuit,
+) -> Result<ProvingKey<C>, Error>
+where
+    C: CurveAffine,
+    P: Params<'params, C>,
+    ConcreteCircuit: Circuit<C::Scalar>,
+{
+    let (compiled_circuit, _, _) = compile_circuit(params.k(), circuit, vk.compress_selectors)?;
+    keygen_pk_v2(params, vk, &compiled_circuit)
+}
+
+// TODO: Remove
 /// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `Circuit`.
 pub fn keygen_pk<'params, C, P, ConcreteCircuit>(
     params: &P,

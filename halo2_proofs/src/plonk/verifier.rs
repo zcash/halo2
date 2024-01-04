@@ -20,6 +20,28 @@ mod batch;
 #[cfg(feature = "batch")]
 pub use batch::BatchVerifier;
 
+/// Returns a boolean indicating whether or not the proof is valid.  Verifies a single proof (not
+/// batched).
+pub fn verify_proof_single<
+    'params,
+    Scheme: CommitmentScheme,
+    V: Verifier<'params, Scheme>,
+    E: EncodedChallenge<Scheme::Curve>,
+    T: TranscriptRead<Scheme::Curve, E>,
+    Strategy: VerificationStrategy<'params, Scheme, V>,
+>(
+    params: &'params Scheme::ParamsVerifier,
+    vk: &VerifyingKey<Scheme::Curve>,
+    strategy: Strategy,
+    instance: &[&[Scheme::Scalar]],
+    transcript: &mut T,
+) -> Result<Strategy::Output, Error>
+where
+    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+{
+    verify_proof(params, vk, strategy, &[instance], transcript)
+}
+
 /// Returns a boolean indicating whether or not the proof is valid
 pub fn verify_proof<
     'params,

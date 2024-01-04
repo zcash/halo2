@@ -40,7 +40,7 @@ pub trait CommitmentScheme {
 }
 
 /// Parameters for circuit sysnthesis and prover parameters.
-pub trait Params<'params, C: CurveAffine>: Sized + Clone {
+pub trait Params<'params, C: CurveAffine>: Sized + Clone + Debug {
     /// Multi scalar multiplication engine
     type MSM: MSM<C> + 'params;
 

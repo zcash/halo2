@@ -7,9 +7,10 @@ use std::{collections::HashMap, iter};
 
 use super::{
     circuit::{
+        compile_circuit,
         sealed::{self},
         Advice, Any, Assignment, Challenge, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner,
-        Instance, Selector,
+        Instance, Selector, WitnessCalculator,
     },
     lookup, permutation, shuffle, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta,
     ChallengeX, ChallengeY, Error, ProvingKey,
@@ -42,9 +43,76 @@ struct AdviceSingle<C: CurveAffine, B: Basis> {
     pub advice_blinds: Vec<Blind<C::Scalar>>,
 }
 
-// TODO: Rewrite as multi-instance prover, and make a wraper for signle-instance case.
 /// The prover object used to create proofs interactively by passing the witnesses to commit at
-/// each phase.
+/// each phase.  This works for a single proof.  This is a wrapper over ProverV2.
+#[derive(Debug)]
+pub struct ProverV2Single<
+    'a,
+    'params,
+    Scheme: CommitmentScheme,
+    P: Prover<'params, Scheme>,
+    E: EncodedChallenge<Scheme::Curve>,
+    R: RngCore,
+    T: TranscriptWrite<Scheme::Curve, E>,
+>(ProverV2<'a, 'params, Scheme, P, E, R, T>);
+
+impl<
+        'a,
+        'params,
+        Scheme: CommitmentScheme,
+        P: Prover<'params, Scheme>,
+        E: EncodedChallenge<Scheme::Curve>,
+        R: RngCore,
+        T: TranscriptWrite<Scheme::Curve, E>,
+    > ProverV2Single<'a, 'params, Scheme, P, E, R, T>
+{
+    /// Create a new prover object
+    pub fn new(
+        params: &'params Scheme::ParamsProver,
+        pk: &'a ProvingKey<Scheme::Curve>,
+        // TODO: If this was a vector the usage would be simpler
+        instance: &[&[Scheme::Scalar]],
+        rng: R,
+        transcript: &'a mut T,
+    ) -> Result<Self, Error>
+    // TODO: Can I move this `where` to the struct definition?
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        Ok(Self(ProverV2::new(
+            params,
+            pk,
+            &[instance],
+            rng,
+            transcript,
+        )?))
+    }
+
+    /// Commit the `witness` at `phase` and return the challenges after `phase`.
+    pub fn commit_phase(
+        &mut self,
+        phase: u8,
+        // TODO: Turn this into Vec<Option<Vec<F>>>.  Requires batch_invert_assigned to work with
+        // Vec<F>
+        witness: Vec<Option<Polynomial<Assigned<Scheme::Scalar>, LagrangeCoeff>>>,
+    ) -> Result<HashMap<usize, Scheme::Scalar>, Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        self.0.commit_phase(phase, vec![witness])
+    }
+
+    /// Finalizes the proof creation.
+    pub fn create_proof(self) -> Result<(), Error>
+    where
+        Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+    {
+        self.0.create_proof()
+    }
+}
+
+/// The prover object used to create proofs interactively by passing the witnesses to commit at
+/// each phase.  This supports batch proving.
 #[derive(Debug)]
 pub struct ProverV2<
     'a,
@@ -58,9 +126,6 @@ pub struct ProverV2<
     // Circuit and setup fields
     params: &'params Scheme::ParamsProver,
     pk: &'a ProvingKey<Scheme::Curve>,
-    // advice_queries: Vec<(Column<Advice>, Rotation)>,
-    // instance_queries: Vec<(Column<Instance>, Rotation)>,
-    // fixed_queries: Vec<(Column<Fixed>, Rotation)>,
     phases: Vec<sealed::Phase>,
     // State
     instance: Vec<InstanceSingle<Scheme::Curve>>,
@@ -68,7 +133,7 @@ pub struct ProverV2<
     challenges: HashMap<usize, Scheme::Scalar>,
     next_phase_index: usize,
     rng: R,
-    transcript: T,
+    transcript: &'a mut T, // TODO: maybe &mut T?
     _marker: std::marker::PhantomData<(P, E)>,
 }
 
@@ -89,7 +154,7 @@ impl<
         // TODO: If this was a vector the usage would be simpler
         instances: &[&[&[Scheme::Scalar]]],
         rng: R,
-        mut transcript: T,
+        transcript: &'a mut T,
     ) -> Result<Self, Error>
     // TODO: Can I move this `where` to the struct definition?
     where
@@ -103,7 +168,7 @@ impl<
         }
 
         // Hash verification key into transcript
-        pk.vk.hash_into(&mut transcript)?;
+        pk.vk.hash_into(transcript)?;
 
         let meta = &pk.vk.cs;
         // let queries = &pk.vk.queries;
@@ -219,7 +284,6 @@ impl<
         let meta = &self.pk.vk.cs;
         // let queries = &self.pk.vk.queries;
 
-        let transcript = &mut self.transcript;
         let mut rng = &mut self.rng;
 
         let advice = &mut self.advice;
@@ -324,7 +388,7 @@ impl<
             drop(advice_commitments_projective);
 
             for commitment in &advice_commitments {
-                transcript.write_point(*commitment)?;
+                self.transcript.write_point(*commitment)?;
             }
             for ((column_index, advice_values), blind) in
                 column_indices.iter().zip(advice_values).zip(blinds)
@@ -342,7 +406,7 @@ impl<
         for (index, phase) in meta.challenge_phase.iter().enumerate() {
             if current_phase == phase {
                 let existing =
-                    challenges.insert(index, *transcript.squeeze_challenge_scalar::<()>());
+                    challenges.insert(index, *self.transcript.squeeze_challenge_scalar::<()>());
                 assert!(existing.is_none());
             }
         }
@@ -352,7 +416,7 @@ impl<
     }
 
     /// Finalizes the proof creation.
-    pub fn create_proof(mut self) -> Result<T, Error>
+    pub fn create_proof(mut self) -> Result<(), Error>
     where
         Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     {
@@ -362,7 +426,6 @@ impl<
         let pk = self.pk;
         let domain = &self.pk.vk.domain;
 
-        let mut transcript = self.transcript;
         let mut rng = self.rng;
 
         let instance = std::mem::replace(&mut self.instance, Vec::new());
@@ -375,7 +438,7 @@ impl<
             .collect::<Vec<_>>();
 
         // Sample theta challenge for keeping lookup columns linearly independent
-        let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
+        let theta: ChallengeTheta<_> = self.transcript.squeeze_challenge_scalar();
 
         let mut lookups_fn =
             |instance: &InstanceSingle<Scheme::Curve>,
@@ -394,7 +457,7 @@ impl<
                             &instance.instance_values,
                             &challenges,
                             &mut rng,
-                            &mut transcript,
+                            self.transcript,
                         )
                     })
                     .collect::<Result<Vec<_>, _>>()
@@ -409,10 +472,10 @@ impl<
             .collect::<Result<Vec<_>, _>>()?;
 
         // Sample beta challenge
-        let beta: ChallengeBeta<_> = transcript.squeeze_challenge_scalar();
+        let beta: ChallengeBeta<_> = self.transcript.squeeze_challenge_scalar();
 
         // Sample gamma challenge
-        let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();
+        let gamma: ChallengeGamma<_> = self.transcript.squeeze_challenge_scalar();
 
         // Commit to permutation.
         let permutations: Vec<permutation::prover::Committed<Scheme::Curve>> = instance
@@ -429,7 +492,7 @@ impl<
                     beta,
                     gamma,
                     &mut rng,
-                    &mut transcript,
+                    self.transcript,
                 )
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -441,7 +504,7 @@ impl<
                 lookups
                     .into_iter()
                     .map(|lookup| {
-                        lookup.commit_product(pk, params, beta, gamma, &mut rng, &mut transcript)
+                        lookup.commit_product(pk, params, beta, gamma, &mut rng, self.transcript)
                     })
                     .collect::<Result<Vec<_>, _>>()
             })
@@ -466,7 +529,7 @@ impl<
                             &instance.instance_values,
                             &challenges,
                             &mut rng,
-                            &mut transcript,
+                            self.transcript,
                         )
                     })
                     .collect::<Result<Vec<_>, _>>()
@@ -474,10 +537,10 @@ impl<
             .collect::<Result<Vec<_>, _>>()?;
 
         // Commit to the vanishing argument's random polynomial for blinding h(x_3)
-        let vanishing = vanishing::Argument::commit(params, domain, &mut rng, &mut transcript)?;
+        let vanishing = vanishing::Argument::commit(params, domain, &mut rng, self.transcript)?;
 
         // Obtain challenge for keeping all separate gates linearly independent
-        let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
+        let y: ChallengeY<_> = self.transcript.squeeze_challenge_scalar();
 
         // Calculate the advice polys
         let advice: Vec<AdviceSingle<Scheme::Curve, Coeff>> = advice
@@ -520,9 +583,9 @@ impl<
         );
 
         // Construct the vanishing argument's h(X) commitments
-        let vanishing = vanishing.construct(params, domain, h_poly, &mut rng, &mut transcript)?;
+        let vanishing = vanishing.construct(params, domain, h_poly, &mut rng, self.transcript)?;
 
-        let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
+        let x: ChallengeX<_> = self.transcript.squeeze_challenge_scalar();
         let xn = x.pow([params.n()]);
 
         if P::QUERY_INSTANCE {
@@ -542,7 +605,7 @@ impl<
 
                 // Hash each instance column evaluation
                 for eval in instance_evals.iter() {
-                    transcript.write_scalar(*eval)?;
+                    self.transcript.write_scalar(*eval)?;
                 }
             }
         }
@@ -564,7 +627,7 @@ impl<
 
             // Hash each advice column evaluation
             for eval in advice_evals.iter() {
-                transcript.write_scalar(*eval)?;
+                self.transcript.write_scalar(*eval)?;
             }
         }
 
@@ -579,19 +642,19 @@ impl<
 
         // Hash each fixed column evaluation
         for eval in fixed_evals.iter() {
-            transcript.write_scalar(*eval)?;
+            self.transcript.write_scalar(*eval)?;
         }
 
-        let vanishing = vanishing.evaluate(x, xn, domain, &mut transcript)?;
+        let vanishing = vanishing.evaluate(x, xn, domain, self.transcript)?;
 
         // Evaluate common permutation data
-        pk.permutation.evaluate(x, &mut transcript)?;
+        pk.permutation.evaluate(x, self.transcript)?;
 
         // Evaluate the permutations, if any, at omega^i x.
         let permutations: Vec<permutation::prover::Evaluated<Scheme::Curve>> = permutations
             .into_iter()
             .map(|permutation| -> Result<_, _> {
-                permutation.construct().evaluate(pk, x, &mut transcript)
+                permutation.construct().evaluate(pk, x, self.transcript)
             })
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -601,7 +664,7 @@ impl<
             .map(|lookups| -> Result<Vec<_>, _> {
                 lookups
                     .into_iter()
-                    .map(|p| p.evaluate(pk, x, &mut transcript))
+                    .map(|p| p.evaluate(pk, x, self.transcript))
                     .collect::<Result<Vec<_>, _>>()
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -612,7 +675,7 @@ impl<
             .map(|shuffles| -> Result<Vec<_>, _> {
                 shuffles
                     .into_iter()
-                    .map(|p| p.evaluate(pk, x, &mut transcript))
+                    .map(|p| p.evaluate(pk, x, self.transcript))
                     .collect::<Result<Vec<_>, _>>()
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -662,10 +725,10 @@ impl<
         let prover = P::new(params);
         println!("DBG create_proof");
         prover
-            .create_proof(rng, &mut transcript, instances)
+            .create_proof(rng, self.transcript, instances)
             .map_err(|_| Error::ConstraintSystemFailure)?;
 
-        Ok(transcript)
+        Ok(())
     }
 }
 
@@ -806,6 +869,52 @@ impl<'a, F: Field> Assignment<F> for WitnessCollection<'a, F> {
     fn pop_namespace(&mut self, _: Option<String>) {
         // Do nothing; we don't care about namespaces in this context.
     }
+}
+
+/// This creates a proof for the provided `circuit` when given the public
+/// parameters `params` and the proving key [`ProvingKey`] that was
+/// generated previously for the same circuit. The provided `instances`
+/// are zero-padded internally.
+pub fn create_proof_legacy<
+    'params,
+    Scheme: CommitmentScheme,
+    P: Prover<'params, Scheme>,
+    E: EncodedChallenge<Scheme::Curve>,
+    R: RngCore,
+    T: TranscriptWrite<Scheme::Curve, E>,
+    ConcreteCircuit: Circuit<Scheme::Scalar>,
+>(
+    params: &'params Scheme::ParamsProver,
+    pk: &ProvingKey<Scheme::Curve>,
+    circuits: &[ConcreteCircuit],
+    instances: &[&[&[Scheme::Scalar]]],
+    mut rng: R,
+    transcript: &mut T,
+) -> Result<(), Error>
+where
+    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+{
+    let (_, config, cs) = compile_circuit(params.k(), &circuits[0], pk.vk.compress_selectors)?;
+    let mut witness_calcs: Vec<_> = circuits
+        .iter()
+        .enumerate()
+        .map(|(i, circuit)| WitnessCalculator::new(params.k(), circuit, &config, &cs, instances[i]))
+        .collect();
+    let mut prover = ProverV2::<Scheme, P, _, _, _>::new(params, pk, instances, rng, transcript)?;
+    let mut challenges = HashMap::new();
+    let phases = prover.phases.clone();
+    for phase in &phases {
+        // for phase in [0] {
+        println!("DBG phase {}", phase.0);
+        let mut witnesses = Vec::with_capacity(circuits.len());
+        for witness_calc in witness_calcs.iter_mut() {
+            witnesses.push(witness_calc.calc(phase.0, &challenges)?);
+        }
+        // println!("DBG witness: {:?}", witness);
+        challenges = prover.commit_phase(phase.0, witnesses).unwrap();
+        // println!("DBG challenges {:?}", challenges);
+    }
+    prover.create_proof()
 }
 
 /// This creates a proof for the provided `circuit` when given the public
