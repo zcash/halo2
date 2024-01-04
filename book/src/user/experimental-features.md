@@ -55,7 +55,7 @@ It allows us to allocate advice column in different interactive phases with extr
 
 ### Unblinded advice column
 
-[`ConstraintSystem::unblinded_advice_column`](https://privacy-scaling-explorations.github.io/halo2/halo2_proofs/plonk/struct.ConstraintSystem.html#method.unblinded_advice_column) is added for use cases that want to re-use advice column commitment among different proofs. For example in `halo2_proofs/examples/vector-ops-unblinded.rs` it shows with this API and same assignment, two advice commitment frmo different proof can be same.
+[`ConstraintSystem::unblinded_advice_column`](https://privacy-scaling-explorations.github.io/halo2/halo2_proofs/plonk/struct.ConstraintSystem.html#method.unblinded_advice_column) is added for use cases that want to reuse advice column commitment among different proofs. For example in `halo2_proofs/examples/vector-ops-unblinded.rs` it shows with this API and same assignment, two advice commitment from different proof can be same.
 
 Worth mentioning, re-using advice column commitment in different proofs will need more blinding factors than the amount that prover adds, otherwise some information will be leaked and it's no longer perfect zero-knowledge.
 

@@ -186,7 +186,7 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
 
     /// Returns an empty (zero) polynomial in the Lagrange coefficient basis, with
     /// deferred inversions.
-    pub(crate) fn empty_lagrange_assigned(&self) -> Polynomial<Assigned<F>, LagrangeCoeff> {
+    pub fn empty_lagrange_assigned(&self) -> Polynomial<Assigned<F>, LagrangeCoeff> {
         Polynomial {
             values: vec![F::ZERO.into(); self.n as usize],
             _marker: PhantomData,

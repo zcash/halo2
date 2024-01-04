@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "halo2",
-    "halo2_gadgets",
     "halo2_proofs",
 ]
 resolver = "2"
