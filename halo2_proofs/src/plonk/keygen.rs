@@ -275,7 +275,9 @@ where
     C::Scalar: FromUniformBytes<64>,
 {
     let (compiled_circuit, _, _) = compile_circuit(params.k(), circuit, compress_selectors)?;
-    keygen_vk_v2(params, &compiled_circuit)
+    let mut vk = keygen_vk_v2(params, &compiled_circuit)?;
+    vk.compress_selectors = compress_selectors;
+    Ok(vk)
 }
 
 // TODO: Remove

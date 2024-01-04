@@ -108,7 +108,8 @@ pub struct VerifyingKey<C: CurveAffine> {
     domain: EvaluationDomain<C::Scalar>,
     fixed_commitments: Vec<C>,
     permutation: permutation::VerifyingKey<C>,
-    cs: ConstraintSystem<C::Scalar>,
+    /// TODO: Remove pub
+    pub cs: ConstraintSystem<C::Scalar>,
     /// Cached maximum degree of `cs` (which doesn't change after construction).
     cs_degree: usize,
     /// The representative of this `VerifyingKey` in transcripts.

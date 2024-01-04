@@ -283,6 +283,8 @@ impl<
         let params = self.params;
         let meta = &self.pk.vk.cs;
         // let queries = &self.pk.vk.queries;
+        // println!("DBG commit_phase gate {:?}", meta.gates()[0]);
+        // println!("DBG commit_phase queries {:?}", meta.advice_queries());
 
         let mut rng = &mut self.rng;
 
@@ -888,7 +890,7 @@ pub fn create_proof_legacy<
     pk: &ProvingKey<Scheme::Curve>,
     circuits: &[ConcreteCircuit],
     instances: &[&[&[Scheme::Scalar]]],
-    mut rng: R,
+    rng: R,
     transcript: &mut T,
 ) -> Result<(), Error>
 where

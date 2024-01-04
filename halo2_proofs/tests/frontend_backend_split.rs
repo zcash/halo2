@@ -11,11 +11,10 @@ use halo2_proofs::arithmetic::Field;
 use halo2_proofs::circuit::{AssignedCell, Cell, Layouter, Region, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::plonk::{
-    compile_circuit, create_proof, keygen_pk, keygen_pk_v2, keygen_vk, keygen_vk_v2, verify_proof,
-    verify_proof_single, Advice, Assigned, Challenge, Circuit, Column, CompiledCircuitV2,
-    ConstraintSystem, ConstraintSystemV2Backend, Error, Expression, FirstPhase, Fixed, Instance,
-    ProverV2Single, ProvingKey, SecondPhase, Selector, TableColumn, VerifyingKey,
-    WitnessCalculator,
+    compile_circuit, keygen_pk_v2, keygen_vk_v2, verify_proof, verify_proof_single, Advice,
+    Assigned, Challenge, Circuit, Column, CompiledCircuitV2, ConstraintSystem,
+    ConstraintSystemV2Backend, Error, Expression, FirstPhase, Fixed, Instance, ProverV2Single,
+    ProvingKey, SecondPhase, Selector, TableColumn, VerifyingKey, WitnessCalculator,
 };
 use halo2_proofs::poly::commitment::{CommitmentScheme, ParamsProver, Prover, Verifier};
 use halo2_proofs::poly::Rotation;
@@ -161,9 +160,9 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> MyCircuit<F, WIDTH_FACTOR>
 
         meta.create_gate("gate_a", |meta| {
             let s_gate = meta.query_selector(s_gate);
+            let b = meta.query_advice(b, Rotation::cur());
             let a1 = meta.query_advice(a, Rotation::next());
             let a0 = meta.query_advice(a, Rotation::cur());
-            let b = meta.query_advice(b, Rotation::cur());
             let c = meta.query_advice(c, Rotation::cur());
             let d = meta.query_fixed(d, Rotation::cur());
 
@@ -488,6 +487,7 @@ fn test_mycircuit_full_legacy() {
         create_proof_legacy as create_proof, keygen_pk_legacy as keygen_pk,
         keygen_vk_legacy as keygen_vk,
     };
+    // use halo2_proofs::plonk::{create_proof, keygen_pk, keygen_vk};
 
     let k = K;
     let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
@@ -498,6 +498,8 @@ fn test_mycircuit_full_legacy() {
     let verifier_params = params.verifier_params();
     let start = Instant::now();
     let vk = keygen_vk(&params, &circuit).expect("keygen_vk should not fail");
+    // println!("DBG gate {:?}", vk.cs.gates()[0]);
+    // println!("DBG queries {:?}", vk.cs.advice_queries());
     let pk = keygen_pk(&params, vk.clone(), &circuit).expect("keygen_pk should not fail");
     println!("Keygen: {:?}", start.elapsed());
 
