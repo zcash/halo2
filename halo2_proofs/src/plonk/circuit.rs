@@ -12,7 +12,6 @@ use ff::Field;
 use sealed::SealedPhase;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::fmt::Debug;
 use std::iter::{Product, Sum};
 use std::{
@@ -1784,59 +1783,6 @@ impl QueriesMap {
     }
 }
 
-/*
-/// This is a description of the circuit environment, such as the gate, column and
-/// permutation arrangements.
-#[derive(Debug, Clone)]
-pub struct ConstraintSystemV2BackendQueries<F: Field> {
-    pub(crate) num_fixed_columns: usize,
-    pub(crate) num_advice_columns: usize,
-    pub(crate) num_instance_columns: usize,
-    // pub(crate) num_selectors: usize,
-    pub(crate) num_challenges: usize,
-
-    /// Contains the index of each advice column that is left unblinded.
-    pub(crate) unblinded_advice_columns: Vec<usize>,
-
-    /// Contains the phase for each advice column. Should have same length as num_advice_columns.
-    pub(crate) advice_column_phase: Vec<u8>,
-    /// Contains the phase for each challenge. Should have same length as num_challenges.
-    pub(crate) challenge_phase: Vec<u8>,
-
-    /// This is a cached vector that maps virtual selectors to the concrete
-    /// fixed column that they were compressed into. This is just used by dev
-    /// tooling right now.
-    // pub(crate) selector_map: Vec<Column<Fixed>>,
-    pub(crate) gates: Vec<GateV2Backend<F>>,
-    pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
-    // Contains an integer for each advice column
-    // identifying how many distinct queries it has
-    // so far; should be same length as num_advice_columns.
-    pub(crate) num_advice_queries: Vec<usize>,
-    pub(crate) instance_queries: Vec<(Column<Instance>, Rotation)>,
-    pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
-
-    // Permutation argument for performing equality constraints
-    pub(crate) permutation: permutation::Argument,
-
-    // Vector of lookup arguments, where each corresponds to a sequence of
-    // input expressions and a sequence of table expressions involved in the lookup.
-    pub(crate) lookups: Vec<lookup::Argument<F>>,
-
-    // Vector of shuffle arguments, where each corresponds to a sequence of
-    // input expressions and a sequence of shuffle expressions involved in the shuffle.
-    pub(crate) shuffles: Vec<shuffle::Argument<F>>,
-
-    // List of indexes of Fixed columns which are associated to a circuit-general Column tied to their annotation.
-    pub(crate) general_column_annotations: HashMap<metadata::Column, String>,
-    // Vector of fixed columns, which can be used to store constant values
-    // that are copied into advice columns.
-    // pub(crate) constants: Vec<Column<Fixed>>,
-
-    // pub(crate) minimum_degree: Option<usize>,
-}
-*/
-
 /// This is a description of the circuit environment, such as the gate, column and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
@@ -1844,7 +1790,6 @@ pub struct ConstraintSystemV2Backend<F: Field> {
     pub(crate) num_fixed_columns: usize,
     pub(crate) num_advice_columns: usize,
     pub(crate) num_instance_columns: usize,
-    // pub(crate) num_selectors: usize,
     pub(crate) num_challenges: usize,
 
     /// Contains the index of each advice column that is left unblinded.
@@ -1855,14 +1800,7 @@ pub struct ConstraintSystemV2Backend<F: Field> {
     /// Contains the phase for each challenge. Should have same length as num_challenges.
     pub(crate) challenge_phase: Vec<u8>,
 
-    /// This is a cached vector that maps virtual selectors to the concrete
-    /// fixed column that they were compressed into. This is just used by dev
-    /// tooling right now.
-    // pub(crate) selector_map: Vec<Column<Fixed>>,
     pub(crate) gates: Vec<GateV2Backend<F>>,
-    // pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
-    // pub(crate) instance_queries: Vec<(Column<Instance>, Rotation)>,
-    // pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
 
     // Permutation argument for performing equality constraints
     pub(crate) permutation: permutation::Argument,
@@ -1877,11 +1815,6 @@ pub struct ConstraintSystemV2Backend<F: Field> {
 
     // List of indexes of Fixed columns which are associated to a circuit-general Column tied to their annotation.
     pub(crate) general_column_annotations: HashMap<metadata::Column, String>,
-    // Vector of fixed columns, which can be used to store constant values
-    // that are copied into advice columns.
-    // pub(crate) constants: Vec<Column<Fixed>>,
-
-    // pub(crate) minimum_degree: Option<usize>,
 }
 
 /// Witness calculator.  Frontend function
@@ -1942,7 +1875,6 @@ impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concret
             k: self.k,
             current_phase,
             advice: vec![Polynomial::new_empty(self.n, F::ZERO.into()); self.cs.num_advice_columns],
-            unblinded_advice: HashSet::from_iter(self.cs.unblinded_advice_columns.clone()),
             instances: self.instances,
             challenges,
             // The prover will not be allowed to assign values to advice

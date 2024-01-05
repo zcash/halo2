@@ -5,27 +5,20 @@
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
 
-use assert_matches::assert_matches;
-use ff::{FromUniformBytes, WithSmallOrderMulGroup};
 use halo2_proofs::arithmetic::Field;
-use halo2_proofs::circuit::{AssignedCell, Cell, Layouter, Region, SimpleFloorPlanner, Value};
+use halo2_proofs::circuit::{AssignedCell, Layouter, Region, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::plonk::{
     compile_circuit, keygen_pk_v2, keygen_vk_v2, verify_proof, verify_proof_single, Advice,
-    Assigned, Challenge, Circuit, Column, CompiledCircuitV2, ConstraintSystem,
-    ConstraintSystemV2Backend, Error, Expression, FirstPhase, Fixed, Instance, ProverV2Single,
-    ProvingKey, SecondPhase, Selector, TableColumn, VerifyingKey, WitnessCalculator,
+    Challenge, Circuit, Column, ConstraintSystem, Error, Expression, FirstPhase, Fixed, Instance,
+    ProverV2Single, SecondPhase, Selector, WitnessCalculator,
 };
-use halo2_proofs::poly::commitment::{CommitmentScheme, ParamsProver, Prover, Verifier};
+use halo2_proofs::poly::commitment::ParamsProver;
 use halo2_proofs::poly::Rotation;
-use halo2_proofs::poly::VerificationStrategy;
 use halo2_proofs::transcript::{
-    Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge, TranscriptReadBuffer,
-    TranscriptWriterBuffer,
+    Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
 };
-use rand_core::{OsRng, RngCore};
 use std::collections::HashMap;
-use std::marker::PhantomData;
 
 #[derive(Clone)]
 struct MyCircuitConfig {
@@ -428,7 +421,7 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> Circuit<F> for MyCircuit<F
                     self.synthesize_unit(config, &mut layouter).expect("todo");
                 if total_rows == 0 {
                     for (i, instance) in instance_copy.iter().enumerate() {
-                        // layouter.constrain_instance(instance.cell(), config.instance, 1 + i)?;
+                        layouter.constrain_instance(instance.cell(), config.instance, 1 + i)?;
                     }
                 }
                 total_rows += rows;
@@ -442,7 +435,7 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> Circuit<F> for MyCircuit<F
     }
 }
 
-use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG, ParamsVerifierKZG};
+use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
 use halo2_proofs::poly::kzg::multiopen::{ProverSHPLONK, VerifierSHPLONK};
 use halo2_proofs::poly::kzg::strategy::SingleStrategy;
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
@@ -477,17 +470,15 @@ use std::time::Instant;
 
 const K: u32 = 8;
 const WIDTH_FACTOR: usize = 1;
+// const K: u32 = 16;
+// const WIDTH_FACTOR: usize = 4;
 
 #[test]
 fn test_mycircuit_full_legacy() {
     #[cfg(feature = "dhat-heap")]
     let _profiler = dhat::Profiler::new_heap();
 
-    use halo2_proofs::plonk::{
-        create_proof_legacy as create_proof, keygen_pk_legacy as keygen_pk,
-        keygen_vk_legacy as keygen_vk,
-    };
-    // use halo2_proofs::plonk::{create_proof, keygen_pk, keygen_vk};
+    use halo2_proofs::plonk::{create_proof, keygen_pk, keygen_vk};
 
     let k = K;
     let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
