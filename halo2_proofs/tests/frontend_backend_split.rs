@@ -171,7 +171,7 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> MyCircuit<F, WIDTH_FACTOR>
             let d = meta.query_fixed(d, Rotation::cur());
             let lhs = [one.clone(), a, b].map(|c| c * s_lookup.clone());
             let rhs = [one.clone(), d, c].map(|c| c * s_ltable.clone());
-            lhs.into_iter().zip(rhs.into_iter()).collect()
+            lhs.into_iter().zip(rhs).collect()
         });
 
         meta.shuffle("shuffle", |meta| {
@@ -181,7 +181,7 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> MyCircuit<F, WIDTH_FACTOR>
             let b = meta.query_advice(b, Rotation::cur());
             let lhs = [one.clone(), a].map(|c| c * s_shuffle.clone());
             let rhs = [one.clone(), b].map(|c| c * s_stable.clone());
-            lhs.into_iter().zip(rhs.into_iter()).collect()
+            lhs.into_iter().zip(rhs).collect()
         });
 
         meta.create_gate("gate_rlc", |meta| {
@@ -523,7 +523,7 @@ fn test_mycircuit_full_legacy() {
     let start = Instant::now();
     let mut verifier_transcript =
         Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
-    let strategy = SingleStrategy::new(&verifier_params);
+    let strategy = SingleStrategy::new(verifier_params);
 
     verify_proof::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<'_, Bn256>, _, _, _>(
         &params,
@@ -599,7 +599,7 @@ fn test_mycircuit_full_split() {
     println!("DBG Verifying...");
     let mut verifier_transcript =
         Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
-    let strategy = SingleStrategy::new(&verifier_params);
+    let strategy = SingleStrategy::new(verifier_params);
 
     verify_proof_single::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<'_, Bn256>, _, _, _>(
         &params,

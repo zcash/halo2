@@ -306,7 +306,7 @@ impl<
 
         // TODO: Check that witness.len() is the expected number of advice columns.
         if witness.len() != advice.len() {
-            return Err(Error::Other(format!("witness.len() != advice.len()")));
+            return Err(Error::Other("witness.len() != advice.len()".to_string()));
         }
         for witness_circuit in witness.iter() {
             if witness_circuit.len() != meta.num_advice_columns {
@@ -316,15 +316,13 @@ impl<
                     meta.num_advice_columns,
                 )));
             }
-            for witness_column in witness_circuit {
-                if let Some(witness_column) = witness_column {
-                    if witness_column.len() != self.params.n() as usize {
-                        return Err(Error::Other(format!(
-                            "unexpected length in witness_column.  Got {}, expected {}",
-                            witness_column.len(),
-                            self.params.n()
-                        )));
-                    }
+            for witness_column in witness_circuit.iter().flatten() {
+                if witness_column.len() != self.params.n() as usize {
+                    return Err(Error::Other(format!(
+                        "unexpected length in witness_column.  Got {}, expected {}",
+                        witness_column.len(),
+                        self.params.n()
+                    )));
                 }
             }
         }
@@ -350,13 +348,11 @@ impl<
                             }
                         }
                     }
-                } else {
-                    if advice_column.is_some() {
-                        return Err(Error::Other(format!(
-                            "expected no advice column with index {} at phase {}",
-                            column_index, current_phase.0
-                        )));
-                    }
+                } else if advice_column.is_some() {
+                    return Err(Error::Other(format!(
+                        "expected no advice column with index {} at phase {}",
+                        column_index, current_phase.0
+                    )));
                 };
             }
         }
@@ -452,8 +448,8 @@ impl<
 
         let mut rng = self.rng;
 
-        let instance = std::mem::replace(&mut self.instance, Vec::new());
-        let advice = std::mem::replace(&mut self.advice, Vec::new());
+        let instance = std::mem::take(&mut self.instance);
+        let advice = std::mem::take(&mut self.advice);
         let mut challenges = self.challenges;
 
         assert_eq!(challenges.len(), meta.num_challenges);
@@ -474,7 +470,7 @@ impl<
                         lookup.commit_permuted(
                             pk,
                             params,
-                            &domain,
+                            domain,
                             theta,
                             &advice.advice_polys,
                             &pk.fixed_values,

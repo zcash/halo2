@@ -1734,7 +1734,7 @@ impl QueriesMap {
 }
 
 impl QueriesMap {
-    fn to_expression<F: Field>(&mut self, expr: &ExpressionMid<F>) -> Expression<F> {
+    fn as_expression<F: Field>(&mut self, expr: &ExpressionMid<F>) -> Expression<F> {
         match expr {
             ExpressionMid::Constant(c) => Expression::Constant(*c),
             ExpressionMid::Fixed(query) => {
@@ -1769,16 +1769,16 @@ impl QueriesMap {
                 })
             }
             ExpressionMid::Challenge(c) => Expression::Challenge(*c),
-            ExpressionMid::Negated(e) => Expression::Negated(Box::new(self.to_expression(e))),
+            ExpressionMid::Negated(e) => Expression::Negated(Box::new(self.as_expression(e))),
             ExpressionMid::Sum(lhs, rhs) => Expression::Sum(
-                Box::new(self.to_expression(lhs)),
-                Box::new(self.to_expression(rhs)),
+                Box::new(self.as_expression(lhs)),
+                Box::new(self.as_expression(rhs)),
             ),
             ExpressionMid::Product(lhs, rhs) => Expression::Product(
-                Box::new(self.to_expression(lhs)),
-                Box::new(self.to_expression(rhs)),
+                Box::new(self.as_expression(lhs)),
+                Box::new(self.as_expression(rhs)),
             ),
-            ExpressionMid::Scaled(e, c) => Expression::Scaled(Box::new(self.to_expression(e)), *c),
+            ExpressionMid::Scaled(e, c) => Expression::Scaled(Box::new(self.as_expression(e)), *c),
         }
     }
 }
@@ -1953,8 +1953,8 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
         k,
         fixed: vec![Polynomial::new_empty(n, F::ZERO.into()); cs.num_fixed_columns],
         permutation: permutation::keygen::Assembly::new(n, &cs.permutation),
-        selectors: vec![vec![false; n as usize]; cs.num_selectors],
-        usable_rows: 0..n as usize - (cs.blinding_factors() + 1),
+        selectors: vec![vec![false; n]; cs.num_selectors],
+        usable_rows: 0..n - (cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
     };
 
@@ -2081,7 +2081,7 @@ impl<F: Field> ConstraintSystemV2Backend<F> {
                 polys: gate
                     .polynomials()
                     .iter()
-                    .map(|e| queries.to_expression(e))
+                    .map(|e| queries.as_expression(e))
                     .collect(),
                 queried_selectors: Vec::new(), // Unused?
                 queried_cells: Vec::new(),     // Unused?
@@ -2095,12 +2095,12 @@ impl<F: Field> ConstraintSystemV2Backend<F> {
                 input_expressions: lookup
                     .input_expressions
                     .iter()
-                    .map(|e| queries.to_expression(e))
+                    .map(|e| queries.as_expression(e))
                     .collect(),
                 table_expressions: lookup
                     .table_expressions
                     .iter()
-                    .map(|e| queries.to_expression(e))
+                    .map(|e| queries.as_expression(e))
                     .collect(),
             })
             .collect();
@@ -2112,12 +2112,12 @@ impl<F: Field> ConstraintSystemV2Backend<F> {
                 input_expressions: shuffle
                     .input_expressions
                     .iter()
-                    .map(|e| queries.to_expression(e))
+                    .map(|e| queries.as_expression(e))
                     .collect(),
                 shuffle_expressions: shuffle
                     .shuffle_expressions
                     .iter()
-                    .map(|e| queries.to_expression(e))
+                    .map(|e| queries.as_expression(e))
                     .collect(),
             })
             .collect();
@@ -2218,13 +2218,9 @@ impl<F: Field> From<ConstraintSystemV2Backend<F>> for ConstraintSystem<F> {
             advice_column_phase: cs2
                 .advice_column_phase
                 .into_iter()
-                .map(|p| sealed::Phase(p))
+                .map(sealed::Phase)
                 .collect(),
-            challenge_phase: cs2
-                .challenge_phase
-                .into_iter()
-                .map(|p| sealed::Phase(p))
-                .collect(),
+            challenge_phase: cs2.challenge_phase.into_iter().map(sealed::Phase).collect(),
             selector_map: Vec::new(),
             gates,
             advice_queries: queries.advice,
