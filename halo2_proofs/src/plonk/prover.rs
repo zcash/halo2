@@ -918,6 +918,9 @@ pub fn create_proof<
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
 {
+    if circuits.len() != instances.len() {
+        return Err(Error::InvalidInstances);
+    }
     let (_, config, cs) = compile_circuit(params.k(), &circuits[0], pk.vk.compress_selectors)?;
     let mut witness_calcs: Vec<_> = circuits
         .iter()
