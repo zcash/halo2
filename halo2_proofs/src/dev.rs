@@ -756,12 +756,12 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
         // check all the row ids are valid
         for row_id in gate_row_ids.clone() {
             if !self.usable_rows.contains(&row_id) {
-                panic!("invalid gate row id {}", row_id)
+                panic!("invalid gate row id {row_id}")
             }
         }
         for row_id in lookup_input_row_ids.clone() {
             if !self.usable_rows.contains(&row_id) {
-                panic!("invalid lookup row id {}", row_id)
+                panic!("invalid lookup row id {row_id}")
             }
         }
 
@@ -1199,12 +1199,12 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
         // check all the row ids are valid
         gate_row_ids.par_iter().for_each(|row_id| {
             if !self.usable_rows.contains(row_id) {
-                panic!("invalid gate row id {}", row_id);
+                panic!("invalid gate row id {row_id}");
             }
         });
         lookup_input_row_ids.par_iter().for_each(|row_id| {
             if !self.usable_rows.contains(row_id) {
-                panic!("invalid gate row id {}", row_id);
+                panic!("invalid gate row id {row_id}");
             }
         });
 

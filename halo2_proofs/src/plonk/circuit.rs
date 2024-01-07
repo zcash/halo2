@@ -1110,7 +1110,7 @@ impl<F: Field> Expression<F> {
 
     fn write_identifier<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
         match self {
-            Expression::Constant(scalar) => write!(writer, "{:?}", scalar),
+            Expression::Constant(scalar) => write!(writer, "{scalar:?}"),
             Expression::Selector(selector) => write!(writer, "selector[{}]", selector.0),
             Expression::Fixed(query) => {
                 write!(
@@ -1157,7 +1157,7 @@ impl<F: Field> Expression<F> {
             }
             Expression::Scaled(a, f) => {
                 a.write_identifier(writer)?;
-                write!(writer, "*{:?}", f)
+                write!(writer, "*{f:?}")
             }
         }
     }
@@ -2206,7 +2206,7 @@ impl<F: Field> ConstraintSystem<F> {
         if let Some(previous_phase) = phase.prev() {
             self.assert_phase_exists(
                 previous_phase,
-                format!("Column<Advice> in later phase {:?}", phase).as_str(),
+                format!("Column<Advice> in later phase {phase:?}").as_str(),
             );
         }
 
@@ -2231,7 +2231,7 @@ impl<F: Field> ConstraintSystem<F> {
         if let Some(previous_phase) = phase.prev() {
             self.assert_phase_exists(
                 previous_phase,
-                format!("Column<Advice> in later phase {:?}", phase).as_str(),
+                format!("Column<Advice> in later phase {phase:?}").as_str(),
             );
         }
 
@@ -2264,7 +2264,7 @@ impl<F: Field> ConstraintSystem<F> {
         let phase = phase.to_sealed();
         self.assert_phase_exists(
             phase,
-            format!("Challenge usable after phase {:?}", phase).as_str(),
+            format!("Challenge usable after phase {phase:?}").as_str(),
         );
 
         let tmp = Challenge {
@@ -2285,8 +2285,7 @@ impl<F: Field> ConstraintSystem<F> {
             .find(|advice_column_phase| **advice_column_phase == phase)
             .unwrap_or_else(|| {
                 panic!(
-                    "No Column<Advice> is used in phase {:?} while allocating a new {:?}",
-                    phase, resource
+                    "No Column<Advice> is used in phase {phase:?} while allocating a new {resource:?}"
                 )
             });
     }
