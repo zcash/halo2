@@ -80,7 +80,7 @@ where
         // Version byte that will be checked on read.
         writer.write_all(&[VERSION])?;
         let k = &self.domain.k();
-        assert!(*k <= C::Scalar::S as u32);
+        assert!(*k <= C::Scalar::S);
         // k value fits in 1 byte
         writer.write_all(&[*k as u8])?;
         writer.write_all(&[self.compress_selectors as u8])?;
