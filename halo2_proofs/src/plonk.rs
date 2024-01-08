@@ -62,8 +62,6 @@ pub struct VerifyingKey<C: CurveAffine> {
 
 // Current version of the VK
 const VERSION: u8 = 0x03;
-// Maximum allowed value for parameter `k`, the log-size of the circuit.
-const MAX_CIRCUIT_SIZE: u8 = 32;
 
 impl<C: SerdeCurveAffine> VerifyingKey<C>
 where
@@ -82,7 +80,7 @@ where
         // Version byte that will be checked on read.
         writer.write_all(&[VERSION])?;
         let k = &self.domain.k();
-        assert!(*k <= MAX_CIRCUIT_SIZE as u32);
+        assert!(*k <= C::Scalar::S as u32);
         // k value fits in 1 byte
         writer.write_all(&[k.to_le_bytes()[0]])?;
         writer.write_all(&[self.compress_selectors as u8])?;
@@ -132,12 +130,13 @@ where
         let mut k = [0u8; 1];
         reader.read_exact(&mut k)?;
         let k = u8::from_le_bytes(k);
-        if k > MAX_CIRCUIT_SIZE {
+        if k as u32 > C::Scalar::S {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 format!(
                     "circuit size value (k): {} exceeds maxium: {}",
-                    k, MAX_CIRCUIT_SIZE
+                    k,
+                    C::Scalar::S
                 ),
             ));
         }
