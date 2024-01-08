@@ -82,7 +82,7 @@ where
         let k = &self.domain.k();
         assert!(*k <= C::Scalar::S as u32);
         // k value fits in 1 byte
-        writer.write_all(&[k.to_le_bytes()[0]])?;
+        writer.write_all(&[*k as u8])?;
         writer.write_all(&[self.compress_selectors as u8])?;
         writer.write_all(&(self.fixed_commitments.len() as u32).to_le_bytes())?;
         for commitment in &self.fixed_commitments {
