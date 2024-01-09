@@ -95,6 +95,7 @@ sanity-checks = []
 batch = ["rand_core/getrandom"]
 circuit-params = []
 cost-estimator = ["serde", "serde_derive"]
+derive_serde = ["halo2curves/derive_serde"]
 
 [lib]
 bench = false
