@@ -1692,7 +1692,8 @@ pub struct PreprocessingV2<F: Field> {
     pub(crate) permutation: permutation::keygen::Assembly,
     // TODO(Edu): Replace this by Vec<Vec<F>>.  Requires some methods of Polynomial to take Vec<F>
     // instead
-    pub(crate) fixed: Vec<Polynomial<F, LagrangeCoeff>>,
+    // pub(crate) fixed: Vec<Polynomial<F, LagrangeCoeff>>,
+    pub(crate) fixed: Vec<Vec<F>>,
 }
 
 /// This is a description of a low level Plonkish compiled circuit.  Contains the Constraint System
@@ -1858,7 +1859,8 @@ impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concret
         &mut self,
         phase: u8,
         challenges: &HashMap<usize, F>,
-    ) -> Result<Vec<Option<Polynomial<Assigned<F>, LagrangeCoeff>>>, Error> {
+        // ) -> Result<Vec<Option<Polynomial<Assigned<F>, LagrangeCoeff>>>, Error> {
+    ) -> Result<Vec<Option<Vec<Assigned<F>>>>, Error> {
         if phase != self.next_phase {
             return Err(Error::Other(format!(
                 "Expected phase {}, got {}",
@@ -1874,7 +1876,7 @@ impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concret
         let mut witness = WitnessCollection {
             k: self.k,
             current_phase,
-            advice: vec![Polynomial::new_empty(self.n, F::ZERO.into()); self.cs.num_advice_columns],
+            advice: vec![vec![Assigned::Zero; self.n]; self.cs.num_advice_columns],
             instances: self.instances,
             challenges,
             // The prover will not be allowed to assign values to advice
@@ -1974,11 +1976,8 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
         let selectors = std::mem::take(&mut assembly.selectors);
         cs.directly_convert_selectors_to_fixed(selectors)
     };
-    fixed.extend(
-        selector_polys
-            .into_iter()
-            .map(|poly| Polynomial::new_lagrange_from_vec(poly)),
-    );
+    let mut fixed: Vec<_> = fixed.into_iter().map(|p| p.values).collect();
+    fixed.extend(selector_polys.into_iter());
 
     let cs2 = ConstraintSystemV2Backend {
         num_fixed_columns: cs.num_fixed_columns,

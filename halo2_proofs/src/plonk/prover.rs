@@ -94,7 +94,8 @@ impl<
         phase: u8,
         // TODO: Turn this into Vec<Option<Vec<F>>>.  Requires batch_invert_assigned to work with
         // Vec<F>
-        witness: Vec<Option<Polynomial<Assigned<Scheme::Scalar>, LagrangeCoeff>>>,
+        // witness: Vec<Option<Polynomial<Assigned<Scheme::Scalar>, LagrangeCoeff>>>,
+        witness: Vec<Option<Vec<Assigned<Scheme::Scalar>>>>,
     ) -> Result<HashMap<usize, Scheme::Scalar>, Error>
     where
         Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
@@ -265,7 +266,8 @@ impl<
         phase: u8,
         // TODO: Turn this into Vec<Option<Vec<F>>>.  Requires batch_invert_assigned to work with
         // Vec<F>
-        witness: Vec<Vec<Option<Polynomial<Assigned<Scheme::Scalar>, LagrangeCoeff>>>>,
+        // witness: Vec<Vec<Option<Polynomial<Assigned<Scheme::Scalar>, LagrangeCoeff>>>>,
+        witness: Vec<Vec<Option<Vec<Assigned<Scheme::Scalar>>>>>,
     ) -> Result<HashMap<usize, Scheme::Scalar>, Error>
     where
         Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
@@ -304,11 +306,10 @@ impl<
             })
             .collect::<BTreeSet<_>>();
 
-        // TODO: Check that witness.len() is the expected number of advice columns.
         if witness.len() != advice.len() {
             return Err(Error::Other("witness.len() != advice.len()".to_string()));
         }
-        for witness_circuit in witness.iter() {
+        for witness_circuit in &witness {
             if witness_circuit.len() != meta.num_advice_columns {
                 return Err(Error::Other(format!(
                     "unexpected length in witness_circuitk.  Got {}, expected {}",
@@ -316,20 +317,8 @@ impl<
                     meta.num_advice_columns,
                 )));
             }
-            for witness_column in witness_circuit.iter().flatten() {
-                if witness_column.len() != self.params.n() as usize {
-                    return Err(Error::Other(format!(
-                        "unexpected length in witness_column.  Got {}, expected {}",
-                        witness_column.len(),
-                        self.params.n()
-                    )));
-                }
-            }
-        }
-
-        // Check that all current_phase advice columns are Some, and their length is correct
-        for witness in &witness {
-            for (column_index, advice_column) in witness.iter().enumerate() {
+            // Check that all current_phase advice columns are Some, and their length is correct
+            for (column_index, advice_column) in witness_circuit.iter().enumerate() {
                 if column_indices.contains(&column_index) {
                     match advice_column {
                         None => {
@@ -420,7 +409,13 @@ impl<
         };
 
         for (witness, advice) in witness.into_iter().zip(advice.iter_mut()) {
-            commit_phase_fn(advice, witness)?;
+            commit_phase_fn(
+                advice,
+                witness
+                    .into_iter()
+                    .map(|v| v.map(Polynomial::new_lagrange_from_vec))
+                    .collect(),
+            )?;
         }
 
         for (index, phase) in meta.challenge_phase.iter().enumerate() {
@@ -755,7 +750,7 @@ impl<
 pub(crate) struct WitnessCollection<'a, F: Field> {
     pub(crate) k: u32,
     pub(crate) current_phase: sealed::Phase,
-    pub(crate) advice: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
+    pub(crate) advice: Vec<Vec<Assigned<F>>>,
     // pub(crate) unblinded_advice: HashSet<usize>,
     pub(crate) challenges: &'a HashMap<usize, F>,
     pub(crate) instances: &'a [&'a [F]],

@@ -231,7 +231,14 @@ where
         .preprocessing
         .fixed
         .iter()
-        .map(|poly| params.commit_lagrange(poly, Blind::default()).to_affine())
+        .map(|poly| {
+            params
+                .commit_lagrange(
+                    &Polynomial::new_lagrange_from_vec(poly.clone()),
+                    Blind::default(),
+                )
+                .to_affine()
+        })
         .collect();
 
     Ok(VerifyingKey::from_parts(
@@ -299,7 +306,10 @@ where
         .preprocessing
         .fixed
         .iter()
-        .map(|poly| vk.domain.lagrange_to_coeff(poly.clone()))
+        .map(|poly| {
+            vk.domain
+                .lagrange_to_coeff(Polynomial::new_lagrange_from_vec(poly.clone()))
+        })
         .collect();
 
     let fixed_cosets = fixed_polys
@@ -355,7 +365,13 @@ where
         l0,
         l_last,
         l_active_row,
-        fixed_values: circuit.preprocessing.fixed.clone(),
+        fixed_values: circuit
+            .preprocessing
+            .fixed
+            .clone()
+            .into_iter()
+            .map(Polynomial::new_lagrange_from_vec)
+            .collect(),
         fixed_polys,
         fixed_cosets,
         permutation: permutation_pk,
