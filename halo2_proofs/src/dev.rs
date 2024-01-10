@@ -20,7 +20,6 @@ use crate::{
     },
 };
 
-#[cfg(feature = "multicore")]
 use crate::multicore::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
     ParallelSliceMut,
@@ -1177,7 +1176,6 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
     /// Returns `Ok(())` if this `MockProver` is satisfied, or a list of errors indicating
     /// the reasons that the circuit is not satisfied.
     /// Constraints and lookup are checked at `usable_rows`, parallelly.
-    #[cfg(feature = "multicore")]
     pub fn verify_par(&self) -> Result<(), Vec<VerifyFailure>> {
         self.verify_at_rows_par(self.usable_rows.clone(), self.usable_rows.clone())
     }
@@ -1185,7 +1183,6 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
     /// Returns `Ok(())` if this `MockProver` is satisfied, or a list of errors indicating
     /// the reasons that the circuit is not satisfied.
     /// Constraints are only checked at `gate_row_ids`, and lookup inputs are only checked at `lookup_input_row_ids`, parallelly.
-    #[cfg(feature = "multicore")]
     pub fn verify_at_rows_par<I: Clone + Iterator<Item = usize>>(
         &self,
         gate_row_ids: I,
@@ -1653,7 +1650,6 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
     /// ```ignore
     /// assert_eq!(prover.verify_par(), Ok(()));
     /// ```
-    #[cfg(feature = "multicore")]
     pub fn assert_satisfied_par(&self) {
         if let Err(errs) = self.verify_par() {
             for err in errs {
@@ -1675,7 +1671,6 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
     /// ```ignore
     /// assert_eq!(prover.verify_at_rows_par(), Ok(()));
     /// ```
-    #[cfg(feature = "multicore")]
     pub fn assert_satisfied_at_rows_par<I: Clone + Iterator<Item = usize>>(
         &self,
         gate_row_ids: I,

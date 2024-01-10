@@ -13,12 +13,11 @@ minor version bump.
 
 ## Controlling parallelism
 
-`halo2` currently uses [rayon](https://github.com/rayon-rs/rayon) for parallel computation.
-The `RAYON_NUM_THREADS` environment variable can be used to set the number of threads.
+`halo2` currently uses [rayon](https://github.com/rayon-rs/rayon) for parallel computation. The `RAYON_NUM_THREADS` environment variable can be used to set the number of threads.
 
-You can disable `rayon` by disabling the `"multicore"` feature.
-Warning! Halo2 will lose access to parallelism if you disable the `"multicore"` feature.
-This will significantly degrade performance.
+When compiling to WASM-targets, notice that since version `1.7`, `rayon` will fallback automatically (with no need to handle features) to require `getrandom` in order to be able to work. For more info related to WASM-compilation.
+
+See: [Rayon: Usage with WebAssembly](https://github.com/rayon-rs/rayon#usage-with-webassembly) for more 
 
 ## License
 

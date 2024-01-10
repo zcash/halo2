@@ -7,15 +7,8 @@ use halo2curves::pasta::pallas::Scalar;
 use rand_chacha::rand_core::RngCore;
 use rand_chacha::ChaCha20Rng;
 use rand_core::SeedableRng;
+use rayon::current_num_threads;
 use std::{collections::HashMap, iter};
-
-#[cfg(feature = "multicore")]
-use maybe_rayon::current_num_threads;
-
-#[cfg(not(feature = "multicore"))]
-fn current_num_threads() -> usize {
-    1
-}
 
 fn rand_poly_serial(mut rng: ChaCha20Rng, domain: usize) -> Vec<Scalar> {
     // Sample a random polynomial of degree n - 1

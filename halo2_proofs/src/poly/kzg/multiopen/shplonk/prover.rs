@@ -12,7 +12,7 @@ use crate::poly::query::{PolynomialPointer, ProverQuery};
 use crate::poly::{Coeff, Polynomial};
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
-use crate::multicore::IntoParallelIterator;
+use crate::multicore::{IntoParallelIterator, ParallelIterator};
 use ff::Field;
 use group::Curve;
 use halo2curves::pairing::Engine;
@@ -22,9 +22,6 @@ use std::fmt::Debug;
 use std::io;
 use std::marker::PhantomData;
 use std::ops::MulAssign;
-
-#[cfg(feature = "multicore")]
-use crate::multicore::ParallelIterator;
 
 fn div_by_vanishing<F: Field>(poly: Polynomial<F, Coeff>, roots: &[F]) -> Vec<F> {
     let poly = roots

@@ -11,8 +11,11 @@ use crate::{
     },
 };
 
-#[cfg(feature = "multicore")]
-use crate::multicore::{IndexedParallelIterator, ParallelIterator};
+#[cfg(feature = "thread-safe-region")]
+use crate::multicore::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+
+#[cfg(not(feature = "thread-safe-region"))]
+use crate::multicore::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 #[cfg(feature = "thread-safe-region")]
 use std::collections::{BTreeSet, HashMap};
@@ -133,20 +136,11 @@ impl Assembly {
         &self.columns
     }
 
-    #[cfg(feature = "multicore")]
     /// Returns mappings of the copies.
     pub fn mapping(
         &self,
     ) -> impl Iterator<Item = impl IndexedParallelIterator<Item = (usize, usize)> + '_> {
-        use crate::multicore::IntoParallelRefIterator;
-
         self.mapping.iter().map(|c| c.par_iter().copied())
-    }
-
-    #[cfg(not(feature = "multicore"))]
-    /// Returns mappings of the copies.
-    pub fn mapping(&self) -> impl Iterator<Item = impl Iterator<Item = (usize, usize)> + '_> {
-        self.mapping.iter().map(|c| c.iter().copied())
     }
 }
 
@@ -315,24 +309,15 @@ impl Assembly {
         &self.columns
     }
 
-    #[cfg(feature = "multicore")]
     /// Returns mappings of the copies.
     pub fn mapping(
         &self,
     ) -> impl Iterator<Item = impl IndexedParallelIterator<Item = (usize, usize)> + '_> {
-        use crate::multicore::IntoParallelIterator;
-
         (0..self.num_cols).map(move |i| {
             (0..self.col_len)
                 .into_par_iter()
                 .map(move |j| self.mapping_at_idx(i, j))
         })
-    }
-
-    #[cfg(not(feature = "multicore"))]
-    /// Returns mappings of the copies.
-    pub fn mapping(&self) -> impl Iterator<Item = impl Iterator<Item = (usize, usize)> + '_> {
-        (0..self.num_cols).map(move |i| (0..self.col_len).map(move |j| self.mapping_at_idx(i, j)))
     }
 }
 
