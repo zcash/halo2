@@ -1,8 +1,3 @@
-#[cfg(all(target_arch = "wasm32", not(target_feature = "atomics")))]
-compile_error!(
-    "The multicore feature flag is not supported on wasm32 architectures without atomics"
-);
-
 pub use rayon::{
     current_num_threads,
     iter::{IndexedParallelIterator, IntoParallelRefIterator},
