@@ -53,16 +53,16 @@ pub(super) fn render_cell_layout(
         FailureLocation::InRegion { region, offset } => {
             col_headers
                 .push_str(format!("{}Cell layout in region '{}':\n", prefix, region.name).as_str());
-            col_headers.push_str(format!("{}  | Offset |", prefix).as_str());
+            col_headers.push_str(format!("{prefix}  | Offset |").as_str());
             Some(*offset as i32)
         }
         FailureLocation::OutsideRegion { row } => {
-            col_headers.push_str(format!("{}Cell layout at row {}:\n", prefix, row).as_str());
-            col_headers.push_str(format!("{}  |Rotation|", prefix).as_str());
+            col_headers.push_str(format!("{prefix}Cell layout at row {row}:\n").as_str());
+            col_headers.push_str(format!("{prefix}  |Rotation|").as_str());
             None
         }
     };
-    eprint!("\n{}", col_headers);
+    eprint!("\n{col_headers}");
 
     let widths: Vec<usize> = columns
         .iter()
@@ -112,7 +112,7 @@ pub(super) fn render_cell_layout(
     }
 
     eprintln!();
-    eprint!("{}  +--------+", prefix);
+    eprint!("{prefix}  +--------+");
     for &width in widths.iter() {
         eprint!("{}+", padded('-', width, ""));
     }
@@ -185,23 +185,23 @@ pub(super) fn expression_to_string<F: Field>(
         &|challenge| format!("C{}({})", challenge.index(), challenge.phase()),
         &|a| {
             if a.contains(' ') {
-                format!("-({})", a)
+                format!("-({a})")
             } else {
-                format!("-{}", a)
+                format!("-{a}")
             }
         },
         &|a, b| {
             if let Some(b) = b.strip_prefix('-') {
-                format!("{} - {}", a, b)
+                format!("{a} - {b}")
             } else {
-                format!("{} + {}", a, b)
+                format!("{a} + {b}")
             }
         },
         &|a, b| match (a.contains(' '), b.contains(' ')) {
-            (false, false) => format!("{} * {}", a, b),
-            (false, true) => format!("{} * ({})", a, b),
-            (true, false) => format!("({}) * {}", a, b),
-            (true, true) => format!("({}) * ({})", a, b),
+            (false, false) => format!("{a} * {b}"),
+            (false, true) => format!("{a} * ({b})"),
+            (true, false) => format!("({a}) * {b}"),
+            (true, true) => format!("({a}) * ({b})"),
         },
         &|a, s| {
             if a.contains(' ') {

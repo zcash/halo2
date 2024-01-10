@@ -178,40 +178,6 @@ impl<F: Field> NumericInstructions<F> for FieldChip<F> {
         let config = self.config();
         assert_eq!(a.len(), b.len());
 
-        #[cfg(feature = "thread-safe-region")]
-        {
-            use maybe_rayon::prelude::{
-                IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator,
-            };
-            layouter.assign_region(
-                || "mul",
-                |region: Region<'_, F>| {
-                    let thread_safe_region = std::sync::Mutex::new(region);
-                    a.par_iter()
-                        .zip(b.par_iter())
-                        .enumerate()
-                        .map(|(i, (a, b))| {
-                            let mut region = thread_safe_region.lock().unwrap();
-
-                            config.s_mul.enable(&mut region, i)?;
-
-                            a.0.copy_advice(|| "lhs", &mut region, config.advice[0], i)?;
-                            b.0.copy_advice(|| "rhs", &mut region, config.advice[1], i)?;
-
-                            let value = a.0.value().copied() * b.0.value();
-
-                            // Finally, we do the assignment to the output, returning a
-                            // variable to be used in another part of the circuit.
-                            region
-                                .assign_advice(|| "lhs * rhs", config.advice[2], i, || value)
-                                .map(Number)
-                        })
-                        .collect()
-                },
-            )
-        }
-
-        #[cfg(not(feature = "thread-safe-region"))]
         layouter.assign_region(
             || "mul",
             |mut region: Region<'_, F>| {

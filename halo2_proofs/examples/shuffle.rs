@@ -168,7 +168,7 @@ impl<F: Field, const W: usize, const H: usize> Circuit<F> for MyCircuit<F, W, H>
                 {
                     for (offset, &value) in values.transpose_array().iter().enumerate() {
                         region.assign_advice(
-                            || format!("original[{}][{}]", idx, offset),
+                            || format!("original[{idx}][{offset}]"),
                             column,
                             offset,
                             || value,
@@ -183,7 +183,7 @@ impl<F: Field, const W: usize, const H: usize> Circuit<F> for MyCircuit<F, W, H>
                 {
                     for (offset, &value) in values.transpose_array().iter().enumerate() {
                         region.assign_advice(
-                            || format!("shuffled[{}][{}]", idx, offset),
+                            || format!("shuffled[{idx}][{offset}]"),
                             column,
                             offset,
                             || value,
@@ -233,12 +233,7 @@ impl<F: Field, const W: usize, const H: usize> Circuit<F> for MyCircuit<F, W, H>
                     },
                 );
                 for (offset, value) in z.transpose_vec(H + 1).into_iter().enumerate() {
-                    region.assign_advice(
-                        || format!("z[{}]", offset),
-                        config.z,
-                        offset,
-                        || value,
-                    )?;
+                    region.assign_advice(|| format!("z[{offset}]"), config.z, offset, || value)?;
                 }
 
                 Ok(())

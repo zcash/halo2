@@ -491,7 +491,7 @@ fn plonk_api() {
         // Check this circuit is satisfied.
         let prover = match MockProver::run(K, &circuit, vec![vec![instance]]) {
             Ok(prover) => prover,
-            Err(e) => panic!("{:?}", e),
+            Err(e) => panic!("{e:?}"),
         };
         assert_eq!(prover.verify(), Ok(()));
 

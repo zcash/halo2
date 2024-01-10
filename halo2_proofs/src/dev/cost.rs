@@ -102,11 +102,11 @@ impl Layout {
             total_rows: 0,
             total_advice_rows: 0,
             total_fixed_rows: 0,
-            /// Any cells assigned outside of a region.
+            // Any cells assigned outside of a region.
             loose_cells: vec![],
-            /// Pairs of cells between which we have equality constraints.
+            // Pairs of cells between which we have equality constraints.
             equality: vec![],
-            /// Selector assignments used for optimization pass
+            // Selector assignments used for optimization pass
             selectors: vec![vec![false; n]; num_selectors],
         }
     }
