@@ -2929,7 +2929,8 @@ impl<F: Field> ConstraintSystem<F> {
             });
     }
 
-    pub(crate) fn phases(&self) -> impl Iterator<Item = sealed::Phase> {
+    /// Returns the list of phases
+    pub fn phases(&self) -> impl Iterator<Item = sealed::Phase> {
         let max_phase = self
             .advice_column_phase
             .iter()

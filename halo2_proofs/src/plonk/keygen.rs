@@ -213,7 +213,6 @@ where
 {
     let cs2 = &circuit.cs;
     let cs: ConstraintSystem<C::Scalar> = cs2.clone().into();
-    // let queries = cs.collect_queries();
     let domain = EvaluationDomain::new(cs.degree() as u32, params.k());
 
     if (params.n() as usize) < cs.minimum_rows() {

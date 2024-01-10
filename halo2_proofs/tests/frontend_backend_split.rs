@@ -578,12 +578,12 @@ fn test_mycircuit_full_split() {
         )
         .unwrap();
     let mut challenges = HashMap::new();
-    for phase in [0, 1] {
+    for phase in 0..cs.phases().count() {
         // for phase in [0] {
         println!("DBG phase {}", phase);
-        let witness = witness_calc.calc(phase, &challenges).unwrap();
+        let witness = witness_calc.calc(phase as u8, &challenges).unwrap();
         // println!("DBG witness: {:?}", witness);
-        challenges = prover.commit_phase(phase, witness).unwrap();
+        challenges = prover.commit_phase(phase as u8, witness).unwrap();
         // println!("DBG challenges {:?}", challenges);
     }
     prover.create_proof().unwrap();

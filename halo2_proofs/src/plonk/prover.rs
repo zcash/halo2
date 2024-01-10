@@ -134,7 +134,7 @@ pub struct ProverV2<
     challenges: HashMap<usize, Scheme::Scalar>,
     next_phase_index: usize,
     rng: R,
-    transcript: &'a mut T, // TODO: maybe &mut T?
+    transcript: &'a mut T,
     _marker: std::marker::PhantomData<(P, E)>,
 }
 
