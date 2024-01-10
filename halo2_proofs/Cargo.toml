@@ -51,7 +51,7 @@ harness = false
 backtrace = { version = "0.3", optional = true }
 ff = "0.13"
 group = "0.13"
-halo2curves = { version = "^0.6", default-features = false }
+halo2curves = { version = "0.6.0" }
 rand_core = { version = "0.6", default-features = false }
 tracing = "0.1"
 blake2b_simd = "1" # MSRV 1.66.0
@@ -80,7 +80,7 @@ serde_json = "1"
 getrandom = { version = "0.2", features = ["js"] }
 
 [features]
-default = ["batch","bits"]
+default = ["batch"]
 dev-graph = ["plotters", "tabbycat"]
 test-dev-graph = [
     "dev-graph",
@@ -88,7 +88,6 @@ test-dev-graph = [
     "plotters/bitmap_encoder",
     "plotters/ttf",
 ]
-bits = ["halo2curves/bits"]
 gadget-traces = ["backtrace"]
 thread-safe-region = []
 sanity-checks = []
