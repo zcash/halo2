@@ -36,7 +36,7 @@ pub fn circuit_dot_graph<F: Field, ConcreteCircuit: Circuit<F>>(
         .into_iter()
         .map(|(name, gadget_name)| {
             if let Some(gadget_name) = gadget_name {
-                format!("[{}] {}", gadget_name, name)
+                format!("[{gadget_name}] {name}")
             } else {
                 name
             }

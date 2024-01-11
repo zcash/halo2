@@ -312,7 +312,7 @@ impl CircuitLayout {
             root.draw(
                 &(EmptyElement::at((0, usable_rows))
                     + Text::new(
-                        format!("{} usable rows", usable_rows),
+                        format!("{usable_rows} usable rows"),
                         (10, 10),
                         ("sans-serif", 15.0).into_font(),
                     )),

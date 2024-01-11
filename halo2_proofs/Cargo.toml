@@ -1,6 +1,6 @@
 [package]
 name = "halo2_proofs"
-version = "0.2.0"
+version = "0.3.0"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
     "Ying Tong Lai <yingtong@electriccoin.co>",
@@ -51,15 +51,15 @@ harness = false
 backtrace = { version = "0.3", optional = true }
 ff = "0.13"
 group = "0.13"
-halo2curves = { version = "0.1.0" }
+halo2curves = { version = "0.6.0", default-features = false }
 rand_core = { version = "0.6", default-features = false }
 tracing = "0.1"
 blake2b_simd = "1" # MSRV 1.66.0
 sha3 = "0.9.1"
 rand_chacha = "0.3"
-maybe-rayon = { version = "0.1.0", default-features = false }
 serde = { version = "1", optional = true, features = ["derive"] }
 serde_derive = { version = "1", optional = true}
+rayon = "1.8"
 
 # Developer tooling dependencies
 plotters = { version = "0.3.0", default-features = false, optional = true }
@@ -81,8 +81,7 @@ serde_json = "1"
 getrandom = { version = "0.2", features = ["js"] }
 
 [features]
-default = ["batch", "multicore"]
-multicore = ["maybe-rayon/threads"]
+default = ["batch", "bits"]
 dev-graph = ["plotters", "tabbycat"]
 test-dev-graph = [
     "dev-graph",
@@ -90,6 +89,7 @@ test-dev-graph = [
     "plotters/bitmap_encoder",
     "plotters/ttf",
 ]
+bits = ["halo2curves/bits"]
 gadget-traces = ["backtrace"]
 thread-safe-region = []
 sanity-checks = []
@@ -97,6 +97,7 @@ batch = ["rand_core/getrandom"]
 circuit-params = []
 dhat-heap = []
 cost-estimator = ["serde", "serde_derive"]
+derive_serde = ["halo2curves/derive_serde"]
 
 [lib]
 bench = false

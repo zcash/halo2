@@ -65,11 +65,10 @@ impl fmt::Display for Error {
             Error::ConstraintSystemFailure => write!(f, "The constraint system is not satisfied"),
             Error::BoundsFailure => write!(f, "An out-of-bounds index was passed to the backend"),
             Error::Opening => write!(f, "Multi-opening proof was invalid"),
-            Error::Transcript(e) => write!(f, "Transcript error: {}", e),
+            Error::Transcript(e) => write!(f, "Transcript error: {e}"),
             Error::NotEnoughRowsAvailable { current_k } => write!(
                 f,
-                "k = {} is too small for the given circuit. Try using a larger value of k",
-                current_k,
+                "k = {current_k} is too small for the given circuit. Try using a larger value of k",
             ),
             Error::InstanceTooLarge => write!(f, "Instance vectors are larger than the circuit"),
             Error::NotEnoughColumnsForConstants => {
@@ -80,11 +79,10 @@ impl fmt::Display for Error {
             }
             Error::ColumnNotInPermutation(column) => write!(
                 f,
-                "Column {:?} must be included in the permutation. Help: try applying `meta.enable_equalty` on the column",
-                column
+                "Column {column:?} must be included in the permutation. Help: try applying `meta.enable_equalty` on the column",
             ),
-            Error::TableError(error) => write!(f, "{}", error),
-            Error::Other(error) => write!(f, "Other: {}", error),
+            Error::TableError(error) => write!(f, "{error}"),
+            Error::Other(error) => write!(f, "Other: {error}"),
         }
     }
 }
@@ -117,23 +115,20 @@ impl fmt::Display for TableError {
             TableError::ColumnNotAssigned(col) => {
                 write!(
                     f,
-                    "{:?} not fully assigned. Help: assign a value at offset 0.",
-                    col
+                    "{col:?} not fully assigned. Help: assign a value at offset 0.",
                 )
             }
             TableError::UnevenColumnLengths((col, col_len), (table, table_len)) => write!(
                 f,
-                "{:?} has length {} while {:?} has length {}",
-                col, col_len, table, table_len
+                "{col:?} has length {col_len} while {table:?} has length {table_len}",
             ),
             TableError::UsedColumn(col) => {
-                write!(f, "{:?} has already been used", col)
+                write!(f, "{col:?} has already been used")
             }
             TableError::OverwriteDefault(col, default, val) => {
                 write!(
                     f,
-                    "Attempted to overwrite default value {} with {} in {:?}",
-                    default, val, col
+                    "Attempted to overwrite default value {default} with {val} in {col:?}",
                 )
             }
         }

@@ -53,7 +53,7 @@ impl Circuit<Fp> for TestCircuit {
             |mut table| {
                 for row in 0u64..(1 << 8) {
                     table.assign_cell(
-                        || format!("row {}", row),
+                        || format!("row {row}"),
                         config.table,
                         row as usize,
                         || Value::known(Fp::from(row + 1)),
@@ -70,7 +70,7 @@ impl Circuit<Fp> for TestCircuit {
                 for offset in 0u64..(1 << 10) {
                     config.selector.enable(&mut region, offset as usize)?;
                     region.assign_advice(
-                        || format!("offset {}", offset),
+                        || format!("offset {offset}"),
                         config.advice,
                         offset as usize,
                         || Value::known(Fp::from((offset % 256) + 1)),
