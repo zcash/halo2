@@ -358,13 +358,11 @@ where
     fn write_point(&mut self, point: C) -> io::Result<()> {
         self.common_point(point)?;
         let compressed = point.to_bytes();
-        // println!("DBG write_point\n{:02x?}", compressed.as_ref());
         self.writer.write_all(compressed.as_ref())
     }
     fn write_scalar(&mut self, scalar: C::Scalar) -> io::Result<()> {
         self.common_scalar(scalar)?;
         let data = scalar.to_repr();
-        // println!("DBG write_scalar\n{:02x?}", data.as_ref());
         self.writer.write_all(data.as_ref())
     }
 }

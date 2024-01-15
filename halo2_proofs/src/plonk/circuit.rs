@@ -4,7 +4,7 @@ use crate::dev::metadata;
 use crate::plonk::WitnessCollection;
 use crate::{
     circuit::{Layouter, Region, Value},
-    poly::{batch_invert_assigned, LagrangeCoeff, Polynomial, Rotation},
+    poly::{batch_invert_assigned, Polynomial, Rotation},
 };
 use core::cmp::max;
 use core::ops::{Add, Mul};
@@ -1690,13 +1690,10 @@ impl<F: Field> Gate<F> {
 pub struct PreprocessingV2<F: Field> {
     // TODO(Edu): Can we replace this by a simpler structure?
     pub(crate) permutation: permutation::keygen::Assembly,
-    // TODO(Edu): Replace this by Vec<Vec<F>>.  Requires some methods of Polynomial to take Vec<F>
-    // instead
-    // pub(crate) fixed: Vec<Polynomial<F, LagrangeCoeff>>,
     pub(crate) fixed: Vec<Vec<F>>,
 }
 
-/// This is a description of a low level Plonkish compiled circuit.  Contains the Constraint System
+/// This is a description of a low level Plonkish compiled circuit. Contains the Constraint System
 /// as well as the fixed columns and copy constraints information.
 #[derive(Debug, Clone)]
 pub struct CompiledCircuitV2<F: Field> {
@@ -1859,7 +1856,6 @@ impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concret
         &mut self,
         phase: u8,
         challenges: &HashMap<usize, F>,
-        // ) -> Result<Vec<Option<Polynomial<Assigned<F>, LagrangeCoeff>>>, Error> {
     ) -> Result<Vec<Option<Vec<Assigned<F>>>>, Error> {
         if phase != self.next_phase {
             return Err(Error::Other(format!(
@@ -1873,6 +1869,7 @@ impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concret
             2 => ThirdPhase.to_sealed(),
             _ => unreachable!("only phase [0,2] supported"),
         };
+
         let mut witness = WitnessCollection {
             k: self.k,
             current_phase,
@@ -1968,7 +1965,7 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
         cs.constants.clone(),
     )?;
 
-    let mut fixed = batch_invert_assigned(assembly.fixed);
+    let fixed = batch_invert_assigned(assembly.fixed);
     let (cs, selector_polys) = if compress_selectors {
         cs.compress_selectors(assembly.selectors.clone())
     } else {
@@ -2146,7 +2143,6 @@ impl<F: Field> ConstraintSystemV2Backend<F> {
             fixed: queries.fixed,
             num_advice_queries,
         };
-        // println!("DBG collected queries\n{:#?}", queries);
         (queries, gates, lookups, shuffles)
     }
 }

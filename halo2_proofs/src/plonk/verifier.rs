@@ -383,8 +383,6 @@ where
         vanishing.verify(params, expressions, y, xn)
     };
 
-    // println!("DBG verify fixed_queries:\n{:#?}", vk.cs.fixed_queries);
-
     let queries = instance_commitments
         .iter()
         .zip(instance_evals.iter())

@@ -3,4 +3,3 @@ members = [
     "halo2",
     "halo2_proofs",
 ]
-resolver = "2"

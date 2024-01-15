@@ -1,7 +1,7 @@
 #![allow(clippy::many_single_char_names)]
 #![allow(clippy::op_ref)]
 
-#[cfg(feature = "dhat-heap")]
+#[cfg(feature = "heap-profiling")]
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
 
@@ -468,14 +468,14 @@ fn test_mycircuit_mock() {
 
 use std::time::Instant;
 
-const K: u32 = 8;
-const WIDTH_FACTOR: usize = 1;
-// const K: u32 = 16;
-// const WIDTH_FACTOR: usize = 4;
+// const K: u32 = 8;
+// const WIDTH_FACTOR: usize = 1;
+const K: u32 = 16;
+const WIDTH_FACTOR: usize = 4;
 
 #[test]
 fn test_mycircuit_full_legacy() {
-    #[cfg(feature = "dhat-heap")]
+    #[cfg(feature = "heap-profiling")]
     let _profiler = dhat::Profiler::new_heap();
 
     use halo2_proofs::plonk::{create_proof, keygen_pk, keygen_vk};
@@ -489,8 +489,6 @@ fn test_mycircuit_full_legacy() {
     let verifier_params = params.verifier_params();
     let start = Instant::now();
     let vk = keygen_vk(&params, &circuit).expect("keygen_vk should not fail");
-    // println!("DBG gate {:?}", vk.cs.gates()[0]);
-    // println!("DBG queries {:?}", vk.cs.advice_queries());
     let pk = keygen_pk(&params, vk.clone(), &circuit).expect("keygen_pk should not fail");
     println!("Keygen: {:?}", start.elapsed());
 
@@ -513,10 +511,6 @@ fn test_mycircuit_full_legacy() {
     )
     .expect("proof generation should not fail");
     let proof = transcript.finalize();
-    // println!("DBG proof.len={} ", proof.len());
-    // for word in proof.chunks(32) {
-    //     println!("  {:02x?}", word);
-    // }
     println!("Prove: {:?}", start.elapsed());
 
     // Verify
@@ -538,7 +532,7 @@ fn test_mycircuit_full_legacy() {
 
 #[test]
 fn test_mycircuit_full_split() {
-    #[cfg(feature = "dhat-heap")]
+    #[cfg(feature = "heap-profiling")]
     let _profiler = dhat::Profiler::new_heap();
 
     let k = K;
@@ -551,14 +545,13 @@ fn test_mycircuit_full_split() {
     let verifier_params = params.verifier_params();
     let start = Instant::now();
     let vk = keygen_vk_v2(&params, &compiled_circuit).expect("keygen_vk should not fail");
-    // println!("vk: {:#?}", vk);
     let pk =
         keygen_pk_v2(&params, vk.clone(), &compiled_circuit).expect("keygen_pk should not fail");
     println!("Keygen: {:?}", start.elapsed());
     drop(compiled_circuit);
 
     // Proving
-    println!("DBG Proving...");
+    println!("Proving...");
     let instances = circuit.instances();
     let instances_slice: &[&[Fr]] = &(instances
         .iter()
@@ -579,24 +572,17 @@ fn test_mycircuit_full_split() {
         .unwrap();
     let mut challenges = HashMap::new();
     for phase in 0..cs.phases().count() {
-        // for phase in [0] {
-        println!("DBG phase {}", phase);
+        println!("phase {}", phase);
         let witness = witness_calc.calc(phase as u8, &challenges).unwrap();
-        // println!("DBG witness: {:?}", witness);
         challenges = prover.commit_phase(phase as u8, witness).unwrap();
-        // println!("DBG challenges {:?}", challenges);
     }
     prover.create_proof().unwrap();
     let proof = transcript.finalize();
-    // println!("DBG proof.len={} ", proof.len());
-    // for word in proof.chunks(32) {
-    //     println!("  {:02x?}", word);
-    // }
     println!("Prove: {:?}", start.elapsed());
 
     // Verify
     let start = Instant::now();
-    println!("DBG Verifying...");
+    println!("Verifying...");
     let mut verifier_transcript =
         Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
     let strategy = SingleStrategy::new(verifier_params);

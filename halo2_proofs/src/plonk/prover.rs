@@ -92,9 +92,6 @@ impl<
     pub fn commit_phase(
         &mut self,
         phase: u8,
-        // TODO: Turn this into Vec<Option<Vec<F>>>.  Requires batch_invert_assigned to work with
-        // Vec<F>
-        // witness: Vec<Option<Polynomial<Assigned<Scheme::Scalar>, LagrangeCoeff>>>,
         witness: Vec<Option<Vec<Assigned<Scheme::Scalar>>>>,
     ) -> Result<HashMap<usize, Scheme::Scalar>, Error>
     where
@@ -161,7 +158,6 @@ impl<
     where
         Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     {
-        // println!("DBG prove vk.queries.advices {:?}", pk.vk.queries.advice);
         for instance in instances.iter() {
             if instance.len() != pk.vk.cs.num_instance_columns {
                 return Err(Error::InvalidInstances);
@@ -172,7 +168,6 @@ impl<
         pk.vk.hash_into(transcript)?;
 
         let meta = &pk.vk.cs;
-        // let queries = &pk.vk.queries;
         let phases = meta.phases().collect();
 
         let domain = &pk.vk.domain;
@@ -239,7 +234,11 @@ impl<
 
         let advice = vec![
             AdviceSingle::<Scheme::Curve, LagrangeCoeff> {
-                advice_polys: vec![domain.empty_lagrange(); meta.num_advice_columns],
+                // Create vectors with empty polynomials to free space while they are not being used
+                advice_polys: vec![
+                    Polynomial::new_empty(0, Scheme::Scalar::ZERO);
+                    meta.num_advice_columns
+                ],
                 advice_blinds: vec![Blind::default(); meta.num_advice_columns],
             };
             instances.len()
@@ -264,9 +263,6 @@ impl<
     pub fn commit_phase(
         &mut self,
         phase: u8,
-        // TODO: Turn this into Vec<Option<Vec<F>>>.  Requires batch_invert_assigned to work with
-        // Vec<F>
-        // witness: Vec<Vec<Option<Polynomial<Assigned<Scheme::Scalar>, LagrangeCoeff>>>>,
         witness: Vec<Vec<Option<Vec<Assigned<Scheme::Scalar>>>>>,
     ) -> Result<HashMap<usize, Scheme::Scalar>, Error>
     where
@@ -284,9 +280,6 @@ impl<
 
         let params = self.params;
         let meta = &self.pk.vk.cs;
-        // let queries = &self.pk.vk.queries;
-        // println!("DBG commit_phase gate {:?}", meta.gates()[0]);
-        // println!("DBG commit_phase queries {:?}", meta.advice_queries());
 
         let mut rng = &mut self.rng;
 
@@ -922,15 +915,12 @@ where
     let mut challenges = HashMap::new();
     let phases = prover.phases.clone();
     for phase in &phases {
-        // for phase in [0] {
         println!("DBG phase {}", phase.0);
         let mut witnesses = Vec::with_capacity(circuits.len());
         for witness_calc in witness_calcs.iter_mut() {
             witnesses.push(witness_calc.calc(phase.0, &challenges)?);
         }
-        // println!("DBG witness: {:?}", witness);
         challenges = prover.commit_phase(phase.0, witnesses).unwrap();
-        // println!("DBG challenges {:?}", challenges);
     }
     prover.create_proof()
 }
