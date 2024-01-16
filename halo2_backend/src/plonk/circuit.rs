@@ -1059,23 +1059,6 @@ impl<F: Field> Product<Self> for Expression<F> {
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct PointIndex(pub usize);
 
-/// A "virtual cell" is a PLONK cell that has been queried at a particular relative offset
-/// within a custom gate.
-#[derive(Clone, Debug)]
-pub struct VirtualCell {
-    pub(crate) column: Column<Any>,
-    pub(crate) rotation: Rotation,
-}
-
-impl<Col: Into<Column<Any>>> From<(Col, Rotation)> for VirtualCell {
-    fn from((column, rotation): (Col, Rotation)) -> Self {
-        VirtualCell {
-            column: column.into(),
-            rotation,
-        }
-    }
-}
-
 /// An individual polynomial constraint.
 ///
 /// These are returned by the closures passed to `ConstraintSystem::create_gate`.
@@ -1220,9 +1203,6 @@ pub struct Gate<F: Field> {
     name: String,
     constraint_names: Vec<String>,
     polys: Vec<Expression<F>>,
-    /// We track queried selectors separately from other cells, so that we can use them to
-    /// trigger debug checks on gates.
-    queried_cells: Vec<VirtualCell>,
 }
 
 impl<F: Field> Gate<F> {
@@ -1453,7 +1433,6 @@ impl<F: Field> ConstraintSystemV2Backend<F> {
                 name: gate.name.clone(),
                 constraint_names: Vec::new(),
                 polys: vec![queries.as_expression(gate.polynomial())],
-                queried_cells: Vec::new(), // Unused?
             })
             .collect()
     }
