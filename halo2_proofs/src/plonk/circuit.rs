@@ -1917,7 +1917,11 @@ impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concret
     }
 }
 
-/// TODO: Document. Frontend function
+/// Compile a circuit.  Runs configure and synthesize on the circuit in order to materialize the
+/// circuit into its columns and the column configuration; as well as doing the fixed column and
+/// copy constraints assignments.  The output of this function can then be used for the key
+/// generation, and proof generation.
+/// If `compress_selectors` is true, multiple selector columns may be multiplexed.
 pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
     k: u32,
     circuit: &ConcreteCircuit,

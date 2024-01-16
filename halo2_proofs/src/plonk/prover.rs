@@ -31,12 +31,14 @@ use crate::{
 };
 use group::prime::PrimeCurveAffine;
 
+/// Collection of instance data used during proving for a single circuit proof.
 #[derive(Debug)]
 struct InstanceSingle<C: CurveAffine> {
     pub instance_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
     pub instance_polys: Vec<Polynomial<C::Scalar, Coeff>>,
 }
 
+/// Collection of advice data used during proving for a single circuit proof.
 #[derive(Debug, Clone)]
 struct AdviceSingle<C: CurveAffine, B: Basis> {
     pub advice_polys: Vec<Polynomial<C::Scalar, B>>,
