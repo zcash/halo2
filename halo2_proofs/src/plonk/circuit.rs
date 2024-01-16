@@ -1623,12 +1623,11 @@ impl<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> IntoIterato
     }
 }
 
-/// GateV2Backend
+/// A Gate contains a single polynomial identity with a name as metadata.
 #[derive(Clone, Debug)]
 pub struct GateV2Backend<F: Field> {
     name: String,
-    constraint_names: Vec<String>,
-    polys: Vec<ExpressionMid<F>>,
+    poly: ExpressionMid<F>,
 }
 
 impl<F: Field> GateV2Backend<F> {
@@ -1637,14 +1636,9 @@ impl<F: Field> GateV2Backend<F> {
         self.name.as_str()
     }
 
-    /// Returns the name of the constraint at index `constraint_index`.
-    pub fn constraint_name(&self, constraint_index: usize) -> &str {
-        self.constraint_names[constraint_index].as_str()
-    }
-
-    /// Returns constraints of this gate
-    pub fn polynomials(&self) -> &[ExpressionMid<F>] {
-        &self.polys
+    /// Returns the polynomial identity of this gate
+    pub fn polynomial(&self) -> &ExpressionMid<F> {
+        &self.poly
     }
 }
 
@@ -1988,11 +1982,19 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
         gates: cs
             .gates
             .iter()
-            .map(|g| GateV2Backend {
-                name: g.name.clone(),
-                constraint_names: g.constraint_names.clone(),
-                polys: g.polys.clone().into_iter().map(|e| e.into()).collect(),
+            .map(|g| {
+                g.polys.clone().into_iter().enumerate().map(|(i, e)| {
+                    let name = match g.constraint_name(i) {
+                        "" => g.name.clone(),
+                        constraint_name => format!("{}:{}", g.name, constraint_name),
+                    };
+                    GateV2Backend {
+                        name,
+                        poly: e.into(),
+                    }
+                })
             })
+            .flatten()
             .collect(),
         permutation: cs.permutation.clone(),
         lookups: cs
@@ -2073,12 +2075,8 @@ impl<F: Field> ConstraintSystemV2Backend<F> {
             .iter()
             .map(|gate| Gate {
                 name: gate.name.clone(),
-                constraint_names: gate.constraint_names.clone(),
-                polys: gate
-                    .polynomials()
-                    .iter()
-                    .map(|e| queries.as_expression(e))
-                    .collect(),
+                constraint_names: Vec::new(),
+                polys: vec![queries.as_expression(gate.polynomial())],
                 queried_selectors: Vec::new(), // Unused?
                 queried_cells: Vec::new(),     // Unused?
             })
