@@ -1683,7 +1683,7 @@ impl<F: Field> Gate<F> {
 #[derive(Debug, Clone)]
 pub struct PreprocessingV2<F: Field> {
     // TODO(Edu): Can we replace this by a simpler structure?
-    pub(crate) permutation: permutation::keygen::Assembly,
+    pub(crate) permutation: permutation::keygen::AssemblyMid,
     pub(crate) fixed: Vec<Vec<F>>,
 }
 
@@ -2020,7 +2020,7 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
     let mut assembly = crate::plonk::keygen::Assembly {
         k,
         fixed: vec![Polynomial::new_empty(n, F::ZERO.into()); cs.num_fixed_columns],
-        permutation: permutation::keygen::Assembly::new(n, &cs.permutation),
+        permutation: permutation::keygen::AssemblyFront::new(n, &cs.permutation),
         selectors: vec![vec![false; n]; cs.num_selectors],
         usable_rows: 0..n - (cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
@@ -2046,7 +2046,9 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
     fixed.extend(selector_polys.into_iter());
 
     let preprocessing = PreprocessingV2 {
-        permutation: assembly.permutation,
+        permutation: permutation::keygen::AssemblyMid {
+            copies: assembly.permutation.copies,
+        },
         fixed,
     };
 

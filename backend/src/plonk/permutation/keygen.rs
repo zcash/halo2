@@ -4,12 +4,14 @@ use group::Curve;
 use super::{Argument, ProvingKey, VerifyingKey};
 use crate::{
     arithmetic::{parallelize, CurveAffine},
-    plonk::{Any, Column, Error},
+    plonk::Error,
     poly::{
         commitment::{Blind, Params},
         EvaluationDomain,
     },
 };
+use halo2_middleware::circuit::{Any, Column};
+use halo2_middleware::permutation;
 
 #[cfg(feature = "thread-safe-region")]
 use crate::multicore::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
@@ -34,71 +36,12 @@ pub struct Assembly {
     sizes: Vec<Vec<usize>>,
 }
 
-// TODO: Dedup with other Cell definition
-#[derive(Clone, Debug)]
-pub struct Cell {
-    pub column: Column<Any>,
-    pub row: usize,
-}
-
-#[derive(Clone, Debug)]
-pub struct AssemblyMid {
-    pub copies: Vec<(Cell, Cell)>,
-}
-
-#[derive(Clone, Debug)]
-pub struct AssemblyFront {
-    n: usize,
-    columns: Vec<Column<Any>>,
-    pub(crate) copies: Vec<(Cell, Cell)>,
-}
-
-impl AssemblyFront {
-    pub(crate) fn new(n: usize, p: &Argument) -> Self {
-        Self {
-            n,
-            columns: p.columns.clone(),
-            copies: Vec::new(),
-        }
-    }
-
-    pub(crate) fn copy(
-        &mut self,
-        left_column: Column<Any>,
-        left_row: usize,
-        right_column: Column<Any>,
-        right_row: usize,
-    ) -> Result<(), Error> {
-        if !self.columns.contains(&left_column) {
-            return Err(Error::ColumnNotInPermutation(left_column));
-        }
-        if !self.columns.contains(&right_column) {
-            return Err(Error::ColumnNotInPermutation(right_column));
-        }
-        // Check bounds
-        if left_row >= self.n || right_row >= self.n {
-            return Err(Error::BoundsFailure);
-        }
-        self.copies.push((
-            Cell {
-                column: left_column,
-                row: left_row,
-            },
-            Cell {
-                column: right_column,
-                row: right_row,
-            },
-        ));
-        Ok(())
-    }
-}
-
 #[cfg(not(feature = "thread-safe-region"))]
 impl Assembly {
     pub(crate) fn new_from_assembly_mid(
         n: usize,
-        p: &Argument,
-        a: &AssemblyMid,
+        p: &permutation::Argument,
+        a: &permutation::AssemblyMid,
     ) -> Result<Self, Error> {
         let mut assembly = Self::new(n, p);
         for copy in &a.copies {
@@ -107,7 +50,7 @@ impl Assembly {
         Ok(assembly)
     }
 
-    pub(crate) fn new(n: usize, p: &Argument) -> Self {
+    pub(crate) fn new(n: usize, p: &permutation::Argument) -> Self {
         // Initialize the copy vector to keep track of copy constraints in all
         // the permutation arguments.
         let mut columns = vec![];
@@ -235,18 +178,6 @@ pub struct Assembly {
 
 #[cfg(feature = "thread-safe-region")]
 impl Assembly {
-    pub(crate) fn new_from_assembly_mid(
-        n: usize,
-        p: &Argument,
-        a: &AssemblyMid,
-    ) -> Result<Self, Error> {
-        let mut assembly = Self::new(n, p);
-        for copy in &a.copies {
-            assembly.copy(copy.0.column, copy.0.row, copy.1.column, copy.1.row)?;
-        }
-        Ok(assembly)
-    }
-
     pub(crate) fn new(n: usize, p: &Argument) -> Self {
         Assembly {
             columns: p.columns.clone(),

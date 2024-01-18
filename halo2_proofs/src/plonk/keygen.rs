@@ -52,7 +52,7 @@ where
 pub(crate) struct Assembly<F: Field> {
     pub(crate) k: u32,
     pub(crate) fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
-    pub(crate) permutation: permutation::keygen::Assembly,
+    pub(crate) permutation: permutation::keygen::AssemblyFront,
     pub(crate) selectors: Vec<Vec<bool>>,
     // A range of available rows for assignment and copies.
     pub(crate) usable_rows: Range<usize>,
@@ -219,12 +219,12 @@ where
         return Err(Error::not_enough_rows_available(params.k()));
     }
 
-    let permutation_vk =
-        circuit
-            .preprocessing
-            .permutation
-            .clone()
-            .build_vk(params, &domain, &cs.permutation);
+    let permutation_vk = permutation::keygen::Assembly::new_from_assembly_mid(
+        params.n() as usize,
+        &cs.permutation,
+        &circuit.preprocessing.permutation,
+    )?
+    .build_vk(params, &domain, &cs.permutation);
 
     let fixed_commitments = circuit
         .preprocessing
@@ -316,12 +316,12 @@ where
         .map(|poly| vk.domain.coeff_to_extended(poly.clone()))
         .collect();
 
-    let permutation_pk =
-        circuit
-            .preprocessing
-            .permutation
-            .clone()
-            .build_pk(params, &vk.domain, &cs.permutation);
+    let permutation_pk = permutation::keygen::Assembly::new_from_assembly_mid(
+        params.n() as usize,
+        &cs.permutation,
+        &circuit.preprocessing.permutation,
+    )?
+    .build_pk(params, &vk.domain, &cs.permutation);
 
     // Compute l_0(X)
     // TODO: this can be done more efficiently
