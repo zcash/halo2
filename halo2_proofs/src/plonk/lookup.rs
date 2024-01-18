@@ -5,7 +5,8 @@ pub(crate) mod prover;
 pub(crate) mod verifier;
 
 #[derive(Clone, Debug)]
-pub(crate) struct Argument<F: Field> {
+/// Visibility changed for analyzer
+pub struct Argument<F: Field> {
     pub input_expressions: Vec<Expression<F>>,
     pub table_expressions: Vec<Expression<F>>,
 }

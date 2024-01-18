@@ -302,7 +302,8 @@ impl<F: Field, B: Basis> Mul<F> for Polynomial<F, B> {
 /// Describes the relative rotation of a vector. Negative numbers represent
 /// reverse (leftmost) rotations and positive numbers represent forward (rightmost)
 /// rotations. Zero represents no rotation.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+/// Hash added for analyzer
+#[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub struct Rotation(pub i32);
 
 impl Rotation {
