@@ -4,13 +4,15 @@ use crate::{
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
 };
 
-pub(crate) mod keygen;
+/// Visibility changed for analyzer
+pub mod keygen;
 pub(crate) mod prover;
 pub(crate) mod verifier;
 
 /// A permutation argument.
 #[derive(Debug, Clone)]
-pub(crate) struct Argument {
+/// Visibility changed for analyzer
+pub struct Argument {
     /// A sequence of columns involved in the argument.
     columns: Vec<Column<Any>>,
 }

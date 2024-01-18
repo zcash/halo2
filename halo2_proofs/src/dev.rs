@@ -37,25 +37,31 @@ mod graph;
 #[cfg(feature = "dev-graph")]
 #[cfg_attr(docsrs, doc(cfg(feature = "dev-graph")))]
 pub use graph::{circuit_dot_graph, layout::CircuitLayout};
-
+/// Visibility changed for analyzer
 #[derive(Debug)]
-struct Region {
+pub struct Region {
     /// The name of the region. Not required to be unique.
-    name: String,
+    /// Visibility changed for analyzer
+    pub name: String,
     /// The columns involved in this region.
-    columns: HashSet<Column<Any>>,
+    /// Visibility changed for analyzer
+    pub columns: HashSet<Column<Any>>,
     /// The rows that this region starts and ends on, if known.
-    rows: Option<(usize, usize)>,
+    /// Visibility changed for analyzer
+    pub rows: Option<(usize, usize)>,
     /// The selectors that have been enabled in this region. All other selectors are by
     /// construction not enabled.
-    enabled_selectors: HashMap<Selector, Vec<usize>>,
+    /// Visibility changed for analyzer
+    pub enabled_selectors: HashMap<Selector, Vec<usize>>,
     /// The cells assigned in this region. We store this as a `Vec` so that if any cells
     /// are double-assigned, they will be visibly darker.
-    cells: Vec<(Column<Any>, usize)>,
+    /// Visibility changed for analyzer
+    pub cells: Vec<(Column<Any>, usize)>,
 }
 
 impl Region {
-    fn update_extent(&mut self, column: Column<Any>, row: usize) {
+    /// Visibility changed for analyzer
+    pub fn update_extent(&mut self, column: Column<Any>, row: usize) {
         self.columns.insert(column);
 
         // The region start is the earliest row assigned to.
@@ -74,12 +80,15 @@ impl Region {
 
 /// The value of a particular cell within the circuit.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum CellValue<F: Field> {
+pub enum CellValue<F: Field> {
     // An unassigned cell.
+    /// Visibility changed for analyzer
     Unassigned,
     // A cell that has been assigned a value.
+    /// Visibility changed for analyzer
     Assigned(F),
     // A unique poisoned cell.
+    /// Visibility changed for analyzer
     Poison(usize),
 }
 
