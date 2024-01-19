@@ -5,14 +5,6 @@ use std::fmt::{self, Debug};
 pub(crate) mod prover;
 pub(crate) mod verifier;
 
-// /// Expressions involved in a shuffle argument, with a name as metadata.
-// #[derive(Clone, Debug)]
-// pub struct ArgumentV2<F: Field> {
-//     pub(crate) name: String,
-//     pub(crate) input_expressions: Vec<ExpressionMid<F>>,
-//     pub(crate) shuffle_expressions: Vec<ExpressionMid<F>>,
-// }
-
 /// Expressions involved in a shuffle argument, with a name as metadata.
 #[derive(Clone)]
 pub struct Argument<F: Field> {

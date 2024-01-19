@@ -162,7 +162,7 @@ where
         Ok(())
     }
 
-    // TODO
+    // TODO: Adapt to CompiledCircuit
     /*
     /// Reads a verification key from a buffer.
     ///
@@ -265,7 +265,7 @@ where
         bytes
     }
 
-    // TODO
+    // TODO: Adapt to CompiledCircuit
     /*
     /// Reads a verification key from a slice of bytes using [`Self::read`].
     pub fn from_bytes<ConcreteCircuit: Circuit<C::Scalar>>(
@@ -463,7 +463,7 @@ where
         Ok(())
     }
 
-    // TODO
+    // TODO: Adapt to CompiledCircuit
     /*
     /// Reads a proving key from a buffer.
     /// Does so by reading verification key first, and then deserializing the rest of the file into the remaining proving key data.
@@ -516,7 +516,7 @@ where
         bytes
     }
 
-    // TODO
+    // TODO: Adapt to CompiledCircuit
     /*
     /// Reads a proving key from a slice of bytes using [`Self::read`].
     pub fn from_bytes<ConcreteCircuit: Circuit<C::Scalar>>(

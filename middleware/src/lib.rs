@@ -5,6 +5,8 @@ pub mod permutation;
 pub mod poly;
 pub mod shuffle;
 
+pub use ff;
+
 // TODO: Remove with permutation::Argument simplification
 pub mod multicore {
     pub use rayon::{
