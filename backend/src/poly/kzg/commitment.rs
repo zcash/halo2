@@ -4,7 +4,7 @@ use crate::poly::commitment::{Blind, CommitmentScheme, Params, ParamsProver, Par
 use crate::poly::{Coeff, LagrangeCoeff, Polynomial};
 use crate::SerdeFormat;
 
-use ff::{Field, PrimeField};
+use halo2_middleware::ff::{Field, PrimeField};
 use group::{prime::PrimeCurveAffine, Curve, Group};
 use halo2curves::pairing::Engine;
 use halo2curves::CurveExt;
@@ -365,7 +365,7 @@ mod test {
     use crate::poly::commitment::ParamsProver;
     use crate::poly::commitment::{Blind, Params};
     use crate::poly::kzg::commitment::ParamsKZG;
-    use ff::Field;
+    use halo2_middleware::ff::Field;
 
     #[test]
     fn test_commit_lagrange() {

@@ -1,4 +1,4 @@
-use ff::{Field, PrimeField};
+use halo2_middleware::ff::{Field, PrimeField};
 use group::Curve;
 
 use super::{Argument, ProvingKey, VerifyingKey};

@@ -10,7 +10,7 @@ use crate::{
         strategy::{Guard, VerificationStrategy},
     },
 };
-use ff::Field;
+use halo2_middleware::ff::Field;
 use halo2curves::{
     pairing::{Engine, MultiMillerLoop},
     CurveAffine, CurveExt,

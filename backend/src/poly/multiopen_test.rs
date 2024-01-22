@@ -14,7 +14,7 @@ mod test {
         Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge, Keccak256Read, Keccak256Write,
         TranscriptReadBuffer, TranscriptWriterBuffer,
     };
-    use ff::WithSmallOrderMulGroup;
+    use halo2_middleware::ff::WithSmallOrderMulGroup;
     use group::Curve;
     use rand_core::OsRng;
 

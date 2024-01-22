@@ -1,5 +1,5 @@
-use ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use group::Curve;
+use halo2_middleware::ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use rand_core::RngCore;
 use std::collections::{BTreeSet, HashSet};
 use std::{collections::HashMap, iter};
@@ -12,7 +12,6 @@ use super::{
 
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine},
-    plonk::Assigned,
     poly::{
         commitment::{Blind, CommitmentScheme, Params, Prover},
         Basis, Coeff, LagrangeCoeff, Polynomial, ProverQuery,
@@ -23,6 +22,7 @@ use crate::{
     transcript::{EncodedChallenge, TranscriptWrite},
 };
 use group::prime::PrimeCurveAffine;
+use halo2_middleware::plonk::Assigned;
 
 /// Collection of instance data used during proving for a single circuit proof.
 #[derive(Debug)]

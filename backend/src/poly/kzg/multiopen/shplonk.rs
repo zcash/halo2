@@ -3,7 +3,7 @@ mod verifier;
 
 use crate::multicore::{IntoParallelIterator, ParallelIterator};
 use crate::{poly::query::Query, transcript::ChallengeScalar};
-use ff::Field;
+use halo2_middleware::ff::Field;
 pub use prover::ProverSHPLONK;
 use std::collections::BTreeSet;
 pub use verifier::VerifierSHPLONK;
@@ -142,7 +142,7 @@ where
 #[cfg(test)]
 mod proptests {
     use super::{construct_intermediate_sets, Commitment, IntermediateSets};
-    use ff::FromUniformBytes;
+    use halo2_middleware::ff::FromUniformBytes;
     use halo2curves::pasta::Fp;
     use proptest::{collection::vec, prelude::*, sample::select};
     use std::convert::TryFrom;

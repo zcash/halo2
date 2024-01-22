@@ -1,6 +1,6 @@
 use std::{collections::HashMap, iter};
 
-use ff::Field;
+use halo2_middleware::ff::Field;
 use group::Curve;
 use rand_chacha::ChaCha20Rng;
 use rand_core::{RngCore, SeedableRng};

@@ -1,6 +1,6 @@
 use crate::arithmetic::{best_multiexp, CurveAffine};
 use crate::poly::{commitment::MSM, ipa::commitment::ParamsVerifierIPA};
-use ff::Field;
+use halo2_middleware::ff::Field;
 use group::Group;
 use std::collections::BTreeMap;
 

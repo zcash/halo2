@@ -1,4 +1,4 @@
-use ff::{Field, PrimeField};
+use halo2_middleware::ff::{Field, PrimeField};
 use std::iter;
 
 use super::super::{ChallengeBeta, ChallengeGamma, ChallengeX};

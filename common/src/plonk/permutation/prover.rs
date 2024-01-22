@@ -1,4 +1,4 @@
-use ff::PrimeField;
+use halo2_middleware::ff::PrimeField;
 use group::{
     ff::{BatchInvert, Field},
     Curve,

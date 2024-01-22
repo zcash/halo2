@@ -1,6 +1,6 @@
 #![allow(clippy::int_plus_one)]
 
-use ff::{Field, FromUniformBytes};
+use halo2_middleware::ff::{Field, FromUniformBytes};
 use group::Curve;
 
 use super::{

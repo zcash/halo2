@@ -13,7 +13,7 @@ use crate::poly::{Coeff, Polynomial};
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use crate::multicore::{IntoParallelIterator, ParallelIterator};
-use ff::Field;
+use halo2_middleware::ff::Field;
 use group::Curve;
 use halo2curves::pairing::Engine;
 use halo2curves::CurveExt;

@@ -1,4 +1,4 @@
-use ff::FromUniformBytes;
+use halo2_middleware::ff::FromUniformBytes;
 use group::ff::Field;
 use halo2curves::CurveAffine;
 use rand_core::OsRng;

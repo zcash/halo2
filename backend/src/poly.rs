@@ -4,10 +4,10 @@
 
 use crate::arithmetic::parallelize;
 use crate::helpers::SerdePrimeField;
-use crate::plonk::Assigned;
 use crate::SerdeFormat;
+use halo2_middleware::plonk::Assigned;
 
-use group::ff::{BatchInvert, Field};
+use halo2_middleware::ff::{BatchInvert, Field};
 use halo2_middleware::poly::Rotation;
 use std::fmt::Debug;
 use std::io;

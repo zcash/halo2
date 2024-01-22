@@ -5,7 +5,7 @@ use super::{
 };
 use crate::poly::Error;
 use crate::transcript::{EncodedChallenge, TranscriptRead, TranscriptWrite};
-use ff::Field;
+use halo2_middleware::ff::Field;
 use halo2curves::CurveAffine;
 use rand_core::RngCore;
 use std::{

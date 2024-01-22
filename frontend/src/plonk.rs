@@ -1,3 +1,16 @@
+use crate::error::Error;
+use crate::poly::batch_invert_assigned;
+use crate::poly::Polynomial;
+use halo2_middleware::circuit::{CompiledCircuitV2, PreprocessingV2};
+use halo2_middleware::ff::Field;
+
+mod circuit;
+mod lookup;
+pub mod permutation;
+mod shuffle;
+
+pub use circuit::*;
+
 /// Compile a circuit.  Runs configure and synthesize on the circuit in order to materialize the
 /// circuit into its columns and the column configuration; as well as doing the fixed column and
 /// copy constraints assignments.  The output of this function can then be used for the key

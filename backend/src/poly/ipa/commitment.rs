@@ -234,7 +234,7 @@ mod test {
     use crate::poly::ipa::commitment::{create_proof, verify_proof, ParamsIPA};
     use crate::poly::ipa::msm::MSMIPA;
 
-    use ff::Field;
+    use halo2_middleware::ff::Field;
     use group::Curve;
 
     #[test]
@@ -291,7 +291,7 @@ mod test {
     fn test_opening_proof() {
         const K: u32 = 6;
 
-        use ff::Field;
+        use halo2_middleware::ff::Field;
         use rand_core::OsRng;
 
         use super::super::commitment::{Blind, Params};

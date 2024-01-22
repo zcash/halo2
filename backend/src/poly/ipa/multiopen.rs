@@ -5,7 +5,7 @@
 
 use super::*;
 use crate::{poly::query::Query, transcript::ChallengeScalar};
-use ff::Field;
+use halo2_middleware::ff::Field;
 use std::collections::{BTreeMap, BTreeSet};
 
 mod prover;
