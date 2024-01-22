@@ -12,7 +12,6 @@ use ff::Field;
 use halo2_middleware::circuit::{
     AdviceQueryMid, Challenge, ExpressionMid, FixedQueryMid, InstanceQueryMid,
 };
-use halo2_middleware::lookup::ArgumentV2;
 use halo2_middleware::poly::Rotation;
 use sealed::SealedPhase;
 use std::collections::BTreeSet;
@@ -1715,11 +1714,11 @@ pub struct ConstraintSystemV2Backend<F: Field> {
 
     // Vector of lookup arguments, where each corresponds to a sequence of
     // input expressions and a sequence of table expressions involved in the lookup.
-    pub(crate) lookups: Vec<ArgumentV2<F>>,
+    pub(crate) lookups: Vec<halo2_middleware::lookup::ArgumentV2<F>>,
 
     // Vector of shuffle arguments, where each corresponds to a sequence of
     // input expressions and a sequence of shuffle expressions involved in the shuffle.
-    pub(crate) shuffles: Vec<shuffle::ArgumentV2<F>>,
+    pub(crate) shuffles: Vec<halo2_middleware::shuffle::ArgumentV2<F>>,
 
     // List of indexes of Fixed columns which are associated to a circuit-general Column tied to their annotation.
     pub(crate) general_column_annotations: HashMap<metadata::Column, String>,
@@ -1756,7 +1755,7 @@ impl<F: Field> Into<ConstraintSystemV2Backend<F>> for ConstraintSystem<F> {
             lookups: self
                 .lookups
                 .iter()
-                .map(|l| ArgumentV2 {
+                .map(|l| halo2_middleware::lookup::ArgumentV2 {
                     name: l.name.clone(),
                     input_expressions: l
                         .input_expressions
@@ -1775,7 +1774,7 @@ impl<F: Field> Into<ConstraintSystemV2Backend<F>> for ConstraintSystem<F> {
             shuffles: self
                 .shuffles
                 .iter()
-                .map(|s| shuffle::ArgumentV2 {
+                .map(|s| halo2_middleware::shuffle::ArgumentV2 {
                     name: s.name.clone(),
                     input_expressions: s
                         .input_expressions
