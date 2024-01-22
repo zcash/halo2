@@ -4,8 +4,8 @@ use crate::poly::commitment::{Blind, CommitmentScheme, Params, ParamsProver, Par
 use crate::poly::{Coeff, LagrangeCoeff, Polynomial};
 use crate::SerdeFormat;
 
-use ff::{Field, PrimeField};
 use group::{prime::PrimeCurveAffine, Curve, Group};
+use halo2_middleware::ff::{Field, PrimeField};
 use halo2curves::pairing::Engine;
 use halo2curves::CurveExt;
 use rand_core::{OsRng, RngCore};

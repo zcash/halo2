@@ -1,8 +1,8 @@
-use ff::PrimeField;
 use group::{
     ff::{BatchInvert, Field},
     Curve,
 };
+use halo2_middleware::ff::PrimeField;
 use rand_core::RngCore;
 use std::iter::{self, ExactSizeIterator};
 

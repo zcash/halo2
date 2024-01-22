@@ -12,11 +12,11 @@ use crate::{
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
-use ff::WithSmallOrderMulGroup;
 use group::{
     ff::{BatchInvert, Field},
     Curve,
 };
+use halo2_middleware::ff::WithSmallOrderMulGroup;
 use halo2_middleware::poly::Rotation;
 use rand_core::RngCore;
 use std::{

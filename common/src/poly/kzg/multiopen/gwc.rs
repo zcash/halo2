@@ -5,7 +5,7 @@ pub use prover::ProverGWC;
 pub use verifier::VerifierGWC;
 
 use crate::{poly::query::Query, transcript::ChallengeScalar};
-use ff::Field;
+use halo2_middleware::ff::Field;
 use std::marker::PhantomData;
 
 #[derive(Clone, Copy, Debug)]

@@ -6,8 +6,8 @@ use std::iter;
 use std::ops::{Add, Mul, Neg, Range};
 
 use blake2b_simd::blake2b;
-use ff::Field;
-use ff::FromUniformBytes;
+use halo2_middleware::ff::Field;
+use halo2_middleware::ff::FromUniformBytes;
 
 use crate::plonk::permutation::keygen::Assembly;
 use crate::{

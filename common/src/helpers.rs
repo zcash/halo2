@@ -1,5 +1,5 @@
 use crate::poly::Polynomial;
-use ff::PrimeField;
+use halo2_middleware::ff::PrimeField;
 use halo2curves::{serde::SerdeObject, CurveAffine};
 use std::io;
 

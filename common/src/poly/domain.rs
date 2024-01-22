@@ -7,8 +7,8 @@ use crate::{
 };
 
 use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial};
-use ff::WithSmallOrderMulGroup;
 use group::ff::{BatchInvert, Field};
+use halo2_middleware::ff::WithSmallOrderMulGroup;
 use halo2_middleware::poly::Rotation;
 
 use std::marker::PhantomData;

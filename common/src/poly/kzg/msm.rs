@@ -37,7 +37,7 @@ where
 
     /// Prepares all scalars in the MSM to linear combination
     pub fn combine_with_base(&mut self, base: E::Fr) {
-        use ff::Field;
+        use halo2_middleware::ff::Field;
         let mut acc = E::Fr::ONE;
         if !self.scalars.is_empty() {
             for scalar in self.scalars.iter_mut().rev() {

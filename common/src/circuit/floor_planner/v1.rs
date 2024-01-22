@@ -1,6 +1,6 @@
 use std::fmt;
 
-use ff::Field;
+use halo2_middleware::ff::Field;
 
 use crate::{
     circuit::{

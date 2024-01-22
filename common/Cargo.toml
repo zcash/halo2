@@ -26,7 +26,6 @@ rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
 
 [dependencies]
 backtrace = { version = "0.3", optional = true }
-ff = "0.13"
 group = "0.13"
 halo2curves = { version = "0.6.0", default-features = false }
 rand_core = { version = "0.6", default-features = false }

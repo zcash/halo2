@@ -1,6 +1,6 @@
 use std::iter;
 
-use ff::Field;
+use halo2_middleware::ff::Field;
 
 use crate::{
     arithmetic::CurveAffine,

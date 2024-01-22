@@ -2,7 +2,7 @@
 
 use std::{fmt, marker::PhantomData};
 
-use ff::Field;
+use halo2_middleware::ff::Field;
 
 use crate::plonk::{Assigned, Error, Selector, TableColumn};
 use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};

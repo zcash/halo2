@@ -5,7 +5,7 @@ use std::{
     fmt::{self, Debug},
 };
 
-use ff::Field;
+use halo2_middleware::ff::Field;
 
 use crate::plonk::{Assigned, Assignment, Error, TableColumn, TableError};
 

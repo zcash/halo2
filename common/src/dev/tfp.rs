@@ -1,6 +1,6 @@
 use std::{fmt, marker::PhantomData};
 
-use ff::Field;
+use halo2_middleware::ff::Field;
 use tracing::{debug, debug_span, span::EnteredSpan};
 
 use crate::{

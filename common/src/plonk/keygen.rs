@@ -2,8 +2,8 @@
 
 use std::ops::Range;
 
-use ff::{Field, FromUniformBytes};
 use group::Curve;
+use halo2_middleware::ff::{Field, FromUniformBytes};
 
 use super::{
     circuit::{compile_circuit, Assignment, Circuit, ConstraintSystem, Selector},

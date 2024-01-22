@@ -8,8 +8,8 @@ use std::{
     ops::{Add, Mul},
 };
 
-use ff::{Field, PrimeField};
 use group::prime::PrimeGroup;
+use halo2_middleware::ff::{Field, PrimeField};
 use halo2_middleware::poly::Rotation;
 
 use crate::{

@@ -1,6 +1,6 @@
 use super::circuit::Expression;
-use ff::Field;
 use halo2_middleware::circuit::ExpressionMid;
+use halo2_middleware::ff::Field;
 use std::fmt::{self, Debug};
 
 pub(crate) mod prover;

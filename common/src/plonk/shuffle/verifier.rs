@@ -8,7 +8,7 @@ use crate::{
     poly::{commitment::MSM, VerifierQuery},
     transcript::{EncodedChallenge, TranscriptRead},
 };
-use ff::Field;
+use halo2_middleware::ff::Field;
 use halo2_middleware::poly::Rotation;
 
 pub struct Committed<C: CurveAffine> {

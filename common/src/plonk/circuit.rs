@@ -1,18 +1,17 @@
 use super::{lookup, permutation, shuffle, Assigned, Error, Queries};
 use crate::circuit::layouter::SyncDeps;
-use crate::plonk::WitnessCollection;
 use crate::{
     circuit::{Layouter, Region, Value},
     poly::{batch_invert_assigned, Polynomial},
 };
 use core::cmp::max;
 use core::ops::{Add, Mul};
-use ff::Field;
 use halo2_middleware::circuit::{
     Advice, AdviceQueryMid, Any, Challenge, Column, CompiledCircuitV2, ConstraintSystemV2Backend,
     ExpressionMid, Fixed, FixedQueryMid, GateV2Backend, Instance, InstanceQueryMid,
     PreprocessingV2,
 };
+use halo2_middleware::ff::Field;
 use halo2_middleware::metadata;
 use halo2_middleware::poly::Rotation;
 use sealed::SealedPhase;
@@ -20,6 +19,7 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::iter::{Product, Sum};
+use std::ops::RangeTo;
 use std::{
     convert::TryFrom,
     ops::{Neg, Sub},
@@ -1477,6 +1477,146 @@ impl<F: Field> Into<ConstraintSystemV2Backend<F>> for ConstraintSystem<F> {
     }
 }
 */
+
+// TODO: Move to frontend
+pub(crate) struct WitnessCollection<'a, F: Field> {
+    pub(crate) k: u32,
+    pub(crate) current_phase: sealed::Phase,
+    pub(crate) advice: Vec<Vec<Assigned<F>>>,
+    // pub(crate) unblinded_advice: HashSet<usize>,
+    pub(crate) challenges: &'a HashMap<usize, F>,
+    pub(crate) instances: &'a [&'a [F]],
+    pub(crate) usable_rows: RangeTo<usize>,
+    pub(crate) _marker: std::marker::PhantomData<F>,
+}
+
+impl<'a, F: Field> Assignment<F> for WitnessCollection<'a, F> {
+    fn enter_region<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // Do nothing; we don't care about regions in this context.
+    }
+
+    fn exit_region(&mut self) {
+        // Do nothing; we don't care about regions in this context.
+    }
+
+    fn enable_selector<A, AR>(&mut self, _: A, _: &Selector, _: usize) -> Result<(), Error>
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // We only care about advice columns here
+
+        Ok(())
+    }
+
+    fn annotate_column<A, AR>(&mut self, _annotation: A, _column: Column<Any>)
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // Do nothing
+    }
+
+    fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Value<F>, Error> {
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::not_enough_rows_available(self.k));
+        }
+
+        self.instances
+            .get(column.index())
+            .and_then(|column| column.get(row))
+            .map(|v| Value::known(*v))
+            .ok_or(Error::BoundsFailure)
+    }
+
+    fn assign_advice<V, VR, A, AR>(
+        &mut self,
+        _: A,
+        column: Column<Advice>,
+        row: usize,
+        to: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Value<VR>,
+        VR: Into<Assigned<F>>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // Ignore assignment of advice column in different phase than current one.
+        if self.current_phase.0 != column.column_type().phase {
+            return Ok(());
+        }
+
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::not_enough_rows_available(self.k));
+        }
+
+        *self
+            .advice
+            .get_mut(column.index())
+            .and_then(|v| v.get_mut(row))
+            .ok_or(Error::BoundsFailure)? = to().into_field().assign()?;
+
+        Ok(())
+    }
+
+    fn assign_fixed<V, VR, A, AR>(
+        &mut self,
+        _: A,
+        _: Column<Fixed>,
+        _: usize,
+        _: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Value<VR>,
+        VR: Into<Assigned<F>>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // We only care about advice columns here
+
+        Ok(())
+    }
+
+    fn copy(&mut self, _: Column<Any>, _: usize, _: Column<Any>, _: usize) -> Result<(), Error> {
+        // We only care about advice columns here
+
+        Ok(())
+    }
+
+    fn fill_from_row(
+        &mut self,
+        _: Column<Fixed>,
+        _: usize,
+        _: Value<Assigned<F>>,
+    ) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn get_challenge(&self, challenge: Challenge) -> Value<F> {
+        self.challenges
+            .get(&challenge.index())
+            .cloned()
+            .map(Value::known)
+            .unwrap_or_else(Value::unknown)
+    }
+
+    fn push_namespace<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // Do nothing; we don't care about namespaces in this context.
+    }
+
+    fn pop_namespace(&mut self, _: Option<String>) {
+        // Do nothing; we don't care about namespaces in this context.
+    }
+}
 
 /// Witness calculator.  Frontend function
 #[derive(Debug)]

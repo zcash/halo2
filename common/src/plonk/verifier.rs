@@ -1,5 +1,5 @@
-use ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use group::Curve;
+use halo2_middleware::ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use std::iter;
 
 use super::{

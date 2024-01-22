@@ -4,7 +4,7 @@ use std::cmp;
 use std::collections::HashSet;
 use std::fmt;
 
-use ff::Field;
+use halo2_middleware::ff::Field;
 
 pub use super::table_layouter::TableLayouter;
 use super::{Cell, RegionIndex, Value};

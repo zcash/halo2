@@ -3,7 +3,7 @@ mod verifier;
 
 use crate::multicore::{IntoParallelIterator, ParallelIterator};
 use crate::{poly::query::Query, transcript::ChallengeScalar};
-use ff::Field;
+use halo2_middleware::ff::Field;
 pub use prover::ProverSHPLONK;
 use std::collections::BTreeSet;
 pub use verifier::VerifierSHPLONK;

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
 
-use ff::Field;
+use halo2_middleware::ff::Field;
 
 use crate::{
     circuit::{

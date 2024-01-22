@@ -1,7 +1,7 @@
 use crate::arithmetic::{best_multiexp, CurveAffine};
 use crate::poly::{commitment::MSM, ipa::commitment::ParamsVerifierIPA};
-use ff::Field;
 use group::Group;
+use halo2_middleware::ff::Field;
 use std::collections::BTreeMap;
 
 /// A multiscalar multiplication in the polynomial commitment scheme

@@ -2,11 +2,11 @@
 //! field and polynomial arithmetic.
 
 use super::multicore;
-pub use ff::Field;
 use group::{
     ff::{BatchInvert, PrimeField},
     Curve, Group, GroupOpsOwned, ScalarMulOwned,
 };
+pub use halo2_middleware::ff::Field;
 
 pub use halo2curves::{CurveAffine, CurveExt};
 

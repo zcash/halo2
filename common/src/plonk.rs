@@ -35,14 +35,12 @@ pub mod permutation;
 mod shuffle;
 mod vanishing;
 
-mod prover;
 mod verifier;
 
 pub use assigned::*;
 pub use circuit::*;
 pub use error::*;
 pub use keygen::*;
-pub use prover::*;
 pub use verifier::*;
 
 use evaluation::Evaluator;

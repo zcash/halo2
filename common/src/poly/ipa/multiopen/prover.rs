@@ -7,8 +7,8 @@ use crate::poly::query::ProverQuery;
 use crate::poly::{Coeff, Polynomial};
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
-use ff::Field;
 use group::Curve;
+use halo2_middleware::ff::Field;
 use rand_core::RngCore;
 use std::io;
 use std::marker::PhantomData;

@@ -9,8 +9,8 @@ use crate::{
         strategy::{Guard, VerificationStrategy},
     },
 };
-use ff::Field;
 use group::Curve;
+use halo2_middleware::ff::Field;
 use halo2curves::CurveAffine;
 use rand_core::OsRng;
 

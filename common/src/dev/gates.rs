@@ -3,7 +3,7 @@ use std::{
     fmt::{self, Write},
 };
 
-use ff::PrimeField;
+use halo2_middleware::ff::PrimeField;
 
 use crate::{
     dev::util,
