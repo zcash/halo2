@@ -121,7 +121,7 @@ pub fn unpack(byte: u8, bits: &mut [bool]) {
 }
 
 /// Reads a vector of polynomials from buffer
-pub(crate) fn read_polynomial_vec<R: io::Read, F: SerdePrimeField, B>(
+pub fn read_polynomial_vec<R: io::Read, F: SerdePrimeField, B>(
     reader: &mut R,
     format: SerdeFormat,
 ) -> io::Result<Vec<Polynomial<F, B>>> {
@@ -135,7 +135,7 @@ pub(crate) fn read_polynomial_vec<R: io::Read, F: SerdePrimeField, B>(
 }
 
 /// Writes a slice of polynomials to buffer
-pub(crate) fn write_polynomial_slice<W: io::Write, F: SerdePrimeField, B>(
+pub fn write_polynomial_slice<W: io::Write, F: SerdePrimeField, B>(
     slice: &[Polynomial<F, B>],
     writer: &mut W,
     format: SerdeFormat,
@@ -148,7 +148,7 @@ pub(crate) fn write_polynomial_slice<W: io::Write, F: SerdePrimeField, B>(
 }
 
 /// Gets the total number of bytes of a slice of polynomials, assuming all polynomials are the same length
-pub(crate) fn polynomial_slice_byte_length<F: PrimeField, B>(slice: &[Polynomial<F, B>]) -> usize {
+pub fn polynomial_slice_byte_length<F: PrimeField, B>(slice: &[Polynomial<F, B>]) -> usize {
     let field_len = F::default().to_repr().as_ref().len();
     4 + slice.len() * (4 + field_len * slice.get(0).map(|poly| poly.len()).unwrap_or(0))
 }

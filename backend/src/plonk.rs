@@ -1,19 +1,19 @@
 use blake2b_simd::Params as Blake2bParams;
 use group::ff::{Field, FromUniformBytes, PrimeField};
 
-use crate::arithmetic::CurveAffine;
-use crate::helpers::{
-    polynomial_slice_byte_length, read_polynomial_vec, write_polynomial_slice, SerdeCurveAffine,
-    SerdePrimeField,
-};
 use crate::poly::{
     Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, PinnedEvaluationDomain,
     Polynomial,
 };
-use crate::transcript::{ChallengeScalar, EncodedChallenge, Transcript};
-use crate::SerdeFormat;
 use evaluation::Evaluator;
+use halo2_common::arithmetic::CurveAffine;
+use halo2_common::helpers::{
+    self, polynomial_slice_byte_length, read_polynomial_vec, write_polynomial_slice,
+    SerdeCurveAffine, SerdePrimeField,
+};
 use halo2_common::plonk::{Circuit, ConstraintSystem, PinnedConstraintSystem};
+use halo2_common::transcript::{ChallengeScalar, EncodedChallenge, Transcript};
+use halo2_common::SerdeFormat;
 use halo2_middleware::circuit::{
     Advice, AdviceQueryMid, Challenge, Column, ExpressionMid, Fixed, FixedQueryMid, GateV2Backend,
     Instance, InstanceQueryMid, PreprocessingV2,
@@ -36,7 +36,7 @@ mod vanishing;
 pub struct VerifyingKey<C: CurveAffine> {
     domain: EvaluationDomain<C::Scalar>,
     fixed_commitments: Vec<C>,
-    permutation: halo2_common::plonk::permutation::VerifyingKey<C>,
+    permutation: permutation::VerifyingKey<C>,
     cs: ConstraintSystem<C::Scalar>,
     /// Cached maximum degree of `cs` (which doesn't change after construction).
     cs_degree: usize,
@@ -84,7 +84,7 @@ where
         for selector in &self.selectors {
             // since `selector` is filled with `bool`, we pack them 8 at a time into bytes and then write
             for bits in selector.chunks(8) {
-                writer.write_all(&[crate::helpers::pack(bits)])?;
+                writer.write_all(&[helpers::pack(bits)])?;
             }
         }
         Ok(())
@@ -149,8 +149,7 @@ where
             .map(|_| C::read(reader, format))
             .collect::<Result<_, _>>()?;
 
-        let permutation =
-            halo2_common::plonk::permutation::VerifyingKey::read(reader, &cs.permutation, format)?;
+        let permutation = permutation::VerifyingKey::read(reader, &cs.permutation, format)?;
 
         let (cs, selectors) = if compress_selectors {
             // read selectors
@@ -160,7 +159,7 @@ where
                     let mut selector_bytes = vec![0u8; (selector.len() + 7) / 8];
                     reader.read_exact(&mut selector_bytes)?;
                     for (bits, byte) in selector.chunks_mut(8).zip(selector_bytes) {
-                        crate::helpers::unpack(byte, bits);
+                        helpers::unpack(byte, bits);
                     }
                     Ok(selector)
                 })
@@ -224,7 +223,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
     fn from_parts(
         domain: EvaluationDomain<C::Scalar>,
         fixed_commitments: Vec<C>,
-        permutation: halo2_common::plonk::permutation::VerifyingKey<C>,
+        permutation: permutation::VerifyingKey<C>,
         cs: ConstraintSystem<C::Scalar>,
         selectors: Vec<Vec<bool>>,
         compress_selectors: bool,
@@ -292,7 +291,7 @@ impl<C: CurveAffine> VerifyingKey<C> {
     }
 
     /// Returns `VerifyingKey` of permutation
-    pub fn permutation(&self) -> &halo2_common::plonk::permutation::VerifyingKey<C> {
+    pub fn permutation(&self) -> &permutation::VerifyingKey<C> {
         &self.permutation
     }
 
@@ -317,7 +316,7 @@ pub struct PinnedVerificationKey<'a, C: CurveAffine> {
     domain: PinnedEvaluationDomain<'a, C::Scalar>,
     cs: PinnedConstraintSystem<'a, C::Scalar>,
     fixed_commitments: &'a Vec<C>,
-    permutation: &'a halo2_common::plonk::permutation::VerifyingKey<C>,
+    permutation: &'a permutation::VerifyingKey<C>,
 }
 
 /// This is a proving key which allows for the creation of proofs for a
@@ -331,7 +330,7 @@ pub struct ProvingKey<C: CurveAffine> {
     fixed_values: Vec<Polynomial<C::Scalar, LagrangeCoeff>>,
     fixed_polys: Vec<Polynomial<C::Scalar, Coeff>>,
     fixed_cosets: Vec<Polynomial<C::Scalar, ExtendedLagrangeCoeff>>,
-    permutation: halo2_common::plonk::permutation::ProvingKey<C>,
+    permutation: permutation::ProvingKey<C>,
     ev: Evaluator<C>,
 }
 
@@ -414,7 +413,7 @@ where
         let fixed_values = read_polynomial_vec(reader, format)?;
         let fixed_polys = read_polynomial_vec(reader, format)?;
         let fixed_cosets = read_polynomial_vec(reader, format)?;
-        let permutation = halo2_common::plonk::permutation::ProvingKey::read(reader, format)?;
+        let permutation = permutation::ProvingKey::read(reader, format)?;
         let ev = Evaluator::new(vk.cs());
         Ok(Self {
             vk,

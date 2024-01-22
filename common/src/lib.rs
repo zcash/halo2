@@ -15,11 +15,12 @@ pub mod circuit;
 pub use halo2curves;
 mod multicore;
 pub mod plonk;
+// TODO: Try to move this to backend and use a lightweight Polynomial type in the frontend
 pub mod poly;
 pub mod transcript;
 
 // TODO: Move to backend for now.  The end goal is to have this in the frontend, but it requires
 // many changes because the MockProver heavliy uses backend types.
 // pub mod dev;
-mod helpers;
+pub mod helpers;
 pub use helpers::SerdeFormat;

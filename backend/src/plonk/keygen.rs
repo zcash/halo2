@@ -52,7 +52,7 @@ where
 pub(crate) struct Assembly<F: Field> {
     pub(crate) k: u32,
     pub(crate) fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
-    pub(crate) permutation: permutation::keygen::AssemblyFront,
+    pub(crate) permutation: halo2_common::plonk::permutation::AssemblyFront,
     pub(crate) selectors: Vec<Vec<bool>>,
     // A range of available rows for assignment and copies.
     pub(crate) usable_rows: Range<usize>,

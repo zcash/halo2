@@ -4,10 +4,10 @@ use rand_core::RngCore;
 use std::collections::{BTreeSet, HashSet};
 use std::{collections::HashMap, iter};
 
+use crate::plonk::{lookup, permutation, shuffle, vanishing};
 use halo2_common::plonk::{
     circuit::{sealed, Assignment, Circuit, Selector},
-    lookup, permutation, shuffle, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta,
-    ChallengeX, ChallengeY, Error, ProvingKey,
+    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error, ProvingKey,
 };
 use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
 

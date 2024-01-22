@@ -10,11 +10,13 @@ use crate::{
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
     SerdeFormat,
 };
+use halo2_common::plonk::permutation::Argument;
 use halo2_middleware::circuit::{Any, Column};
 use halo2_middleware::permutation::{ArgumentV2, Cell};
 
 use std::io;
 
+pub mod keygen;
 pub mod prover;
 pub mod verifier;
 
