@@ -8,7 +8,7 @@ use crate::{
     poly::{commitment::MSM, VerifierQuery},
     transcript::{EncodedChallenge, TranscriptRead},
 };
-use halo2_middleware::ff::Field;
+use ff::Field;
 use halo2_middleware::poly::Rotation;
 
 pub struct Committed<C: CurveAffine> {
@@ -77,6 +77,7 @@ impl<C: CurveAffine> Evaluated<C> {
                     .map(|expression| {
                         expression.evaluate(
                             &|scalar| scalar,
+                            &|_| panic!("virtual selectors are removed during optimization"),
                             &|query| fixed_evals[query.index.unwrap()],
                             &|query| advice_evals[query.index.unwrap()],
                             &|query| instance_evals[query.index.unwrap()],

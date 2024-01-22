@@ -4,10 +4,10 @@
 
 use crate::arithmetic::parallelize;
 use crate::helpers::SerdePrimeField;
+use crate::plonk::Assigned;
 use crate::SerdeFormat;
-use halo2_middleware::plonk::Assigned;
 
-use halo2_middleware::ff::{BatchInvert, Field};
+use group::ff::{BatchInvert, Field};
 use halo2_middleware::poly::Rotation;
 use std::fmt::Debug;
 use std::io;
@@ -15,23 +15,23 @@ use std::marker::PhantomData;
 use std::ops::{Add, Deref, DerefMut, Index, IndexMut, Mul, RangeFrom, RangeFull, Sub};
 
 /// Generic commitment scheme structures
-// pub mod commitment;
-// mod domain;
-// mod query;
-// mod strategy;
+pub mod commitment;
+mod domain;
+mod query;
+mod strategy;
 
-// /// Inner product argument commitment scheme
-// pub mod ipa;
+/// Inner product argument commitment scheme
+pub mod ipa;
 
-// /// KZG commitment scheme
-// pub mod kzg;
+/// KZG commitment scheme
+pub mod kzg;
 
-// #[cfg(test)]
-// mod multiopen_test;
+#[cfg(test)]
+mod multiopen_test;
 
-// pub use domain::*;
-// pub use query::{ProverQuery, VerifierQuery};
-// pub use strategy::{Guard, VerificationStrategy};
+pub use domain::*;
+pub use query::{ProverQuery, VerifierQuery};
+pub use strategy::{Guard, VerificationStrategy};
 
 /// This is an error that could occur during proving or circuit synthesis.
 // TODO: these errors need to be cleaned up

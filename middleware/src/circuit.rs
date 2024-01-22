@@ -36,8 +36,8 @@ pub struct InstanceQueryMid {
 /// A challenge squeezed from transcript after advice columns at the phase have been committed.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Challenge {
-    index: usize,
-    pub(crate) phase: u8,
+    pub index: usize,
+    pub phase: u8,
 }
 
 impl Challenge {

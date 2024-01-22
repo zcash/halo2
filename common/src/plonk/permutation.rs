@@ -1,5 +1,6 @@
 //! Implementation of permutation argument.
 
+use super::circuit::{Any, Column};
 use crate::{
     arithmetic::CurveAffine,
     helpers::{
@@ -9,8 +10,6 @@ use crate::{
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
     SerdeFormat,
 };
-use halo2_middleware::circuit::{Any, Column};
-// use halo2_middleware::permutation::Argument;
 
 pub(crate) mod keygen;
 pub(crate) mod prover;
@@ -20,22 +19,11 @@ pub use keygen::Assembly;
 
 use std::io;
 
-// TODO: Use https://docs.rs/ref-cast/latest/ref_cast/index.html here?  This way we can have
-// Argument(halo2_middleware::permutation::Argument) and easily translate from one type to the
-// other while using references.
 /// A permutation argument.
 #[derive(Debug, Clone)]
 pub struct Argument {
     /// A sequence of columns involved in the argument.
     pub(super) columns: Vec<Column<Any>>,
-}
-
-impl From<halo2_middleware::permutation::Argument> for Argument {
-    fn from(arg: halo2_middleware::permutation::Argument) -> Self {
-        Self {
-            columns: arg.columns,
-        }
-    }
 }
 
 impl Argument {
@@ -79,6 +67,12 @@ impl Argument {
         // There are constraints of degree 3 regardless of the
         // number of columns involved.
         3
+    }
+
+    pub(crate) fn add_column(&mut self, column: Column<Any>) {
+        if !self.columns.contains(&column) {
+            self.columns.push(column);
+        }
     }
 
     /// Returns columns that participate on the permutation argument.

@@ -1,4 +1,4 @@
-use halo2_middleware::ff::PrimeField;
+use ff::PrimeField;
 use group::{
     ff::{BatchInvert, Field},
     Curve,
@@ -6,7 +6,7 @@ use group::{
 use rand_core::RngCore;
 use std::iter::{self, ExactSizeIterator};
 
-use super::super::{ChallengeBeta, ChallengeGamma, ChallengeX};
+use super::super::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};
 use super::{Argument, ProvingKey};
 use crate::{
     arithmetic::{eval_polynomial, parallelize, CurveAffine},
@@ -17,7 +17,6 @@ use crate::{
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
-use halo2_middleware::circuit::Any;
 use halo2_middleware::poly::Rotation;
 
 pub(crate) struct CommittedSet<C: CurveAffine> {
