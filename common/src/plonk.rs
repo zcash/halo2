@@ -25,17 +25,17 @@ use halo2_middleware::circuit::{
 };
 use halo2_middleware::poly::Rotation;
 
-mod assigned;
-mod circuit;
-mod error;
-mod evaluation;
-mod keygen;
-mod lookup;
+pub mod assigned;
+pub mod circuit;
+pub mod error;
+pub mod evaluation;
+pub mod keygen;
+pub mod lookup;
 pub mod permutation;
-mod shuffle;
-mod vanishing;
+pub mod shuffle;
+pub mod vanishing;
 
-mod verifier;
+pub mod verifier;
 
 pub use assigned::*;
 pub use circuit::*;
@@ -532,21 +532,21 @@ impl<C: CurveAffine> VerifyingKey<C> {
 }
 
 #[derive(Clone, Copy, Debug)]
-struct Theta;
-type ChallengeTheta<F> = ChallengeScalar<F, Theta>;
+pub struct Theta;
+pub type ChallengeTheta<F> = ChallengeScalar<F, Theta>;
 
 #[derive(Clone, Copy, Debug)]
-struct Beta;
-type ChallengeBeta<F> = ChallengeScalar<F, Beta>;
+pub struct Beta;
+pub type ChallengeBeta<F> = ChallengeScalar<F, Beta>;
 
 #[derive(Clone, Copy, Debug)]
-struct Gamma;
-type ChallengeGamma<F> = ChallengeScalar<F, Gamma>;
+pub struct Gamma;
+pub type ChallengeGamma<F> = ChallengeScalar<F, Gamma>;
 
 #[derive(Clone, Copy, Debug)]
-struct Y;
-type ChallengeY<F> = ChallengeScalar<F, Y>;
+pub struct Y;
+pub type ChallengeY<F> = ChallengeScalar<F, Y>;
 
 #[derive(Clone, Copy, Debug)]
-struct X;
-type ChallengeX<F> = ChallengeScalar<F, X>;
+pub struct X;
+pub type ChallengeX<F> = ChallengeScalar<F, X>;

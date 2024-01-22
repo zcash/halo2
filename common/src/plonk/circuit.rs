@@ -28,7 +28,7 @@ use std::{
 mod compress_selectors;
 
 // TODO: Move sealed phase to frontend, and always use u8 in middleware and backend
-pub(crate) mod sealed {
+pub mod sealed {
     /// Phase of advice column
     #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
     pub struct Phase(pub(crate) u8);

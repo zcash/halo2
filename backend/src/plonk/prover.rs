@@ -2,21 +2,17 @@ use group::Curve;
 use halo2_middleware::ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use rand_core::RngCore;
 use std::collections::{BTreeSet, HashSet};
-use std::ops::RangeTo;
 use std::{collections::HashMap, iter};
 
-use super::{
-    circuit::{
-        compile_circuit,
-        sealed::{self},
-        Assignment, Circuit, Selector, WitnessCalculator,
-    },
+use halo2_common::plonk::{
+    circuit::{sealed, Assignment, Circuit, Selector},
     lookup, permutation, shuffle, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta,
     ChallengeX, ChallengeY, Error, ProvingKey,
 };
 use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
 
-use crate::{
+use group::prime::PrimeCurveAffine;
+use halo2_common::{
     arithmetic::{eval_polynomial, CurveAffine},
     circuit::Value,
     plonk::Assigned,
@@ -25,11 +21,10 @@ use crate::{
         Basis, Coeff, LagrangeCoeff, Polynomial, ProverQuery,
     },
 };
-use crate::{
+use halo2_common::{
     poly::batch_invert_assigned,
     transcript::{EncodedChallenge, TranscriptWrite},
 };
-use group::prime::PrimeCurveAffine;
 
 /// Collection of instance data used during proving for a single circuit proof.
 #[derive(Debug)]
@@ -742,6 +737,8 @@ impl<
     }
 }
 
+// TODO: Move this to halo2_proofs as a legacy wrapper
+/*
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
 /// generated previously for the same circuit. The provided `instances`
@@ -853,3 +850,4 @@ fn test_create_proof() {
     )
     .expect("proof generation should not fail");
 }
+*/
