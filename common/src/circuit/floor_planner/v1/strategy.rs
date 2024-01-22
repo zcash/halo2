@@ -5,7 +5,8 @@ use std::{
 };
 
 use super::{RegionColumn, RegionShape};
-use crate::{circuit::RegionStart, plonk::Any};
+use crate::circuit::RegionStart;
+use halo2_middleware::circuit::Any;
 
 /// A region allocated within a column.
 #[derive(Clone, Default, Debug, PartialEq, Eq)]

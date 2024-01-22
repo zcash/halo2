@@ -7,8 +7,7 @@ use group::Curve;
 
 use super::{
     circuit::{
-        compile_circuit, Advice, Any, Assignment, Circuit, Column, CompiledCircuitV2,
-        ConstraintSystem, Fixed, Instance, Selector,
+        compile_circuit, Assignment, Circuit, CompiledCircuitV2, ConstraintSystem, Selector,
     },
     evaluation::Evaluator,
     permutation, Assigned, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
@@ -21,7 +20,7 @@ use crate::{
         EvaluationDomain,
     },
 };
-use halo2_middleware::circuit::Challenge;
+use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
 
 pub(crate) fn create_domain<C, ConcreteCircuit>(
     k: u32,

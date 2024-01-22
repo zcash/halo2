@@ -4,12 +4,14 @@ use group::Curve;
 use super::{Argument, ProvingKey, VerifyingKey};
 use crate::{
     arithmetic::{parallelize, CurveAffine},
-    plonk::{Any, Column, Error},
+    plonk::Error,
     poly::{
         commitment::{Blind, Params},
         EvaluationDomain,
     },
 };
+use halo2_middleware::circuit::{Any, Column};
+use halo2_middleware::permutation::{AssemblyMid, Cell};
 
 #[cfg(feature = "thread-safe-region")]
 use crate::multicore::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
@@ -32,18 +34,6 @@ pub struct Assembly {
     aux: Vec<Vec<(usize, usize)>>,
     /// More aux data
     sizes: Vec<Vec<usize>>,
-}
-
-// TODO: Dedup with other Cell definition
-#[derive(Clone, Debug)]
-pub struct Cell {
-    pub column: Column<Any>,
-    pub row: usize,
-}
-
-#[derive(Clone, Debug)]
-pub struct AssemblyMid {
-    pub copies: Vec<(Cell, Cell)>,
 }
 
 #[derive(Clone, Debug)]

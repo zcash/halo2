@@ -19,6 +19,10 @@ use crate::poly::{
 };
 use crate::transcript::{ChallengeScalar, EncodedChallenge, Transcript};
 use crate::SerdeFormat;
+use halo2_middleware::circuit::{
+    Advice, AdviceQueryMid, Challenge, Column, ExpressionMid, Fixed, FixedQueryMid, GateV2Backend,
+    Instance, InstanceQueryMid, PreprocessingV2,
+};
 use halo2_middleware::poly::Rotation;
 
 mod assigned;

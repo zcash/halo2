@@ -15,11 +15,11 @@ use crate::{
     plonk::{
         permutation,
         sealed::{self, SealedPhase},
-        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Expression,
-        FirstPhase, Fixed, FloorPlanner, Instance, Phase, Selector,
+        Assigned, Assignment, Circuit, ConstraintSystem, Error, Expression, FirstPhase,
+        FloorPlanner, Phase, Selector,
     },
 };
-use halo2_middleware::circuit::Challenge;
+use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
 
 use crate::multicore::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
@@ -484,7 +484,7 @@ impl<F: Field> Assignment<F> for MockProver<F> {
             }
             Err(err) => {
                 // Propagate `assign` error if the column is in current phase.
-                if self.in_phase(column.column_type().phase) {
+                if self.in_phase(sealed::Phase(column.column_type().phase)) {
                     return Err(err);
                 }
             }

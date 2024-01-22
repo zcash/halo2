@@ -1,7 +1,8 @@
 //! Metadata about circuits.
 
 use super::metadata::Column as ColumnMetadata;
-use crate::plonk::{self, Any};
+use crate::plonk::{self};
+use halo2_middleware::circuit::Any;
 use std::{
     collections::HashMap,
     fmt::{self, Debug},
@@ -38,8 +39,8 @@ impl From<(Any, usize)> for Column {
     }
 }
 
-impl From<plonk::Column<Any>> for Column {
-    fn from(column: plonk::Column<Any>) -> Self {
+impl From<halo2_middleware::circuit::Column<Any>> for Column {
+    fn from(column: halo2_middleware::circuit::Column<Any>) -> Self {
         Column {
             column_type: *column.column_type(),
             index: column.index(),

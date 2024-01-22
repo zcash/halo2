@@ -1,11 +1,12 @@
 use crate::multicore;
-use crate::plonk::{lookup, permutation, Any, ProvingKey};
+use crate::plonk::{lookup, permutation, ProvingKey};
 use crate::poly::Basis;
 use crate::{
     arithmetic::{parallelize, CurveAffine},
     poly::{Coeff, ExtendedLagrangeCoeff, Polynomial},
 };
 use group::ff::{Field, PrimeField, WithSmallOrderMulGroup};
+use halo2_middleware::circuit::Any;
 use halo2_middleware::poly::Rotation;
 
 use super::{shuffle, ConstraintSystem, Expression};

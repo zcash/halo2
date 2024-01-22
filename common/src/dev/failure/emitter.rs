@@ -6,8 +6,9 @@ use group::ff::Field;
 use super::FailureLocation;
 use crate::{
     dev::{metadata, util},
-    plonk::{Advice, Any, Expression},
+    plonk::Expression,
 };
+use halo2_middleware::circuit::{Advice, Any};
 
 fn padded(p: char, width: usize, text: &str) -> String {
     let pad = width - text.len();
@@ -165,7 +166,9 @@ pub(super) fn expression_to_string<F: Field>(
                 .and_then(|map| {
                     map.get(
                         &(
-                            Any::Advice(Advice { phase: query.phase }),
+                            Any::Advice(Advice {
+                                phase: query.phase.0,
+                            }),
                             query.column_index,
                         )
                             .into(),

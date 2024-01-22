@@ -10,7 +10,8 @@ use core::cmp::max;
 use core::ops::{Add, Mul};
 use ff::Field;
 use halo2_middleware::circuit::{
-    AdviceQueryMid, Challenge, ExpressionMid, FixedQueryMid, InstanceQueryMid,
+    Advice, AdviceQueryMid, Any, Challenge, Column, ExpressionMid, Fixed, FixedQueryMid,
+    GateV2Backend, Instance, InstanceQueryMid, PreprocessingV2,
 };
 use halo2_middleware::poly::Rotation;
 use sealed::SealedPhase;
@@ -25,80 +26,7 @@ use std::{
 
 mod compress_selectors;
 
-/// A column type
-pub trait ColumnType:
-    'static + Sized + Copy + std::fmt::Debug + PartialEq + Eq + Into<Any>
-{
-    /// Return expression from cell
-    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> Expression<F>;
-}
-
-/// A column with an index and type
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct Column<C: ColumnType> {
-    index: usize,
-    column_type: C,
-}
-
-impl<C: ColumnType> Column<C> {
-    pub(crate) fn new(index: usize, column_type: C) -> Self {
-        Column { index, column_type }
-    }
-
-    /// Index of this column.
-    pub fn index(&self) -> usize {
-        self.index
-    }
-
-    /// Type of this column.
-    pub fn column_type(&self) -> &C {
-        &self.column_type
-    }
-
-    /// Return expression from column at a relative position
-    pub fn query_cell<F: Field>(&self, at: Rotation) -> Expression<F> {
-        self.column_type.query_cell(self.index, at)
-    }
-
-    /// Return expression from column at the current row
-    pub fn cur<F: Field>(&self) -> Expression<F> {
-        self.query_cell(Rotation::cur())
-    }
-
-    /// Return expression from column at the next row
-    pub fn next<F: Field>(&self) -> Expression<F> {
-        self.query_cell(Rotation::next())
-    }
-
-    /// Return expression from column at the previous row
-    pub fn prev<F: Field>(&self) -> Expression<F> {
-        self.query_cell(Rotation::prev())
-    }
-
-    /// Return expression from column at the specified rotation
-    pub fn rot<F: Field>(&self, rotation: i32) -> Expression<F> {
-        self.query_cell(Rotation(rotation))
-    }
-}
-
-impl<C: ColumnType> Ord for Column<C> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // This ordering is consensus-critical! The layouters rely on deterministic column
-        // orderings.
-        match self.column_type.into().cmp(&other.column_type.into()) {
-            // Indices are assigned within column types.
-            std::cmp::Ordering::Equal => self.index.cmp(&other.index),
-            order => order,
-        }
-    }
-}
-
-impl<C: ColumnType> PartialOrd for Column<C> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
+// TODO: Move sealed phase to frontend, and always use u8 in middleware and backend
 pub(crate) mod sealed {
     /// Phase of advice column
     #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -154,255 +82,6 @@ pub struct ThirdPhase;
 impl SealedPhase for super::ThirdPhase {
     fn to_sealed(self) -> sealed::Phase {
         sealed::Phase(2)
-    }
-}
-
-/// An advice column
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
-pub struct Advice {
-    pub(crate) phase: sealed::Phase,
-}
-
-impl Default for Advice {
-    fn default() -> Advice {
-        Advice {
-            phase: FirstPhase.to_sealed(),
-        }
-    }
-}
-
-impl Advice {
-    /// Returns `Advice` in given `Phase`
-    pub fn new<P: Phase>(phase: P) -> Advice {
-        Advice {
-            phase: phase.to_sealed(),
-        }
-    }
-
-    /// Phase of this column
-    pub fn phase(&self) -> u8 {
-        self.phase.0
-    }
-}
-
-impl std::fmt::Debug for Advice {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut debug_struct = f.debug_struct("Advice");
-        // Only show advice's phase if it's not in first phase.
-        if self.phase != FirstPhase.to_sealed() {
-            debug_struct.field("phase", &self.phase);
-        }
-        debug_struct.finish()
-    }
-}
-
-/// A fixed column
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct Fixed;
-
-/// An instance column
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct Instance;
-
-/// An enum over the Advice, Fixed, Instance structs
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
-pub enum Any {
-    /// An Advice variant
-    Advice(Advice),
-    /// A Fixed variant
-    Fixed,
-    /// An Instance variant
-    Instance,
-}
-
-impl Any {
-    /// Returns Advice variant in `FirstPhase`
-    pub fn advice() -> Any {
-        Any::Advice(Advice::default())
-    }
-
-    /// Returns Advice variant in given `Phase`
-    pub fn advice_in<P: Phase>(phase: P) -> Any {
-        Any::Advice(Advice::new(phase))
-    }
-}
-
-impl std::fmt::Debug for Any {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Any::Advice(advice) => {
-                let mut debug_struct = f.debug_struct("Advice");
-                // Only show advice's phase if it's not in first phase.
-                if advice.phase != FirstPhase.to_sealed() {
-                    debug_struct.field("phase", &advice.phase);
-                }
-                debug_struct.finish()
-            }
-            Any::Fixed => f.debug_struct("Fixed").finish(),
-            Any::Instance => f.debug_struct("Instance").finish(),
-        }
-    }
-}
-
-impl Ord for Any {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // This ordering is consensus-critical! The layouters rely on deterministic column
-        // orderings.
-        match (self, other) {
-            (Any::Instance, Any::Instance) | (Any::Fixed, Any::Fixed) => std::cmp::Ordering::Equal,
-            (Any::Advice(lhs), Any::Advice(rhs)) => lhs.phase.cmp(&rhs.phase),
-            // Across column types, sort Instance < Advice < Fixed.
-            (Any::Instance, Any::Advice(_))
-            | (Any::Advice(_), Any::Fixed)
-            | (Any::Instance, Any::Fixed) => std::cmp::Ordering::Less,
-            (Any::Fixed, Any::Instance)
-            | (Any::Fixed, Any::Advice(_))
-            | (Any::Advice(_), Any::Instance) => std::cmp::Ordering::Greater,
-        }
-    }
-}
-
-impl PartialOrd for Any {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl ColumnType for Advice {
-    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> Expression<F> {
-        Expression::Advice(AdviceQuery {
-            index: None,
-            column_index: index,
-            rotation: at,
-            phase: self.phase,
-        })
-    }
-}
-impl ColumnType for Fixed {
-    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> Expression<F> {
-        Expression::Fixed(FixedQuery {
-            index: None,
-            column_index: index,
-            rotation: at,
-        })
-    }
-}
-impl ColumnType for Instance {
-    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> Expression<F> {
-        Expression::Instance(InstanceQuery {
-            index: None,
-            column_index: index,
-            rotation: at,
-        })
-    }
-}
-impl ColumnType for Any {
-    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> Expression<F> {
-        match self {
-            Any::Advice(Advice { phase }) => Expression::Advice(AdviceQuery {
-                index: None,
-                column_index: index,
-                rotation: at,
-                phase: *phase,
-            }),
-            Any::Fixed => Expression::Fixed(FixedQuery {
-                index: None,
-                column_index: index,
-                rotation: at,
-            }),
-            Any::Instance => Expression::Instance(InstanceQuery {
-                index: None,
-                column_index: index,
-                rotation: at,
-            }),
-        }
-    }
-}
-
-impl From<Advice> for Any {
-    fn from(advice: Advice) -> Any {
-        Any::Advice(advice)
-    }
-}
-
-impl From<Fixed> for Any {
-    fn from(_: Fixed) -> Any {
-        Any::Fixed
-    }
-}
-
-impl From<Instance> for Any {
-    fn from(_: Instance) -> Any {
-        Any::Instance
-    }
-}
-
-impl From<Column<Advice>> for Column<Any> {
-    fn from(advice: Column<Advice>) -> Column<Any> {
-        Column {
-            index: advice.index(),
-            column_type: Any::Advice(advice.column_type),
-        }
-    }
-}
-
-impl From<Column<Fixed>> for Column<Any> {
-    fn from(advice: Column<Fixed>) -> Column<Any> {
-        Column {
-            index: advice.index(),
-            column_type: Any::Fixed,
-        }
-    }
-}
-
-impl From<Column<Instance>> for Column<Any> {
-    fn from(advice: Column<Instance>) -> Column<Any> {
-        Column {
-            index: advice.index(),
-            column_type: Any::Instance,
-        }
-    }
-}
-
-impl TryFrom<Column<Any>> for Column<Advice> {
-    type Error = &'static str;
-
-    fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
-        match any.column_type() {
-            Any::Advice(advice) => Ok(Column {
-                index: any.index(),
-                column_type: *advice,
-            }),
-            _ => Err("Cannot convert into Column<Advice>"),
-        }
-    }
-}
-
-impl TryFrom<Column<Any>> for Column<Fixed> {
-    type Error = &'static str;
-
-    fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
-        match any.column_type() {
-            Any::Fixed => Ok(Column {
-                index: any.index(),
-                column_type: Fixed,
-            }),
-            _ => Err("Cannot convert into Column<Fixed>"),
-        }
-    }
-}
-
-impl TryFrom<Column<Any>> for Column<Instance> {
-    type Error = &'static str;
-
-    fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
-        match any.column_type() {
-            Any::Instance => Ok(Column {
-                index: any.index(),
-                column_type: Instance,
-            }),
-            _ => Err("Cannot convert into Column<Instance>"),
-        }
     }
 }
 
@@ -866,7 +545,9 @@ impl<F: Field> Expression<F> {
                 if query.index.is_none() {
                     let col = Column {
                         index: query.column_index,
-                        column_type: Advice { phase: query.phase },
+                        column_type: Advice {
+                            phase: query.phase.0,
+                        },
                     };
                     cells.queried_cells.push((col, query.rotation).into());
                     query.index = Some(cells.meta.query_advice_index(col, query.rotation));
@@ -1533,25 +1214,6 @@ impl<F: Field, C: Into<Constraint<F>>, Iter: IntoIterator<Item = C>> IntoIterato
     }
 }
 
-/// A Gate contains a single polynomial identity with a name as metadata.
-#[derive(Clone, Debug)]
-pub struct GateV2Backend<F: Field> {
-    name: String,
-    poly: ExpressionMid<F>,
-}
-
-impl<F: Field> GateV2Backend<F> {
-    /// Returns the gate name.
-    pub fn name(&self) -> &str {
-        self.name.as_str()
-    }
-
-    /// Returns the polynomial identity of this gate
-    pub fn polynomial(&self) -> &ExpressionMid<F> {
-        &self.poly
-    }
-}
-
 /// Gate
 #[derive(Clone, Debug)]
 pub struct Gate<F: Field> {
@@ -1587,14 +1249,6 @@ impl<F: Field> Gate<F> {
     pub(crate) fn queried_cells(&self) -> &[VirtualCell] {
         &self.queried_cells
     }
-}
-
-/// Data that needs to be preprocessed from a circuit
-#[derive(Debug, Clone)]
-pub struct PreprocessingV2<F: Field> {
-    // TODO(Edu): Can we replace this by a simpler structure?
-    pub(crate) permutation: permutation::keygen::AssemblyMid,
-    pub(crate) fixed: Vec<Vec<F>>,
 }
 
 /// This is a description of a low level Plonkish compiled circuit. Contains the Constraint System
@@ -1650,12 +1304,7 @@ impl QueriesMap {
             }
             ExpressionMid::Advice(query) => {
                 let (col, rot) = (
-                    Column::new(
-                        query.column_index,
-                        Advice {
-                            phase: sealed::Phase(query.phase),
-                        },
-                    ),
+                    Column::new(query.column_index, Advice { phase: query.phase }),
                     query.rotation,
                 );
                 let index = self.add_advice(col, rot);
@@ -1961,7 +1610,7 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
     fixed.extend(selector_polys.into_iter());
 
     let preprocessing = PreprocessingV2 {
-        permutation: permutation::keygen::AssemblyMid {
+        permutation: halo2_middleware::permutation::AssemblyMid {
             copies: assembly.permutation.copies,
         },
         fixed,
@@ -2788,7 +2437,7 @@ impl<F: Field> ConstraintSystem<F> {
 
         let tmp = Column {
             index: self.num_advice_columns,
-            column_type: Advice { phase },
+            column_type: Advice { phase: phase.0 },
         };
         self.unblinded_advice_columns.push(tmp.index);
         self.num_advice_columns += 1;
@@ -2813,7 +2462,7 @@ impl<F: Field> ConstraintSystem<F> {
 
         let tmp = Column {
             index: self.num_advice_columns,
-            column_type: Advice { phase },
+            column_type: Advice { phase: phase.0 },
         };
         self.num_advice_columns += 1;
         self.num_advice_queries.push(0);
@@ -3086,7 +2735,7 @@ impl<'a, F: Field> VirtualCells<'a, F> {
             index: Some(self.meta.query_advice_index(column, at)),
             column_index: column.index,
             rotation: at,
-            phase: column.column_type().phase,
+            phase: sealed::Phase(column.column_type().phase),
         })
     }
 

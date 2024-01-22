@@ -3,7 +3,7 @@ use std::fmt;
 use std::io;
 
 use super::TableColumn;
-use super::{Any, Column};
+use halo2_middleware::circuit::{Any, Column};
 
 /// This is an error that could occur during proving or circuit synthesis.
 // TODO: these errors need to be cleaned up

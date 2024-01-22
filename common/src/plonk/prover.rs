@@ -9,12 +9,12 @@ use super::{
     circuit::{
         compile_circuit,
         sealed::{self},
-        Advice, Any, Assignment, Circuit, Column, Fixed, Instance, Selector, WitnessCalculator,
+        Assignment, Circuit, Selector, WitnessCalculator,
     },
     lookup, permutation, shuffle, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta,
     ChallengeX, ChallengeY, Error, ProvingKey,
 };
-use halo2_middleware::circuit::Challenge;
+use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
 
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine},
@@ -810,7 +810,7 @@ impl<'a, F: Field> Assignment<F> for WitnessCollection<'a, F> {
         AR: Into<String>,
     {
         // Ignore assignment of advice column in different phase than current one.
-        if self.current_phase != column.column_type().phase {
+        if self.current_phase.0 != column.column_type().phase {
             return Ok(());
         }
 

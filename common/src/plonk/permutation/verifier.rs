@@ -1,7 +1,7 @@
 use ff::{Field, PrimeField};
 use std::iter;
 
-use super::super::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};
+use super::super::{ChallengeBeta, ChallengeGamma, ChallengeX};
 use super::{Argument, VerifyingKey};
 use crate::{
     arithmetic::CurveAffine,
@@ -9,6 +9,7 @@ use crate::{
     poly::{commitment::MSM, VerifierQuery},
     transcript::{EncodedChallenge, TranscriptRead},
 };
+use halo2_middleware::circuit::Any;
 use halo2_middleware::poly::Rotation;
 
 pub struct Committed<C: CurveAffine> {

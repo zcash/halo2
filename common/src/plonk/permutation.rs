@@ -1,6 +1,5 @@
 //! Implementation of permutation argument.
 
-use super::circuit::{Any, Column};
 use crate::{
     arithmetic::CurveAffine,
     helpers::{
@@ -10,6 +9,7 @@ use crate::{
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
     SerdeFormat,
 };
+use halo2_middleware::circuit::{Any, Column};
 
 pub(crate) mod keygen;
 pub(crate) mod prover;

@@ -8,12 +8,9 @@ use crate::{
         layouter::{RegionLayouter, SyncDeps},
         AssignedCell, Cell, Layouter, Region, Table, Value,
     },
-    plonk::{
-        Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
-        FloorPlanner, Instance, Selector,
-    },
+    plonk::{Assigned, Assignment, Circuit, ConstraintSystem, Error, FloorPlanner, Selector},
 };
-use halo2_middleware::circuit::Challenge;
+use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
 
 /// A helper type that augments a [`FloorPlanner`] with [`tracing`] spans and events.
 ///
