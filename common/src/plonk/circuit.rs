@@ -1,6 +1,5 @@
 use super::{lookup, permutation, shuffle, Assigned, Error, Queries};
 use crate::circuit::layouter::SyncDeps;
-use crate::dev::metadata;
 use crate::plonk::WitnessCollection;
 use crate::{
     circuit::{Layouter, Region, Value},
@@ -10,9 +9,11 @@ use core::cmp::max;
 use core::ops::{Add, Mul};
 use ff::Field;
 use halo2_middleware::circuit::{
-    Advice, AdviceQueryMid, Any, Challenge, Column, ExpressionMid, Fixed, FixedQueryMid,
-    GateV2Backend, Instance, InstanceQueryMid, PreprocessingV2,
+    Advice, AdviceQueryMid, Any, Challenge, Column, CompiledCircuitV2, ConstraintSystemV2Backend,
+    ExpressionMid, Fixed, FixedQueryMid, GateV2Backend, Instance, InstanceQueryMid,
+    PreprocessingV2,
 };
+use halo2_middleware::metadata;
 use halo2_middleware::poly::Rotation;
 use sealed::SealedPhase;
 use std::collections::BTreeSet;
@@ -1251,14 +1252,6 @@ impl<F: Field> Gate<F> {
     }
 }
 
-/// This is a description of a low level Plonkish compiled circuit. Contains the Constraint System
-/// as well as the fixed columns and copy constraints information.
-#[derive(Debug, Clone)]
-pub struct CompiledCircuitV2<F: Field> {
-    pub(crate) preprocessing: PreprocessingV2<F>,
-    pub(crate) cs: ConstraintSystemV2Backend<F>,
-}
-
 struct QueriesMap {
     advice_map: HashMap<(Column<Advice>, Rotation), usize>,
     instance_map: HashMap<(Column<Instance>, Rotation), usize>,
@@ -1339,40 +1332,80 @@ impl QueriesMap {
     }
 }
 
-/// This is a description of the circuit environment, such as the gate, column and
-/// permutation arrangements.
-#[derive(Debug, Clone)]
-pub struct ConstraintSystemV2Backend<F: Field> {
-    pub(crate) num_fixed_columns: usize,
-    pub(crate) num_advice_columns: usize,
-    pub(crate) num_instance_columns: usize,
-    pub(crate) num_challenges: usize,
-
-    /// Contains the index of each advice column that is left unblinded.
-    pub(crate) unblinded_advice_columns: Vec<usize>,
-
-    /// Contains the phase for each advice column. Should have same length as num_advice_columns.
-    pub(crate) advice_column_phase: Vec<u8>,
-    /// Contains the phase for each challenge. Should have same length as num_challenges.
-    pub(crate) challenge_phase: Vec<u8>,
-
-    pub(crate) gates: Vec<GateV2Backend<F>>,
-
-    // Permutation argument for performing equality constraints
-    pub(crate) permutation: permutation::Argument,
-
-    // Vector of lookup arguments, where each corresponds to a sequence of
-    // input expressions and a sequence of table expressions involved in the lookup.
-    pub(crate) lookups: Vec<halo2_middleware::lookup::ArgumentV2<F>>,
-
-    // Vector of shuffle arguments, where each corresponds to a sequence of
-    // input expressions and a sequence of shuffle expressions involved in the shuffle.
-    pub(crate) shuffles: Vec<halo2_middleware::shuffle::ArgumentV2<F>>,
-
-    // List of indexes of Fixed columns which are associated to a circuit-general Column tied to their annotation.
-    pub(crate) general_column_annotations: HashMap<metadata::Column, String>,
+impl<F: Field> From<ConstraintSystem<F>> for ConstraintSystemV2Backend<F> {
+    fn from(cs: ConstraintSystem<F>) -> Self {
+        ConstraintSystemV2Backend {
+            num_fixed_columns: cs.num_fixed_columns,
+            num_advice_columns: cs.num_advice_columns,
+            num_instance_columns: cs.num_instance_columns,
+            num_challenges: cs.num_challenges,
+            unblinded_advice_columns: cs.unblinded_advice_columns.clone(),
+            advice_column_phase: cs.advice_column_phase.iter().map(|p| p.0).collect(),
+            challenge_phase: cs.challenge_phase.iter().map(|p| p.0).collect(),
+            gates: cs
+                .gates
+                .iter()
+                .map(|g| {
+                    g.polys.clone().into_iter().enumerate().map(|(i, e)| {
+                        let name = match g.constraint_name(i) {
+                            "" => g.name.clone(),
+                            constraint_name => format!("{}:{}", g.name, constraint_name),
+                        };
+                        GateV2Backend {
+                            name,
+                            poly: e.into(),
+                        }
+                    })
+                })
+                .flatten()
+                .collect(),
+            permutation: halo2_middleware::permutation::ArgumentV2 {
+                columns: cs.permutation.columns.clone(),
+            },
+            lookups: cs
+                .lookups
+                .iter()
+                .map(|l| halo2_middleware::lookup::ArgumentV2 {
+                    name: l.name.clone(),
+                    input_expressions: l
+                        .input_expressions
+                        .clone()
+                        .into_iter()
+                        .map(|e| e.into())
+                        .collect(),
+                    table_expressions: l
+                        .table_expressions
+                        .clone()
+                        .into_iter()
+                        .map(|e| e.into())
+                        .collect(),
+                })
+                .collect(),
+            shuffles: cs
+                .shuffles
+                .iter()
+                .map(|s| halo2_middleware::shuffle::ArgumentV2 {
+                    name: s.name.clone(),
+                    input_expressions: s
+                        .input_expressions
+                        .clone()
+                        .into_iter()
+                        .map(|e| e.into())
+                        .collect(),
+                    shuffle_expressions: s
+                        .shuffle_expressions
+                        .clone()
+                        .into_iter()
+                        .map(|e| e.into())
+                        .collect(),
+                })
+                .collect(),
+            general_column_annotations: cs.general_column_annotations.clone(),
+        }
+    }
 }
 
+/*
 impl<F: Field> Into<ConstraintSystemV2Backend<F>> for ConstraintSystem<F> {
     fn into(self) -> ConstraintSystemV2Backend<F> {
         ConstraintSystemV2Backend {
@@ -1443,6 +1476,7 @@ impl<F: Field> Into<ConstraintSystemV2Backend<F>> for ConstraintSystem<F> {
         }
     }
 }
+*/
 
 /// Witness calculator.  Frontend function
 #[derive(Debug)]
@@ -1626,116 +1660,121 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
     ))
 }
 
-impl<F: Field> ConstraintSystemV2Backend<F> {
-    /// Collect queries used in gates while mapping those gates to equivalent ones with indexed
-    /// query references in the expressions.
-    fn collect_queries_gates(&self, queries: &mut QueriesMap) -> Vec<Gate<F>> {
-        self.gates
-            .iter()
-            .map(|gate| Gate {
-                name: gate.name.clone(),
-                constraint_names: Vec::new(),
-                polys: vec![queries.as_expression(gate.polynomial())],
-                queried_selectors: Vec::new(), // Unused?
-                queried_cells: Vec::new(),     // Unused?
-            })
-            .collect()
-    }
+/// Collect queries used in gates while mapping those gates to equivalent ones with indexed
+/// query references in the expressions.
+fn cs2_collect_queries_gates<F: Field>(
+    cs2: &ConstraintSystemV2Backend<F>,
+    queries: &mut QueriesMap,
+) -> Vec<Gate<F>> {
+    cs2.gates
+        .iter()
+        .map(|gate| Gate {
+            name: gate.name.clone(),
+            constraint_names: Vec::new(),
+            polys: vec![queries.as_expression(gate.polynomial())],
+            queried_selectors: Vec::new(), // Unused?
+            queried_cells: Vec::new(),     // Unused?
+        })
+        .collect()
+}
 
-    /// Collect queries used in lookups while mapping those lookups to equivalent ones with indexed
-    /// query references in the expressions.
-    fn collect_queries_lookups(&self, queries: &mut QueriesMap) -> Vec<lookup::Argument<F>> {
-        self.lookups
-            .iter()
-            .map(|lookup| lookup::Argument {
-                name: lookup.name.clone(),
-                input_expressions: lookup
-                    .input_expressions
-                    .iter()
-                    .map(|e| queries.as_expression(e))
-                    .collect(),
-                table_expressions: lookup
-                    .table_expressions
-                    .iter()
-                    .map(|e| queries.as_expression(e))
-                    .collect(),
-            })
-            .collect()
-    }
+/// Collect queries used in lookups while mapping those lookups to equivalent ones with indexed
+/// query references in the expressions.
+fn cs2_collect_queries_lookups<F: Field>(
+    cs2: &ConstraintSystemV2Backend<F>,
+    queries: &mut QueriesMap,
+) -> Vec<lookup::Argument<F>> {
+    cs2.lookups
+        .iter()
+        .map(|lookup| lookup::Argument {
+            name: lookup.name.clone(),
+            input_expressions: lookup
+                .input_expressions
+                .iter()
+                .map(|e| queries.as_expression(e))
+                .collect(),
+            table_expressions: lookup
+                .table_expressions
+                .iter()
+                .map(|e| queries.as_expression(e))
+                .collect(),
+        })
+        .collect()
+}
 
-    /// Collect queries used in shuffles while mapping those lookups to equivalent ones with indexed
-    /// query references in the expressions.
-    fn collect_queries_shuffles(&self, queries: &mut QueriesMap) -> Vec<shuffle::Argument<F>> {
-        self.shuffles
-            .iter()
-            .map(|shuffle| shuffle::Argument {
-                name: shuffle.name.clone(),
-                input_expressions: shuffle
-                    .input_expressions
-                    .iter()
-                    .map(|e| queries.as_expression(e))
-                    .collect(),
-                shuffle_expressions: shuffle
-                    .shuffle_expressions
-                    .iter()
-                    .map(|e| queries.as_expression(e))
-                    .collect(),
-            })
-            .collect()
-    }
+/// Collect queries used in shuffles while mapping those lookups to equivalent ones with indexed
+/// query references in the expressions.
+fn cs2_collect_queries_shuffles<F: Field>(
+    cs2: &ConstraintSystemV2Backend<F>,
+    queries: &mut QueriesMap,
+) -> Vec<shuffle::Argument<F>> {
+    cs2.shuffles
+        .iter()
+        .map(|shuffle| shuffle::Argument {
+            name: shuffle.name.clone(),
+            input_expressions: shuffle
+                .input_expressions
+                .iter()
+                .map(|e| queries.as_expression(e))
+                .collect(),
+            shuffle_expressions: shuffle
+                .shuffle_expressions
+                .iter()
+                .map(|e| queries.as_expression(e))
+                .collect(),
+        })
+        .collect()
+}
 
-    /// Collect all queries used in the expressions of gates, lookups and shuffles.  Map the
-    /// expressions of gates, lookups and shuffles into equivalent ones with indexed query
-    /// references.
-    pub(crate) fn collect_queries(
-        &self,
-    ) -> (
-        Queries,
-        Vec<Gate<F>>,
-        Vec<lookup::Argument<F>>,
-        Vec<shuffle::Argument<F>>,
-    ) {
-        let mut queries = QueriesMap {
-            advice_map: HashMap::new(),
-            instance_map: HashMap::new(),
-            fixed_map: HashMap::new(),
-            advice: Vec::new(),
-            instance: Vec::new(),
-            fixed: Vec::new(),
+/// Collect all queries used in the expressions of gates, lookups and shuffles.  Map the
+/// expressions of gates, lookups and shuffles into equivalent ones with indexed query
+/// references.
+pub(crate) fn collect_queries<F: Field>(
+    cs2: &ConstraintSystemV2Backend<F>,
+) -> (
+    Queries,
+    Vec<Gate<F>>,
+    Vec<lookup::Argument<F>>,
+    Vec<shuffle::Argument<F>>,
+) {
+    let mut queries = QueriesMap {
+        advice_map: HashMap::new(),
+        instance_map: HashMap::new(),
+        fixed_map: HashMap::new(),
+        advice: Vec::new(),
+        instance: Vec::new(),
+        fixed: Vec::new(),
+    };
+
+    let gates = cs2_collect_queries_gates(cs2, &mut queries);
+    let lookups = cs2_collect_queries_lookups(cs2, &mut queries);
+    let shuffles = cs2_collect_queries_shuffles(cs2, &mut queries);
+
+    // Each column used in a copy constraint involves a query at rotation current.
+    for column in &cs2.permutation.columns {
+        match column.column_type {
+            Any::Instance => {
+                queries.add_instance(Column::new(column.index(), Instance), Rotation::cur())
+            }
+            Any::Fixed => queries.add_fixed(Column::new(column.index(), Fixed), Rotation::cur()),
+            Any::Advice(advice) => {
+                queries.add_advice(Column::new(column.index(), advice), Rotation::cur())
+            }
         };
-
-        let gates = self.collect_queries_gates(&mut queries);
-        let lookups = self.collect_queries_lookups(&mut queries);
-        let shuffles = self.collect_queries_shuffles(&mut queries);
-
-        // Each column used in a copy constraint involves a query at rotation current.
-        for column in self.permutation.get_columns() {
-            match column.column_type {
-                Any::Instance => {
-                    queries.add_instance(Column::new(column.index(), Instance), Rotation::cur())
-                }
-                Any::Fixed => {
-                    queries.add_fixed(Column::new(column.index(), Fixed), Rotation::cur())
-                }
-                Any::Advice(advice) => {
-                    queries.add_advice(Column::new(column.index(), advice), Rotation::cur())
-                }
-            };
-        }
-
-        let mut num_advice_queries = vec![0; self.num_advice_columns];
-        for (column, _) in queries.advice.iter() {
-            num_advice_queries[column.index()] += 1;
-        }
-
-        let queries = Queries {
-            advice: queries.advice,
-            instance: queries.instance,
-            fixed: queries.fixed,
-            num_advice_queries,
-        };
-        (queries, gates, lookups, shuffles)
     }
+
+    let mut num_advice_queries = vec![0; cs2.num_advice_columns];
+    for (column, _) in queries.advice.iter() {
+        num_advice_queries[column.index()] += 1;
+    }
+
+    let queries = Queries {
+        advice: queries.advice,
+        instance: queries.instance,
+        fixed: queries.fixed,
+        num_advice_queries,
+    };
+    (queries, gates, lookups, shuffles)
 }
 
 /// This is a description of the circuit environment, such as the gate, column and
@@ -1793,7 +1832,7 @@ pub struct ConstraintSystem<F: Field> {
 
 impl<F: Field> From<ConstraintSystemV2Backend<F>> for ConstraintSystem<F> {
     fn from(cs2: ConstraintSystemV2Backend<F>) -> Self {
-        let (queries, gates, lookups, shuffles) = cs2.collect_queries();
+        let (queries, gates, lookups, shuffles) = collect_queries(&cs2);
         ConstraintSystem {
             num_fixed_columns: cs2.num_fixed_columns,
             num_advice_columns: cs2.num_advice_columns,
@@ -1813,7 +1852,7 @@ impl<F: Field> From<ConstraintSystemV2Backend<F>> for ConstraintSystem<F> {
             num_advice_queries: queries.num_advice_queries,
             instance_queries: queries.instance,
             fixed_queries: queries.fixed,
-            permutation: cs2.permutation,
+            permutation: cs2.permutation.into(),
             lookups,
             shuffles,
             general_column_annotations: cs2.general_column_annotations,

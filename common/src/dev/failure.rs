@@ -50,7 +50,10 @@ impl fmt::Display for FailureLocation {
 
 impl FailureLocation {
     /// Returns a `DebugColumn` from Column metadata and `&self`.
-    pub(super) fn get_debug_column(&self, metadata: metadata::Column) -> DebugColumn {
+    pub(super) fn get_debug_column(
+        &self,
+        metadata: halo2_middleware::metadata::Column,
+    ) -> DebugColumn {
         match self {
             Self::InRegion { region, .. } => {
                 DebugColumn::from((metadata, region.column_annotations.as_ref()))

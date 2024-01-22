@@ -10,6 +10,7 @@ use crate::{
     SerdeFormat,
 };
 use halo2_middleware::circuit::{Any, Column};
+use halo2_middleware::permutation::ArgumentV2;
 
 pub(crate) mod keygen;
 pub(crate) mod prover;
@@ -24,6 +25,14 @@ use std::io;
 pub struct Argument {
     /// A sequence of columns involved in the argument.
     pub(super) columns: Vec<Column<Any>>,
+}
+
+impl From<ArgumentV2> for Argument {
+    fn from(arg: ArgumentV2) -> Self {
+        Self {
+            columns: arg.columns.clone(),
+        }
+    }
 }
 
 impl Argument {

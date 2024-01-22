@@ -6,9 +6,9 @@ use std::fmt::{self, Debug};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Column {
     /// The type of the column.
-    pub(super) column_type: Any,
+    pub column_type: Any,
     /// The index of the column.
-    pub(super) index: usize,
+    pub index: usize,
 }
 
 impl Column {

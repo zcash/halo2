@@ -6,9 +6,7 @@ use ff::{Field, FromUniformBytes};
 use group::Curve;
 
 use super::{
-    circuit::{
-        compile_circuit, Assignment, Circuit, CompiledCircuitV2, ConstraintSystem, Selector,
-    },
+    circuit::{compile_circuit, Assignment, Circuit, ConstraintSystem, Selector},
     evaluation::Evaluator,
     permutation, Assigned, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
 };
@@ -20,7 +18,9 @@ use crate::{
         EvaluationDomain,
     },
 };
-use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
+use halo2_middleware::circuit::{
+    Advice, Any, Challenge, Column, CompiledCircuitV2, Fixed, Instance,
+};
 
 pub(crate) fn create_domain<C, ConcreteCircuit>(
     k: u32,
@@ -221,7 +221,7 @@ where
 
     let permutation_vk = permutation::keygen::Assembly::new_from_assembly_mid(
         params.n() as usize,
-        &cs.permutation,
+        &cs2.permutation,
         &circuit.preprocessing.permutation,
     )?
     .build_vk(params, &domain, &cs.permutation);
@@ -321,7 +321,7 @@ where
         &cs.permutation,
         &circuit.preprocessing.permutation,
     )?
-    .build_pk(params, &vk.domain, &cs.permutation);
+    .build_pk(params, &vk.domain, &cs.permutation.clone().into());
 
     // Compute l_0(X)
     // TODO: this can be done more efficiently

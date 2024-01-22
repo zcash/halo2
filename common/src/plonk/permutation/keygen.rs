@@ -11,7 +11,7 @@ use crate::{
     },
 };
 use halo2_middleware::circuit::{Any, Column};
-use halo2_middleware::permutation::{AssemblyMid, Cell};
+use halo2_middleware::permutation::{ArgumentV2, AssemblyMid, Cell};
 
 #[cfg(feature = "thread-safe-region")]
 use crate::multicore::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
@@ -87,10 +87,10 @@ impl AssemblyFront {
 impl Assembly {
     pub(crate) fn new_from_assembly_mid(
         n: usize,
-        p: &Argument,
+        p: &ArgumentV2,
         a: &AssemblyMid,
     ) -> Result<Self, Error> {
-        let mut assembly = Self::new(n, p);
+        let mut assembly = Self::new(n, &p.clone().into());
         for copy in &a.copies {
             assembly.copy(copy.0.column, copy.0.row, copy.1.column, copy.1.row)?;
         }
