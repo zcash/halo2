@@ -3,9 +3,6 @@ use halo2_middleware::circuit::ExpressionMid;
 use halo2_middleware::ff::Field;
 use std::fmt::{self, Debug};
 
-pub mod prover;
-pub mod verifier;
-
 /// Expressions involved in a lookup argument, with a name as metadata.
 #[derive(Clone)]
 pub struct Argument<F: Field> {

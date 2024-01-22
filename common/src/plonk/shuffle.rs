@@ -3,9 +3,6 @@ use halo2_middleware::circuit::ExpressionMid;
 use halo2_middleware::ff::Field;
 use std::fmt::{self, Debug};
 
-pub(crate) mod prover;
-pub(crate) mod verifier;
-
 /// Expressions involved in a shuffle argument, with a name as metadata.
 #[derive(Clone)]
 pub struct Argument<F: Field> {

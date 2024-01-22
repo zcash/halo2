@@ -6,19 +6,16 @@ use crate::{
         polynomial_slice_byte_length, read_polynomial_vec, write_polynomial_slice,
         SerdeCurveAffine, SerdePrimeField,
     },
+    plonk::Error,
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
     SerdeFormat,
 };
 use halo2_middleware::circuit::{Any, Column};
-use halo2_middleware::permutation::ArgumentV2;
-
-pub(crate) mod keygen;
-pub(crate) mod prover;
-pub(crate) mod verifier;
-
-pub use keygen::Assembly;
+use halo2_middleware::permutation::{ArgumentV2, Cell};
 
 use std::io;
+
+pub mod keygen;
 
 /// A permutation argument.
 #[derive(Debug, Clone)]
@@ -177,5 +174,53 @@ impl<C: CurveAffine> ProvingKey<C> {
         polynomial_slice_byte_length(&self.permutations)
             + polynomial_slice_byte_length(&self.polys)
             + polynomial_slice_byte_length(&self.cosets)
+    }
+}
+
+// TODO: Move to frontend
+#[derive(Clone, Debug)]
+pub struct AssemblyFront {
+    n: usize,
+    columns: Vec<Column<Any>>,
+    pub(crate) copies: Vec<(Cell, Cell)>,
+}
+
+impl AssemblyFront {
+    pub(crate) fn new(n: usize, p: &Argument) -> Self {
+        Self {
+            n,
+            columns: p.columns.clone(),
+            copies: Vec::new(),
+        }
+    }
+
+    pub(crate) fn copy(
+        &mut self,
+        left_column: Column<Any>,
+        left_row: usize,
+        right_column: Column<Any>,
+        right_row: usize,
+    ) -> Result<(), Error> {
+        if !self.columns.contains(&left_column) {
+            return Err(Error::ColumnNotInPermutation(left_column));
+        }
+        if !self.columns.contains(&right_column) {
+            return Err(Error::ColumnNotInPermutation(right_column));
+        }
+        // Check bounds
+        if left_row >= self.n || right_row >= self.n {
+            return Err(Error::BoundsFailure);
+        }
+        self.copies.push((
+            Cell {
+                column: left_column,
+                row: left_row,
+            },
+            Cell {
+                column: right_column,
+                row: right_row,
+            },
+        ));
+        Ok(())
     }
 }

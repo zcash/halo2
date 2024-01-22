@@ -36,53 +36,6 @@ pub struct Assembly {
     sizes: Vec<Vec<usize>>,
 }
 
-#[derive(Clone, Debug)]
-pub struct AssemblyFront {
-    n: usize,
-    columns: Vec<Column<Any>>,
-    pub(crate) copies: Vec<(Cell, Cell)>,
-}
-
-impl AssemblyFront {
-    pub(crate) fn new(n: usize, p: &Argument) -> Self {
-        Self {
-            n,
-            columns: p.columns.clone(),
-            copies: Vec::new(),
-        }
-    }
-
-    pub(crate) fn copy(
-        &mut self,
-        left_column: Column<Any>,
-        left_row: usize,
-        right_column: Column<Any>,
-        right_row: usize,
-    ) -> Result<(), Error> {
-        if !self.columns.contains(&left_column) {
-            return Err(Error::ColumnNotInPermutation(left_column));
-        }
-        if !self.columns.contains(&right_column) {
-            return Err(Error::ColumnNotInPermutation(right_column));
-        }
-        // Check bounds
-        if left_row >= self.n || right_row >= self.n {
-            return Err(Error::BoundsFailure);
-        }
-        self.copies.push((
-            Cell {
-                column: left_column,
-                row: left_row,
-            },
-            Cell {
-                column: right_column,
-                row: right_row,
-            },
-        ));
-        Ok(())
-    }
-}
-
 #[cfg(not(feature = "thread-safe-region"))]
 impl Assembly {
     pub(crate) fn new_from_assembly_mid(
