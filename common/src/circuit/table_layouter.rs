@@ -7,7 +7,8 @@ use std::{
 
 use halo2_middleware::ff::Field;
 
-use crate::plonk::{Assigned, Assignment, Error, TableColumn, TableError};
+use crate::plonk::{Assignment, Error, TableColumn, TableError};
+use halo2_middleware::plonk::Assigned;
 
 use super::Value;
 
@@ -117,7 +118,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
     }
 }
 
-pub(crate) fn compute_table_lengths<F: Debug>(
+pub fn compute_table_lengths<F: Debug>(
     default_and_assigned: &HashMap<TableColumn, (DefaultTableValue<F>, Vec<bool>)>,
 ) -> Result<usize, Error> {
     let column_lengths: Result<Vec<_>, Error> = default_and_assigned

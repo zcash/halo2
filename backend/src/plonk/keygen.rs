@@ -8,7 +8,7 @@ use halo2_middleware::ff::{Field, FromUniformBytes};
 use super::{
     circuit::{compile_circuit, Assignment, Circuit, ConstraintSystem, Selector},
     evaluation::Evaluator,
-    permutation, Assigned, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
+    permutation, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
 };
 use crate::{
     arithmetic::{parallelize, CurveAffine},
@@ -21,6 +21,7 @@ use crate::{
 use halo2_middleware::circuit::{
     Advice, Any, Challenge, Column, CompiledCircuitV2, Fixed, Instance,
 };
+use halo2_middleware::plonk::Assigned;
 
 pub(crate) fn create_domain<C, ConcreteCircuit>(
     k: u32,

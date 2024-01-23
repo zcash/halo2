@@ -5,7 +5,7 @@ use halo2_middleware::ff::{Field, FromUniformBytes};
 
 use super::{
     circuit::{compile_circuit, Assignment, Circuit, ConstraintSystem, Selector},
-    permutation, Assigned, Error, LagrangeCoeff, Polynomial,
+    permutation, Error, LagrangeCoeff, Polynomial,
 };
 use crate::{
     arithmetic::{parallelize, CurveAffine},
@@ -18,17 +18,18 @@ use crate::{
 use halo2_middleware::circuit::{
     Advice, Any, Challenge, Column, CompiledCircuitV2, Fixed, Instance,
 };
+use halo2_middleware::plonk::Assigned;
 
 /// Assembly to be used in circuit synthesis.
 #[derive(Debug)]
-pub(crate) struct Assembly<F: Field> {
-    pub(crate) k: u32,
-    pub(crate) fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
-    pub(crate) permutation: permutation::AssemblyFront,
-    pub(crate) selectors: Vec<Vec<bool>>,
+pub struct Assembly<F: Field> {
+    pub k: u32,
+    pub fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
+    pub permutation: permutation::AssemblyFront,
+    pub selectors: Vec<Vec<bool>>,
     // A range of available rows for assignment and copies.
-    pub(crate) usable_rows: Range<usize>,
-    pub(crate) _marker: std::marker::PhantomData<F>,
+    pub usable_rows: Range<usize>,
+    pub _marker: std::marker::PhantomData<F>,
 }
 
 impl<F: Field> Assignment<F> for Assembly<F> {

@@ -7,6 +7,9 @@ use super::{
     VerifyingKey,
 };
 use crate::arithmetic::compute_inner_product;
+use crate::plonk::lookup::verifier::lookup_read_permuted_commitments;
+use crate::plonk::permutation::verifier::permutation_read_product_commitments;
+use crate::plonk::shuffle::verifier::shuffle_read_product_commitments;
 use crate::poly::commitment::{CommitmentScheme, Verifier};
 use crate::poly::VerificationStrategy;
 use crate::poly::{
@@ -150,7 +153,7 @@ where
             vk.cs
                 .lookups
                 .iter()
-                .map(|argument| argument.read_permuted_commitments(transcript))
+                .map(|argument| lookup_read_permuted_commitments(transcript))
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -164,7 +167,7 @@ where
     let permutations_committed = (0..num_proofs)
         .map(|_| {
             // Hash each permutation product commitment
-            vk.cs.permutation.read_product_commitments(vk, transcript)
+            permutation_read_product_commitments(&vk.cs.permutation, vk, transcript)
         })
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -185,7 +188,7 @@ where
             vk.cs
                 .shuffles
                 .iter()
-                .map(|argument| argument.read_product_commitment(transcript))
+                .map(|argument| shuffle_read_product_commitment(transcript))
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;

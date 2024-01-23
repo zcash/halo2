@@ -55,39 +55,39 @@ pub struct CircuitCost<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> {
 /// Region implementation used by Layout
 #[allow(dead_code)]
 #[derive(Debug)]
-pub(crate) struct LayoutRegion {
+pub struct LayoutRegion {
     /// The name of the region. Not required to be unique.
-    pub(crate) name: String,
+    pub name: String,
     /// The columns used by this region.
-    pub(crate) columns: HashSet<RegionColumn>,
+    pub columns: HashSet<RegionColumn>,
     /// The row that this region starts on, if known.
-    pub(crate) offset: Option<usize>,
+    pub offset: Option<usize>,
     /// The number of rows that this region takes up.
-    pub(crate) rows: usize,
+    pub rows: usize,
     /// The cells assigned in this region.
-    pub(crate) cells: Vec<(RegionColumn, usize)>,
+    pub cells: Vec<(RegionColumn, usize)>,
 }
 
 /// Cost and graphing layouter
 #[derive(Default, Debug)]
-pub(crate) struct Layout {
+pub struct Layout {
     /// k = 1 << n
-    pub(crate) k: u32,
+    pub k: u32,
     /// Regions of the layout
-    pub(crate) regions: Vec<LayoutRegion>,
+    pub regions: Vec<LayoutRegion>,
     current_region: Option<usize>,
     /// Total row count
-    pub(crate) total_rows: usize,
+    pub total_rows: usize,
     /// Total advice rows
-    pub(crate) total_advice_rows: usize,
+    pub total_advice_rows: usize,
     /// Total fixed rows
-    pub(crate) total_fixed_rows: usize,
+    pub total_fixed_rows: usize,
     /// Any cells assigned outside of a region.
-    pub(crate) loose_cells: Vec<(RegionColumn, usize)>,
+    pub loose_cells: Vec<(RegionColumn, usize)>,
     /// Pairs of cells between which we have equality constraints.
-    pub(crate) equality: Vec<(Column<Any>, usize, Column<Any>, usize)>,
+    pub equality: Vec<(Column<Any>, usize, Column<Any>, usize)>,
     /// Selector assignments used for optimization pass
-    pub(crate) selectors: Vec<Vec<bool>>,
+    pub selectors: Vec<Vec<bool>>,
 }
 
 impl Layout {

@@ -52,7 +52,7 @@ impl From<io::Error> for Error {
 
 impl Error {
     /// Constructs an `Error::NotEnoughRowsAvailable`.
-    pub(crate) fn not_enough_rows_available(current_k: u32) -> Self {
+    pub fn not_enough_rows_available(current_k: u32) -> Self {
         Error::NotEnoughRowsAvailable { current_k }
     }
 }

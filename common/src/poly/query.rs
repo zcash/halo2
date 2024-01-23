@@ -20,11 +20,11 @@ pub trait Query<F>: Sized + Clone + Send + Sync {
 #[derive(Debug, Clone, Copy)]
 pub struct ProverQuery<'com, C: CurveAffine> {
     /// Point at which polynomial is queried
-    pub(crate) point: C::Scalar,
+    pub point: C::Scalar,
     /// Coefficients of polynomial
-    pub(crate) poly: &'com Polynomial<C::Scalar, Coeff>,
+    pub poly: &'com Polynomial<C::Scalar, Coeff>,
     /// Blinding factor of polynomial
-    pub(crate) blind: Blind<C::Scalar>,
+    pub blind: Blind<C::Scalar>,
 }
 
 impl<'com, C> ProverQuery<'com, C>
@@ -44,8 +44,8 @@ where
 #[doc(hidden)]
 #[derive(Copy, Clone)]
 pub struct PolynomialPointer<'com, C: CurveAffine> {
-    pub(crate) poly: &'com Polynomial<C::Scalar, Coeff>,
-    pub(crate) blind: Blind<C::Scalar>,
+    pub poly: &'com Polynomial<C::Scalar, Coeff>,
+    pub blind: Blind<C::Scalar>,
 }
 
 impl<'com, C: CurveAffine> PartialEq for PolynomialPointer<'com, C> {
@@ -96,11 +96,11 @@ impl<'com, C: CurveAffine, M: MSM<C>> VerifierQuery<'com, C, M> {
 #[derive(Debug, Clone, Copy)]
 pub struct VerifierQuery<'com, C: CurveAffine, M: MSM<C>> {
     /// Point at which polynomial is queried
-    pub(crate) point: C::Scalar,
+    pub point: C::Scalar,
     /// Commitment to polynomial
-    pub(crate) commitment: CommitmentReference<'com, C, M>,
+    pub commitment: CommitmentReference<'com, C, M>,
     /// Evaluation of polynomial at query point
-    pub(crate) eval: C::Scalar,
+    pub eval: C::Scalar,
 }
 
 impl<'com, C, M> VerifierQuery<'com, C, M>

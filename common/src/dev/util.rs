@@ -6,7 +6,7 @@ use crate::plonk::{AdviceQuery, Expression, FixedQuery, Gate, InstanceQuery, Vir
 use halo2_middleware::circuit::{Advice, Any, Column, ColumnType};
 use halo2_middleware::poly::Rotation;
 
-pub(crate) struct AnyQuery {
+pub struct AnyQuery {
     /// Query index
     pub index: Option<usize>,
     /// Column type

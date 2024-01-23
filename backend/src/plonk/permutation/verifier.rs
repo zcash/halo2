@@ -5,10 +5,11 @@ use super::super::{ChallengeBeta, ChallengeGamma, ChallengeX};
 use super::{Argument, VerifyingKey};
 use crate::{
     arithmetic::CurveAffine,
-    plonk::{self, Error},
+    plonk::{self},
     poly::{commitment::MSM, VerifierQuery},
     transcript::{EncodedChallenge, TranscriptRead},
 };
+use halo2_common::plonk::Error;
 use halo2_middleware::circuit::Any;
 use halo2_middleware::poly::Rotation;
 
@@ -31,28 +32,26 @@ pub struct Evaluated<C: CurveAffine> {
     sets: Vec<EvaluatedSet<C>>,
 }
 
-impl Argument {
-    pub(crate) fn read_product_commitments<
-        C: CurveAffine,
-        E: EncodedChallenge<C>,
-        T: TranscriptRead<C, E>,
-    >(
-        &self,
-        vk: &plonk::VerifyingKey<C>,
-        transcript: &mut T,
-    ) -> Result<Committed<C>, Error> {
-        let chunk_len = vk.cs_degree - 2;
+pub(crate) fn permutation_read_product_commitments<
+    C: CurveAffine,
+    E: EncodedChallenge<C>,
+    T: TranscriptRead<C, E>,
+>(
+    arg: &Argument,
+    vk: &plonk::VerifyingKey<C>,
+    transcript: &mut T,
+) -> Result<Committed<C>, Error> {
+    let chunk_len = vk.cs_degree - 2;
 
-        let permutation_product_commitments = self
-            .columns
-            .chunks(chunk_len)
-            .map(|_| transcript.read_point())
-            .collect::<Result<Vec<_>, _>>()?;
+    let permutation_product_commitments = arg
+        .columns
+        .chunks(chunk_len)
+        .map(|_| transcript.read_point())
+        .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(Committed {
-            permutation_product_commitments,
-        })
-    }
+    Ok(Committed {
+        permutation_product_commitments,
+    })
 }
 
 impl<C: CurveAffine> VerifyingKey<C> {

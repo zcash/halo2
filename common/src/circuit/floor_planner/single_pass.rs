@@ -11,9 +11,10 @@ use crate::{
         table_layouter::{compute_table_lengths, SimpleTableLayouter},
         Cell, Layouter, Region, RegionIndex, RegionStart, Table, Value,
     },
-    plonk::{Assigned, Assignment, Circuit, Error, FloorPlanner, Selector, TableColumn},
+    plonk::{Assignment, Circuit, Error, FloorPlanner, Selector, TableColumn},
 };
 use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
+use halo2_middleware::plonk::Assigned;
 
 /// A simple [`FloorPlanner`] that performs minimal optimizations.
 ///

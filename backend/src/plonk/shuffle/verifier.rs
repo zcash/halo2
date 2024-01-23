@@ -21,19 +21,17 @@ pub struct Evaluated<C: CurveAffine> {
     product_next_eval: C::Scalar,
 }
 
-impl<F: Field> Argument<F> {
-    pub(in crate::plonk) fn read_product_commitment<
-        C: CurveAffine<ScalarExt = F>,
-        E: EncodedChallenge<C>,
-        T: TranscriptRead<C, E>,
-    >(
-        &self,
-        transcript: &mut T,
-    ) -> Result<Committed<C>, Error> {
-        let product_commitment = transcript.read_point()?;
+pub(in crate::plonk) fn shuffle_read_product_commitment<
+    F: Field,
+    C: CurveAffine<ScalarExt = F>,
+    E: EncodedChallenge<C>,
+    T: TranscriptRead<C, E>,
+>(
+    transcript: &mut T,
+) -> Result<Committed<C>, Error> {
+    let product_commitment = transcript.read_point()?;
 
-        Ok(Committed { product_commitment })
-    }
+    Ok(Committed { product_commitment })
 }
 
 impl<C: CurveAffine> Committed<C> {

@@ -1,4 +1,4 @@
-use super::{lookup, permutation, shuffle, Assigned, Error, Queries};
+use super::{lookup, permutation, shuffle, Error, Queries};
 use crate::circuit::layouter::SyncDeps;
 use crate::{
     circuit::{Layouter, Region, Value},
@@ -13,6 +13,7 @@ use halo2_middleware::circuit::{
 };
 use halo2_middleware::ff::Field;
 use halo2_middleware::metadata;
+use halo2_middleware::plonk::Assigned;
 use halo2_middleware::poly::Rotation;
 use sealed::SealedPhase;
 use std::collections::BTreeSet;
@@ -31,7 +32,7 @@ mod compress_selectors;
 pub mod sealed {
     /// Phase of advice column
     #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-    pub struct Phase(pub(crate) u8);
+    pub struct Phase(pub u8);
 
     impl Phase {
         pub fn prev(&self) -> Option<Phase> {
@@ -138,7 +139,7 @@ impl SealedPhase for super::ThirdPhase {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct Selector(pub(crate) usize, bool);
+pub struct Selector(pub usize, bool);
 
 impl Selector {
     /// Enable this selector at the given offset within the given region.
@@ -167,11 +168,11 @@ impl Selector {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct FixedQuery {
     /// Query index
-    pub(crate) index: Option<usize>,
+    pub index: Option<usize>,
     /// Column index
-    pub(crate) column_index: usize,
+    pub column_index: usize,
     /// Rotation of this query
-    pub(crate) rotation: Rotation,
+    pub rotation: Rotation,
 }
 
 impl FixedQuery {
@@ -190,13 +191,13 @@ impl FixedQuery {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct AdviceQuery {
     /// Query index
-    pub(crate) index: Option<usize>,
+    pub index: Option<usize>,
     /// Column index
-    pub(crate) column_index: usize,
+    pub column_index: usize,
     /// Rotation of this query
-    pub(crate) rotation: Rotation,
+    pub rotation: Rotation,
     /// Phase of this advice column
-    pub(crate) phase: sealed::Phase,
+    pub phase: sealed::Phase,
 }
 
 impl AdviceQuery {
@@ -220,11 +221,11 @@ impl AdviceQuery {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct InstanceQuery {
     /// Query index
-    pub(crate) index: Option<usize>,
+    pub index: Option<usize>,
     /// Column index
-    pub(crate) column_index: usize,
+    pub column_index: usize,
     /// Rotation of this query
-    pub(crate) rotation: Rotation,
+    pub rotation: Rotation,
 }
 
 impl InstanceQuery {
@@ -1077,14 +1078,14 @@ impl<F: Field> Product<Self> for Expression<F> {
 /// Represents an index into a vector where each entry corresponds to a distinct
 /// point that polynomials are queried at.
 #[derive(Copy, Clone, Debug)]
-pub(crate) struct PointIndex(pub usize);
+pub struct PointIndex(pub usize);
 
 /// A "virtual cell" is a PLONK cell that has been queried at a particular relative offset
 /// within a custom gate.
 #[derive(Clone, Debug)]
 pub struct VirtualCell {
-    pub(crate) column: Column<Any>,
-    pub(crate) rotation: Rotation,
+    pub column: Column<Any>,
+    pub rotation: Rotation,
 }
 
 impl<Col: Into<Column<Any>>> From<(Col, Rotation)> for VirtualCell {
@@ -1243,11 +1244,11 @@ impl<F: Field> Gate<F> {
         &self.polys
     }
 
-    pub(crate) fn queried_selectors(&self) -> &[Selector] {
+    pub fn queried_selectors(&self) -> &[Selector] {
         &self.queried_selectors
     }
 
-    pub(crate) fn queried_cells(&self) -> &[VirtualCell] {
+    pub fn queried_cells(&self) -> &[VirtualCell] {
         &self.queried_cells
     }
 }
@@ -1479,15 +1480,15 @@ impl<F: Field> Into<ConstraintSystemV2Backend<F>> for ConstraintSystem<F> {
 */
 
 // TODO: Move to frontend
-pub(crate) struct WitnessCollection<'a, F: Field> {
-    pub(crate) k: u32,
-    pub(crate) current_phase: sealed::Phase,
-    pub(crate) advice: Vec<Vec<Assigned<F>>>,
-    // pub(crate) unblinded_advice: HashSet<usize>,
-    pub(crate) challenges: &'a HashMap<usize, F>,
-    pub(crate) instances: &'a [&'a [F]],
-    pub(crate) usable_rows: RangeTo<usize>,
-    pub(crate) _marker: std::marker::PhantomData<F>,
+pub struct WitnessCollection<'a, F: Field> {
+    pub k: u32,
+    pub current_phase: sealed::Phase,
+    pub advice: Vec<Vec<Assigned<F>>>,
+    // pub unblinded_advice: HashSet<usize>,
+    pub challenges: &'a HashMap<usize, F>,
+    pub instances: &'a [&'a [F]],
+    pub usable_rows: RangeTo<usize>,
+    pub _marker: std::marker::PhantomData<F>,
 }
 
 impl<'a, F: Field> Assignment<F> for WitnessCollection<'a, F> {
@@ -1869,7 +1870,7 @@ fn cs2_collect_queries_shuffles<F: Field>(
 /// Collect all queries used in the expressions of gates, lookups and shuffles.  Map the
 /// expressions of gates, lookups and shuffles into equivalent ones with indexed query
 /// references.
-pub(crate) fn collect_queries<F: Field>(
+pub fn collect_queries<F: Field>(
     cs2: &ConstraintSystemV2Backend<F>,
 ) -> (
     Queries,
@@ -1921,53 +1922,53 @@ pub(crate) fn collect_queries<F: Field>(
 /// permutation arrangements.
 #[derive(Debug, Clone)]
 pub struct ConstraintSystem<F: Field> {
-    pub(crate) num_fixed_columns: usize,
-    pub(crate) num_advice_columns: usize,
-    pub(crate) num_instance_columns: usize,
-    pub(crate) num_selectors: usize,
-    pub(crate) num_challenges: usize,
+    pub num_fixed_columns: usize,
+    pub num_advice_columns: usize,
+    pub num_instance_columns: usize,
+    pub num_selectors: usize,
+    pub num_challenges: usize,
 
     /// Contains the index of each advice column that is left unblinded.
-    pub(crate) unblinded_advice_columns: Vec<usize>,
+    pub unblinded_advice_columns: Vec<usize>,
 
     /// Contains the phase for each advice column. Should have same length as num_advice_columns.
-    pub(crate) advice_column_phase: Vec<sealed::Phase>,
+    pub advice_column_phase: Vec<sealed::Phase>,
     /// Contains the phase for each challenge. Should have same length as num_challenges.
-    pub(crate) challenge_phase: Vec<sealed::Phase>,
+    pub challenge_phase: Vec<sealed::Phase>,
 
     /// This is a cached vector that maps virtual selectors to the concrete
     /// fixed column that they were compressed into. This is just used by dev
     /// tooling right now.
-    pub(crate) selector_map: Vec<Column<Fixed>>,
+    pub selector_map: Vec<Column<Fixed>>,
 
-    pub(crate) gates: Vec<Gate<F>>,
-    pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
+    pub gates: Vec<Gate<F>>,
+    pub advice_queries: Vec<(Column<Advice>, Rotation)>,
     // Contains an integer for each advice column
     // identifying how many distinct queries it has
     // so far; should be same length as num_advice_columns.
-    pub(crate) num_advice_queries: Vec<usize>,
-    pub(crate) instance_queries: Vec<(Column<Instance>, Rotation)>,
-    pub(crate) fixed_queries: Vec<(Column<Fixed>, Rotation)>,
+    pub num_advice_queries: Vec<usize>,
+    pub instance_queries: Vec<(Column<Instance>, Rotation)>,
+    pub fixed_queries: Vec<(Column<Fixed>, Rotation)>,
 
     // Permutation argument for performing equality constraints
-    pub(crate) permutation: permutation::Argument,
+    pub permutation: permutation::Argument,
 
     // Vector of lookup arguments, where each corresponds to a sequence of
     // input expressions and a sequence of table expressions involved in the lookup.
-    pub(crate) lookups: Vec<lookup::Argument<F>>,
+    pub lookups: Vec<lookup::Argument<F>>,
 
     // Vector of shuffle arguments, where each corresponds to a sequence of
     // input expressions and a sequence of shuffle expressions involved in the shuffle.
-    pub(crate) shuffles: Vec<shuffle::Argument<F>>,
+    pub shuffles: Vec<shuffle::Argument<F>>,
 
     // List of indexes of Fixed columns which are associated to a circuit-general Column tied to their annotation.
-    pub(crate) general_column_annotations: HashMap<metadata::Column, String>,
+    pub general_column_annotations: HashMap<metadata::Column, String>,
 
     // Vector of fixed columns, which can be used to store constant values
     // that are copied into advice columns.
-    pub(crate) constants: Vec<Column<Fixed>>,
+    pub constants: Vec<Column<Fixed>>,
 
-    pub(crate) minimum_degree: Option<usize>,
+    pub minimum_degree: Option<usize>,
 }
 
 impl<F: Field> From<ConstraintSystemV2Backend<F>> for ConstraintSystem<F> {
@@ -2236,7 +2237,7 @@ impl<F: Field> ConstraintSystem<F> {
         index
     }
 
-    pub(crate) fn query_advice_index(&mut self, column: Column<Advice>, at: Rotation) -> usize {
+    pub fn query_advice_index(&mut self, column: Column<Advice>, at: Rotation) -> usize {
         // Return existing query, if it exists
         for (index, advice_query) in self.advice_queries.iter().enumerate() {
             if advice_query == &(column, at) {
@@ -2279,7 +2280,7 @@ impl<F: Field> ConstraintSystem<F> {
         }
     }
 
-    pub(crate) fn get_advice_query_index(&self, column: Column<Advice>, at: Rotation) -> usize {
+    pub fn get_advice_query_index(&self, column: Column<Advice>, at: Rotation) -> usize {
         for (index, advice_query) in self.advice_queries.iter().enumerate() {
             if advice_query == &(column, at) {
                 return index;
@@ -2289,7 +2290,7 @@ impl<F: Field> ConstraintSystem<F> {
         panic!("get_advice_query_index called for non-existent query");
     }
 
-    pub(crate) fn get_fixed_query_index(&self, column: Column<Fixed>, at: Rotation) -> usize {
+    pub fn get_fixed_query_index(&self, column: Column<Fixed>, at: Rotation) -> usize {
         for (index, fixed_query) in self.fixed_queries.iter().enumerate() {
             if fixed_query == &(column, at) {
                 return index;
@@ -2299,7 +2300,7 @@ impl<F: Field> ConstraintSystem<F> {
         panic!("get_fixed_query_index called for non-existent query");
     }
 
-    pub(crate) fn get_instance_query_index(&self, column: Column<Instance>, at: Rotation) -> usize {
+    pub fn get_instance_query_index(&self, column: Column<Instance>, at: Rotation) -> usize {
         for (index, instance_query) in self.instance_queries.iter().enumerate() {
             if instance_query == &(column, at) {
                 return index;
@@ -2309,7 +2310,7 @@ impl<F: Field> ConstraintSystem<F> {
         panic!("get_instance_query_index called for non-existent query");
     }
 
-    pub(crate) fn get_any_query_index(&self, column: Column<Any>, at: Rotation) -> usize {
+    pub fn get_any_query_index(&self, column: Column<Any>, at: Rotation) -> usize {
         match column.column_type() {
             Any::Advice(_) => {
                 self.get_advice_query_index(Column::<Advice>::try_from(column).unwrap(), at)

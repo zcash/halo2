@@ -20,7 +20,7 @@ pub enum SerdeFormat {
 }
 
 // Keep this trait for compatibility with IPA serialization
-pub(crate) trait CurveRead: CurveAffine {
+pub trait CurveRead: CurveAffine {
     /// Reads a compressed element from the buffer and attempts to parse it
     /// using `from_bytes`.
     fn read<R: io::Read>(reader: &mut R) -> io::Result<Self> {

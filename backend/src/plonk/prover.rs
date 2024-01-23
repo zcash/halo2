@@ -4,10 +4,13 @@ use rand_core::RngCore;
 use std::collections::{BTreeSet, HashSet};
 use std::{collections::HashMap, iter};
 
-use crate::plonk::{lookup, permutation, shuffle, vanishing};
+use crate::plonk::lookup::prover::lookup_commit_permuted;
+use crate::plonk::permutation::prover::permutation_commit;
+use crate::plonk::shuffle::prover::shuffle_commit_product;
+use crate::plonk::{lookup, permutation, shuffle, vanishing, ProvingKey};
 use halo2_common::plonk::{
     circuit::{sealed, Assignment, Circuit, Selector},
-    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error, ProvingKey,
+    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
 };
 use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
 
@@ -15,7 +18,6 @@ use group::prime::PrimeCurveAffine;
 use halo2_common::{
     arithmetic::{eval_polynomial, CurveAffine},
     circuit::Value,
-    plonk::Assigned,
     poly::{
         commitment::{Blind, CommitmentScheme, Params, Prover},
         Basis, Coeff, LagrangeCoeff, Polynomial, ProverQuery,
@@ -25,6 +27,7 @@ use halo2_common::{
     poly::batch_invert_assigned,
     transcript::{EncodedChallenge, TranscriptWrite},
 };
+use halo2_middleware::plonk::Assigned;
 
 /// Collection of instance data used during proving for a single circuit proof.
 #[derive(Debug)]
@@ -452,7 +455,8 @@ impl<
                 meta.lookups
                     .iter()
                     .map(|lookup| {
-                        lookup.commit_permuted(
+                        lookup_commit_permuted(
+                            &lookup,
                             pk,
                             params,
                             domain,
@@ -487,7 +491,8 @@ impl<
             .iter()
             .zip(advice.iter())
             .map(|(instance, advice)| {
-                meta.permutation.commit(
+                permutation_commit(
+                    &meta.permutation,
                     params,
                     pk,
                     &pk.permutation,
@@ -523,7 +528,8 @@ impl<
                 meta.shuffles
                     .iter()
                     .map(|shuffle| {
-                        shuffle.commit_product(
+                        shuffle_commit_product(
+                            &shuffle,
                             pk,
                             params,
                             domain,

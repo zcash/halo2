@@ -4,10 +4,10 @@
 
 use crate::arithmetic::parallelize;
 use crate::helpers::SerdePrimeField;
-use crate::plonk::Assigned;
 use crate::SerdeFormat;
 
 use group::ff::{BatchInvert, Field};
+use halo2_middleware::plonk::Assigned;
 use halo2_middleware::poly::Rotation;
 use std::fmt::Debug;
 use std::io;
@@ -66,12 +66,12 @@ impl Basis for ExtendedLagrangeCoeff {}
 /// basis.
 #[derive(Clone, Debug)]
 pub struct Polynomial<F, B> {
-    pub(crate) values: Vec<F>,
-    pub(crate) _marker: PhantomData<B>,
+    pub values: Vec<F>,
+    pub _marker: PhantomData<B>,
 }
 
 impl<F: Clone, B> Polynomial<F, B> {
-    pub(crate) fn new_empty(size: usize, zero: F) -> Self {
+    pub fn new_empty(size: usize, zero: F) -> Self {
         Polynomial {
             values: vec![zero; size],
             _marker: PhantomData,
@@ -83,7 +83,7 @@ impl<F: Clone> Polynomial<F, LagrangeCoeff> {
     /// Obtains a polynomial in Lagrange form when given a vector of Lagrange
     /// coefficients of size `n`; panics if the provided vector is the wrong
     /// length.
-    pub(crate) fn new_lagrange_from_vec(values: Vec<F>) -> Polynomial<F, LagrangeCoeff> {
+    pub fn new_lagrange_from_vec(values: Vec<F>) -> Polynomial<F, LagrangeCoeff> {
         Polynomial {
             values,
             _marker: PhantomData,
@@ -169,7 +169,7 @@ impl<F, B> Polynomial<F, B> {
 
 impl<F: SerdePrimeField, B> Polynomial<F, B> {
     /// Reads polynomial from buffer using `SerdePrimeField::read`.  
-    pub(crate) fn read<R: io::Read>(reader: &mut R, format: SerdeFormat) -> io::Result<Self> {
+    pub fn read<R: io::Read>(reader: &mut R, format: SerdeFormat) -> io::Result<Self> {
         let mut poly_len = [0u8; 4];
         reader.read_exact(&mut poly_len)?;
         let poly_len = u32::from_be_bytes(poly_len);
@@ -184,11 +184,7 @@ impl<F: SerdePrimeField, B> Polynomial<F, B> {
     }
 
     /// Writes polynomial to buffer using `SerdePrimeField::write`.  
-    pub(crate) fn write<W: io::Write>(
-        &self,
-        writer: &mut W,
-        format: SerdeFormat,
-    ) -> io::Result<()> {
+    pub fn write<W: io::Write>(&self, writer: &mut W, format: SerdeFormat) -> io::Result<()> {
         writer.write_all(&(self.values.len() as u32).to_be_bytes())?;
         for value in self.values.iter() {
             value.write(writer, format)?;
@@ -227,7 +223,7 @@ pub fn batch_invert_assigned<F: Field>(
 }
 
 impl<F: Field> Polynomial<Assigned<F>, LagrangeCoeff> {
-    pub(crate) fn invert(
+    pub fn invert(
         &self,
         inv_denoms: impl Iterator<Item = F> + ExactSizeIterator,
     ) -> Polynomial<F, LagrangeCoeff> {

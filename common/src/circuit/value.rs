@@ -3,7 +3,8 @@ use std::ops::{Add, Mul, Neg, Sub};
 
 use group::ff::Field;
 
-use crate::plonk::{Assigned, Error};
+use crate::plonk::Error;
+use halo2_middleware::plonk::Assigned;
 
 /// A value that might exist within a circuit.
 ///
@@ -45,7 +46,7 @@ impl<V> Value<V> {
     /// Obtains the inner value for assigning into the circuit.
     ///
     /// Returns `Error::Synthesis` if this is [`Value::unknown()`].
-    pub(crate) fn assign(self) -> Result<V, Error> {
+    pub fn assign(self) -> Result<V, Error> {
         self.inner.ok_or(Error::Synthesis)
     }
 
@@ -64,7 +65,7 @@ impl<V> Value<V> {
     }
 
     /// ONLY FOR INTERNAL CRATE USAGE; DO NOT EXPOSE!
-    pub(crate) fn into_option(self) -> Option<V> {
+    pub fn into_option(self) -> Option<V> {
         self.inner
     }
 

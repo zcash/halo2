@@ -19,7 +19,7 @@ use std::io;
 #[derive(Debug, Clone)]
 pub struct Argument {
     /// A sequence of columns involved in the argument.
-    pub(super) columns: Vec<Column<Any>>,
+    pub columns: Vec<Column<Any>>,
 }
 
 impl From<ArgumentV2> for Argument {
@@ -31,14 +31,14 @@ impl From<ArgumentV2> for Argument {
 }
 
 impl Argument {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Argument { columns: vec![] }
     }
 
     /// Returns the minimum circuit degree required by the permutation argument.
     /// The argument may use larger degree gates depending on the actual
     /// circuit's degree and how many columns are involved in the permutation.
-    pub(crate) fn required_degree(&self) -> usize {
+    pub fn required_degree(&self) -> usize {
         // degree 2:
         // l_0(X) * (1 - z(X)) = 0
         //
@@ -73,7 +73,7 @@ impl Argument {
         3
     }
 
-    pub(crate) fn add_column(&mut self, column: Column<Any>) {
+    pub fn add_column(&mut self, column: Column<Any>) {
         if !self.columns.contains(&column) {
             self.columns.push(column);
         }
@@ -90,11 +90,11 @@ impl Argument {
 pub struct AssemblyFront {
     n: usize,
     columns: Vec<Column<Any>>,
-    pub(crate) copies: Vec<(Cell, Cell)>,
+    pub copies: Vec<(Cell, Cell)>,
 }
 
 impl AssemblyFront {
-    pub(crate) fn new(n: usize, p: &Argument) -> Self {
+    pub fn new(n: usize, p: &Argument) -> Self {
         Self {
             n,
             columns: p.columns.clone(),
@@ -102,7 +102,7 @@ impl AssemblyFront {
         }
     }
 
-    pub(crate) fn copy(
+    pub fn copy(
         &mut self,
         left_column: Column<Any>,
         left_row: usize,

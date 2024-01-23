@@ -503,7 +503,7 @@ pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
     }
 }
 
-pub(crate) fn evaluate_vanishing_polynomial<F: Field>(roots: &[F], z: F) -> F {
+pub fn evaluate_vanishing_polynomial<F: Field>(roots: &[F], z: F) -> F {
     fn evaluate<F: Field>(roots: &[F], z: F) -> F {
         roots.iter().fold(F::ONE, |acc, point| (z - point) * acc)
     }
@@ -523,7 +523,7 @@ pub(crate) fn evaluate_vanishing_polynomial<F: Field>(roots: &[F], z: F) -> F {
     }
 }
 
-pub(crate) fn powers<F: Field>(base: F) -> impl Iterator<Item = F> {
+pub fn powers<F: Field>(base: F) -> impl Iterator<Item = F> {
     std::iter::successors(Some(F::ONE), move |power| Some(base * power))
 }
 

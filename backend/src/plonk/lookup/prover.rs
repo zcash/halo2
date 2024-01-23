@@ -51,112 +51,111 @@ pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
     constructed: Committed<C>,
 }
 
-impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
-    /// Given a Lookup with input expressions [A_0, A_1, ..., A_{m-1}] and table expressions
-    /// [S_0, S_1, ..., S_{m-1}], this method
-    /// - constructs A_compressed = \theta^{m-1} A_0 + theta^{m-2} A_1 + ... + \theta A_{m-2} + A_{m-1}
-    ///   and S_compressed = \theta^{m-1} S_0 + theta^{m-2} S_1 + ... + \theta S_{m-2} + S_{m-1},
-    /// - permutes A_compressed and S_compressed using permute_expression_pair() helper,
-    ///   obtaining A' and S', and
-    /// - constructs Permuted<C> struct using permuted_input_value = A', and
-    ///   permuted_table_expression = S'.
-    /// The Permuted<C> struct is used to update the Lookup, and is then returned.
-    #[allow(clippy::too_many_arguments)]
-    pub(in crate::plonk) fn commit_permuted<
-        'a,
-        'params: 'a,
-        C,
-        P: Params<'params, C>,
-        E: EncodedChallenge<C>,
-        R: RngCore,
-        T: TranscriptWrite<C, E>,
-    >(
-        &self,
-        pk: &ProvingKey<C>,
-        params: &P,
-        domain: &EvaluationDomain<C::Scalar>,
-        theta: ChallengeTheta<C>,
-        advice_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
-        fixed_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
-        instance_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
-        challenges: &'a [C::Scalar],
-        mut rng: R,
-        transcript: &mut T,
-    ) -> Result<Permuted<C>, Error>
-    where
-        C: CurveAffine<ScalarExt = F>,
-        C::Curve: Mul<F, Output = C::Curve> + MulAssign<F>,
-    {
-        // Closure to get values of expressions and compress them
-        let compress_expressions = |expressions: &[Expression<C::Scalar>]| {
-            let compressed_expression = expressions
-                .iter()
-                .map(|expression| {
-                    pk.vk.domain.lagrange_from_vec(evaluate(
-                        expression,
-                        params.n() as usize,
-                        1,
-                        fixed_values,
-                        advice_values,
-                        instance_values,
-                        challenges,
-                    ))
-                })
-                .fold(domain.empty_lagrange(), |acc, expression| {
-                    acc * *theta + &expression
-                });
-            compressed_expression
-        };
+/// Given a Lookup with input expressions [A_0, A_1, ..., A_{m-1}] and table expressions
+/// [S_0, S_1, ..., S_{m-1}], this method
+/// - constructs A_compressed = \theta^{m-1} A_0 + theta^{m-2} A_1 + ... + \theta A_{m-2} + A_{m-1}
+///   and S_compressed = \theta^{m-1} S_0 + theta^{m-2} S_1 + ... + \theta S_{m-2} + S_{m-1},
+/// - permutes A_compressed and S_compressed using permute_expression_pair() helper,
+///   obtaining A' and S', and
+/// - constructs Permuted<C> struct using permuted_input_value = A', and
+///   permuted_table_expression = S'.
+/// The Permuted<C> struct is used to update the Lookup, and is then returned.
+#[allow(clippy::too_many_arguments)]
+pub(in crate::plonk) fn lookup_commit_permuted<
+    'a,
+    'params: 'a,
+    F: WithSmallOrderMulGroup<3>,
+    C,
+    P: Params<'params, C>,
+    E: EncodedChallenge<C>,
+    R: RngCore,
+    T: TranscriptWrite<C, E>,
+>(
+    arg: &Argument<F>,
+    pk: &ProvingKey<C>,
+    params: &P,
+    domain: &EvaluationDomain<C::Scalar>,
+    theta: ChallengeTheta<C>,
+    advice_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+    fixed_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+    instance_values: &'a [Polynomial<C::Scalar, LagrangeCoeff>],
+    challenges: &'a [C::Scalar],
+    mut rng: R,
+    transcript: &mut T,
+) -> Result<Permuted<C>, Error>
+where
+    C: CurveAffine<ScalarExt = F>,
+    C::Curve: Mul<F, Output = C::Curve> + MulAssign<F>,
+{
+    // Closure to get values of expressions and compress them
+    let compress_expressions = |expressions: &[Expression<C::Scalar>]| {
+        let compressed_expression = expressions
+            .iter()
+            .map(|expression| {
+                pk.vk.domain.lagrange_from_vec(evaluate(
+                    expression,
+                    params.n() as usize,
+                    1,
+                    fixed_values,
+                    advice_values,
+                    instance_values,
+                    challenges,
+                ))
+            })
+            .fold(domain.empty_lagrange(), |acc, expression| {
+                acc * *theta + &expression
+            });
+        compressed_expression
+    };
 
-        // Get values of input expressions involved in the lookup and compress them
-        let compressed_input_expression = compress_expressions(&self.input_expressions);
+    // Get values of input expressions involved in the lookup and compress them
+    let compressed_input_expression = compress_expressions(&arg.input_expressions);
 
-        // Get values of table expressions involved in the lookup and compress them
-        let compressed_table_expression = compress_expressions(&self.table_expressions);
+    // Get values of table expressions involved in the lookup and compress them
+    let compressed_table_expression = compress_expressions(&arg.table_expressions);
 
-        // Permute compressed (InputExpression, TableExpression) pair
-        let (permuted_input_expression, permuted_table_expression) = permute_expression_pair(
-            pk,
-            params,
-            domain,
-            &mut rng,
-            &compressed_input_expression,
-            &compressed_table_expression,
-        )?;
+    // Permute compressed (InputExpression, TableExpression) pair
+    let (permuted_input_expression, permuted_table_expression) = permute_expression_pair(
+        pk,
+        params,
+        domain,
+        &mut rng,
+        &compressed_input_expression,
+        &compressed_table_expression,
+    )?;
 
-        // Closure to construct commitment to vector of values
-        let mut commit_values = |values: &Polynomial<C::Scalar, LagrangeCoeff>| {
-            let poly = pk.vk.domain.lagrange_to_coeff(values.clone());
-            let blind = Blind(C::Scalar::random(&mut rng));
-            let commitment = params.commit_lagrange(values, blind).to_affine();
-            (poly, blind, commitment)
-        };
+    // Closure to construct commitment to vector of values
+    let mut commit_values = |values: &Polynomial<C::Scalar, LagrangeCoeff>| {
+        let poly = pk.vk.domain.lagrange_to_coeff(values.clone());
+        let blind = Blind(C::Scalar::random(&mut rng));
+        let commitment = params.commit_lagrange(values, blind).to_affine();
+        (poly, blind, commitment)
+    };
 
-        // Commit to permuted input expression
-        let (permuted_input_poly, permuted_input_blind, permuted_input_commitment) =
-            commit_values(&permuted_input_expression);
+    // Commit to permuted input expression
+    let (permuted_input_poly, permuted_input_blind, permuted_input_commitment) =
+        commit_values(&permuted_input_expression);
 
-        // Commit to permuted table expression
-        let (permuted_table_poly, permuted_table_blind, permuted_table_commitment) =
-            commit_values(&permuted_table_expression);
+    // Commit to permuted table expression
+    let (permuted_table_poly, permuted_table_blind, permuted_table_commitment) =
+        commit_values(&permuted_table_expression);
 
-        // Hash permuted input commitment
-        transcript.write_point(permuted_input_commitment)?;
+    // Hash permuted input commitment
+    transcript.write_point(permuted_input_commitment)?;
 
-        // Hash permuted table commitment
-        transcript.write_point(permuted_table_commitment)?;
+    // Hash permuted table commitment
+    transcript.write_point(permuted_table_commitment)?;
 
-        Ok(Permuted {
-            compressed_input_expression,
-            permuted_input_expression,
-            permuted_input_poly,
-            permuted_input_blind,
-            compressed_table_expression,
-            permuted_table_expression,
-            permuted_table_poly,
-            permuted_table_blind,
-        })
-    }
+    Ok(Permuted {
+        compressed_input_expression,
+        permuted_input_expression,
+        permuted_input_poly,
+        permuted_input_blind,
+        compressed_table_expression,
+        permuted_table_expression,
+        permuted_table_poly,
+        permuted_table_blind,
+    })
 }
 
 impl<C: CurveAffine> Permuted<C> {

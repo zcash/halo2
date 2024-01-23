@@ -32,23 +32,20 @@ pub struct Evaluated<C: CurveAffine> {
     permuted_table_eval: C::Scalar,
 }
 
-impl<F: Field> Argument<F> {
-    pub(in crate::plonk) fn read_permuted_commitments<
-        C: CurveAffine,
-        E: EncodedChallenge<C>,
-        T: TranscriptRead<C, E>,
-    >(
-        &self,
-        transcript: &mut T,
-    ) -> Result<PermutationCommitments<C>, Error> {
-        let permuted_input_commitment = transcript.read_point()?;
-        let permuted_table_commitment = transcript.read_point()?;
+pub(in crate::plonk) fn lookup_read_permuted_commitments<
+    C: CurveAffine,
+    E: EncodedChallenge<C>,
+    T: TranscriptRead<C, E>,
+>(
+    transcript: &mut T,
+) -> Result<PermutationCommitments<C>, Error> {
+    let permuted_input_commitment = transcript.read_point()?;
+    let permuted_table_commitment = transcript.read_point()?;
 
-        Ok(PermutationCommitments {
-            permuted_input_commitment,
-            permuted_table_commitment,
-        })
-    }
+    Ok(PermutationCommitments {
+        permuted_input_commitment,
+        permuted_table_commitment,
+    })
 }
 
 impl<C: CurveAffine> PermutationCommitments<C> {
