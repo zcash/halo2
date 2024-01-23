@@ -4,7 +4,7 @@ use group::Curve;
 use halo2_middleware::ff::{Field, FromUniformBytes};
 
 use super::{
-    circuit::{compile_circuit, Assignment, Circuit, ConstraintSystem, Selector},
+    circuit::{Assignment, Circuit, ConstraintSystem, Selector},
     permutation, Error, LagrangeCoeff, Polynomial,
 };
 use crate::{
