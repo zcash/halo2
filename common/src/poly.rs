@@ -33,6 +33,9 @@ pub use domain::*;
 pub use query::{ProverQuery, VerifierQuery};
 pub use strategy::{Guard, VerificationStrategy};
 
+// TODO: move everything from the poly module to the backend.  This requires that the frontend
+// works without Poly (and just Vec<F>).
+
 /// This is an error that could occur during proving or circuit synthesis.
 // TODO: these errors need to be cleaned up
 #[derive(Debug)]
