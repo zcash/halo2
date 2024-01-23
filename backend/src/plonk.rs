@@ -27,9 +27,7 @@ pub use halo2_common::plonk::{
     ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
 };
 pub mod circuit {
-    pub use halo2_common::plonk::circuit::{
-        compile_circuit, Assignment, Circuit, ConstraintSystem, Selector,
-    };
+    pub use halo2_common::plonk::circuit::{Assignment, Circuit, ConstraintSystem, Selector};
     pub use halo2_common::plonk::Expression;
 }
 pub use halo2_common::plonk::Expression;

@@ -6,7 +6,7 @@ use group::Curve;
 use halo2_middleware::ff::{Field, FromUniformBytes};
 
 use super::{
-    circuit::{compile_circuit, Assignment, Circuit, ConstraintSystem, Selector},
+    circuit::{Assignment, Circuit, ConstraintSystem, Selector},
     evaluation::Evaluator,
     permutation, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
 };
@@ -251,6 +251,8 @@ where
     ))
 }
 
+// TODO: Move to halo2_proofs, as a legacy wrapper
+/*
 /// Generate a `VerifyingKey` from an instance of `Circuit`.
 /// By default, selector compression is turned **off**.
 pub fn keygen_vk<'params, C, P, ConcreteCircuit>(
@@ -285,6 +287,7 @@ where
     vk.compress_selectors = compress_selectors;
     Ok(vk)
 }
+*/
 
 /// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `CompiledCircuit`.
 pub fn keygen_pk_v2<'params, C, P>(
@@ -379,6 +382,8 @@ where
     })
 }
 
+// TODO: Move to halo2_proofs, as a legacy wrapper
+/*
 /// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `Circuit`.
 pub fn keygen_pk<'params, C, P, ConcreteCircuit>(
     params: &P,
@@ -393,3 +398,4 @@ where
     let (compiled_circuit, _, _) = compile_circuit(params.k(), circuit, vk.compress_selectors)?;
     keygen_pk_v2(params, vk, &compiled_circuit)
 }
+*/
