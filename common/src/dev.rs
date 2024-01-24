@@ -9,17 +9,17 @@ use blake2b_simd::blake2b;
 use halo2_middleware::ff::Field;
 use halo2_middleware::ff::FromUniformBytes;
 
-use crate::plonk::permutation::keygen::Assembly;
 use crate::{
     circuit,
     plonk::{
         permutation,
         sealed::{self, SealedPhase},
-        Assigned, Assignment, Circuit, ConstraintSystem, Error, Expression, FirstPhase,
-        FloorPlanner, Phase, Selector,
+        Assignment, Circuit, ConstraintSystem, Error, Expression, FirstPhase, FloorPlanner, Phase,
+        Selector,
     },
 };
 use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
+use halo2_middleware::plonk::Assigned;
 
 use crate::multicore::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
@@ -311,7 +311,7 @@ pub struct MockProver<F: Field> {
 
     challenges: Vec<F>,
 
-    permutation: permutation::keygen::Assembly,
+    permutation: permutation::AssemblyFront,
 
     // A range of available rows for assignment and copies.
     usable_rows: Range<usize>,
@@ -670,7 +670,7 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
             };
             cs.num_advice_columns
         ];
-        let permutation = permutation::keygen::Assembly::new(n, &cs.permutation);
+        let permutation = permutation::AssemblyFront::new(n, &cs.permutation);
         let constants = cs.constants.clone();
 
         // Use hash chain to derive deterministic challenges for testing
@@ -1111,53 +1111,35 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                         .collect::<Vec<_>>()
                 });
 
-        let mapping = self.permutation.mapping();
         // Check that permutations preserve the original values of the cells.
-        let perm_errors = {
-            // Original values of columns involved in the permutation.
-            let original = |column, row| {
-                self.cs
-                    .permutation
-                    .get_columns()
-                    .get(column)
-                    .map(|c: &Column<Any>| match c.column_type() {
-                        Any::Advice(_) => self.advice[c.index()][row],
-                        Any::Fixed => self.fixed[c.index()][row],
-                        Any::Instance => {
-                            let cell: &InstanceValue<F> = &self.instance[c.index()][row];
-                            CellValue::Assigned(cell.value())
-                        }
-                    })
-                    .unwrap()
-            };
-
-            // Iterate over each column of the permutation
-            mapping.enumerate().flat_map(move |(column, values)| {
-                // Iterate over each row of the column to check that the cell's
-                // value is preserved by the mapping.
-                values
-                    .enumerate()
-                    .filter_map(move |(row, cell)| {
-                        let original_cell = original(column, row);
-                        let permuted_cell = original(cell.0, cell.1);
-                        if original_cell == permuted_cell {
-                            None
-                        } else {
-                            let columns = self.cs.permutation.get_columns();
-                            let column = columns.get(column).unwrap();
-                            Some(VerifyFailure::Permutation {
-                                column: (*column).into(),
-                                location: FailureLocation::find(
-                                    &self.regions,
-                                    row,
-                                    Some(column).into_iter().cloned().collect(),
-                                ),
-                            })
-                        }
-                    })
-                    .collect::<Vec<_>>()
-            })
+        // Original values of columns involved in the permutation.
+        let original = |column: Column<Any>, row: usize| match column.column_type() {
+            Any::Advice(_) => self.advice[column.index()][row],
+            Any::Fixed => self.fixed[column.index()][row],
+            Any::Instance => {
+                let cell: &InstanceValue<F> = &self.instance[column.index()][row];
+                CellValue::Assigned(cell.value())
+            }
         };
+
+        // Iterate over each pair of copied cells to check that the cell's value is preserved
+        // by the copy.
+        let perm_errors = self.permutation.copies.iter().flat_map(|(cell_a, cell_b)| {
+            let original_cell = original(cell_a.column, cell_a.row);
+            let permuted_cell = original(cell_b.column, cell_b.row);
+            if original_cell == permuted_cell {
+                None
+            } else {
+                Some(VerifyFailure::Permutation {
+                    column: cell_a.column.into(),
+                    location: FailureLocation::find(
+                        &self.regions,
+                        cell_a.row,
+                        Some(&cell_a.column).into_iter().cloned().collect(),
+                    ),
+                })
+            }
+        });
 
         let mut errors: Vec<_> = iter::empty()
             .chain(selector_errors)
@@ -1258,7 +1240,7 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
     }
 
     /// Returns the permutation argument (`Assembly`) used within a MockProver instance.
-    pub fn permutation(&self) -> &Assembly {
+    pub fn permutation(&self) -> &permutation::AssemblyFront {
         &self.permutation
     }
 }

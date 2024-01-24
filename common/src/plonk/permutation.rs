@@ -88,8 +88,8 @@ impl Argument {
 // TODO: Move to frontend
 #[derive(Clone, Debug)]
 pub struct AssemblyFront {
-    n: usize,
-    columns: Vec<Column<Any>>,
+    pub n: usize,
+    pub columns: Vec<Column<Any>>,
     pub copies: Vec<(Cell, Cell)>,
 }
 

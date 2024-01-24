@@ -21,7 +21,7 @@ pub mod transcript;
 
 // TODO: Move to backend for now.  The end goal is to have this in the frontend, but it requires
 // many changes because the MockProver heavliy uses backend types.
-// pub mod dev;
+pub mod dev;
 pub mod helpers;
 pub use helpers::SerdeFormat;
 
