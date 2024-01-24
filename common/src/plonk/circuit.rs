@@ -118,7 +118,7 @@ impl SealedPhase for super::ThirdPhase {
 ///     circuit::{Chip, Layouter, Value},
 ///     plonk::{Advice, Column, Error, Selector},
 /// };
-/// use ff::Field;
+/// use halo2_middleware::ff::Field;
 /// # use halo2_proofs::plonk::Fixed;
 ///
 /// struct Config {

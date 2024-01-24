@@ -1,4 +1,4 @@
-use ff::Field;
+use halo2_middleware::ff::Field;
 use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 
 use crate::{

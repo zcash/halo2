@@ -188,7 +188,7 @@ impl<F: Field> Mul<F> for Value<F> {
 ///     plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Selector},
 ///     poly::Rotation,
 /// };
-/// use ff::PrimeField;
+/// use halo2_middleware::ff::PrimeField;
 /// use halo2curves::pasta::Fp;
 /// const K: u32 = 5;
 ///

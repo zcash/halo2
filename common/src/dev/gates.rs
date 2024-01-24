@@ -28,7 +28,7 @@ struct Gate {
 /// # Examples
 ///
 /// ```
-/// use ff::Field;
+/// use halo2_middleware::ff::Field;
 /// use halo2_proofs::{
 ///     circuit::{Layouter, SimpleFloorPlanner},
 ///     dev::CircuitGates,

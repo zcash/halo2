@@ -1,4 +1,4 @@
-use ff::Field;
+use halo2_middleware::ff::Field;
 use plotters::{
     coord::Shift,
     prelude::{DrawingArea, DrawingAreaErrorKind, DrawingBackend},

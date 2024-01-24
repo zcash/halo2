@@ -365,7 +365,7 @@ mod test {
     use crate::poly::commitment::ParamsProver;
     use crate::poly::commitment::{Blind, Params};
     use crate::poly::kzg::commitment::ParamsKZG;
-    use ff::Field;
+    use halo2_middleware::ff::Field;
 
     #[test]
     fn test_commit_lagrange() {

@@ -27,7 +27,7 @@ use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance}
 /// # Examples
 ///
 /// ```
-/// use ff::Field;
+/// use halo2_middleware::ff::Field;
 /// use halo2_proofs::{
 ///     circuit::{floor_planner, Layouter, Value},
 ///     dev::TracingFloorPlanner,
