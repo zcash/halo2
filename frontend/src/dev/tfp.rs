@@ -3,13 +3,11 @@ use std::{fmt, marker::PhantomData};
 use halo2_middleware::ff::Field;
 use tracing::{debug, debug_span, span::EnteredSpan};
 
-use crate::{
-    circuit::{
-        layouter::{RegionLayouter, SyncDeps},
-        AssignedCell, Cell, Layouter, Region, Table, Value,
-    },
-    plonk::{Assignment, Circuit, ConstraintSystem, Error, FloorPlanner, Selector},
+use halo2_common::circuit::{
+    layouter::{RegionLayouter, SyncDeps},
+    AssignedCell, Cell, Layouter, Region, Table, Value,
 };
+use halo2_common::plonk::{Assignment, Circuit, ConstraintSystem, Error, FloorPlanner, Selector};
 use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
 use halo2_middleware::plonk::Assigned;
 

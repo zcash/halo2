@@ -5,10 +5,8 @@ use std::{
 
 use halo2_middleware::ff::PrimeField;
 
-use crate::{
-    dev::util,
-    plonk::{sealed::SealedPhase, Circuit, ConstraintSystem, FirstPhase},
-};
+use crate::dev::util;
+use halo2_common::plonk::{sealed::SealedPhase, Circuit, ConstraintSystem, FirstPhase};
 
 #[derive(Debug)]
 struct Constraint {

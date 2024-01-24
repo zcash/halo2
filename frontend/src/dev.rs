@@ -9,7 +9,7 @@ use blake2b_simd::blake2b;
 use halo2_middleware::ff::Field;
 use halo2_middleware::ff::FromUniformBytes;
 
-use crate::{
+use halo2_common::{
     circuit,
     plonk::{
         permutation,
@@ -21,7 +21,7 @@ use crate::{
 use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
 use halo2_middleware::plonk::Assigned;
 
-use crate::multicore::{
+use halo2_common::multicore::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
     ParallelSliceMut,
 };
@@ -542,7 +542,7 @@ impl<F: Field> Assignment<F> for MockProver<F> {
         left_row: usize,
         right_column: Column<Any>,
         right_row: usize,
-    ) -> Result<(), crate::plonk::Error> {
+    ) -> Result<(), halo2_common::plonk::Error> {
         if !self.in_phase(FirstPhase) {
             return Ok(());
         }

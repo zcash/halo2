@@ -1,7 +1,7 @@
 //! Metadata about circuits.
 
 use super::metadata::Column as ColumnMetadata;
-use crate::plonk::{self};
+use halo2_common::plonk;
 use halo2_middleware::circuit::Any;
 pub use halo2_middleware::metadata::Column;
 use std::{

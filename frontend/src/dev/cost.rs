@@ -12,7 +12,7 @@ use group::prime::PrimeGroup;
 use halo2_middleware::ff::{Field, PrimeField};
 use halo2_middleware::poly::Rotation;
 
-use crate::{
+use halo2_common::{
     circuit::{layouter::RegionColumn, Value},
     plonk::{Assignment, Circuit, ConstraintSystem, Error, FloorPlanner, Selector},
 };
@@ -235,7 +235,7 @@ impl<F: Field> Assignment<F> for Layout {
         l_row: usize,
         r_col: Column<Any>,
         r_row: usize,
-    ) -> Result<(), crate::plonk::Error> {
+    ) -> Result<(), halo2_common::plonk::Error> {
         self.equality.push((l_col, l_row, r_col, r_row));
         Ok(())
     }

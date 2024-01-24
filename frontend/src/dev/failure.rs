@@ -11,10 +11,8 @@ use super::{
     Region,
 };
 use crate::dev::metadata::Constraint;
-use crate::{
-    dev::{Instance, Value},
-    plonk::{ConstraintSystem, Expression, Gate},
-};
+use crate::dev::{Instance, Value};
+use halo2_common::plonk::{ConstraintSystem, Expression, Gate};
 use halo2_middleware::circuit::{Any, Column};
 
 mod emitter;
