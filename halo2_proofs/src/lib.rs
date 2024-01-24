@@ -1,21 +1,15 @@
-//! # halo2_proofs
+//! Legacy halo2 API that wraps the frontend-backend split API.  This crate doesn't implement any
+//! core functionality, it just imports from the other crates and offers the legacy API in the same
+//! module structure so that projects depending on halo2 can update their dependency towards it
+//! without breaking.
 
-#![cfg_attr(docsrs, feature(doc_cfg))]
-// The actual lints we want to disable.
-#![allow(clippy::op_ref, clippy::many_single_char_names)]
-#![deny(rustdoc::broken_intra_doc_links)]
-#![deny(missing_debug_implementations)]
-#![deny(missing_docs)]
-#![deny(unsafe_code)]
+#![allow(dead_code)] // TODO: Remove
+#![allow(unused_imports)] // TODO: Remove
 
-pub mod arithmetic;
-pub mod circuit;
-pub use halo2curves;
-mod multicore;
 pub mod plonk;
-pub mod poly;
-pub mod transcript;
 
-pub mod dev;
-mod helpers;
-pub use helpers::SerdeFormat;
+pub mod circuit {
+    pub use halo2_common::circuit::{Layouter, SimpleFloorPlanner};
+}
+pub use halo2_common::poly;
+pub use halo2_common::transcript;

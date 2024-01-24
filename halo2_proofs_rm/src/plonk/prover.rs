@@ -1,33 +1,35 @@
+use ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use group::Curve;
-use halo2_middleware::ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use rand_core::RngCore;
 use std::collections::{BTreeSet, HashSet};
+use std::ops::RangeTo;
 use std::{collections::HashMap, iter};
 
-use crate::plonk::lookup::prover::lookup_commit_permuted;
-use crate::plonk::permutation::prover::permutation_commit;
-use crate::plonk::shuffle::prover::shuffle_commit_product;
-use crate::plonk::{lookup, permutation, shuffle, vanishing, ProvingKey};
-use halo2_common::plonk::{
-    circuit::{sealed, Assignment, Circuit, Selector},
-    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
+use super::{
+    circuit::{
+        compile_circuit,
+        sealed::{self},
+        Advice, Any, Assignment, Challenge, Circuit, Column, Fixed, Instance, Selector,
+        WitnessCalculator,
+    },
+    lookup, permutation, shuffle, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta,
+    ChallengeX, ChallengeY, Error, ProvingKey,
 };
-use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
 
-use group::prime::PrimeCurveAffine;
-use halo2_common::{
+use crate::{
     arithmetic::{eval_polynomial, CurveAffine},
     circuit::Value,
+    plonk::Assigned,
     poly::{
         commitment::{Blind, CommitmentScheme, Params, Prover},
         Basis, Coeff, LagrangeCoeff, Polynomial, ProverQuery,
     },
 };
-use halo2_common::{
+use crate::{
     poly::batch_invert_assigned,
     transcript::{EncodedChallenge, TranscriptWrite},
 };
-use halo2_middleware::plonk::Assigned;
+use group::prime::PrimeCurveAffine;
 
 /// Collection of instance data used during proving for a single circuit proof.
 #[derive(Debug)]
@@ -124,8 +126,7 @@ pub struct ProverV2<
     // Circuit and setup fields
     params: &'params Scheme::ParamsProver,
     pk: &'a ProvingKey<Scheme::Curve>,
-    // TODO: Add getter
-    pub phases: Vec<sealed::Phase>,
+    phases: Vec<sealed::Phase>,
     // State
     instance: Vec<InstanceSingle<Scheme::Curve>>,
     advice: Vec<AdviceSingle<Scheme::Curve, LagrangeCoeff>>,
@@ -456,8 +457,7 @@ impl<
                 meta.lookups
                     .iter()
                     .map(|lookup| {
-                        lookup_commit_permuted(
-                            &lookup,
+                        lookup.commit_permuted(
                             pk,
                             params,
                             domain,
@@ -492,8 +492,7 @@ impl<
             .iter()
             .zip(advice.iter())
             .map(|(instance, advice)| {
-                permutation_commit(
-                    &meta.permutation,
+                meta.permutation.commit(
                     params,
                     pk,
                     &pk.permutation,
@@ -529,8 +528,7 @@ impl<
                 meta.shuffles
                     .iter()
                     .map(|shuffle| {
-                        shuffle_commit_product(
-                            &shuffle,
+                        shuffle.commit_product(
                             pk,
                             params,
                             domain,
@@ -742,4 +740,255 @@ impl<
 
         Ok(())
     }
+}
+
+pub(crate) struct WitnessCollection<'a, F: Field> {
+    pub(crate) k: u32,
+    pub(crate) current_phase: sealed::Phase,
+    pub(crate) advice: Vec<Vec<Assigned<F>>>,
+    // pub(crate) unblinded_advice: HashSet<usize>,
+    pub(crate) challenges: &'a HashMap<usize, F>,
+    pub(crate) instances: &'a [&'a [F]],
+    pub(crate) usable_rows: RangeTo<usize>,
+    pub(crate) _marker: std::marker::PhantomData<F>,
+}
+
+impl<'a, F: Field> Assignment<F> for WitnessCollection<'a, F> {
+    fn enter_region<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // Do nothing; we don't care about regions in this context.
+    }
+
+    fn exit_region(&mut self) {
+        // Do nothing; we don't care about regions in this context.
+    }
+
+    fn enable_selector<A, AR>(&mut self, _: A, _: &Selector, _: usize) -> Result<(), Error>
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // We only care about advice columns here
+
+        Ok(())
+    }
+
+    fn annotate_column<A, AR>(&mut self, _annotation: A, _column: Column<Any>)
+    where
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // Do nothing
+    }
+
+    fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Value<F>, Error> {
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::not_enough_rows_available(self.k));
+        }
+
+        self.instances
+            .get(column.index())
+            .and_then(|column| column.get(row))
+            .map(|v| Value::known(*v))
+            .ok_or(Error::BoundsFailure)
+    }
+
+    fn assign_advice<V, VR, A, AR>(
+        &mut self,
+        _: A,
+        column: Column<Advice>,
+        row: usize,
+        to: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Value<VR>,
+        VR: Into<Assigned<F>>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // Ignore assignment of advice column in different phase than current one.
+        if self.current_phase != column.column_type().phase {
+            return Ok(());
+        }
+
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::not_enough_rows_available(self.k));
+        }
+
+        *self
+            .advice
+            .get_mut(column.index())
+            .and_then(|v| v.get_mut(row))
+            .ok_or(Error::BoundsFailure)? = to().into_field().assign()?;
+
+        Ok(())
+    }
+
+    fn assign_fixed<V, VR, A, AR>(
+        &mut self,
+        _: A,
+        _: Column<Fixed>,
+        _: usize,
+        _: V,
+    ) -> Result<(), Error>
+    where
+        V: FnOnce() -> Value<VR>,
+        VR: Into<Assigned<F>>,
+        A: FnOnce() -> AR,
+        AR: Into<String>,
+    {
+        // We only care about advice columns here
+
+        Ok(())
+    }
+
+    fn copy(&mut self, _: Column<Any>, _: usize, _: Column<Any>, _: usize) -> Result<(), Error> {
+        // We only care about advice columns here
+
+        Ok(())
+    }
+
+    fn fill_from_row(
+        &mut self,
+        _: Column<Fixed>,
+        _: usize,
+        _: Value<Assigned<F>>,
+    ) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn get_challenge(&self, challenge: Challenge) -> Value<F> {
+        self.challenges
+            .get(&challenge.index())
+            .cloned()
+            .map(Value::known)
+            .unwrap_or_else(Value::unknown)
+    }
+
+    fn push_namespace<NR, N>(&mut self, _: N)
+    where
+        NR: Into<String>,
+        N: FnOnce() -> NR,
+    {
+        // Do nothing; we don't care about namespaces in this context.
+    }
+
+    fn pop_namespace(&mut self, _: Option<String>) {
+        // Do nothing; we don't care about namespaces in this context.
+    }
+}
+
+/// This creates a proof for the provided `circuit` when given the public
+/// parameters `params` and the proving key [`ProvingKey`] that was
+/// generated previously for the same circuit. The provided `instances`
+/// are zero-padded internally.
+pub fn create_proof<
+    'params,
+    Scheme: CommitmentScheme,
+    P: Prover<'params, Scheme>,
+    E: EncodedChallenge<Scheme::Curve>,
+    R: RngCore,
+    T: TranscriptWrite<Scheme::Curve, E>,
+    ConcreteCircuit: Circuit<Scheme::Scalar>,
+>(
+    params: &'params Scheme::ParamsProver,
+    pk: &ProvingKey<Scheme::Curve>,
+    circuits: &[ConcreteCircuit],
+    instances: &[&[&[Scheme::Scalar]]],
+    rng: R,
+    transcript: &mut T,
+) -> Result<(), Error>
+where
+    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+{
+    if circuits.len() != instances.len() {
+        return Err(Error::InvalidInstances);
+    }
+    let (_, config, cs) = compile_circuit(params.k(), &circuits[0], pk.vk.compress_selectors)?;
+    let mut witness_calcs: Vec<_> = circuits
+        .iter()
+        .enumerate()
+        .map(|(i, circuit)| WitnessCalculator::new(params.k(), circuit, &config, &cs, instances[i]))
+        .collect();
+    let mut prover = ProverV2::<Scheme, P, _, _, _>::new(params, pk, instances, rng, transcript)?;
+    let mut challenges = HashMap::new();
+    let phases = prover.phases.clone();
+    for phase in &phases {
+        println!("DBG phase {}", phase.0);
+        let mut witnesses = Vec::with_capacity(circuits.len());
+        for witness_calc in witness_calcs.iter_mut() {
+            witnesses.push(witness_calc.calc(phase.0, &challenges)?);
+        }
+        challenges = prover.commit_phase(phase.0, witnesses).unwrap();
+    }
+    prover.create_proof()
+}
+
+#[test]
+fn test_create_proof() {
+    use crate::{
+        circuit::SimpleFloorPlanner,
+        plonk::{keygen_pk, keygen_vk, ConstraintSystem},
+        poly::kzg::{
+            commitment::{KZGCommitmentScheme, ParamsKZG},
+            multiopen::ProverSHPLONK,
+        },
+        transcript::{Blake2bWrite, Challenge255, TranscriptWriterBuffer},
+    };
+    use halo2curves::bn256::Bn256;
+    use rand_core::OsRng;
+
+    #[derive(Clone, Copy)]
+    struct MyCircuit;
+
+    impl<F: Field> Circuit<F> for MyCircuit {
+        type Config = ();
+        type FloorPlanner = SimpleFloorPlanner;
+        #[cfg(feature = "circuit-params")]
+        type Params = ();
+
+        fn without_witnesses(&self) -> Self {
+            *self
+        }
+
+        fn configure(_meta: &mut ConstraintSystem<F>) -> Self::Config {}
+
+        fn synthesize(
+            &self,
+            _config: Self::Config,
+            _layouter: impl crate::circuit::Layouter<F>,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+    }
+
+    let params: ParamsKZG<Bn256> = ParamsKZG::setup(3, OsRng);
+    let vk = keygen_vk(&params, &MyCircuit).expect("keygen_vk should not fail");
+    let pk = keygen_pk(&params, vk, &MyCircuit).expect("keygen_pk should not fail");
+    let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
+
+    // Create proof with wrong number of instances
+    let proof = create_proof::<KZGCommitmentScheme<_>, ProverSHPLONK<_>, _, _, _, _>(
+        &params,
+        &pk,
+        &[MyCircuit, MyCircuit],
+        &[],
+        OsRng,
+        &mut transcript,
+    );
+    assert!(matches!(proof.unwrap_err(), Error::InvalidInstances));
+
+    // Create proof with correct number of instances
+    create_proof::<KZGCommitmentScheme<_>, ProverSHPLONK<_>, _, _, _, _>(
+        &params,
+        &pk,
+        &[MyCircuit, MyCircuit],
+        &[&[], &[]],
+        OsRng,
+        &mut transcript,
+    )
+    .expect("proof generation should not fail");
 }

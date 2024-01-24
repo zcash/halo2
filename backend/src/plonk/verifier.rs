@@ -9,7 +9,7 @@ use super::{
 use crate::arithmetic::compute_inner_product;
 use crate::plonk::lookup::verifier::lookup_read_permuted_commitments;
 use crate::plonk::permutation::verifier::permutation_read_product_commitments;
-use crate::plonk::shuffle::verifier::shuffle_read_product_commitments;
+use crate::plonk::shuffle::verifier::shuffle_read_product_commitment;
 use crate::poly::commitment::{CommitmentScheme, Verifier};
 use crate::poly::VerificationStrategy;
 use crate::poly::{

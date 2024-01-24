@@ -2,13 +2,16 @@
 
 use std::ops::Range;
 
+use ff::{Field, FromUniformBytes};
 use group::Curve;
-use halo2_middleware::ff::{Field, FromUniformBytes};
 
 use super::{
-    circuit::{Assignment, Circuit, ConstraintSystem, Selector},
+    circuit::{
+        compile_circuit, Advice, Any, Assignment, Circuit, Column, CompiledCircuitV2,
+        ConstraintSystem, Fixed, Instance, Selector,
+    },
     evaluation::Evaluator,
-    permutation, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
+    permutation, Assigned, Challenge, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
 };
 use crate::{
     arithmetic::{parallelize, CurveAffine},
@@ -18,10 +21,6 @@ use crate::{
         EvaluationDomain,
     },
 };
-use halo2_middleware::circuit::{
-    Advice, Any, Challenge, Column, CompiledCircuitV2, Fixed, Instance,
-};
-use halo2_middleware::plonk::Assigned;
 
 pub(crate) fn create_domain<C, ConcreteCircuit>(
     k: u32,
@@ -53,7 +52,7 @@ where
 pub(crate) struct Assembly<F: Field> {
     pub(crate) k: u32,
     pub(crate) fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
-    pub(crate) permutation: halo2_common::plonk::permutation::AssemblyFront,
+    pub(crate) permutation: permutation::keygen::AssemblyFront,
     pub(crate) selectors: Vec<Vec<bool>>,
     // A range of available rows for assignment and copies.
     pub(crate) usable_rows: Range<usize>,
@@ -222,7 +221,7 @@ where
 
     let permutation_vk = permutation::keygen::Assembly::new_from_assembly_mid(
         params.n() as usize,
-        &cs2.permutation,
+        &cs.permutation,
         &circuit.preprocessing.permutation,
     )?
     .build_vk(params, &domain, &cs.permutation);
@@ -249,6 +248,41 @@ where
         Vec::new(),
         false,
     ))
+}
+
+/// Generate a `VerifyingKey` from an instance of `Circuit`.
+/// By default, selector compression is turned **off**.
+pub fn keygen_vk<'params, C, P, ConcreteCircuit>(
+    params: &P,
+    circuit: &ConcreteCircuit,
+) -> Result<VerifyingKey<C>, Error>
+where
+    C: CurveAffine,
+    P: Params<'params, C>,
+    ConcreteCircuit: Circuit<C::Scalar>,
+    C::Scalar: FromUniformBytes<64>,
+{
+    keygen_vk_custom(params, circuit, true)
+}
+
+/// Generate a `VerifyingKey` from an instance of `Circuit`.
+///
+/// The selector compression optimization is turned on only if `compress_selectors` is `true`.
+pub fn keygen_vk_custom<'params, C, P, ConcreteCircuit>(
+    params: &P,
+    circuit: &ConcreteCircuit,
+    compress_selectors: bool,
+) -> Result<VerifyingKey<C>, Error>
+where
+    C: CurveAffine,
+    P: Params<'params, C>,
+    ConcreteCircuit: Circuit<C::Scalar>,
+    C::Scalar: FromUniformBytes<64>,
+{
+    let (compiled_circuit, _, _) = compile_circuit(params.k(), circuit, compress_selectors)?;
+    let mut vk = keygen_vk_v2(params, &compiled_circuit)?;
+    vk.compress_selectors = compress_selectors;
+    Ok(vk)
 }
 
 /// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `CompiledCircuit`.
@@ -287,7 +321,7 @@ where
         &cs.permutation,
         &circuit.preprocessing.permutation,
     )?
-    .build_pk(params, &vk.domain, &cs.permutation.clone().into());
+    .build_pk(params, &vk.domain, &cs.permutation);
 
     // Compute l_0(X)
     // TODO: this can be done more efficiently
@@ -342,4 +376,19 @@ where
         permutation: permutation_pk,
         ev,
     })
+}
+
+/// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `Circuit`.
+pub fn keygen_pk<'params, C, P, ConcreteCircuit>(
+    params: &P,
+    vk: VerifyingKey<C>,
+    circuit: &ConcreteCircuit,
+) -> Result<ProvingKey<C>, Error>
+where
+    C: CurveAffine,
+    P: Params<'params, C>,
+    ConcreteCircuit: Circuit<C::Scalar>,
+{
+    let (compiled_circuit, _, _) = compile_circuit(params.k(), circuit, vk.compress_selectors)?;
+    keygen_pk_v2(params, vk, &compiled_circuit)
 }

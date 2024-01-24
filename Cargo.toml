@@ -2,6 +2,7 @@
 members = [
     "halo2",
     "halo2_proofs",
+    "halo2_proofs_rm", # TODO: Remove
     "frontend",
     "middleware",
     "backend",
