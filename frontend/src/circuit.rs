@@ -1,35 +1,23 @@
 //! Traits and structs for implementing circuit components.
 
-use core::cmp::max;
-use core::ops::{Add, Mul};
-use halo2_common::circuit::layouter::SyncDeps;
 use halo2_common::plonk::sealed::{self, SealedPhase};
 use halo2_common::plonk::FloorPlanner;
-use halo2_common::plonk::{lookup, permutation, shuffle, Error, Queries};
+use halo2_common::plonk::{permutation, Error};
 use halo2_common::plonk::{Assignment, FirstPhase, SecondPhase, Selector, ThirdPhase};
 use halo2_common::plonk::{Circuit, ConstraintSystem};
 use halo2_common::{
-    circuit::{Layouter, Region, Value},
+    circuit::Value,
     poly::{batch_invert_assigned, Polynomial},
 };
 use halo2_middleware::circuit::{
-    Advice, AdviceQueryMid, Any, Challenge, Column, CompiledCircuitV2, ConstraintSystemV2Backend,
-    ExpressionMid, Fixed, FixedQueryMid, GateV2Backend, Instance, InstanceQueryMid,
-    PreprocessingV2,
+    Advice, Any, Challenge, Column, CompiledCircuitV2, Fixed, Instance, PreprocessingV2,
 };
 use halo2_middleware::ff::Field;
-use halo2_middleware::metadata;
 use halo2_middleware::plonk::Assigned;
-use halo2_middleware::poly::Rotation;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::iter::{Product, Sum};
 use std::ops::RangeTo;
-use std::{
-    convert::TryFrom,
-    ops::{Neg, Sub},
-};
 
 /// Compile a circuit.  Runs configure and synthesize on the circuit in order to materialize the
 /// circuit into its columns and the column configuration; as well as doing the fixed column and

@@ -1,28 +1,11 @@
-use halo2_backend::plonk::{
-    circuit::{Assignment, Circuit, ConstraintSystem, Selector},
-    keygen::{keygen_pk_v2, keygen_vk_v2},
-    prover::ProverV2,
-    ProvingKey, VerifyingKey,
-};
-use halo2_backend::{arithmetic::parallelize, poly::EvaluationDomain};
+use halo2_backend::plonk::{circuit::Circuit, prover::ProverV2, ProvingKey};
 use halo2_common::plonk::Error;
-use halo2_common::{
-    arithmetic::{eval_polynomial, CurveAffine},
-    circuit::Value,
-    poly::{
-        commitment::{Blind, CommitmentScheme, Params, Prover},
-        Basis, Coeff, LagrangeCoeff, Polynomial, ProverQuery,
-    },
-};
-use halo2_common::{
-    poly::batch_invert_assigned,
-    transcript::{EncodedChallenge, TranscriptWrite},
-};
+use halo2_common::poly::commitment::{CommitmentScheme, Params, Prover};
+use halo2_common::transcript::{EncodedChallenge, TranscriptWrite};
 use halo2_frontend::circuit::{compile_circuit, WitnessCalculator};
-use halo2_middleware::ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
-use halo2_middleware::plonk::Assigned;
+use halo2_middleware::ff::{FromUniformBytes, WithSmallOrderMulGroup};
 use rand_core::RngCore;
-use std::{collections::HashMap, iter};
+use std::collections::HashMap;
 
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was

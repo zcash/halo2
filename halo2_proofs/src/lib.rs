@@ -3,9 +3,6 @@
 //! module structure so that projects depending on halo2 can update their dependency towards it
 //! without breaking.
 
-#![allow(dead_code)] // TODO: Remove
-#![allow(unused_imports)] // TODO: Remove
-
 pub mod plonk;
 
 pub mod circuit {

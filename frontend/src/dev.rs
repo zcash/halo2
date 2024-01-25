@@ -22,8 +22,7 @@ use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance}
 use halo2_middleware::plonk::Assigned;
 
 use halo2_common::multicore::{
-    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
-    ParallelSliceMut,
+    IntoParallelIterator, IntoParallelRefIterator, ParallelIterator, ParallelSliceMut,
 };
 
 pub mod metadata;

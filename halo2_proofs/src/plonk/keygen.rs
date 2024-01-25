@@ -1,16 +1,9 @@
 use halo2_backend::plonk::{
-    circuit::{Assignment, Circuit, ConstraintSystem, Selector},
+    circuit::Circuit,
     keygen::{keygen_pk_v2, keygen_vk_v2},
     ProvingKey, VerifyingKey,
 };
-use halo2_backend::{
-    arithmetic::{parallelize, CurveAffine},
-    circuit::Value,
-    poly::{
-        commitment::{Blind, Params},
-        EvaluationDomain,
-    },
-};
+use halo2_backend::{arithmetic::CurveAffine, poly::commitment::Params};
 use halo2_common::plonk::Error;
 use halo2_frontend::circuit::compile_circuit;
 use halo2_middleware::ff::FromUniformBytes;
