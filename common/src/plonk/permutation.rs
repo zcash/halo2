@@ -1,19 +1,8 @@
 //! Implementation of permutation argument.
 
-use crate::{
-    arithmetic::CurveAffine,
-    helpers::{
-        polynomial_slice_byte_length, read_polynomial_vec, write_polynomial_slice,
-        SerdeCurveAffine, SerdePrimeField,
-    },
-    plonk::Error,
-    poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
-    SerdeFormat,
-};
+use crate::plonk::Error;
 use halo2_middleware::circuit::{Any, Column};
 use halo2_middleware::permutation::{ArgumentV2, Cell};
-
-use std::io;
 
 /// A permutation argument.
 #[derive(Debug, Clone)]

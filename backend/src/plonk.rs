@@ -12,13 +12,8 @@ use halo2_common::helpers::{
     SerdeCurveAffine, SerdePrimeField,
 };
 use halo2_common::plonk::{Circuit, ConstraintSystem, PinnedConstraintSystem};
-use halo2_common::transcript::{ChallengeScalar, EncodedChallenge, Transcript};
+use halo2_common::transcript::{EncodedChallenge, Transcript};
 use halo2_common::SerdeFormat;
-use halo2_middleware::circuit::{
-    Advice, AdviceQueryMid, Challenge, Column, ExpressionMid, Fixed, FixedQueryMid, GateV2Backend,
-    Instance, InstanceQueryMid, PreprocessingV2,
-};
-use halo2_middleware::poly::Rotation;
 
 use std::io;
 

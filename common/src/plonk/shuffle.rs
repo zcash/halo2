@@ -1,5 +1,4 @@
 use super::circuit::Expression;
-use halo2_middleware::circuit::ExpressionMid;
 use halo2_middleware::ff::Field;
 use std::fmt::{self, Debug};
 

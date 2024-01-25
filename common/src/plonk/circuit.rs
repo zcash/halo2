@@ -1,26 +1,20 @@
 use super::{lookup, permutation, shuffle, Error, Queries};
 use crate::circuit::layouter::SyncDeps;
-use crate::{
-    circuit::{Layouter, Region, Value},
-    poly::{batch_invert_assigned, Polynomial},
-};
+use crate::circuit::{Layouter, Region, Value};
 use core::cmp::max;
 use core::ops::{Add, Mul};
 use halo2_middleware::circuit::{
-    Advice, AdviceQueryMid, Any, Challenge, Column, CompiledCircuitV2, ConstraintSystemV2Backend,
-    ExpressionMid, Fixed, FixedQueryMid, GateV2Backend, Instance, InstanceQueryMid,
-    PreprocessingV2,
+    Advice, AdviceQueryMid, Any, Challenge, Column, ConstraintSystemV2Backend, ExpressionMid,
+    Fixed, FixedQueryMid, GateV2Backend, Instance, InstanceQueryMid,
 };
 use halo2_middleware::ff::Field;
 use halo2_middleware::metadata;
 use halo2_middleware::plonk::Assigned;
 use halo2_middleware::poly::Rotation;
 use sealed::SealedPhase;
-use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::iter::{Product, Sum};
-use std::ops::RangeTo;
 use std::{
     convert::TryFrom,
     ops::{Neg, Sub},
@@ -454,6 +448,8 @@ pub trait Circuit<F: Field> {
     fn synthesize(&self, config: Self::Config, layouter: impl Layouter<F>) -> Result<(), Error>;
 }
 
+// TODO: Create two types from this, one with selector for the frontend (this way we can move the
+// Layouter traits, Region and Selector to frontend).  And one without selector for the backend.
 /// Low-degree expression representing an identity that must hold over the committed columns.
 #[derive(Clone, PartialEq, Eq)]
 pub enum Expression<F> {

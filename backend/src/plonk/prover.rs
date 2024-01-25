@@ -9,15 +9,12 @@ use crate::plonk::permutation::prover::permutation_commit;
 use crate::plonk::shuffle::prover::shuffle_commit_product;
 use crate::plonk::{lookup, permutation, shuffle, vanishing, ProvingKey};
 use halo2_common::plonk::{
-    circuit::{sealed, Assignment, Circuit, Selector},
-    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
+    circuit::sealed, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
 };
-use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
 
 use group::prime::PrimeCurveAffine;
 use halo2_common::{
     arithmetic::{eval_polynomial, CurveAffine},
-    circuit::Value,
     poly::{
         commitment::{Blind, CommitmentScheme, Params, Prover},
         Basis, Coeff, LagrangeCoeff, Polynomial, ProverQuery,

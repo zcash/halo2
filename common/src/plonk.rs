@@ -5,45 +5,21 @@
 //! [halo]: https://eprint.iacr.org/2019/1021
 //! [plonk]: https://eprint.iacr.org/2019/953
 
-use blake2b_simd::Params as Blake2bParams;
-use group::ff::{Field, FromUniformBytes, PrimeField};
-
-use crate::arithmetic::CurveAffine;
-use crate::helpers::{
-    polynomial_slice_byte_length, read_polynomial_vec, write_polynomial_slice, SerdeCurveAffine,
-    SerdePrimeField,
-};
-use crate::poly::{
-    Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, PinnedEvaluationDomain,
-    Polynomial,
-};
-use crate::transcript::{ChallengeScalar, EncodedChallenge, Transcript};
-use crate::SerdeFormat;
-use halo2_middleware::circuit::{
-    Advice, AdviceQueryMid, Challenge, Column, ExpressionMid, Fixed, FixedQueryMid, GateV2Backend,
-    Instance, InstanceQueryMid, PreprocessingV2,
-};
+use crate::poly::{LagrangeCoeff, Polynomial};
+use crate::transcript::ChallengeScalar;
+use halo2_middleware::circuit::{Advice, Column, Fixed, Instance};
 use halo2_middleware::poly::Rotation;
 
-pub mod assigned;
 pub mod circuit;
 pub mod error;
-// pub mod evaluation;
 pub mod keygen;
 pub mod lookup;
 pub mod permutation;
 pub mod shuffle;
-// pub mod vanishing;
 
-// pub mod verifier;
-
-pub use assigned::*;
 pub use circuit::*;
 pub use error::*;
 pub use keygen::*;
-// pub use verifier::*;
-
-use std::io;
 
 /// List of queries (columns and rotations) used by a circuit
 #[derive(Debug, Clone)]

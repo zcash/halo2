@@ -1,23 +1,13 @@
 use std::ops::Range;
 
-use group::Curve;
-use halo2_middleware::ff::{Field, FromUniformBytes};
+use halo2_middleware::ff::Field;
 
 use super::{
-    circuit::{Assignment, Circuit, ConstraintSystem, Selector},
+    circuit::{Assignment, Selector},
     permutation, Error, LagrangeCoeff, Polynomial,
 };
-use crate::{
-    arithmetic::{parallelize, CurveAffine},
-    circuit::Value,
-    poly::{
-        commitment::{Blind, Params},
-        EvaluationDomain,
-    },
-};
-use halo2_middleware::circuit::{
-    Advice, Any, Challenge, Column, CompiledCircuitV2, Fixed, Instance,
-};
+use crate::circuit::Value;
+use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
 use halo2_middleware::plonk::Assigned;
 
 /// Assembly to be used in circuit synthesis.

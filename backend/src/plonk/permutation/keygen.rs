@@ -11,13 +11,10 @@ use crate::{
     },
 };
 use halo2_middleware::circuit::{Any, Column};
-use halo2_middleware::permutation::{ArgumentV2, AssemblyMid, Cell};
+use halo2_middleware::permutation::{ArgumentV2, AssemblyMid};
 
 #[cfg(feature = "thread-safe-region")]
 use crate::multicore::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
-
-#[cfg(not(feature = "thread-safe-region"))]
-use crate::multicore::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 #[cfg(feature = "thread-safe-region")]
 use std::collections::{BTreeSet, HashMap};
@@ -143,18 +140,6 @@ impl Assembly {
         p: &Argument,
     ) -> ProvingKey<C> {
         build_pk(params, domain, p, |i, j| self.mapping[i][j])
-    }
-
-    /// Returns columns that participate in the permutation argument.
-    pub fn columns(&self) -> &[Column<Any>] {
-        &self.columns
-    }
-
-    /// Returns mappings of the copies.
-    pub fn mapping(
-        &self,
-    ) -> impl Iterator<Item = impl IndexedParallelIterator<Item = (usize, usize)> + '_> {
-        self.mapping.iter().map(|c| c.par_iter().copied())
     }
 }
 

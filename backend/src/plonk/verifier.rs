@@ -153,7 +153,7 @@ where
             vk.cs
                 .lookups
                 .iter()
-                .map(|argument| lookup_read_permuted_commitments(transcript))
+                .map(|_argument| lookup_read_permuted_commitments(transcript))
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -188,7 +188,7 @@ where
             vk.cs
                 .shuffles
                 .iter()
-                .map(|argument| shuffle_read_product_commitment(transcript))
+                .map(|_argument| shuffle_read_product_commitment(transcript))
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;

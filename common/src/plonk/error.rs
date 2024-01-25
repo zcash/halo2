@@ -5,6 +5,8 @@ use std::io;
 use super::TableColumn;
 use halo2_middleware::circuit::{Any, Column};
 
+// TODO: Consider splitting this Error into a frontend and backend version?
+
 /// This is an error that could occur during proving or circuit synthesis.
 // TODO: these errors need to be cleaned up
 #[derive(Debug)]
