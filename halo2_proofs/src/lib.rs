@@ -6,7 +6,24 @@
 pub mod plonk;
 
 pub mod circuit {
-    pub use halo2_common::circuit::{Layouter, SimpleFloorPlanner};
+    pub use halo2_common::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 }
-pub use halo2_common::poly;
-pub use halo2_common::transcript;
+pub mod arithmetic {
+    pub use halo2_common::arithmetic::Field;
+}
+pub mod dev {
+    pub use halo2_frontend::dev::MockProver;
+}
+pub mod poly {
+    pub use halo2_backend::poly::VerificationStrategy;
+    pub use halo2_common::poly::commitment;
+    pub use halo2_common::poly::ipa;
+    pub use halo2_common::poly::kzg;
+    pub use halo2_middleware::poly::Rotation;
+}
+pub mod transcript {
+    pub use halo2_common::transcript::{
+        Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge, TranscriptReadBuffer,
+        TranscriptWriterBuffer,
+    };
+}

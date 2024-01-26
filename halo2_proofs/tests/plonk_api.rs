@@ -2,31 +2,21 @@
 #![allow(clippy::op_ref)]
 
 use assert_matches::assert_matches;
-// TODO: Only import from halo2_proofs to show that we re-export the legacy API correctly
-use halo2_backend::plonk::{ProvingKey, VerifyingKey, VerifyingKey};
-use halo2_common::{
-    circuit::{Cell, Layouter, SimpleFloorPlanner, Value},
-    plonk::{Circuit, ConstraintSystem, Error, TableColumn},
-    poly::commitment::{CommitmentScheme, Prover, Verifier},
-    transcript::{
-        Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
-    },
+use ff::{FromUniformBytes, WithSmallOrderMulGroup};
+use halo2_proofs::arithmetic::Field;
+use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
+use halo2_proofs::dev::MockProver;
+use halo2_proofs::plonk::{
+    create_proof as create_plonk_proof, keygen_pk, keygen_vk, verify_proof as verify_plonk_proof,
+    Advice, Assigned, Circuit, Column, ConstraintSystem, Error, Fixed, ProvingKey, TableColumn,
+    VerifyingKey,
 };
-use halo2_frontend::dev::MockProver;
-use halo2_middleware::{
-    circuit::{Advice, Column, Fixed},
-    ff::{Field, FromUniformBytes, WithSmallOrderMulGroup},
-    plonk::Assigned,
-    poly::Rotation,
-};
-use halo2_proofs::{
-    plonk::{
-        create_proof as create_plonk_proof, keygen_pk, keygen_vk,
-        verify_proof as verify_plonk_proof,
-    },
-    poly::commitment::ParamsProver,
-    poly::VerificationStrategy,
-    transcript::EncodedChallenge,
+use halo2_proofs::poly::commitment::{CommitmentScheme, ParamsProver, Prover, Verifier};
+use halo2_proofs::poly::Rotation;
+use halo2_proofs::poly::VerificationStrategy;
+use halo2_proofs::transcript::{
+    Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge, TranscriptReadBuffer,
+    TranscriptWriterBuffer,
 };
 use rand_core::{OsRng, RngCore};
 use std::marker::PhantomData;
