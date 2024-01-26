@@ -140,9 +140,9 @@ pub trait RegionLayouter<F: Field>: fmt::Debug + SyncDeps {
 /// the set of columns it uses as well as the number of rows it uses.
 #[derive(Clone, Debug)]
 pub struct RegionShape {
-    pub(super) region_index: RegionIndex,
-    pub(super) columns: HashSet<RegionColumn>,
-    pub(super) row_count: usize,
+    pub region_index: RegionIndex,
+    pub columns: HashSet<RegionColumn>,
+    pub row_count: usize,
 }
 
 /// The virtual column involved in a region. This includes concrete columns,

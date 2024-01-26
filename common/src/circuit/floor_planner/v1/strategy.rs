@@ -163,7 +163,7 @@ fn first_fit_region(
 
 /// Positions the regions starting at the earliest row for which none of the columns are
 /// in use, taking into account gaps between earlier regions.
-fn slot_in(
+pub fn slot_in(
     region_shapes: Vec<RegionShape>,
 ) -> (Vec<(RegionStart, RegionShape)>, CircuitAllocations) {
     // Tracks the empty regions for each column.
@@ -240,44 +240,4 @@ pub fn slot_in_biggest_advice_first(
     let regions = regions.into_iter().map(|(start, _)| start).collect();
 
     (regions, column_allocations)
-}
-
-#[test]
-fn test_slot_in() {
-    use crate::plonk::Column;
-
-    let regions = vec![
-        RegionShape {
-            region_index: 0.into(),
-            columns: vec![Column::new(0, Any::advice()), Column::new(1, Any::advice())]
-                .into_iter()
-                .map(|a| a.into())
-                .collect(),
-            row_count: 15,
-        },
-        RegionShape {
-            region_index: 1.into(),
-            columns: vec![Column::new(2, Any::advice())]
-                .into_iter()
-                .map(|a| a.into())
-                .collect(),
-            row_count: 10,
-        },
-        RegionShape {
-            region_index: 2.into(),
-            columns: vec![Column::new(2, Any::advice()), Column::new(0, Any::advice())]
-                .into_iter()
-                .map(|a| a.into())
-                .collect(),
-            row_count: 10,
-        },
-    ];
-    assert_eq!(
-        slot_in(regions)
-            .0
-            .into_iter()
-            .map(|(i, _)| i)
-            .collect::<Vec<_>>(),
-        vec![0.into(), 0.into(), 15.into()]
-    );
 }

@@ -5,10 +5,7 @@ use halo2_common::plonk::FloorPlanner;
 use halo2_common::plonk::{permutation, Error};
 use halo2_common::plonk::{Assignment, FirstPhase, SecondPhase, Selector, ThirdPhase};
 use halo2_common::plonk::{Circuit, ConstraintSystem};
-use halo2_common::{
-    circuit::Value,
-    poly::{batch_invert_assigned, Polynomial},
-};
+use halo2_common::poly::{batch_invert_assigned, Polynomial};
 use halo2_middleware::circuit::{
     Advice, Any, Challenge, Column, CompiledCircuitV2, Fixed, Instance, PreprocessingV2,
 };
@@ -18,6 +15,13 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::ops::RangeTo;
+
+mod floor_planner;
+mod table_layouter;
+
+// Re-exports from common
+pub use halo2_common::circuit::floor_planner::single_pass::SimpleFloorPlanner;
+pub use halo2_common::circuit::{layouter, Layouter, Value};
 
 /// Compile a circuit.  Runs configure and synthesize on the circuit in order to materialize the
 /// circuit into its columns and the column configuration; as well as doing the fixed column and

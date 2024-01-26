@@ -13,7 +13,7 @@ use crate::{
 use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
 use halo2_middleware::plonk::Assigned;
 
-mod strategy;
+pub mod strategy;
 
 /// The version 1 [`FloorPlanner`] provided by `halo2`.
 ///
@@ -488,61 +488,5 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + SyncDeps> RegionLayouter<F> for V1Reg
         )?;
 
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use halo2curves::pasta::vesta;
-
-    use crate::{
-        dev::MockProver,
-        plonk::{Advice, Circuit, Column, Error},
-    };
-
-    #[test]
-    fn not_enough_columns_for_constants() {
-        struct MyCircuit {}
-
-        impl Circuit<vesta::Scalar> for MyCircuit {
-            type Config = Column<Advice>;
-            type FloorPlanner = super::V1;
-            #[cfg(feature = "circuit-params")]
-            type Params = ();
-
-            fn without_witnesses(&self) -> Self {
-                MyCircuit {}
-            }
-
-            fn configure(meta: &mut crate::plonk::ConstraintSystem<vesta::Scalar>) -> Self::Config {
-                meta.advice_column()
-            }
-
-            fn synthesize(
-                &self,
-                config: Self::Config,
-                mut layouter: impl crate::circuit::Layouter<vesta::Scalar>,
-            ) -> Result<(), crate::plonk::Error> {
-                layouter.assign_region(
-                    || "assign constant",
-                    |mut region| {
-                        region.assign_advice_from_constant(
-                            || "one",
-                            config,
-                            0,
-                            vesta::Scalar::one(),
-                        )
-                    },
-                )?;
-
-                Ok(())
-            }
-        }
-
-        let circuit = MyCircuit {};
-        assert!(matches!(
-            MockProver::run(3, &circuit, vec![]).unwrap_err(),
-            Error::NotEnoughColumnsForConstants,
-        ));
     }
 }

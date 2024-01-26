@@ -1249,13 +1249,11 @@ mod tests {
     use halo2curves::pasta::Fp;
 
     use super::{FailureLocation, MockProver, VerifyFailure};
-    use crate::{
-        circuit::{Layouter, SimpleFloorPlanner, Value},
-        plonk::{
-            sealed::SealedPhase, Advice, Any, Circuit, Column, ConstraintSystem, Error, Expression,
-            FirstPhase, Fixed, Instance, Selector, TableColumn,
-        },
+    use crate::circuit::{Layouter, SimpleFloorPlanner, Value};
+    use halo2_common::plonk::{
+        Circuit, ConstraintSystem, Error, Expression, Selector, TableColumn,
     };
+    use halo2_middleware::circuit::{Advice, Any, Column, Fixed, Instance};
     use halo2_middleware::poly::Rotation;
 
     #[test]
@@ -1334,12 +1332,7 @@ mod tests {
                 gate: (0, "Equality check").into(),
                 region: (0, "Faulty synthesis".to_owned()).into(),
                 gate_offset: 1,
-                column: Column::new(
-                    1,
-                    Any::Advice(Advice {
-                        phase: FirstPhase.to_sealed()
-                    })
-                ),
+                column: Column::new(1, Any::Advice(Advice { phase: 0 })),
                 offset: 1,
             }])
         );
@@ -1787,45 +1780,15 @@ mod tests {
                 },
                 cell_values: vec![
                     (
-                        (
-                            (
-                                Any::Advice(Advice {
-                                    phase: FirstPhase.to_sealed()
-                                }),
-                                0
-                            )
-                                .into(),
-                            0
-                        )
-                            .into(),
+                        ((Any::Advice(Advice { phase: 0 }), 0).into(), 0).into(),
                         "1".to_string()
                     ),
                     (
-                        (
-                            (
-                                Any::Advice(Advice {
-                                    phase: FirstPhase.to_sealed()
-                                }),
-                                1
-                            )
-                                .into(),
-                            0
-                        )
-                            .into(),
+                        ((Any::Advice(Advice { phase: 0 }), 1).into(), 0).into(),
                         "0".to_string()
                     ),
                     (
-                        (
-                            (
-                                Any::Advice(Advice {
-                                    phase: FirstPhase.to_sealed()
-                                }),
-                                2
-                            )
-                                .into(),
-                            0
-                        )
-                            .into(),
+                        ((Any::Advice(Advice { phase: 0 }), 2).into(), 0).into(),
                         "0x5".to_string()
                     ),
                     (((Any::Fixed, 0).into(), 0).into(), "0x7".to_string()),
