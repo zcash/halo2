@@ -10,7 +10,7 @@ use crate::{
         EvaluationDomain,
     },
 };
-use halo2_middleware::circuit::{Any, Column};
+use halo2_middleware::circuit::{Any, ColumnMid};
 use halo2_middleware::permutation::{ArgumentV2, AssemblyMid};
 
 #[cfg(feature = "thread-safe-region")]
@@ -24,7 +24,7 @@ use std::collections::{BTreeSet, HashMap};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Assembly {
     /// Columns that participate on the copy permutation argument.
-    columns: Vec<Column<Any>>,
+    columns: Vec<ColumnMid<Any>>,
     /// Mapping of the actual copies done.
     mapping: Vec<Vec<(usize, usize)>>,
     /// Some aux data used to swap positions directly when sorting.
@@ -60,7 +60,7 @@ impl Assembly {
         // in a 1-cycle; therefore mapping and aux are identical, because every cell is
         // its own distinguished element.
         Assembly {
-            columns: p.columns.clone(),
+            columns: p.columns.clone().into_iter().map(|c| c.into()).collect(),
             mapping: columns.clone(),
             aux: columns,
             sizes: vec![vec![1usize; n]; p.columns.len()],
@@ -69,21 +69,21 @@ impl Assembly {
 
     pub(crate) fn copy(
         &mut self,
-        left_column: Column<Any>,
+        left_column: ColumnMid<Any>,
         left_row: usize,
-        right_column: Column<Any>,
+        right_column: ColumnMid<Any>,
         right_row: usize,
     ) -> Result<(), Error> {
         let left_column = self
             .columns
             .iter()
             .position(|c| c == &left_column)
-            .ok_or(Error::ColumnNotInPermutation(left_column))?;
+            .ok_or(Error::ColumnNotInPermutation(left_column.into()))?;
         let right_column = self
             .columns
             .iter()
             .position(|c| c == &right_column)
-            .ok_or(Error::ColumnNotInPermutation(right_column))?;
+            .ok_or(Error::ColumnNotInPermutation(right_column.into()))?;
 
         // Check bounds
         if left_row >= self.mapping[left_column].len()
@@ -148,7 +148,7 @@ impl Assembly {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Assembly {
     /// Columns that participate on the copy permutation argument.
-    columns: Vec<Column<Any>>,
+    columns: Vec<ColumnMid<Any>>,
     /// Mapping of the actual copies done.
     cycles: Vec<Vec<(usize, usize)>>,
     /// Mapping of the actual copies done.
@@ -188,9 +188,9 @@ impl Assembly {
 
     pub(crate) fn copy(
         &mut self,
-        left_column: Column<Any>,
+        left_column: ColumnMid<Any>,
         left_row: usize,
-        right_column: Column<Any>,
+        right_column: ColumnMid<Any>,
         right_row: usize,
     ) -> Result<(), Error> {
         let left_column = self
@@ -316,7 +316,7 @@ impl Assembly {
     }
 
     /// Returns columns that participate in the permutation argument.
-    pub fn columns(&self) -> &[Column<Any>] {
+    pub fn columns(&self) -> &[ColumnMid<Any>] {
         &self.columns
     }
 

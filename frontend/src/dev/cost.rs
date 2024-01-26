@@ -14,9 +14,11 @@ use halo2_middleware::poly::Rotation;
 
 use halo2_common::{
     circuit::{layouter::RegionColumn, Value},
-    plonk::{Assignment, Circuit, ConstraintSystem, Error, FloorPlanner, Selector},
+    plonk::{
+        circuit::Column, Assignment, Circuit, ConstraintSystem, Error, FloorPlanner, Selector,
+    },
 };
-use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
+use halo2_middleware::circuit::{Advice, Any, Challenge, Fixed, Instance};
 use halo2_middleware::plonk::Assigned;
 
 /// Measures a circuit to determine its costs, and explain what contributes to them.

@@ -1,7 +1,7 @@
 //! Implementation of permutation argument.
 
-use crate::plonk::Error;
-use halo2_middleware::circuit::{Any, Column};
+use crate::plonk::{Column, Error};
+use halo2_middleware::circuit::Any;
 use halo2_middleware::permutation::{ArgumentV2, Cell};
 
 /// A permutation argument.
@@ -14,7 +14,7 @@ pub struct Argument {
 impl From<ArgumentV2> for Argument {
     fn from(arg: ArgumentV2) -> Self {
         Self {
-            columns: arg.columns.clone(),
+            columns: arg.columns.into_iter().map(|c| c.into()).collect(),
         }
     }
 }
@@ -110,11 +110,11 @@ impl AssemblyFront {
         }
         self.copies.push((
             Cell {
-                column: left_column,
+                column: left_column.into(),
                 row: left_row,
             },
             Cell {
-                column: right_column,
+                column: right_column.into(),
                 row: right_row,
             },
         ));

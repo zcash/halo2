@@ -6,11 +6,11 @@ use crate::{
     circuit::{
         layouter::{RegionColumn, RegionLayouter, RegionShape, SyncDeps, TableLayouter},
         table_layouter::{compute_table_lengths, SimpleTableLayouter},
-        Cell, Layouter, Region, RegionIndex, RegionStart, Table, Value,
+        Cell, Column, Layouter, Region, RegionIndex, RegionStart, Table, Value,
     },
     plonk::{Assignment, Circuit, Error, FloorPlanner, Selector, TableColumn},
 };
-use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
+use halo2_middleware::circuit::{Advice, Any, Challenge, Fixed, Instance};
 use halo2_middleware::plonk::Assigned;
 
 pub mod strategy;

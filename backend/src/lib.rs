@@ -1,3 +1,5 @@
+#![allow(unused_imports)] // TODO: Remove
+
 pub mod plonk;
 
 // Internal re-exports

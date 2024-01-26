@@ -4,8 +4,8 @@ use crate::circuit::{Layouter, Region, Value};
 use core::cmp::max;
 use core::ops::{Add, Mul};
 use halo2_middleware::circuit::{
-    Advice, AdviceQueryMid, Any, Challenge, Column, ConstraintSystemV2Backend, ExpressionMid,
-    Fixed, FixedQueryMid, GateV2Backend, Instance, InstanceQueryMid,
+    Advice, AdviceQueryMid, Any, Challenge, ColumnMid, ColumnType, ConstraintSystemV2Backend,
+    ExpressionMid, Fixed, FixedQueryMid, GateV2Backend, Instance, InstanceQueryMid,
 };
 use halo2_middleware::ff::Field;
 use halo2_middleware::metadata;
@@ -21,6 +21,160 @@ use std::{
 };
 
 mod compress_selectors;
+
+/// A column with an index and type
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub struct Column<C: ColumnType> {
+    pub index: usize,
+    pub column_type: C,
+}
+
+// TODO: Remove all these methods, and directly access the fields?
+impl<C: ColumnType> Column<C> {
+    pub fn new(index: usize, column_type: C) -> Self {
+        Column { index, column_type }
+    }
+
+    /// Index of this column.
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    /// Type of this column.
+    pub fn column_type(&self) -> &C {
+        &self.column_type
+    }
+
+    /// Return expression from column at a relative position
+    pub fn query_cell<F: Field>(&self, at: Rotation) -> ExpressionMid<F> {
+        self.column_type.query_cell(self.index, at)
+    }
+
+    /// Return expression from column at the current row
+    pub fn cur<F: Field>(&self) -> ExpressionMid<F> {
+        self.query_cell(Rotation::cur())
+    }
+
+    /// Return expression from column at the next row
+    pub fn next<F: Field>(&self) -> ExpressionMid<F> {
+        self.query_cell(Rotation::next())
+    }
+
+    /// Return expression from column at the previous row
+    pub fn prev<F: Field>(&self) -> ExpressionMid<F> {
+        self.query_cell(Rotation::prev())
+    }
+
+    /// Return expression from column at the specified rotation
+    pub fn rot<F: Field>(&self, rotation: i32) -> ExpressionMid<F> {
+        self.query_cell(Rotation(rotation))
+    }
+}
+
+impl<C: ColumnType> Ord for Column<C> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // This ordering is consensus-critical! The layouters rely on deterministic column
+        // orderings.
+        match self.column_type.into().cmp(&other.column_type.into()) {
+            // Indices are assigned within column types.
+            std::cmp::Ordering::Equal => self.index.cmp(&other.index),
+            order => order,
+        }
+    }
+}
+
+impl<C: ColumnType> PartialOrd for Column<C> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<C: ColumnType> From<ColumnMid<C>> for Column<C> {
+    fn from(column: ColumnMid<C>) -> Column<C> {
+        Column {
+            index: column.index,
+            column_type: column.column_type,
+        }
+    }
+}
+
+impl<C: ColumnType> Into<ColumnMid<C>> for Column<C> {
+    fn into(self) -> ColumnMid<C> {
+        ColumnMid {
+            index: self.index(),
+            column_type: *self.column_type(),
+        }
+    }
+}
+
+impl From<Column<Advice>> for Column<Any> {
+    fn from(advice: Column<Advice>) -> Column<Any> {
+        Column {
+            index: advice.index(),
+            column_type: Any::Advice(advice.column_type),
+        }
+    }
+}
+
+impl From<Column<Fixed>> for Column<Any> {
+    fn from(advice: Column<Fixed>) -> Column<Any> {
+        Column {
+            index: advice.index(),
+            column_type: Any::Fixed,
+        }
+    }
+}
+
+impl From<Column<Instance>> for Column<Any> {
+    fn from(advice: Column<Instance>) -> Column<Any> {
+        Column {
+            index: advice.index(),
+            column_type: Any::Instance,
+        }
+    }
+}
+
+impl TryFrom<Column<Any>> for Column<Advice> {
+    type Error = &'static str;
+
+    fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
+        match any.column_type() {
+            Any::Advice(advice) => Ok(Column {
+                index: any.index(),
+                column_type: *advice,
+            }),
+            _ => Err("Cannot convert into Column<Advice>"),
+        }
+    }
+}
+
+impl TryFrom<Column<Any>> for Column<Fixed> {
+    type Error = &'static str;
+
+    fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
+        match any.column_type() {
+            Any::Fixed => Ok(Column {
+                index: any.index(),
+                column_type: Fixed,
+            }),
+            _ => Err("Cannot convert into Column<Fixed>"),
+        }
+    }
+}
+
+impl TryFrom<Column<Any>> for Column<Instance> {
+    type Error = &'static str;
+
+    fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
+        match any.column_type() {
+            Any::Instance => Ok(Column {
+                index: any.index(),
+                column_type: Instance,
+            }),
+            _ => Err("Cannot convert into Column<Instance>"),
+        }
+    }
+}
 
 // TODO: Move sealed phase to frontend, and always use u8 in middleware and backend
 pub mod sealed {
@@ -1336,17 +1490,19 @@ impl<F: Field> From<ConstraintSystem<F>> for ConstraintSystemV2Backend<F> {
             num_advice_columns: cs.num_advice_columns,
             num_instance_columns: cs.num_instance_columns,
             num_challenges: cs.num_challenges,
-            unblinded_advice_columns: cs.unblinded_advice_columns.clone(),
+            unblinded_advice_columns: cs.unblinded_advice_columns,
             advice_column_phase: cs.advice_column_phase.iter().map(|p| p.0).collect(),
             challenge_phase: cs.challenge_phase.iter().map(|p| p.0).collect(),
             gates: cs
                 .gates
-                .iter()
-                .map(|g| {
-                    g.polys.clone().into_iter().enumerate().map(|(i, e)| {
-                        let name = match g.constraint_name(i) {
-                            "" => g.name.clone(),
-                            constraint_name => format!("{}:{}", g.name, constraint_name),
+                .into_iter()
+                .map(|mut g| {
+                    let constraint_names = std::mem::take(&mut g.constraint_names);
+                    let gate_name = g.name.clone();
+                    g.polys.into_iter().enumerate().map(move |(i, e)| {
+                        let name = match constraint_names[i].as_str() {
+                            "" => gate_name.clone(),
+                            constraint_name => format!("{}:{}", gate_name, constraint_name),
                         };
                         GateV2Backend {
                             name,
@@ -1357,47 +1513,36 @@ impl<F: Field> From<ConstraintSystem<F>> for ConstraintSystemV2Backend<F> {
                 .flatten()
                 .collect(),
             permutation: halo2_middleware::permutation::ArgumentV2 {
-                columns: cs.permutation.columns.clone(),
+                columns: cs
+                    .permutation
+                    .columns
+                    .into_iter()
+                    .map(|c| c.into())
+                    .collect(),
             },
             lookups: cs
                 .lookups
-                .iter()
+                .into_iter()
                 .map(|l| halo2_middleware::lookup::ArgumentV2 {
-                    name: l.name.clone(),
-                    input_expressions: l
-                        .input_expressions
-                        .clone()
-                        .into_iter()
-                        .map(|e| e.into())
-                        .collect(),
-                    table_expressions: l
-                        .table_expressions
-                        .clone()
-                        .into_iter()
-                        .map(|e| e.into())
-                        .collect(),
+                    name: l.name,
+                    input_expressions: l.input_expressions.into_iter().map(|e| e.into()).collect(),
+                    table_expressions: l.table_expressions.into_iter().map(|e| e.into()).collect(),
                 })
                 .collect(),
             shuffles: cs
                 .shuffles
-                .iter()
+                .into_iter()
                 .map(|s| halo2_middleware::shuffle::ArgumentV2 {
-                    name: s.name.clone(),
-                    input_expressions: s
-                        .input_expressions
-                        .clone()
-                        .into_iter()
-                        .map(|e| e.into())
-                        .collect(),
+                    name: s.name,
+                    input_expressions: s.input_expressions.into_iter().map(|e| e.into()).collect(),
                     shuffle_expressions: s
                         .shuffle_expressions
-                        .clone()
                         .into_iter()
                         .map(|e| e.into())
                         .collect(),
                 })
                 .collect(),
-            general_column_annotations: cs.general_column_annotations.clone(),
+            general_column_annotations: cs.general_column_annotations,
         }
     }
 }
@@ -1569,11 +1714,11 @@ pub fn collect_queries<F: Field>(
     for column in &cs2.permutation.columns {
         match column.column_type {
             Any::Instance => {
-                queries.add_instance(Column::new(column.index(), Instance), Rotation::cur())
+                queries.add_instance(Column::new(column.index, Instance), Rotation::cur())
             }
-            Any::Fixed => queries.add_fixed(Column::new(column.index(), Fixed), Rotation::cur()),
+            Any::Fixed => queries.add_fixed(Column::new(column.index, Fixed), Rotation::cur()),
             Any::Advice(advice) => {
-                queries.add_advice(Column::new(column.index(), advice), Rotation::cur())
+                queries.add_advice(Column::new(column.index, advice), Rotation::cur())
             }
         };
     }

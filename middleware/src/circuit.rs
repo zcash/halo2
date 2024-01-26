@@ -176,69 +176,9 @@ pub trait ColumnType:
 
 /// A column with an index and type
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct Column<C: ColumnType> {
+pub struct ColumnMid<C: ColumnType> {
     pub index: usize,
     pub column_type: C,
-}
-
-// TODO: Remove all these methods, and directly access the fields?
-impl<C: ColumnType> Column<C> {
-    pub fn new(index: usize, column_type: C) -> Self {
-        Column { index, column_type }
-    }
-
-    /// Index of this column.
-    pub fn index(&self) -> usize {
-        self.index
-    }
-
-    /// Type of this column.
-    pub fn column_type(&self) -> &C {
-        &self.column_type
-    }
-
-    /// Return expression from column at a relative position
-    pub fn query_cell<F: Field>(&self, at: Rotation) -> ExpressionMid<F> {
-        self.column_type.query_cell(self.index, at)
-    }
-
-    /// Return expression from column at the current row
-    pub fn cur<F: Field>(&self) -> ExpressionMid<F> {
-        self.query_cell(Rotation::cur())
-    }
-
-    /// Return expression from column at the next row
-    pub fn next<F: Field>(&self) -> ExpressionMid<F> {
-        self.query_cell(Rotation::next())
-    }
-
-    /// Return expression from column at the previous row
-    pub fn prev<F: Field>(&self) -> ExpressionMid<F> {
-        self.query_cell(Rotation::prev())
-    }
-
-    /// Return expression from column at the specified rotation
-    pub fn rot<F: Field>(&self, rotation: i32) -> ExpressionMid<F> {
-        self.query_cell(Rotation(rotation))
-    }
-}
-
-impl<C: ColumnType> Ord for Column<C> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // This ordering is consensus-critical! The layouters rely on deterministic column
-        // orderings.
-        match self.column_type.into().cmp(&other.column_type.into()) {
-            // Indices are assigned within column types.
-            std::cmp::Ordering::Equal => self.index.cmp(&other.index),
-            order => order,
-        }
-    }
-}
-
-impl<C: ColumnType> PartialOrd for Column<C> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
 }
 
 /// An advice column
@@ -408,74 +348,5 @@ impl From<Fixed> for Any {
 impl From<Instance> for Any {
     fn from(_: Instance) -> Any {
         Any::Instance
-    }
-}
-
-impl From<Column<Advice>> for Column<Any> {
-    fn from(advice: Column<Advice>) -> Column<Any> {
-        Column {
-            index: advice.index(),
-            column_type: Any::Advice(advice.column_type),
-        }
-    }
-}
-
-impl From<Column<Fixed>> for Column<Any> {
-    fn from(advice: Column<Fixed>) -> Column<Any> {
-        Column {
-            index: advice.index(),
-            column_type: Any::Fixed,
-        }
-    }
-}
-
-impl From<Column<Instance>> for Column<Any> {
-    fn from(advice: Column<Instance>) -> Column<Any> {
-        Column {
-            index: advice.index(),
-            column_type: Any::Instance,
-        }
-    }
-}
-
-impl TryFrom<Column<Any>> for Column<Advice> {
-    type Error = &'static str;
-
-    fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
-        match any.column_type() {
-            Any::Advice(advice) => Ok(Column {
-                index: any.index(),
-                column_type: *advice,
-            }),
-            _ => Err("Cannot convert into Column<Advice>"),
-        }
-    }
-}
-
-impl TryFrom<Column<Any>> for Column<Fixed> {
-    type Error = &'static str;
-
-    fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
-        match any.column_type() {
-            Any::Fixed => Ok(Column {
-                index: any.index(),
-                column_type: Fixed,
-            }),
-            _ => Err("Cannot convert into Column<Fixed>"),
-        }
-    }
-}
-
-impl TryFrom<Column<Any>> for Column<Instance> {
-    type Error = &'static str;
-
-    fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
-        match any.column_type() {
-            Any::Instance => Ok(Column {
-                index: any.index(),
-                column_type: Instance,
-            }),
-            _ => Err("Cannot convert into Column<Instance>"),
-        }
     }
 }

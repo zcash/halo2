@@ -1,13 +1,15 @@
 //! Traits and structs for implementing circuit components.
 
-use halo2_common::plonk::sealed::{self, SealedPhase};
-use halo2_common::plonk::FloorPlanner;
-use halo2_common::plonk::{permutation, Error};
-use halo2_common::plonk::{Assignment, FirstPhase, SecondPhase, Selector, ThirdPhase};
-use halo2_common::plonk::{Circuit, ConstraintSystem};
+use halo2_common::plonk::{
+    circuit::Column,
+    permutation,
+    sealed::{self, SealedPhase},
+    Assignment, Circuit, ConstraintSystem, Error, FirstPhase, FloorPlanner, SecondPhase, Selector,
+    ThirdPhase,
+};
 use halo2_common::poly::{batch_invert_assigned, Polynomial};
 use halo2_middleware::circuit::{
-    Advice, Any, Challenge, Column, CompiledCircuitV2, Fixed, Instance, PreprocessingV2,
+    Advice, Any, Challenge, CompiledCircuitV2, Fixed, Instance, PreprocessingV2,
 };
 use halo2_middleware::ff::Field;
 use halo2_middleware::plonk::Assigned;

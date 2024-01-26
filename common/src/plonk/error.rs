@@ -3,7 +3,8 @@ use std::fmt;
 use std::io;
 
 use super::TableColumn;
-use halo2_middleware::circuit::{Any, Column};
+use crate::plonk::circuit::Column;
+use halo2_middleware::circuit::Any;
 
 // TODO: Consider splitting this Error into a frontend and backend version?
 

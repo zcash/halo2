@@ -12,13 +12,14 @@ use halo2_middleware::ff::FromUniformBytes;
 use halo2_common::{
     circuit,
     plonk::{
+        circuit::Column,
         permutation,
         sealed::{self, SealedPhase},
         Assignment, Circuit, ConstraintSystem, Error, Expression, FirstPhase, FloorPlanner, Phase,
         Selector,
     },
 };
-use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
+use halo2_middleware::circuit::{Advice, Any, Challenge, ColumnMid, Fixed, Instance};
 use halo2_middleware::plonk::Assigned;
 
 use halo2_common::multicore::{
@@ -381,9 +382,10 @@ impl<F: Field> Assignment<F> for MockProver<F> {
         }
 
         if let Some(region) = self.current_region.as_mut() {
-            region
-                .annotations
-                .insert(ColumnMetadata::from(column), annotation().into());
+            region.annotations.insert(
+                ColumnMetadata::from(column.into().into()),
+                annotation().into(),
+            );
         }
     }
 
@@ -1112,11 +1114,11 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
 
         // Check that permutations preserve the original values of the cells.
         // Original values of columns involved in the permutation.
-        let original = |column: Column<Any>, row: usize| match column.column_type() {
-            Any::Advice(_) => self.advice[column.index()][row],
-            Any::Fixed => self.fixed[column.index()][row],
+        let original = |column: ColumnMid<Any>, row: usize| match column.column_type {
+            Any::Advice(_) => self.advice[column.index][row],
+            Any::Fixed => self.fixed[column.index][row],
             Any::Instance => {
-                let cell: &InstanceValue<F> = &self.instance[column.index()][row];
+                let cell: &InstanceValue<F> = &self.instance[column.index][row];
                 CellValue::Assigned(cell.value())
             }
         };

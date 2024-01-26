@@ -4,8 +4,8 @@ use std::{fmt, marker::PhantomData};
 
 use halo2_middleware::ff::Field;
 
-use crate::plonk::{Error, Selector, TableColumn};
-use halo2_middleware::circuit::{Advice, Any, Challenge, Column, Fixed, Instance};
+use crate::plonk::{circuit::Column, Error, Selector, TableColumn};
+use halo2_middleware::circuit::{Advice, Any, Challenge, Fixed, Instance};
 use halo2_middleware::plonk::Assigned;
 
 mod value;
