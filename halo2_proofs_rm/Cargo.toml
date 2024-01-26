@@ -102,11 +102,3 @@ derive_serde = ["halo2curves/derive_serde"]
 
 [lib]
 bench = false
-
-[[example]]
-name = "circuit-layout"
-required-features = ["test-dev-graph"]
-
-[[example]]
-name = "proof-size"
-required-features = ["cost-estimator"]

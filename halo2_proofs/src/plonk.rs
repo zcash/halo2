@@ -10,6 +10,9 @@ pub use prover::create_proof;
 pub use verifier::verify_proof;
 
 pub use halo2_backend::plonk::{ProvingKey, VerifyingKey};
-pub use halo2_common::plonk::{Circuit, ConstraintSystem, Error, TableColumn};
-pub use halo2_middleware::circuit::{Advice, Column, Fixed, Instance};
+pub use halo2_common::plonk::{
+    Circuit, ConstraintSystem, Error, Expression, FirstPhase, SecondPhase, Selector, TableColumn,
+    ThirdPhase,
+};
+pub use halo2_middleware::circuit::{Advice, Challenge, Column, Fixed, Instance};
 pub use halo2_middleware::plonk::Assigned;
