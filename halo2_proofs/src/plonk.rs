@@ -6,3 +6,7 @@ pub mod verifier {
 
 pub use halo2_common::plonk::ConstraintSystem;
 pub use keygen::{keygen_pk, keygen_vk};
+
+pub use keygen::*;
+pub use prover::*;
+pub use verifier::*;

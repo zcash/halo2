@@ -5,19 +5,28 @@
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
 
-use halo2_proofs::arithmetic::Field;
-use halo2_proofs::circuit::{AssignedCell, Layouter, Region, SimpleFloorPlanner, Value};
-use halo2_proofs::dev::MockProver;
-use halo2_proofs::plonk::{
-    compile_circuit, keygen_pk_v2, keygen_vk_v2, verify_proof, verify_proof_single, Advice,
-    Challenge, Circuit, Column, ConstraintSystem, Error, Expression, FirstPhase, Fixed, Instance,
-    ProverV2Single, SecondPhase, Selector, WitnessCalculator,
+use halo2_backend::plonk::{
+    keygen::{keygen_pk_v2, keygen_vk_v2},
+    prover::ProverV2Single,
+    verifier::{verify_proof, verify_proof_single},
+};
+use halo2_common::{
+    circuit::{AssignedCell, Layouter, Region, SimpleFloorPlanner, Value},
+    plonk::{Circuit, ConstraintSystem, Error, Expression, FirstPhase, SecondPhase, Selector},
+    transcript::{
+        Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
+    },
+};
+use halo2_frontend::{
+    circuit::{compile_circuit, WitnessCalculator},
+    dev::MockProver,
+};
+use halo2_middleware::{
+    circuit::{Advice, Challenge, Column, Fixed, Instance},
+    ff::Field,
+    poly::Rotation,
 };
 use halo2_proofs::poly::commitment::ParamsProver;
-use halo2_proofs::poly::Rotation;
-use halo2_proofs::transcript::{
-    Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
-};
 use std::collections::HashMap;
 
 #[derive(Clone)]
