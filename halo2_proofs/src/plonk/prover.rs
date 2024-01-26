@@ -64,6 +64,7 @@ fn test_create_proof() {
         },
         transcript::{Blake2bWrite, Challenge255, TranscriptWriterBuffer},
     };
+    use halo2_middleware::ff::Field;
     use halo2curves::bn256::Bn256;
     use rand_core::OsRng;
 
