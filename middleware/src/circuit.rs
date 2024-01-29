@@ -176,9 +176,11 @@ pub trait ColumnType:
 
 /// A column with an index and type
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct ColumnMid<C: ColumnType> {
+pub struct ColumnMid {
+    /// The index of the column.
     pub index: usize,
-    pub column_type: C,
+    /// The type of the column.
+    pub column_type: Any,
 }
 
 /// An advice column

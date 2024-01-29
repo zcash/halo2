@@ -382,10 +382,9 @@ impl<F: Field> Assignment<F> for MockProver<F> {
         }
 
         if let Some(region) = self.current_region.as_mut() {
-            region.annotations.insert(
-                ColumnMetadata::from(column.into().into()),
-                annotation().into(),
-            );
+            region
+                .annotations
+                .insert(column.into(), annotation().into());
         }
     }
 
@@ -1114,7 +1113,7 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
 
         // Check that permutations preserve the original values of the cells.
         // Original values of columns involved in the permutation.
-        let original = |column: ColumnMid<Any>, row: usize| match column.column_type {
+        let original = |column: ColumnMid, row: usize| match column.column_type {
             Any::Advice(_) => self.advice[column.index][row],
             Any::Fixed => self.fixed[column.index][row],
             Any::Instance => {
@@ -1136,7 +1135,7 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                     location: FailureLocation::find(
                         &self.regions,
                         cell_a.row,
-                        Some(&cell_a.column).into_iter().cloned().collect(),
+                        Some(&cell_a.column.into()).into_iter().cloned().collect(),
                     ),
                 })
             }

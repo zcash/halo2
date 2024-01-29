@@ -24,7 +24,7 @@ use std::collections::{BTreeSet, HashMap};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Assembly {
     /// Columns that participate on the copy permutation argument.
-    columns: Vec<ColumnMid<Any>>,
+    columns: Vec<ColumnMid>,
     /// Mapping of the actual copies done.
     mapping: Vec<Vec<(usize, usize)>>,
     /// Some aux data used to swap positions directly when sorting.
@@ -69,9 +69,9 @@ impl Assembly {
 
     pub(crate) fn copy(
         &mut self,
-        left_column: ColumnMid<Any>,
+        left_column: ColumnMid,
         left_row: usize,
-        right_column: ColumnMid<Any>,
+        right_column: ColumnMid,
         right_row: usize,
     ) -> Result<(), Error> {
         let left_column = self

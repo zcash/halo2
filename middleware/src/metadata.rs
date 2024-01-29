@@ -34,8 +34,8 @@ impl From<(Any, usize)> for Column {
     }
 }
 
-impl From<circuit::ColumnMid<Any>> for Column {
-    fn from(column: circuit::ColumnMid<Any>) -> Self {
+impl From<circuit::ColumnMid> for Column {
+    fn from(column: circuit::ColumnMid) -> Self {
         Column {
             column_type: column.column_type,
             index: column.index,

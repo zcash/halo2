@@ -29,6 +29,15 @@ pub struct Column<C: ColumnType> {
     pub column_type: C,
 }
 
+impl Into<metadata::Column> for Column<Any> {
+    fn into(self) -> metadata::Column {
+        metadata::Column {
+            index: self.index(),
+            column_type: *self.column_type(),
+        }
+    }
+}
+
 // TODO: Remove all these methods, and directly access the fields?
 impl<C: ColumnType> Column<C> {
     pub fn new(index: usize, column_type: C) -> Self {
@@ -46,27 +55,27 @@ impl<C: ColumnType> Column<C> {
     }
 
     /// Return expression from column at a relative position
-    pub fn query_cell<F: Field>(&self, at: Rotation) -> ExpressionMid<F> {
+    pub fn query_cell<F: Field>(&self, at: Rotation) -> Expression<F> {
         self.column_type.query_cell(self.index, at)
     }
 
     /// Return expression from column at the current row
-    pub fn cur<F: Field>(&self) -> ExpressionMid<F> {
+    pub fn cur<F: Field>(&self) -> Expression<F> {
         self.query_cell(Rotation::cur())
     }
 
     /// Return expression from column at the next row
-    pub fn next<F: Field>(&self) -> ExpressionMid<F> {
+    pub fn next<F: Field>(&self) -> Expression<F> {
         self.query_cell(Rotation::next())
     }
 
     /// Return expression from column at the previous row
-    pub fn prev<F: Field>(&self) -> ExpressionMid<F> {
+    pub fn prev<F: Field>(&self) -> Expression<F> {
         self.query_cell(Rotation::prev())
     }
 
     /// Return expression from column at the specified rotation
-    pub fn rot<F: Field>(&self, rotation: i32) -> ExpressionMid<F> {
+    pub fn rot<F: Field>(&self, rotation: i32) -> Expression<F> {
         self.query_cell(Rotation(rotation))
     }
 }
@@ -89,8 +98,8 @@ impl<C: ColumnType> PartialOrd for Column<C> {
     }
 }
 
-impl<C: ColumnType> From<ColumnMid<C>> for Column<C> {
-    fn from(column: ColumnMid<C>) -> Column<C> {
+impl From<ColumnMid> for Column<Any> {
+    fn from(column: ColumnMid) -> Column<Any> {
         Column {
             index: column.index,
             column_type: column.column_type,
@@ -98,8 +107,8 @@ impl<C: ColumnType> From<ColumnMid<C>> for Column<C> {
     }
 }
 
-impl<C: ColumnType> Into<ColumnMid<C>> for Column<C> {
-    fn into(self) -> ColumnMid<C> {
+impl Into<ColumnMid> for Column<Any> {
+    fn into(self) -> ColumnMid {
         ColumnMid {
             index: self.index(),
             column_type: *self.column_type(),

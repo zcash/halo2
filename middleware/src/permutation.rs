@@ -1,9 +1,9 @@
-use crate::circuit::{Any, ColumnMid};
+use crate::circuit::ColumnMid;
 
 // TODO: Dedup with other Cell definition, or move this to a higher level
 #[derive(Clone, Debug)]
 pub struct Cell {
-    pub column: ColumnMid<Any>,
+    pub column: ColumnMid,
     pub row: usize,
 }
 
@@ -16,5 +16,5 @@ pub struct AssemblyMid {
 #[derive(Debug, Clone)]
 pub struct ArgumentV2 {
     /// A sequence of columns involved in the argument.
-    pub columns: Vec<ColumnMid<Any>>,
+    pub columns: Vec<ColumnMid>,
 }
