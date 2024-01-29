@@ -1,6 +1,13 @@
-pub mod keygen;
-pub mod prover;
-pub mod verifier {
+//! This module provides an implementation of a variant of (Turbo)[PLONK][plonk]
+//! that is designed specifically for the polynomial commitment scheme described
+//! in the [Halo][halo] paper.
+//!
+//! [halo]: https://eprint.iacr.org/2019/1021
+//! [plonk]: https://eprint.iacr.org/2019/953
+
+mod keygen;
+mod prover;
+mod verifier {
     pub use halo2_backend::plonk::verifier::verify_proof;
 }
 

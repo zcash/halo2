@@ -49,36 +49,23 @@ name = "fft"
 harness = false
 
 [dependencies]
-backtrace = { version = "0.3", optional = true }
-ff = "0.13"
-group = "0.13"
-halo2curves = { version = "0.6.0", default-features = false }
-rand_core = { version = "0.6", default-features = false }
-tracing = "0.1"
-blake2b_simd = "1" # MSRV 1.66.0
-sha3 = "0.9.1"
-rand_chacha = "0.3"
-serde = { version = "1", optional = true, features = ["derive"] }
-serde_derive = { version = "1", optional = true}
-rayon = "1.8"
 halo2_middleware = { path = "../middleware" }
 halo2_common = { path = "../common" }
 halo2_backend = { path = "../backend" }
 halo2_frontend = { path = "../frontend" }
-
-# Developer tooling dependencies
-plotters = { version = "0.3.0", default-features = false, optional = true }
-tabbycat = { version = "0.1", features = ["attributes"], optional = true }
-
-# Legacy circuit compatibility
-halo2_legacy_pdqsort = { version = "0.1.0", optional = true }
+halo2curves = { version = "0.6.0", default-features = false }
+rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
 
 [dev-dependencies]
+ff = "0.13"
+group = "0.13"
+tracing = "0.1"
+rand_chacha = "0.3"
+rayon = "1.8"
 assert_matches = "1.5"
 criterion = "0.3"
 gumdrop = "0.8"
 proptest = "1"
-rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
 dhat = "0.3.2"
 serde_json = "1"
 
@@ -87,21 +74,16 @@ getrandom = { version = "0.2", features = ["js"] }
 
 [features]
 default = ["batch", "bits"]
-dev-graph = ["plotters", "tabbycat"]
-test-dev-graph = [
-    "dev-graph",
-    "plotters/bitmap_backend",
-    "plotters/bitmap_encoder",
-    "plotters/ttf",
-]
+dev-graph = ["halo2_frontend/dev-graph"]
+test-dev-graph = ["halo2_frontend/test-dev-graph"]
 bits = ["halo2curves/bits"]
-gadget-traces = ["backtrace"]
+gadget-traces = ["halo2_common/gadget-traces"]
 thread-safe-region = []
 sanity-checks = []
 batch = ["rand_core/getrandom"]
 circuit-params = []
 heap-profiling = []
-cost-estimator = ["serde", "serde_derive"]
+cost-estimator = ["halo2_frontend/cost-estimator"]
 derive_serde = ["halo2curves/derive_serde"]
 
 [lib]
