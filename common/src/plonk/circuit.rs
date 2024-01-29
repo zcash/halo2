@@ -267,9 +267,9 @@ impl SealedPhase for super::ThirdPhase {
 ///
 /// Selectors can be used to conditionally enable (portions of) gates:
 /// ```
-/// use halo2_proofs::poly::Rotation;
+/// use halo2_middleware::poly::Rotation;
 /// # use halo2curves::pasta::Fp;
-/// # use halo2_proofs::plonk::ConstraintSystem;
+/// # use halo2_common::plonk::ConstraintSystem;
 ///
 /// # let mut meta = ConstraintSystem::<Fp>::default();
 /// let a = meta.advice_column();
@@ -290,12 +290,12 @@ impl SealedPhase for super::ThirdPhase {
 /// Selectors are disabled on all rows by default, and must be explicitly enabled on each
 /// row when required:
 /// ```
-/// use halo2_proofs::{
-///     circuit::{Chip, Layouter, Value},
-///     plonk::{Advice, Column, Error, Selector},
-/// };
+/// use halo2_middleware::circuit::Advice;
+/// use halo2_common::circuit::{Chip, Layouter, Value};
+/// use halo2_common::plonk::circuit::{Column, Selector};
+/// use halo2_common::plonk::Error;
 /// use halo2_middleware::ff::Field;
-/// # use halo2_proofs::plonk::Fixed;
+/// # use halo2_middleware::circuit::Fixed;
 ///
 /// struct Config {
 ///     a: Column<Advice>,
@@ -1356,9 +1356,10 @@ impl<F: Field> From<Expression<F>> for Vec<Constraint<F>> {
 /// A set of polynomial constraints with a common selector.
 ///
 /// ```
-/// use halo2_proofs::{plonk::{Constraints, Expression}, poly::Rotation};
+/// use halo2_common::{plonk::{Constraints, Expression}};
+/// use halo2_middleware::poly::Rotation;
 /// use halo2curves::pasta::Fp;
-/// # use halo2_proofs::plonk::ConstraintSystem;
+/// # use halo2_common::plonk::ConstraintSystem;
 ///
 /// # let mut meta = ConstraintSystem::<Fp>::default();
 /// let a = meta.advice_column();

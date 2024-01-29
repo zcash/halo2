@@ -27,11 +27,13 @@ struct Gate {
 ///
 /// ```
 /// use halo2_middleware::ff::Field;
-/// use halo2_proofs::{
+/// use halo2_middleware::poly::Rotation;
+/// use halo2_frontend::{
 ///     circuit::{Layouter, SimpleFloorPlanner},
 ///     dev::CircuitGates,
+/// };
+/// use halo2_common::{
 ///     plonk::{Circuit, ConstraintSystem, Error},
-///     poly::Rotation,
 /// };
 /// use halo2curves::pasta::pallas;
 ///

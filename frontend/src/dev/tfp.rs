@@ -30,9 +30,11 @@ use halo2_middleware::plonk::Assigned;
 ///
 /// ```
 /// use halo2_middleware::ff::Field;
-/// use halo2_proofs::{
+/// use halo2_frontend::{
 ///     circuit::{floor_planner, Layouter, Value},
 ///     dev::TracingFloorPlanner,
+/// };
+/// use halo2_common::{
 ///     plonk::{Circuit, ConstraintSystem, Error},
 /// };
 ///

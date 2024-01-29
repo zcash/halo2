@@ -182,12 +182,15 @@ impl<F: Field> Mul<F> for Value<F> {
 /// # Examples
 ///
 /// ```
-/// use halo2_proofs::{
+/// use halo2_frontend::{
 ///     circuit::{Layouter, SimpleFloorPlanner, Value},
 ///     dev::{FailureLocation, MockProver, VerifyFailure},
-///     plonk::{Advice, Any, Circuit, Column, ConstraintSystem, Error, Selector},
-///     poly::Rotation,
 /// };
+/// use halo2_common::{
+///     plonk::{circuit::Column, Circuit, ConstraintSystem, Error, Selector},
+/// };
+/// use halo2_middleware::circuit::{Advice, Any};
+/// use halo2_middleware::poly::Rotation;
 /// use halo2_middleware::ff::PrimeField;
 /// use halo2curves::pasta::Fp;
 /// const K: u32 = 5;

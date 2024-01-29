@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::ops::RangeTo;
 
-mod floor_planner;
+pub mod floor_planner;
 mod table_layouter;
 
 // Re-exports from common
