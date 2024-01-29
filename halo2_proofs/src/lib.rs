@@ -12,7 +12,9 @@ pub mod circuit {
     };
 }
 pub mod arithmetic {
-    pub use halo2_common::arithmetic::{CurveAffine, Field};
+    pub use halo2_common::arithmetic::{
+        best_fft, parallelize, small_multiexp, CurveAffine, CurveExt, Field,
+    };
 }
 pub mod dev {
     pub use halo2_frontend::dev::{metadata, FailureLocation, MockProver, VerifyFailure};

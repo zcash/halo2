@@ -11,11 +11,11 @@ authors = [
 edition = "2021"
 rust-version = "1.66.0"
 description = """
-TODO
+Fast PLONK-based zero-knowledge proving system with no trusted setup
 """
 license = "MIT OR Apache-2.0"
-repository = "TODO"
-documentation = "TODO"
+repository = "https://github.com/zcash/halo2"
+documentation = "https://docs.rs/halo2_proofs"
 readme = "README.md"
 categories = ["cryptography"]
 keywords = ["halo", "proofs", "zkp", "zkSNARKs"]
@@ -23,6 +23,30 @@ keywords = ["halo", "proofs", "zkp", "zkSNARKs"]
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
+
+[[bench]]
+name = "arithmetic"
+harness = false
+
+[[bench]]
+name = "commit_zk"
+harness = false
+
+[[bench]]
+name = "hashtocurve"
+harness = false
+
+[[bench]]
+name = "plonk"
+harness = false
+
+[[bench]]
+name = "dev_lookup"
+harness = false
+
+[[bench]]
+name = "fft"
+harness = false
 
 [dependencies]
 backtrace = { version = "0.3", optional = true }
