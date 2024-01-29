@@ -13,13 +13,18 @@ use crate::{
 use halo2_middleware::circuit::{Any, ColumnMid};
 use halo2_middleware::permutation::{ArgumentV2, AssemblyMid};
 
-#[cfg(feature = "thread-safe-region")]
+// NOTE: Temporarily disabled thread-safe-region feature.  Regions are a frontend concept, so the
+// thread-safe support for them should be only in the frontend package.
+
+// #[cfg(feature = "thread-safe-region")]
 use crate::multicore::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
+/*
 #[cfg(feature = "thread-safe-region")]
 use std::collections::{BTreeSet, HashMap};
+*/
 
-#[cfg(not(feature = "thread-safe-region"))]
+// #[cfg(not(feature = "thread-safe-region"))]
 /// Struct that accumulates all the necessary data in order to construct the permutation argument.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Assembly {
@@ -33,7 +38,7 @@ pub struct Assembly {
     sizes: Vec<Vec<usize>>,
 }
 
-#[cfg(not(feature = "thread-safe-region"))]
+// #[cfg(not(feature = "thread-safe-region"))]
 impl Assembly {
     pub(crate) fn new_from_assembly_mid(
         n: usize,
@@ -143,12 +148,13 @@ impl Assembly {
     }
 }
 
+/*
 #[cfg(feature = "thread-safe-region")]
 /// Struct that accumulates all the necessary data in order to construct the permutation argument.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Assembly {
     /// Columns that participate on the copy permutation argument.
-    columns: Vec<ColumnMid<Any>>,
+    columns: Vec<ColumnMid>,
     /// Mapping of the actual copies done.
     cycles: Vec<Vec<(usize, usize)>>,
     /// Mapping of the actual copies done.
@@ -165,10 +171,10 @@ pub struct Assembly {
 impl Assembly {
     pub(crate) fn new_from_assembly_mid(
         n: usize,
-        p: &Argument,
+        p: &ArgumentV2,
         a: &AssemblyMid,
     ) -> Result<Self, Error> {
-        let mut assembly = Self::new(n, p);
+        let mut assembly = Self::new(n, &p.clone().into());
         for copy in &a.copies {
             assembly.copy(copy.0.column, copy.0.row, copy.1.column, copy.1.row)?;
         }
@@ -176,21 +182,27 @@ impl Assembly {
     }
 
     pub(crate) fn new(n: usize, p: &Argument) -> Self {
+        // Initialize the copy vector to keep track of copy constraints in all
+        // the permutation arguments.
+        let mut columns = vec![];
+        for i in 0..p.columns.len() {
+            // Computes [(i, 0), (i, 1), ..., (i, n - 1)]
+            columns.push((0..n).map(|j| (i, j)).collect());
+        }
+
         Assembly {
-            columns: p.columns.clone(),
-            cycles: Vec::with_capacity(n),
-            ordered_cycles: Vec::with_capacity(n),
-            aux: HashMap::new(),
-            col_len: n,
-            num_cols: p.columns.len(),
+            columns: p.columns.clone().into_iter().map(|c| c.into()).collect(),
+            mapping: columns.clone(),
+            aux: columns,
+            sizes: vec![vec![1usize; n]; p.columns.len()],
         }
     }
 
     pub(crate) fn copy(
         &mut self,
-        left_column: ColumnMid<Any>,
+        left_column: ColumnMid,
         left_row: usize,
-        right_column: ColumnMid<Any>,
+        right_column: ColumnMid,
         right_row: usize,
     ) -> Result<(), Error> {
         let left_column = self
@@ -316,7 +328,7 @@ impl Assembly {
     }
 
     /// Returns columns that participate in the permutation argument.
-    pub fn columns(&self) -> &[ColumnMid<Any>] {
+    pub fn columns(&self) -> &[ColumnMid] {
         &self.columns
     }
 
@@ -331,6 +343,7 @@ impl Assembly {
         })
     }
 }
+*/
 
 pub(crate) fn build_pk<'params, C: CurveAffine, P: Params<'params, C>>(
     params: &P,

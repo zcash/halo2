@@ -4,7 +4,7 @@
 use std::collections::HashSet;
 use std::{iter, num::ParseIntError, str::FromStr};
 
-use crate::plonk::Circuit;
+use halo2_common::plonk::circuit::Circuit;
 use halo2_middleware::ff::{Field, FromUniformBytes};
 use serde::Deserialize;
 use serde_derive::Serialize;

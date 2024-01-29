@@ -258,6 +258,7 @@ impl<
     }
 
     /// Commit the `witness` at `phase` and return the challenges after `phase`.
+    #[allow(clippy::type_complexity)]
     pub fn commit_phase(
         &mut self,
         phase: u8,
@@ -454,7 +455,7 @@ impl<
                     .iter()
                     .map(|lookup| {
                         lookup_commit_permuted(
-                            &lookup,
+                            lookup,
                             pk,
                             params,
                             domain,
@@ -527,7 +528,7 @@ impl<
                     .iter()
                     .map(|shuffle| {
                         shuffle_commit_product(
-                            &shuffle,
+                            shuffle,
                             pk,
                             params,
                             domain,

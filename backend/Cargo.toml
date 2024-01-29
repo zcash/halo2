@@ -55,7 +55,6 @@ getrandom = { version = "0.2", features = ["js"] }
 default = ["batch", "bits"]
 bits = ["halo2curves/bits"]
 gadget-traces = ["backtrace"]
-thread-safe-region = []
 sanity-checks = []
 batch = ["rand_core/getrandom"]
 circuit-params = []

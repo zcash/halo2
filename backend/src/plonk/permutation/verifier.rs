@@ -123,13 +123,13 @@ impl<C: CurveAffine> Evaluated<C> {
             .chain(
                 self.sets
                     .first()
-                    .map(|first_set| l_0 * &(C::Scalar::ONE - &first_set.permutation_product_eval)),
+                    .map(|first_set| l_0 * (C::Scalar::ONE - first_set.permutation_product_eval)),
             )
             // Enforce only for the last set.
             // l_last(X) * (z_l(X)^2 - z_l(X)) = 0
             .chain(self.sets.last().map(|last_set| {
-                (last_set.permutation_product_eval.square() - &last_set.permutation_product_eval)
-                    * &l_last
+                (last_set.permutation_product_eval.square() - last_set.permutation_product_eval)
+                    * l_last
             }))
             // Except for the first set, enforce.
             // l_0(X) * (z_i(X) - z_{i-1}(\omega^(last) X)) = 0
@@ -144,7 +144,7 @@ impl<C: CurveAffine> Evaluated<C> {
                             last_set.permutation_product_last_eval.unwrap(),
                         )
                     })
-                    .map(move |(set, prev_last)| (set - &prev_last) * &l_0),
+                    .map(move |(set, prev_last)| (set - prev_last) * l_0),
             )
             // And for all the sets we enforce:
             // (1 - (l_last(X) + l_blind(X))) * (
@@ -175,12 +175,12 @@ impl<C: CurveAffine> Evaluated<C> {
                             })
                             .zip(permutation_evals.iter())
                         {
-                            left *= &(eval + &(*beta * permutation_eval) + &*gamma);
+                            left *= eval + (*beta * permutation_eval) + *gamma;
                         }
 
                         let mut right = set.permutation_product_eval;
-                        let mut current_delta = (*beta * &*x)
-                            * &(<C::Scalar as PrimeField>::DELTA
+                        let mut current_delta = (*beta * *x)
+                            * (<C::Scalar as PrimeField>::DELTA
                                 .pow_vartime([(chunk_index * chunk_len) as u64]));
                         for eval in columns.iter().map(|&column| match column.column_type() {
                             Any::Advice(_) => {
@@ -193,11 +193,11 @@ impl<C: CurveAffine> Evaluated<C> {
                                 instance_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
                             }
                         }) {
-                            right *= &(eval + &current_delta + &*gamma);
+                            right *= eval + current_delta + *gamma;
                             current_delta *= &C::Scalar::DELTA;
                         }
 
-                        (left - &right) * (C::Scalar::ONE - &(l_last + &l_blind))
+                        (left - right) * (C::Scalar::ONE - (l_last + l_blind))
                     }),
             )
     }

@@ -199,7 +199,7 @@ impl<C: CurveAffine> Permuted<C> {
                 .zip(self.permuted_input_expression[start..].iter())
                 .zip(self.permuted_table_expression[start..].iter())
             {
-                *lookup_product = (*beta + permuted_input_value) * &(*gamma + permuted_table_value);
+                *lookup_product = (*beta + permuted_input_value) * (*gamma + permuted_table_value);
             }
         });
 
@@ -214,8 +214,8 @@ impl<C: CurveAffine> Permuted<C> {
             for (i, product) in product.iter_mut().enumerate() {
                 let i = i + start;
 
-                *product *= &(self.compressed_input_expression[i] + &*beta);
-                *product *= &(self.compressed_table_expression[i] + &*gamma);
+                *product *= &(self.compressed_input_expression[i] + *beta);
+                *product *= &(self.compressed_table_expression[i] + *gamma);
             }
         });
 
@@ -276,7 +276,7 @@ impl<C: CurveAffine> Permuted<C> {
 
                 input_term += &(*beta);
                 table_term += &(*gamma);
-                right *= &(input_term * &table_term);
+                right *= &(input_term * table_term);
 
                 assert_eq!(left, right);
             }

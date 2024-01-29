@@ -65,6 +65,7 @@ struct MyCircuitConfig {
 }
 
 impl MyCircuitConfig {
+    #[allow(clippy::type_complexity)]
     fn assign_gate<F: Field + From<u64>>(
         &self,
         region: &mut Region<'_, F>,
@@ -516,7 +517,7 @@ fn test_mycircuit_full_legacy() {
     create_proof::<KZGCommitmentScheme<Bn256>, ProverSHPLONK<'_, Bn256>, _, _, _, _>(
         &params,
         &pk,
-        &[circuit.clone()],
+        &[circuit],
         &[instances_slice],
         &mut rng,
         &mut transcript,
@@ -584,7 +585,7 @@ fn test_mycircuit_full_split() {
         .unwrap();
     let mut challenges = HashMap::new();
     for phase in 0..cs.phases().count() {
-        println!("phase {}", phase);
+        println!("phase {phase}");
         let witness = witness_calc.calc(phase as u8, &challenges).unwrap();
         challenges = prover.commit_phase(phase as u8, witness).unwrap();
     }

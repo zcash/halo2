@@ -5,7 +5,7 @@ use halo2_middleware::circuit::Any;
 use halo2_middleware::permutation::{ArgumentV2, Cell};
 
 /// A permutation argument.
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct Argument {
     /// A sequence of columns involved in the argument.
     pub columns: Vec<Column<Any>>,
@@ -20,10 +20,6 @@ impl From<ArgumentV2> for Argument {
 }
 
 impl Argument {
-    pub fn new() -> Self {
-        Argument { columns: vec![] }
-    }
-
     /// Returns the minimum circuit degree required by the permutation argument.
     /// The argument may use larger degree gates depending on the actual
     /// circuit's degree and how many columns are involved in the permutation.

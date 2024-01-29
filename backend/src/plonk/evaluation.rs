@@ -390,7 +390,7 @@ impl<C: CurveAffine> Evaluator<C> {
                 let blinding_factors = pk.vk.cs.blinding_factors();
                 let last_rotation = Rotation(-((blinding_factors + 1) as i32));
                 let chunk_len = pk.vk.cs.degree() - 2;
-                let delta_start = beta * &C::Scalar::ZETA;
+                let delta_start = beta * C::Scalar::ZETA;
 
                 let first_set = sets.first().unwrap();
                 let last_set = sets.last().unwrap();
@@ -863,7 +863,7 @@ pub fn evaluate<F: Field, B: Basis>(
                 },
                 &|challenge| challenges[challenge.index()],
                 &|a| -a,
-                &|a, b| a + &b,
+                &|a, b| a + b,
                 &|a, b| a * b,
                 &|a, scalar| a * scalar,
             );

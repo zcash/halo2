@@ -1,13 +1,13 @@
+use halo2_common::plonk::{
+    circuit::{Circuit, Column},
+    Assignment, Challenge, ConstraintSystem, Error, FloorPlanner, Selector,
+};
+use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
 use halo2_middleware::ff::Field;
+use halo2_middleware::plonk::Assigned;
 use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 
-use crate::{
-    circuit::Value,
-    plonk::{
-        Advice, Any, Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error,
-        Fixed, FloorPlanner, Instance, Selector,
-    },
-};
+use crate::circuit::Value;
 
 pub mod layout;
 
@@ -154,7 +154,7 @@ impl<F: Field> Assignment<F> for Graph {
         _: usize,
         _: Column<Any>,
         _: usize,
-    ) -> Result<(), crate::plonk::Error> {
+    ) -> Result<(), halo2_common::plonk::Error> {
         // Do nothing; we don't care about permutations in this context.
         Ok(())
     }

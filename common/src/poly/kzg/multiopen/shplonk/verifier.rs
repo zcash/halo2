@@ -72,7 +72,7 @@ where
         let h2 = transcript.read_point().map_err(|_| Error::SamplingError)?;
 
         let (mut z_0_diff_inverse, mut z_0) = (E::Fr::ZERO, E::Fr::ZERO);
-        let (mut outer_msm, mut r_outer_acc) = (PreMSM::<E>::new(), E::Fr::ZERO);
+        let (mut outer_msm, mut r_outer_acc) = (PreMSM::<E>::default(), E::Fr::ZERO);
         for (i, (rotation_set, power_of_v)) in rotation_sets.iter().zip(powers(*v)).enumerate() {
             let diffs: Vec<E::Fr> = super_point_set
                 .iter()

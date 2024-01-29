@@ -6,11 +6,9 @@ use plotters::{
 use std::collections::HashSet;
 use std::ops::Range;
 
-use crate::{
-    circuit::layouter::RegionColumn,
-    dev::cost::Layout,
-    plonk::{Any, Circuit, Column, ConstraintSystem, FloorPlanner},
-};
+use crate::{circuit::layouter::RegionColumn, dev::cost::Layout};
+use halo2_common::plonk::{circuit::Column, Circuit, ConstraintSystem, FloorPlanner};
+use halo2_middleware::circuit::Any;
 
 /// Graphical renderer for circuit layouts.
 ///

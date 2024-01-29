@@ -29,11 +29,11 @@ pub struct Column<C: ColumnType> {
     pub column_type: C,
 }
 
-impl Into<metadata::Column> for Column<Any> {
-    fn into(self) -> metadata::Column {
+impl From<Column<Any>> for metadata::Column {
+    fn from(val: Column<Any>) -> Self {
         metadata::Column {
-            index: self.index(),
-            column_type: *self.column_type(),
+            index: val.index(),
+            column_type: *val.column_type(),
         }
     }
 }
@@ -126,11 +126,11 @@ impl From<ColumnMid> for Column<Any> {
     }
 }
 
-impl Into<ColumnMid> for Column<Any> {
-    fn into(self) -> ColumnMid {
+impl From<Column<Any>> for ColumnMid {
+    fn from(val: Column<Any>) -> Self {
         ColumnMid {
-            index: self.index(),
-            column_type: *self.column_type(),
+            index: val.index(),
+            column_type: *val.column_type(),
         }
     }
 }
@@ -469,11 +469,11 @@ impl Challenge {
     }
 }
 
-impl Into<ChallengeMid> for Challenge {
-    fn into(self) -> ChallengeMid {
+impl From<Challenge> for ChallengeMid {
+    fn from(val: Challenge) -> Self {
         ChallengeMid {
-            index: self.index,
-            phase: self.phase,
+            index: val.index,
+            phase: val.phase,
         }
     }
 }
@@ -699,9 +699,9 @@ pub enum Expression<F> {
     Scaled(Box<Expression<F>>, F),
 }
 
-impl<F> Into<ExpressionMid<F>> for Expression<F> {
-    fn into(self) -> ExpressionMid<F> {
-        match self {
+impl<F> From<Expression<F>> for ExpressionMid<F> {
+    fn from(val: Expression<F>) -> Self {
+        match val {
             Expression::Constant(c) => ExpressionMid::Constant(c),
             Expression::Selector(_) => unreachable!(),
             Expression::Fixed(FixedQuery {
@@ -1538,7 +1538,7 @@ impl QueriesMap {
                     rotation: query.rotation,
                 })
             }
-            ExpressionMid::Challenge(c) => Expression::Challenge(c.clone().into()),
+            ExpressionMid::Challenge(c) => Expression::Challenge((*c).into()),
             ExpressionMid::Negated(e) => Expression::Negated(Box::new(self.as_expression(e))),
             ExpressionMid::Sum(lhs, rhs) => Expression::Sum(
                 Box::new(self.as_expression(lhs)),
@@ -1566,13 +1566,13 @@ impl<F: Field> From<ConstraintSystem<F>> for ConstraintSystemV2Backend<F> {
             gates: cs
                 .gates
                 .into_iter()
-                .map(|mut g| {
+                .flat_map(|mut g| {
                     let constraint_names = std::mem::take(&mut g.constraint_names);
                     let gate_name = g.name.clone();
                     g.polys.into_iter().enumerate().map(move |(i, e)| {
                         let name = match constraint_names[i].as_str() {
                             "" => gate_name.clone(),
-                            constraint_name => format!("{}:{}", gate_name, constraint_name),
+                            constraint_name => format!("{gate_name}:{constraint_name}"),
                         };
                         GateV2Backend {
                             name,
@@ -1580,7 +1580,6 @@ impl<F: Field> From<ConstraintSystem<F>> for ConstraintSystemV2Backend<F> {
                         }
                     })
                 })
-                .flatten()
                 .collect(),
             permutation: halo2_middleware::permutation::ArgumentV2 {
                 columns: cs
@@ -1759,6 +1758,7 @@ fn cs2_collect_queries_shuffles<F: Field>(
 /// Collect all queries used in the expressions of gates, lookups and shuffles.  Map the
 /// expressions of gates, lookups and shuffles into equivalent ones with indexed query
 /// references.
+#[allow(clippy::type_complexity)]
 pub fn collect_queries<F: Field>(
     cs2: &ConstraintSystemV2Backend<F>,
 ) -> (
@@ -1972,7 +1972,7 @@ impl<F: Field> Default for ConstraintSystem<F> {
             advice_queries: Vec::new(),
             num_advice_queries: Vec::new(),
             instance_queries: Vec::new(),
-            permutation: permutation::Argument::new(),
+            permutation: permutation::Argument::default(),
             lookups: Vec::new(),
             shuffles: Vec::new(),
             general_column_annotations: HashMap::new(),

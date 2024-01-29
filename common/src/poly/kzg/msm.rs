@@ -103,17 +103,23 @@ where
     projectives_msms: Vec<MSMKZG<E>>,
 }
 
+impl<E: Engine + Debug> Default for PreMSM<E>
+where
+    E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
+    E::G1: CurveExt<AffineExt = E::G1Affine>,
+{
+    fn default() -> Self {
+        PreMSM {
+            projectives_msms: vec![],
+        }
+    }
+}
+
 impl<E: Engine + Debug> PreMSM<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
-    pub fn new() -> Self {
-        PreMSM {
-            projectives_msms: vec![],
-        }
-    }
-
     pub fn normalize(self) -> MSMKZG<E> {
         let (scalars, bases) = self
             .projectives_msms

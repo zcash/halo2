@@ -95,7 +95,7 @@ impl<C: CurveAffine> PartiallyEvaluated<C> {
         y: ChallengeY<C>,
         xn: C::Scalar,
     ) -> Evaluated<C, P::MSM> {
-        let expected_h_eval = expressions.fold(C::Scalar::ZERO, |h_eval, v| h_eval * &*y + &v);
+        let expected_h_eval = expressions.fold(C::Scalar::ZERO, |h_eval, v| h_eval * *y + v);
         let expected_h_eval = expected_h_eval * ((xn - C::Scalar::ONE).invert().unwrap());
 
         let h_commitment =

@@ -110,7 +110,7 @@ pub(in crate::plonk) fn permutation_commit<
                     .zip(values[column.index()][start..].iter())
                     .zip(permuted_column_values[start..].iter())
                 {
-                    *modified_values *= &(*beta * permuted_value + &*gamma + value);
+                    *modified_values *= *beta * permuted_value + *gamma + value;
                 }
             });
         }
@@ -128,13 +128,13 @@ pub(in crate::plonk) fn permutation_commit<
                 Any::Instance => instance,
             };
             parallelize(&mut modified_values, |modified_values, start| {
-                let mut deltaomega = deltaomega * &omega.pow_vartime([start as u64, 0, 0, 0]);
+                let mut deltaomega = deltaomega * omega.pow_vartime([start as u64, 0, 0, 0]);
                 for (modified_values, value) in modified_values
                     .iter_mut()
                     .zip(values[column.index()][start..].iter())
                 {
                     // Multiply by p_j(\omega^i) + \delta^j \omega^i \beta
-                    *modified_values *= &(deltaomega * &*beta + &*gamma + value);
+                    *modified_values *= deltaomega * *beta + *gamma + value;
                     deltaomega *= &omega;
                 }
             });

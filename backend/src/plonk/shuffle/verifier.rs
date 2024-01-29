@@ -81,31 +81,31 @@ impl<C: CurveAffine> Evaluated<C> {
                             &|query| instance_evals[query.index.unwrap()],
                             &|challenge| challenges[challenge.index()],
                             &|a| -a,
-                            &|a, b| a + &b,
-                            &|a, b| a * &b,
-                            &|a, scalar| a * &scalar,
+                            &|a, b| a + b,
+                            &|a, b| a * b,
+                            &|a, scalar| a * scalar,
                         )
                     })
-                    .fold(C::Scalar::ZERO, |acc, eval| acc * &*theta + &eval)
+                    .fold(C::Scalar::ZERO, |acc, eval| acc * *theta + eval)
             };
             // z(\omega X) (s(X) + \gamma)
             let left = self.product_next_eval
-                * &(compress_expressions(&argument.shuffle_expressions) + &*gamma);
+                * (compress_expressions(&argument.shuffle_expressions) + *gamma);
             // z(X) (a(X) + \gamma)
             let right =
-                self.product_eval * &(compress_expressions(&argument.input_expressions) + &*gamma);
+                self.product_eval * (compress_expressions(&argument.input_expressions) + *gamma);
 
-            (left - &right) * &active_rows
+            (left - right) * active_rows
         };
 
         std::iter::empty()
             .chain(
                 // l_0(X) * (1 - z'(X)) = 0
-                Some(l_0 * &(C::Scalar::ONE - &self.product_eval)),
+                Some(l_0 * (C::Scalar::ONE - self.product_eval)),
             )
             .chain(
                 // l_last(X) * (z(X)^2 - z(X)) = 0
-                Some(l_last * &(self.product_eval.square() - &self.product_eval)),
+                Some(l_last * (self.product_eval.square() - self.product_eval)),
             )
             .chain(
                 // (1 - (l_last(X) + l_blind(X))) * ( z(\omega X) (s(X) + \gamma) - z(X) (a(X) + \gamma))

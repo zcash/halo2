@@ -28,6 +28,7 @@ pub use halo2_common::circuit::{layouter, Layouter, Value};
 /// copy constraints assignments.  The output of this function can then be used for the key
 /// generation, and proof generation.
 /// If `compress_selectors` is true, multiple selector columns may be multiplexed.
+#[allow(clippy::type_complexity)]
 pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
     k: u32,
     circuit: &ConcreteCircuit,

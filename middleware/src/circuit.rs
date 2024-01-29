@@ -190,15 +190,9 @@ pub struct ColumnMid {
 }
 
 /// An advice column
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+#[derive(Default, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct Advice {
     pub phase: u8,
-}
-
-impl Default for Advice {
-    fn default() -> Advice {
-        Advice { phase: 0 }
-    }
 }
 
 impl Advice {

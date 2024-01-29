@@ -30,6 +30,12 @@ pub mod arithmetic {
 /// Tools for developing circuits.
 pub mod dev {
     pub use halo2_frontend::dev::{metadata, FailureLocation, MockProver, VerifyFailure};
+
+    #[cfg(feature = "cost-estimator")]
+    pub use halo2_frontend::dev::cost_model;
+
+    #[cfg(feature = "dev-graph")]
+    pub use halo2_frontend::dev::{circuit_dot_graph, CircuitLayout};
 }
 /// Contains utilities for performing arithmetic over univariate polynomials in
 /// various forms, including computing commitments to them and provably opening

@@ -327,9 +327,9 @@ where
                                     &|query| instance_evals[query.index.unwrap()],
                                     &|challenge| challenges[challenge.index()],
                                     &|a| -a,
-                                    &|a, b| a + &b,
-                                    &|a, b| a * &b,
-                                    &|a, scalar| a * &scalar,
+                                    &|a, b| a + b,
+                                    &|a, b| a * b,
+                                    &|a, scalar| a * scalar,
                                 )
                             })
                         }))

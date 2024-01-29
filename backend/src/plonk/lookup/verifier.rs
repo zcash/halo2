@@ -109,8 +109,8 @@ impl<C: CurveAffine> Evaluated<C> {
             // z(\omega X) (a'(X) + \beta) (s'(X) + \gamma)
             // - z(X) (\theta^{m-1} a_0(X) + ... + a_{m-1}(X) + \beta) (\theta^{m-1} s_0(X) + ... + s_{m-1}(X) + \gamma)
             let left = self.product_next_eval
-                * &(self.permuted_input_eval + &*beta)
-                * &(self.permuted_table_eval + &*gamma);
+                * (self.permuted_input_eval + *beta)
+                * (self.permuted_table_eval + *gamma);
 
             let compress_expressions = |expressions: &[Expression<C::Scalar>]| {
                 expressions
@@ -124,28 +124,28 @@ impl<C: CurveAffine> Evaluated<C> {
                             &|query| instance_evals[query.index.unwrap()],
                             &|challenge| challenges[challenge.index()],
                             &|a| -a,
-                            &|a, b| a + &b,
-                            &|a, b| a * &b,
-                            &|a, scalar| a * &scalar,
+                            &|a, b| a + b,
+                            &|a, b| a * b,
+                            &|a, scalar| a * scalar,
                         )
                     })
-                    .fold(C::Scalar::ZERO, |acc, eval| acc * &*theta + &eval)
+                    .fold(C::Scalar::ZERO, |acc, eval| acc * *theta + eval)
             };
             let right = self.product_eval
-                * &(compress_expressions(&argument.input_expressions) + &*beta)
-                * &(compress_expressions(&argument.table_expressions) + &*gamma);
+                * (compress_expressions(&argument.input_expressions) + *beta)
+                * (compress_expressions(&argument.table_expressions) + *gamma);
 
-            (left - &right) * &active_rows
+            (left - right) * active_rows
         };
 
         std::iter::empty()
             .chain(
                 // l_0(X) * (1 - z(X)) = 0
-                Some(l_0 * &(C::Scalar::ONE - &self.product_eval)),
+                Some(l_0 * (C::Scalar::ONE - self.product_eval)),
             )
             .chain(
                 // l_last(X) * (z(X)^2 - z(X)) = 0
-                Some(l_last * &(self.product_eval.square() - &self.product_eval)),
+                Some(l_last * (self.product_eval.square() - self.product_eval)),
             )
             .chain(
                 // (1 - (l_last(X) + l_blind(X))) * (
@@ -156,13 +156,13 @@ impl<C: CurveAffine> Evaluated<C> {
             )
             .chain(Some(
                 // l_0(X) * (a'(X) - s'(X)) = 0
-                l_0 * &(self.permuted_input_eval - &self.permuted_table_eval),
+                l_0 * (self.permuted_input_eval - self.permuted_table_eval),
             ))
             .chain(Some(
                 // (1 - (l_last(X) + l_blind(X))) * (a′(X) − s′(X))⋅(a′(X) − a′(\omega^{-1} X)) = 0
-                (self.permuted_input_eval - &self.permuted_table_eval)
-                    * &(self.permuted_input_eval - &self.permuted_input_inv_eval)
-                    * &active_rows,
+                (self.permuted_input_eval - self.permuted_table_eval)
+                    * (self.permuted_input_eval - self.permuted_input_inv_eval)
+                    * active_rows,
             ))
     }
 
