@@ -18,7 +18,7 @@ use crate::{
         EvaluationDomain,
     },
 };
-use halo2_middleware::circuit::{Advice, Any, Challenge, CompiledCircuitV2, Fixed, Instance};
+use halo2_middleware::circuit::{Advice, Any, CompiledCircuitV2, Fixed, Instance};
 use halo2_middleware::plonk::Assigned;
 
 pub(crate) fn create_domain<C, ConcreteCircuit>(

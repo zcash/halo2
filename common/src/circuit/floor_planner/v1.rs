@@ -8,9 +8,9 @@ use crate::{
         table_layouter::{compute_table_lengths, SimpleTableLayouter},
         Cell, Column, Layouter, Region, RegionIndex, RegionStart, Table, Value,
     },
-    plonk::{Assignment, Circuit, Error, FloorPlanner, Selector, TableColumn},
+    plonk::{circuit::Challenge, Assignment, Circuit, Error, FloorPlanner, Selector, TableColumn},
 };
-use halo2_middleware::circuit::{Advice, Any, Challenge, Fixed, Instance};
+use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
 use halo2_middleware::plonk::Assigned;
 
 pub mod strategy;

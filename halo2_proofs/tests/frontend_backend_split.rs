@@ -13,8 +13,8 @@ use halo2_backend::plonk::{
 use halo2_common::{
     circuit::{AssignedCell, Layouter, Region, SimpleFloorPlanner, Value},
     plonk::{
-        circuit::Column, Circuit, ConstraintSystem, Error, Expression, FirstPhase, SecondPhase,
-        Selector,
+        circuit::{Challenge, Column},
+        Circuit, ConstraintSystem, Error, Expression, FirstPhase, SecondPhase, Selector,
     },
     transcript::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
@@ -25,7 +25,7 @@ use halo2_frontend::{
     dev::MockProver,
 };
 use halo2_middleware::{
-    circuit::{Advice, Challenge, Fixed, Instance},
+    circuit::{Advice, Fixed, Instance},
     ff::Field,
     poly::Rotation,
 };

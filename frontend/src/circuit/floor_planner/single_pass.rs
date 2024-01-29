@@ -5,8 +5,8 @@ mod tests {
 
     use super::SimpleFloorPlanner;
     use crate::dev::MockProver;
-    use halo2_common::plonk::{Circuit, ConstraintSystem, Error};
-    use halo2_middleware::circuit::{Advice, Column};
+    use halo2_common::plonk::{circuit::Column, Circuit, ConstraintSystem, Error};
+    use halo2_middleware::circuit::Advice;
 
     #[test]
     fn not_enough_columns_for_constants() {

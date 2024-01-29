@@ -4,7 +4,7 @@ use crate::circuit::{Layouter, Region, Value};
 use core::cmp::max;
 use core::ops::{Add, Mul};
 use halo2_middleware::circuit::{
-    Advice, AdviceQueryMid, Any, Challenge, ColumnMid, ColumnType, ConstraintSystemV2Backend,
+    Advice, AdviceQueryMid, Any, ChallengeMid, ColumnMid, ColumnType, ConstraintSystemV2Backend,
     ExpressionMid, Fixed, FixedQueryMid, GateV2Backend, Instance, InstanceQueryMid,
 };
 use halo2_middleware::ff::Field;
@@ -56,7 +56,26 @@ impl<C: ColumnType> Column<C> {
 
     /// Return expression from column at a relative position
     pub fn query_cell<F: Field>(&self, at: Rotation) -> Expression<F> {
-        self.column_type.query_cell(self.index, at)
+        let expr_mid = self.column_type.query_cell::<F>(self.index, at);
+        match expr_mid {
+            ExpressionMid::Advice(q) => Expression::Advice(AdviceQuery {
+                index: None,
+                column_index: q.column_index,
+                rotation: q.rotation,
+                phase: sealed::Phase(q.phase),
+            }),
+            ExpressionMid::Fixed(q) => Expression::Fixed(FixedQuery {
+                index: None,
+                column_index: q.column_index,
+                rotation: q.rotation,
+            }),
+            ExpressionMid::Instance(q) => Expression::Instance(InstanceQuery {
+                index: None,
+                column_index: q.column_index,
+                rotation: q.rotation,
+            }),
+            _ => unreachable!(),
+        }
     }
 
     /// Return expression from column at the current row
@@ -426,6 +445,48 @@ impl TableColumn {
     }
 }
 
+/// A challenge squeezed from transcript after advice columns at the phase have been committed.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub struct Challenge {
+    pub index: usize,
+    pub phase: u8,
+}
+
+impl Challenge {
+    /// Index of this challenge.
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    /// Phase of this challenge.
+    pub fn phase(&self) -> u8 {
+        self.phase
+    }
+
+    /// Return Expression
+    pub fn expr<F: Field>(&self) -> Expression<F> {
+        Expression::Challenge(*self)
+    }
+}
+
+impl Into<ChallengeMid> for Challenge {
+    fn into(self) -> ChallengeMid {
+        ChallengeMid {
+            index: self.index,
+            phase: self.phase,
+        }
+    }
+}
+
+impl From<ChallengeMid> for Challenge {
+    fn from(c: ChallengeMid) -> Self {
+        Self {
+            index: c.index,
+            phase: c.phase,
+        }
+    }
+}
+
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
 pub trait Assignment<F: Field> {
@@ -669,7 +730,7 @@ impl<F> Into<ExpressionMid<F>> for Expression<F> {
                 column_index,
                 rotation,
             }),
-            Expression::Challenge(c) => ExpressionMid::Challenge(c),
+            Expression::Challenge(c) => ExpressionMid::Challenge(c.into()),
             Expression::Negated(e) => ExpressionMid::Negated(Box::new((*e).into())),
             Expression::Sum(lhs, rhs) => {
                 ExpressionMid::Sum(Box::new((*lhs).into()), Box::new((*rhs).into()))
@@ -1477,7 +1538,7 @@ impl QueriesMap {
                     rotation: query.rotation,
                 })
             }
-            ExpressionMid::Challenge(c) => Expression::Challenge(*c),
+            ExpressionMid::Challenge(c) => Expression::Challenge(c.clone().into()),
             ExpressionMid::Negated(e) => Expression::Negated(Box::new(self.as_expression(e))),
             ExpressionMid::Sum(lhs, rhs) => Expression::Sum(
                 Box::new(self.as_expression(lhs)),

@@ -11,8 +11,9 @@ pub use verifier::verify_proof;
 
 pub use halo2_backend::plonk::{ProvingKey, VerifyingKey};
 pub use halo2_common::plonk::{
-    circuit::Column, Circuit, ConstraintSystem, Error, Expression, FirstPhase, SecondPhase,
-    Selector, TableColumn, ThirdPhase,
+    circuit::{Challenge, Column},
+    Circuit, ConstraintSystem, Error, Expression, FirstPhase, SecondPhase, Selector, TableColumn,
+    ThirdPhase,
 };
-pub use halo2_middleware::circuit::{Advice, Challenge, Fixed, Instance};
+pub use halo2_middleware::circuit::{Advice, Fixed, Instance};
 pub use halo2_middleware::plonk::Assigned;

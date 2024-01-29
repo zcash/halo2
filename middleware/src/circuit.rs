@@ -35,12 +35,12 @@ pub struct InstanceQueryMid {
 
 /// A challenge squeezed from transcript after advice columns at the phase have been committed.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct Challenge {
+pub struct ChallengeMid {
     pub index: usize,
     pub phase: u8,
 }
 
-impl Challenge {
+impl ChallengeMid {
     /// Index of this challenge.
     pub fn index(&self) -> usize {
         self.index
@@ -51,10 +51,10 @@ impl Challenge {
         self.phase
     }
 
-    /// Return Expression
-    pub fn expr<F: Field>(&self) -> ExpressionMid<F> {
-        ExpressionMid::Challenge(*self)
-    }
+    // /// Return Expression
+    // pub fn expr<F: Field>(&self) -> ExpressionMid<F> {
+    //     ExpressionMid::Challenge(*self)
+    // }
 }
 
 /// Low-degree expression representing an identity that must hold over the committed columns.
@@ -69,7 +69,7 @@ pub enum ExpressionMid<F> {
     /// This is an instance (external) column queried at a certain relative location
     Instance(InstanceQueryMid),
     /// This is a challenge
-    Challenge(Challenge),
+    Challenge(ChallengeMid),
     /// This is a negated polynomial
     Negated(Box<ExpressionMid<F>>),
     /// This is the sum of two polynomials
@@ -166,6 +166,12 @@ pub struct CompiledCircuitV2<F: Field> {
     pub cs: ConstraintSystemV2Backend<F>,
 }
 
+// TODO: The query_cell method is only used in the frontend, which uses Expression.  By having this
+// trait implemented here we can only return ExpressionMid, which requires conversion to Expression
+// when used.  On the other hand, it's difficult to move ColumnType to the frontend because this
+// trait is implemented for Any which is used in the backend.  It would be great to find a way to
+// move all the `query_cell` implementations to the frontend and have them return `Expression`,
+// while keeping `Any` in the middleware.
 /// A column type
 pub trait ColumnType:
     'static + Sized + Copy + std::fmt::Debug + PartialEq + Eq + Into<Any>

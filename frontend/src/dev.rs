@@ -12,14 +12,14 @@ use halo2_middleware::ff::FromUniformBytes;
 use halo2_common::{
     circuit,
     plonk::{
-        circuit::Column,
+        circuit::{Challenge, Column},
         permutation,
         sealed::{self, SealedPhase},
         Assignment, Circuit, ConstraintSystem, Error, Expression, FirstPhase, FloorPlanner, Phase,
         Selector,
     },
 };
-use halo2_middleware::circuit::{Advice, Any, Challenge, ColumnMid, Fixed, Instance};
+use halo2_middleware::circuit::{Advice, Any, ColumnMid, Fixed, Instance};
 use halo2_middleware::plonk::Assigned;
 
 use halo2_common::multicore::{
@@ -1252,9 +1252,9 @@ mod tests {
     use super::{FailureLocation, MockProver, VerifyFailure};
     use crate::circuit::{Layouter, SimpleFloorPlanner, Value};
     use halo2_common::plonk::{
-        Circuit, ConstraintSystem, Error, Expression, Selector, TableColumn,
+        circuit::Column, Circuit, ConstraintSystem, Error, Expression, Selector, TableColumn,
     };
-    use halo2_middleware::circuit::{Advice, Any, Column, Fixed, Instance};
+    use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
     use halo2_middleware::poly::Rotation;
 
     #[test]

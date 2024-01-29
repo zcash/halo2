@@ -3,11 +3,11 @@ use std::ops::Range;
 use halo2_middleware::ff::Field;
 
 use super::{
-    circuit::{Assignment, Column, Selector},
+    circuit::{Assignment, Challenge, Column, Selector},
     permutation, Error, LagrangeCoeff, Polynomial,
 };
 use crate::circuit::Value;
-use halo2_middleware::circuit::{Advice, Any, Challenge, Fixed, Instance};
+use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
 use halo2_middleware::plonk::Assigned;
 
 /// Assembly to be used in circuit synthesis.
