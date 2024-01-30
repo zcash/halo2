@@ -944,7 +944,8 @@ impl<F: Field> Gate<F> {
 pub struct ConstraintSystem<F: Field> {
     /// Visibility changed for analyzer
     pub num_fixed_columns: usize,
-    pub(crate) num_advice_columns: usize,
+    /// Visibility changed for analyzer
+    pub num_advice_columns: usize,
     pub(crate) num_instance_columns: usize,
     /// Visibility changed for analyzer
     pub num_selectors: usize,
