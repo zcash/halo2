@@ -1,11 +1,4 @@
-use crate::circuit::ColumnMid;
-
-// TODO: Dedup with other Cell definition, or move this to a higher level
-#[derive(Clone, Debug)]
-pub struct Cell {
-    pub column: ColumnMid,
-    pub row: usize,
-}
+use crate::circuit::{Cell, ColumnMid};
 
 #[derive(Clone, Debug)]
 pub struct AssemblyMid {

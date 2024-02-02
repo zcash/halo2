@@ -314,7 +314,7 @@ pub struct MockProver<F: Field> {
 
     challenges: Vec<F>,
 
-    permutation: permutation::AssemblyFront,
+    permutation: permutation::Assembly,
 
     // A range of available rows for assignment and copies.
     usable_rows: Range<usize>,
@@ -673,7 +673,7 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
             };
             cs.num_advice_columns
         ];
-        let permutation = permutation::AssemblyFront::new(n, &cs.permutation);
+        let permutation = permutation::Assembly::new(n, &cs.permutation);
         let constants = cs.constants.clone();
 
         // Use hash chain to derive deterministic challenges for testing
@@ -1243,7 +1243,7 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
     }
 
     /// Returns the permutation argument (`Assembly`) used within a MockProver instance.
-    pub fn permutation(&self) -> &permutation::AssemblyFront {
+    pub fn permutation(&self) -> &permutation::Assembly {
         &self.permutation
     }
 }

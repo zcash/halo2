@@ -1,8 +1,8 @@
 //! Implementation of permutation argument.
 
 use crate::plonk::{Column, Error};
-use halo2_middleware::circuit::Any;
-use halo2_middleware::permutation::{ArgumentV2, Cell};
+use halo2_middleware::circuit::{Any, Cell};
+use halo2_middleware::permutation::ArgumentV2;
 
 /// A permutation argument.
 #[derive(Default, Debug, Clone)]
@@ -70,15 +70,14 @@ impl Argument {
     }
 }
 
-// TODO: Move to frontend
 #[derive(Clone, Debug)]
-pub struct AssemblyFront {
+pub struct Assembly {
     pub n: usize,
     pub columns: Vec<Column<Any>>,
     pub copies: Vec<(Cell, Cell)>,
 }
 
-impl AssemblyFront {
+impl Assembly {
     pub fn new(n: usize, p: &Argument) -> Self {
         Self {
             n,

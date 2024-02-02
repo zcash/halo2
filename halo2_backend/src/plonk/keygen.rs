@@ -129,6 +129,7 @@ where
 
     // Compute l_0(X)
     // TODO: this can be done more efficiently
+    // https://github.com/privacy-scaling-explorations/halo2/issues/269
     let mut l0 = vk.domain.empty_lagrange();
     l0[0] = C::Scalar::ONE;
     let l0 = vk.domain.lagrange_to_coeff(l0);

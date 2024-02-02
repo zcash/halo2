@@ -167,6 +167,7 @@ pub struct CompiledCircuitV2<F: Field> {
 // trait is implemented for Any which is used in the backend.  It would be great to find a way to
 // move all the `query_cell` implementations to the frontend and have them return `Expression`,
 // while keeping `Any` in the middleware.
+// https://github.com/privacy-scaling-explorations/halo2/issues/270
 /// A column type
 pub trait ColumnType:
     'static + Sized + Copy + std::fmt::Debug + PartialEq + Eq + Into<Any>
@@ -182,6 +183,13 @@ pub struct ColumnMid {
     pub index: usize,
     /// The type of the column.
     pub column_type: Any,
+}
+
+/// A cell identifies a position in the plonkish matrix identified by a column and a row offset.
+#[derive(Clone, Debug)]
+pub struct Cell {
+    pub column: ColumnMid,
+    pub row: usize,
 }
 
 /// An advice column

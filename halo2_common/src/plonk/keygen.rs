@@ -15,7 +15,7 @@ use halo2_middleware::plonk::Assigned;
 pub struct Assembly<F: Field> {
     pub k: u32,
     pub fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
-    pub permutation: permutation::AssemblyFront,
+    pub permutation: permutation::Assembly,
     pub selectors: Vec<Vec<bool>>,
     // A range of available rows for assignment and copies.
     pub usable_rows: Range<usize>,

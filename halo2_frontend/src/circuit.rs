@@ -56,7 +56,7 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
     let mut assembly = halo2_common::plonk::keygen::Assembly {
         k,
         fixed: vec![Polynomial::new_empty(n, F::ZERO.into()); cs.num_fixed_columns],
-        permutation: permutation::AssemblyFront::new(n, &cs.permutation),
+        permutation: permutation::Assembly::new(n, &cs.permutation),
         selectors: vec![vec![false; n]; cs.num_selectors],
         usable_rows: 0..n - (cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
