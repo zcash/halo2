@@ -733,7 +733,6 @@ impl<
             .chain(vanishing.open(x));
 
         let prover = P::new(params);
-        println!("DBG create_proof");
         prover
             .create_proof(rng, self.transcript, instances)
             .map_err(|_| Error::ConstraintSystemFailure)?;

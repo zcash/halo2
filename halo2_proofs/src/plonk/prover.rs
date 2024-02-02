@@ -43,7 +43,6 @@ where
     let mut challenges = HashMap::new();
     let phases = prover.phases.clone();
     for phase in &phases {
-        println!("DBG phase {}", phase.0);
         let mut witnesses = Vec::with_capacity(circuits.len());
         for witness_calc in witness_calcs.iter_mut() {
             witnesses.push(witness_calc.calc(phase.0, &challenges)?);

@@ -423,8 +423,11 @@ impl<F: Field + From<u64>, const WIDTH_FACTOR: usize> Circuit<F> for MyCircuit<F
         config: Vec<MyCircuitConfig>,
         mut layouter: impl Layouter<F>,
     ) -> Result<(), Error> {
-        // 2 queries from first gate, 3 for permutation argument, 1 for multipoen, 1 for off-by-one
-        //   errors, 1 for off-by-two errors?
+        // - 2 queries from first gate
+        // - 3 for permutation argument
+        // - 1 for multipoen
+        // - 1 for the last row of grand product poly to check that the product result is 1
+        // - 1 for off-by-one errors
         let unusable_rows = 2 + 3 + 1 + 1 + 1;
         let max_rows = 2usize.pow(self.k) - unusable_rows;
         for config in &config {
