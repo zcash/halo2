@@ -50,11 +50,6 @@ impl ChallengeMid {
     pub fn phase(&self) -> u8 {
         self.phase
     }
-
-    // /// Return Expression
-    // pub fn expr<F: Field>(&self) -> ExpressionMid<F> {
-    //     ExpressionMid::Challenge(*self)
-    // }
 }
 
 /// Low-degree expression representing an identity that must hold over the committed columns.

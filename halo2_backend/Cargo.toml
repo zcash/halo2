@@ -1,5 +1,5 @@
 [package]
-name = "halo2_frontend"
+name = "halo2_backend"
 version = "0.3.0"
 authors = [
     "Sean Bowe <sean@electriccoin.co>",
@@ -11,7 +11,7 @@ authors = [
 edition = "2021"
 rust-version = "1.66.0"
 description = """
-Halo2 frontend implementation.  This package implements an API to write circuits, handles witness generation and contains the MockProver.
+Halo2 backend implementation.  This package implements the halo2 proof system which includes setup (key generation), proving and verifying.
 """
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/zcash/halo2"
@@ -29,18 +29,21 @@ backtrace = { version = "0.3", optional = true }
 ff = "0.13"
 group = "0.13"
 halo2curves = { version = "0.6.0", default-features = false }
+rand_core = { version = "0.6", default-features = false }
 tracing = "0.1"
 blake2b_simd = "1" # MSRV 1.66.0
+sha3 = "0.9.1"
+rand_chacha = "0.3"
 serde = { version = "1", optional = true, features = ["derive"] }
 serde_derive = { version = "1", optional = true}
-halo2_middleware = { path = "../middleware" }
-halo2_common = { path = "../common" }
-
-# Developer tooling dependencies
-plotters = { version = "0.3.0", default-features = false, optional = true }
-tabbycat = { version = "0.1", features = ["attributes"], optional = true }
+rayon = "1.8"
+halo2_middleware = { path = "../halo2_middleware" }
+halo2_common = { path = "../halo2_common" }
 
 [dev-dependencies]
+assert_matches = "1.5"
+criterion = "0.3"
+gumdrop = "0.8"
 proptest = "1"
 rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
 serde_json = "1"
@@ -49,20 +52,12 @@ serde_json = "1"
 getrandom = { version = "0.2", features = ["js"] }
 
 [features]
-default = ["bits"]
-dev-graph = ["plotters", "tabbycat"]
-test-dev-graph = [
-    "dev-graph",
-    "plotters/bitmap_backend",
-    "plotters/bitmap_encoder",
-    "plotters/ttf",
-]
+default = ["batch", "bits"]
 bits = ["halo2curves/bits"]
 gadget-traces = ["backtrace"]
-thread-safe-region = []
 sanity-checks = []
+batch = ["rand_core/getrandom"]
 circuit-params = []
-heap-profiling = []
 cost-estimator = ["serde", "serde_derive"]
 derive_serde = ["halo2curves/derive_serde"]
 
