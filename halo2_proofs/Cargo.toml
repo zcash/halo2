@@ -55,6 +55,7 @@ halo2_backend = { path = "../halo2_backend" }
 halo2_frontend = { path = "../halo2_frontend" }
 halo2curves = { version = "0.6.0", default-features = false }
 rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
+plotters = { version = "0.3.0", default-features = false, optional = true }
 
 [dev-dependencies]
 ff = "0.13"
@@ -68,21 +69,26 @@ gumdrop = "0.8"
 proptest = "1"
 dhat = "0.3.2"
 serde_json = "1"
-plotters = { version = "0.3.0", features = ["bitmap_backend", "bitmap_encoder", "ttf"] }
 
 [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
 getrandom = { version = "0.2", features = ["js"] }
 
 [features]
 default = ["batch", "bits"]
-dev-graph = ["halo2_frontend/dev-graph"]
-test-dev-graph = ["halo2_frontend/test-dev-graph"]
+dev-graph = ["halo2_frontend/dev-graph", "plotters"]
+test-dev-graph = [
+    "halo2_frontend/test-dev-graph",
+    "dev-graph",
+    "plotters/bitmap_backend",
+    "plotters/bitmap_encoder",
+    "plotters/ttf"
+]
 bits = ["halo2curves/bits"]
 gadget-traces = ["halo2_common/gadget-traces"]
 thread-safe-region = []
 sanity-checks = []
 batch = ["rand_core/getrandom"]
-circuit-params = []
+circuit-params = ["halo2_common/circuit-params", "halo2_frontend/circuit-params", "halo2_backend/circuit-params"]
 heap-profiling = []
 cost-estimator = ["halo2_frontend/cost-estimator"]
 derive_serde = ["halo2curves/derive_serde"]
