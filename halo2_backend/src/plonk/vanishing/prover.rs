@@ -1,6 +1,7 @@
 use std::{collections::HashMap, iter};
 
 use group::Curve;
+use halo2_common::plonk::{ChallengeX, Error};
 use halo2_middleware::ff::Field;
 use rand_chacha::ChaCha20Rng;
 use rand_core::{RngCore, SeedableRng};
@@ -9,7 +10,6 @@ use super::Argument;
 use crate::{
     arithmetic::{eval_polynomial, parallelize, CurveAffine},
     multicore::current_num_threads,
-    plonk::{ChallengeX, Error},
     poly::{
         commitment::{Blind, ParamsProver},
         Coeff, EvaluationDomain, ExtendedLagrangeCoeff, Polynomial, ProverQuery,

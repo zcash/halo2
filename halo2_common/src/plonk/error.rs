@@ -6,7 +6,8 @@ use super::TableColumn;
 use crate::plonk::circuit::Column;
 use halo2_middleware::circuit::Any;
 
-// TODO: Consider splitting this Error into a frontend and backend version?
+// TODO: Split this Error into a frontend and backend version
+// https://github.com/privacy-scaling-explorations/halo2/issues/266
 
 /// This is an error that could occur during proving or circuit synthesis.
 // TODO: these errors need to be cleaned up

@@ -1,14 +1,14 @@
 use std::iter;
 
-use super::super::{
-    circuit::Expression, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
-};
 use super::Argument;
 use crate::{
     arithmetic::CurveAffine,
-    plonk::{Error, VerifyingKey},
+    plonk::VerifyingKey,
     poly::{commitment::MSM, VerifierQuery},
     transcript::{EncodedChallenge, TranscriptRead},
+};
+use halo2_common::plonk::{
+    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error, Expression,
 };
 use halo2_middleware::ff::Field;
 use halo2_middleware::poly::Rotation;

@@ -4,20 +4,22 @@ use halo2_middleware::ff::{Field, PrimeField};
 use super::{Argument, ProvingKey, VerifyingKey};
 use crate::{
     arithmetic::{parallelize, CurveAffine},
-    plonk::Error,
     poly::{
         commitment::{Blind, Params},
         EvaluationDomain,
     },
 };
-use halo2_middleware::circuit::{Any, ColumnMid};
+use halo2_common::plonk::Error;
+use halo2_middleware::circuit::ColumnMid;
 use halo2_middleware::permutation::{ArgumentV2, AssemblyMid};
 
 // NOTE: Temporarily disabled thread-safe-region feature.  Regions are a frontend concept, so the
 // thread-safe support for them should be only in the frontend package.
+// TODO: Bring the thread-safe region feature back
+// https://github.com/privacy-scaling-explorations/halo2/issues/258
 
 // #[cfg(feature = "thread-safe-region")]
-use crate::multicore::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
+// use crate::multicore::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
 /*
 #[cfg(feature = "thread-safe-region")]

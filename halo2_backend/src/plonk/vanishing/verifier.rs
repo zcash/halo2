@@ -1,6 +1,6 @@
 use std::iter;
 
-use halo2_common::plonk::Error;
+use halo2_common::plonk::{ChallengeX, ChallengeY, Error};
 use halo2_middleware::ff::Field;
 
 use crate::{
@@ -13,7 +13,6 @@ use crate::{
     transcript::{read_n_points, EncodedChallenge, TranscriptRead},
 };
 
-use super::super::{ChallengeX, ChallengeY};
 use super::Argument;
 
 pub struct Committed<C: CurveAffine> {

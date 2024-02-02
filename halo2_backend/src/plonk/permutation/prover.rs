@@ -6,19 +6,22 @@ use halo2_middleware::ff::PrimeField;
 use rand_core::RngCore;
 use std::iter::{self, ExactSizeIterator};
 
-use super::super::{ChallengeBeta, ChallengeGamma, ChallengeX};
 use super::Argument;
 use crate::{
     arithmetic::{eval_polynomial, parallelize, CurveAffine},
-    plonk::{self, permutation::ProvingKey, Error},
+    plonk::{self, permutation::ProvingKey},
     poly::{
         commitment::{Blind, Params},
         Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, ProverQuery,
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
+use halo2_common::plonk::{ChallengeBeta, ChallengeGamma, ChallengeX, Error};
 use halo2_middleware::circuit::Any;
 use halo2_middleware::poly::Rotation;
+
+// TODO: Document a bit these types
+// https://github.com/privacy-scaling-explorations/halo2/issues/264
 
 pub(crate) struct CommittedSet<C: CurveAffine> {
     pub(crate) permutation_product_poly: Polynomial<C::Scalar, Coeff>,

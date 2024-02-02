@@ -1,7 +1,4 @@
-use super::super::{
-    circuit::Expression, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error,
-    ProvingKey,
-};
+use super::super::ProvingKey;
 use super::Argument;
 use crate::plonk::evaluation::evaluate;
 use crate::{
@@ -15,6 +12,9 @@ use crate::{
 use group::{
     ff::{BatchInvert, Field},
     Curve,
+};
+use halo2_common::plonk::{
+    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error, Expression,
 };
 use halo2_middleware::ff::WithSmallOrderMulGroup;
 use halo2_middleware::poly::Rotation;

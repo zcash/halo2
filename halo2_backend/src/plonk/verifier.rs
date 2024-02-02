@@ -1,11 +1,11 @@
 use group::Curve;
+use halo2_common::plonk::{
+    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
+};
 use halo2_middleware::ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use std::iter;
 
-use super::{
-    vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
-    VerifyingKey,
-};
+use super::{vanishing, VerifyingKey};
 use crate::arithmetic::compute_inner_product;
 use crate::plonk::lookup::verifier::lookup_read_permuted_commitments;
 use crate::plonk::permutation::verifier::permutation_read_product_commitments;

@@ -17,16 +17,6 @@ use halo2_common::SerdeFormat;
 
 use std::io;
 
-// TODO: Import propertly instead of reimporting from inside
-pub use halo2_common::plonk::{
-    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
-};
-pub mod circuit {
-    pub use halo2_common::plonk::circuit::{Assignment, Circuit, ConstraintSystem, Selector};
-    pub use halo2_common::plonk::Expression;
-}
-pub use halo2_common::plonk::Expression;
-
 mod evaluation;
 pub mod keygen;
 mod lookup;
@@ -49,7 +39,7 @@ pub struct VerifyingKey<C: CurveAffine> {
     /// The representative of this `VerifyingKey` in transcripts.
     transcript_repr: C::Scalar,
     selectors: Vec<Vec<bool>>,
-    // TODO: Use setter/getter
+    // TODO: Use setter/getter https://github.com/privacy-scaling-explorations/halo2/issues/259
     /// Whether selector compression is turned on or not.
     pub compress_selectors: bool,
 }
@@ -330,8 +320,7 @@ pub struct PinnedVerificationKey<'a, C: CurveAffine> {
 /// particular circuit.
 #[derive(Clone, Debug)]
 pub struct ProvingKey<C: CurveAffine> {
-    // TODO: Add getter
-    pub vk: VerifyingKey<C>,
+    vk: VerifyingKey<C>,
     l0: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     l_last: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     l_active_row: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,

@@ -1,5 +1,5 @@
-use halo2_backend::plonk::{circuit::Circuit, prover::ProverV2, ProvingKey};
-use halo2_common::plonk::Error;
+use halo2_backend::plonk::{prover::ProverV2, ProvingKey};
+use halo2_common::plonk::{circuit::Circuit, Error};
 use halo2_common::poly::commitment::{CommitmentScheme, Params, Prover};
 use halo2_common::transcript::{EncodedChallenge, TranscriptWrite};
 use halo2_frontend::circuit::{compile_circuit, WitnessCalculator};
@@ -33,7 +33,8 @@ where
     if circuits.len() != instances.len() {
         return Err(Error::InvalidInstances);
     }
-    let (_, config, cs) = compile_circuit(params.k(), &circuits[0], pk.vk.compress_selectors)?;
+    let (_, config, cs) =
+        compile_circuit(params.k(), &circuits[0], pk.get_vk().compress_selectors)?;
     let mut witness_calcs: Vec<_> = circuits
         .iter()
         .enumerate()

@@ -6,10 +6,11 @@ use crate::{
     poly::{Coeff, ExtendedLagrangeCoeff, Polynomial},
 };
 use group::ff::{Field, PrimeField, WithSmallOrderMulGroup};
+use halo2_common::plonk::{ConstraintSystem, Expression};
 use halo2_middleware::circuit::Any;
 use halo2_middleware::poly::Rotation;
 
-use super::{shuffle, ConstraintSystem, Expression};
+use super::shuffle;
 
 /// Return the index in the polynomial of size `isize` after rotation `rot`.
 fn get_rotation_idx(idx: usize, rot: i32, rot_scale: i32, isize: i32) -> usize {

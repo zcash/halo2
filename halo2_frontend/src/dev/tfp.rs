@@ -225,10 +225,15 @@ impl<F: Field, L: Layouter<F>> Layouter<F> for TracingLayouter<F, L> {
     }
 }
 
-fn debug_value_and_return_cell<F: Field, V: fmt::Debug>(value: AssignedCell<V, F>) -> Cell {
-    if let Some(v) = value.value().into_option() {
+fn debug_value<F: Field, V: fmt::Debug>(value: &AssignedCell<V, F>) {
+    value.value().assert_if_known(|v| {
         debug!(target: "assigned", value = ?v);
-    }
+        true
+    });
+}
+
+fn debug_value_and_return_cell<F: Field, V: fmt::Debug>(value: AssignedCell<V, F>) -> Cell {
+    debug_value(&value);
     value.cell()
 }
 
@@ -311,9 +316,7 @@ impl<'r, F: Field> RegionLayouter<F> for TracingRegion<'r, F> {
         self.0
             .assign_advice_from_instance(annotation, instance, row, advice, offset)
             .map(|value| {
-                if let Some(v) = value.value().into_option() {
-                    debug!(target: "assigned", value = ?v);
-                }
+                debug_value(&value);
                 (value.cell(), value.value().cloned())
             })
     }

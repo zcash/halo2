@@ -1,4 +1,4 @@
-use super::super::{circuit::Expression, ChallengeGamma, ChallengeTheta, ChallengeX, ProvingKey};
+use super::super::ProvingKey;
 use super::Argument;
 use crate::plonk::evaluation::evaluate;
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
     transcript::{EncodedChallenge, TranscriptWrite},
 };
 use group::{ff::BatchInvert, Curve};
-use halo2_common::plonk::Error;
+use halo2_common::plonk::{ChallengeGamma, ChallengeTheta, ChallengeX, Error, Expression};
 use halo2_middleware::ff::WithSmallOrderMulGroup;
 use halo2_middleware::poly::Rotation;
 use rand_core::RngCore;

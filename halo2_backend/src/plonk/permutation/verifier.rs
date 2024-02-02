@@ -1,7 +1,6 @@
 use halo2_middleware::ff::{Field, PrimeField};
 use std::iter;
 
-use super::super::{ChallengeBeta, ChallengeGamma, ChallengeX};
 use super::{Argument, VerifyingKey};
 use crate::{
     arithmetic::CurveAffine,
@@ -9,7 +8,7 @@ use crate::{
     poly::{commitment::MSM, VerifierQuery},
     transcript::{EncodedChallenge, TranscriptRead},
 };
-use halo2_common::plonk::Error;
+use halo2_common::plonk::{ChallengeBeta, ChallengeGamma, ChallengeX, Error};
 use halo2_middleware::circuit::Any;
 use halo2_middleware::poly::Rotation;
 

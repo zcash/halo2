@@ -147,12 +147,12 @@ impl<
     pub fn new(
         params: &'params Scheme::ParamsProver,
         pk: &'a ProvingKey<Scheme::Curve>,
-        // TODO: If this was a vector the usage would be simpler
+        // TODO: If this was a vector the usage would be simpler.
+        // https://github.com/privacy-scaling-explorations/halo2/issues/265
         instances: &[&[&[Scheme::Scalar]]],
         rng: R,
         transcript: &'a mut T,
     ) -> Result<Self, Error>
-    // TODO: Can I move this `where` to the struct definition?
     where
         Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     {
@@ -170,8 +170,7 @@ impl<
 
         let domain = &pk.vk.domain;
 
-        // TODO: Name this better
-        let mut instance_fn =
+        let mut commit_instance_fn =
             |instance: &[&[Scheme::Scalar]]| -> Result<InstanceSingle<Scheme::Curve>, Error> {
                 let instance_values = instance
                     .iter()
@@ -183,7 +182,6 @@ impl<
                         }
                         for (poly, value) in poly.iter_mut().zip(values.iter()) {
                             if !P::QUERY_INSTANCE {
-                                // dbg!(1, value);
                                 transcript.common_scalar(*value)?;
                             }
                             *poly = *value;
@@ -207,7 +205,6 @@ impl<
                     drop(instance_commitments_projective);
 
                     for commitment in &instance_commitments {
-                        // dbg!(2, commitment);
                         transcript.common_point(*commitment)?;
                     }
                 }
@@ -227,7 +224,7 @@ impl<
             };
         let instance: Vec<InstanceSingle<Scheme::Curve>> = instances
             .iter()
-            .map(|instance| instance_fn(instance))
+            .map(|instance| commit_instance_fn(instance))
             .collect::<Result<Vec<_>, _>>()?;
 
         let advice = vec![
@@ -270,11 +267,14 @@ impl<
         let current_phase = match self.phases.get(self.next_phase_index) {
             Some(phase) => phase,
             None => {
-                panic!("TODO: Return Error instead.  All phases already commited");
+                return Err(Error::Other("All phases already committed".to_string()));
             }
         };
         if phase != current_phase.0 {
-            panic!("TODO: Return Error instead. Committing invalid phase");
+            return Err(Error::Other(format!(
+                "Committing invalid phase.  Expected {}, got {}",
+                current_phase.0, phase
+            )));
         }
 
         let params = self.params;
@@ -633,7 +633,6 @@ impl<
                     )
                 })
                 .collect();
-            // dbg!(&advice_evals);
 
             // Hash each advice column evaluation
             for eval in advice_evals.iter() {

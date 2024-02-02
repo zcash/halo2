@@ -1,4 +1,5 @@
 use group::ff::Field;
+use halo2_common::plonk::Error;
 use halo2_middleware::ff::FromUniformBytes;
 use halo2curves::CurveAffine;
 use rand_core::OsRng;
@@ -8,7 +9,7 @@ use crate::{
     multicore::{
         IndexedParallelIterator, IntoParallelIterator, ParallelIterator, TryFoldAndReduce,
     },
-    plonk::{Error, VerifyingKey},
+    plonk::VerifyingKey,
     poly::{
         commitment::{Params, MSM},
         ipa::{

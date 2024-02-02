@@ -1,25 +1,19 @@
 #![allow(clippy::int_plus_one)]
 
-use std::ops::Range;
-
 use group::Curve;
 use halo2_middleware::ff::{Field, FromUniformBytes};
 
-use super::{
-    circuit::{Assignment, Circuit, ConstraintSystem, Selector},
-    evaluation::Evaluator,
-    permutation, Error, LagrangeCoeff, Polynomial, ProvingKey, VerifyingKey,
-};
+use super::{evaluation::Evaluator, permutation, Polynomial, ProvingKey, VerifyingKey};
 use crate::{
     arithmetic::{parallelize, CurveAffine},
-    circuit::Value,
     poly::{
         commitment::{Blind, Params},
         EvaluationDomain,
     },
 };
-use halo2_middleware::circuit::{Advice, Any, CompiledCircuitV2, Fixed, Instance};
-use halo2_middleware::plonk::Assigned;
+use halo2_common::plonk::circuit::{Circuit, ConstraintSystem};
+use halo2_common::plonk::Error;
+use halo2_middleware::circuit::CompiledCircuitV2;
 
 pub(crate) fn create_domain<C, ConcreteCircuit>(
     k: u32,
