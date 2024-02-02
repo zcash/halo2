@@ -68,6 +68,7 @@ impl<
         params: &'params Scheme::ParamsProver,
         pk: &'a ProvingKey<Scheme::Curve>,
         // TODO: If this was a vector the usage would be simpler
+        // https://github.com/privacy-scaling-explorations/halo2/issues/265
         instance: &[&[Scheme::Scalar]],
         rng: R,
         transcript: &'a mut T,
