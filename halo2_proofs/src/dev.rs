@@ -51,8 +51,9 @@ mod graph;
 #[cfg_attr(docsrs, doc(cfg(feature = "dev-graph")))]
 pub use graph::{circuit_dot_graph, layout::CircuitLayout};
 
+/// Region of assignments that are done during synthesis.
 #[derive(Debug)]
-struct Region {
+pub struct Region {
     /// The name of the region. Not required to be unique.
     name: String,
     /// The columns involved in this region.
@@ -84,6 +85,36 @@ impl Region {
             end = row;
         }
         self.rows = Some((start, end));
+    }
+
+    /// Returns the name of the region.
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    /// Returns the columns involved in this region.
+    pub fn columns(&self) -> &HashSet<Column<Any>> {
+        &self.columns
+    }
+
+    /// Returns the rows that this region starts and ends on, if known.
+    pub fn rows(&self) -> Option<(usize, usize)> {
+        self.rows
+    }
+
+    /// Returns the selectors that have been enabled in this region.
+    pub fn enabled_selectors(&self) -> &HashMap<Selector, Vec<usize>> {
+        &self.enabled_selectors
+    }
+
+    /// Returns the annotations given to Advice, Fixed or Instance columns within a region context.
+    pub fn annotations(&self) -> &HashMap<ColumnMetadata, String> {
+        &self.annotations
+    }
+
+    /// Returns the cells assigned in this region.
+    pub fn cells(&self) -> &HashMap<(Column<Any>, usize), usize> {
+        &self.cells
     }
 }
 
@@ -328,7 +359,8 @@ pub enum InstanceValue<F: Field> {
 }
 
 impl<F: Field> InstanceValue<F> {
-    fn value(&self) -> F {
+    /// Field value on the instance cell
+    pub fn value(&self) -> F {
         match self {
             InstanceValue::Assigned(v) => *v,
             InstanceValue::Padding => F::ZERO,
@@ -1259,6 +1291,11 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
     /// Returns the permutation argument (`Assembly`) used within a MockProver instance.
     pub fn permutation(&self) -> &Assembly {
         &self.permutation
+    }
+
+    /// Returns the Regions used during synthesis.
+    pub fn regions(&self) -> &[Region] {
+        &self.regions
     }
 }
 
