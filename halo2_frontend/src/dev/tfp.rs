@@ -9,10 +9,9 @@ use halo2_common::circuit::{
 };
 use halo2_common::plonk::{
     circuit::{Challenge, Column},
-    Assignment, Circuit, ConstraintSystem, Error, FloorPlanner, Selector,
+    Assigned, Assignment, Circuit, ConstraintSystem, Error, FloorPlanner, Selector,
 };
 use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
-use halo2_middleware::plonk::Assigned;
 
 /// A helper type that augments a [`FloorPlanner`] with [`tracing`] spans and events.
 ///

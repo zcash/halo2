@@ -16,11 +16,10 @@ use halo2_common::{
     circuit::{layouter::RegionColumn, Value},
     plonk::{
         circuit::{Challenge, Column},
-        Assignment, Circuit, ConstraintSystem, Error, FloorPlanner, Selector,
+        Assigned, Assignment, Circuit, ConstraintSystem, Error, FloorPlanner, Selector,
     },
 };
 use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
-use halo2_middleware::plonk::Assigned;
 
 /// Measures a circuit to determine its costs, and explain what contributes to them.
 #[allow(dead_code)]

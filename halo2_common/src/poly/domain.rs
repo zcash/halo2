@@ -6,7 +6,7 @@ use crate::arithmetic::{best_fft, parallelize};
 use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial};
 use group::ff::{BatchInvert, Field};
 use halo2_middleware::ff::WithSmallOrderMulGroup;
-use halo2_middleware::plonk::Assigned;
+use crate::plonk::Assigned;
 use halo2_middleware::poly::Rotation;
 
 use std::marker::PhantomData;

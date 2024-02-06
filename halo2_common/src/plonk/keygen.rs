@@ -8,7 +8,7 @@ use super::{
 };
 use crate::circuit::Value;
 use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
-use halo2_middleware::plonk::Assigned;
+use crate::plonk::Assigned;
 
 /// Assembly to be used in circuit synthesis.
 #[derive(Debug)]

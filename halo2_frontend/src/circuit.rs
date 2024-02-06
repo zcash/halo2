@@ -4,13 +4,12 @@ use halo2_common::plonk::{
     circuit::{Challenge, Column},
     permutation,
     sealed::{self, SealedPhase},
-    Assignment, Circuit, ConstraintSystem, Error, FirstPhase, FloorPlanner, SecondPhase, Selector,
-    ThirdPhase,
+    Assigned, Assignment, Circuit, ConstraintSystem, Error, FirstPhase, FloorPlanner, SecondPhase,
+    Selector, ThirdPhase,
 };
 use halo2_common::poly::batch_invert_assigned;
 use halo2_middleware::circuit::{Advice, Any, CompiledCircuitV2, Fixed, Instance, PreprocessingV2};
 use halo2_middleware::ff::Field;
-use halo2_middleware::plonk::Assigned;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fmt::Debug;

@@ -4,7 +4,7 @@ use std::ops::{Add, Mul, Neg, Sub};
 use group::ff::Field;
 
 use crate::plonk::Error;
-use halo2_middleware::plonk::Assigned;
+use crate::plonk::Assigned;
 
 /// A value that might exist within a circuit.
 ///
@@ -642,7 +642,7 @@ impl<V> Value<V> {
     /// ```
     /// # use halo2curves::pasta::pallas::Base as F;
     /// use halo2_common::circuit::Value;
-    /// use halo2_middleware::plonk::Assigned;
+    /// use crate::plonk::Assigned;
     ///
     /// let v = Value::known(F::from(2));
     /// let v: Value<Assigned<F>> = v.into();

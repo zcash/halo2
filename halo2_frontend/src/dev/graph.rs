@@ -1,10 +1,9 @@
 use halo2_common::plonk::{
     circuit::{Circuit, Column},
-    Assignment, Challenge, ConstraintSystem, Error, FloorPlanner, Selector,
+    Assigned, Assignment, Challenge, ConstraintSystem, Error, FloorPlanner, Selector,
 };
 use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
 use halo2_middleware::ff::Field;
-use halo2_middleware::plonk::Assigned;
 use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 
 use crate::circuit::Value;

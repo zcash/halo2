@@ -15,12 +15,11 @@ use halo2_common::{
         circuit::{Challenge, Column},
         permutation,
         sealed::{self, SealedPhase},
-        Assignment, Circuit, ConstraintSystem, Error, Expression, FirstPhase, FloorPlanner, Phase,
-        Selector,
+        Assigned, Assignment, Circuit, ConstraintSystem, Error, Expression, FirstPhase,
+        FloorPlanner, Phase, Selector,
     },
 };
 use halo2_middleware::circuit::{Advice, Any, ColumnMid, Fixed, Instance};
-use halo2_middleware::plonk::Assigned;
 
 use halo2_common::multicore::{
     IntoParallelIterator, IntoParallelRefIterator, ParallelIterator, ParallelSliceMut,

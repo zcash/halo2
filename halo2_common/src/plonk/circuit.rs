@@ -9,7 +9,7 @@ use halo2_middleware::circuit::{
 };
 use halo2_middleware::ff::Field;
 use halo2_middleware::metadata;
-use halo2_middleware::plonk::Assigned;
+use crate::plonk::Assigned;
 use halo2_middleware::poly::Rotation;
 use sealed::SealedPhase;
 use std::collections::HashMap;

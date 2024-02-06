@@ -7,7 +7,7 @@ use crate::helpers::SerdePrimeField;
 use crate::SerdeFormat;
 
 use group::ff::{BatchInvert, Field};
-use halo2_middleware::plonk::Assigned;
+use crate::plonk::Assigned;
 use halo2_middleware::poly::Rotation;
 use std::fmt::Debug;
 use std::io;

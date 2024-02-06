@@ -9,7 +9,7 @@ use crate::plonk::{
     Error, Selector, TableColumn,
 };
 use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
-use halo2_middleware::plonk::Assigned;
+use crate::plonk::Assigned;
 
 mod value;
 pub use value::Value;
