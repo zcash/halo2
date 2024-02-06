@@ -642,7 +642,7 @@ impl<V> Value<V> {
     /// ```
     /// # use halo2curves::pasta::pallas::Base as F;
     /// use halo2_common::circuit::Value;
-    /// use crate::plonk::Assigned;
+    /// use halo2_common::plonk::Assigned;
     ///
     /// let v = Value::known(F::from(2));
     /// let v: Value<Assigned<F>> = v.into();
