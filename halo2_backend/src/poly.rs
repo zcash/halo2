@@ -3,8 +3,8 @@
 //! the committed polynomials at arbitrary points.
 
 use crate::arithmetic::parallelize;
-use crate::helpers::SerdePrimeField;
 use crate::SerdeFormat;
+use halo2_common::helpers::SerdePrimeField;
 
 use group::ff::Field;
 use halo2_middleware::poly::Rotation;

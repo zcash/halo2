@@ -296,11 +296,11 @@ mod test {
 
         use super::super::commitment::{Blind, Params};
         use crate::arithmetic::eval_polynomial;
-        use crate::halo2curves::pasta::{EpAffine, Fq};
         use crate::poly::EvaluationDomain;
         use crate::transcript::{
             Blake2bRead, Blake2bWrite, Challenge255, Transcript, TranscriptRead, TranscriptWrite,
         };
+        use halo2curves::pasta::{EpAffine, Fq};
 
         use crate::transcript::TranscriptReadBuffer;
         use crate::transcript::TranscriptWriterBuffer;

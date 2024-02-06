@@ -2,13 +2,11 @@
 
 use crate::{
     arithmetic::CurveAffine,
-    helpers::{
-        polynomial_slice_byte_length, read_polynomial_vec, write_polynomial_slice,
-        SerdeCurveAffine, SerdePrimeField,
-    },
+    helpers::{polynomial_slice_byte_length, read_polynomial_vec, write_polynomial_slice},
     poly::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial},
     SerdeFormat,
 };
+use halo2_common::helpers::{SerdeCurveAffine, SerdePrimeField};
 pub use halo2_common::plonk::permutation::Argument;
 
 use std::io;

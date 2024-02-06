@@ -4,7 +4,6 @@
 use crate::arithmetic::{best_fft, parallelize};
 
 use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial};
-use crate::plonk::Assigned;
 use group::ff::{BatchInvert, Field};
 use halo2_middleware::ff::WithSmallOrderMulGroup;
 use halo2_middleware::poly::Rotation;
@@ -179,15 +178,6 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
     pub fn empty_lagrange(&self) -> Polynomial<F, LagrangeCoeff> {
         Polynomial {
             values: vec![F::ZERO; self.n as usize],
-            _marker: PhantomData,
-        }
-    }
-
-    /// Returns an empty (zero) polynomial in the Lagrange coefficient basis, with
-    /// deferred inversions.
-    pub fn empty_lagrange_assigned(&self) -> Polynomial<Assigned<F>, LagrangeCoeff> {
-        Polynomial {
-            values: vec![F::ZERO.into(); self.n as usize],
             _marker: PhantomData,
         }
     }

@@ -1,21 +1,23 @@
 use blake2b_simd::Params as Blake2bParams;
 use group::ff::{Field, FromUniformBytes, PrimeField};
 
+use crate::helpers::{
+    self, polynomial_slice_byte_length, read_polynomial_vec, write_polynomial_slice,
+    SerdeCurveAffine, SerdePrimeField,
+};
 use crate::poly::{
     Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, PinnedEvaluationDomain,
     Polynomial,
 };
 use evaluation::Evaluator;
 use halo2_common::arithmetic::CurveAffine;
-use halo2_common::helpers::{
-    self, polynomial_slice_byte_length, read_polynomial_vec, write_polynomial_slice,
-    SerdeCurveAffine, SerdePrimeField,
-};
 use halo2_common::plonk::{Circuit, ConstraintSystem, PinnedConstraintSystem};
 use halo2_common::transcript::{EncodedChallenge, Transcript};
 use halo2_common::SerdeFormat;
 
 use std::io;
+
+pub(crate) use halo2_common::plonk::Error;
 
 mod evaluation;
 pub mod keygen;
