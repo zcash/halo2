@@ -4,7 +4,7 @@ use halo2_middleware::ff::Field;
 
 use super::{
     circuit::{Assignment, Challenge, Column, Selector},
-    permutation, Error, LagrangeCoeff, Polynomial,
+    permutation, Error,
 };
 use crate::circuit::Value;
 use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
@@ -14,7 +14,7 @@ use halo2_middleware::plonk::Assigned;
 #[derive(Debug)]
 pub struct Assembly<F: Field> {
     pub k: u32,
-    pub fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
+    pub fixed: Vec<Vec<Assigned<F>>>,
     pub permutation: permutation::Assembly,
     pub selectors: Vec<Vec<bool>>,
     // A range of available rows for assignment and copies.

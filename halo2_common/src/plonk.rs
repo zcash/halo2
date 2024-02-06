@@ -6,7 +6,6 @@
 //! [plonk]: https://eprint.iacr.org/2019/953
 
 use crate::plonk::circuit::Column;
-use crate::poly::{LagrangeCoeff, Polynomial};
 use crate::transcript::ChallengeScalar;
 use halo2_middleware::circuit::{Advice, Fixed, Instance};
 use halo2_middleware::poly::Rotation;

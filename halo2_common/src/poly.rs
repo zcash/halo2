@@ -197,9 +197,7 @@ impl<F: SerdePrimeField, B> Polynomial<F, B> {
     }
 }
 
-pub fn batch_invert_assigned<F: Field>(
-    assigned: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
-) -> Vec<Polynomial<F, LagrangeCoeff>> {
+pub fn batch_invert_assigned<F: Field>(assigned: Vec<Vec<Assigned<F>>>) -> Vec<Vec<F>> {
     let mut assigned_denominators: Vec<_> = assigned
         .iter()
         .map(|f| {
@@ -222,26 +220,21 @@ pub fn batch_invert_assigned<F: Field>(
     assigned
         .iter()
         .zip(assigned_denominators)
-        .map(|(poly, inv_denoms)| poly.invert(inv_denoms.into_iter().map(|d| d.unwrap_or(F::ONE))))
+        .map(|(poly, inv_denoms)| {
+            poly_invert(poly, inv_denoms.into_iter().map(|d| d.unwrap_or(F::ONE)))
+        })
         .collect()
 }
 
-impl<F: Field> Polynomial<Assigned<F>, LagrangeCoeff> {
-    pub fn invert(
-        &self,
-        inv_denoms: impl Iterator<Item = F> + ExactSizeIterator,
-    ) -> Polynomial<F, LagrangeCoeff> {
-        assert_eq!(inv_denoms.len(), self.values.len());
-        Polynomial {
-            values: self
-                .values
-                .iter()
-                .zip(inv_denoms)
-                .map(|(a, inv_den)| a.numerator() * inv_den)
-                .collect(),
-            _marker: self._marker,
-        }
-    }
+pub fn poly_invert<F: Field>(
+    poly: &[Assigned<F>],
+    inv_denoms: impl Iterator<Item = F> + ExactSizeIterator,
+) -> Vec<F> {
+    assert_eq!(inv_denoms.len(), poly.len());
+    poly.iter()
+        .zip(inv_denoms)
+        .map(|(a, inv_den)| a.numerator() * inv_den)
+        .collect()
 }
 
 impl<'a, F: Field, B: Basis> Add<&'a Polynomial<F, B>> for Polynomial<F, B> {

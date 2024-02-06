@@ -13,6 +13,7 @@ use halo2_common::plonk::{
 };
 
 use group::prime::PrimeCurveAffine;
+use halo2_common::transcript::{EncodedChallenge, TranscriptWrite};
 use halo2_common::{
     arithmetic::{eval_polynomial, CurveAffine},
     poly::{
@@ -20,11 +21,6 @@ use halo2_common::{
         Basis, Coeff, LagrangeCoeff, Polynomial, ProverQuery,
     },
 };
-use halo2_common::{
-    poly::batch_invert_assigned,
-    transcript::{EncodedChallenge, TranscriptWrite},
-};
-use halo2_middleware::plonk::Assigned;
 
 /// Collection of instance data used during proving for a single circuit proof.
 #[derive(Debug)]
@@ -73,7 +69,6 @@ impl<
         rng: R,
         transcript: &'a mut T,
     ) -> Result<Self, Error>
-    // TODO: Can I move this `where` to the struct definition?
     where
         Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     {
@@ -90,7 +85,7 @@ impl<
     pub fn commit_phase(
         &mut self,
         phase: u8,
-        witness: Vec<Option<Vec<Assigned<Scheme::Scalar>>>>,
+        witness: Vec<Option<Vec<Scheme::Scalar>>>,
     ) -> Result<HashMap<usize, Scheme::Scalar>, Error>
     where
         Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
@@ -260,7 +255,7 @@ impl<
     pub fn commit_phase(
         &mut self,
         phase: u8,
-        witness: Vec<Vec<Option<Vec<Assigned<Scheme::Scalar>>>>>,
+        witness: Vec<Vec<Option<Vec<Scheme::Scalar>>>>,
     ) -> Result<HashMap<usize, Scheme::Scalar>, Error>
     where
         Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
@@ -339,67 +334,65 @@ impl<
             }
         }
 
-        let mut commit_phase_fn = |advice: &mut AdviceSingle<Scheme::Curve, LagrangeCoeff>,
-                                   witness: Vec<
-            Option<Polynomial<Assigned<Scheme::Scalar>, LagrangeCoeff>>,
-        >|
-         -> Result<(), Error> {
-            let unusable_rows_start = params.n() as usize - (meta.blinding_factors() + 1);
-            let mut advice_values =
-                batch_invert_assigned::<Scheme::Scalar>(witness.into_iter().flatten().collect());
-            let unblinded_advice: HashSet<usize> =
-                HashSet::from_iter(meta.unblinded_advice_columns.clone());
+        let mut commit_phase_fn =
+            |advice: &mut AdviceSingle<Scheme::Curve, LagrangeCoeff>,
+             witness: Vec<Option<Polynomial<Scheme::Scalar, LagrangeCoeff>>>|
+             -> Result<(), Error> {
+                let unusable_rows_start = params.n() as usize - (meta.blinding_factors() + 1);
+                let mut advice_values: Vec<_> = witness.into_iter().flatten().collect();
+                let unblinded_advice: HashSet<usize> =
+                    HashSet::from_iter(meta.unblinded_advice_columns.clone());
 
-            // Add blinding factors to advice columns
-            for (column_index, advice_values) in column_indices.iter().zip(&mut advice_values) {
-                if !unblinded_advice.contains(column_index) {
-                    for cell in &mut advice_values[unusable_rows_start..] {
-                        *cell = Scheme::Scalar::random(&mut rng);
-                    }
-                } else {
-                    #[cfg(feature = "sanity-checks")]
-                    for cell in &advice_values[unusable_rows_start..] {
-                        assert_eq!(*cell, Scheme::Scalar::ZERO);
+                // Add blinding factors to advice columns
+                for (column_index, advice_values) in column_indices.iter().zip(&mut advice_values) {
+                    if !unblinded_advice.contains(column_index) {
+                        for cell in &mut advice_values[unusable_rows_start..] {
+                            *cell = Scheme::Scalar::random(&mut rng);
+                        }
+                    } else {
+                        #[cfg(feature = "sanity-checks")]
+                        for cell in &advice_values[unusable_rows_start..] {
+                            assert_eq!(*cell, Scheme::Scalar::ZERO);
+                        }
                     }
                 }
-            }
 
-            // Compute commitments to advice column polynomials
-            let blinds: Vec<_> = column_indices
-                .iter()
-                .map(|i| {
-                    if unblinded_advice.contains(i) {
-                        Blind::default()
-                    } else {
-                        Blind(Scheme::Scalar::random(&mut rng))
-                    }
-                })
-                .collect();
-            let advice_commitments_projective: Vec<_> = advice_values
-                .iter()
-                .zip(blinds.iter())
-                .map(|(poly, blind)| params.commit_lagrange(poly, *blind))
-                .collect();
-            let mut advice_commitments =
-                vec![Scheme::Curve::identity(); advice_commitments_projective.len()];
-            <Scheme::Curve as CurveAffine>::CurveExt::batch_normalize(
-                &advice_commitments_projective,
-                &mut advice_commitments,
-            );
-            let advice_commitments = advice_commitments;
-            drop(advice_commitments_projective);
+                // Compute commitments to advice column polynomials
+                let blinds: Vec<_> = column_indices
+                    .iter()
+                    .map(|i| {
+                        if unblinded_advice.contains(i) {
+                            Blind::default()
+                        } else {
+                            Blind(Scheme::Scalar::random(&mut rng))
+                        }
+                    })
+                    .collect();
+                let advice_commitments_projective: Vec<_> = advice_values
+                    .iter()
+                    .zip(blinds.iter())
+                    .map(|(poly, blind)| params.commit_lagrange(poly, *blind))
+                    .collect();
+                let mut advice_commitments =
+                    vec![Scheme::Curve::identity(); advice_commitments_projective.len()];
+                <Scheme::Curve as CurveAffine>::CurveExt::batch_normalize(
+                    &advice_commitments_projective,
+                    &mut advice_commitments,
+                );
+                let advice_commitments = advice_commitments;
+                drop(advice_commitments_projective);
 
-            for commitment in &advice_commitments {
-                self.transcript.write_point(*commitment)?;
-            }
-            for ((column_index, advice_values), blind) in
-                column_indices.iter().zip(advice_values).zip(blinds)
-            {
-                advice.advice_polys[*column_index] = advice_values;
-                advice.advice_blinds[*column_index] = blind;
-            }
-            Ok(())
-        };
+                for commitment in &advice_commitments {
+                    self.transcript.write_point(*commitment)?;
+                }
+                for ((column_index, advice_values), blind) in
+                    column_indices.iter().zip(advice_values).zip(blinds)
+                {
+                    advice.advice_polys[*column_index] = advice_values;
+                    advice.advice_blinds[*column_index] = blind;
+                }
+                Ok(())
+            };
 
         for (witness, advice) in witness.into_iter().zip(advice.iter_mut()) {
             commit_phase_fn(

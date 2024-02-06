@@ -7,7 +7,7 @@ use halo2_common::plonk::{
     Assignment, Circuit, ConstraintSystem, Error, FirstPhase, FloorPlanner, SecondPhase, Selector,
     ThirdPhase,
 };
-use halo2_common::poly::{batch_invert_assigned, Polynomial};
+use halo2_common::poly::batch_invert_assigned;
 use halo2_middleware::circuit::{Advice, Any, CompiledCircuitV2, Fixed, Instance, PreprocessingV2};
 use halo2_middleware::ff::Field;
 use halo2_middleware::plonk::Assigned;
@@ -55,7 +55,7 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
 
     let mut assembly = halo2_common::plonk::keygen::Assembly {
         k,
-        fixed: vec![Polynomial::new_empty(n, F::ZERO.into()); cs.num_fixed_columns],
+        fixed: vec![vec![F::ZERO.into(); n]; cs.num_fixed_columns],
         permutation: permutation::Assembly::new(n, &cs.permutation),
         selectors: vec![vec![false; n]; cs.num_selectors],
         usable_rows: 0..n - (cs.blinding_factors() + 1),
@@ -70,7 +70,7 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
         cs.constants.clone(),
     )?;
 
-    let fixed = batch_invert_assigned(assembly.fixed);
+    let mut fixed = batch_invert_assigned(assembly.fixed);
     let (cs, selector_polys) = if compress_selectors {
         cs.compress_selectors(assembly.selectors.clone())
     } else {
@@ -78,7 +78,6 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
         let selectors = std::mem::take(&mut assembly.selectors);
         cs.directly_convert_selectors_to_fixed(selectors)
     };
-    let mut fixed: Vec<_> = fixed.into_iter().map(|p| p.values).collect();
     fixed.extend(selector_polys.into_iter());
 
     let preprocessing = PreprocessingV2 {
@@ -278,7 +277,7 @@ impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concret
         &mut self,
         phase: u8,
         challenges: &HashMap<usize, F>,
-    ) -> Result<Vec<Option<Vec<Assigned<F>>>>, Error> {
+    ) -> Result<Vec<Option<Vec<F>>>, Error> {
         if phase != self.next_phase {
             return Err(Error::Other(format!(
                 "Expected phase {}, got {}",
@@ -330,8 +329,8 @@ impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concret
             .collect::<BTreeSet<_>>();
 
         self.next_phase += 1;
-        Ok(witness
-            .advice
+        let advice_values = batch_invert_assigned(witness.advice);
+        Ok(advice_values
             .into_iter()
             .enumerate()
             .map(|(column_index, advice)| {
