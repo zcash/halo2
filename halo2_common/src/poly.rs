@@ -6,8 +6,7 @@ use crate::arithmetic::parallelize;
 use crate::helpers::SerdePrimeField;
 use crate::SerdeFormat;
 
-use crate::plonk::Assigned;
-use group::ff::{BatchInvert, Field};
+use group::ff::Field;
 use halo2_middleware::poly::Rotation;
 use std::fmt::Debug;
 use std::io;
@@ -195,46 +194,6 @@ impl<F: SerdePrimeField, B> Polynomial<F, B> {
         }
         Ok(())
     }
-}
-
-pub fn batch_invert_assigned<F: Field>(assigned: Vec<Vec<Assigned<F>>>) -> Vec<Vec<F>> {
-    let mut assigned_denominators: Vec<_> = assigned
-        .iter()
-        .map(|f| {
-            f.iter()
-                .map(|value| value.denominator())
-                .collect::<Vec<_>>()
-        })
-        .collect();
-
-    assigned_denominators
-        .iter_mut()
-        .flat_map(|f| {
-            f.iter_mut()
-                // If the denominator is trivial, we can skip it, reducing the
-                // size of the batch inversion.
-                .filter_map(|d| d.as_mut())
-        })
-        .batch_invert();
-
-    assigned
-        .iter()
-        .zip(assigned_denominators)
-        .map(|(poly, inv_denoms)| {
-            poly_invert(poly, inv_denoms.into_iter().map(|d| d.unwrap_or(F::ONE)))
-        })
-        .collect()
-}
-
-pub fn poly_invert<F: Field>(
-    poly: &[Assigned<F>],
-    inv_denoms: impl Iterator<Item = F> + ExactSizeIterator,
-) -> Vec<F> {
-    assert_eq!(inv_denoms.len(), poly.len());
-    poly.iter()
-        .zip(inv_denoms)
-        .map(|(a, inv_den)| a.numerator() * inv_den)
-        .collect()
 }
 
 impl<'a, F: Field, B: Basis> Add<&'a Polynomial<F, B>> for Polynomial<F, B> {

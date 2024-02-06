@@ -7,9 +7,8 @@ use halo2_common::plonk::{
     Assigned, Assignment, Circuit, ConstraintSystem, Error, FirstPhase, FloorPlanner, SecondPhase,
     Selector, ThirdPhase,
 };
-use halo2_common::poly::batch_invert_assigned;
 use halo2_middleware::circuit::{Advice, Any, CompiledCircuitV2, Fixed, Instance, PreprocessingV2};
-use halo2_middleware::ff::Field;
+use halo2_middleware::ff::{BatchInvert, Field};
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -341,4 +340,49 @@ impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concret
             })
             .collect())
     }
+}
+
+// Turn vectors of `Assigned<F>` into vectors of `F` by evaluation the divisions in `Assigned<F>`
+// using batched inversions.
+fn batch_invert_assigned<F: Field>(assigned: Vec<Vec<Assigned<F>>>) -> Vec<Vec<F>> {
+    let mut assigned_denominators: Vec<_> = assigned
+        .iter()
+        .map(|f| {
+            f.iter()
+                .map(|value| value.denominator())
+                .collect::<Vec<_>>()
+        })
+        .collect();
+
+    assigned_denominators
+        .iter_mut()
+        .flat_map(|f| {
+            f.iter_mut()
+                // If the denominator is trivial, we can skip it, reducing the
+                // size of the batch inversion.
+                .filter_map(|d| d.as_mut())
+        })
+        .batch_invert();
+
+    assigned
+        .iter()
+        .zip(assigned_denominators)
+        .map(|(poly, inv_denoms)| {
+            poly_invert(poly, inv_denoms.into_iter().map(|d| d.unwrap_or(F::ONE)))
+        })
+        .collect()
+}
+
+// Turn a slice of `Assigned<F>` into a vector of F by multiplying each numerator with the elements
+// from `inv_denoms`, assuming that `inv_denoms` are the inverted denominators of the
+// `Assigned<F>`.
+fn poly_invert<F: Field>(
+    poly: &[Assigned<F>],
+    inv_denoms: impl Iterator<Item = F> + ExactSizeIterator,
+) -> Vec<F> {
+    assert_eq!(inv_denoms.len(), poly.len());
+    poly.iter()
+        .zip(inv_denoms)
+        .map(|(a, inv_den)| a.numerator() * inv_den)
+        .collect()
 }
