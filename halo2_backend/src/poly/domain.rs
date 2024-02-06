@@ -286,7 +286,7 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
         // evaluation domain might be slightly larger than necessary because
         // it always lies on a power-of-two boundary.
         a.values
-            .truncate((&self.n * self.quotient_poly_degree) as usize);
+            .truncate((self.n * self.quotient_poly_degree) as usize);
 
         a.values
     }

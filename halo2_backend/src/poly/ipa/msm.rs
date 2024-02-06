@@ -126,8 +126,8 @@ impl<'a, C: CurveAffine> MSM<C> for MSMIPA<'a, C> {
             other.0 *= factor;
         }
 
-        self.w_scalar = self.w_scalar.map(|a| a * &factor);
-        self.u_scalar = self.u_scalar.map(|a| a * &factor);
+        self.w_scalar = self.w_scalar.map(|a| a * factor);
+        self.u_scalar = self.u_scalar.map(|a| a * factor);
     }
 
     fn check(&self) -> bool {
@@ -207,12 +207,12 @@ impl<'a, C: CurveAffine> MSMIPA<'a, C> {
     }
     /// Add to `w_scalar`
     pub fn add_to_w_scalar(&mut self, scalar: C::Scalar) {
-        self.w_scalar = self.w_scalar.map_or(Some(scalar), |a| Some(a + &scalar));
+        self.w_scalar = self.w_scalar.map_or(Some(scalar), |a| Some(a + scalar));
     }
 
     /// Add to `u_scalar`
     pub fn add_to_u_scalar(&mut self, scalar: C::Scalar) {
-        self.u_scalar = self.u_scalar.map_or(Some(scalar), |a| Some(a + &scalar));
+        self.u_scalar = self.u_scalar.map_or(Some(scalar), |a| Some(a + scalar));
     }
 }
 

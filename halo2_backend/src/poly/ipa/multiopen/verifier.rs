@@ -120,10 +120,10 @@ impl<'params, C: CurveAffine> Verifier<'params, IPACommitmentScheme<C>>
                 |msm_eval, ((points, evals), proof_eval)| {
                     let r_poly = lagrange_interpolate(points, evals);
                     let r_eval = eval_polynomial(&r_poly, *x_3);
-                    let eval = points.iter().fold(*proof_eval - &r_eval, |eval, point| {
-                        eval * &(*x_3 - point).invert().unwrap()
+                    let eval = points.iter().fold(*proof_eval - r_eval, |eval, point| {
+                        eval * (*x_3 - point).invert().unwrap()
                     });
-                    msm_eval * &(*x_2) + &eval
+                    msm_eval * (*x_2) + eval
                 },
             );
 
@@ -138,7 +138,7 @@ impl<'params, C: CurveAffine> Verifier<'params, IPACommitmentScheme<C>>
             |(mut msm, msm_eval), ((q_commitment, _), q_eval)| {
                 msm.scale(*x_4);
                 msm.add_msm(&q_commitment);
-                (msm, msm_eval * &(*x_4) + q_eval)
+                (msm, msm_eval * (*x_4) + q_eval)
             },
         );
 
