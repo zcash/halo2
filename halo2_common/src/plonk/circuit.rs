@@ -1,6 +1,7 @@
 use super::{lookup, permutation, shuffle, Error, Queries};
 use crate::circuit::layouter::SyncDeps;
 use crate::circuit::{Layouter, Region, Value};
+use crate::plonk::Assigned;
 use core::cmp::max;
 use core::ops::{Add, Mul};
 use halo2_middleware::circuit::{
@@ -9,7 +10,6 @@ use halo2_middleware::circuit::{
 };
 use halo2_middleware::ff::Field;
 use halo2_middleware::metadata;
-use crate::plonk::Assigned;
 use halo2_middleware::poly::Rotation;
 use sealed::SealedPhase;
 use std::collections::HashMap;

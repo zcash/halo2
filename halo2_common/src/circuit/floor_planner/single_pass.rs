@@ -5,6 +5,7 @@ use std::marker::PhantomData;
 
 use halo2_middleware::ff::Field;
 
+use crate::plonk::Assigned;
 use crate::{
     circuit::{
         layouter::{RegionColumn, RegionLayouter, RegionShape, SyncDeps, TableLayouter},
@@ -14,7 +15,6 @@ use crate::{
     plonk::{circuit::Challenge, Assignment, Circuit, Error, FloorPlanner, Selector, TableColumn},
 };
 use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
-use crate::plonk::Assigned;
 
 /// A simple [`FloorPlanner`] that performs minimal optimizations.
 ///

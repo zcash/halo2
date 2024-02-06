@@ -6,8 +6,8 @@ use crate::arithmetic::parallelize;
 use crate::helpers::SerdePrimeField;
 use crate::SerdeFormat;
 
-use group::ff::{BatchInvert, Field};
 use crate::plonk::Assigned;
+use group::ff::{BatchInvert, Field};
 use halo2_middleware::poly::Rotation;
 use std::fmt::Debug;
 use std::io;

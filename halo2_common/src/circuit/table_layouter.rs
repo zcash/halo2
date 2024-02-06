@@ -7,8 +7,8 @@ use std::{
 
 use halo2_middleware::ff::Field;
 
-use crate::plonk::{Assignment, Error, TableColumn, TableError};
 use crate::plonk::Assigned;
+use crate::plonk::{Assignment, Error, TableColumn, TableError};
 
 use super::Value;
 
