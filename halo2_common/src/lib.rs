@@ -11,9 +11,6 @@ pub mod circuit;
 pub use halo2curves;
 pub mod multicore;
 pub mod plonk;
-// TODO: Try to move this to backend and use a lightweight Polynomial type in the frontend
-// https://github.com/privacy-scaling-explorations/halo2/issues/257
-pub mod poly;
 pub mod transcript;
 
 pub mod helpers;

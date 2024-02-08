@@ -112,7 +112,7 @@ impl<'params, C: CurveAffine> Prover<'params, IPACommitmentScheme<C>> for Prover
             |(q_prime_poly, q_prime_blind), (poly, blind)| {
                 (
                     q_prime_poly * *x_4 + &poly.unwrap(),
-                    Blind((q_prime_blind.0 * &(*x_4)) + &blind.0),
+                    Blind((q_prime_blind.0 * (*x_4)) + blind.0),
                 )
             },
         );

@@ -75,7 +75,7 @@ pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
     let f = transcript.read_scalar().map_err(|_| Error::SamplingError)?;
     let b = compute_b(x, &u);
 
-    msm.add_to_u_scalar(neg_c * &b * &z);
+    msm.add_to_u_scalar(neg_c * b * z);
     msm.add_to_w_scalar(-f);
 
     let guard = GuardIPA {
@@ -93,7 +93,7 @@ fn compute_b<F: Field>(x: F, u: &[F]) -> F {
     let mut tmp = F::ONE;
     let mut cur = x;
     for u_j in u.iter().rev() {
-        tmp *= F::ONE + &(*u_j * &cur);
+        tmp *= F::ONE + (*u_j * cur);
         cur *= cur;
     }
     tmp

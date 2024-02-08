@@ -397,7 +397,7 @@ mod test {
         const K: u32 = 4;
 
         use super::super::commitment::Params;
-        use crate::halo2curves::bn256::Bn256;
+        use halo2curves::bn256::Bn256;
 
         let params0 = ParamsKZG::<Bn256>::new(K);
         let mut data = vec![];
