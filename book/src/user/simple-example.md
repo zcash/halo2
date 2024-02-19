@@ -4,7 +4,9 @@ Let's start with a simple circuit, to introduce you to the common APIs and how t
 used. The circuit will take a public input $c$, and will prove knowledge of two private
 inputs $a$ and $b$ such that
 
-$$a^2 \cdot b^2 = c.$$
+$$a^2 \cdot b^2 \cdot \mathrm{constant} = c,$$
+
+where $\mathrm{constant}$ is a fixed number (field element), such as $\mathrm{constant} = 7.$
 
 ## Define instructions
 
