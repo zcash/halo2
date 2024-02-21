@@ -23,7 +23,7 @@ impl Argument {
     /// Returns the minimum circuit degree required by the permutation argument.
     /// The argument may use larger degree gates depending on the actual
     /// circuit's degree and how many columns are involved in the permutation.
-    pub fn required_degree(&self) -> usize {
+    pub(crate) fn required_degree(&self) -> usize {
         // degree 2:
         // l_0(X) * (1 - z(X)) = 0
         //
@@ -58,7 +58,7 @@ impl Argument {
         3
     }
 
-    pub fn add_column(&mut self, column: Column<Any>) {
+    pub(crate) fn add_column(&mut self, column: Column<Any>) {
         if !self.columns.contains(&column) {
             self.columns.push(column);
         }

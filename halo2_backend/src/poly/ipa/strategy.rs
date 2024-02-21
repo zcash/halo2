@@ -17,10 +17,10 @@ use rand_core::OsRng;
 /// Wrapper for verification accumulator
 #[derive(Debug, Clone)]
 pub struct GuardIPA<'params, C: CurveAffine> {
-    pub msm: MSMIPA<'params, C>,
-    pub neg_c: C::Scalar,
-    pub u: Vec<C::Scalar>,
-    pub u_packed: Vec<C::Scalar>,
+    pub(crate) msm: MSMIPA<'params, C>,
+    pub(crate) neg_c: C::Scalar,
+    pub(crate) u: Vec<C::Scalar>,
+    pub(crate) u_packed: Vec<C::Scalar>,
 }
 
 /// An accumulator instance consisting of an evaluation claim and a proof.

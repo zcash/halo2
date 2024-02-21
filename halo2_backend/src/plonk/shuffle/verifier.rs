@@ -11,11 +11,11 @@ use halo2_common::plonk::{ChallengeGamma, ChallengeTheta, ChallengeX, Error, Exp
 use halo2_middleware::ff::Field;
 use halo2_middleware::poly::Rotation;
 
-pub struct Committed<C: CurveAffine> {
+pub(crate) struct Committed<C: CurveAffine> {
     product_commitment: C,
 }
 
-pub struct Evaluated<C: CurveAffine> {
+pub(crate) struct Evaluated<C: CurveAffine> {
     committed: Committed<C>,
     product_eval: C::Scalar,
     product_next_eval: C::Scalar,

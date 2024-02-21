@@ -207,7 +207,7 @@ impl Region {
     /// This function will return `None` if:
     /// - There's no annotation map generated for this `Region`.
     /// - There's no entry on the annotation map corresponding to the metadata provided.
-    pub fn get_column_annotation(&self, metadata: ColumnMetadata) -> Option<String> {
+    pub(crate) fn get_column_annotation(&self, metadata: ColumnMetadata) -> Option<String> {
         self.column_annotations
             .as_ref()
             .and_then(|map| map.get(&metadata).cloned())

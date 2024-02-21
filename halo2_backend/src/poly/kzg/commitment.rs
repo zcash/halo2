@@ -19,12 +19,12 @@ use super::msm::MSMKZG;
 /// These are the public parameters for the polynomial commitment scheme.
 #[derive(Debug, Clone)]
 pub struct ParamsKZG<E: Engine> {
-    pub k: u32,
-    pub n: u64,
-    pub g: Vec<E::G1Affine>,
-    pub g_lagrange: Vec<E::G1Affine>,
-    pub g2: E::G2Affine,
-    pub s_g2: E::G2Affine,
+    pub(crate) k: u32,
+    pub(crate) n: u64,
+    pub(crate) g: Vec<E::G1Affine>,
+    pub(crate) g_lagrange: Vec<E::G1Affine>,
+    pub(crate) g2: E::G2Affine,
+    pub(crate) s_g2: E::G2Affine,
 }
 
 /// Umbrella commitment scheme construction for all KZG variants

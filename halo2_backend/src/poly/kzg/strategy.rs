@@ -25,7 +25,7 @@ where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
-    pub msm_accumulator: DualMSM<'params, E>,
+    pub(crate) msm_accumulator: DualMSM<'params, E>,
 }
 
 /// Define accumulator type as `DualMSM`
@@ -45,7 +45,7 @@ where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
-    pub fn new(msm_accumulator: DualMSM<'params, E>) -> Self {
+    pub(crate) fn new(msm_accumulator: DualMSM<'params, E>) -> Self {
         Self { msm_accumulator }
     }
 }
@@ -57,7 +57,7 @@ where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
-    pub msm_accumulator: DualMSM<'params, E>,
+    pub(crate) msm_accumulator: DualMSM<'params, E>,
 }
 
 impl<'params, E: MultiMillerLoop + Debug> AccumulatorStrategy<'params, E>
@@ -85,7 +85,7 @@ where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
-    pub msm: DualMSM<'params, E>,
+    pub(crate) msm: DualMSM<'params, E>,
 }
 
 impl<'params, E: MultiMillerLoop + Debug> SingleStrategy<'params, E>

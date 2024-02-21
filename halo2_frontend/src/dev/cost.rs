@@ -58,44 +58,44 @@ pub struct CircuitCost<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> {
 /// Region implementation used by Layout
 #[allow(dead_code)]
 #[derive(Debug)]
-pub struct LayoutRegion {
+pub(crate) struct LayoutRegion {
     /// The name of the region. Not required to be unique.
-    pub name: String,
+    pub(crate) name: String,
     /// The columns used by this region.
-    pub columns: HashSet<RegionColumn>,
+    pub(crate) columns: HashSet<RegionColumn>,
     /// The row that this region starts on, if known.
-    pub offset: Option<usize>,
+    pub(crate) offset: Option<usize>,
     /// The number of rows that this region takes up.
-    pub rows: usize,
+    pub(crate) rows: usize,
     /// The cells assigned in this region.
-    pub cells: Vec<(RegionColumn, usize)>,
+    pub(crate) cells: Vec<(RegionColumn, usize)>,
 }
 
 /// Cost and graphing layouter
 #[derive(Default, Debug)]
-pub struct Layout {
+pub(crate) struct Layout {
     /// k = 1 << n
-    pub k: u32,
+    pub(crate) k: u32,
     /// Regions of the layout
-    pub regions: Vec<LayoutRegion>,
+    pub(crate) regions: Vec<LayoutRegion>,
     current_region: Option<usize>,
     /// Total row count
-    pub total_rows: usize,
+    pub(crate) total_rows: usize,
     /// Total advice rows
-    pub total_advice_rows: usize,
+    pub(crate) total_advice_rows: usize,
     /// Total fixed rows
-    pub total_fixed_rows: usize,
+    pub(crate) total_fixed_rows: usize,
     /// Any cells assigned outside of a region.
-    pub loose_cells: Vec<(RegionColumn, usize)>,
+    pub(crate) loose_cells: Vec<(RegionColumn, usize)>,
     /// Pairs of cells between which we have equality constraints.
-    pub equality: Vec<(Column<Any>, usize, Column<Any>, usize)>,
+    pub(crate) equality: Vec<(Column<Any>, usize, Column<Any>, usize)>,
     /// Selector assignments used for optimization pass
-    pub selectors: Vec<Vec<bool>>,
+    pub(crate) selectors: Vec<Vec<bool>>,
 }
 
 impl Layout {
     /// Creates a empty layout
-    pub fn new(k: u32, n: usize, num_selectors: usize) -> Self {
+    pub(crate) fn new(k: u32, n: usize, num_selectors: usize) -> Self {
         Layout {
             k,
             regions: vec![],
@@ -113,7 +113,7 @@ impl Layout {
     }
 
     /// Update layout metadata
-    pub fn update(&mut self, column: RegionColumn, row: usize) {
+    pub(crate) fn update(&mut self, column: RegionColumn, row: usize) {
         self.total_rows = cmp::max(self.total_rows, row + 1);
 
         if let RegionColumn::Column(col) = column {

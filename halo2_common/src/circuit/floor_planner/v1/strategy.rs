@@ -30,7 +30,7 @@ impl PartialOrd for AllocatedRegion {
 }
 
 /// An area of empty space within a column.
-pub struct EmptySpace {
+pub(crate) struct EmptySpace {
     // The starting position (inclusive) of the empty space.
     start: usize,
     // The ending position (exclusive) of the empty space, or `None` if unbounded.
@@ -38,7 +38,7 @@ pub struct EmptySpace {
 }
 
 impl EmptySpace {
-    pub fn range(&self) -> Option<Range<usize>> {
+    pub(crate) fn range(&self) -> Option<Range<usize>> {
         self.end.map(|end| self.start..end)
     }
 }
@@ -51,7 +51,7 @@ pub struct Allocations(BTreeSet<AllocatedRegion>);
 
 impl Allocations {
     /// Returns the row that forms the unbounded unallocated interval [row, None).
-    pub fn unbounded_interval_start(&self) -> usize {
+    pub(crate) fn unbounded_interval_start(&self) -> usize {
         self.0
             .iter()
             .last()
@@ -62,7 +62,7 @@ impl Allocations {
     /// Return all the *unallocated* nonempty intervals intersecting [start, end).
     ///
     /// `end = None` represents an unbounded end.
-    pub fn free_intervals(
+    pub(crate) fn free_intervals(
         &self,
         start: usize,
         end: Option<usize>,

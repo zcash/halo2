@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 /// A multiscalar multiplication in the polynomial commitment scheme
 #[derive(Debug, Clone)]
 pub struct MSMIPA<'params, C: CurveAffine> {
-    pub params: &'params ParamsVerifierIPA<C>,
+    pub(crate) params: &'params ParamsVerifierIPA<C>,
     g_scalars: Option<Vec<C::Scalar>>,
     w_scalar: Option<C::Scalar>,
     u_scalar: Option<C::Scalar>,

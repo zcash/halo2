@@ -23,12 +23,12 @@ use std::io;
 /// Public parameters for IPA commitment scheme
 #[derive(Debug, Clone)]
 pub struct ParamsIPA<C: CurveAffine> {
-    pub k: u32,
-    pub n: u64,
-    pub g: Vec<C>,
-    pub g_lagrange: Vec<C>,
-    pub w: C,
-    pub u: C,
+    pub(crate) k: u32,
+    pub(crate) n: u64,
+    pub(crate) g: Vec<C>,
+    pub(crate) g_lagrange: Vec<C>,
+    pub(crate) w: C,
+    pub(crate) u: C,
 }
 
 /// Concrete IPA commitment scheme

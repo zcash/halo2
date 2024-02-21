@@ -37,10 +37,10 @@ type ChallengeX4<F> = ChallengeScalar<F, X4>;
 
 #[derive(Debug)]
 struct CommitmentData<F, T: PartialEq> {
-    pub commitment: T,
-    pub set_index: usize,
-    pub point_indices: Vec<usize>,
-    pub evals: Vec<F>,
+    pub(crate) commitment: T,
+    pub(crate) set_index: usize,
+    pub(crate) point_indices: Vec<usize>,
+    pub(crate) evals: Vec<F>,
 }
 
 impl<F, T: PartialEq> CommitmentData<F, T> {

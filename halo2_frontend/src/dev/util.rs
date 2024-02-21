@@ -8,7 +8,7 @@ use halo2_common::plonk::{
 use halo2_middleware::circuit::{Advice, Any, ColumnType};
 use halo2_middleware::poly::Rotation;
 
-pub struct AnyQuery {
+pub(crate) struct AnyQuery {
     /// Query index
     pub index: Option<usize>,
     /// Column type

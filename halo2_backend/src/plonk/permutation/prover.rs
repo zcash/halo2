@@ -33,7 +33,7 @@ pub(crate) struct Committed<C: CurveAffine> {
     pub(crate) sets: Vec<CommittedSet<C>>,
 }
 
-pub struct ConstructedSet<C: CurveAffine> {
+pub(crate) struct ConstructedSet<C: CurveAffine> {
     permutation_product_poly: Polynomial<C::Scalar, Coeff>,
     permutation_product_blind: Blind<C::Scalar>,
 }

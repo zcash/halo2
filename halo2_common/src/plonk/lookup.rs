@@ -3,6 +3,7 @@ use halo2_middleware::ff::Field;
 use std::fmt::{self, Debug};
 
 /// Expressions involved in a lookup argument, with a name as metadata.
+/// TODO: possible to move to "halo2_backend", if moved, pub(crate) fields.
 #[derive(Clone)]
 pub struct Argument<F: Field> {
     pub name: String,
@@ -32,7 +33,7 @@ impl<F: Field> Argument<F> {
         }
     }
 
-    pub fn required_degree(&self) -> usize {
+    pub(crate) fn required_degree(&self) -> usize {
         assert_eq!(self.input_expressions.len(), self.table_expressions.len());
 
         // The first value in the permutation poly should be one.

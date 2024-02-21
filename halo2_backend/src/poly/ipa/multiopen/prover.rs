@@ -16,7 +16,7 @@ use std::marker::PhantomData;
 /// IPA multi-open prover
 #[derive(Debug)]
 pub struct ProverIPA<'params, C: CurveAffine> {
-    pub params: &'params ParamsIPA<C>,
+    pub(crate) params: &'params ParamsIPA<C>,
 }
 
 impl<'params, C: CurveAffine> Prover<'params, IPACommitmentScheme<C>> for ProverIPA<'params, C> {
