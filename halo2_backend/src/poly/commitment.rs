@@ -39,12 +39,12 @@ pub trait CommitmentScheme {
     fn read_params<R: io::Read>(reader: &mut R) -> io::Result<Self::ParamsProver>;
 }
 
-/// Parameters for circuit sysnthesis and prover parameters.
+/// Parameters for circuit synthesis and prover parameters.
 pub trait Params<'params, C: CurveAffine>: Sized + Clone + Debug {
-    /// Multi scalar multiplication engine
+    /// Multiscalar multiplication engine
     type MSM: MSM<C> + 'params;
 
-    /// Logaritmic size of the circuit
+    /// Logarithmic size of the circuit
     fn k(&self) -> u32;
 
     /// Size of the circuit
@@ -73,7 +73,7 @@ pub trait Params<'params, C: CurveAffine>: Sized + Clone + Debug {
     fn read<R: io::Read>(reader: &mut R) -> io::Result<Self>;
 }
 
-/// Parameters for circuit sysnthesis and prover parameters.
+/// Parameters for circuit synthesis and prover parameters.
 pub trait ParamsProver<'params, C: CurveAffine>: Params<'params, C> {
     /// Constant verifier parameters.
     type ParamsVerifier: ParamsVerifier<'params, C>;
@@ -97,7 +97,7 @@ pub trait ParamsProver<'params, C: CurveAffine>: Params<'params, C> {
 /// Verifier specific functionality with circuit constraints
 pub trait ParamsVerifier<'params, C: CurveAffine>: Params<'params, C> {}
 
-/// Multi scalar multiplication engine
+/// Multiscalar multiplication engine
 pub trait MSM<C: CurveAffine>: Clone + Debug + Send + Sync {
     /// Add arbitrary term (the scalar and the point)
     fn append_term(&mut self, scalar: C::Scalar, point: C::CurveExt);
@@ -152,10 +152,10 @@ pub trait Prover<'params, Scheme: CommitmentScheme> {
 /// Common multi-open verifier interface for various commitment schemes
 pub trait Verifier<'params, Scheme: CommitmentScheme> {
     /// Unfinalized verification result. This is returned in verification
-    /// to allow developer to compress or combined verification results
+    /// to allow developer to compress or combine verification results
     type Guard: Guard<Scheme, MSMAccumulator = Self::MSMAccumulator>;
 
-    /// Accumulator fot comressed verification
+    /// Accumulator for compressed verification
     type MSMAccumulator;
 
     /// Query instance or not
@@ -164,7 +164,7 @@ pub trait Verifier<'params, Scheme: CommitmentScheme> {
     /// Creates new verifier instance
     fn new(params: &'params Scheme::ParamsVerifier) -> Self;
 
-    /// Process the proof and returns unfinished result named `Guard`
+    /// Process the proof and return unfinished result named `Guard`
     fn verify_proof<
         'com,
         E: EncodedChallenge<Scheme::Curve>,
