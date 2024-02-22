@@ -622,7 +622,7 @@ fn plonk_api() {
             //panic!("{:#?}", pk.get_vk().pinned());
             assert_eq!(
                 format!("{:#?}", pk.get_vk().pinned()),
-                r#####"PinnedVerificationKey {
+                r#"PinnedVerificationKey {
     base_modulus: "0x40000000000000000000000000000000224698fc0994a8dd8c46eb2100000001",
     scalar_modulus: "0x40000000000000000000000000000000224698fc094cf91b992d30ed00000001",
     domain: PinnedEvaluationDomain {
@@ -1015,7 +1015,7 @@ fn plonk_api() {
             (0x3d907e0591343bd285c2c846f3e871a6ac70d80ec29e9500b8cb57f544e60202, 0x1034e48df35830244cabea076be8a16d67d7896e27c6ac22b285d017105da9c3),
         ],
     },
-}"#####
+}"#
             );
         }
     }

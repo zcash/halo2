@@ -6,7 +6,6 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(unsafe_code)]
 
-pub mod arithmetic;
 pub mod circuit;
 pub use halo2curves;
 pub mod multicore;

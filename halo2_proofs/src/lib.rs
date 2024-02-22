@@ -20,10 +20,10 @@ pub mod circuit {
         AssignedCell, Cell, Chip, Layouter, Region, SimpleFloorPlanner, Value,
     };
 }
-///! This module provides common utilities, traits and structures for group,
-///! field and polynomial arithmetic.
+/// This module provides common utilities, traits and structures for group,
+/// field and polynomial arithmetic.
 pub mod arithmetic {
-    pub use halo2_common::arithmetic::{
+    pub use halo2_backend::arithmetic::{
         best_fft, parallelize, small_multiexp, CurveAffine, CurveExt, Field,
     };
 }

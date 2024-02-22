@@ -5,7 +5,6 @@
 //! [halo]: https://eprint.iacr.org/2019/1021
 //! [plonk]: https://eprint.iacr.org/2019/953
 
-use crate::plonk::circuit::Column;
 use crate::transcript::ChallengeScalar;
 use halo2_middleware::circuit::{Advice, Fixed, Instance};
 use halo2_middleware::ff::Field;

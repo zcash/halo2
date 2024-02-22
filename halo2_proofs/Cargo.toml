@@ -70,7 +70,7 @@ proptest = "1"
 dhat = "0.3.2"
 serde_json = "1"
 
-[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
 getrandom = { version = "0.2", features = ["js"] }
 
 [features]
