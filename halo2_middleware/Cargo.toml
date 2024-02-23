@@ -35,7 +35,7 @@ proptest = "1"
 group = "0.13"
 halo2curves = { version = "0.6.0", default-features = false }
 
-[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
 getrandom = { version = "0.2", features = ["js"] }
 
 [lib]

@@ -7,4 +7,3 @@ members = [
     "halo2_backend",
     "halo2_common",
 ]
-resolver = "2"
