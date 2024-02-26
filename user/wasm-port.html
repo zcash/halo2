@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" class="sidebar-visible no-js light">
+<html lang="en" class="light" dir="ltr">
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
@@ -10,7 +10,7 @@
         
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" content="#ffffff">
 
         <link rel="icon" href="../favicon.svg">
         <link rel="shortcut icon" href="../favicon.png">
@@ -31,7 +31,8 @@
         <!-- Custom theme stylesheets -->
 
     </head>
-    <body>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
         <!-- Provide site root to javascript -->
         <script>
             var path_to_root = "../";
@@ -60,40 +61,71 @@
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             var html = document.querySelector('html');
-            html.classList.remove('no-js')
             html.classList.remove('light')
             html.classList.add(theme);
-            html.classList.add('js');
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
         </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var html = document.querySelector('html');
-            var sidebar = 'hidden';
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
             }
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">halo2</a></li><li class="chapter-item expanded "><a href="../concepts.html"><strong aria-hidden="true">1.</strong> Concepts</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../concepts/proofs.html"><strong aria-hidden="true">1.1.</strong> Proof systems</a></li><li class="chapter-item expanded "><a href="../concepts/arithmetization.html"><strong aria-hidden="true">1.2.</strong> PLONKish Arithmetization</a></li><li class="chapter-item expanded "><a href="../concepts/chips.html"><strong aria-hidden="true">1.3.</strong> Chips</a></li><li class="chapter-item expanded "><a href="../concepts/gadgets.html"><strong aria-hidden="true">1.4.</strong> Gadgets</a></li></ol></li><li class="chapter-item expanded "><a href="../user.html"><strong aria-hidden="true">2.</strong> User Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../user/dev-tools.html"><strong aria-hidden="true">2.1.</strong> Developer tools</a></li><li class="chapter-item expanded "><a href="../user/simple-example.html"><strong aria-hidden="true">2.2.</strong> A simple example</a></li><li class="chapter-item expanded "><a href="../user/lookup-tables.html"><strong aria-hidden="true">2.3.</strong> Lookup tables</a></li><li class="chapter-item expanded "><a href="../user/gadgets.html"><strong aria-hidden="true">2.4.</strong> Gadgets</a></li><li class="chapter-item expanded "><a href="../user/tips-and-tricks.html"><strong aria-hidden="true">2.5.</strong> Tips and tricks</a></li><li class="chapter-item expanded "><a href="../user/wasm-port.html" class="active"><strong aria-hidden="true">2.6.</strong> WASM Guide</a></li></ol></li><li class="chapter-item expanded "><a href="../dev.html"><strong aria-hidden="true">3.</strong> Developer Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../dev/features.html"><strong aria-hidden="true">3.1.</strong> Feature development</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">4.</strong> Design</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/proving-system.html"><strong aria-hidden="true">4.1.</strong> Proving system</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/proving-system/lookup.html"><strong aria-hidden="true">4.1.1.</strong> Lookup argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/permutation.html"><strong aria-hidden="true">4.1.2.</strong> Permutation argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/circuit-commitments.html"><strong aria-hidden="true">4.1.3.</strong> Circuit commitments</a></li><li class="chapter-item expanded "><a href="../design/proving-system/vanishing.html"><strong aria-hidden="true">4.1.4.</strong> Vanishing argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/multipoint-opening.html"><strong aria-hidden="true">4.1.5.</strong> Multipoint opening argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/inner-product.html"><strong aria-hidden="true">4.1.6.</strong> Inner product argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/comparison.html"><strong aria-hidden="true">4.1.7.</strong> Comparison to other work</a></li></ol></li><li class="chapter-item expanded "><a href="../design/protocol.html"><strong aria-hidden="true">4.2.</strong> Protocol Description</a></li><li class="chapter-item expanded "><a href="../design/implementation.html"><strong aria-hidden="true">4.3.</strong> Implementation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/implementation/proofs.html"><strong aria-hidden="true">4.3.1.</strong> Proofs</a></li><li class="chapter-item expanded "><a href="../design/implementation/fields.html"><strong aria-hidden="true">4.3.2.</strong> Fields</a></li><li class="chapter-item expanded "><a href="../design/implementation/selector-combining.html"><strong aria-hidden="true">4.3.3.</strong> Selector combining</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets.html"><strong aria-hidden="true">4.4.</strong> Gadgets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/ecc.html"><strong aria-hidden="true">4.4.1.</strong> Elliptic curve cryptography</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/ecc/witnessing-points.html"><strong aria-hidden="true">4.4.1.1.</strong> Witnessing points</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/addition.html"><strong aria-hidden="true">4.4.1.2.</strong> Incomplete and complete addition</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/fixed-base-scalar-mul.html"><strong aria-hidden="true">4.4.1.3.</strong> Fixed-base scalar multiplication</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/var-base-scalar-mul.html"><strong aria-hidden="true">4.4.1.4.</strong> Variable-base scalar multiplication</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets/sinsemilla.html"><strong aria-hidden="true">4.4.2.</strong> Sinsemilla</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sinsemilla/merkle-crh.html"><strong aria-hidden="true">4.4.2.1.</strong> MerkleCRH</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets/decomposition.html"><strong aria-hidden="true">4.4.3.</strong> Decomposition</a></li><li class="chapter-item expanded "><a href="../design/gadgets/sha256.html"><strong aria-hidden="true">4.4.4.</strong> SHA-256</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sha256/table16.html"><strong aria-hidden="true">4.4.4.1.</strong> 16-bit table chip</a></li></ol></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../background.html"><strong aria-hidden="true">5.</strong> Background Material</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../background/fields.html"><strong aria-hidden="true">5.1.</strong> Fields</a></li><li class="chapter-item expanded "><a href="../background/polynomials.html"><strong aria-hidden="true">5.2.</strong> Polynomials</a></li><li class="chapter-item expanded "><a href="../background/groups.html"><strong aria-hidden="true">5.3.</strong> Cryptographic groups</a></li><li class="chapter-item expanded "><a href="../background/curves.html"><strong aria-hidden="true">5.4.</strong> Elliptic curves</a></li><li class="chapter-item expanded "><a href="../background/pc-ipa.html"><strong aria-hidden="true">5.5.</strong> Polynomial commitment using inner product argument</a></li><li class="chapter-item expanded "><a href="../background/recursion.html"><strong aria-hidden="true">5.6.</strong> Recursion</a></li></ol></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
         </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
 
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
                                 <div id="menu-bar-hover-placeholder"></div>
-                <div id="menu-bar" class="menu-bar sticky bordered">
+                <div id="menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
-                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
                             <i class="fa fa-bars"></i>
-                        </button>
+                        </label>
                         <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
                             <i class="fa fa-paint-brush"></i>
                         </button>
@@ -144,7 +176,7 @@
                         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
 <h1 id="using-halo2-in-wasm"><a class="header" href="#using-halo2-in-wasm">Using halo2 in WASM</a></h1>
 <p>Since halo2 is written in Rust, you can compile it to WebAssembly (wasm), which will allow you to use the prover and verifier for your circuits in browser applications. This tutorial takes you through all you need to know to compile your circuits to wasm.</p>
-<p>Throughout this tutorial, we will follow the repository for <a href="https://github.com/nalinbhardwaj/zordle">Zordle</a> for reference, one of the first known webapps based on Halo 2 circuits. Zordle is ZK <a href="https://www.nytimes.com/games/wordle/index.html">Wordle</a>, where the circuit takes as advice values the player's input words and the player's share grid (the grey, yellow and green squares) and verifies that they match correctly. Therefore, the proof verifies that the player knows a &quot;preimage&quot; to the output share sheet, which can then be verified using just the ZK proof.</p>
+<p>Throughout this tutorial, we will follow the repository for <a href="https://github.com/nalinbhardwaj/zordle">Zordle</a> for reference, one of the first known webapps based on Halo 2 circuits. Zordle is ZK <a href="https://www.nytimes.com/games/wordle/index.html">Wordle</a>, where the circuit takes as advice values the player's input words and the player's share grid (the grey, yellow and green squares) and verifies that they match correctly. Therefore, the proof verifies that the player knows a "preimage" to the output share sheet, which can then be verified using just the ZK proof.</p>
 <h2 id="circuit-code-setup"><a class="header" href="#circuit-code-setup">Circuit code setup</a></h2>
 <p>The first step is to create functions in Rust that will interface with the browser application. In the case of a prover, this will typically input some version of the advice and instance data, use it to generate a complete witness, and then output a proof. In the case of a verifier, this will typically input a proof and some version of the instance, and then output a boolean indicating whether the proof verified correctly or not.</p>
 <p>In the case of Zordle, this code is contained in <a href="https://github.com/nalinbhardwaj/zordle/blob/main/circuits/src/wasm.rs">wasm.rs</a>, and consists of two primary functions:</p>
@@ -175,7 +207,7 @@ pub fn verify_play(final_word: String, proof_js: JsValue, diffs_u64_js: JsValue,
 <h3 id="params"><a class="header" href="#params">Params</a></h3>
 <p>Additionally, both the prover and verifier functions input <code>params_ser</code>, a serialised form of the public parameters of the polynomial commitment scheme. These are passed in as input (instead of being regenerated in prove/verify functions) as a performance optimisation since these are constant based only on the circuit's value of <code>K</code>. We can store these separately on a static web server and pass them in as input to the WASM. To generate the binary serialised form of these (separately outside the WASM functions), you can run something like:</p>
 <pre><code class="language-rust ignore">fn write_params(K: u32) {
-    let mut params_file = File::create(&quot;params.bin&quot;).unwrap();
+    let mut params_file = File::create("params.bin").unwrap();
     let params: Params&lt;EqAffine&gt; = Params::new(K);
     params.write(&amp;mut params_file).unwrap();
 }</code></pre>
@@ -188,20 +220,20 @@ pub fn verify_play(final_word: String, proof_js: JsValue, diffs_u64_js: JsValue,
 <li><strong>WASM max memory</strong>: The default memory limit for WASM with <code>wasm-bindgen</code> is set to 2GB, which is not enough to run the halo2 prover for large circuits (with <code>K</code> &gt; 10 or so). We need to increase this limit to the maximum allowed by WASM (4GB!) to support larger circuits (up to <code>K = 15</code> or so).</li>
 </ul>
 <p>Firstly, add all the dependencies particular to your WASM interfacing functions to your <code>Cargo.toml</code> file. You can restrict the dependencies to the WASM compilation by using the WASM target feature flag. In the case of Zordle, <a href="https://github.com/nalinbhardwaj/zordle/blob/main/circuits/Cargo.toml#L24">this looks like</a>:</p>
-<pre><code class="language-toml">[target.'cfg(target_family = &quot;wasm&quot;)'.dependencies]
-getrandom = { version = &quot;0.2&quot;, features = [&quot;js&quot;]}
-wasm-bindgen = { version = &quot;0.2.81&quot;, features = [&quot;serde-serialize&quot;]}
-console_error_panic_hook = &quot;0.1.7&quot;
-rayon = &quot;1.5&quot;
-wasm-bindgen-rayon = { version = &quot;1.0&quot;}
-web-sys = { version = &quot;0.3&quot;, features = [&quot;Request&quot;, &quot;Window&quot;, &quot;Response&quot;] }
-wasm-bindgen-futures = &quot;0.4&quot;
-js-sys = &quot;0.3&quot;
+<pre><code class="language-toml">[target.'cfg(target_family = "wasm")'.dependencies]
+getrandom = { version = "0.2", features = ["js"]}
+wasm-bindgen = { version = "0.2.81", features = ["serde-serialize"]}
+console_error_panic_hook = "0.1.7"
+rayon = "1.5"
+wasm-bindgen-rayon = { version = "1.0"}
+web-sys = { version = "0.3", features = ["Request", "Window", "Response"] }
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
 </code></pre>
 <p>Next, let's integrate <code>wasm-bindgen-rayon</code> into our code. The <a href="https://github.com/GoogleChromeLabs/wasm-bindgen-rayon">README for the library</a> has a great overview of how to do so. In particular, note the <a href="https://github.com/GoogleChromeLabs/wasm-bindgen-rayon#using-config-files">changes to the Rust compilation pipeline</a>. You need to switch to a nightly version of Rust and enable support for WASM atomics. Additionally, remember to export the <a href="https://github.com/GoogleChromeLabs/wasm-bindgen-rayon#setting-up"><code>init_thread_pool</code></a> in Rust code.</p>
-<p>Next, we will bump up the default 2GB max memory limit for <code>wasm-pack</code>. To do so, add <code>&quot;-C&quot;, &quot;link-arg=--max-memory=4294967296&quot;</code> Rust flag to the wasm target in the <code>.cargo/config</code> file. With the setup for <code>wasm-bindgen-rayon</code> and the memory bump, the <code>.cargo/config</code> file should now look like:</p>
+<p>Next, we will bump up the default 2GB max memory limit for <code>wasm-pack</code>. To do so, add <code>"-C", "link-arg=--max-memory=4294967296"</code> Rust flag to the wasm target in the <code>.cargo/config</code> file. With the setup for <code>wasm-bindgen-rayon</code> and the memory bump, the <code>.cargo/config</code> file should now look like:</p>
 <pre><code class="language-toml">[target.wasm32-unknown-unknown]
-rustflags = [&quot;-C&quot;, &quot;target-feature=+atomics,+bulk-memory,+mutable-globals&quot;, &quot;-C&quot;, &quot;link-arg=--max-memory=4294967296&quot;]
+rustflags = ["-C", "target-feature=+atomics,+bulk-memory,+mutable-globals", "-C", "link-arg=--max-memory=4294967296"]
 ...
 </code></pre>
 <p>Shoutout to <a href="https://github.com/mattgibb">@mattgibb</a> who documented this esoteric change for increasing maximum memory in a random GitHub issue <a href="https://github.com/rustwasm/wasm-bindgen/issues/2498#issuecomment-801498175">here</a>.<sup class="footnote-reference"><a href="#1">1</a></sup></p>
@@ -231,7 +263,7 @@ rustflags = [&quot;-C&quot;, &quot;target-feature=+atomics,+bulk-memory,+mutable
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next" href="../dev.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../dev.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -245,7 +277,7 @@ rustflags = [&quot;-C&quot;, &quot;target-feature=+atomics,+bulk-memory,+mutable
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next" href="../dev.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../dev.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -271,5 +303,6 @@ rustflags = [&quot;-C&quot;, &quot;target-feature=+atomics,+bulk-memory,+mutable
         <!-- Custom JS scripts -->
 
 
+    </div>
     </body>
 </html>

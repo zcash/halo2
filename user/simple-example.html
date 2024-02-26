@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" class="sidebar-visible no-js light">
+<html lang="en" class="light" dir="ltr">
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
@@ -10,7 +10,7 @@
         
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" content="#ffffff">
 
         <link rel="icon" href="../favicon.svg">
         <link rel="shortcut icon" href="../favicon.png">
@@ -31,7 +31,8 @@
         <!-- Custom theme stylesheets -->
 
     </head>
-    <body>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
         <!-- Provide site root to javascript -->
         <script>
             var path_to_root = "../";
@@ -60,40 +61,71 @@
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             var html = document.querySelector('html');
-            html.classList.remove('no-js')
             html.classList.remove('light')
             html.classList.add(theme);
-            html.classList.add('js');
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
         </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var html = document.querySelector('html');
-            var sidebar = 'hidden';
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
             }
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
                 <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">halo2</a></li><li class="chapter-item expanded "><a href="../concepts.html"><strong aria-hidden="true">1.</strong> Concepts</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../concepts/proofs.html"><strong aria-hidden="true">1.1.</strong> Proof systems</a></li><li class="chapter-item expanded "><a href="../concepts/arithmetization.html"><strong aria-hidden="true">1.2.</strong> PLONKish Arithmetization</a></li><li class="chapter-item expanded "><a href="../concepts/chips.html"><strong aria-hidden="true">1.3.</strong> Chips</a></li><li class="chapter-item expanded "><a href="../concepts/gadgets.html"><strong aria-hidden="true">1.4.</strong> Gadgets</a></li></ol></li><li class="chapter-item expanded "><a href="../user.html"><strong aria-hidden="true">2.</strong> User Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../user/dev-tools.html"><strong aria-hidden="true">2.1.</strong> Developer tools</a></li><li class="chapter-item expanded "><a href="../user/simple-example.html" class="active"><strong aria-hidden="true">2.2.</strong> A simple example</a></li><li class="chapter-item expanded "><a href="../user/lookup-tables.html"><strong aria-hidden="true">2.3.</strong> Lookup tables</a></li><li class="chapter-item expanded "><a href="../user/gadgets.html"><strong aria-hidden="true">2.4.</strong> Gadgets</a></li><li class="chapter-item expanded "><a href="../user/tips-and-tricks.html"><strong aria-hidden="true">2.5.</strong> Tips and tricks</a></li><li class="chapter-item expanded "><a href="../user/wasm-port.html"><strong aria-hidden="true">2.6.</strong> WASM Guide</a></li></ol></li><li class="chapter-item expanded "><a href="../dev.html"><strong aria-hidden="true">3.</strong> Developer Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../dev/features.html"><strong aria-hidden="true">3.1.</strong> Feature development</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">4.</strong> Design</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/proving-system.html"><strong aria-hidden="true">4.1.</strong> Proving system</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/proving-system/lookup.html"><strong aria-hidden="true">4.1.1.</strong> Lookup argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/permutation.html"><strong aria-hidden="true">4.1.2.</strong> Permutation argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/circuit-commitments.html"><strong aria-hidden="true">4.1.3.</strong> Circuit commitments</a></li><li class="chapter-item expanded "><a href="../design/proving-system/vanishing.html"><strong aria-hidden="true">4.1.4.</strong> Vanishing argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/multipoint-opening.html"><strong aria-hidden="true">4.1.5.</strong> Multipoint opening argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/inner-product.html"><strong aria-hidden="true">4.1.6.</strong> Inner product argument</a></li><li class="chapter-item expanded "><a href="../design/proving-system/comparison.html"><strong aria-hidden="true">4.1.7.</strong> Comparison to other work</a></li></ol></li><li class="chapter-item expanded "><a href="../design/protocol.html"><strong aria-hidden="true">4.2.</strong> Protocol Description</a></li><li class="chapter-item expanded "><a href="../design/implementation.html"><strong aria-hidden="true">4.3.</strong> Implementation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/implementation/proofs.html"><strong aria-hidden="true">4.3.1.</strong> Proofs</a></li><li class="chapter-item expanded "><a href="../design/implementation/fields.html"><strong aria-hidden="true">4.3.2.</strong> Fields</a></li><li class="chapter-item expanded "><a href="../design/implementation/selector-combining.html"><strong aria-hidden="true">4.3.3.</strong> Selector combining</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets.html"><strong aria-hidden="true">4.4.</strong> Gadgets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/ecc.html"><strong aria-hidden="true">4.4.1.</strong> Elliptic curve cryptography</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/ecc/witnessing-points.html"><strong aria-hidden="true">4.4.1.1.</strong> Witnessing points</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/addition.html"><strong aria-hidden="true">4.4.1.2.</strong> Incomplete and complete addition</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/fixed-base-scalar-mul.html"><strong aria-hidden="true">4.4.1.3.</strong> Fixed-base scalar multiplication</a></li><li class="chapter-item expanded "><a href="../design/gadgets/ecc/var-base-scalar-mul.html"><strong aria-hidden="true">4.4.1.4.</strong> Variable-base scalar multiplication</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets/sinsemilla.html"><strong aria-hidden="true">4.4.2.</strong> Sinsemilla</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sinsemilla/merkle-crh.html"><strong aria-hidden="true">4.4.2.1.</strong> MerkleCRH</a></li></ol></li><li class="chapter-item expanded "><a href="../design/gadgets/decomposition.html"><strong aria-hidden="true">4.4.3.</strong> Decomposition</a></li><li class="chapter-item expanded "><a href="../design/gadgets/sha256.html"><strong aria-hidden="true">4.4.4.</strong> SHA-256</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../design/gadgets/sha256/table16.html"><strong aria-hidden="true">4.4.4.1.</strong> 16-bit table chip</a></li></ol></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../background.html"><strong aria-hidden="true">5.</strong> Background Material</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../background/fields.html"><strong aria-hidden="true">5.1.</strong> Fields</a></li><li class="chapter-item expanded "><a href="../background/polynomials.html"><strong aria-hidden="true">5.2.</strong> Polynomials</a></li><li class="chapter-item expanded "><a href="../background/groups.html"><strong aria-hidden="true">5.3.</strong> Cryptographic groups</a></li><li class="chapter-item expanded "><a href="../background/curves.html"><strong aria-hidden="true">5.4.</strong> Elliptic curves</a></li><li class="chapter-item expanded "><a href="../background/pc-ipa.html"><strong aria-hidden="true">5.5.</strong> Polynomial commitment using inner product argument</a></li><li class="chapter-item expanded "><a href="../background/recursion.html"><strong aria-hidden="true">5.6.</strong> Recursion</a></li></ol></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
         </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
 
         <div id="page-wrapper" class="page-wrapper">
 
             <div class="page">
                                 <div id="menu-bar-hover-placeholder"></div>
-                <div id="menu-bar" class="menu-bar sticky bordered">
+                <div id="menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
-                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
                             <i class="fa fa-bars"></i>
-                        </button>
+                        </label>
                         <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
                             <i class="fa fa-paint-brush"></i>
                         </button>
@@ -257,7 +289,7 @@ impl&lt;F: Field&gt; FieldChip&lt;F&gt; {
         let s_mul = meta.selector();
 
         // Define our multiplication gate!
-        meta.create_gate(&quot;mul&quot;, |meta| {
+        meta.create_gate("mul", |meta| {
             // To implement multiplication, we need three advice cells and a selector
             // cell. We arrange them like so:
             //
@@ -309,10 +341,10 @@ impl&lt;F: Field&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
         let config = self.config();
 
         layouter.assign_region(
-            || &quot;load private&quot;,
+            || "load private",
             |mut region| {
                 region
-                    .assign_advice(|| &quot;private input&quot;, config.advice[0], 0, || value)
+                    .assign_advice(|| "private input", config.advice[0], 0, || value)
                     .map(Number)
             },
         )
@@ -326,10 +358,10 @@ impl&lt;F: Field&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
         let config = self.config();
 
         layouter.assign_region(
-            || &quot;load constant&quot;,
+            || "load constant",
             |mut region| {
                 region
-                    .assign_advice_from_constant(|| &quot;constant value&quot;, config.advice[0], 0, constant)
+                    .assign_advice_from_constant(|| "constant value", config.advice[0], 0, constant)
                     .map(Number)
             },
         )
@@ -344,7 +376,7 @@ impl&lt;F: Field&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
         let config = self.config();
 
         layouter.assign_region(
-            || &quot;mul&quot;,
+            || "mul",
             |mut region: Region&lt;'_, F&gt;| {
                 // We only want to use a single multiplication gate in this region,
                 // so we enable it at region offset 0; this means it will constrain
@@ -355,8 +387,8 @@ impl&lt;F: Field&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
                 // but we can only rely on relative offsets inside this region. So we
                 // assign new cells inside the region and constrain them to have the
                 // same values as the inputs.
-                a.0.copy_advice(|| &quot;lhs&quot;, &amp;mut region, config.advice[0], 0)?;
-                b.0.copy_advice(|| &quot;rhs&quot;, &amp;mut region, config.advice[1], 0)?;
+                a.0.copy_advice(|| "lhs", &amp;mut region, config.advice[0], 0)?;
+                b.0.copy_advice(|| "rhs", &amp;mut region, config.advice[1], 0)?;
 
                 // Now we can assign the multiplication result, which is to be assigned
                 // into the output position.
@@ -365,7 +397,7 @@ impl&lt;F: Field&gt; NumericInstructions&lt;F&gt; for FieldChip&lt;F&gt; {
                 // Finally, we do the assignment to the output, returning a
                 // variable to be used in another part of the circuit.
                 region
-                    .assign_advice(|| &quot;lhs * rhs&quot;, config.advice[0], 1, || value)
+                    .assign_advice(|| "lhs * rhs", config.advice[0], 1, || value)
                     .map(Number)
             },
         )
@@ -427,12 +459,12 @@ impl&lt;F: Field&gt; Circuit&lt;F&gt; for MyCircuit&lt;F&gt; {
         let field_chip = FieldChip::&lt;F&gt;::construct(config);
 
         // Load our private values into the circuit.
-        let a = field_chip.load_private(layouter.namespace(|| &quot;load a&quot;), self.a)?;
-        let b = field_chip.load_private(layouter.namespace(|| &quot;load b&quot;), self.b)?;
+        let a = field_chip.load_private(layouter.namespace(|| "load a"), self.a)?;
+        let b = field_chip.load_private(layouter.namespace(|| "load b"), self.b)?;
 
         // Load the constant factor into the circuit.
         let constant =
-            field_chip.load_constant(layouter.namespace(|| &quot;load constant&quot;), self.constant)?;
+            field_chip.load_constant(layouter.namespace(|| "load constant"), self.constant)?;
 
         // We only have access to plain multiplication.
         // We could implement our circuit as:
@@ -445,12 +477,12 @@ impl&lt;F: Field&gt; Circuit&lt;F&gt; for MyCircuit&lt;F&gt; {
         //     ab   = a*b
         //     absq = ab^2
         //     c    = constant*absq
-        let ab = field_chip.mul(layouter.namespace(|| &quot;a * b&quot;), a, b)?;
-        let absq = field_chip.mul(layouter.namespace(|| &quot;ab * ab&quot;), ab.clone(), ab)?;
-        let c = field_chip.mul(layouter.namespace(|| &quot;constant * absq&quot;), constant, absq)?;
+        let ab = field_chip.mul(layouter.namespace(|| "a * b"), a, b)?;
+        let absq = field_chip.mul(layouter.namespace(|| "ab * ab"), ab.clone(), ab)?;
+        let c = field_chip.mul(layouter.namespace(|| "constant * absq"), constant, absq)?;
 
         // Expose the result as a public input to the circuit.
-        field_chip.expose_public(layouter.namespace(|| &quot;expose c&quot;), c, 0)
+        field_chip.expose_public(layouter.namespace(|| "expose c"), c, 0)
     }
 }</code></pre>
 <h2 id="testing-the-circuit"><a class="header" href="#testing-the-circuit">Testing the circuit</a></h2>
@@ -499,7 +531,7 @@ in the circuit, and tell us exactly what is failing (if anything).</p>
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next" href="../user/lookup-tables.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../user/lookup-tables.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -513,7 +545,7 @@ in the circuit, and tell us exactly what is failing (if anything).</p>
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next" href="../user/lookup-tables.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../user/lookup-tables.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -539,5 +571,6 @@ in the circuit, and tell us exactly what is failing (if anything).</p>
         <!-- Custom JS scripts -->
 
 
+    </div>
     </body>
 </html>
