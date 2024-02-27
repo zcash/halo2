@@ -1,4 +1,4 @@
-use crate::arithmetic::{best_multiexp, g_to_lagrange, parallelize};
+use crate::arithmetic::{g_to_lagrange, parallelize};
 use crate::helpers::SerdeCurveAffine;
 use crate::poly::commitment::{Blind, CommitmentScheme, Params, ParamsProver, ParamsVerifier};
 use crate::poly::{Coeff, LagrangeCoeff, Polynomial};
@@ -6,6 +6,7 @@ use crate::SerdeFormat;
 
 use group::{prime::PrimeCurveAffine, Curve, Group};
 use halo2_middleware::ff::{Field, PrimeField};
+use halo2curves::msm::best_multiexp;
 use halo2curves::pairing::Engine;
 use halo2curves::CurveExt;
 use rand_core::{OsRng, RngCore};

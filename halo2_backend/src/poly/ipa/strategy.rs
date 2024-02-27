@@ -2,7 +2,6 @@ use super::commitment::{IPACommitmentScheme, ParamsIPA};
 use super::msm::MSMIPA;
 use super::multiopen::VerifierIPA;
 use crate::{
-    arithmetic::best_multiexp,
     plonk::Error,
     poly::{
         commitment::MSM,
@@ -11,6 +10,7 @@ use crate::{
 };
 use group::Curve;
 use halo2_middleware::ff::Field;
+use halo2curves::msm::best_multiexp;
 use halo2curves::CurveAffine;
 use rand_core::OsRng;
 

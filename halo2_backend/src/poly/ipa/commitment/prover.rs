@@ -1,10 +1,9 @@
 use halo2_middleware::ff::Field;
+use halo2curves::msm::best_multiexp;
 use rand_core::RngCore;
 
 use super::ParamsIPA;
-use crate::arithmetic::{
-    best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine,
-};
+use crate::arithmetic::{compute_inner_product, eval_polynomial, parallelize, CurveAffine};
 
 use crate::poly::commitment::ParamsProver;
 use crate::poly::{commitment::Blind, Coeff, Polynomial};

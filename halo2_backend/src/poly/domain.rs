@@ -1,12 +1,13 @@
 //! Contains utilities for performing polynomial arithmetic over an evaluation
 //! domain that is of a suitable size for the application.
 
-use crate::arithmetic::{best_fft, parallelize};
+use crate::arithmetic::parallelize;
 
 use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial};
 use group::ff::{BatchInvert, Field};
 use halo2_middleware::ff::WithSmallOrderMulGroup;
 use halo2_middleware::poly::Rotation;
+use halo2curves::fft::best_fft;
 
 use std::marker::PhantomData;
 

@@ -23,9 +23,7 @@ pub mod circuit {
 /// This module provides common utilities, traits and structures for group,
 /// field and polynomial arithmetic.
 pub mod arithmetic {
-    pub use halo2_backend::arithmetic::{
-        best_fft, parallelize, small_multiexp, CurveAffine, CurveExt, Field,
-    };
+    pub use halo2_backend::arithmetic::{parallelize, CurveAffine, CurveExt, Field};
 }
 /// Tools for developing circuits.
 pub mod dev {

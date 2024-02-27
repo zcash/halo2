@@ -3,13 +3,14 @@
 //!
 //! [halo]: https://eprint.iacr.org/2019/1021
 
-use crate::arithmetic::{best_multiexp, g_to_lagrange, parallelize, CurveAffine, CurveExt};
+use crate::arithmetic::{g_to_lagrange, parallelize, CurveAffine, CurveExt};
 use crate::helpers::CurveRead;
 use crate::poly::commitment::{Blind, CommitmentScheme, Params, ParamsProver, ParamsVerifier};
 use crate::poly::ipa::msm::MSMIPA;
 use crate::poly::{Coeff, LagrangeCoeff, Polynomial};
 
 use group::{Curve, Group};
+use halo2curves::msm::best_multiexp;
 use std::marker::PhantomData;
 
 mod prover;

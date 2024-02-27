@@ -25,10 +25,6 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
 
 [[bench]]
-name = "arithmetic"
-harness = false
-
-[[bench]]
 name = "commit_zk"
 harness = false
 
@@ -42,10 +38,6 @@ harness = false
 
 [[bench]]
 name = "dev_lookup"
-harness = false
-
-[[bench]]
-name = "fft"
 harness = false
 
 [dependencies]
