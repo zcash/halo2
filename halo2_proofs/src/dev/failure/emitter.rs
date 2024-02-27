@@ -103,6 +103,8 @@ pub(super) fn expression_to_string<F: Field>(
     expr.evaluate(
         &util::format_value,
         &|_| panic!("virtual selectors are removed during optimization"),
+        #[cfg(feature = "unstable-dynamic-lookups")]
+        &|_| panic!("virtual table tags are removed during optimization"),
         &|query| {
             if let Some(label) = layout
                 .get(&query.rotation.0)

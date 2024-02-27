@@ -13,6 +13,8 @@ use crate::{
 };
 
 mod compress_selectors;
+#[cfg(feature = "unstable-dynamic-lookups")]
+mod compress_table_tags;
 
 /// A column type
 pub trait ColumnType:
@@ -268,6 +270,17 @@ impl Selector {
     }
 }
 
+/// A dynamic table tag
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct TableTag(pub(crate) usize);
+
+impl TableTag {
+    /// The value of a table tag is the table's `index` + 1
+    fn value(&self) -> u64 {
+        self.0 as u64 + 1
+    }
+}
+
 /// Query of fixed column at a certain relative location
 #[derive(Copy, Clone, Debug)]
 pub struct FixedQuery {
@@ -334,6 +347,43 @@ impl TableColumn {
     }
 }
 
+/// `DynamicTable`s are constructed in the configuration phase by `create_dynamic_table`.
+/// To include a row of a region in a dynamic table use `add_row_to_table` during synthesize.
+#[cfg_attr(
+    feature = "unstable-dynamic-lookups",
+    derive(Clone, Debug, Eq, PartialEq, Hash)
+)]
+#[cfg(feature = "unstable-dynamic-lookups")]
+pub struct DynamicTable {
+    pub(crate) name: String,
+    pub(crate) index: usize,
+    /// Columns contained in this table, excluding the tag column.
+    pub(crate) columns: Vec<Column<Any>>,
+}
+
+#[cfg(feature = "unstable-dynamic-lookups")]
+impl DynamicTable {
+    pub(crate) fn index(&self) -> usize {
+        self.index
+    }
+
+    pub(crate) fn tag(&self) -> TableTag {
+        TableTag(self.index)
+    }
+
+    pub(crate) fn columns(&self) -> &[Column<Any>] {
+        &self.columns
+    }
+
+    /// Includes a row at `offset` in this dynamic lookup table.
+    pub fn add_row<F>(&self, region: &mut Region<F>, offset: usize) -> Result<(), Error>
+    where
+        F: Field,
+    {
+        region.add_to_lookup(self.tag(), offset)
+    }
+}
+
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.
 pub trait Assignment<F: Field> {
@@ -368,6 +418,10 @@ pub trait Assignment<F: Field> {
     where
         A: FnOnce() -> AR,
         AR: Into<String>;
+
+    /// Adds a row in the provided dynamic lookup table.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fn add_to_lookup(&mut self, table: TableTag, row: usize) -> Result<(), Error>;
 
     /// Queries the cell of an instance column at a particular absolute row.
     ///
@@ -491,6 +545,9 @@ pub enum Expression<F> {
     Constant(F),
     /// This is a virtual selector
     Selector(Selector),
+    /// A placeholder which will be resolved as a fixed column during optimization.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    TableTag(TableTag),
     /// This is a fixed column queried at a certain relative location
     Fixed(FixedQuery),
     /// This is an advice (witness) column queried at a certain relative location
@@ -515,6 +572,7 @@ impl<F: Field> Expression<F> {
         &self,
         constant: &impl Fn(F) -> T,
         selector_column: &impl Fn(Selector) -> T,
+        #[cfg(feature = "unstable-dynamic-lookups")] table_tag: &impl Fn(TableTag) -> T,
         fixed_column: &impl Fn(FixedQuery) -> T,
         advice_column: &impl Fn(AdviceQuery) -> T,
         instance_column: &impl Fn(InstanceQuery) -> T,
@@ -526,6 +584,8 @@ impl<F: Field> Expression<F> {
         match self {
             Expression::Constant(scalar) => constant(*scalar),
             Expression::Selector(selector) => selector_column(*selector),
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            Expression::TableTag(tag) => table_tag(*tag),
             Expression::Fixed(query) => fixed_column(*query),
             Expression::Advice(query) => advice_column(*query),
             Expression::Instance(query) => instance_column(*query),
@@ -533,6 +593,8 @@ impl<F: Field> Expression<F> {
                 let a = a.evaluate(
                     constant,
                     selector_column,
+                    #[cfg(feature = "unstable-dynamic-lookups")]
+                    table_tag,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -547,6 +609,8 @@ impl<F: Field> Expression<F> {
                 let a = a.evaluate(
                     constant,
                     selector_column,
+                    #[cfg(feature = "unstable-dynamic-lookups")]
+                    table_tag,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -558,6 +622,8 @@ impl<F: Field> Expression<F> {
                 let b = b.evaluate(
                     constant,
                     selector_column,
+                    #[cfg(feature = "unstable-dynamic-lookups")]
+                    table_tag,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -572,6 +638,8 @@ impl<F: Field> Expression<F> {
                 let a = a.evaluate(
                     constant,
                     selector_column,
+                    #[cfg(feature = "unstable-dynamic-lookups")]
+                    table_tag,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -583,6 +651,8 @@ impl<F: Field> Expression<F> {
                 let b = b.evaluate(
                     constant,
                     selector_column,
+                    #[cfg(feature = "unstable-dynamic-lookups")]
+                    table_tag,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -597,6 +667,8 @@ impl<F: Field> Expression<F> {
                 let a = a.evaluate(
                     constant,
                     selector_column,
+                    #[cfg(feature = "unstable-dynamic-lookups")]
+                    table_tag,
                     fixed_column,
                     advice_column,
                     instance_column,
@@ -615,6 +687,8 @@ impl<F: Field> Expression<F> {
         match self {
             Expression::Constant(_) => 0,
             Expression::Selector(_) => 1,
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            Expression::TableTag(_) => 1,
             Expression::Fixed { .. } => 1,
             Expression::Advice { .. } => 1,
             Expression::Instance { .. } => 1,
@@ -635,6 +709,8 @@ impl<F: Field> Expression<F> {
         self.evaluate(
             &|_| false,
             &|selector| selector.is_simple(),
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            &|_| false,
             &|_| false,
             &|_| false,
             &|_| false,
@@ -662,6 +738,8 @@ impl<F: Field> Expression<F> {
                     None
                 }
             },
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            &|_| None,
             &|_| None,
             &|_| None,
             &|_| None,
@@ -678,6 +756,8 @@ impl<F: std::fmt::Debug> std::fmt::Debug for Expression<F> {
         match self {
             Expression::Constant(scalar) => f.debug_tuple("Constant").field(scalar).finish(),
             Expression::Selector(selector) => f.debug_tuple("Selector").field(selector).finish(),
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            Expression::TableTag(vc) => f.debug_tuple("TableTag").field(vc).finish(),
             // Skip enum variant and print query struct directly to maintain backwards compatibility.
             Expression::Fixed(FixedQuery {
                 index,
@@ -941,6 +1021,12 @@ pub struct ConstraintSystem<F: Field> {
     /// fixed column that they were compressed into. This is just used by dev
     /// tooling right now.
     pub(crate) selector_map: Vec<Column<Fixed>>,
+    /// Like selector_map, but for dynamic tables.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    pub(crate) dynamic_table_tag_map: Vec<Column<Fixed>>,
+
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    pub(crate) dynamic_tables: Vec<DynamicTable>,
 
     pub(crate) gates: Vec<Gate<F>>,
     pub(crate) advice_queries: Vec<(Column<Advice>, Rotation)>,
@@ -1001,6 +1087,10 @@ impl<F: Field> Default for ConstraintSystem<F> {
             num_instance_columns: 0,
             num_selectors: 0,
             selector_map: vec![],
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            dynamic_table_tag_map: vec![],
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            dynamic_tables: vec![],
             gates: vec![],
             fixed_queries: Vec::new(),
             advice_queries: Vec::new(),
@@ -1075,6 +1165,63 @@ impl<F: Field> ConstraintSystem<F> {
                 (input, table)
             })
             .collect();
+
+        let index = self.lookups.len();
+
+        self.lookups.push(lookup::Argument::new(table_map));
+
+        index
+    }
+
+    /// Add a dynamic lookup argument for some input expressions and table columns.
+    ///
+    /// `table_map` returns a map between input expressions and the table columns
+    /// they need to match.
+    ///
+    /// `table` must contain all table columns used in table_map.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    pub fn lookup_dynamic(
+        &mut self,
+        table: &DynamicTable,
+        table_map: impl FnOnce(
+            &mut VirtualCells<'_, F>,
+        ) -> (Selector, Vec<(Expression<F>, Column<Any>)>),
+    ) -> usize
+    where
+        F: From<u64>,
+    {
+        let mut cells = VirtualCells::new(self);
+        let (selector, table_map) = table_map(&mut cells);
+        let selector = cells.query_selector(selector);
+
+        let mut table_map: Vec<_> = table_map
+            .into_iter()
+            .map(|(input, table_col)| {
+                if !table.columns.contains(&table_col) {
+                    panic!(
+                        "{:?} does not contain {:?}. Try adding this column to the dynamic table.",
+                        table,
+                        table_col
+                    );
+                }
+
+                if selector.contains_simple_selector() {
+                    panic!("selector expression containing simple selector supplied to lookup argument");
+                }
+
+                if input.contains_simple_selector() {
+                    panic!("input expression containing simple selector supplied to lookup argument");
+                }
+
+                let table_query = cells.query_any(table_col, Rotation::cur());
+                (selector.clone() * input, selector.clone() * table_query)
+            })
+            .collect();
+
+        table_map.push((
+            selector.clone() * Expression::Constant(F::from(table.tag().value())),
+            selector * Expression::TableTag(table.tag()),
+        ));
 
         let index = self.lookups.len();
 
@@ -1227,6 +1374,80 @@ impl<F: Field> ConstraintSystem<F> {
         });
     }
 
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    pub(crate) fn compress_dynamic_table_tags(
+        mut self,
+        dynamic_tables: Vec<Vec<bool>>,
+    ) -> (Self, Vec<Vec<F>>)
+    where
+        F: From<u64>,
+    {
+        assert!(self.dynamic_table_tag_map.is_empty());
+        assert_eq!(self.dynamic_tables.len(), dynamic_tables.len());
+
+        let mut new_columns = vec![];
+        let (polys, table_tag_assignment) = compress_table_tags::process(
+            dynamic_tables
+                .into_iter()
+                .enumerate()
+                .map(
+                    |(index, activations)| compress_table_tags::TableDescription {
+                        index,
+                        activations,
+                    },
+                )
+                .collect(),
+            || {
+                let column = self.fixed_column();
+                new_columns.push(column);
+                Expression::Fixed(FixedQuery {
+                    index: self.query_fixed_index(column),
+                    column_index: column.index,
+                    rotation: Rotation::cur(),
+                })
+            },
+        );
+
+        let mut table_tag_map = vec![None; table_tag_assignment.len()];
+        let mut table_tag_replacements = vec![None; table_tag_assignment.len()];
+        for assignment in table_tag_assignment {
+            table_tag_replacements[assignment.index] = Some(assignment.expression);
+            table_tag_map[assignment.index] = Some(new_columns[assignment.combination_index]);
+        }
+
+        self.dynamic_table_tag_map = table_tag_map
+            .into_iter()
+            .map(|a| a.unwrap())
+            .collect::<Vec<_>>();
+        let table_tag_replacements = table_tag_replacements
+            .into_iter()
+            .map(|a| a.unwrap())
+            .collect::<Vec<_>>();
+
+        // Substitute virtual tag columns for the real fixed columns in all lookup expressions
+        for expr in self.lookups.iter_mut().flat_map(|lookup| {
+            lookup
+                .input_expressions
+                .iter_mut()
+                .chain(lookup.table_expressions.iter_mut())
+        }) {
+            *expr = expr.evaluate(
+                &|constant| Expression::Constant(constant),
+                &|selector| Expression::Selector(selector),
+                &|table| table_tag_replacements[table.0].clone(),
+                &|query| Expression::Fixed(query),
+                &|query| Expression::Advice(query),
+                &|query| Expression::Instance(query),
+                &|a| -a,
+                &|a, b| a + b,
+                &|a, b| a * b,
+                &|a, f| a * f,
+            );
+        }
+
+        (self, polys)
+    }
+
     /// This will compress selectors together depending on their provided
     /// assignments. This `ConstraintSystem` will then be modified to add new
     /// fixed columns (representing the actual selectors) and will return the
@@ -1313,6 +1534,8 @@ impl<F: Field> ConstraintSystem<F> {
 
                     selector_replacements[selector.0].clone()
                 },
+                #[cfg(feature = "unstable-dynamic-lookups")]
+                &|query| Expression::TableTag(query),
                 &|query| Expression::Fixed(query),
                 &|query| Expression::Advice(query),
                 &|query| Expression::Instance(query),
@@ -1358,6 +1581,32 @@ impl<F: Field> ConstraintSystem<F> {
         let index = self.num_selectors;
         self.num_selectors += 1;
         Selector(index, false)
+    }
+
+    /// Construct a dynamic table consisting of fixed, and advice.
+    /// `name` is solely for debugging.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    pub fn create_dynamic_table(
+        &mut self,
+        name: impl Into<String>,
+        fixed_columns: &[Column<Fixed>],
+        advice_columns: &[Column<Advice>],
+    ) -> DynamicTable {
+        let index = self.dynamic_tables.len();
+        let columns: Vec<_> = fixed_columns
+            .iter()
+            .map(|f| Column::<Any>::from(*f))
+            .chain(advice_columns.iter().map(|f| Column::<Any>::from(*f)))
+            .collect();
+
+        let table = DynamicTable {
+            name: name.into(),
+            index,
+            columns,
+        };
+
+        self.dynamic_tables.push(table.clone());
+        table
     }
 
     /// Allocates a new fixed column that can be used in a lookup table.
