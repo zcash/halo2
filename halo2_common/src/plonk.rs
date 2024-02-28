@@ -5,7 +5,6 @@
 //! [halo]: https://eprint.iacr.org/2019/1021
 //! [plonk]: https://eprint.iacr.org/2019/953
 
-use crate::transcript::ChallengeScalar;
 use halo2_middleware::circuit::{Advice, Fixed, Instance};
 use halo2_middleware::ff::Field;
 use halo2_middleware::poly::Rotation;
@@ -442,26 +441,6 @@ impl Queries {
         factors + 1
     }
 }
-
-#[derive(Clone, Copy, Debug)]
-pub struct Theta;
-pub type ChallengeTheta<F> = ChallengeScalar<F, Theta>;
-
-#[derive(Clone, Copy, Debug)]
-pub struct Beta;
-pub type ChallengeBeta<F> = ChallengeScalar<F, Beta>;
-
-#[derive(Clone, Copy, Debug)]
-pub struct Gamma;
-pub type ChallengeGamma<F> = ChallengeScalar<F, Gamma>;
-
-#[derive(Clone, Copy, Debug)]
-pub struct Y;
-pub type ChallengeY<F> = ChallengeScalar<F, Y>;
-
-#[derive(Clone, Copy, Debug)]
-pub struct X;
-pub type ChallengeX<F> = ChallengeScalar<F, X>;
 
 #[cfg(test)]
 mod tests {

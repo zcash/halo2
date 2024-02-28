@@ -4,11 +4,11 @@ use std::iter;
 use super::{Argument, VerifyingKey};
 use crate::{
     arithmetic::CurveAffine,
-    plonk::{self},
+    plonk::{self, ChallengeBeta, ChallengeGamma, ChallengeX},
     poly::{commitment::MSM, VerifierQuery},
     transcript::{EncodedChallenge, TranscriptRead},
 };
-use halo2_common::plonk::{ChallengeBeta, ChallengeGamma, ChallengeX, Error};
+use halo2_common::plonk::Error;
 use halo2_middleware::circuit::Any;
 use halo2_middleware::poly::Rotation;
 

@@ -46,7 +46,7 @@ pub mod poly {
 /// This module contains utilities and traits for dealing with Fiat-Shamir
 /// transcripts.
 pub mod transcript {
-    pub use halo2_common::transcript::{
+    pub use halo2_backend::transcript::{
         Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge, TranscriptReadBuffer,
         TranscriptWriterBuffer,
     };

@@ -3,13 +3,11 @@ use std::iter;
 use super::Argument;
 use crate::{
     arithmetic::CurveAffine,
-    plonk::VerifyingKey,
+    plonk::{ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, VerifyingKey},
     poly::{commitment::MSM, VerifierQuery},
     transcript::{EncodedChallenge, TranscriptRead},
 };
-use halo2_common::plonk::{
-    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error, Expression,
-};
+use halo2_common::plonk::{Error, Expression};
 use halo2_middleware::ff::Field;
 use halo2_middleware::poly::Rotation;
 

@@ -3,6 +3,7 @@ use super::Argument;
 use crate::plonk::evaluation::evaluate;
 use crate::{
     arithmetic::{eval_polynomial, parallelize, CurveAffine},
+    plonk::{ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX},
     poly::{
         commitment::{Blind, Params},
         Coeff, EvaluationDomain, LagrangeCoeff, Polynomial, ProverQuery,
@@ -13,9 +14,7 @@ use group::{
     ff::{BatchInvert, Field},
     Curve,
 };
-use halo2_common::plonk::{
-    ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error, Expression,
-};
+use halo2_common::plonk::{Error, Expression};
 use halo2_middleware::ff::WithSmallOrderMulGroup;
 use halo2_middleware::poly::Rotation;
 use rand_core::RngCore;

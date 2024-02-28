@@ -9,14 +9,14 @@ use std::iter::{self, ExactSizeIterator};
 use super::Argument;
 use crate::{
     arithmetic::{eval_polynomial, parallelize, CurveAffine},
-    plonk::{self, permutation::ProvingKey},
+    plonk::{self, permutation::ProvingKey, ChallengeBeta, ChallengeGamma, ChallengeX},
     poly::{
         commitment::{Blind, Params},
         Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, ProverQuery,
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
-use halo2_common::plonk::{ChallengeBeta, ChallengeGamma, ChallengeX, Error};
+use halo2_common::plonk::Error;
 use halo2_middleware::circuit::Any;
 use halo2_middleware::poly::Rotation;
 

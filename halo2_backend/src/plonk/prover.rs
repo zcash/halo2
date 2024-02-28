@@ -8,17 +8,18 @@ use crate::arithmetic::{eval_polynomial, CurveAffine};
 use crate::plonk::lookup::prover::lookup_commit_permuted;
 use crate::plonk::permutation::prover::permutation_commit;
 use crate::plonk::shuffle::prover::shuffle_commit_product;
-use crate::plonk::{lookup, permutation, shuffle, vanishing, ProvingKey};
+use crate::plonk::{
+    lookup, permutation, shuffle, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta,
+    ChallengeX, ChallengeY, ProvingKey,
+};
 use crate::poly::{
     commitment::{Blind, CommitmentScheme, Params, Prover},
     Basis, Coeff, LagrangeCoeff, Polynomial, ProverQuery,
 };
 
+use crate::transcript::{EncodedChallenge, TranscriptWrite};
 use group::prime::PrimeCurveAffine;
-use halo2_common::plonk::{
-    circuit::sealed, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
-};
-use halo2_common::transcript::{EncodedChallenge, TranscriptWrite};
+use halo2_common::plonk::{circuit::sealed, Error};
 
 /// Collection of instance data used during proving for a single circuit proof.
 #[derive(Debug)]

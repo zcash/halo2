@@ -10,7 +10,6 @@ pub mod circuit;
 pub use halo2curves;
 pub mod multicore;
 pub mod plonk;
-pub mod transcript;
 
 pub mod helpers;
 pub use helpers::SerdeFormat;
