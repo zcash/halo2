@@ -8,7 +8,7 @@ use crate::{
 use arrayvec::ArrayVec;
 
 use ff::PrimeField;
-use group::prime::PrimeCurveAffine;
+use group::CurveAffine as _;
 use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter, Value},
     plonk::{Advice, Assigned, Column, ConstraintSystem, Error, Fixed},

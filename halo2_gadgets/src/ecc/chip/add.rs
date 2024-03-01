@@ -325,7 +325,7 @@ impl Config {
 
 #[cfg(test)]
 pub mod tests {
-    use group::{prime::PrimeCurveAffine, Curve};
+    use group::{Curve, CurveAffine};
     use halo2_proofs::{
         circuit::{Layouter, Value},
         plonk::Error,

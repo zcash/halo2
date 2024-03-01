@@ -578,7 +578,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> FixedPointShort<C, EccChip> {
 #[cfg(test)]
 pub(crate) mod tests {
     use ff::PrimeField;
-    use group::{prime::PrimeCurveAffine, Curve, Group};
+    use group::{Curve, CurveAffine, Group};
 
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner, Value},

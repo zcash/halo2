@@ -1,6 +1,6 @@
 use std::ops::Add;
 
-use group::{cofactor::CofactorCurveAffine, Group};
+use group::{CurveAffine, Group};
 use pasta_curves::pallas;
 use subtle::{ConstantTimeEq, CtOption};
 
