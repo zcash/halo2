@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 use halo2_proofs::{
     arithmetic::CurveAffine,
-    circuit::{Chip, Layouter, Value},
+    circuit::{AssignedCell, Chip, Layouter, Value},
     plonk::Error,
 };
 
@@ -60,6 +60,15 @@ pub trait EccInstructions<C: CurveAffine>:
         value: Value<C>,
     ) -> Result<Self::Point, Error>;
 
+    /// Witnesses the given constant point as a private input to the circuit.
+    /// This allows the point to be the identity, mapped to (0, 0) in
+    /// affine coordinates.
+    fn witness_point_from_constant(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        value: C,
+    ) -> Result<Self::Point, Error>;
+
     /// Witnesses the given point as a private input to the circuit.
     /// This returns an error if the point is the identity.
     fn witness_point_non_id(
@@ -109,6 +118,15 @@ pub trait EccInstructions<C: CurveAffine>:
         layouter: &mut impl Layouter<C::Base>,
         a: &A,
         b: &B,
+    ) -> Result<Self::Point, Error>;
+
+    /// Performs variable-base sign-scalar multiplication, returning `[sign] point`
+    /// `sign` must be in {-1, 1}.
+    fn mul_sign(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        sign: &AssignedCell<C::Base, C::Base>,
+        point: &Self::Point,
     ) -> Result<Self::Point, Error>;
 
     /// Performs variable-base scalar multiplication, returning `[scalar] base`.
@@ -390,6 +408,16 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
         point.map(|inner| Point { chip, inner })
     }
 
+    /// Constructs a new point with the given fixed value.
+    pub fn new_from_constant(
+        chip: EccChip,
+        mut layouter: impl Layouter<C::Base>,
+        value: C,
+    ) -> Result<Self, Error> {
+        let point = chip.witness_point_from_constant(&mut layouter, value);
+        point.map(|inner| Point { chip, inner })
+    }
+
     /// Constrains this point to be equal in value to another point.
     pub fn constrain_equal<Other: Into<Point<C, EccChip>> + Clone>(
         &self,
@@ -430,6 +458,21 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
             .map(|inner| Point {
                 chip: self.chip.clone(),
                 inner,
+            })
+    }
+
+    /// Returns `[sign] self`.
+    /// `sign` must be in {-1, 1}.
+    pub fn mul_sign(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        sign: &AssignedCell<C::Base, C::Base>,
+    ) -> Result<Point<C, EccChip>, Error> {
+        self.chip
+            .mul_sign(&mut layouter, sign, &self.inner)
+            .map(|point| Point {
+                chip: self.chip.clone(),
+                inner: point,
             })
     }
 }
@@ -750,6 +793,7 @@ pub(crate) mod tests {
                 meta.advice_column(),
             ];
             let lookup_table = meta.lookup_table_column();
+            let table_range_check_tag = meta.lookup_table_column();
             let lagrange_coeffs = [
                 meta.fixed_column(),
                 meta.fixed_column(),
@@ -764,7 +808,12 @@ pub(crate) mod tests {
             let constants = meta.fixed_column();
             meta.enable_constant(constants);
 
-            let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
+            let range_check = LookupRangeCheckConfig::configure(
+                meta,
+                advices[9],
+                lookup_table,
+                table_range_check_tag,
+            );
             EccChip::<TestFixedBases>::configure(meta, advices, lagrange_coeffs, range_check)
         }
 
@@ -862,6 +911,14 @@ pub(crate) mod tests {
                     layouter.namespace(|| "variable-base scalar mul"),
                     &p,
                     p_val,
+                )?;
+            }
+
+            // Test variable-base sign-scalar multiplication
+            {
+                super::chip::mul_fixed::short::tests::test_mul_sign(
+                    chip.clone(),
+                    layouter.namespace(|| "variable-base sign-scalar mul"),
                 )?;
             }
 
