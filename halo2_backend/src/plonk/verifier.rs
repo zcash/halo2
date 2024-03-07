@@ -1,3 +1,5 @@
+//! Verify a plonk proof
+
 use group::Curve;
 use halo2_middleware::ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use std::iter;
@@ -68,6 +70,8 @@ where
         }
     }
 
+    // 1. Get the commitments of the instance polynomials. ----------------------------------------
+
     let instance_commitments = if V::QUERY_INSTANCE {
         instances
             .iter()
@@ -93,8 +97,13 @@ where
 
     let num_proofs = instance_commitments.len();
 
-    // Hash verification key into transcript
+    // 2. Add hash of verification key and instances into transcript. -----------------------------
+    // [TRANSCRIPT-1]
+
     vk.hash_into(transcript)?;
+
+    // 3. Add instance commitments into the transcript. --------------------------------------------
+    // [TRANSCRIPT-2]
 
     if V::QUERY_INSTANCE {
         for instance_commitments in instance_commitments.iter() {
@@ -113,13 +122,15 @@ where
         }
     }
 
-    // Hash the prover's advice commitments into the transcript and squeeze challenges
+    // 3. Hash the prover's advice commitments into the transcript and squeeze challenges ---------
+
     let (advice_commitments, challenges) = {
         let mut advice_commitments =
             vec![vec![Scheme::Curve::default(); vk.cs.num_advice_columns]; num_proofs];
         let mut challenges = vec![Scheme::Scalar::ZERO; vk.cs.num_challenges];
 
         for current_phase in vk.cs.phases() {
+            // [TRANSCRIPT-3]
             for advice_commitments in advice_commitments.iter_mut() {
                 for (phase, commitment) in vk
                     .cs
@@ -132,6 +143,8 @@ where
                     }
                 }
             }
+
+            // [TRANSCRIPT-4]
             for (phase, challenge) in vk.cs.challenge_phase.iter().zip(challenges.iter_mut()) {
                 if current_phase == *phase {
                     *challenge = *transcript.squeeze_challenge_scalar::<()>();
@@ -142,8 +155,13 @@ where
         (advice_commitments, challenges)
     };
 
-    // Sample theta challenge for keeping lookup columns linearly independent
+    // 4. Sample theta challenge for keeping lookup columns linearly independent ------------------
+    // [TRANSCRIPT-5]
+
     let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
+
+    // 5. Read lookup permuted commitments
+    // [TRANSCRIPT-6]
 
     let lookups_permuted = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
@@ -156,12 +174,19 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    // 6. Sample beta and gamma challenges --------------------------------------------------------
+
     // Sample beta challenge
+    // [TRANSCRIPT-7]
     let beta: ChallengeBeta<_> = transcript.squeeze_challenge_scalar();
 
     // Sample gamma challenge
+    // [TRANSCRIPT-8]
     let gamma: ChallengeGamma<_> = transcript.squeeze_challenge_scalar();
 
+    // 7. Read commitments for permutation, lookups, and shuffles ---------------------------------
+
+    // [TRANSCRIPT-9]
     let permutations_committed = (0..num_proofs)
         .map(|_| {
             // Hash each permutation product commitment
@@ -169,6 +194,7 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    // [TRANSCRIPT-10]
     let lookups_committed = lookups_permuted
         .into_iter()
         .map(|lookups| {
@@ -180,6 +206,7 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    // [TRANSCRIPT-11]
     let shuffles_committed = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
             // Hash each shuffle product commitment
@@ -191,17 +218,26 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    // 8. Read vanishing argument (before y) ------------------------------------------------------
+    // [TRANSCRIPT-12]
     let vanishing = vanishing::Argument::read_commitments_before_y(transcript)?;
 
-    // Sample y challenge, which keeps the gates linearly independent.
+    // 9. Sample y challenge, which keeps the gates linearly independent. -------------------------
+    // [TRANSCRIPT-13]
     let y: ChallengeY<_> = transcript.squeeze_challenge_scalar();
 
+    // 10. Read vanishing argument (after y) ------------------------------------------------------
+    // [TRANSCRIPT-14]
     let vanishing = vanishing.read_commitments_after_y(vk, transcript)?;
 
-    // Sample x challenge, which is used to ensure the circuit is
-    // satisfied with high probability.
+    // 11. Sample x challenge, which is used to ensure the circuit is
+    // satisfied with high probability. -----------------------------------------------------------
+    // [TRANSCRIPT-15]
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
+
+    // 12. Get the instance evaluations
     let instance_evals = if V::QUERY_INSTANCE {
+        // [TRANSCRIPT-16]
         (0..num_proofs)
             .map(|_| -> Result<Vec<_>, _> {
                 read_n_scalars(transcript, vk.cs.instance_queries.len())
@@ -248,21 +284,27 @@ where
             .collect::<Vec<_>>()
     };
 
+    // [TRANSCRIPT-17]
     let advice_evals = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> { read_n_scalars(transcript, vk.cs.advice_queries.len()) })
         .collect::<Result<Vec<_>, _>>()?;
 
+    // [TRANSCRIPT-18]
     let fixed_evals = read_n_scalars(transcript, vk.cs.fixed_queries.len())?;
 
+    // [TRANSCRIPT-19]
     let vanishing = vanishing.evaluate_after_x(transcript)?;
 
+    // [TRANSCRIPT-20]
     let permutations_common = vk.permutation.evaluate(transcript)?;
 
+    // [TRANSCRIPT-21]
     let permutations_evaluated = permutations_committed
         .into_iter()
         .map(|permutation| permutation.evaluate(transcript))
         .collect::<Result<Vec<_>, _>>()?;
 
+    // [TRANSCRIPT-22]
     let lookups_evaluated = lookups_committed
         .into_iter()
         .map(|lookups| -> Result<Vec<_>, _> {
@@ -273,6 +315,7 @@ where
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    // [TRANSCRIPT-23]
     let shuffles_evaluated = shuffles_committed
         .into_iter()
         .map(|shuffles| -> Result<Vec<_>, _> {
@@ -384,6 +427,7 @@ where
         vanishing.verify(params, expressions, y, xn)
     };
 
+    #[rustfmt::skip]
     let queries = instance_commitments
         .iter()
         .zip(instance_evals.iter())
@@ -392,20 +436,7 @@ where
         .zip(permutations_evaluated.iter())
         .zip(lookups_evaluated.iter())
         .zip(shuffles_evaluated.iter())
-        .flat_map(
-            |(
-                (
-                    (
-                        (
-                            ((instance_commitments, instance_evals), advice_commitments),
-                            advice_evals,
-                        ),
-                        permutation,
-                    ),
-                    lookups,
-                ),
-                shuffles,
-            )| {
+        .flat_map(|((((((instance_commitments, instance_evals), advice_commitments),advice_evals),permutation),lookups),shuffles)| {
                 iter::empty()
                     .chain(
                         V::QUERY_INSTANCE

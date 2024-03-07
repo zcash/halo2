@@ -42,8 +42,8 @@ where
         .collect();
     let mut prover = ProverV2::<Scheme, P, _, _, _>::new(params, pk, instances, rng, transcript)?;
     let mut challenges = HashMap::new();
-    let phases = prover.phases.clone();
-    for phase in &phases {
+    let phases = prover.phases().to_vec();
+    for phase in phases.iter() {
         let mut witnesses = Vec::with_capacity(circuits.len());
         for witness_calc in witness_calcs.iter_mut() {
             witnesses.push(witness_calc.calc(phase.0, &challenges)?);

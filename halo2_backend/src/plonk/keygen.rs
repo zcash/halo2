@@ -1,3 +1,7 @@
+//! This module
+//! - creates the proving and verifying keys for a circuit
+//! - crates a domain, constraint system, and configuration for a circuit
+
 #![allow(clippy::int_plus_one)]
 
 use group::Curve;
@@ -15,6 +19,7 @@ use halo2_common::plonk::circuit::{Circuit, ConstraintSystem};
 use halo2_common::plonk::Error;
 use halo2_middleware::circuit::CompiledCircuitV2;
 
+/// Creates a domain, constraint system, and configuration for a circuit.
 pub(crate) fn create_domain<C, ConcreteCircuit>(
     k: u32,
     #[cfg(feature = "circuit-params")] params: ConcreteCircuit::Params,
@@ -50,8 +55,8 @@ where
     P: Params<'params, C>,
     C::Scalar: FromUniformBytes<64>,
 {
-    let cs2 = &circuit.cs;
-    let cs: ConstraintSystem<C::Scalar> = cs2.clone().into();
+    let cs_backend = &circuit.cs;
+    let cs: ConstraintSystem<C::Scalar> = cs_backend.clone().into();
     let domain = EvaluationDomain::new(cs.degree() as u32, params.k());
 
     if (params.n() as usize) < cs.minimum_rows() {
@@ -60,7 +65,7 @@ where
 
     let permutation_vk = permutation::keygen::Assembly::new_from_assembly_mid(
         params.n() as usize,
-        &cs2.permutation,
+        &cs_backend.permutation,
         &circuit.preprocessing.permutation,
     )?
     .build_vk(params, &domain, &cs.permutation);
@@ -84,7 +89,9 @@ where
         fixed_commitments,
         permutation_vk,
         cs,
+        // selectors
         Vec::new(),
+        // compress_selectors
         false,
     ))
 }
@@ -105,6 +112,8 @@ where
         return Err(Error::not_enough_rows_available(params.k()));
     }
 
+    // Compute fixeds
+
     let fixed_polys: Vec<_> = circuit
         .preprocessing
         .fixed
@@ -120,12 +129,13 @@ where
         .map(|poly| vk.domain.coeff_to_extended(poly.clone()))
         .collect();
 
-    let permutation_pk = permutation::keygen::Assembly::new_from_assembly_mid(
-        params.n() as usize,
-        &cs.permutation,
-        &circuit.preprocessing.permutation,
-    )?
-    .build_pk(params, &vk.domain, &cs.permutation.clone().into());
+    let fixed_values = circuit
+        .preprocessing
+        .fixed
+        .clone()
+        .into_iter()
+        .map(Polynomial::new_lagrange_from_vec)
+        .collect();
 
     // Compute l_0(X)
     // TODO: this can be done more efficiently
@@ -164,18 +174,20 @@ where
     // Compute the optimized evaluation data structure
     let ev = Evaluator::new(&vk.cs);
 
+    // Compute the permutation proving key
+    let permutation_pk = permutation::keygen::Assembly::new_from_assembly_mid(
+        params.n() as usize,
+        &cs.permutation,
+        &circuit.preprocessing.permutation,
+    )?
+    .build_pk(params, &vk.domain, &cs.permutation.clone().into());
+
     Ok(ProvingKey {
         vk,
         l0,
         l_last,
         l_active_row,
-        fixed_values: circuit
-            .preprocessing
-            .fixed
-            .clone()
-            .into_iter()
-            .map(Polynomial::new_lagrange_from_vec)
-            .collect(),
+        fixed_values,
         fixed_polys,
         fixed_cosets,
         permutation: permutation_pk,

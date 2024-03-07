@@ -11,7 +11,7 @@ use crate::poly::{
     Polynomial,
 };
 use crate::transcript::{ChallengeScalar, EncodedChallenge, Transcript};
-use evaluation::Evaluator;
+pub(crate) use evaluation::Evaluator;
 use halo2_common::plonk::{Circuit, ConstraintSystem, PinnedConstraintSystem};
 use halo2_common::SerdeFormat;
 
@@ -32,14 +32,19 @@ pub mod verifier;
 /// particular circuit.
 #[derive(Clone, Debug)]
 pub struct VerifyingKey<C: CurveAffine> {
+    /// Evaluation domain
     domain: EvaluationDomain<C::Scalar>,
+    /// Commitments to fixed columns
     fixed_commitments: Vec<C>,
+    /// Permutation verifying key
     permutation: permutation::VerifyingKey<C>,
+    /// Constraint system
     cs: ConstraintSystem<C::Scalar>,
     /// Cached maximum degree of `cs` (which doesn't change after construction).
     cs_degree: usize,
     /// The representative of this `VerifyingKey` in transcripts.
     transcript_repr: C::Scalar,
+    /// Selectors
     selectors: Vec<Vec<bool>>,
     // TODO: Use setter/getter https://github.com/privacy-scaling-explorations/halo2/issues/259
     /// Whether selector compression is turned on or not.

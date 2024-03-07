@@ -1,6 +1,10 @@
+//! This module:
+//! - Evaluates the h polynomial: Evaluator::new(ConstraintSystem).evaluate_h(...)
+//! - Evaluates an Expression using Lagrange basis
+
 use crate::multicore;
 use crate::plonk::{lookup, permutation, ProvingKey};
-use crate::poly::Basis;
+use crate::poly::{Basis, LagrangeBasis};
 use crate::{
     arithmetic::{parallelize, CurveAffine},
     poly::{Coeff, ExtendedLagrangeCoeff, Polynomial},
@@ -17,9 +21,9 @@ fn get_rotation_idx(idx: usize, rot: i32, rot_scale: i32, isize: i32) -> usize {
     (((idx as i32) + (rot * rot_scale)).rem_euclid(isize)) as usize
 }
 
-/// Value used in a calculation
+/// Value used in [`Calculation`]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd)]
-pub enum ValueSource {
+enum ValueSource {
     /// This is a constant value
     Constant(usize),
     /// This is an intermediate value
@@ -53,7 +57,7 @@ impl Default for ValueSource {
 impl ValueSource {
     /// Get the value for this source
     #[allow(clippy::too_many_arguments)]
-    pub fn get<F: Field, B: Basis>(
+    fn get<F: Field, B: Basis>(
         &self,
         rotations: &[usize],
         constants: &[F],
@@ -92,7 +96,7 @@ impl ValueSource {
 
 /// Calculation
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Calculation {
+enum Calculation {
     /// This is an addition
     Add(ValueSource, ValueSource),
     /// This is a subtraction
@@ -114,7 +118,7 @@ pub enum Calculation {
 impl Calculation {
     /// Get the resulting value of this calculation
     #[allow(clippy::too_many_arguments)]
-    pub fn evaluate<F: Field, B: Basis>(
+    fn evaluate<F: Field, B: Basis>(
         &self,
         rotations: &[usize],
         constants: &[F],
@@ -169,46 +173,59 @@ impl Calculation {
 #[derive(Clone, Default, Debug)]
 pub struct Evaluator<C: CurveAffine> {
     ///  Custom gates evalution
-    pub custom_gates: GraphEvaluator<C>,
+    custom_gates: GraphEvaluator<C>,
     ///  Lookups evalution
-    pub lookups: Vec<GraphEvaluator<C>>,
+    lookups: Vec<GraphEvaluator<C>>,
     ///  Shuffle evalution
-    pub shuffles: Vec<GraphEvaluator<C>>,
+    shuffles: Vec<GraphEvaluator<C>>,
 }
 
-/// GraphEvaluator
+/// The purpose of GraphEvaluator to is to collect a set of computations and compute them by making a graph of
+/// its internal operations to avoid repeating computations.
+///
+/// Computations can be added in two ways:
+///
+/// - using [`Self::add_expression`] where expressions are added and internally turned into a graph.
+///   A reference to the computation is returned in the form of [ `ValueSource::Itermediate`] reference
+///   index.
+/// - using [`Self::add_calculation`] where you can add only a single operation or a
+///   [Horner polynomial evaluation](https://en.wikipedia.org/wiki/Horner's_method) by using
+///   Calculation::Horner
+///
+/// Finally, call [`Self::evaluate`] to get the result of the last calculation added.
+///
 #[derive(Clone, Debug)]
-pub struct GraphEvaluator<C: CurveAffine> {
+struct GraphEvaluator<C: CurveAffine> {
     /// Constants
-    pub constants: Vec<C::ScalarExt>,
+    constants: Vec<C::ScalarExt>,
     /// Rotations
-    pub rotations: Vec<i32>,
+    rotations: Vec<i32>,
     /// Calculations
-    pub calculations: Vec<CalculationInfo>,
+    calculations: Vec<CalculationInfo>,
     /// Number of intermediates
-    pub num_intermediates: usize,
+    num_intermediates: usize,
 }
 
 /// EvaluationData
 #[derive(Default, Debug)]
-pub struct EvaluationData<C: CurveAffine> {
+struct EvaluationData<C: CurveAffine> {
     /// Intermediates
-    pub intermediates: Vec<C::ScalarExt>,
+    intermediates: Vec<C::ScalarExt>,
     /// Rotations
-    pub rotations: Vec<usize>,
+    rotations: Vec<usize>,
 }
 
-/// CaluclationInfo
+/// CalculationInfo contains a calculation to perform and in [`target`] the [`EvaluationData::intermediate`] where the value is going to be stored.  
 #[derive(Clone, Debug)]
-pub struct CalculationInfo {
+struct CalculationInfo {
     /// Calculation
-    pub calculation: Calculation,
+    calculation: Calculation,
     /// Target
-    pub target: usize,
+    target: usize,
 }
 
 impl<C: CurveAffine> Evaluator<C> {
-    /// Creates a new evaluation structure
+    /// Creates a new evaluation structure from a [`ConstraintSystem`]
     pub fn new(cs: &ConstraintSystem<C::ScalarExt>) -> Self {
         let mut ev = Evaluator::default();
 
@@ -776,7 +793,7 @@ impl<C: CurveAffine> GraphEvaluator<C> {
     }
 
     /// Creates a new evaluation structure
-    pub fn instance(&self) -> EvaluationData<C> {
+    fn instance(&self) -> EvaluationData<C> {
         EvaluationData {
             intermediates: vec![C::ScalarExt::ZERO; self.num_intermediates],
             rotations: vec![0usize; self.rotations.len()],
@@ -784,7 +801,11 @@ impl<C: CurveAffine> GraphEvaluator<C> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn evaluate<B: Basis>(
+    /// Fills the EvaluationData
+    ///     .intermediaries with the evaluation the calculation
+    ///     .rotations with the indexes of the polinomials after rotations
+    /// returns the value of last evaluation done.
+    fn evaluate<B: Basis>(
         &self,
         data: &mut EvaluationData<C>,
         fixed: &[Polynomial<C::ScalarExt, B>],
@@ -832,8 +853,8 @@ impl<C: CurveAffine> GraphEvaluator<C> {
     }
 }
 
-/// Simple evaluation of an expression
-pub fn evaluate<F: Field, B: Basis>(
+/// Simple evaluation of an [`Expression`] over the provided lagrange polynomials
+pub fn evaluate<F: Field, B: LagrangeBasis>(
     expression: &Expression<F>,
     size: usize,
     rot_scale: i32,
@@ -871,4 +892,171 @@ pub fn evaluate<F: Field, B: Basis>(
         }
     });
     values
+}
+
+#[cfg(test)]
+mod test {
+    use crate::poly::LagrangeCoeff;
+    use halo2_common::plonk::sealed::Phase;
+    use halo2_common::plonk::{AdviceQuery, Challenge, FixedQuery};
+    use halo2_common::plonk::{Expression, InstanceQuery};
+    use halo2_middleware::circuit::ChallengeMid;
+    use halo2_middleware::poly::Rotation;
+    use halo2curves::pasta::pallas::{Affine, Scalar};
+
+    use super::*;
+
+    fn check(calc: Option<Calculation>, expr: Option<Expression<Scalar>>, expected: i64) {
+        let lagranges = |v: &[&[u64]]| -> Vec<Polynomial<Scalar, LagrangeCoeff>> {
+            v.iter()
+                .map(|vv| {
+                    Polynomial::new_lagrange_from_vec(
+                        vv.iter().map(|v| Scalar::from(*v)).collect::<Vec<_>>(),
+                    )
+                })
+                .collect()
+        };
+
+        let mut gv = GraphEvaluator::<Affine>::default();
+        if let Some(expression) = expr {
+            gv.add_expression(&expression);
+        } else if let Some(calculation) = calc {
+            gv.add_rotation(&Rotation::cur());
+            gv.add_rotation(&Rotation::next());
+            gv.add_calculation(calculation);
+        } else {
+            unreachable!()
+        }
+
+        let mut evaluation_data = gv.instance();
+        let result = gv.evaluate(
+            &mut evaluation_data,
+            &lagranges(&[&[2, 3], &[1002, 1003]]), // fixed
+            &lagranges(&[&[4, 5], &[1004, 1005]]), // advice
+            &lagranges(&[&[6, 7], &[1006, 1007]]), // instance
+            &[8u64.into(), 9u64.into()],           // challenges
+            &Scalar::from_raw([10, 0, 0, 0]),      // beta
+            &Scalar::from_raw([11, 0, 0, 0]),      // gamma
+            &Scalar::from_raw([12, 0, 0, 0]),      // theta
+            &Scalar::from_raw([13, 0, 0, 0]),      // y
+            &Scalar::from_raw([14, 0, 0, 0]),      // previous value
+            0,                                     // idx
+            1,                                     // rot_scale
+            32,                                    // isize
+        );
+        let fq_expected = if expected < 0 {
+            -Scalar::from(-expected as u64)
+        } else {
+            Scalar::from(expected as u64)
+        };
+
+        assert_eq!(
+            result, fq_expected,
+            "Expected {} was {:?}",
+            expected, result
+        );
+    }
+    fn check_expr(expr: Expression<Scalar>, expected: i64) {
+        check(None, Some(expr), expected);
+    }
+    fn check_calc(calc: Calculation, expected: i64) {
+        check(Some(calc), None, expected);
+    }
+
+    #[test]
+    fn graphevaluator_values() {
+        // Check values
+        for (col, rot, expected) in [(0, 0, 2), (0, 1, 3), (1, 0, 1002), (1, 1, 1003)] {
+            check_expr(
+                Expression::Fixed(FixedQuery {
+                    index: None,
+                    column_index: col,
+                    rotation: Rotation(rot),
+                }),
+                expected,
+            );
+        }
+        for (col, rot, expected) in [(0, 0, 4), (0, 1, 5), (1, 0, 1004), (1, 1, 1005)] {
+            check_expr(
+                Expression::Advice(AdviceQuery {
+                    index: None,
+                    column_index: col,
+                    rotation: Rotation(rot),
+                    phase: Phase(0),
+                }),
+                expected,
+            );
+        }
+        for (col, rot, expected) in [(0, 0, 6), (0, 1, 7), (1, 0, 1006), (1, 1, 1007)] {
+            check_expr(
+                Expression::Instance(InstanceQuery {
+                    index: None,
+                    column_index: col,
+                    rotation: Rotation(rot),
+                }),
+                expected,
+            );
+        }
+        for (ch, expected) in [(0, 8), (1, 9)] {
+            check_expr(
+                Expression::Challenge(Challenge::from(ChallengeMid {
+                    index: ch,
+                    phase: 0,
+                })),
+                expected,
+            );
+        }
+
+        check_calc(Calculation::Store(ValueSource::Beta()), 10);
+        check_calc(Calculation::Store(ValueSource::Gamma()), 11);
+        check_calc(Calculation::Store(ValueSource::Theta()), 12);
+        check_calc(Calculation::Store(ValueSource::Y()), 13);
+        check_calc(Calculation::Store(ValueSource::PreviousValue()), 14);
+    }
+
+    #[test]
+    fn graphevaluator_expr_operations() {
+        // Check expression operations
+        let two = || {
+            Box::new(Expression::<Scalar>::Fixed(FixedQuery {
+                index: None,
+                column_index: 0,
+                rotation: Rotation(0),
+            }))
+        };
+
+        let three = || {
+            Box::new(Expression::<Scalar>::Fixed(FixedQuery {
+                index: None,
+                column_index: 0,
+                rotation: Rotation(1),
+            }))
+        };
+
+        check_expr(Expression::Sum(two(), three()), 5);
+        check_expr(Expression::Product(two(), three()), 6);
+        check_expr(Expression::Scaled(two(), Scalar::from(5)), 10);
+        check_expr(
+            Expression::Sum(Expression::Negated(two()).into(), three()),
+            1,
+        );
+    }
+
+    #[test]
+    fn graphevaluator_calc_operations() {
+        // Check calculation operations
+        let two = || ValueSource::Fixed(0, 0);
+        let three = || ValueSource::Fixed(0, 1);
+
+        check_calc(Calculation::Add(two(), three()), 5);
+        check_calc(Calculation::Double(two()), 4);
+        check_calc(Calculation::Mul(two(), three()), 6);
+        check_calc(Calculation::Square(three()), 9);
+        check_calc(Calculation::Negate(two()), -2);
+        check_calc(Calculation::Sub(three(), two()), 1);
+        check_calc(
+            Calculation::Horner(two(), vec![three(), two()], three()),
+            2 + 3 * 3 + 2 * 9,
+        );
+    }
 }
