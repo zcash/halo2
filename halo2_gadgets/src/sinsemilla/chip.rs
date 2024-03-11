@@ -153,7 +153,7 @@ where
         advices: [Column<Advice>; 5],
         witness_pieces: Column<Advice>,
         fixed_y_q: Column<Fixed>,
-        lookup: (TableColumn, TableColumn, TableColumn),
+        lookup: (TableColumn, TableColumn, TableColumn, TableColumn),
         range_check: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
     ) -> <Self as Chip<pallas::Base>>::Config {
         // Enable equality on all advice columns
@@ -178,6 +178,7 @@ where
                 table_idx: lookup.0,
                 table_x: lookup.1,
                 table_y: lookup.2,
+                table_range_check_tag: lookup.3,
             },
             lookup_config: range_check,
             _marker: PhantomData,
@@ -203,7 +204,7 @@ where
         // https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial
         meta.create_gate("Initial y_Q", |meta| {
             let q_s4 = meta.query_selector(config.q_sinsemilla4);
-            let y_q = meta.query_fixed(config.fixed_y_q);
+            let y_q = meta.query_advice(config.double_and_add.x_p, Rotation::prev());
 
             // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
             let Y_A_cur = Y_A(meta, Rotation::cur());
@@ -318,6 +319,20 @@ where
         layouter.assign_region(
             || "hash_to_point",
             |mut region| self.hash_message(&mut region, Q, &message),
+        )
+    }
+
+    #[allow(non_snake_case)]
+    #[allow(clippy::type_complexity)]
+    fn hash_to_point_with_private_init(
+        &self,
+        mut layouter: impl Layouter<pallas::Base>,
+        Q: &Self::NonIdentityPoint,
+        message: Self::Message,
+    ) -> Result<(Self::NonIdentityPoint, Vec<Self::RunningSum>), Error> {
+        layouter.assign_region(
+            || "hash_to_point",
+            |mut region| self.hash_message_with_private_init(&mut region, Q, &message),
         )
     }
 
