@@ -186,9 +186,10 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
         config
     }
 
-    // Fill `table_idx` and `table_range_check_tag`.
-    // This is only used in testing for now, since the Sinsemilla chip provides a pre-loaded table
-    // in the Orchard context.
+    #[cfg(any(test, feature = "verifiable-encryption"))]
+    /// Fill `table_idx` and `table_range_check_tag`.
+    /// This is only used in testing for now, since the Sinsemilla chip provides a pre-loaded table
+    /// in the Orchard context.
     pub fn load(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error> {
         layouter.assign_table(
             || "table_idx",
