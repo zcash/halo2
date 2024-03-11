@@ -186,7 +186,7 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfig<F, K> {
         config
     }
 
-    #[cfg(feature = "verifiable-encryption")]
+    #[cfg(any(test, feature = "verifiable-encryption"))] 
     // Fill `table_idx` and `table_range_check_tag`.
     // This is only used in testing for now, since the Sinsemilla chip provides a pre-loaded table
     // in the Orchard context.
