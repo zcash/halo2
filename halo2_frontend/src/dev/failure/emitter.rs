@@ -5,7 +5,7 @@ use group::ff::Field;
 
 use super::FailureLocation;
 use crate::dev::{metadata, util};
-use halo2_common::plonk::Expression;
+use crate::plonk::circuit::expression::Expression;
 use halo2_middleware::circuit::{Advice, Any};
 
 fn padded(p: char, width: usize, text: &str) -> String {

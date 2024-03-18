@@ -12,11 +12,11 @@ use group::prime::PrimeGroup;
 use halo2_middleware::ff::{Field, PrimeField};
 use halo2_middleware::poly::Rotation;
 
-use halo2_common::{
+use crate::{
     circuit::{layouter::RegionColumn, Value},
     plonk::{
-        circuit::{Challenge, Column},
-        Assigned, Assignment, Circuit, ConstraintSystem, Error, FloorPlanner, Selector,
+        Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error, FloorPlanner,
+        Selector,
     },
 };
 use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
@@ -237,7 +237,7 @@ impl<F: Field> Assignment<F> for Layout {
         l_row: usize,
         r_col: Column<Any>,
         r_row: usize,
-    ) -> Result<(), halo2_common::plonk::Error> {
+    ) -> Result<(), crate::plonk::Error> {
         self.equality.push((l_col, l_row, r_col, r_row));
         Ok(())
     }
@@ -284,7 +284,7 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
             cs.constants.clone(),
         )
         .unwrap();
-        let (cs, _) = cs.compress_selectors(layout.selectors);
+        let (cs, _) = cs.selectors_to_fixed_compressed();
 
         assert!((1 << k) >= cs.minimum_rows());
 

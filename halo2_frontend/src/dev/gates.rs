@@ -6,7 +6,7 @@ use std::{
 use halo2_middleware::ff::PrimeField;
 
 use crate::dev::util;
-use halo2_common::plonk::{sealed::SealedPhase, Circuit, ConstraintSystem, FirstPhase};
+use crate::plonk::{sealed::SealedPhase, Circuit, ConstraintSystem, FirstPhase};
 
 #[derive(Debug)]
 struct Constraint {
@@ -31,8 +31,6 @@ struct Gate {
 /// use halo2_frontend::{
 ///     circuit::{Layouter, SimpleFloorPlanner},
 ///     dev::CircuitGates,
-/// };
-/// use halo2_common::{
 ///     plonk::{Circuit, ConstraintSystem, Error},
 /// };
 /// use halo2curves::pasta::pallas;

@@ -7,7 +7,8 @@ use crate::{
     SerdeFormat,
 };
 use halo2_common::helpers::{SerdeCurveAffine, SerdePrimeField};
-pub use halo2_common::plonk::permutation::Argument;
+// TODO: Remove the renaming
+pub use halo2_middleware::permutation::ArgumentMid as Argument;
 
 use std::io;
 

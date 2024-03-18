@@ -10,39 +10,33 @@ use halo2_middleware::ff::{Field, FromUniformBytes};
 use super::{evaluation::Evaluator, permutation, Polynomial, ProvingKey, VerifyingKey};
 use crate::{
     arithmetic::{parallelize, CurveAffine},
+    plonk::circuit::{
+        ConstraintSystemBack, ExpressionBack, GateBack, LookupArgumentBack, QueryBack,
+        ShuffleArgumentBack, VarBack,
+    },
+    plonk::Error,
     poly::{
         commitment::{Blind, Params},
         EvaluationDomain,
     },
 };
-use halo2_common::plonk::circuit::{Circuit, ConstraintSystem};
-use halo2_common::plonk::Error;
-use halo2_middleware::circuit::CompiledCircuitV2;
+use halo2_common::plonk::Queries;
+use halo2_middleware::circuit::{
+    Any, ColumnMid, CompiledCircuitV2, ConstraintSystemMid, ExpressionMid, VarMid,
+};
+use halo2_middleware::{lookup, poly::Rotation, shuffle};
+use std::collections::HashMap;
 
 /// Creates a domain, constraint system, and configuration for a circuit.
-pub(crate) fn create_domain<C, ConcreteCircuit>(
+pub(crate) fn create_domain<C>(
+    cs: &ConstraintSystemBack<C::Scalar>,
     k: u32,
-    #[cfg(feature = "circuit-params")] params: ConcreteCircuit::Params,
-) -> (
-    EvaluationDomain<C::Scalar>,
-    ConstraintSystem<C::Scalar>,
-    ConcreteCircuit::Config,
-)
+) -> EvaluationDomain<C::Scalar>
 where
     C: CurveAffine,
-    ConcreteCircuit: Circuit<C::Scalar>,
 {
-    let mut cs = ConstraintSystem::default();
-    #[cfg(feature = "circuit-params")]
-    let config = ConcreteCircuit::configure_with_params(&mut cs, params);
-    #[cfg(not(feature = "circuit-params"))]
-    let config = ConcreteCircuit::configure(&mut cs);
-
     let degree = cs.degree();
-
-    let domain = EvaluationDomain::new(degree as u32, k);
-
-    (domain, cs, config)
+    EvaluationDomain::new(degree as u32, k)
 }
 
 /// Generate a `VerifyingKey` from an instance of `CompiledCircuit`.
@@ -55,8 +49,8 @@ where
     P: Params<'params, C>,
     C::Scalar: FromUniformBytes<64>,
 {
-    let cs_backend = &circuit.cs;
-    let cs: ConstraintSystem<C::Scalar> = cs_backend.clone().into();
+    let cs_mid = &circuit.cs;
+    let cs: ConstraintSystemBack<C::Scalar> = cs_mid.clone().into();
     let domain = EvaluationDomain::new(cs.degree() as u32, params.k());
 
     if (params.n() as usize) < cs.minimum_rows() {
@@ -65,7 +59,7 @@ where
 
     let permutation_vk = permutation::keygen::Assembly::new_from_assembly_mid(
         params.n() as usize,
-        &cs_backend.permutation,
+        &cs_mid.permutation,
         &circuit.preprocessing.permutation,
     )?
     .build_vk(params, &domain, &cs.permutation);
@@ -89,10 +83,6 @@ where
         fixed_commitments,
         permutation_vk,
         cs,
-        // selectors
-        Vec::new(),
-        // compress_selectors
-        false,
     ))
 }
 
@@ -180,7 +170,7 @@ where
         &cs.permutation,
         &circuit.preprocessing.permutation,
     )?
-    .build_pk(params, &vk.domain, &cs.permutation.clone().into());
+    .build_pk(params, &vk.domain, &cs.permutation.clone());
 
     Ok(ProvingKey {
         vk,
@@ -193,4 +183,205 @@ where
         permutation: permutation_pk,
         ev,
     })
+}
+
+struct QueriesMap {
+    map: HashMap<(ColumnMid, Rotation), usize>,
+    advice: Vec<(ColumnMid, Rotation)>,
+    instance: Vec<(ColumnMid, Rotation)>,
+    fixed: Vec<(ColumnMid, Rotation)>,
+}
+
+impl QueriesMap {
+    fn add(&mut self, col: ColumnMid, rot: Rotation) -> usize {
+        *self
+            .map
+            .entry((col, rot))
+            .or_insert_with(|| match col.column_type {
+                Any::Advice(_) => {
+                    self.advice.push((col, rot));
+                    self.advice.len() - 1
+                }
+                Any::Instance => {
+                    self.instance.push((col, rot));
+                    self.instance.len() - 1
+                }
+                Any::Fixed => {
+                    self.fixed.push((col, rot));
+                    self.fixed.len() - 1
+                }
+            })
+    }
+}
+
+impl QueriesMap {
+    fn as_expression<F: Field>(&mut self, expr: &ExpressionMid<F>) -> ExpressionBack<F> {
+        match expr {
+            ExpressionMid::Constant(c) => ExpressionBack::Constant(*c),
+            ExpressionMid::Var(VarMid::Query(query)) => {
+                let column = ColumnMid::new(query.column_index, query.column_type);
+                let index = self.add(column, query.rotation);
+                ExpressionBack::Var(VarBack::Query(QueryBack {
+                    index,
+                    column_index: query.column_index,
+                    column_type: query.column_type,
+                    rotation: query.rotation,
+                }))
+            }
+            ExpressionMid::Var(VarMid::Challenge(c)) => ExpressionBack::Var(VarBack::Challenge(*c)),
+            ExpressionMid::Negated(e) => ExpressionBack::Negated(Box::new(self.as_expression(e))),
+            ExpressionMid::Sum(lhs, rhs) => ExpressionBack::Sum(
+                Box::new(self.as_expression(lhs)),
+                Box::new(self.as_expression(rhs)),
+            ),
+            ExpressionMid::Product(lhs, rhs) => ExpressionBack::Product(
+                Box::new(self.as_expression(lhs)),
+                Box::new(self.as_expression(rhs)),
+            ),
+            ExpressionMid::Scaled(e, c) => {
+                ExpressionBack::Scaled(Box::new(self.as_expression(e)), *c)
+            }
+        }
+    }
+}
+
+/// Collect queries used in gates while mapping those gates to equivalent ones with indexed
+/// query references in the expressions.
+fn cs_mid_collect_queries_gates<F: Field>(
+    cs_mid: &ConstraintSystemMid<F>,
+    queries: &mut QueriesMap,
+) -> Vec<GateBack<F>> {
+    cs_mid
+        .gates
+        .iter()
+        .map(|gate| GateBack {
+            name: gate.name.clone(),
+            poly: queries.as_expression(&gate.poly),
+        })
+        .collect()
+}
+
+/// Collect queries used in lookups while mapping those lookups to equivalent ones with indexed
+/// query references in the expressions.
+fn cs_mid_collect_queries_lookups<F: Field>(
+    cs_mid: &ConstraintSystemMid<F>,
+    queries: &mut QueriesMap,
+) -> Vec<LookupArgumentBack<F>> {
+    cs_mid
+        .lookups
+        .iter()
+        .map(|lookup| lookup::Argument {
+            name: lookup.name.clone(),
+            input_expressions: lookup
+                .input_expressions
+                .iter()
+                .map(|e| queries.as_expression(e))
+                .collect(),
+            table_expressions: lookup
+                .table_expressions
+                .iter()
+                .map(|e| queries.as_expression(e))
+                .collect(),
+        })
+        .collect()
+}
+
+/// Collect queries used in shuffles while mapping those lookups to equivalent ones with indexed
+/// query references in the expressions.
+fn cs_mid_collect_queries_shuffles<F: Field>(
+    cs_mid: &ConstraintSystemMid<F>,
+    queries: &mut QueriesMap,
+) -> Vec<ShuffleArgumentBack<F>> {
+    cs_mid
+        .shuffles
+        .iter()
+        .map(|shuffle| shuffle::Argument {
+            name: shuffle.name.clone(),
+            input_expressions: shuffle
+                .input_expressions
+                .iter()
+                .map(|e| queries.as_expression(e))
+                .collect(),
+            shuffle_expressions: shuffle
+                .shuffle_expressions
+                .iter()
+                .map(|e| queries.as_expression(e))
+                .collect(),
+        })
+        .collect()
+}
+
+/// Collect all queries used in the expressions of gates, lookups and shuffles.  Map the
+/// expressions of gates, lookups and shuffles into equivalent ones with indexed query
+/// references.
+#[allow(clippy::type_complexity)]
+fn collect_queries<F: Field>(
+    cs_mid: &ConstraintSystemMid<F>,
+) -> (
+    Queries,
+    Vec<GateBack<F>>,
+    Vec<LookupArgumentBack<F>>,
+    Vec<ShuffleArgumentBack<F>>,
+) {
+    let mut queries = QueriesMap {
+        map: HashMap::new(),
+        advice: Vec::new(),
+        instance: Vec::new(),
+        fixed: Vec::new(),
+    };
+
+    let gates = cs_mid_collect_queries_gates(cs_mid, &mut queries);
+    let lookups = cs_mid_collect_queries_lookups(cs_mid, &mut queries);
+    let shuffles = cs_mid_collect_queries_shuffles(cs_mid, &mut queries);
+
+    // Each column used in a copy constraint involves a query at rotation current.
+    for column in &cs_mid.permutation.columns {
+        match column.column_type {
+            Any::Instance => {
+                queries.add(ColumnMid::new(column.index, Any::Instance), Rotation::cur())
+            }
+            Any::Fixed => queries.add(ColumnMid::new(column.index, Any::Fixed), Rotation::cur()),
+            Any::Advice(advice) => queries.add(
+                ColumnMid::new(column.index, Any::Advice(advice)),
+                Rotation::cur(),
+            ),
+        };
+    }
+
+    let mut num_advice_queries = vec![0; cs_mid.num_advice_columns];
+    for (column, _) in queries.advice.iter() {
+        num_advice_queries[column.index] += 1;
+    }
+
+    let queries = Queries {
+        advice: queries.advice,
+        instance: queries.instance,
+        fixed: queries.fixed,
+        num_advice_queries,
+    };
+    (queries, gates, lookups, shuffles)
+}
+
+impl<F: Field> From<ConstraintSystemMid<F>> for ConstraintSystemBack<F> {
+    fn from(cs_mid: ConstraintSystemMid<F>) -> Self {
+        let (queries, gates, lookups, shuffles) = collect_queries(&cs_mid);
+        Self {
+            num_fixed_columns: cs_mid.num_fixed_columns,
+            num_advice_columns: cs_mid.num_advice_columns,
+            num_instance_columns: cs_mid.num_instance_columns,
+            num_challenges: cs_mid.num_challenges,
+            unblinded_advice_columns: cs_mid.unblinded_advice_columns,
+            advice_column_phase: cs_mid.advice_column_phase,
+            challenge_phase: cs_mid.challenge_phase,
+            gates,
+            advice_queries: queries.advice,
+            num_advice_queries: queries.num_advice_queries,
+            instance_queries: queries.instance,
+            fixed_queries: queries.fixed,
+            permutation: cs_mid.permutation,
+            lookups,
+            shuffles,
+            minimum_degree: cs_mid.minimum_degree,
+        }
+    }
 }

@@ -6,7 +6,7 @@ use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
     plonk::{
         create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column,
-        ConstraintSystem, Error, Fixed, Selector,
+        ConstraintSystem, ErrorFront, Fixed, Selector,
     },
     poly::Rotation,
     poly::{
@@ -111,7 +111,7 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
         &self,
         config: Self::Config,
         mut layouter: impl Layouter<F>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ErrorFront> {
         let ch = ShuffleChip::<F>::construct(config);
         layouter.assign_region(
             || "load inputs",

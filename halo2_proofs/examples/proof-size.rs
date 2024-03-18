@@ -1,7 +1,7 @@
 use ff::Field;
 use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
-    plonk::{Advice, Circuit, Column, ConstraintSystem, Error},
+    plonk::{Advice, Circuit, Column, ConstraintSystem, ErrorFront},
 };
 use halo2curves::pasta::Fp;
 
@@ -47,7 +47,11 @@ impl Circuit<Fp> for TestCircuit {
         config
     }
 
-    fn synthesize(&self, config: MyConfig, mut layouter: impl Layouter<Fp>) -> Result<(), Error> {
+    fn synthesize(
+        &self,
+        config: MyConfig,
+        mut layouter: impl Layouter<Fp>,
+    ) -> Result<(), ErrorFront> {
         layouter.assign_table(
             || "8-bit table",
             |mut table| {

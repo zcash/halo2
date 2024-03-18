@@ -1,7 +1,7 @@
 use ff::Field;
 use halo2_proofs::{
     circuit::{Cell, Layouter, Region, SimpleFloorPlanner, Value},
-    plonk::{Advice, Assigned, Circuit, Column, ConstraintSystem, Error, Fixed, TableColumn},
+    plonk::{Advice, Assigned, Circuit, Column, ConstraintSystem, ErrorFront, Fixed, TableColumn},
     poly::Rotation,
 };
 use halo2curves::pasta::Fp;
@@ -28,14 +28,22 @@ struct PlonkConfig {
 }
 
 trait StandardCs<FF: Field> {
-    fn raw_multiply<F>(&self, region: &mut Region<FF>, f: F) -> Result<(Cell, Cell, Cell), Error>
+    fn raw_multiply<F>(
+        &self,
+        region: &mut Region<FF>,
+        f: F,
+    ) -> Result<(Cell, Cell, Cell), ErrorFront>
     where
         F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>;
-    fn raw_add<F>(&self, region: &mut Region<FF>, f: F) -> Result<(Cell, Cell, Cell), Error>
+    fn raw_add<F>(&self, region: &mut Region<FF>, f: F) -> Result<(Cell, Cell, Cell), ErrorFront>
     where
         F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>;
-    fn copy(&self, region: &mut Region<FF>, a: Cell, b: Cell) -> Result<(), Error>;
-    fn lookup_table(&self, layouter: &mut impl Layouter<FF>, values: &[FF]) -> Result<(), Error>;
+    fn copy(&self, region: &mut Region<FF>, a: Cell, b: Cell) -> Result<(), ErrorFront>;
+    fn lookup_table(
+        &self,
+        layouter: &mut impl Layouter<FF>,
+        values: &[FF],
+    ) -> Result<(), ErrorFront>;
 }
 
 struct MyCircuit<F: Field> {
@@ -62,7 +70,7 @@ impl<FF: Field> StandardCs<FF> for StandardPlonk<FF> {
         &self,
         region: &mut Region<FF>,
         mut f: F,
-    ) -> Result<(Cell, Cell, Cell), Error>
+    ) -> Result<(Cell, Cell, Cell), ErrorFront>
     where
         F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>,
     {
@@ -99,7 +107,11 @@ impl<FF: Field> StandardCs<FF> for StandardPlonk<FF> {
         region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::ONE))?;
         Ok((lhs.cell(), rhs.cell(), out.cell()))
     }
-    fn raw_add<F>(&self, region: &mut Region<FF>, mut f: F) -> Result<(Cell, Cell, Cell), Error>
+    fn raw_add<F>(
+        &self,
+        region: &mut Region<FF>,
+        mut f: F,
+    ) -> Result<(Cell, Cell, Cell), ErrorFront>
     where
         F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>,
     {
@@ -136,10 +148,14 @@ impl<FF: Field> StandardCs<FF> for StandardPlonk<FF> {
         region.assign_fixed(|| "a * b", self.config.sm, 0, || Value::known(FF::ZERO))?;
         Ok((lhs.cell(), rhs.cell(), out.cell()))
     }
-    fn copy(&self, region: &mut Region<FF>, left: Cell, right: Cell) -> Result<(), Error> {
+    fn copy(&self, region: &mut Region<FF>, left: Cell, right: Cell) -> Result<(), ErrorFront> {
         region.constrain_equal(left, right)
     }
-    fn lookup_table(&self, layouter: &mut impl Layouter<FF>, values: &[FF]) -> Result<(), Error> {
+    fn lookup_table(
+        &self,
+        layouter: &mut impl Layouter<FF>,
+        values: &[FF],
+    ) -> Result<(), ErrorFront> {
         layouter.assign_table(
             || "",
             |mut table| {
@@ -240,7 +256,11 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
         }
     }
 
-    fn synthesize(&self, config: PlonkConfig, mut layouter: impl Layouter<F>) -> Result<(), Error> {
+    fn synthesize(
+        &self,
+        config: PlonkConfig,
+        mut layouter: impl Layouter<F>,
+    ) -> Result<(), ErrorFront> {
         let cs = StandardPlonk::new(config);
 
         for i in 0..10 {

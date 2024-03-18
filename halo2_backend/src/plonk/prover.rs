@@ -1,27 +1,24 @@
 //! Generate a proof
 
+use group::prime::PrimeCurveAffine;
 use group::Curve;
-use halo2_middleware::ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use rand_core::RngCore;
 use std::collections::{BTreeSet, HashSet};
 use std::{collections::HashMap, iter};
 
 use crate::arithmetic::{eval_polynomial, CurveAffine};
-use crate::plonk::lookup::prover::lookup_commit_permuted;
-use crate::plonk::permutation::prover::permutation_commit;
-use crate::plonk::shuffle::prover::shuffle_commit_product;
 use crate::plonk::{
-    lookup, permutation, shuffle, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta,
-    ChallengeX, ChallengeY, ProvingKey,
+    lookup, lookup::prover::lookup_commit_permuted, permutation,
+    permutation::prover::permutation_commit, shuffle, shuffle::prover::shuffle_commit_product,
+    vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
+    ProvingKey,
 };
 use crate::poly::{
     commitment::{Blind, CommitmentScheme, Params, Prover},
     Basis, Coeff, LagrangeCoeff, Polynomial, ProverQuery,
 };
-
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
-use group::prime::PrimeCurveAffine;
-use halo2_common::plonk::{circuit::sealed, Error};
+use halo2_middleware::ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 
 /// Collection of instance data used during proving for a single circuit proof.
 #[derive(Debug)]
@@ -120,7 +117,7 @@ pub struct ProverV2<
     // Plonk proving key
     pk: &'a ProvingKey<Scheme::Curve>,
     // Phases
-    phases: Vec<sealed::Phase>,
+    phases: Vec<u8>,
     // Polynomials (Lagrange and Coeff) for all circuits instances
     instances: Vec<InstanceSingle<Scheme::Curve>>,
     // Advice polynomials with its blindings
@@ -294,10 +291,9 @@ impl<
                 return Err(Error::Other("All phases already committed".to_string()));
             }
         };
-        if phase != current_phase.0 {
+        if phase != *current_phase {
             return Err(Error::Other(format!(
-                "Committing invalid phase.  Expected {}, got {}",
-                current_phase.0, phase
+                "Committing invalid phase.  Expected {current_phase}, got {phase}",
             )));
         }
 
@@ -345,8 +341,7 @@ impl<
                     match advice_column {
                         None => {
                             return Err(Error::Other(format!(
-                                "expected advice column with index {} at phase {}",
-                                column_index, current_phase.0
+                                "expected advice column with index {column_index} at phase {current_phase}",
                             )))
                         }
                         Some(advice_column) => {
@@ -361,8 +356,7 @@ impl<
                     }
                 } else if advice_column.is_some() {
                     return Err(Error::Other(format!(
-                        "expected no advice column with index {} at phase {}",
-                        column_index, current_phase.0
+                        "expected no advice column with index {column_index} at phase {current_phase}",
                     )));
                 };
             }
@@ -691,7 +685,7 @@ impl<
                     .iter()
                     .map(|&(column, at)| {
                         eval_polynomial(
-                            &instance.instance_polys[column.index()],
+                            &instance.instance_polys[column.index],
                             domain.rotate_omega(*x, at),
                         )
                     })
@@ -713,7 +707,7 @@ impl<
                 .iter()
                 .map(|&(column, at)| {
                     eval_polynomial(
-                        &advice.advice_polys[column.index()],
+                        &advice.advice_polys[column.index],
                         domain.rotate_omega(*x, at),
                     )
                 })
@@ -730,7 +724,7 @@ impl<
             .fixed_queries
             .iter()
             .map(|&(column, at)| {
-                eval_polynomial(&pk.fixed_polys[column.index()], domain.rotate_omega(*x, at))
+                eval_polynomial(&pk.fixed_polys[column.index], domain.rotate_omega(*x, at))
             })
             .collect();
 
@@ -803,7 +797,7 @@ impl<
                             .then_some(cs.instance_queries.iter().map(move |&(column, at)| {
                                 ProverQuery {
                                     point: domain.rotate_omega(*x, at),
-                                    poly: &instance.instance_polys[column.index()],
+                                    poly: &instance.instance_polys[column.index],
                                     blind: Blind::default(),
                                 }
                             }))
@@ -816,8 +810,8 @@ impl<
                             .iter()
                             .map(move |&(column, at)| ProverQuery {
                                 point: domain.rotate_omega(*x, at),
-                                poly: &advice.advice_polys[column.index()],
-                                blind: advice.advice_blinds[column.index()],
+                                poly: &advice.advice_polys[column.index],
+                                blind: advice.advice_blinds[column.index],
                             }),
                     )
                     // Permutations
@@ -830,7 +824,7 @@ impl<
             // Queries to fixed columns
             .chain(cs.fixed_queries.iter().map(|&(column, at)| ProverQuery {
                 point: domain.rotate_omega(*x, at),
-                poly: &pk.fixed_polys[column.index()],
+                poly: &pk.fixed_polys[column.index],
                 blind: Blind::default(),
             }))
             // Copy constraints
@@ -849,7 +843,7 @@ impl<
     }
 
     /// Returns the phases of the circuit
-    pub fn phases(&'a self) -> &'a [sealed::Phase] {
+    pub fn phases(&self) -> &[u8] {
         self.phases.as_slice()
     }
 }

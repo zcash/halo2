@@ -1,6 +1,6 @@
-use halo2_common::plonk::{
-    circuit::{Circuit, Column},
-    Assigned, Assignment, Challenge, ConstraintSystem, Error, FloorPlanner, Selector,
+use crate::plonk::{
+    Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error, FloorPlanner,
+    Selector,
 };
 use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
 use halo2_middleware::ff::Field;
@@ -153,7 +153,7 @@ impl<F: Field> Assignment<F> for Graph {
         _: usize,
         _: Column<Any>,
         _: usize,
-    ) -> Result<(), halo2_common::plonk::Error> {
+    ) -> Result<(), crate::plonk::Error> {
         // Do nothing; we don't care about permutations in this context.
         Ok(())
     }

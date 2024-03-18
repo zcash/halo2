@@ -1,20 +1,21 @@
 //! Verify a plonk proof
 
 use group::Curve;
+use halo2_middleware::circuit::Any;
 use halo2_middleware::ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use std::iter;
 
 use super::{vanishing, VerifyingKey};
 use crate::arithmetic::compute_inner_product;
-use crate::plonk::lookup::verifier::lookup_read_permuted_commitments;
-use crate::plonk::permutation::verifier::permutation_read_product_commitments;
-use crate::plonk::shuffle::verifier::shuffle_read_product_commitment;
-use crate::plonk::{ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error};
-use crate::poly::commitment::{CommitmentScheme, Verifier};
-use crate::poly::VerificationStrategy;
+use crate::plonk::{
+    circuit::VarBack, lookup::verifier::lookup_read_permuted_commitments,
+    permutation::verifier::permutation_read_product_commitments,
+    shuffle::verifier::shuffle_read_product_commitment, ChallengeBeta, ChallengeGamma,
+    ChallengeTheta, ChallengeX, ChallengeY, Error,
+};
 use crate::poly::{
-    commitment::{Blind, Params},
-    VerifierQuery,
+    commitment::{Blind, CommitmentScheme, Params, Verifier},
+    VerificationStrategy, VerifierQuery,
 };
 use crate::transcript::{read_n_scalars, EncodedChallenge, TranscriptRead};
 
@@ -275,7 +276,7 @@ where
                     .instance_queries
                     .iter()
                     .map(|(column, rotation)| {
-                        let instances = instances[column.index()];
+                        let instances = instances[column.index];
                         let offset = (max_rotation - rotation.0) as usize;
                         compute_inner_product(instances, &l_i_s[offset..offset + instances.len()])
                     })
@@ -356,23 +357,22 @@ where
                     let fixed_evals = &fixed_evals;
                     std::iter::empty()
                         // Evaluate the circuit using the custom gates provided
-                        .chain(vk.cs.gates.iter().flat_map(move |gate| {
-                            gate.polynomials().iter().map(move |poly| {
-                                poly.evaluate(
-                                    &|scalar| scalar,
-                                    &|_| {
-                                        panic!("virtual selectors are removed during optimization")
+                        .chain(vk.cs.gates.iter().map(move |gate| {
+                            gate.poly.evaluate(
+                                &|scalar| scalar,
+                                &|var| match var {
+                                    VarBack::Query(query) => match query.column_type {
+                                        Any::Fixed => fixed_evals[query.index],
+                                        Any::Advice(_) => advice_evals[query.index],
+                                        Any::Instance => instance_evals[query.index],
                                     },
-                                    &|query| fixed_evals[query.index.unwrap()],
-                                    &|query| advice_evals[query.index.unwrap()],
-                                    &|query| instance_evals[query.index.unwrap()],
-                                    &|challenge| challenges[challenge.index()],
-                                    &|a| -a,
-                                    &|a, b| a + b,
-                                    &|a, b| a * b,
-                                    &|a, scalar| a * scalar,
-                                )
-                            })
+                                    VarBack::Challenge(challenge) => challenges[challenge.index],
+                                },
+                                &|a| -a,
+                                &|a, b| a + b,
+                                &|a, b| a * b,
+                                &|a, scalar| a * scalar,
+                            )
                         }))
                         .chain(permutation.expressions(
                             vk,
@@ -443,7 +443,7 @@ where
                             .then_some(vk.cs.instance_queries.iter().enumerate().map(
                                 move |(query_index, &(column, at))| {
                                     VerifierQuery::new_commitment(
-                                        &instance_commitments[column.index()],
+                                        &instance_commitments[column.index],
                                         vk.domain.rotate_omega(*x, at),
                                         instance_evals[query_index],
                                     )
@@ -455,7 +455,7 @@ where
                     .chain(vk.cs.advice_queries.iter().enumerate().map(
                         move |(query_index, &(column, at))| {
                             VerifierQuery::new_commitment(
-                                &advice_commitments[column.index()],
+                                &advice_commitments[column.index],
                                 vk.domain.rotate_omega(*x, at),
                                 advice_evals[query_index],
                             )
@@ -473,7 +473,7 @@ where
                 .enumerate()
                 .map(|(query_index, &(column, at))| {
                     VerifierQuery::new_commitment(
-                        &vk.fixed_commitments[column.index()],
+                        &vk.fixed_commitments[column.index],
                         vk.domain.rotate_omega(*x, at),
                         fixed_evals[query_index],
                     )

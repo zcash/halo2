@@ -3,7 +3,8 @@ use super::Argument;
 use crate::plonk::evaluation::evaluate;
 use crate::{
     arithmetic::{eval_polynomial, parallelize, CurveAffine},
-    plonk::{ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX},
+    plonk::circuit::ExpressionBack,
+    plonk::{ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error},
     poly::{
         commitment::{Blind, Params},
         Coeff, EvaluationDomain, LagrangeCoeff, Polynomial, ProverQuery,
@@ -14,7 +15,6 @@ use group::{
     ff::{BatchInvert, Field},
     Curve,
 };
-use halo2_common::plonk::{Error, Expression};
 use halo2_middleware::ff::WithSmallOrderMulGroup;
 use halo2_middleware::poly::Rotation;
 use rand_core::RngCore;
@@ -87,7 +87,7 @@ where
     C::Curve: Mul<F, Output = C::Curve> + MulAssign<F>,
 {
     // Closure to get values of expressions and compress them
-    let compress_expressions = |expressions: &[Expression<C::Scalar>]| {
+    let compress_expressions = |expressions: &[ExpressionBack<C::Scalar>]| {
         let compressed_expression = expressions
             .iter()
             .map(|expression| {

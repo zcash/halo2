@@ -4,11 +4,10 @@ use std::iter;
 use super::{Argument, VerifyingKey};
 use crate::{
     arithmetic::CurveAffine,
-    plonk::{self, ChallengeBeta, ChallengeGamma, ChallengeX},
+    plonk::{self, ChallengeBeta, ChallengeGamma, ChallengeX, Error},
     poly::{commitment::MSM, VerifierQuery},
     transcript::{EncodedChallenge, TranscriptRead},
 };
-use halo2_common::plonk::Error;
 use halo2_middleware::circuit::Any;
 use halo2_middleware::poly::Rotation;
 
@@ -160,7 +159,7 @@ impl<C: CurveAffine> Evaluated<C> {
                         let mut left = set.permutation_product_next_eval;
                         for (eval, permutation_eval) in columns
                             .iter()
-                            .map(|&column| match column.column_type() {
+                            .map(|&column| match column.column_type {
                                 Any::Advice(_) => {
                                     advice_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
                                 }
@@ -181,7 +180,7 @@ impl<C: CurveAffine> Evaluated<C> {
                         let mut current_delta = (*beta * *x)
                             * (<C::Scalar as PrimeField>::DELTA
                                 .pow_vartime([(chunk_index * chunk_len) as u64]));
-                        for eval in columns.iter().map(|&column| match column.column_type() {
+                        for eval in columns.iter().map(|&column| match column.column_type {
                             Any::Advice(_) => {
                                 advice_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
                             }

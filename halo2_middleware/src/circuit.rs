@@ -1,37 +1,8 @@
+use crate::expression::{Expression, Variable};
 use crate::poly::Rotation;
 use crate::{lookup, metadata, permutation, shuffle};
-use core::cmp::max;
 use ff::Field;
 use std::collections::HashMap;
-
-/// Query of fixed column at a certain relative location
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct FixedQueryMid {
-    /// Column index
-    pub column_index: usize,
-    /// Rotation of this query
-    pub rotation: Rotation,
-}
-
-/// Query of advice column at a certain relative location
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct AdviceQueryMid {
-    /// Column index
-    pub column_index: usize,
-    /// Rotation of this query
-    pub rotation: Rotation,
-    /// Phase of this advice column
-    pub phase: u8,
-}
-
-/// Query of instance column at a certain relative location
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct InstanceQueryMid {
-    /// Column index
-    pub column_index: usize,
-    /// Rotation of this query
-    pub rotation: Rotation,
-}
 
 /// A challenge squeezed from transcript after advice columns at the phase have been committed.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -52,70 +23,83 @@ impl ChallengeMid {
     }
 }
 
-/// Low-degree expression representing an identity that must hold over the committed columns.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ExpressionMid<F> {
-    /// This is a constant polynomial
-    Constant(F),
-    /// This is a fixed column queried at a certain relative location
-    Fixed(FixedQueryMid),
-    /// This is an advice (witness) column queried at a certain relative location
-    Advice(AdviceQueryMid),
-    /// This is an instance (external) column queried at a certain relative location
-    Instance(InstanceQueryMid),
-    /// This is a challenge
-    Challenge(ChallengeMid),
-    /// This is a negated polynomial
-    Negated(Box<ExpressionMid<F>>),
-    /// This is the sum of two polynomials
-    Sum(Box<ExpressionMid<F>>, Box<ExpressionMid<F>>),
-    /// This is the product of two polynomials
-    Product(Box<ExpressionMid<F>>, Box<ExpressionMid<F>>),
-    /// This is a scaled polynomial
-    Scaled(Box<ExpressionMid<F>>, F),
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct QueryMid {
+    /// Column index
+    pub column_index: usize,
+    /// The type of the column.
+    pub column_type: Any,
+    /// Rotation of this query
+    pub rotation: Rotation,
 }
 
-impl<F: Field> ExpressionMid<F> {
-    /// Compute the degree of this polynomial
-    pub fn degree(&self) -> usize {
-        use ExpressionMid::*;
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum VarMid {
+    /// This is a generic column query
+    Query(QueryMid),
+    /// This is a challenge
+    Challenge(ChallengeMid),
+}
+
+impl Variable for VarMid {
+    fn degree(&self) -> usize {
         match self {
-            Constant(_) => 0,
-            Fixed(_) => 1,
-            Advice(_) => 1,
-            Instance(_) => 1,
-            Challenge(_) => 0,
-            Negated(poly) => poly.degree(),
-            Sum(a, b) => max(a.degree(), b.degree()),
-            Product(a, b) => a.degree() + b.degree(),
-            Scaled(poly, _) => poly.degree(),
+            VarMid::Query(_) => 1,
+            VarMid::Challenge(_) => 0,
+        }
+    }
+
+    fn complexity(&self) -> usize {
+        match self {
+            VarMid::Query(_) => 1,
+            VarMid::Challenge(_) => 0,
+        }
+    }
+
+    fn write_identifier<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        match self {
+            VarMid::Query(query) => {
+                match query.column_type {
+                    Any::Fixed => write!(writer, "fixed")?,
+                    Any::Advice(_) => write!(writer, "advice")?,
+                    Any::Instance => write!(writer, "instance")?,
+                };
+                write!(writer, "[{}][{}]", query.column_index, query.rotation.0)
+            }
+            VarMid::Challenge(challenge) => {
+                write!(writer, "challenge[{}]", challenge.index())
+            }
         }
     }
 }
 
+pub type ExpressionMid<F> = Expression<F, VarMid>;
+
 /// A Gate contains a single polynomial identity with a name as metadata.
 #[derive(Clone, Debug)]
-pub struct GateV2Backend<F: Field> {
+pub struct Gate<F: Field, V: Variable> {
     pub name: String,
-    pub poly: ExpressionMid<F>,
+    pub poly: Expression<F, V>,
 }
 
-impl<F: Field> GateV2Backend<F> {
+impl<F: Field, V: Variable> Gate<F, V> {
     /// Returns the gate name.
     pub fn name(&self) -> &str {
         self.name.as_str()
     }
 
     /// Returns the polynomial identity of this gate
-    pub fn polynomial(&self) -> &ExpressionMid<F> {
+    pub fn polynomial(&self) -> &Expression<F, V> {
         &self.poly
     }
 }
 
+pub type GateMid<F> = Gate<F, VarMid>;
+
 /// This is a description of the circuit environment, such as the gate, column and
 /// permutation arrangements.
 #[derive(Debug, Clone)]
-pub struct ConstraintSystemV2Backend<F: Field> {
+pub struct ConstraintSystemMid<F: Field> {
     pub num_fixed_columns: usize,
     pub num_advice_columns: usize,
     pub num_instance_columns: usize,
@@ -129,21 +113,26 @@ pub struct ConstraintSystemV2Backend<F: Field> {
     /// Contains the phase for each challenge. Should have same length as num_challenges.
     pub challenge_phase: Vec<u8>,
 
-    pub gates: Vec<GateV2Backend<F>>,
+    pub gates: Vec<GateMid<F>>,
 
     // Permutation argument for performing equality constraints
-    pub permutation: permutation::ArgumentV2,
+    pub permutation: permutation::ArgumentMid,
 
     // Vector of lookup arguments, where each corresponds to a sequence of
     // input expressions and a sequence of table expressions involved in the lookup.
-    pub lookups: Vec<lookup::ArgumentV2<F>>,
+    pub lookups: Vec<lookup::ArgumentMid<F>>,
 
     // Vector of shuffle arguments, where each corresponds to a sequence of
     // input expressions and a sequence of shuffle expressions involved in the shuffle.
-    pub shuffles: Vec<shuffle::ArgumentV2<F>>,
+    pub shuffles: Vec<shuffle::ArgumentMid<F>>,
 
     // List of indexes of Fixed columns which are associated to a circuit-general Column tied to their annotation.
     pub general_column_annotations: HashMap<metadata::Column, String>,
+
+    // The minimum degree required by the circuit, which can be set to a
+    // larger amount than actually needed. This can be used, for example, to
+    // force the permutation argument to involve more columns in the same set.
+    pub minimum_degree: Option<usize>,
 }
 
 /// Data that needs to be preprocessed from a circuit
@@ -158,7 +147,7 @@ pub struct PreprocessingV2<F: Field> {
 #[derive(Debug, Clone)]
 pub struct CompiledCircuitV2<F: Field> {
     pub preprocessing: PreprocessingV2<F>,
-    pub cs: ConstraintSystemV2Backend<F>,
+    pub cs: ConstraintSystemMid<F>,
 }
 
 // TODO: The query_cell method is only used in the frontend, which uses Expression.  By having this
@@ -183,6 +172,12 @@ pub struct ColumnMid {
     pub index: usize,
     /// The type of the column.
     pub column_type: Any,
+}
+
+impl ColumnMid {
+    pub fn new(index: usize, column_type: Any) -> Self {
+        ColumnMid { index, column_type }
+    }
 }
 
 /// A cell identifies a position in the plonkish matrix identified by a column and a row offset.
@@ -295,45 +290,49 @@ impl PartialOrd for Any {
 
 impl ColumnType for Advice {
     fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> ExpressionMid<F> {
-        ExpressionMid::Advice(AdviceQueryMid {
+        ExpressionMid::Var(VarMid::Query(QueryMid {
             column_index: index,
+            column_type: Any::Advice(Advice { phase: self.phase }),
             rotation: at,
-            phase: self.phase,
-        })
+        }))
     }
 }
 impl ColumnType for Fixed {
     fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> ExpressionMid<F> {
-        ExpressionMid::Fixed(FixedQueryMid {
+        ExpressionMid::Var(VarMid::Query(QueryMid {
             column_index: index,
+            column_type: Any::Fixed,
             rotation: at,
-        })
+        }))
     }
 }
 impl ColumnType for Instance {
     fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> ExpressionMid<F> {
-        ExpressionMid::Instance(InstanceQueryMid {
+        ExpressionMid::Var(VarMid::Query(QueryMid {
             column_index: index,
+            column_type: Any::Instance,
             rotation: at,
-        })
+        }))
     }
 }
 impl ColumnType for Any {
     fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> ExpressionMid<F> {
         match self {
-            Any::Advice(Advice { phase }) => ExpressionMid::Advice(AdviceQueryMid {
+            Any::Advice(Advice { phase }) => ExpressionMid::Var(VarMid::Query(QueryMid {
                 column_index: index,
+                column_type: Any::Advice(Advice { phase: *phase }),
                 rotation: at,
-                phase: *phase,
-            }),
-            Any::Fixed => ExpressionMid::Fixed(FixedQueryMid {
+            })),
+            Any::Fixed => ExpressionMid::Var(VarMid::Query(QueryMid {
                 column_index: index,
+                column_type: Any::Fixed,
                 rotation: at,
-            }),
-            Any::Instance => ExpressionMid::Instance(InstanceQueryMid {
+            })),
+            Any::Instance => ExpressionMid::Var(VarMid::Query(QueryMid {
                 column_index: index,
+                column_type: Any::Instance,
                 rotation: at,
-            }),
+            })),
         }
     }
 }

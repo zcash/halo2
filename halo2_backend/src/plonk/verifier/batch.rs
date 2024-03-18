@@ -1,5 +1,5 @@
+use crate::plonk::Error;
 use group::ff::Field;
-use halo2_common::plonk::Error;
 use halo2_middleware::ff::FromUniformBytes;
 use halo2curves::CurveAffine;
 use rand_core::OsRng;

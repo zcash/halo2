@@ -1,10 +1,11 @@
+use crate::plonk::Error;
 use halo2_backend::plonk::{
     keygen::{keygen_pk_v2, keygen_vk_v2},
     ProvingKey, VerifyingKey,
 };
 use halo2_backend::{arithmetic::CurveAffine, poly::commitment::Params};
-use halo2_common::plonk::{circuit::Circuit, Error};
 use halo2_frontend::circuit::compile_circuit;
+use halo2_frontend::plonk::Circuit;
 use halo2_middleware::ff::FromUniformBytes;
 
 /// Generate a `VerifyingKey` from an instance of `Circuit`.
@@ -38,7 +39,7 @@ where
 {
     let (compiled_circuit, _, _) = compile_circuit(params.k(), circuit, compress_selectors)?;
     let mut vk = keygen_vk_v2(params, &compiled_circuit)?;
-    vk.compress_selectors = compress_selectors;
+    vk.compress_selectors = Some(compress_selectors);
     Ok(vk)
 }
 
@@ -53,6 +54,10 @@ where
     P: Params<'params, C>,
     ConcreteCircuit: Circuit<C::Scalar>,
 {
-    let (compiled_circuit, _, _) = compile_circuit(params.k(), circuit, vk.compress_selectors)?;
-    keygen_pk_v2(params, vk, &compiled_circuit)
+    let (compiled_circuit, _, _) = compile_circuit(
+        params.k(),
+        circuit,
+        vk.compress_selectors.unwrap_or_default(),
+    )?;
+    Ok(keygen_pk_v2(params, vk, &compiled_circuit)?)
 }

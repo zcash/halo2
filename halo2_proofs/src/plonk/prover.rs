@@ -1,8 +1,9 @@
+use crate::plonk::{Error, ErrorBack};
 use crate::poly::commitment::{CommitmentScheme, Params, Prover};
+use crate::transcript::{EncodedChallenge, TranscriptWrite};
 use halo2_backend::plonk::{prover::ProverV2, ProvingKey};
-use halo2_backend::transcript::{EncodedChallenge, TranscriptWrite};
-use halo2_common::plonk::{circuit::Circuit, Error};
-use halo2_frontend::circuit::{compile_circuit, WitnessCalculator};
+use halo2_frontend::circuit::{compile_circuit_cs, WitnessCalculator};
+use halo2_frontend::plonk::Circuit;
 use halo2_middleware::ff::{FromUniformBytes, WithSmallOrderMulGroup};
 use rand_core::RngCore;
 use std::collections::HashMap;
@@ -31,10 +32,13 @@ where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
 {
     if circuits.len() != instances.len() {
-        return Err(Error::InvalidInstances);
+        return Err(Error::Backend(ErrorBack::InvalidInstances));
     }
-    let (_, config, cs) =
-        compile_circuit(params.k(), &circuits[0], pk.get_vk().compress_selectors)?;
+    let (config, cs, _) = compile_circuit_cs::<_, ConcreteCircuit>(
+        pk.get_vk().compress_selectors.unwrap_or_default(),
+        #[cfg(feature = "circuit-params")]
+        circuits[0].params(),
+    );
     let mut witness_calcs: Vec<_> = circuits
         .iter()
         .enumerate()
@@ -46,18 +50,18 @@ where
     for phase in phases.iter() {
         let mut witnesses = Vec::with_capacity(circuits.len());
         for witness_calc in witness_calcs.iter_mut() {
-            witnesses.push(witness_calc.calc(phase.0, &challenges)?);
+            witnesses.push(witness_calc.calc(*phase, &challenges)?);
         }
-        challenges = prover.commit_phase(phase.0, witnesses).unwrap();
+        challenges = prover.commit_phase(*phase, witnesses).unwrap();
     }
-    prover.create_proof()
+    Ok(prover.create_proof()?)
 }
 
 #[test]
 fn test_create_proof() {
     use crate::{
         circuit::SimpleFloorPlanner,
-        plonk::{keygen_pk, keygen_vk, ConstraintSystem},
+        plonk::{keygen_pk, keygen_vk, ConstraintSystem, ErrorFront},
         poly::kzg::{
             commitment::{KZGCommitmentScheme, ParamsKZG},
             multiopen::ProverSHPLONK,
@@ -87,7 +91,7 @@ fn test_create_proof() {
             &self,
             _config: Self::Config,
             _layouter: impl crate::circuit::Layouter<F>,
-        ) -> Result<(), Error> {
+        ) -> Result<(), ErrorFront> {
             Ok(())
         }
     }
@@ -106,7 +110,10 @@ fn test_create_proof() {
         OsRng,
         &mut transcript,
     );
-    assert!(matches!(proof.unwrap_err(), Error::InvalidInstances));
+    assert!(matches!(
+        proof.unwrap_err(),
+        Error::Backend(ErrorBack::InvalidInstances)
+    ));
 
     // Create proof with correct number of instances
     create_proof::<KZGCommitmentScheme<_>, ProverSHPLONK<_>, _, _, _, _>(

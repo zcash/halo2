@@ -56,7 +56,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             &self,
             config: MyConfig,
             mut layouter: impl Layouter<F>,
-        ) -> Result<(), Error> {
+        ) -> Result<(), ErrorFront> {
             layouter.assign_table(
                 || "8-bit table",
                 |mut table| {

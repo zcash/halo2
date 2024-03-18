@@ -1,14 +1,13 @@
-use super::circuit::Expression;
+use crate::plonk::Expression;
 use halo2_middleware::ff::Field;
 use std::fmt::{self, Debug};
 
 /// Expressions involved in a lookup argument, with a name as metadata.
-/// TODO: possible to move to "halo2_backend", if moved, pub(crate) fields.
 #[derive(Clone)]
 pub struct Argument<F: Field> {
-    pub name: String,
-    pub input_expressions: Vec<Expression<F>>,
-    pub table_expressions: Vec<Expression<F>>,
+    pub(crate) name: String,
+    pub(crate) input_expressions: Vec<Expression<F>>,
+    pub(crate) table_expressions: Vec<Expression<F>>,
 }
 
 impl<F: Field> Debug for Argument<F> {

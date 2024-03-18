@@ -2,17 +2,17 @@
 
 use crate::plonk::{Column, Error};
 use halo2_middleware::circuit::{Any, Cell};
-use halo2_middleware::permutation::ArgumentV2;
+use halo2_middleware::permutation::ArgumentMid;
 
 /// A permutation argument.
 #[derive(Default, Debug, Clone)]
 pub struct Argument {
     /// A sequence of columns involved in the argument.
-    pub columns: Vec<Column<Any>>,
+    pub(crate) columns: Vec<Column<Any>>,
 }
 
-impl From<ArgumentV2> for Argument {
-    fn from(arg: ArgumentV2) -> Self {
+impl From<ArgumentMid> for Argument {
+    fn from(arg: ArgumentMid) -> Self {
         Self {
             columns: arg.columns.into_iter().map(|c| c.into()).collect(),
         }
@@ -72,9 +72,9 @@ impl Argument {
 
 #[derive(Clone, Debug)]
 pub struct Assembly {
-    pub n: usize,
-    pub columns: Vec<Column<Any>>,
-    pub copies: Vec<(Cell, Cell)>,
+    pub(crate) n: usize,
+    pub(crate) columns: Vec<Column<Any>>,
+    pub(crate) copies: Vec<(Cell, Cell)>,
 }
 
 impl Assembly {

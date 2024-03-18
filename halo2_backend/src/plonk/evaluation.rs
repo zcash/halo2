@@ -3,14 +3,16 @@
 //! - Evaluates an Expression using Lagrange basis
 
 use crate::multicore;
-use crate::plonk::{lookup, permutation, ProvingKey};
+use crate::plonk::{
+    circuit::{ConstraintSystemBack, ExpressionBack, VarBack},
+    lookup, permutation, ProvingKey,
+};
 use crate::poly::{Basis, LagrangeBasis};
 use crate::{
     arithmetic::{parallelize, CurveAffine},
     poly::{Coeff, ExtendedLagrangeCoeff, Polynomial},
 };
 use group::ff::{Field, PrimeField, WithSmallOrderMulGroup};
-use halo2_common::plonk::{ConstraintSystem, Expression};
 use halo2_middleware::circuit::Any;
 use halo2_middleware::poly::Rotation;
 
@@ -225,18 +227,13 @@ struct CalculationInfo {
 }
 
 impl<C: CurveAffine> Evaluator<C> {
-    /// Creates a new evaluation structure from a [`ConstraintSystem`]
-    pub fn new(cs: &ConstraintSystem<C::ScalarExt>) -> Self {
+    /// Creates a new evaluation structure from a [`ConstraintSystemBack`]
+    pub fn new(cs: &ConstraintSystemBack<C::ScalarExt>) -> Self {
         let mut ev = Evaluator::default();
 
-        // Custom gates
         let mut parts = Vec::new();
         for gate in cs.gates.iter() {
-            parts.extend(
-                gate.polynomials()
-                    .iter()
-                    .map(|poly| ev.custom_gates.add_expression(poly)),
-            );
+            parts.push(ev.custom_gates.add_expression(&gate.poly));
         }
         ev.custom_gates.add_calculation(Calculation::Horner(
             ValueSource::PreviousValue(),
@@ -248,7 +245,7 @@ impl<C: CurveAffine> Evaluator<C> {
         for lookup in cs.lookups.iter() {
             let mut graph = GraphEvaluator::default();
 
-            let mut evaluate_lc = |expressions: &Vec<Expression<_>>| {
+            let mut evaluate_lc = |expressions: &Vec<ExpressionBack<_>>| {
                 let parts = expressions
                     .iter()
                     .map(|expr| graph.add_expression(expr))
@@ -280,7 +277,8 @@ impl<C: CurveAffine> Evaluator<C> {
 
         // Shuffles
         for shuffle in cs.shuffles.iter() {
-            let evaluate_lc = |expressions: &Vec<Expression<_>>, graph: &mut GraphEvaluator<C>| {
+            let evaluate_lc = |expressions: &Vec<ExpressionBack<_>>,
+                               graph: &mut GraphEvaluator<C>| {
                 let parts = expressions
                     .iter()
                     .map(|expr| graph.add_expression(expr))
@@ -457,10 +455,10 @@ impl<C: CurveAffine> Evaluator<C> {
                             let mut left = set.permutation_product_coset[r_next];
                             for (values, permutation) in columns
                                 .iter()
-                                .map(|&column| match column.column_type() {
-                                    Any::Advice(_) => &advice[column.index()],
-                                    Any::Fixed => &fixed[column.index()],
-                                    Any::Instance => &instance[column.index()],
+                                .map(|&column| match column.column_type {
+                                    Any::Advice(_) => &advice[column.index],
+                                    Any::Fixed => &fixed[column.index],
+                                    Any::Instance => &instance[column.index],
                                 })
                                 .zip(cosets.iter())
                             {
@@ -468,10 +466,10 @@ impl<C: CurveAffine> Evaluator<C> {
                             }
 
                             let mut right = set.permutation_product_coset[idx];
-                            for values in columns.iter().map(|&column| match column.column_type() {
-                                Any::Advice(_) => &advice[column.index()],
-                                Any::Fixed => &fixed[column.index()],
-                                Any::Instance => &instance[column.index()],
+                            for values in columns.iter().map(|&column| match column.column_type {
+                                Any::Advice(_) => &advice[column.index],
+                                Any::Fixed => &fixed[column.index],
+                                Any::Instance => &instance[column.index],
                             }) {
                                 right *= values[idx] + current_delta + gamma;
                                 current_delta *= &C::Scalar::DELTA;
@@ -690,36 +688,29 @@ impl<C: CurveAffine> GraphEvaluator<C> {
     }
 
     /// Generates an optimized evaluation for the expression
-    fn add_expression(&mut self, expr: &Expression<C::ScalarExt>) -> ValueSource {
+    fn add_expression(&mut self, expr: &ExpressionBack<C::ScalarExt>) -> ValueSource {
         match expr {
-            Expression::Constant(scalar) => self.add_constant(scalar),
-            Expression::Selector(_selector) => unreachable!(),
-            Expression::Fixed(query) => {
+            ExpressionBack::Constant(scalar) => self.add_constant(scalar),
+            ExpressionBack::Var(VarBack::Query(query)) => {
                 let rot_idx = self.add_rotation(&query.rotation);
-                self.add_calculation(Calculation::Store(ValueSource::Fixed(
-                    query.column_index,
-                    rot_idx,
-                )))
+                match query.column_type {
+                    Any::Fixed => self.add_calculation(Calculation::Store(ValueSource::Fixed(
+                        query.column_index,
+                        rot_idx,
+                    ))),
+                    Any::Advice(_) => self.add_calculation(Calculation::Store(
+                        ValueSource::Advice(query.column_index, rot_idx),
+                    )),
+                    Any::Instance => self.add_calculation(Calculation::Store(
+                        ValueSource::Instance(query.column_index, rot_idx),
+                    )),
+                }
             }
-            Expression::Advice(query) => {
-                let rot_idx = self.add_rotation(&query.rotation);
-                self.add_calculation(Calculation::Store(ValueSource::Advice(
-                    query.column_index,
-                    rot_idx,
-                )))
-            }
-            Expression::Instance(query) => {
-                let rot_idx = self.add_rotation(&query.rotation);
-                self.add_calculation(Calculation::Store(ValueSource::Instance(
-                    query.column_index,
-                    rot_idx,
-                )))
-            }
-            Expression::Challenge(challenge) => self.add_calculation(Calculation::Store(
-                ValueSource::Challenge(challenge.index()),
-            )),
-            Expression::Negated(a) => match **a {
-                Expression::Constant(scalar) => self.add_constant(&-scalar),
+            ExpressionBack::Var(VarBack::Challenge(challenge)) => self.add_calculation(
+                Calculation::Store(ValueSource::Challenge(challenge.index())),
+            ),
+            ExpressionBack::Negated(a) => match **a {
+                ExpressionBack::Constant(scalar) => self.add_constant(&-scalar),
                 _ => {
                     let result_a = self.add_expression(a);
                     match result_a {
@@ -728,10 +719,10 @@ impl<C: CurveAffine> GraphEvaluator<C> {
                     }
                 }
             },
-            Expression::Sum(a, b) => {
+            ExpressionBack::Sum(a, b) => {
                 // Undo subtraction stored as a + (-b) in expressions
                 match &**b {
-                    Expression::Negated(b_int) => {
+                    ExpressionBack::Negated(b_int) => {
                         let result_a = self.add_expression(a);
                         let result_b = self.add_expression(b_int);
                         if result_a == ValueSource::Constant(0) {
@@ -757,7 +748,7 @@ impl<C: CurveAffine> GraphEvaluator<C> {
                     }
                 }
             }
-            Expression::Product(a, b) => {
+            ExpressionBack::Product(a, b) => {
                 let result_a = self.add_expression(a);
                 let result_b = self.add_expression(b);
                 if result_a == ValueSource::Constant(0) || result_b == ValueSource::Constant(0) {
@@ -778,7 +769,7 @@ impl<C: CurveAffine> GraphEvaluator<C> {
                     self.add_calculation(Calculation::Mul(result_b, result_a))
                 }
             }
-            Expression::Scaled(a, f) => {
+            ExpressionBack::Scaled(a, f) => {
                 if *f == C::ScalarExt::ZERO {
                     ValueSource::Constant(0)
                 } else if *f == C::ScalarExt::ONE {
@@ -853,9 +844,9 @@ impl<C: CurveAffine> GraphEvaluator<C> {
     }
 }
 
-/// Simple evaluation of an [`Expression`] over the provided lagrange polynomials
+/// Simple evaluation of an [`ExpressionBack`] over the provided lagrange polynomials
 pub fn evaluate<F: Field, B: LagrangeBasis>(
-    expression: &Expression<F>,
+    expression: &ExpressionBack<F>,
     size: usize,
     rot_scale: i32,
     fixed: &[Polynomial<F, B>],
@@ -870,20 +861,17 @@ pub fn evaluate<F: Field, B: LagrangeBasis>(
             let idx = start + i;
             *value = expression.evaluate(
                 &|scalar| scalar,
-                &|_| panic!("virtual selectors are removed during optimization"),
-                &|query| {
-                    fixed[query.column_index]
-                        [get_rotation_idx(idx, query.rotation.0, rot_scale, isize)]
+                &|var| match var {
+                    VarBack::Challenge(challenge) => challenges[challenge.index()],
+                    VarBack::Query(query) => {
+                        let rot_idx = get_rotation_idx(idx, query.rotation.0, rot_scale, isize);
+                        match query.column_type {
+                            Any::Fixed => fixed[query.column_index][rot_idx],
+                            Any::Advice(_) => advice[query.column_index][rot_idx],
+                            Any::Instance => instance[query.column_index][rot_idx],
+                        }
+                    }
                 },
-                &|query| {
-                    advice[query.column_index]
-                        [get_rotation_idx(idx, query.rotation.0, rot_scale, isize)]
-                },
-                &|query| {
-                    instance[query.column_index]
-                        [get_rotation_idx(idx, query.rotation.0, rot_scale, isize)]
-                },
-                &|challenge| challenges[challenge.index()],
                 &|a| -a,
                 &|a, b| a + b,
                 &|a, b| a * b,
@@ -896,17 +884,15 @@ pub fn evaluate<F: Field, B: LagrangeBasis>(
 
 #[cfg(test)]
 mod test {
+    use crate::plonk::circuit::{ExpressionBack, QueryBack, VarBack};
     use crate::poly::LagrangeCoeff;
-    use halo2_common::plonk::sealed::Phase;
-    use halo2_common::plonk::{AdviceQuery, Challenge, FixedQuery};
-    use halo2_common::plonk::{Expression, InstanceQuery};
-    use halo2_middleware::circuit::ChallengeMid;
+    use halo2_middleware::circuit::{Advice, Any, ChallengeMid};
     use halo2_middleware::poly::Rotation;
     use halo2curves::pasta::pallas::{Affine, Scalar};
 
     use super::*;
 
-    fn check(calc: Option<Calculation>, expr: Option<Expression<Scalar>>, expected: i64) {
+    fn check(calc: Option<Calculation>, expr: Option<ExpressionBack<Scalar>>, expected: i64) {
         let lagranges = |v: &[&[u64]]| -> Vec<Polynomial<Scalar, LagrangeCoeff>> {
             v.iter()
                 .map(|vv| {
@@ -956,7 +942,7 @@ mod test {
             expected, result
         );
     }
-    fn check_expr(expr: Expression<Scalar>, expected: i64) {
+    fn check_expr(expr: ExpressionBack<Scalar>, expected: i64) {
         check(None, Some(expr), expected);
     }
     fn check_calc(calc: Calculation, expected: i64) {
@@ -965,41 +951,44 @@ mod test {
 
     #[test]
     fn graphevaluator_values() {
+        use VarBack::*;
         // Check values
         for (col, rot, expected) in [(0, 0, 2), (0, 1, 3), (1, 0, 1002), (1, 1, 1003)] {
             check_expr(
-                Expression::Fixed(FixedQuery {
-                    index: None,
+                ExpressionBack::Var(Query(QueryBack {
+                    index: 0,
                     column_index: col,
+                    column_type: Any::Fixed,
                     rotation: Rotation(rot),
-                }),
+                })),
                 expected,
             );
         }
         for (col, rot, expected) in [(0, 0, 4), (0, 1, 5), (1, 0, 1004), (1, 1, 1005)] {
             check_expr(
-                Expression::Advice(AdviceQuery {
-                    index: None,
+                ExpressionBack::Var(Query(QueryBack {
+                    index: 0,
                     column_index: col,
+                    column_type: Any::Advice(Advice { phase: 0 }),
                     rotation: Rotation(rot),
-                    phase: Phase(0),
-                }),
+                })),
                 expected,
             );
         }
         for (col, rot, expected) in [(0, 0, 6), (0, 1, 7), (1, 0, 1006), (1, 1, 1007)] {
             check_expr(
-                Expression::Instance(InstanceQuery {
-                    index: None,
+                ExpressionBack::Var(Query(QueryBack {
+                    index: 0,
                     column_index: col,
+                    column_type: Any::Instance,
                     rotation: Rotation(rot),
-                }),
+                })),
                 expected,
             );
         }
         for (ch, expected) in [(0, 8), (1, 9)] {
             check_expr(
-                Expression::Challenge(Challenge::from(ChallengeMid {
+                ExpressionBack::Var(Challenge(ChallengeMid {
                     index: ch,
                     phase: 0,
                 })),
@@ -1016,28 +1005,31 @@ mod test {
 
     #[test]
     fn graphevaluator_expr_operations() {
+        use VarBack::*;
         // Check expression operations
         let two = || {
-            Box::new(Expression::<Scalar>::Fixed(FixedQuery {
-                index: None,
+            Box::new(ExpressionBack::<Scalar>::Var(Query(QueryBack {
+                index: 0,
                 column_index: 0,
+                column_type: Any::Fixed,
                 rotation: Rotation(0),
-            }))
+            })))
         };
 
         let three = || {
-            Box::new(Expression::<Scalar>::Fixed(FixedQuery {
-                index: None,
+            Box::new(ExpressionBack::<Scalar>::Var(Query(QueryBack {
+                index: 0,
                 column_index: 0,
+                column_type: Any::Fixed,
                 rotation: Rotation(1),
-            }))
+            })))
         };
 
-        check_expr(Expression::Sum(two(), three()), 5);
-        check_expr(Expression::Product(two(), three()), 6);
-        check_expr(Expression::Scaled(two(), Scalar::from(5)), 10);
+        check_expr(ExpressionBack::Sum(two(), three()), 5);
+        check_expr(ExpressionBack::Product(two(), three()), 6);
+        check_expr(ExpressionBack::Scaled(two(), Scalar::from(5)), 10);
         check_expr(
-            Expression::Sum(Expression::Negated(two()).into(), three()),
+            ExpressionBack::Sum(ExpressionBack::Negated(two()).into(), three()),
             1,
         );
     }

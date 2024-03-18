@@ -1,7 +1,7 @@
 use std::{collections::HashMap, iter};
 
+use crate::plonk::Error;
 use group::Curve;
-use halo2_common::plonk::Error;
 use halo2_middleware::ff::Field;
 use rand_chacha::ChaCha20Rng;
 use rand_core::{RngCore, SeedableRng};

@@ -47,17 +47,22 @@ fn criterion_benchmark(c: &mut Criterion) {
             &self,
             layouter: &mut impl Layouter<FF>,
             f: F,
-        ) -> Result<(Cell, Cell, Cell), Error>
+        ) -> Result<(Cell, Cell, Cell), ErrorFront>
         where
             F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>;
         fn raw_add<F>(
             &self,
             layouter: &mut impl Layouter<FF>,
             f: F,
-        ) -> Result<(Cell, Cell, Cell), Error>
+        ) -> Result<(Cell, Cell, Cell), ErrorFront>
         where
             F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>;
-        fn copy(&self, layouter: &mut impl Layouter<FF>, a: Cell, b: Cell) -> Result<(), Error>;
+        fn copy(
+            &self,
+            layouter: &mut impl Layouter<FF>,
+            a: Cell,
+            b: Cell,
+        ) -> Result<(), ErrorFront>;
     }
 
     #[derive(Clone)]
@@ -85,7 +90,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             &self,
             layouter: &mut impl Layouter<FF>,
             mut f: F,
-        ) -> Result<(Cell, Cell, Cell), Error>
+        ) -> Result<(Cell, Cell, Cell), ErrorFront>
         where
             F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>,
         {
@@ -127,7 +132,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             &self,
             layouter: &mut impl Layouter<FF>,
             mut f: F,
-        ) -> Result<(Cell, Cell, Cell), Error>
+        ) -> Result<(Cell, Cell, Cell), ErrorFront>
         where
             F: FnMut() -> Value<(Assigned<FF>, Assigned<FF>, Assigned<FF>)>,
         {
@@ -175,7 +180,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             layouter: &mut impl Layouter<FF>,
             left: Cell,
             right: Cell,
-        ) -> Result<(), Error> {
+        ) -> Result<(), ErrorFront> {
             layouter.assign_region(|| "copy", |mut region| region.constrain_equal(left, right))
         }
     }
@@ -237,7 +242,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             &self,
             config: PlonkConfig,
             mut layouter: impl Layouter<F>,
-        ) -> Result<(), Error> {
+        ) -> Result<(), ErrorFront> {
             let cs = StandardPlonk::new(config);
 
             for _ in 0..((1 << (self.k - 1)) - 3) {

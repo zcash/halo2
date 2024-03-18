@@ -4,14 +4,14 @@ use halo2_middleware::ff::{Field, PrimeField};
 use super::{Argument, ProvingKey, VerifyingKey};
 use crate::{
     arithmetic::{parallelize, CurveAffine},
+    plonk::Error,
     poly::{
         commitment::{Blind, Params},
         EvaluationDomain,
     },
 };
-use halo2_common::plonk::Error;
 use halo2_middleware::circuit::ColumnMid;
-use halo2_middleware::permutation::{ArgumentV2, AssemblyMid};
+use halo2_middleware::permutation::{ArgumentMid, AssemblyMid};
 
 // NOTE: Temporarily disabled thread-safe-region feature.  Regions are a frontend concept, so the
 // thread-safe support for them should be only in the frontend package.
@@ -44,10 +44,10 @@ pub struct Assembly {
 impl Assembly {
     pub(crate) fn new_from_assembly_mid(
         n: usize,
-        p: &ArgumentV2,
+        p: &ArgumentMid,
         a: &AssemblyMid,
     ) -> Result<Self, Error> {
-        let mut assembly = Self::new(n, &p.clone().into());
+        let mut assembly = Self::new(n, &p.clone());
         for copy in &a.copies {
             assembly.copy(copy.0.column, copy.0.row, copy.1.column, copy.1.row)?;
         }
@@ -67,7 +67,7 @@ impl Assembly {
         // in a 1-cycle; therefore mapping and aux are identical, because every cell is
         // its own distinguished element.
         Assembly {
-            columns: p.columns.clone().into_iter().map(|c| c.into()).collect(),
+            columns: p.columns.clone(),
             mapping: columns.clone(),
             aux: columns,
             sizes: vec![vec![1usize; n]; p.columns.len()],
@@ -85,12 +85,12 @@ impl Assembly {
             .columns
             .iter()
             .position(|c| c == &left_column)
-            .ok_or(Error::ColumnNotInPermutation(left_column.into()))?;
+            .ok_or(Error::ColumnNotInPermutation(left_column))?;
         let right_column = self
             .columns
             .iter()
             .position(|c| c == &right_column)
-            .ok_or(Error::ColumnNotInPermutation(right_column.into()))?;
+            .ok_or(Error::ColumnNotInPermutation(right_column))?;
 
         // Check bounds
         if left_row >= self.mapping[left_column].len()

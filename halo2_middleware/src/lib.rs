@@ -1,4 +1,5 @@
 pub mod circuit;
+pub mod expression;
 pub mod lookup;
 pub mod metadata;
 pub mod permutation;

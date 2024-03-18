@@ -1,11 +1,10 @@
 use std::iter;
 
-use halo2_common::plonk::Error;
 use halo2_middleware::ff::Field;
 
 use crate::{
     arithmetic::CurveAffine,
-    plonk::{ChallengeX, ChallengeY, VerifyingKey},
+    plonk::{ChallengeX, ChallengeY, Error, VerifyingKey},
     poly::{
         commitment::{Params, MSM},
         VerifierQuery,

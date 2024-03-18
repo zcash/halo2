@@ -48,6 +48,7 @@ halo2_frontend = { path = "../halo2_frontend" }
 halo2curves = { version = "0.6.0", default-features = false }
 rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
 plotters = { version = "0.3.0", default-features = false, optional = true }
+group = "0.13"
 
 [dev-dependencies]
 ff = "0.13"
@@ -76,11 +77,11 @@ test-dev-graph = [
     "plotters/ttf"
 ]
 bits = ["halo2curves/bits"]
-gadget-traces = ["halo2_common/gadget-traces"]
+gadget-traces = []
 thread-safe-region = []
 sanity-checks = []
 batch = ["rand_core/getrandom"]
-circuit-params = ["halo2_common/circuit-params", "halo2_frontend/circuit-params", "halo2_backend/circuit-params"]
+circuit-params = ["halo2_common/circuit-params", "halo2_frontend/circuit-params"]
 heap-profiling = []
 cost-estimator = ["halo2_frontend/cost-estimator"]
 derive_serde = ["halo2curves/derive_serde"]

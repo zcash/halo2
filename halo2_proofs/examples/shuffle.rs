@@ -145,7 +145,7 @@ impl<F: Field, const W: usize, const H: usize> Circuit<F> for MyCircuit<F, W, H>
         &self,
         config: Self::Config,
         mut layouter: impl Layouter<F>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ErrorFront> {
         let theta = layouter.get_challenge(config.theta);
         let gamma = layouter.get_challenge(config.gamma);
 

@@ -7,7 +7,7 @@ pub struct AssemblyMid {
 
 /// A permutation argument.
 #[derive(Debug, Clone)]
-pub struct ArgumentV2 {
+pub struct ArgumentMid {
     /// A sequence of columns involved in the argument.
     pub columns: Vec<ColumnMid>,
 }

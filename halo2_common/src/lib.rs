@@ -6,12 +6,11 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(unsafe_code)]
 
-pub mod circuit;
-pub use halo2curves;
+pub mod helpers;
 pub mod multicore;
 pub mod plonk;
 
-pub mod helpers;
+pub use halo2curves;
 pub use helpers::SerdeFormat;
 
 // TODO: Everything that is moved from this crate to frontend or backend should recover the

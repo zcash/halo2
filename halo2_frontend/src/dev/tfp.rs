@@ -3,12 +3,12 @@ use std::{fmt, marker::PhantomData};
 use halo2_middleware::ff::Field;
 use tracing::{debug, debug_span, span::EnteredSpan};
 
-use halo2_common::circuit::{
+use crate::circuit::{
     layouter::{RegionLayouter, SyncDeps},
     AssignedCell, Cell, Layouter, Region, Table, Value,
 };
-use halo2_common::plonk::{
-    circuit::{Challenge, Column},
+use crate::plonk::{
+    circuit::expression::{Challenge, Column},
     Assigned, Assignment, Circuit, ConstraintSystem, Error, FloorPlanner, Selector,
 };
 use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
@@ -32,8 +32,6 @@ use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
 /// use halo2_frontend::{
 ///     circuit::{floor_planner, Layouter, Value},
 ///     dev::TracingFloorPlanner,
-/// };
-/// use halo2_common::{
 ///     plonk::{Circuit, ConstraintSystem, Error},
 /// };
 ///

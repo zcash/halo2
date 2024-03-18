@@ -7,8 +7,8 @@ use ff::Field;
 use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
     plonk::{
-        create_proof, keygen_pk, keygen_vk, verify_proof, Advice, Circuit, Column,
-        ConstraintSystem, Error, Fixed, Instance, ProvingKey,
+        create_proof, keygen_pk, keygen_vk_custom, pk_read, verify_proof, Advice, Circuit, Column,
+        ConstraintSystem, ErrorFront, Fixed, Instance,
     },
     poly::{
         kzg::{
@@ -101,7 +101,7 @@ impl Circuit<Fr> for StandardPlonk {
         &self,
         config: Self::Config,
         mut layouter: impl Layouter<Fr>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ErrorFront> {
         layouter.assign_region(
             || "",
             |mut region| {
@@ -132,7 +132,8 @@ fn main() {
     let k = 4;
     let circuit = StandardPlonk(Fr::random(OsRng));
     let params = ParamsKZG::<Bn256>::setup(k, OsRng);
-    let vk = keygen_vk(&params, &circuit).expect("vk should not fail");
+    let compress_selectors = true;
+    let vk = keygen_vk_custom(&params, &circuit, compress_selectors).expect("vk should not fail");
     let pk = keygen_pk(&params, vk, &circuit).expect("pk should not fail");
 
     let f = File::create("serialization-test.pk").unwrap();
@@ -143,9 +144,10 @@ fn main() {
     let f = File::open("serialization-test.pk").unwrap();
     let mut reader = BufReader::new(f);
     #[allow(clippy::unit_arg)]
-    let pk = ProvingKey::<G1Affine>::read::<_, StandardPlonk>(
+    let pk = pk_read::<G1Affine, _, StandardPlonk>(
         &mut reader,
         SerdeFormat::RawBytes,
+        compress_selectors,
         #[cfg(feature = "circuit-params")]
         circuit.params(),
     )

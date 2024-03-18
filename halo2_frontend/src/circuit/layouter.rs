@@ -9,7 +9,7 @@ use halo2_middleware::ff::Field;
 pub use super::table_layouter::TableLayouter;
 use super::{Cell, RegionIndex, Value};
 use crate::plonk::Assigned;
-use crate::plonk::{circuit::Column, Error, Selector};
+use crate::plonk::{Column, Error, Selector};
 use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
 
 /// Intermediate trait requirements for [`RegionLayouter`] when thread-safe regions are enabled.

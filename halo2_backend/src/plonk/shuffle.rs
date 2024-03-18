@@ -1,4 +1,4 @@
 pub(crate) mod prover;
 pub(crate) mod verifier;
 
-pub use halo2_common::plonk::shuffle::Argument;
+use crate::plonk::circuit::ShuffleArgumentBack as Argument;

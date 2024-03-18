@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use halo2_proofs::{
     arithmetic::Field,
     circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner, Value},
-    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Instance, Selector},
+    plonk::{Advice, Circuit, Column, ConstraintSystem, ErrorFront, Instance, Selector},
     poly::Rotation,
 };
 
@@ -17,7 +17,7 @@ trait NumericInstructions<F: Field>: Chip<F> {
         &self,
         layouter: impl Layouter<F>,
         a: &[Value<F>],
-    ) -> Result<Vec<Self::Num>, Error>;
+    ) -> Result<Vec<Self::Num>, ErrorFront>;
 
     /// Returns `c = a * b`. The caller is responsible for ensuring that `a.len() == b.len()`.
     fn mul(
@@ -25,7 +25,7 @@ trait NumericInstructions<F: Field>: Chip<F> {
         layouter: impl Layouter<F>,
         a: &[Self::Num],
         b: &[Self::Num],
-    ) -> Result<Vec<Self::Num>, Error>;
+    ) -> Result<Vec<Self::Num>, ErrorFront>;
 
     /// Exposes a number as a public input to the circuit.
     fn expose_public(
@@ -33,7 +33,7 @@ trait NumericInstructions<F: Field>: Chip<F> {
         layouter: impl Layouter<F>,
         num: &Self::Num,
         row: usize,
-    ) -> Result<(), Error>;
+    ) -> Result<(), ErrorFront>;
 }
 // ANCHOR_END: instructions
 
@@ -150,7 +150,7 @@ impl<F: Field> NumericInstructions<F> for FieldChip<F> {
         &self,
         mut layouter: impl Layouter<F>,
         values: &[Value<F>],
-    ) -> Result<Vec<Self::Num>, Error> {
+    ) -> Result<Vec<Self::Num>, ErrorFront> {
         let config = self.config();
 
         layouter.assign_region(
@@ -174,7 +174,7 @@ impl<F: Field> NumericInstructions<F> for FieldChip<F> {
         mut layouter: impl Layouter<F>,
         a: &[Self::Num],
         b: &[Self::Num],
-    ) -> Result<Vec<Self::Num>, Error> {
+    ) -> Result<Vec<Self::Num>, ErrorFront> {
         let config = self.config();
         assert_eq!(a.len(), b.len());
 
@@ -208,7 +208,7 @@ impl<F: Field> NumericInstructions<F> for FieldChip<F> {
         mut layouter: impl Layouter<F>,
         num: &Self::Num,
         row: usize,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ErrorFront> {
         let config = self.config();
 
         layouter.constrain_instance(num.0.cell(), config.instance, row)
@@ -257,7 +257,7 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
         &self,
         config: Self::Config,
         mut layouter: impl Layouter<F>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ErrorFront> {
         let field_chip = FieldChip::<F>::construct(config);
 
         // Load our private values into the circuit.

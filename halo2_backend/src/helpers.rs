@@ -3,7 +3,7 @@ pub(crate) use halo2_common::helpers::{SerdeFormat, SerdePrimeField};
 use halo2_middleware::ff::PrimeField;
 use std::io;
 
-pub(crate) use halo2_common::helpers::{pack, unpack, CurveRead, SerdeCurveAffine};
+pub(crate) use halo2_common::helpers::{CurveRead, SerdeCurveAffine};
 
 /// Reads a vector of polynomials from buffer
 pub(crate) fn read_polynomial_vec<R: io::Read, F: SerdePrimeField, B>(

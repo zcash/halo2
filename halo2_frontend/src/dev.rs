@@ -6,24 +6,21 @@ use std::iter;
 use std::ops::{Add, Mul, Neg, Range};
 
 use blake2b_simd::blake2b;
-use halo2_middleware::ff::Field;
-use halo2_middleware::ff::FromUniformBytes;
 
-use halo2_common::{
+use crate::{
     circuit,
     plonk::{
-        circuit::{Challenge, Column},
         permutation,
         sealed::{self, SealedPhase},
-        Assigned, Assignment, Circuit, ConstraintSystem, Error, Expression, FirstPhase,
-        FloorPlanner, Phase, Selector,
+        Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error, Expression,
+        FirstPhase, FloorPlanner, Phase, Selector,
     },
 };
-use halo2_middleware::circuit::{Advice, Any, ColumnMid, Fixed, Instance};
-
 use halo2_common::multicore::{
     IntoParallelIterator, IntoParallelRefIterator, ParallelIterator, ParallelSliceMut,
 };
+use halo2_middleware::circuit::{Advice, Any, ColumnMid, Fixed, Instance};
+use halo2_middleware::ff::{Field, FromUniformBytes};
 
 pub mod metadata;
 use metadata::Column as ColumnMetadata;
@@ -215,8 +212,6 @@ impl<F: Field> Mul<F> for Value<F> {
 /// use halo2_frontend::{
 ///     circuit::{Layouter, SimpleFloorPlanner, Value},
 ///     dev::{FailureLocation, MockProver, VerifyFailure},
-/// };
-/// use halo2_common::{
 ///     plonk::{circuit::Column, Circuit, ConstraintSystem, Error, Selector},
 /// };
 /// use halo2_middleware::circuit::{Advice, Any};
@@ -576,7 +571,7 @@ impl<F: Field> Assignment<F> for MockProver<F> {
         left_row: usize,
         right_column: Column<Any>,
         right_row: usize,
-    ) -> Result<(), halo2_common::plonk::Error> {
+    ) -> Result<(), crate::plonk::Error> {
         if !self.in_phase(FirstPhase) {
             return Ok(());
         }
@@ -744,7 +739,8 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
             )?;
         }
 
-        let (cs, selector_polys) = prover.cs.compress_selectors(prover.selectors.clone());
+        let (cs, selectors_to_fixed) = prover.cs.selectors_to_fixed_compressed();
+        let selector_polys = selectors_to_fixed.convert(prover.selectors.clone());
         prover.cs = cs;
         prover.fixed.extend(selector_polys.into_iter().map(|poly| {
             let mut v = vec![CellValue::Unassigned; n];
@@ -1290,8 +1286,8 @@ mod tests {
 
     use super::{FailureLocation, MockProver, VerifyFailure};
     use crate::circuit::{Layouter, SimpleFloorPlanner, Value};
-    use halo2_common::plonk::{
-        circuit::Column, Circuit, ConstraintSystem, Error, Expression, Selector, TableColumn,
+    use crate::plonk::{
+        Circuit, Column, ConstraintSystem, Error, Expression, Selector, TableColumn,
     };
     use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
     use halo2_middleware::poly::Rotation;

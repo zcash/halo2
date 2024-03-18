@@ -15,8 +15,8 @@ pub mod plonk;
 
 /// Traits and structs for implementing circuit components.
 pub mod circuit {
-    pub use halo2_common::circuit::floor_planner;
-    pub use halo2_common::circuit::{
+    pub use halo2_frontend::circuit::floor_planner;
+    pub use halo2_frontend::circuit::{
         AssignedCell, Cell, Chip, Layouter, Region, SimpleFloorPlanner, Value,
     };
 }
@@ -47,8 +47,8 @@ pub mod poly {
 /// transcripts.
 pub mod transcript {
     pub use halo2_backend::transcript::{
-        Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge, TranscriptReadBuffer,
-        TranscriptWriterBuffer,
+        Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge, TranscriptRead,
+        TranscriptReadBuffer, TranscriptWrite, TranscriptWriterBuffer,
     };
 }
 mod helpers {

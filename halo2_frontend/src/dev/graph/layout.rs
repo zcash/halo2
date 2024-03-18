@@ -6,8 +6,8 @@ use plotters::{
 use std::collections::HashSet;
 use std::ops::Range;
 
+use crate::plonk::{Circuit, Column, ConstraintSystem, FloorPlanner};
 use crate::{circuit::layouter::RegionColumn, dev::cost::Layout};
-use halo2_common::plonk::{circuit::Column, Circuit, ConstraintSystem, FloorPlanner};
 use halo2_middleware::circuit::Any;
 
 /// Graphical renderer for circuit layouts.
@@ -104,7 +104,8 @@ impl CircuitLayout {
             cs.constants.clone(),
         )
         .unwrap();
-        let (cs, selector_polys) = cs.compress_selectors(layout.selectors);
+        let (cs, selectors_to_fixed) = cs.selectors_to_fixed_compressed();
+        let selector_polys = selectors_to_fixed.convert::<F>(layout.selectors);
         let non_selector_fixed_columns = cs.num_fixed_columns - selector_polys.len();
 
         // Figure out what order to render the columns in.
