@@ -138,3 +138,38 @@ For some use cases that want to keep configured `ConstraintSystem` unchanged the
 ## `Evaluator` and `evaluate_h`
 
 They are introduced to improve quotient computation speed and memory usage for circuit with complicated `Expression`.
+
+## Modular design (frontend-backend split)
+
+The halo2 implementation has been split into two separate parts: the frontend
+and the backend, following these definitions:
+- frontend: allows the user to specify the circuit logic and its satisfying
+  witness. It must provide a way to translate this logic into a low level
+  arithmetization format specified in the middleware module.
+- backend: the proving system implementation that receives the middleware
+  circuit arithmetization and performs the following tasks:
+  - Generate the setup (proving and verifying keys)
+  - Generate a proof (with witness as input)
+  - Verify a proof
+
+A note on naming: "halo2" can mean different things:
+- halo2 proof system, the protocol
+- halo2 proof system implementation, the backend
+- halo2 circuit library, the frontend (includes the halo2 circuit API, the
+  layouter, the selector to fixed column transformation, etc.)
+- halo2 full-stack, the proof system full stack (the combination of the backend
+  and frontend)
+
+Currently the backend implements the "original" halo2 proof system extended
+with the features discussed in this document.  Nevertheless, the public
+interface that the backend uses is generic for plonkish arithmetization.  This
+allows for alternative frontend implementations as well as alternative plonkish
+proof system implementations.  The middleware contains the type definitions
+used to connect the frontend and backend.
+
+Summary of crates:
+- `halo2_frontend`: library used to define circuits and calculate their witness.
+- `halo2_backend`: implementation of the halo2 proof system (the protocol).
+- `halo2_middleware`: type definitions used to interface the backend with the frontend.
+- `halo2_proofs`: legacy API built by re-exporting from the frontend and
+  backend as well as function wrappers.
