@@ -188,7 +188,7 @@ pub struct Evaluator<C: CurveAffine> {
 /// Computations can be added in two ways:
 ///
 /// - using [`Self::add_expression`] where expressions are added and internally turned into a graph.
-///   A reference to the computation is returned in the form of [ `ValueSource::Itermediate`] reference
+///   A reference to the computation is returned in the form of [ `ValueSource::Intermediate`] reference
 ///   index.
 /// - using [`Self::add_calculation`] where you can add only a single operation or a
 ///   [Horner polynomial evaluation](https://en.wikipedia.org/wiki/Horner's_method) by using
@@ -217,7 +217,7 @@ struct EvaluationData<C: CurveAffine> {
     rotations: Vec<usize>,
 }
 
-/// CalculationInfo contains a calculation to perform and in [`target`] the [`EvaluationData::intermediate`] where the value is going to be stored.  
+/// CalculationInfo contains a calculation to perform and in [`Self::target`] the [`EvaluationData::intermediates`] where the value is going to be stored.  
 #[derive(Clone, Debug)]
 struct CalculationInfo {
     /// Calculation

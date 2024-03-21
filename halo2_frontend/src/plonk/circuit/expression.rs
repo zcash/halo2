@@ -372,7 +372,7 @@ impl InstanceQuery {
 ///
 /// A lookup table can be loaded into this column via [`Layouter::assign_table`]. Columns
 /// can currently only contain a single table, but they may be used in multiple lookup
-/// arguments via [`ConstraintSystem::lookup`].
+/// arguments via [`super::constraint_system::ConstraintSystem::lookup`].
 ///
 /// Lookup table columns are always "encumbered" by the lookup arguments they are used in;
 /// they cannot simultaneously be used as general fixed columns.

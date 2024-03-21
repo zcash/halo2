@@ -475,7 +475,7 @@ impl<
     /// - 10. Compute and hash instance evals for the circuit instance
     /// - 11. Compute and hash fixed evals
     /// - 12. Evaluate permutation, lookups and shuffles at x
-    /// - 13. Generate all queries ([`PowerQuery`])
+    /// - 13. Generate all queries ([`ProverQuery`])
     /// - 14. Send the queries to the [`Prover`]  
     pub fn create_proof(mut self) -> Result<(), Error>
     where
@@ -779,7 +779,7 @@ impl<
                 })
                 .collect::<Result<Vec<_>, _>>()?;
 
-        // 13. Generate all queries ([`PowerQuery`]) that needs to be sent to prover  --------------------
+        // 13. Generate all queries ([`ProverQuery`]) that needs to be sent to prover  --------------------
 
         let queries = instances
             // group the instance, advice, permutation, lookups and shuffles

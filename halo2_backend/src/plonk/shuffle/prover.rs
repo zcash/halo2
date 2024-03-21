@@ -90,8 +90,8 @@ where
 
 /// Given a Shuffle with input expressions and table expressions this method
 /// constructs the grand product polynomial over the shuffle.
-/// The grand product polynomial is used to populate the Product<C> struct.
-/// The Product<C> struct is added to the Shuffle and finally returned by the method.
+/// The grand product polynomial is used to populate the [`Committed<C>`] struct.
+/// The [`Committed<C>`] struct is added to the Shuffle and finally returned by the method.
 #[allow(clippy::too_many_arguments)]
 pub(in crate::plonk) fn shuffle_commit_product<
     'a,
