@@ -1,5 +1,6 @@
 use std::{fmt, marker::PhantomData};
 
+use halo2_middleware::circuit::Any;
 use halo2_middleware::ff::Field;
 use tracing::{debug, debug_span, span::EnteredSpan};
 
@@ -9,9 +10,9 @@ use crate::circuit::{
 };
 use crate::plonk::{
     circuit::expression::{Challenge, Column},
-    Assigned, Assignment, Circuit, ConstraintSystem, Error, FloorPlanner, Selector,
+    Advice, Assigned, Assignment, Circuit, ConstraintSystem, Error, Fixed, FloorPlanner, Instance,
+    Selector,
 };
-use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
 
 /// A helper type that augments a [`FloorPlanner`] with [`tracing`] spans and events.
 ///

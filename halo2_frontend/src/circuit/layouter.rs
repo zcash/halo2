@@ -4,13 +4,13 @@ use std::cmp;
 use std::collections::HashSet;
 use std::fmt;
 
+use halo2_middleware::circuit::Any;
 use halo2_middleware::ff::Field;
 
 pub use super::table_layouter::TableLayouter;
 use super::{Cell, RegionIndex, Value};
 use crate::plonk::Assigned;
-use crate::plonk::{Column, Error, Selector};
-use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
+use crate::plonk::{Advice, Column, Error, Fixed, Instance, Selector};
 
 /// Intermediate trait requirements for [`RegionLayouter`] when thread-safe regions are enabled.
 #[cfg(feature = "thread-safe-region")]

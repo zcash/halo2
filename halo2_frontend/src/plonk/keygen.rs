@@ -1,10 +1,12 @@
 use std::ops::Range;
 
+use halo2_middleware::circuit::Any;
 use halo2_middleware::ff::Field;
 
 use crate::circuit::Value;
-use crate::plonk::{permutation, Assigned, Assignment, Challenge, Column, Error, Selector};
-use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
+use crate::plonk::{
+    permutation, Advice, Assigned, Assignment, Challenge, Column, Error, Fixed, Instance, Selector,
+};
 
 /// Assembly to be used in circuit synthesis.
 #[derive(Debug)]

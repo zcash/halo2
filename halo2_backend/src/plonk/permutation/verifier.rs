@@ -160,7 +160,7 @@ impl<C: CurveAffine> Evaluated<C> {
                         for (eval, permutation_eval) in columns
                             .iter()
                             .map(|&column| match column.column_type {
-                                Any::Advice(_) => {
+                                Any::Advice => {
                                     advice_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
                                 }
                                 Any::Fixed => {
@@ -181,7 +181,7 @@ impl<C: CurveAffine> Evaluated<C> {
                             * (<C::Scalar as PrimeField>::DELTA
                                 .pow_vartime([(chunk_index * chunk_len) as u64]));
                         for eval in columns.iter().map(|&column| match column.column_type {
-                            Any::Advice(_) => {
+                            Any::Advice => {
                                 advice_evals[vk.cs.get_any_query_index(column, Rotation::cur())]
                             }
                             Any::Fixed => {

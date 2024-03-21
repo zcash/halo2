@@ -1,14 +1,10 @@
 use crate::circuit::Region;
-use crate::plonk::circuit::VirtualCells;
+use crate::plonk::circuit::{Advice, ColumnType, Fixed, Instance, VirtualCells};
 use crate::plonk::Error;
 use core::cmp::max;
 use core::ops::{Add, Mul};
-use halo2_middleware::circuit::{
-    Advice, Any, ChallengeMid, ColumnMid, ColumnType, ExpressionMid, Fixed, Instance, QueryMid,
-    VarMid,
-};
+use halo2_middleware::circuit::{Any, ChallengeMid, ColumnMid, ExpressionMid, QueryMid, VarMid};
 use halo2_middleware::ff::Field;
-use halo2_middleware::metadata;
 use halo2_middleware::poly::Rotation;
 use sealed::SealedPhase;
 use std::fmt::Debug;
@@ -25,11 +21,11 @@ pub struct Column<C: ColumnType> {
     pub column_type: C,
 }
 
-impl From<Column<Any>> for metadata::Column {
+impl From<Column<Any>> for ColumnMid {
     fn from(val: Column<Any>) -> Self {
-        metadata::Column {
+        ColumnMid {
             index: val.index(),
-            column_type: *val.column_type(),
+            column_type: (*val.column_type()),
         }
     }
 }
@@ -51,28 +47,7 @@ impl<C: ColumnType> Column<C> {
 
     /// Return expression from column at a relative position
     pub fn query_cell<F: Field>(&self, at: Rotation) -> Expression<F> {
-        let expr_mid = self.column_type.query_cell::<F>(self.index, at);
-        match expr_mid {
-            ExpressionMid::Var(VarMid::Query(q)) => match q.column_type {
-                Any::Advice(Advice { phase }) => Expression::Advice(AdviceQuery {
-                    index: None,
-                    column_index: q.column_index,
-                    rotation: q.rotation,
-                    phase: sealed::Phase(phase),
-                }),
-                Any::Fixed => Expression::Fixed(FixedQuery {
-                    index: None,
-                    column_index: q.column_index,
-                    rotation: q.rotation,
-                }),
-                Any::Instance => Expression::Instance(InstanceQuery {
-                    index: None,
-                    column_index: q.column_index,
-                    rotation: q.rotation,
-                }),
-            },
-            _ => unreachable!(),
-        }
+        self.column_type.query_cell(self.index, at)
     }
 
     /// Return expression from column at the current row
@@ -123,20 +98,11 @@ impl From<ColumnMid> for Column<Any> {
     }
 }
 
-impl From<Column<Any>> for ColumnMid {
-    fn from(val: Column<Any>) -> Self {
-        ColumnMid {
-            index: val.index(),
-            column_type: *val.column_type(),
-        }
-    }
-}
-
 impl From<Column<Advice>> for Column<Any> {
     fn from(advice: Column<Advice>) -> Column<Any> {
         Column {
             index: advice.index(),
-            column_type: Any::Advice(advice.column_type),
+            column_type: Any::Advice,
         }
     }
 }
@@ -164,9 +130,9 @@ impl TryFrom<Column<Any>> for Column<Advice> {
 
     fn try_from(any: Column<Any>) -> Result<Self, Self::Error> {
         match any.column_type() {
-            Any::Advice(advice) => Ok(Column {
+            Any::Advice => Ok(Column {
                 index: any.index(),
-                column_type: *advice,
+                column_type: Advice,
             }),
             _ => Err("Cannot convert into Column<Advice>"),
         }
@@ -286,11 +252,9 @@ impl SealedPhase for ThirdPhase {
 /// Selectors are disabled on all rows by default, and must be explicitly enabled on each
 /// row when required:
 /// ```
-/// use halo2_middleware::circuit::Advice;
 /// use halo2_frontend::circuit::{Chip, Layouter, Value};
-/// use halo2_frontend::plonk::{Error, Column, Selector};
+/// use halo2_frontend::plonk::{Advice, Fixed, Error, Column, Selector};
 /// use halo2_middleware::ff::Field;
-/// # use halo2_middleware::circuit::Fixed;
 ///
 /// struct Config {
 ///     a: Column<Advice>,
@@ -367,8 +331,6 @@ pub struct AdviceQuery {
     pub column_index: usize,
     /// Rotation of this query
     pub rotation: Rotation,
-    /// Phase of this advice column
-    pub phase: sealed::Phase,
 }
 
 impl AdviceQuery {
@@ -380,11 +342,6 @@ impl AdviceQuery {
     /// Rotation of this query
     pub fn rotation(&self) -> Rotation {
         self.rotation
-    }
-
-    /// Phase of this advice column
-    pub fn phase(&self) -> u8 {
-        self.phase.0
     }
 }
 
@@ -524,11 +481,10 @@ impl<F> From<Expression<F>> for ExpressionMid<F> {
             Expression::Advice(AdviceQuery {
                 column_index,
                 rotation,
-                phase,
                 ..
             }) => ExpressionMid::Var(VarMid::Query(QueryMid {
                 column_index,
-                column_type: Any::Advice(Advice { phase: phase.0 }),
+                column_type: Any::Advice,
                 rotation,
             })),
             Expression::Instance(InstanceQuery {
@@ -577,9 +533,7 @@ impl<F: Field> Expression<F> {
                 if query.index.is_none() {
                     let col = Column {
                         index: query.column_index,
-                        column_type: Advice {
-                            phase: query.phase.0,
-                        },
+                        column_type: Advice,
                     };
                     cells.queried_cells.push((col, query.rotation).into());
                     query.index = Some(cells.meta.query_advice_index(col, query.rotation));
@@ -1018,10 +972,6 @@ impl<F: std::fmt::Debug> std::fmt::Debug for Expression<F> {
                 debug_struct
                     .field("column_index", &query.column_index)
                     .field("rotation", &query.rotation);
-                // Only show advice's phase if it's not in first phase.
-                if query.phase != FirstPhase.to_sealed() {
-                    debug_struct.field("phase", &query.phase);
-                }
                 debug_struct.finish()
             }
             Expression::Instance(query) => {

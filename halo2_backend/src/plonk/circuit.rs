@@ -181,7 +181,7 @@ impl<F: Field> ConstraintSystemBack<F> {
 
     pub fn get_any_query_index(&self, column: ColumnMid, at: Rotation) -> usize {
         let queries = match column.column_type {
-            Any::Advice(_) => &self.advice_queries,
+            Any::Advice => &self.advice_queries,
             Any::Fixed => &self.fixed_queries,
             Any::Instance => &self.instance_queries,
         };

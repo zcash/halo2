@@ -4,10 +4,10 @@ use crate::plonk;
 use crate::plonk::{
     permutation,
     sealed::{self, SealedPhase},
-    Assignment, Circuit, ConstraintSystem, FirstPhase, FloorPlanner, SecondPhase, SelectorsToFixed,
-    ThirdPhase,
+    Advice, Assignment, Circuit, ConstraintSystem, FirstPhase, Fixed, FloorPlanner, Instance,
+    SecondPhase, SelectorsToFixed, ThirdPhase,
 };
-use halo2_middleware::circuit::{Advice, Any, CompiledCircuitV2, Fixed, Instance, PreprocessingV2};
+use halo2_middleware::circuit::{Any, CompiledCircuitV2, PreprocessingV2};
 use halo2_middleware::ff::{BatchInvert, Field};
 use std::collections::BTreeSet;
 use std::collections::HashMap;
@@ -130,14 +130,13 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
 }
 
 pub struct WitnessCollection<'a, F: Field> {
-    pub k: u32,
-    pub current_phase: sealed::Phase,
-    pub advice: Vec<Vec<Assigned<F>>>,
-    // pub unblinded_advice: HashSet<usize>,
-    pub challenges: &'a HashMap<usize, F>,
-    pub instances: &'a [&'a [F]],
-    pub usable_rows: RangeTo<usize>,
-    pub _marker: std::marker::PhantomData<F>,
+    k: u32,
+    current_phase: sealed::Phase,
+    advice_column_phase: &'a Vec<sealed::Phase>,
+    advice: Vec<Vec<Assigned<F>>>,
+    challenges: &'a HashMap<usize, F>,
+    instances: &'a [&'a [F]],
+    usable_rows: RangeTo<usize>,
 }
 
 impl<'a, F: Field> Assignment<F> for WitnessCollection<'a, F> {
@@ -197,7 +196,8 @@ impl<'a, F: Field> Assignment<F> for WitnessCollection<'a, F> {
         AR: Into<String>,
     {
         // Ignore assignment of advice column in different phase than current one.
-        if self.current_phase.0 != column.column_type().phase {
+        let phase = self.advice_column_phase[column.index];
+        if self.current_phase != phase {
             return Ok(());
         }
 
@@ -326,6 +326,7 @@ impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concret
         let mut witness = WitnessCollection {
             k: self.k,
             current_phase,
+            advice_column_phase: &self.cs.advice_column_phase,
             advice: vec![vec![Assigned::Zero; self.n]; self.cs.num_advice_columns],
             instances: self.instances,
             challenges,
@@ -334,7 +335,6 @@ impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concret
             // number of blinding factors and an extra row for use in the
             // permutation argument.
             usable_rows: ..self.unusable_rows_start,
-            _marker: std::marker::PhantomData,
         };
 
         // Synthesize the circuit to obtain the witness and other information.

@@ -1,7 +1,8 @@
 use crate::circuit::{layouter::SyncDeps, Layouter, Value};
 use crate::plonk::{Assigned, Error};
-use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
+use halo2_middleware::circuit::Any;
 use halo2_middleware::ff::Field;
+use halo2_middleware::poly::Rotation;
 
 pub mod compress_selectors;
 pub mod constraint_system;
@@ -10,9 +11,92 @@ pub mod expression;
 pub use constraint_system::*;
 pub use expression::*;
 
-// TODO: Bring ColumnType, Advice, Fixed, Instance and Any here, where Advice has a sealed phase
-// Keep a slim copy of those types in middleware.
-// https://github.com/privacy-scaling-explorations/halo2/issues/295
+/// A column type
+pub trait ColumnType:
+    'static + Sized + Copy + std::fmt::Debug + PartialEq + Eq + Into<Any>
+{
+    /// Return expression from cell
+    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> Expression<F>;
+}
+
+/// An advice column
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub struct Advice;
+
+/// A fixed column
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub struct Fixed;
+
+/// An instance column
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
+pub struct Instance;
+
+impl ColumnType for Advice {
+    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> Expression<F> {
+        Expression::Advice(AdviceQuery {
+            index: None,
+            column_index: index,
+            rotation: at,
+        })
+    }
+}
+impl ColumnType for Fixed {
+    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> Expression<F> {
+        Expression::Fixed(FixedQuery {
+            index: None,
+            column_index: index,
+            rotation: at,
+        })
+    }
+}
+impl ColumnType for Instance {
+    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> Expression<F> {
+        Expression::Instance(InstanceQuery {
+            index: None,
+            column_index: index,
+            rotation: at,
+        })
+    }
+}
+impl ColumnType for Any {
+    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> Expression<F> {
+        match self {
+            Any::Advice => Expression::Advice(AdviceQuery {
+                index: None,
+                column_index: index,
+                rotation: at,
+            }),
+            Any::Fixed => Expression::Fixed(FixedQuery {
+                index: None,
+                column_index: index,
+                rotation: at,
+            }),
+            Any::Instance => Expression::Instance(InstanceQuery {
+                index: None,
+                column_index: index,
+                rotation: at,
+            }),
+        }
+    }
+}
+
+impl From<Advice> for Any {
+    fn from(_: Advice) -> Any {
+        Any::Advice
+    }
+}
+
+impl From<Fixed> for Any {
+    fn from(_: Fixed) -> Any {
+        Any::Fixed
+    }
+}
+
+impl From<Instance> for Any {
+    fn from(_: Instance) -> Any {
+        Any::Instance
+    }
+}
 
 /// This trait allows a [`Circuit`] to direct some backend to assign a witness
 /// for a constraint system.

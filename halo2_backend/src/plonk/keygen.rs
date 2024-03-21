@@ -198,7 +198,7 @@ impl QueriesMap {
             .map
             .entry((col, rot))
             .or_insert_with(|| match col.column_type {
-                Any::Advice(_) => {
+                Any::Advice => {
                     self.advice.push((col, rot));
                     self.advice.len() - 1
                 }
@@ -219,7 +219,7 @@ impl QueriesMap {
         match expr {
             ExpressionMid::Constant(c) => ExpressionBack::Constant(*c),
             ExpressionMid::Var(VarMid::Query(query)) => {
-                let column = ColumnMid::new(query.column_index, query.column_type);
+                let column = ColumnMid::new(query.column_type, query.column_index);
                 let index = self.add(column, query.rotation);
                 ExpressionBack::Var(VarBack::Query(QueryBack {
                     index,
@@ -336,16 +336,7 @@ fn collect_queries<F: Field>(
 
     // Each column used in a copy constraint involves a query at rotation current.
     for column in &cs_mid.permutation.columns {
-        match column.column_type {
-            Any::Instance => {
-                queries.add(ColumnMid::new(column.index, Any::Instance), Rotation::cur())
-            }
-            Any::Fixed => queries.add(ColumnMid::new(column.index, Any::Fixed), Rotation::cur()),
-            Any::Advice(advice) => queries.add(
-                ColumnMid::new(column.index, Any::Advice(advice)),
-                Rotation::cur(),
-            ),
-        };
+        queries.add(*column, Rotation::cur());
     }
 
     let mut num_advice_queries = vec![0; cs_mid.num_advice_columns];

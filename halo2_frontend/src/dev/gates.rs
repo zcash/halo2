@@ -129,14 +129,13 @@ impl CircuitGates {
                             &|selector| format!("S{}", selector.0),
                             &|query| format!("F{}@{}", query.column_index, query.rotation.0),
                             &|query| {
-                                if query.phase == FirstPhase.to_sealed() {
+                                let phase = cs.advice_column_phase[query.column_index];
+                                if phase == FirstPhase.to_sealed() {
                                     format!("A{}@{}", query.column_index, query.rotation.0)
                                 } else {
                                     format!(
                                         "A{}({})@{}",
-                                        query.column_index,
-                                        query.phase(),
-                                        query.rotation.0
+                                        query.column_index, phase.0, query.rotation.0
                                     )
                                 }
                             },
@@ -179,14 +178,13 @@ impl CircuitGates {
                                     .collect()
                             },
                             &|query| {
-                                let query = if query.phase == FirstPhase.to_sealed() {
+                                let phase = cs.advice_column_phase[query.column_index];
+                                let query = if phase == FirstPhase.to_sealed() {
                                     format!("A{}@{}", query.column_index, query.rotation.0)
                                 } else {
                                     format!(
                                         "A{}({})@{}",
-                                        query.column_index,
-                                        query.phase(),
-                                        query.rotation.0
+                                        query.column_index, phase.0, query.rotation.0
                                     )
                                 };
                                 vec![query].into_iter().collect()

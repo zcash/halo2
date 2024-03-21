@@ -363,7 +363,7 @@ where
                                 &|var| match var {
                                     VarBack::Query(query) => match query.column_type {
                                         Any::Fixed => fixed_evals[query.index],
-                                        Any::Advice(_) => advice_evals[query.index],
+                                        Any::Advice => advice_evals[query.index],
                                         Any::Instance => instance_evals[query.index],
                                     },
                                     VarBack::Challenge(challenge) => challenges[challenge.index],

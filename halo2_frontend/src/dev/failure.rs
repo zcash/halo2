@@ -16,7 +16,7 @@ use crate::plonk::{
     circuit::expression::{Column, Expression},
     ConstraintSystem, Gate,
 };
-use halo2_middleware::circuit::Any;
+use halo2_middleware::circuit::{Any, ColumnMid};
 
 mod emitter;
 
@@ -53,7 +53,7 @@ impl FailureLocation {
     /// Returns a `DebugColumn` from Column metadata and `&self`.
     pub(super) fn get_debug_column(
         &self,
-        metadata: halo2_middleware::metadata::Column,
+        metadata: halo2_middleware::circuit::ColumnMid,
     ) -> DebugColumn {
         match self {
             Self::InRegion { region, .. } => {
@@ -535,7 +535,7 @@ fn render_lookup<F: Field>(
                     prover
                         .cs
                         .general_column_annotations
-                        .get(&metadata::Column::from((Any::Fixed, query.column_index)))
+                        .get(&ColumnMid::new(Any::Fixed, query.column_index))
                         .cloned()
                         .unwrap_or_else(|| format!("F{}", query.column_index()))
                 )
@@ -546,7 +546,7 @@ fn render_lookup<F: Field>(
                     prover
                         .cs
                         .general_column_annotations
-                        .get(&metadata::Column::from((Any::advice(), query.column_index)))
+                        .get(&ColumnMid::new(Any::Advice, query.column_index))
                         .cloned()
                         .unwrap_or_else(|| format!("A{}", query.column_index()))
                 )
@@ -557,7 +557,7 @@ fn render_lookup<F: Field>(
                     prover
                         .cs
                         .general_column_annotations
-                        .get(&metadata::Column::from((Any::Instance, query.column_index)))
+                        .get(&ColumnMid::new(Any::Instance, query.column_index))
                         .cloned()
                         .unwrap_or_else(|| format!("I{}", query.column_index()))
                 )
@@ -581,7 +581,7 @@ fn render_lookup<F: Field>(
                 ..
             } = query.into();
             Some((
-                ((column_type, column_index).into(), rotation.0).into(),
+                (ColumnMid::new(column_type, column_index), rotation.0).into(),
                 match load(query) {
                     Value::Real(v) => util::format_value(v),
                     Value::Poison => unreachable!(),
@@ -701,7 +701,7 @@ fn render_shuffle<F: Field>(
                     prover
                         .cs
                         .general_column_annotations
-                        .get(&metadata::Column::from((Any::Fixed, query.column_index)))
+                        .get(&ColumnMid::new(Any::Fixed, query.column_index))
                         .cloned()
                         .unwrap_or_else(|| format!("F{}", query.column_index()))
                 )
@@ -712,7 +712,7 @@ fn render_shuffle<F: Field>(
                     prover
                         .cs
                         .general_column_annotations
-                        .get(&metadata::Column::from((Any::advice(), query.column_index)))
+                        .get(&ColumnMid::new(Any::Advice, query.column_index))
                         .cloned()
                         .unwrap_or_else(|| format!("A{}", query.column_index()))
                 )
@@ -723,7 +723,7 @@ fn render_shuffle<F: Field>(
                     prover
                         .cs
                         .general_column_annotations
-                        .get(&metadata::Column::from((Any::Instance, query.column_index)))
+                        .get(&ColumnMid::new(Any::Instance, query.column_index))
                         .cloned()
                         .unwrap_or_else(|| format!("I{}", query.column_index()))
                 )
@@ -747,7 +747,7 @@ fn render_shuffle<F: Field>(
                 ..
             } = query.into();
             Some((
-                ((column_type, column_index).into(), rotation.0).into(),
+                (ColumnMid::new(column_type, column_index), rotation.0).into(),
                 match load(query) {
                     Value::Real(v) => util::format_value(v),
                     Value::Poison => unreachable!(),

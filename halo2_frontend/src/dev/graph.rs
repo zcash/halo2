@@ -1,8 +1,8 @@
 use crate::plonk::{
-    Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error, FloorPlanner,
-    Selector,
+    Advice, Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error, Fixed,
+    FloorPlanner, Instance, Selector,
 };
-use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
+use halo2_middleware::circuit::Any;
 use halo2_middleware::ff::Field;
 use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 

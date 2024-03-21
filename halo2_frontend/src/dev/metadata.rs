@@ -3,7 +3,7 @@
 use super::metadata::Column as ColumnMetadata;
 use crate::plonk;
 use halo2_middleware::circuit::Any;
-pub use halo2_middleware::metadata::Column;
+pub use halo2_middleware::circuit::ColumnMid as Column;
 use std::{
     collections::HashMap,
     fmt::{self, Debug},

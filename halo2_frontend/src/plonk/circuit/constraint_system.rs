@@ -1,13 +1,12 @@
 use super::compress_selectors;
 use super::expression::sealed;
 use crate::plonk::{
-    lookup, permutation, shuffle, AdviceQuery, Challenge, Column, Expression, FirstPhase,
-    FixedQuery, InstanceQuery, Phase, Selector, TableColumn,
+    lookup, permutation, shuffle, Advice, AdviceQuery, Challenge, Column, Expression, FirstPhase,
+    Fixed, FixedQuery, Instance, InstanceQuery, Phase, Selector, TableColumn,
 };
 use core::cmp::max;
-use halo2_middleware::circuit::{Advice, Any, ConstraintSystemMid, Fixed, GateMid, Instance};
+use halo2_middleware::circuit::{Any, ColumnMid, ConstraintSystemMid, GateMid};
 use halo2_middleware::ff::Field;
-use halo2_middleware::metadata;
 use halo2_middleware::poly::Rotation;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -302,7 +301,7 @@ pub struct ConstraintSystem<F: Field> {
     pub(crate) shuffles: Vec<shuffle::Argument<F>>,
 
     // List of indexes of Fixed columns which are associated to a circuit-general Column tied to their annotation.
-    pub(crate) general_column_annotations: HashMap<metadata::Column, String>,
+    pub(crate) general_column_annotations: HashMap<ColumnMid, String>,
 
     // Vector of fixed columns, which can be used to store constant values
     // that are copied into advice columns.
@@ -541,9 +540,7 @@ impl<F: Field> ConstraintSystem<F> {
 
     fn query_any_index(&mut self, column: Column<Any>, at: Rotation) -> usize {
         match column.column_type() {
-            Any::Advice(_) => {
-                self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at)
-            }
+            Any::Advice => self.query_advice_index(Column::<Advice>::try_from(column).unwrap(), at),
             Any::Fixed => self.query_fixed_index(Column::<Fixed>::try_from(column).unwrap(), at),
             Any::Instance => {
                 self.query_instance_index(Column::<Instance>::try_from(column).unwrap(), at)
@@ -583,7 +580,7 @@ impl<F: Field> ConstraintSystem<F> {
 
     pub fn get_any_query_index(&self, column: Column<Any>, at: Rotation) -> usize {
         match column.column_type() {
-            Any::Advice(_) => {
+            Any::Advice => {
                 self.get_advice_query_index(Column::<Advice>::try_from(column).unwrap(), at)
             }
             Any::Fixed => {
@@ -860,7 +857,10 @@ impl<F: Field> ConstraintSystem<F> {
     {
         // We don't care if the table has already an annotation. If it's the case we keep the new one.
         self.general_column_annotations.insert(
-            metadata::Column::from((Any::Fixed, column.inner().index)),
+            ColumnMid {
+                index: column.inner().index,
+                column_type: halo2_middleware::circuit::Any::Fixed,
+            },
             annotation().into(),
         );
     }
@@ -875,7 +875,10 @@ impl<F: Field> ConstraintSystem<F> {
         let col_any = column.into();
         // We don't care if the table has already an annotation. If it's the case we keep the new one.
         self.general_column_annotations.insert(
-            metadata::Column::from((col_any.column_type, col_any.index)),
+            ColumnMid {
+                column_type: col_any.column_type,
+                index: col_any.index,
+            },
             annotation().into(),
         );
     }
@@ -913,7 +916,7 @@ impl<F: Field> ConstraintSystem<F> {
 
         let tmp = Column {
             index: self.num_advice_columns,
-            column_type: Advice { phase: phase.0 },
+            column_type: Advice,
         };
         self.unblinded_advice_columns.push(tmp.index);
         self.num_advice_columns += 1;
@@ -938,7 +941,7 @@ impl<F: Field> ConstraintSystem<F> {
 
         let tmp = Column {
             index: self.num_advice_columns,
-            column_type: Advice { phase: phase.0 },
+            column_type: Advice,
         };
         self.num_advice_columns += 1;
         self.num_advice_queries.push(0);
@@ -1130,7 +1133,7 @@ impl<F: Field> ConstraintSystem<F> {
     }
 
     /// Returns general column annotations
-    pub fn general_column_annotations(&self) -> &HashMap<metadata::Column, String> {
+    pub fn general_column_annotations(&self) -> &HashMap<ColumnMid, String> {
         &self.general_column_annotations
     }
 
@@ -1211,7 +1214,6 @@ impl<'a, F: Field> VirtualCells<'a, F> {
             index: Some(self.meta.query_advice_index(column, at)),
             column_index: column.index,
             rotation: at,
-            phase: sealed::Phase(column.column_type().phase),
         })
     }
 
@@ -1229,7 +1231,7 @@ impl<'a, F: Field> VirtualCells<'a, F> {
     pub fn query_any<C: Into<Column<Any>>>(&mut self, column: C, at: Rotation) -> Expression<F> {
         let column = column.into();
         match column.column_type() {
-            Any::Advice(_) => self.query_advice(Column::<Advice>::try_from(column).unwrap(), at),
+            Any::Advice => self.query_advice(Column::<Advice>::try_from(column).unwrap(), at),
             Any::Fixed => self.query_fixed(Column::<Fixed>::try_from(column).unwrap(), at),
             Any::Instance => self.query_instance(Column::<Instance>::try_from(column).unwrap(), at),
         }

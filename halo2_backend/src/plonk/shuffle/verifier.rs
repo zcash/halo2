@@ -82,7 +82,7 @@ impl<C: CurveAffine> Evaluated<C> {
                                     index, column_type, ..
                                 }) => match column_type {
                                     Any::Fixed => fixed_evals[index],
-                                    Any::Advice(_) => advice_evals[index],
+                                    Any::Advice => advice_evals[index],
                                     Any::Instance => instance_evals[index],
                                 },
                             },

@@ -862,8 +862,8 @@ fn plonk_api() {
         advice_queries: [
             (
                 ColumnMid {
+                    column_type: Advice,
                     index: 1,
-                    column_type: Advice,
                 },
                 Rotation(
                     0,
@@ -871,8 +871,8 @@ fn plonk_api() {
             ),
             (
                 ColumnMid {
+                    column_type: Advice,
                     index: 2,
-                    column_type: Advice,
                 },
                 Rotation(
                     0,
@@ -880,8 +880,8 @@ fn plonk_api() {
             ),
             (
                 ColumnMid {
+                    column_type: Advice,
                     index: 3,
-                    column_type: Advice,
                 },
                 Rotation(
                     0,
@@ -889,8 +889,8 @@ fn plonk_api() {
             ),
             (
                 ColumnMid {
-                    index: 4,
                     column_type: Advice,
+                    index: 4,
                 },
                 Rotation(
                     1,
@@ -898,8 +898,8 @@ fn plonk_api() {
             ),
             (
                 ColumnMid {
-                    index: 0,
                     column_type: Advice,
+                    index: 0,
                 },
                 Rotation(
                     -1,
@@ -907,8 +907,8 @@ fn plonk_api() {
             ),
             (
                 ColumnMid {
-                    index: 0,
                     column_type: Advice,
+                    index: 0,
                 },
                 Rotation(
                     0,
@@ -916,8 +916,8 @@ fn plonk_api() {
             ),
             (
                 ColumnMid {
-                    index: 4,
                     column_type: Advice,
+                    index: 4,
                 },
                 Rotation(
                     0,
@@ -927,8 +927,8 @@ fn plonk_api() {
         instance_queries: [
             (
                 ColumnMid {
-                    index: 0,
                     column_type: Instance,
+                    index: 0,
                 },
                 Rotation(
                     0,
@@ -938,8 +938,8 @@ fn plonk_api() {
         fixed_queries: [
             (
                 ColumnMid {
+                    column_type: Fixed,
                     index: 2,
-                    column_type: Fixed,
                 },
                 Rotation(
                     0,
@@ -947,8 +947,8 @@ fn plonk_api() {
             ),
             (
                 ColumnMid {
+                    column_type: Fixed,
                     index: 3,
-                    column_type: Fixed,
                 },
                 Rotation(
                     0,
@@ -956,8 +956,8 @@ fn plonk_api() {
             ),
             (
                 ColumnMid {
+                    column_type: Fixed,
                     index: 1,
-                    column_type: Fixed,
                 },
                 Rotation(
                     0,
@@ -965,8 +965,8 @@ fn plonk_api() {
             ),
             (
                 ColumnMid {
+                    column_type: Fixed,
                     index: 4,
-                    column_type: Fixed,
                 },
                 Rotation(
                     0,
@@ -974,8 +974,8 @@ fn plonk_api() {
             ),
             (
                 ColumnMid {
+                    column_type: Fixed,
                     index: 0,
-                    column_type: Fixed,
                 },
                 Rotation(
                     0,
@@ -983,8 +983,8 @@ fn plonk_api() {
             ),
             (
                 ColumnMid {
+                    column_type: Fixed,
                     index: 5,
-                    column_type: Fixed,
                 },
                 Rotation(
                     0,
@@ -992,8 +992,8 @@ fn plonk_api() {
             ),
             (
                 ColumnMid {
-                    index: 6,
                     column_type: Fixed,
+                    index: 6,
                 },
                 Rotation(
                     0,
@@ -1003,52 +1003,52 @@ fn plonk_api() {
         permutation: ArgumentMid {
             columns: [
                 ColumnMid {
+                    column_type: Advice,
                     index: 1,
-                    column_type: Advice,
                 },
                 ColumnMid {
+                    column_type: Advice,
                     index: 2,
-                    column_type: Advice,
                 },
                 ColumnMid {
+                    column_type: Advice,
                     index: 3,
-                    column_type: Advice,
                 },
                 ColumnMid {
-                    index: 0,
                     column_type: Fixed,
-                },
-                ColumnMid {
                     index: 0,
-                    column_type: Advice,
                 },
                 ColumnMid {
+                    column_type: Advice,
+                    index: 0,
+                },
+                ColumnMid {
+                    column_type: Advice,
                     index: 4,
-                    column_type: Advice,
                 },
                 ColumnMid {
-                    index: 0,
                     column_type: Instance,
+                    index: 0,
                 },
                 ColumnMid {
+                    column_type: Fixed,
                     index: 1,
-                    column_type: Fixed,
                 },
                 ColumnMid {
+                    column_type: Fixed,
                     index: 2,
-                    column_type: Fixed,
                 },
                 ColumnMid {
+                    column_type: Fixed,
                     index: 3,
-                    column_type: Fixed,
                 },
                 ColumnMid {
+                    column_type: Fixed,
                     index: 4,
-                    column_type: Fixed,
                 },
                 ColumnMid {
-                    index: 5,
                     column_type: Fixed,
+                    index: 5,
                 },
             ],
         },

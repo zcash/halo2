@@ -102,7 +102,7 @@ pub(in crate::plonk) fn permutation_commit<
         // Iterate over each column of the permutation
         for (&column, permuted_column_values) in columns.iter().zip(permutations.iter()) {
             let values = match column.column_type {
-                Any::Advice(_) => advice,
+                Any::Advice => advice,
                 Any::Fixed => fixed,
                 Any::Instance => instance,
             };
@@ -125,7 +125,7 @@ pub(in crate::plonk) fn permutation_commit<
         for &column in columns.iter() {
             let omega = domain.get_omega();
             let values = match column.column_type {
-                Any::Advice(_) => advice,
+                Any::Advice => advice,
                 Any::Fixed => fixed,
                 Any::Instance => instance,
             };

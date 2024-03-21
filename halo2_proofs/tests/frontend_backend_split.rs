@@ -23,15 +23,11 @@ use halo2_frontend::{
     dev::MockProver,
     plonk::{
         circuit::{Challenge, Column},
-        Circuit, ConstraintSystem, Error as ErrorFront, Expression, FirstPhase, SecondPhase,
-        Selector,
+        Advice, Circuit, ConstraintSystem, Error as ErrorFront, Expression, FirstPhase, Fixed,
+        Instance, SecondPhase, Selector,
     },
 };
-use halo2_middleware::{
-    circuit::{Advice, Fixed, Instance},
-    ff::Field,
-    poly::Rotation,
-};
+use halo2_middleware::{ff::Field, poly::Rotation};
 use halo2_proofs::poly::commitment::ParamsProver;
 use std::collections::HashMap;
 

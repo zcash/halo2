@@ -2,8 +2,10 @@ use group::ff::Field;
 use std::collections::BTreeMap;
 
 use super::{metadata, CellValue, InstanceValue, Value};
-use crate::plonk::{AdviceQuery, Column, Expression, FixedQuery, Gate, InstanceQuery, VirtualCell};
-use halo2_middleware::circuit::{Advice, Any, ColumnType};
+use crate::plonk::{
+    AdviceQuery, Column, ColumnType, Expression, FixedQuery, Gate, InstanceQuery, VirtualCell,
+};
+use halo2_middleware::circuit::Any;
 use halo2_middleware::poly::Rotation;
 
 pub(crate) struct AnyQuery {
@@ -32,9 +34,7 @@ impl From<AdviceQuery> for AnyQuery {
     fn from(query: AdviceQuery) -> Self {
         Self {
             index: query.index,
-            column_type: Any::Advice(Advice {
-                phase: query.phase.0,
-            }),
+            column_type: Any::Advice,
             column_index: query.column_index,
             rotation: query.rotation,
         }

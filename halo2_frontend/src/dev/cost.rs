@@ -9,17 +9,17 @@ use std::{
 };
 
 use group::prime::PrimeGroup;
+use halo2_middleware::circuit::Any;
 use halo2_middleware::ff::{Field, PrimeField};
 use halo2_middleware::poly::Rotation;
 
 use crate::{
     circuit::{layouter::RegionColumn, Value},
     plonk::{
-        Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error, FloorPlanner,
-        Selector,
+        Advice, Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error, Fixed,
+        FloorPlanner, Instance, Selector,
     },
 };
-use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
 
 /// Measures a circuit to determine its costs, and explain what contributes to them.
 #[allow(dead_code)]
@@ -118,9 +118,7 @@ impl Layout {
 
         if let RegionColumn::Column(col) = column {
             match col.column_type() {
-                Any::Advice(_) => {
-                    self.total_advice_rows = cmp::max(self.total_advice_rows, row + 1)
-                }
+                Any::Advice => self.total_advice_rows = cmp::max(self.total_advice_rows, row + 1),
                 Any::Fixed => self.total_fixed_rows = cmp::max(self.total_fixed_rows, row + 1),
                 _ => {}
             }

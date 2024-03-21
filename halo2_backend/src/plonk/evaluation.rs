@@ -456,7 +456,7 @@ impl<C: CurveAffine> Evaluator<C> {
                             for (values, permutation) in columns
                                 .iter()
                                 .map(|&column| match column.column_type {
-                                    Any::Advice(_) => &advice[column.index],
+                                    Any::Advice => &advice[column.index],
                                     Any::Fixed => &fixed[column.index],
                                     Any::Instance => &instance[column.index],
                                 })
@@ -467,7 +467,7 @@ impl<C: CurveAffine> Evaluator<C> {
 
                             let mut right = set.permutation_product_coset[idx];
                             for values in columns.iter().map(|&column| match column.column_type {
-                                Any::Advice(_) => &advice[column.index],
+                                Any::Advice => &advice[column.index],
                                 Any::Fixed => &fixed[column.index],
                                 Any::Instance => &instance[column.index],
                             }) {
@@ -698,9 +698,10 @@ impl<C: CurveAffine> GraphEvaluator<C> {
                         query.column_index,
                         rot_idx,
                     ))),
-                    Any::Advice(_) => self.add_calculation(Calculation::Store(
-                        ValueSource::Advice(query.column_index, rot_idx),
-                    )),
+                    Any::Advice => self.add_calculation(Calculation::Store(ValueSource::Advice(
+                        query.column_index,
+                        rot_idx,
+                    ))),
                     Any::Instance => self.add_calculation(Calculation::Store(
                         ValueSource::Instance(query.column_index, rot_idx),
                     )),
@@ -867,7 +868,7 @@ pub fn evaluate<F: Field, B: LagrangeBasis>(
                         let rot_idx = get_rotation_idx(idx, query.rotation.0, rot_scale, isize);
                         match query.column_type {
                             Any::Fixed => fixed[query.column_index][rot_idx],
-                            Any::Advice(_) => advice[query.column_index][rot_idx],
+                            Any::Advice => advice[query.column_index][rot_idx],
                             Any::Instance => instance[query.column_index][rot_idx],
                         }
                     }
@@ -886,7 +887,7 @@ pub fn evaluate<F: Field, B: LagrangeBasis>(
 mod test {
     use crate::plonk::circuit::{ExpressionBack, QueryBack, VarBack};
     use crate::poly::LagrangeCoeff;
-    use halo2_middleware::circuit::{Advice, Any, ChallengeMid};
+    use halo2_middleware::circuit::{Any, ChallengeMid};
     use halo2_middleware::poly::Rotation;
     use halo2curves::pasta::pallas::{Affine, Scalar};
 
@@ -969,7 +970,7 @@ mod test {
                 ExpressionBack::Var(Query(QueryBack {
                     index: 0,
                     column_index: col,
-                    column_type: Any::Advice(Advice { phase: 0 }),
+                    column_type: Any::Advice,
                     rotation: Rotation(rot),
                 })),
                 expected,

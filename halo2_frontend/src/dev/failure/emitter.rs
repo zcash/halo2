@@ -6,7 +6,7 @@ use group::ff::Field;
 use super::FailureLocation;
 use crate::dev::{metadata, util};
 use crate::plonk::circuit::expression::Expression;
-use halo2_middleware::circuit::{Advice, Any};
+use halo2_middleware::circuit::{Any, ColumnMid};
 
 fn padded(p: char, width: usize, text: &str) -> String {
     let pad = width - text.len();
@@ -23,7 +23,7 @@ fn column_type_and_idx(column: &metadata::Column) -> String {
     format!(
         "{}{}",
         match column.column_type {
-            Any::Advice(_) => "A",
+            Any::Advice => "A",
             Any::Fixed => "F",
             Any::Instance => "I",
         },
@@ -147,7 +147,7 @@ pub(super) fn expression_to_string<F: Field>(
         &|query| {
             if let Some(label) = layout
                 .get(&query.rotation.0)
-                .and_then(|row| row.get(&(Any::Fixed, query.column_index).into()))
+                .and_then(|row| row.get(&ColumnMid::new(Any::Fixed, query.column_index)))
             {
                 label.clone()
             } else if query.rotation.0 == 0 {
@@ -161,17 +161,7 @@ pub(super) fn expression_to_string<F: Field>(
         &|query| {
             layout
                 .get(&query.rotation.0)
-                .and_then(|map| {
-                    map.get(
-                        &(
-                            Any::Advice(Advice {
-                                phase: query.phase.0,
-                            }),
-                            query.column_index,
-                        )
-                            .into(),
-                    )
-                })
+                .and_then(|map| map.get(&ColumnMid::new(Any::Advice, query.column_index)))
                 .cloned()
                 .unwrap_or_default()
         },
@@ -179,7 +169,7 @@ pub(super) fn expression_to_string<F: Field>(
             layout
                 .get(&query.rotation.0)
                 .unwrap()
-                .get(&(Any::Instance, query.column_index).into())
+                .get(&ColumnMid::new(Any::Instance, query.column_index))
                 .unwrap()
                 .clone()
         },

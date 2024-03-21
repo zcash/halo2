@@ -1,8 +1,9 @@
 use crate::expression::{Expression, Variable};
 use crate::poly::Rotation;
-use crate::{lookup, metadata, permutation, shuffle};
+use crate::{lookup, permutation, shuffle};
 use ff::Field;
 use std::collections::HashMap;
+use std::fmt;
 
 /// A challenge squeezed from transcript after advice columns at the phase have been committed.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -61,7 +62,7 @@ impl Variable for VarMid {
             VarMid::Query(query) => {
                 match query.column_type {
                     Any::Fixed => write!(writer, "fixed")?,
-                    Any::Advice(_) => write!(writer, "advice")?,
+                    Any::Advice => write!(writer, "advice")?,
                     Any::Instance => write!(writer, "instance")?,
                 };
                 write!(writer, "[{}][{}]", query.column_index, query.rotation.0)
@@ -127,7 +128,7 @@ pub struct ConstraintSystemMid<F: Field> {
     pub shuffles: Vec<shuffle::ArgumentMid<F>>,
 
     // List of indexes of Fixed columns which are associated to a circuit-general Column tied to their annotation.
-    pub general_column_annotations: HashMap<metadata::Column, String>,
+    pub general_column_annotations: HashMap<ColumnMid, String>,
 
     // The minimum degree required by the circuit, which can be set to a
     // larger amount than actually needed. This can be used, for example, to
@@ -150,114 +151,21 @@ pub struct CompiledCircuitV2<F: Field> {
     pub cs: ConstraintSystemMid<F>,
 }
 
-// TODO: The query_cell method is only used in the frontend, which uses Expression.  By having this
-// trait implemented here we can only return ExpressionMid, which requires conversion to Expression
-// when used.  On the other hand, it's difficult to move ColumnType to the frontend because this
-// trait is implemented for Any which is used in the backend.  It would be great to find a way to
-// move all the `query_cell` implementations to the frontend and have them return `Expression`,
-// while keeping `Any` in the middleware.
-// https://github.com/privacy-scaling-explorations/halo2/issues/270
-/// A column type
-pub trait ColumnType:
-    'static + Sized + Copy + std::fmt::Debug + PartialEq + Eq + Into<Any>
-{
-    /// Return expression from cell
-    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> ExpressionMid<F>;
-}
-
-/// A column with an index and type
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct ColumnMid {
-    /// The index of the column.
-    pub index: usize,
-    /// The type of the column.
-    pub column_type: Any,
-}
-
-impl ColumnMid {
-    pub fn new(index: usize, column_type: Any) -> Self {
-        ColumnMid { index, column_type }
-    }
-}
-
-/// A cell identifies a position in the plonkish matrix identified by a column and a row offset.
-#[derive(Clone, Debug)]
-pub struct Cell {
-    pub column: ColumnMid,
-    pub row: usize,
-}
-
-/// An advice column
-#[derive(Default, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct Advice {
-    pub phase: u8,
-}
-
-impl Advice {
-    /// Returns `Advice` in given `Phase`
-    pub fn new(phase: u8) -> Advice {
-        Advice { phase }
-    }
-
-    /// Phase of this column
-    pub fn phase(&self) -> u8 {
-        self.phase
-    }
-}
-
-impl std::fmt::Debug for Advice {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut debug_struct = f.debug_struct("Advice");
-        // Only show advice's phase if it's not in first phase.
-        if self.phase != 0 {
-            debug_struct.field("phase", &self.phase);
-        }
-        debug_struct.finish()
-    }
-}
-
-/// A fixed column
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct Fixed;
-
-/// An instance column
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct Instance;
-
 /// An enum over the Advice, Fixed, Instance structs
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
 pub enum Any {
     /// An Advice variant
-    Advice(Advice),
+    Advice,
     /// A Fixed variant
     Fixed,
     /// An Instance variant
     Instance,
 }
 
-impl Any {
-    /// Returns Advice variant in `FirstPhase`
-    pub fn advice() -> Any {
-        Any::Advice(Advice::default())
-    }
-
-    /// Returns Advice variant in given `Phase`
-    pub fn advice_in(phase: u8) -> Any {
-        Any::Advice(Advice::new(phase))
-    }
-}
-
 impl std::fmt::Debug for Any {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Any::Advice(advice) => {
-                let mut debug_struct = f.debug_struct("Advice");
-                // Only show advice's phase if it's not in first phase.
-                if advice.phase != 0 {
-                    debug_struct.field("phase", &advice.phase);
-                }
-                debug_struct.finish()
-            }
+            Any::Advice => f.debug_struct("Advice").finish(),
             Any::Fixed => f.debug_struct("Fixed").finish(),
             Any::Instance => f.debug_struct("Instance").finish(),
         }
@@ -269,15 +177,16 @@ impl Ord for Any {
         // This ordering is consensus-critical! The layouters rely on deterministic column
         // orderings.
         match (self, other) {
-            (Any::Instance, Any::Instance) | (Any::Fixed, Any::Fixed) => std::cmp::Ordering::Equal,
-            (Any::Advice(lhs), Any::Advice(rhs)) => lhs.phase.cmp(&rhs.phase),
+            (Any::Instance, Any::Instance)
+            | (Any::Fixed, Any::Fixed)
+            | (Any::Advice, Any::Advice) => std::cmp::Ordering::Equal,
             // Across column types, sort Instance < Advice < Fixed.
-            (Any::Instance, Any::Advice(_))
-            | (Any::Advice(_), Any::Fixed)
+            (Any::Instance, Any::Advice)
+            | (Any::Advice, Any::Fixed)
             | (Any::Instance, Any::Fixed) => std::cmp::Ordering::Less,
             (Any::Fixed, Any::Instance)
-            | (Any::Fixed, Any::Advice(_))
-            | (Any::Advice(_), Any::Instance) => std::cmp::Ordering::Greater,
+            | (Any::Fixed, Any::Advice)
+            | (Any::Advice, Any::Instance) => std::cmp::Ordering::Greater,
         }
     }
 }
@@ -288,69 +197,35 @@ impl PartialOrd for Any {
     }
 }
 
-impl ColumnType for Advice {
-    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> ExpressionMid<F> {
-        ExpressionMid::Var(VarMid::Query(QueryMid {
-            column_index: index,
-            column_type: Any::Advice(Advice { phase: self.phase }),
-            rotation: at,
-        }))
-    }
+/// A column with an index and type
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct ColumnMid {
+    /// The type of the column.
+    pub column_type: Any,
+    /// The index of the column.
+    pub index: usize,
 }
-impl ColumnType for Fixed {
-    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> ExpressionMid<F> {
-        ExpressionMid::Var(VarMid::Query(QueryMid {
-            column_index: index,
-            column_type: Any::Fixed,
-            rotation: at,
-        }))
-    }
-}
-impl ColumnType for Instance {
-    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> ExpressionMid<F> {
-        ExpressionMid::Var(VarMid::Query(QueryMid {
-            column_index: index,
-            column_type: Any::Instance,
-            rotation: at,
-        }))
-    }
-}
-impl ColumnType for Any {
-    fn query_cell<F: Field>(&self, index: usize, at: Rotation) -> ExpressionMid<F> {
-        match self {
-            Any::Advice(Advice { phase }) => ExpressionMid::Var(VarMid::Query(QueryMid {
-                column_index: index,
-                column_type: Any::Advice(Advice { phase: *phase }),
-                rotation: at,
-            })),
-            Any::Fixed => ExpressionMid::Var(VarMid::Query(QueryMid {
-                column_index: index,
-                column_type: Any::Fixed,
-                rotation: at,
-            })),
-            Any::Instance => ExpressionMid::Var(VarMid::Query(QueryMid {
-                column_index: index,
-                column_type: Any::Instance,
-                rotation: at,
-            })),
-        }
+
+impl ColumnMid {
+    pub fn new(column_type: Any, index: usize) -> Self {
+        ColumnMid { column_type, index }
     }
 }
 
-impl From<Advice> for Any {
-    fn from(advice: Advice) -> Any {
-        Any::Advice(advice)
+impl fmt::Display for ColumnMid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let column_type = match self.column_type {
+            Any::Advice => "a",
+            Any::Fixed => "f",
+            Any::Instance => "i",
+        };
+        write!(f, "{}{}", column_type, self.index)
     }
 }
 
-impl From<Fixed> for Any {
-    fn from(_: Fixed) -> Any {
-        Any::Fixed
-    }
-}
-
-impl From<Instance> for Any {
-    fn from(_: Instance) -> Any {
-        Any::Instance
-    }
+/// A cell identifies a position in the plonkish matrix identified by a column and a row offset.
+#[derive(Clone, Debug)]
+pub struct Cell {
+    pub column: ColumnMid,
+    pub row: usize,
 }

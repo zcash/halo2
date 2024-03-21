@@ -12,14 +12,14 @@ use crate::{
     plonk::{
         permutation,
         sealed::{self, SealedPhase},
-        Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error, Expression,
-        FirstPhase, FloorPlanner, Phase, Selector,
+        Advice, Assigned, Assignment, Challenge, Circuit, Column, ConstraintSystem, Error,
+        Expression, FirstPhase, Fixed, FloorPlanner, Instance, Phase, Selector,
     },
 };
 use halo2_common::multicore::{
     IntoParallelIterator, IntoParallelRefIterator, ParallelIterator, ParallelSliceMut,
 };
-use halo2_middleware::circuit::{Advice, Any, ColumnMid, Fixed, Instance};
+use halo2_middleware::circuit::{Any, ColumnMid};
 use halo2_middleware::ff::{Field, FromUniformBytes};
 
 pub mod metadata;
@@ -212,9 +212,9 @@ impl<F: Field> Mul<F> for Value<F> {
 /// use halo2_frontend::{
 ///     circuit::{Layouter, SimpleFloorPlanner, Value},
 ///     dev::{FailureLocation, MockProver, VerifyFailure},
-///     plonk::{circuit::Column, Circuit, ConstraintSystem, Error, Selector},
+///     plonk::{circuit::Column, Circuit, ConstraintSystem, Error, Advice, Selector},
 /// };
-/// use halo2_middleware::circuit::{Advice, Any};
+/// use halo2_middleware::circuit::{Any, ColumnMid};
 /// use halo2_middleware::poly::Rotation;
 /// use halo2_middleware::ff::PrimeField;
 /// use halo2curves::pasta::Fp;
@@ -299,9 +299,9 @@ impl<F: Field> Mul<F> for Value<F> {
 ///             offset: 0,
 ///         },
 ///         cell_values: vec![
-///             (((Any::advice(), 0).into(), 0).into(), "0x2".to_string()),
-///             (((Any::advice(), 1).into(), 0).into(), "0x4".to_string()),
-///             (((Any::advice(), 2).into(), 0).into(), "0x8".to_string()),
+///             ((ColumnMid::new(Any::Advice, 0), 0).into(), "0x2".to_string()),
+///             ((ColumnMid::new(Any::Advice, 1), 0).into(), "0x4".to_string()),
+///             ((ColumnMid::new(Any::Advice, 2), 0).into(), "0x8".to_string()),
 ///         ],
 ///     }])
 /// );
@@ -513,7 +513,8 @@ impl<F: Field> Assignment<F> for MockProver<F> {
             }
             Err(err) => {
                 // Propagate `assign` error if the column is in current phase.
-                if self.in_phase(sealed::Phase(column.column_type().phase)) {
+                let phase = self.cs.advice_column_phase[column.index];
+                if self.in_phase(phase) {
                     return Err(err);
                 }
             }
@@ -1144,9 +1145,9 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
         // Check that permutations preserve the original values of the cells.
         // Original values of columns involved in the permutation.
         let original = |column: ColumnMid, row: usize| match column.column_type {
-            Any::Advice(_) => self.advice[column.index][row],
-            Any::Fixed => self.fixed[column.index][row],
-            Any::Instance => {
+            halo2_middleware::circuit::Any::Advice => self.advice[column.index][row],
+            halo2_middleware::circuit::Any::Fixed => self.fixed[column.index][row],
+            halo2_middleware::circuit::Any::Instance => {
                 let cell: &InstanceValue<F> = &self.instance[column.index][row];
                 CellValue::Assigned(cell.value())
             }
@@ -1161,7 +1162,7 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
                 None
             } else {
                 Some(VerifyFailure::Permutation {
-                    column: cell_a.column.into(),
+                    column: cell_a.column,
                     location: FailureLocation::find(
                         &self.regions,
                         cell_a.row,
@@ -1287,9 +1288,10 @@ mod tests {
     use super::{FailureLocation, MockProver, VerifyFailure};
     use crate::circuit::{Layouter, SimpleFloorPlanner, Value};
     use crate::plonk::{
-        Circuit, Column, ConstraintSystem, Error, Expression, Selector, TableColumn,
+        Advice, Circuit, Column, ConstraintSystem, Error, Expression, Fixed, Instance, Selector,
+        TableColumn,
     };
-    use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
+    use halo2_middleware::circuit::{Any, ColumnMid};
     use halo2_middleware::poly::Rotation;
 
     #[test]
@@ -1368,7 +1370,7 @@ mod tests {
                 gate: (0, "Equality check").into(),
                 region: (0, "Faulty synthesis".to_owned()).into(),
                 gate_offset: 1,
-                column: Column::new(1, Any::Advice(Advice { phase: 0 })),
+                column: Column::new(1, Any::Advice),
                 offset: 1,
             }])
         );
@@ -1815,19 +1817,13 @@ mod tests {
                     offset: 0,
                 },
                 cell_values: vec![
+                    ((ColumnMid::new(Any::Advice, 0), 0).into(), "1".to_string()),
+                    ((ColumnMid::new(Any::Advice, 1), 0).into(), "0".to_string()),
                     (
-                        ((Any::Advice(Advice { phase: 0 }), 0).into(), 0).into(),
-                        "1".to_string()
-                    ),
-                    (
-                        ((Any::Advice(Advice { phase: 0 }), 1).into(), 0).into(),
-                        "0".to_string()
-                    ),
-                    (
-                        ((Any::Advice(Advice { phase: 0 }), 2).into(), 0).into(),
+                        (ColumnMid::new(Any::Advice, 2), 0).into(),
                         "0x5".to_string()
                     ),
-                    (((Any::Fixed, 0).into(), 0).into(), "0x7".to_string()),
+                    ((ColumnMid::new(Any::Fixed, 0), 0).into(), "0x7".to_string()),
                 ],
             },])
         )

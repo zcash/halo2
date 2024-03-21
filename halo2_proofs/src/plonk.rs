@@ -20,10 +20,10 @@ pub use verifier::verify_proof;
 pub use error::Error;
 pub use halo2_backend::plonk::{Error as ErrorBack, ProvingKey, VerifyingKey};
 pub use halo2_frontend::plonk::{
-    Assigned, Challenge, Circuit, Column, ConstraintSystem, Error as ErrorFront, Expression,
-    FirstPhase, SecondPhase, Selector, TableColumn, ThirdPhase,
+    Advice, Assigned, Challenge, Circuit, Column, ConstraintSystem, Error as ErrorFront,
+    Expression, FirstPhase, Fixed, Instance, SecondPhase, Selector, TableColumn, ThirdPhase,
 };
-pub use halo2_middleware::circuit::{Advice, ConstraintSystemMid, Fixed, Instance};
+pub use halo2_middleware::circuit::{Any, ConstraintSystemMid};
 
 use group::ff::FromUniformBytes;
 use halo2_common::helpers::{SerdeCurveAffine, SerdePrimeField};

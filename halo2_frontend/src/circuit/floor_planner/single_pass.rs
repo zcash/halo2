@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
 
+use halo2_middleware::circuit::Any;
 use halo2_middleware::ff::Field;
 
 use crate::plonk::Assigned;
@@ -12,9 +13,11 @@ use crate::{
         table_layouter::{compute_table_lengths, SimpleTableLayouter},
         Cell, Column, Layouter, Region, RegionIndex, RegionStart, Table, Value,
     },
-    plonk::{Assignment, Challenge, Circuit, Error, FloorPlanner, Selector, TableColumn},
+    plonk::{
+        Advice, Assignment, Challenge, Circuit, Error, Fixed, FloorPlanner, Instance, Selector,
+        TableColumn,
+    },
 };
-use halo2_middleware::circuit::{Advice, Any, Fixed, Instance};
 
 /// A simple [`FloorPlanner`] that performs minimal optimizations.
 ///
@@ -381,8 +384,7 @@ mod tests {
 
     use super::SimpleFloorPlanner;
     use crate::dev::MockProver;
-    use crate::plonk::{Circuit, Column, ConstraintSystem, Error};
-    use halo2_middleware::circuit::Advice;
+    use crate::plonk::{Advice, Circuit, Column, ConstraintSystem, Error};
 
     #[test]
     fn not_enough_columns_for_constants() {
