@@ -1,8 +1,7 @@
 use crate::arithmetic::{g_to_lagrange, parallelize};
-use crate::helpers::SerdeCurveAffine;
+use crate::helpers::{SerdeCurveAffine, SerdeFormat};
 use crate::poly::commitment::{Blind, CommitmentScheme, Params, ParamsProver, ParamsVerifier};
 use crate::poly::{Coeff, LagrangeCoeff, Polynomial};
-use crate::SerdeFormat;
 
 use group::{prime::PrimeCurveAffine, Curve, Group};
 use halo2_middleware::ff::{Field, PrimeField};

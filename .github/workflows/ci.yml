@@ -46,13 +46,12 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           override: false
+          default: true
       - name: Add target
         run: rustup target add ${{ matrix.target }}
-      - name: cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --no-default-features --features batch,dev-graph,gadget-traces --target ${{ matrix.target }}
+      - name: Run script file
+        run: |
+          .github/scripts/wasm-target-test-build.sh
 
   bitrot:
     name: Bitrot check

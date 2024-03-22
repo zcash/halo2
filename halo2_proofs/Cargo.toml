@@ -42,7 +42,6 @@ harness = false
 
 [dependencies]
 halo2_middleware = { path = "../halo2_middleware" }
-halo2_common = { path = "../halo2_common" }
 halo2_backend = { path = "../halo2_backend" }
 halo2_frontend = { path = "../halo2_frontend" }
 halo2curves = { version = "0.6.0", default-features = false }
@@ -81,7 +80,7 @@ gadget-traces = []
 thread-safe-region = []
 sanity-checks = []
 batch = ["rand_core/getrandom"]
-circuit-params = ["halo2_common/circuit-params", "halo2_frontend/circuit-params"]
+circuit-params = ["halo2_frontend/circuit-params"]
 heap-profiling = []
 cost-estimator = ["halo2_frontend/cost-estimator"]
 derive_serde = ["halo2curves/derive_serde"]

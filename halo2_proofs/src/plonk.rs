@@ -26,8 +26,7 @@ pub use halo2_frontend::plonk::{
 pub use halo2_middleware::circuit::{Any, ConstraintSystemMid};
 
 use group::ff::FromUniformBytes;
-use halo2_common::helpers::{SerdeCurveAffine, SerdePrimeField};
-use halo2_common::SerdeFormat;
+use halo2_backend::helpers::{SerdeCurveAffine, SerdeFormat, SerdePrimeField};
 use halo2_frontend::circuit::compile_circuit_cs;
 use std::io;
 

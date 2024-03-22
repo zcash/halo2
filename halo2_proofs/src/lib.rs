@@ -52,7 +52,7 @@ pub mod transcript {
     };
 }
 mod helpers {
-    pub use halo2_common::helpers::SerdeFormat;
+    pub use halo2_backend::helpers::SerdeFormat;
 }
 
 pub use crate::helpers::SerdeFormat;

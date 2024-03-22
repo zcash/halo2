@@ -1,10 +1,17 @@
+//! This module provides an implementation of a variant of (Turbo)[PLONK][plonk]
+//! that is designed specifically for the polynomial commitment scheme described
+//! in the [Halo][halo] paper.
+//!
+//! [halo]: https://eprint.iacr.org/2019/1021
+//! [plonk]: https://eprint.iacr.org/2019/953
+
 use blake2b_simd::Params as Blake2bParams;
 use group::ff::{Field, FromUniformBytes, PrimeField};
 
 use crate::arithmetic::CurveAffine;
 use crate::helpers::{
     polynomial_slice_byte_length, read_polynomial_vec, write_polynomial_slice, SerdeCurveAffine,
-    SerdePrimeField,
+    SerdeFormat, SerdePrimeField,
 };
 use crate::plonk::circuit::{ConstraintSystemBack, PinnedConstraintSystem};
 use crate::poly::{
@@ -13,7 +20,6 @@ use crate::poly::{
 };
 use crate::transcript::{ChallengeScalar, EncodedChallenge, Transcript};
 pub(crate) use evaluation::Evaluator;
-use halo2_common::SerdeFormat;
 
 use std::io;
 

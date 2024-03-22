@@ -38,7 +38,6 @@ serde = { version = "1", optional = true, features = ["derive"] }
 serde_derive = { version = "1", optional = true}
 rayon = "1.8"
 halo2_middleware = { path = "../halo2_middleware" }
-halo2_common = { path = "../halo2_common" }
 
 [dev-dependencies]
 assert_matches = "1.5"
