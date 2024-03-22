@@ -504,7 +504,9 @@ impl<F> From<Expression<F>> for ExpressionMid<F> {
             Expression::Product(lhs, rhs) => {
                 ExpressionMid::Product(Box::new((*lhs).into()), Box::new((*rhs).into()))
             }
-            Expression::Scaled(e, c) => ExpressionMid::Scaled(Box::new((*e).into()), c),
+            Expression::Scaled(e, c) => {
+                ExpressionMid::Product(Box::new((*e).into()), Box::new(ExpressionMid::Constant(c)))
+            }
         }
     }
 }

@@ -770,17 +770,6 @@ impl<C: CurveAffine> GraphEvaluator<C> {
                     self.add_calculation(Calculation::Mul(result_b, result_a))
                 }
             }
-            ExpressionBack::Scaled(a, f) => {
-                if *f == C::ScalarExt::ZERO {
-                    ValueSource::Constant(0)
-                } else if *f == C::ScalarExt::ONE {
-                    self.add_expression(a)
-                } else {
-                    let cst = self.add_constant(f);
-                    let result_a = self.add_expression(a);
-                    self.add_calculation(Calculation::Mul(result_a, cst))
-                }
-            }
         }
     }
 
@@ -876,7 +865,6 @@ pub fn evaluate<F: Field, B: LagrangeBasis>(
                 &|a| -a,
                 &|a, b| a + b,
                 &|a, b| a * b,
-                &|a, scalar| a * scalar,
             );
         }
     });
@@ -1028,7 +1016,6 @@ mod test {
 
         check_expr(ExpressionBack::Sum(two(), three()), 5);
         check_expr(ExpressionBack::Product(two(), three()), 6);
-        check_expr(ExpressionBack::Scaled(two(), Scalar::from(5)), 10);
         check_expr(
             ExpressionBack::Sum(ExpressionBack::Negated(two()).into(), three()),
             1,

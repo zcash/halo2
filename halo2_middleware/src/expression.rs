@@ -31,8 +31,6 @@ pub enum Expression<F, V: Variable> {
     Sum(Box<Expression<F, V>>, Box<Expression<F, V>>),
     /// This is the product of two polynomials
     Product(Box<Expression<F, V>>, Box<Expression<F, V>>),
-    /// This is a scaled polynomial
-    Scaled(Box<Expression<F, V>>, F),
 }
 
 impl<F: Field, V: Variable> Expression<F, V> {
@@ -46,28 +44,23 @@ impl<F: Field, V: Variable> Expression<F, V> {
         negated: &impl Fn(T) -> T,
         sum: &impl Fn(T, T) -> T,
         product: &impl Fn(T, T) -> T,
-        scaled: &impl Fn(T, F) -> T,
     ) -> T {
         match self {
             Expression::Constant(scalar) => constant(*scalar),
             Expression::Var(v) => var(*v),
             Expression::Negated(a) => {
-                let a = a.evaluate(constant, var, negated, sum, product, scaled);
+                let a = a.evaluate(constant, var, negated, sum, product);
                 negated(a)
             }
             Expression::Sum(a, b) => {
-                let a = a.evaluate(constant, var, negated, sum, product, scaled);
-                let b = b.evaluate(constant, var, negated, sum, product, scaled);
+                let a = a.evaluate(constant, var, negated, sum, product);
+                let b = b.evaluate(constant, var, negated, sum, product);
                 sum(a, b)
             }
             Expression::Product(a, b) => {
-                let a = a.evaluate(constant, var, negated, sum, product, scaled);
-                let b = b.evaluate(constant, var, negated, sum, product, scaled);
+                let a = a.evaluate(constant, var, negated, sum, product);
+                let b = b.evaluate(constant, var, negated, sum, product);
                 product(a, b)
-            }
-            Expression::Scaled(a, f) => {
-                let a = a.evaluate(constant, var, negated, sum, product, scaled);
-                scaled(a, *f)
             }
         }
     }
@@ -95,10 +88,6 @@ impl<F: Field, V: Variable> Expression<F, V> {
                 b.write_identifier(writer)?;
                 writer.write_all(b")")
             }
-            Expression::Scaled(a, f) => {
-                a.write_identifier(writer)?;
-                write!(writer, "*{f:?}")
-            }
         }
     }
 
@@ -120,7 +109,6 @@ impl<F: Field, V: Variable> Expression<F, V> {
             Negated(poly) => poly.degree(),
             Sum(a, b) => max(a.degree(), b.degree()),
             Product(a, b) => a.degree() + b.degree(),
-            Scaled(poly, _) => poly.degree(),
         }
     }
 
@@ -132,7 +120,6 @@ impl<F: Field, V: Variable> Expression<F, V> {
             Expression::Negated(poly) => poly.complexity() + 5,
             Expression::Sum(a, b) => a.complexity() + b.complexity() + 15,
             Expression::Product(a, b) => a.complexity() + b.complexity() + 30,
-            Expression::Scaled(poly, _) => poly.complexity() + 30,
         }
     }
 
@@ -173,7 +160,7 @@ impl<F: Field, V: Variable> Mul for Expression<F, V> {
 impl<F: Field, V: Variable> Mul<F> for Expression<F, V> {
     type Output = Expression<F, V>;
     fn mul(self, rhs: F) -> Expression<F, V> {
-        Expression::Scaled(Box::new(self), rhs)
+        Expression::Product(Box::new(self), Box::new(Expression::Constant(rhs)))
     }
 }
 

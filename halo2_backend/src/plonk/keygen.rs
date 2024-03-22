@@ -237,9 +237,6 @@ impl QueriesMap {
                 Box::new(self.as_expression(lhs)),
                 Box::new(self.as_expression(rhs)),
             ),
-            ExpressionMid::Scaled(e, c) => {
-                ExpressionBack::Scaled(Box::new(self.as_expression(e)), *c)
-            }
         }
     }
 }
