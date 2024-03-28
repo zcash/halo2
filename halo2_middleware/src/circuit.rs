@@ -224,7 +224,7 @@ impl fmt::Display for ColumnMid {
 }
 
 /// A cell identifies a position in the plonkish matrix identified by a column and a row offset.
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, PartialOrd, Eq, Ord, Debug)]
 pub struct Cell {
     pub column: ColumnMid,
     pub row: usize,

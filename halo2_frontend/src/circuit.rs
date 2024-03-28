@@ -112,6 +112,10 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
     let selector_polys = selectors_to_fixed.convert(assembly.selectors);
     fixed.extend(selector_polys);
 
+    // sort the "copies" for deterministic ordering
+    #[cfg(feature = "thread-safe-region")]
+    assembly.permutation.copies.sort();
+
     let preprocessing = PreprocessingV2 {
         permutation: halo2_middleware::permutation::AssemblyMid {
             copies: assembly.permutation.copies,
