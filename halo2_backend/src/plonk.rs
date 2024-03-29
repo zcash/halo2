@@ -162,8 +162,9 @@ impl<C: CurveAffine> VerifyingKey<C> {
     where
         C: SerdeCurveAffine,
     {
-        10 + (self.fixed_commitments.len() * C::byte_length(format))
-            + self.permutation.bytes_length(format)
+        6 // bytes used for encoding VERSION(u8), "domain.k"(u8) & num_fixed_columns(u32)
+        + (self.fixed_commitments.len() * C::byte_length(format))
+        + self.permutation.bytes_length(format)
     }
 
     fn from_parts(
@@ -293,7 +294,7 @@ where
     {
         let scalar_len = C::Scalar::default().to_repr().as_ref().len();
         self.vk.bytes_length(format)
-            + 12
+            + 12 // bytes used for encoding the length(u32) of "l0", "l_last" & "l_active_row" polys
             + scalar_len * (self.l0.len() + self.l_last.len() + self.l_active_row.len())
             + polynomial_slice_byte_length(&self.fixed_values)
             + polynomial_slice_byte_length(&self.fixed_polys)
