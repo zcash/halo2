@@ -16,8 +16,16 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: nightly-2023-10-05
           override: true
+
+      - name: Copy the html file to workspace crates
+        run: |
+          for cargo_toml in $(find . -name Cargo.toml); do
+            crate_dir=$(dirname $cargo_toml)
+            cp .github/katex-header.html $crate_dir
+            echo "Copied html file to $crate_dir"
+          done
 
       - name: Build latest rustdocs
         uses: actions-rs/cargo@v1
@@ -32,6 +40,14 @@ jobs:
           rm -rf ./docs
           cp -R ./target/doc ./docs
           echo "<meta http-equiv=\"refresh\" content=\"0; url=halo2_proofs\">" > ./docs/index.html
+
+      - name: Delete the html files copied to every crate
+        run: |
+          for cargo_toml in $(find . -name Cargo.toml); do
+            crate_dir=$(dirname $cargo_toml)
+            rm -f $crate_dir/katex-header.html
+            echo "Deleted html file in $crate_dir"
+          done
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
