@@ -562,9 +562,15 @@ fn test_mycircuit_full_legacy() {
 
 #[test]
 fn test_mycircuit_full_split() {
+    use halo2_middleware::zal::impls::{H2cEngine, PlonkEngineConfig};
+
     #[cfg(feature = "heap-profiling")]
     let _profiler = dhat::Profiler::new_heap();
 
+    let engine = PlonkEngineConfig::new()
+        .set_curve::<G1Affine>()
+        .set_msm(H2cEngine::new())
+        .build();
     let k = K;
     let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
     let (compiled_circuit, config, cs) = compile_circuit(k, &circuit, false).unwrap();
@@ -591,15 +597,22 @@ fn test_mycircuit_full_split() {
     let start = Instant::now();
     let mut witness_calc = WitnessCalculator::new(k, &circuit, &config, &cs, instances_slice);
     let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
-    let mut prover =
-        ProverV2Single::<KZGCommitmentScheme<Bn256>, ProverSHPLONK<'_, Bn256>, _, _, _>::new(
-            &params,
-            &pk,
-            instances_slice,
-            &mut rng,
-            &mut transcript,
-        )
-        .unwrap();
+    let mut prover = ProverV2Single::<
+        KZGCommitmentScheme<Bn256>,
+        ProverSHPLONK<'_, Bn256>,
+        _,
+        _,
+        _,
+        _,
+    >::new_with_engine(
+        engine,
+        &params,
+        &pk,
+        instances_slice,
+        &mut rng,
+        &mut transcript,
+    )
+    .unwrap();
     let mut challenges = HashMap::new();
     for phase in 0..cs.phases().count() {
         println!("phase {phase}");

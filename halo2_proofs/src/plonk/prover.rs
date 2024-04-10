@@ -5,8 +5,65 @@ use halo2_backend::plonk::{prover::ProverV2, ProvingKey};
 use halo2_frontend::circuit::{compile_circuit_cs, WitnessCalculator};
 use halo2_frontend::plonk::Circuit;
 use halo2_middleware::ff::{FromUniformBytes, WithSmallOrderMulGroup};
+use halo2_middleware::zal::{
+    impls::{PlonkEngine, PlonkEngineConfig},
+    traits::MsmAccel,
+};
 use rand_core::RngCore;
 use std::collections::HashMap;
+
+/// This creates a proof for the provided `circuit` when given the public
+/// parameters `params` and the proving key [`ProvingKey`] that was
+/// generated previously for the same circuit. The provided `instances`
+/// are zero-padded internally.
+pub fn create_proof_with_engine<
+    'params,
+    Scheme: CommitmentScheme,
+    P: Prover<'params, Scheme>,
+    E: EncodedChallenge<Scheme::Curve>,
+    R: RngCore,
+    T: TranscriptWrite<Scheme::Curve, E>,
+    ConcreteCircuit: Circuit<Scheme::Scalar>,
+    M: MsmAccel<Scheme::Curve>,
+>(
+    engine: PlonkEngine<Scheme::Curve, M>,
+    params: &'params Scheme::ParamsProver,
+    pk: &ProvingKey<Scheme::Curve>,
+    circuits: &[ConcreteCircuit],
+    instances: &[&[&[Scheme::Scalar]]],
+    rng: R,
+    transcript: &mut T,
+) -> Result<(), Error>
+where
+    Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
+{
+    if circuits.len() != instances.len() {
+        return Err(Error::Backend(ErrorBack::InvalidInstances));
+    }
+    let (config, cs, _) = compile_circuit_cs::<_, ConcreteCircuit>(
+        pk.get_vk().compress_selectors.unwrap_or_default(),
+        #[cfg(feature = "circuit-params")]
+        circuits[0].params(),
+    );
+    let mut witness_calcs: Vec<_> = circuits
+        .iter()
+        .enumerate()
+        .map(|(i, circuit)| WitnessCalculator::new(params.k(), circuit, &config, &cs, instances[i]))
+        .collect();
+    let mut prover = ProverV2::<Scheme, P, _, _, _, _>::new_with_engine(
+        engine, params, pk, instances, rng, transcript,
+    )?;
+    let mut challenges = HashMap::new();
+    let phases = prover.phases().to_vec();
+    for phase in phases.iter() {
+        let mut witnesses = Vec::with_capacity(circuits.len());
+        for witness_calc in witness_calcs.iter_mut() {
+            witnesses.push(witness_calc.calc(*phase, &challenges)?);
+        }
+        challenges = prover.commit_phase(*phase, witnesses).unwrap();
+    }
+    Ok(prover.create_proof()?)
+}
 
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
@@ -31,30 +88,10 @@ pub fn create_proof<
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
 {
-    if circuits.len() != instances.len() {
-        return Err(Error::Backend(ErrorBack::InvalidInstances));
-    }
-    let (config, cs, _) = compile_circuit_cs::<_, ConcreteCircuit>(
-        pk.get_vk().compress_selectors.unwrap_or_default(),
-        #[cfg(feature = "circuit-params")]
-        circuits[0].params(),
-    );
-    let mut witness_calcs: Vec<_> = circuits
-        .iter()
-        .enumerate()
-        .map(|(i, circuit)| WitnessCalculator::new(params.k(), circuit, &config, &cs, instances[i]))
-        .collect();
-    let mut prover = ProverV2::<Scheme, P, _, _, _>::new(params, pk, instances, rng, transcript)?;
-    let mut challenges = HashMap::new();
-    let phases = prover.phases().to_vec();
-    for phase in phases.iter() {
-        let mut witnesses = Vec::with_capacity(circuits.len());
-        for witness_calc in witness_calcs.iter_mut() {
-            witnesses.push(witness_calc.calc(*phase, &challenges)?);
-        }
-        challenges = prover.commit_phase(*phase, witnesses).unwrap();
-    }
-    Ok(prover.create_proof()?)
+    let engine = PlonkEngineConfig::build_default();
+    create_proof_with_engine::<Scheme, P, _, _, _, _, _>(
+        engine, params, pk, circuits, instances, rng, transcript,
+    )
 }
 
 #[test]

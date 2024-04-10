@@ -9,6 +9,7 @@ use crate::poly::{commitment::Blind, Polynomial};
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use group::Curve;
+use halo2_middleware::zal::traits::MsmAccel;
 use halo2curves::pairing::Engine;
 use halo2curves::CurveExt;
 use rand_core::RngCore;
@@ -36,7 +37,7 @@ where
     }
 
     /// Create a multi-opening proof
-    fn create_proof<
+    fn create_proof_with_engine<
         'com,
         Ch: EncodedChallenge<E::G1Affine>,
         T: TranscriptWrite<E::G1Affine, Ch>,
@@ -44,6 +45,7 @@ where
         I,
     >(
         &self,
+        engine: &impl MsmAccel<E::G1Affine>,
         _: R,
         transcript: &mut T,
         queries: I,
@@ -79,7 +81,7 @@ where
             };
             let w = self
                 .params
-                .commit(&witness_poly, Blind::default())
+                .commit(engine, &witness_poly, Blind::default())
                 .to_affine();
 
             transcript.write_point(w)?;

@@ -5,7 +5,7 @@ use crate::poly::{Coeff, LagrangeCoeff, Polynomial};
 
 use group::{prime::PrimeCurveAffine, Curve, Group};
 use halo2_middleware::ff::{Field, PrimeField};
-use halo2curves::msm::best_multiexp;
+use halo2_middleware::zal::traits::MsmAccel;
 use halo2curves::pairing::Engine;
 use halo2curves::CurveExt;
 use rand_core::{OsRng, RngCore};
@@ -302,13 +302,18 @@ where
         MSMKZG::new()
     }
 
-    fn commit_lagrange(&self, poly: &Polynomial<E::Fr, LagrangeCoeff>, _: Blind<E::Fr>) -> E::G1 {
+    fn commit_lagrange(
+        &self,
+        engine: &impl MsmAccel<E::G1Affine>,
+        poly: &Polynomial<E::Fr, LagrangeCoeff>,
+        _: Blind<E::Fr>,
+    ) -> E::G1 {
         let mut scalars = Vec::with_capacity(poly.len());
         scalars.extend(poly.iter());
         let bases = &self.g_lagrange;
         let size = scalars.len();
         assert!(bases.len() >= size);
-        best_multiexp(&scalars, &bases[0..size])
+        engine.msm(&scalars, &bases[0..size])
     }
 
     /// Writes params to a buffer.
@@ -346,13 +351,18 @@ where
         Self::setup(k, OsRng)
     }
 
-    fn commit(&self, poly: &Polynomial<E::Fr, Coeff>, _: Blind<E::Fr>) -> E::G1 {
+    fn commit(
+        &self,
+        engine: &impl MsmAccel<E::G1Affine>,
+        poly: &Polynomial<E::Fr, Coeff>,
+        _: Blind<E::Fr>,
+    ) -> E::G1 {
         let mut scalars = Vec::with_capacity(poly.len());
         scalars.extend(poly.iter());
         let bases = &self.g;
         let size = scalars.len();
         assert!(bases.len() >= size);
-        best_multiexp(&scalars, &bases[0..size])
+        engine.msm(&scalars, &bases[0..size])
     }
 
     fn get_g(&self) -> &[E::G1Affine] {
@@ -366,6 +376,7 @@ mod test {
     use crate::poly::commitment::{Blind, Params};
     use crate::poly::kzg::commitment::ParamsKZG;
     use halo2_middleware::ff::Field;
+    use halo2_middleware::zal::impls::H2cEngine;
 
     #[test]
     fn test_commit_lagrange() {
@@ -376,6 +387,7 @@ mod test {
         use crate::poly::EvaluationDomain;
         use halo2curves::bn256::{Bn256, Fr};
 
+        let engine = H2cEngine::new();
         let params = ParamsKZG::<Bn256>::new(K);
         let domain = EvaluationDomain::new(1, K);
 
@@ -389,7 +401,10 @@ mod test {
 
         let alpha = Blind(Fr::random(OsRng));
 
-        assert_eq!(params.commit(&b, alpha), params.commit_lagrange(&a, alpha));
+        assert_eq!(
+            params.commit(&engine, &b, alpha),
+            params.commit_lagrange(&engine, &a, alpha)
+        );
     }
 
     #[test]

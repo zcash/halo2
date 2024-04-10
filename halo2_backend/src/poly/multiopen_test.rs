@@ -16,6 +16,7 @@ mod test {
     };
     use group::Curve;
     use halo2_middleware::ff::WithSmallOrderMulGroup;
+    use halo2_middleware::zal::{impls::H2cEngine, traits::MsmAccel};
     use rand_core::OsRng;
 
     #[test]
@@ -27,6 +28,7 @@ mod test {
 
         const K: u32 = 4;
 
+        let engine = H2cEngine::new();
         let params = ParamsIPA::<EqAffine>::new(K);
 
         let proof = create_proof::<
@@ -34,7 +36,7 @@ mod test {
             ProverIPA<_>,
             _,
             Blake2bWrite<_, _, Challenge255<_>>,
-        >(&params);
+        >(&engine, &params);
 
         let verifier_params = params.verifier_params();
 
@@ -64,6 +66,7 @@ mod test {
 
         const K: u32 = 4;
 
+        let engine = H2cEngine::new();
         let params = ParamsIPA::<EqAffine>::new(K);
 
         let proof = create_proof::<
@@ -71,7 +74,7 @@ mod test {
             ProverIPA<_>,
             _,
             Keccak256Write<_, _, Challenge255<_>>,
-        >(&params);
+        >(&engine, &params);
 
         let verifier_params = params.verifier_params();
 
@@ -101,10 +104,12 @@ mod test {
 
         const K: u32 = 4;
 
+        let engine = H2cEngine::new();
         let params = ParamsKZG::<Bn256>::new(K);
 
-        let proof =
-            create_proof::<_, ProverGWC<_>, _, Blake2bWrite<_, _, Challenge255<_>>>(&params);
+        let proof = create_proof::<_, ProverGWC<_>, _, Blake2bWrite<_, _, Challenge255<_>>>(
+            &engine, &params,
+        );
 
         let verifier_params = params.verifier_params();
 
@@ -132,6 +137,7 @@ mod test {
 
         const K: u32 = 4;
 
+        let engine = H2cEngine::new();
         let params = ParamsKZG::<Bn256>::new(K);
 
         let proof = create_proof::<
@@ -139,7 +145,7 @@ mod test {
             ProverSHPLONK<_>,
             _,
             Blake2bWrite<_, _, Challenge255<_>>,
-        >(&params);
+        >(&engine, &params);
 
         let verifier_params = params.verifier_params();
 
@@ -225,6 +231,7 @@ mod test {
         E: EncodedChallenge<Scheme::Curve>,
         T: TranscriptWriterBuffer<Vec<u8>, Scheme::Curve, E>,
     >(
+        engine: &impl MsmAccel<Scheme::Curve>,
         params: &'params Scheme::ParamsProver,
     ) -> Vec<u8>
     where
@@ -250,9 +257,9 @@ mod test {
         let mut transcript = T::init(vec![]);
 
         let blind = Blind::new(&mut OsRng);
-        let a = params.commit(&ax, blind).to_affine();
-        let b = params.commit(&bx, blind).to_affine();
-        let c = params.commit(&cx, blind).to_affine();
+        let a = params.commit(engine, &ax, blind).to_affine();
+        let b = params.commit(engine, &bx, blind).to_affine();
+        let c = params.commit(engine, &cx, blind).to_affine();
 
         transcript.write_point(a).unwrap();
         transcript.write_point(b).unwrap();

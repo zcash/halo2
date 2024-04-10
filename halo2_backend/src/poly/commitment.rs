@@ -6,6 +6,7 @@ use super::{
 use crate::poly::Error;
 use crate::transcript::{EncodedChallenge, TranscriptRead, TranscriptWrite};
 use halo2_middleware::ff::Field;
+use halo2_middleware::zal::{impls::PlonkEngineConfig, traits::MsmAccel};
 use halo2curves::CurveAffine;
 use rand_core::RngCore;
 use std::{
@@ -62,6 +63,7 @@ pub trait Params<'params, C: CurveAffine>: Sized + Clone + Debug {
     /// `r`.
     fn commit_lagrange(
         &self,
+        engine: &impl MsmAccel<C>,
         poly: &Polynomial<C::ScalarExt, LagrangeCoeff>,
         r: Blind<C::ScalarExt>,
     ) -> C::CurveExt;
@@ -84,8 +86,12 @@ pub trait ParamsProver<'params, C: CurveAffine>: Params<'params, C> {
     /// This computes a commitment to a polynomial described by the provided
     /// slice of coefficients. The commitment may be blinded by the blinding
     /// factor `r`.
-    fn commit(&self, poly: &Polynomial<C::ScalarExt, Coeff>, r: Blind<C::ScalarExt>)
-        -> C::CurveExt;
+    fn commit(
+        &self,
+        engine: &impl MsmAccel<C>,
+        poly: &Polynomial<C::ScalarExt, Coeff>,
+        r: Blind<C::ScalarExt>,
+    ) -> C::CurveExt;
 
     /// Getter for g generators
     fn get_g(&self) -> &[C];
@@ -111,10 +117,10 @@ pub trait MSM<C: CurveAffine>: Clone + Debug + Send + Sync {
     fn scale(&mut self, factor: C::Scalar);
 
     /// Perform multiexp and check that it results in zero
-    fn check(&self) -> bool;
+    fn check(&self, engine: &impl MsmAccel<C>) -> bool;
 
     /// Perform multiexp and return the result
-    fn eval(&self) -> C::CurveExt;
+    fn eval(&self, engine: &impl MsmAccel<C>) -> C::CurveExt;
 
     /// Return base points
     fn bases(&self) -> Vec<C::CurveExt>;
@@ -132,6 +138,24 @@ pub trait Prover<'params, Scheme: CommitmentScheme> {
     fn new(params: &'params Scheme::ParamsProver) -> Self;
 
     /// Create a multi-opening proof
+    fn create_proof_with_engine<
+        'com,
+        E: EncodedChallenge<Scheme::Curve>,
+        T: TranscriptWrite<Scheme::Curve, E>,
+        R,
+        I,
+    >(
+        &self,
+        engine: &impl MsmAccel<Scheme::Curve>,
+        rng: R,
+        transcript: &mut T,
+        queries: I,
+    ) -> io::Result<()>
+    where
+        I: IntoIterator<Item = ProverQuery<'com, Scheme::Curve>> + Clone,
+        R: RngCore;
+
+    /// Create a multi-opening proof
     fn create_proof<
         'com,
         E: EncodedChallenge<Scheme::Curve>,
@@ -146,7 +170,11 @@ pub trait Prover<'params, Scheme: CommitmentScheme> {
     ) -> io::Result<()>
     where
         I: IntoIterator<Item = ProverQuery<'com, Scheme::Curve>> + Clone,
-        R: RngCore;
+        R: RngCore,
+    {
+        let engine = PlonkEngineConfig::build_default::<Scheme::Curve>();
+        self.create_proof_with_engine(&engine.msm_backend, rng, transcript, queries)
+    }
 }
 
 /// Common multi-open verifier interface for various commitment schemes

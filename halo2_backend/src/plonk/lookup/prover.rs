@@ -17,6 +17,7 @@ use group::{
 };
 use halo2_middleware::ff::WithSmallOrderMulGroup;
 use halo2_middleware::poly::Rotation;
+use halo2_middleware::zal::{impls::PlonkEngine, traits::MsmAccel};
 use rand_core::RngCore;
 use std::{
     collections::BTreeMap,
@@ -69,7 +70,9 @@ pub(in crate::plonk) fn lookup_commit_permuted<
     E: EncodedChallenge<C>,
     R: RngCore,
     T: TranscriptWrite<C, E>,
+    M: MsmAccel<C>,
 >(
+    engine: &PlonkEngine<C, M>,
     arg: &Argument<F>,
     pk: &ProvingKey<C>,
     params: &P,
@@ -127,7 +130,9 @@ where
     let mut commit_values = |values: &Polynomial<C::Scalar, LagrangeCoeff>| {
         let poly = pk.vk.domain.lagrange_to_coeff(values.clone());
         let blind = Blind(C::Scalar::random(&mut rng));
-        let commitment = params.commit_lagrange(values, blind).to_affine();
+        let commitment = params
+            .commit_lagrange(&engine.msm_backend, values, blind)
+            .to_affine();
         (poly, blind, commitment)
     };
 
@@ -163,14 +168,17 @@ impl<C: CurveAffine> Permuted<C> {
     /// grand product polynomial over the lookup. The grand product polynomial
     /// is used to populate the [`Committed<C>`] struct. The [`Committed<C>`] struct is
     /// added to the Lookup and finally returned by the method.
+    #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn commit_product<
         'params,
         P: Params<'params, C>,
         E: EncodedChallenge<C>,
         R: RngCore,
         T: TranscriptWrite<C, E>,
+        M: MsmAccel<C>,
     >(
         self,
+        engine: &PlonkEngine<C, M>,
         pk: &ProvingKey<C>,
         params: &P,
         beta: ChallengeBeta<C>,
@@ -287,7 +295,9 @@ impl<C: CurveAffine> Permuted<C> {
         }
 
         let product_blind = Blind(C::Scalar::random(rng));
-        let product_commitment = params.commit_lagrange(&z, product_blind).to_affine();
+        let product_commitment = params
+            .commit_lagrange(&engine.msm_backend, &z, product_blind)
+            .to_affine();
         let z = pk.vk.domain.lagrange_to_coeff(z);
 
         // Hash product commitment

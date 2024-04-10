@@ -3,6 +3,7 @@ use std::{collections::HashMap, iter};
 use crate::plonk::Error;
 use group::Curve;
 use halo2_middleware::ff::Field;
+use halo2_middleware::zal::{impls::PlonkEngine, traits::MsmAccel};
 use rand_chacha::ChaCha20Rng;
 use rand_core::{RngCore, SeedableRng};
 
@@ -43,6 +44,7 @@ impl<C: CurveAffine> Argument<C> {
         R: RngCore,
         T: TranscriptWrite<C, E>,
     >(
+        engine: &impl MsmAccel<C>,
         params: &P,
         domain: &EvaluationDomain<C::Scalar>,
         mut rng: R,
@@ -84,7 +86,9 @@ impl<C: CurveAffine> Argument<C> {
         let random_blind = Blind(C::Scalar::random(rng));
 
         // Commit
-        let c = params.commit(&random_poly, random_blind).to_affine();
+        let c = params
+            .commit(engine, &random_poly, random_blind)
+            .to_affine();
         transcript.write_point(c)?;
 
         Ok(Committed {
@@ -101,8 +105,10 @@ impl<C: CurveAffine> Committed<C> {
         E: EncodedChallenge<C>,
         R: RngCore,
         T: TranscriptWrite<C, E>,
+        M: MsmAccel<C>,
     >(
         self,
+        engine: &PlonkEngine<C, M>,
         params: &P,
         domain: &EvaluationDomain<C::Scalar>,
         h_poly: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
@@ -130,7 +136,7 @@ impl<C: CurveAffine> Committed<C> {
         let h_commitments_projective: Vec<_> = h_pieces
             .iter()
             .zip(h_blinds.iter())
-            .map(|(h_piece, blind)| params.commit(h_piece, *blind))
+            .map(|(h_piece, blind)| params.commit(&engine.msm_backend, h_piece, *blind))
             .collect();
         let mut h_commitments = vec![C::identity(); h_commitments_projective.len()];
         C::Curve::batch_normalize(&h_commitments_projective, &mut h_commitments);

@@ -11,6 +11,7 @@ use crate::{
     },
 };
 use halo2_middleware::ff::Field;
+use halo2_middleware::zal::impls::H2cEngine;
 use halo2curves::{
     pairing::{Engine, MultiMillerLoop},
     CurveAffine, CurveExt,
@@ -136,7 +137,9 @@ where
     }
 
     fn finalize(self) -> bool {
-        self.msm_accumulator.check()
+        // ZAL: Verification is (supposedly) cheap, hence we don't use an accelerator engine
+        let default_engine = H2cEngine::new();
+        self.msm_accumulator.check(&default_engine)
     }
 }
 
@@ -168,7 +171,9 @@ where
         // Guard is updated with new msm contributions
         let guard = f(self.msm)?;
         let msm = guard.msm_accumulator;
-        if msm.check() {
+        // Verification is (supposedly) cheap, hence we don't use an accelerator engine
+        let default_engine = H2cEngine::new();
+        if msm.check(&default_engine) {
             Ok(())
         } else {
             Err(Error::ConstraintSystemFailure)

@@ -15,6 +15,7 @@ use crate::transcript::{EncodedChallenge, TranscriptWrite};
 use crate::multicore::{IntoParallelIterator, ParallelIterator};
 use group::Curve;
 use halo2_middleware::ff::Field;
+use halo2_middleware::zal::traits::MsmAccel;
 use halo2curves::pairing::Engine;
 use halo2curves::CurveExt;
 use rand_core::RngCore;
@@ -117,7 +118,7 @@ where
     }
 
     /// Create a multi-opening proof
-    fn create_proof<
+    fn create_proof_with_engine<
         'com,
         Ch: EncodedChallenge<E::G1Affine>,
         T: TranscriptWrite<E::G1Affine, Ch>,
@@ -125,6 +126,7 @@ where
         I,
     >(
         &self,
+        engine: &impl MsmAccel<E::G1Affine>,
         _: R,
         transcript: &mut T,
         queries: I,
@@ -208,7 +210,10 @@ where
             .reduce(|acc, poly| acc + &poly)
             .unwrap();
 
-        let h = self.params.commit(&h_x, Blind::default()).to_affine();
+        let h = self
+            .params
+            .commit(engine, &h_x, Blind::default())
+            .to_affine();
         transcript.write_point(h)?;
         let u: ChallengeU<_> = transcript.squeeze_challenge_scalar();
 
@@ -290,7 +295,10 @@ where
             _marker: PhantomData,
         };
 
-        let h = self.params.commit(&h_x, Blind::default()).to_affine();
+        let h = self
+            .params
+            .commit(engine, &h_x, Blind::default())
+            .to_affine();
         transcript.write_point(h)?;
 
         Ok(())

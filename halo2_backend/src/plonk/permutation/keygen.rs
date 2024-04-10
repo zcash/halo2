@@ -1,5 +1,6 @@
 use group::Curve;
 use halo2_middleware::ff::{Field, PrimeField};
+use halo2_middleware::zal::impls::H2cEngine;
 
 use super::{Argument, ProvingKey, VerifyingKey};
 use crate::{
@@ -265,7 +266,7 @@ pub(crate) fn build_vk<'params, C: CurveAffine, P: Params<'params, C>>(
         // Compute commitment to permutation polynomial
         commitments.push(
             params
-                .commit_lagrange(permutation, Blind::default())
+                .commit_lagrange(&H2cEngine::new(), permutation, Blind::default())
                 .to_affine(),
         );
     }

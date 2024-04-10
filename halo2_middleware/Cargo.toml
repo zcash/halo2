@@ -26,14 +26,16 @@ rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
 
 [dependencies]
 ff = "0.13"
+halo2curves = { version = "0.6.0", default-features = false }
 serde = { version = "1", optional = true, features = ["derive"] }
 serde_derive = { version = "1", optional = true}
 rayon = "1.8"
 
 [dev-dependencies]
+ark-std = { version = "0.3" }
 proptest = "1"
 group = "0.13"
-halo2curves = { version = "0.6.0", default-features = false }
+rand_core = { version = "0.6", default-features = false }
 
 [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
 getrandom = { version = "0.2", features = ["js"] }

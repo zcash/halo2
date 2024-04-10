@@ -2,7 +2,8 @@ use group::{
     ff::{BatchInvert, Field},
     Curve,
 };
-use halo2_middleware::ff::PrimeField;
+use halo2_middleware::zal::traits::MsmAccel;
+use halo2_middleware::{ff::PrimeField, zal::impls::PlonkEngine};
 use rand_core::RngCore;
 use std::iter::{self, ExactSizeIterator};
 
@@ -53,7 +54,9 @@ pub(in crate::plonk) fn permutation_commit<
     E: EncodedChallenge<C>,
     R: RngCore,
     T: TranscriptWrite<C, E>,
+    M: MsmAccel<C>,
 >(
+    engine: &PlonkEngine<C, M>,
     arg: &Argument,
     params: &P,
     pk: &plonk::ProvingKey<C>,
@@ -171,7 +174,8 @@ pub(in crate::plonk) fn permutation_commit<
 
         let blind = Blind(C::Scalar::random(&mut rng));
 
-        let permutation_product_commitment_projective = params.commit_lagrange(&z, blind);
+        let permutation_product_commitment_projective =
+            params.commit_lagrange(&engine.msm_backend, &z, blind);
         let permutation_product_blind = blind;
         let z = domain.lagrange_to_coeff(z);
         let permutation_product_poly = z.clone();
