@@ -12,9 +12,9 @@ mod verifier {
     pub use halo2_backend::plonk::verifier::verify_proof;
 }
 
-pub use keygen::{keygen_pk, keygen_vk, keygen_vk_custom};
+pub use keygen::{keygen_pk, keygen_pk_custom, keygen_vk, keygen_vk_custom};
 
-pub use prover::{create_proof, create_proof_with_engine};
+pub use prover::{create_proof, create_proof_custom_with_engine, create_proof_with_engine};
 pub use verifier::verify_proof;
 
 pub use error::Error;

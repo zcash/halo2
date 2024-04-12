@@ -52,9 +52,6 @@ pub struct VerifyingKey<C: CurveAffine> {
     cs_degree: usize,
     /// The representative of this `VerifyingKey` in transcripts.
     transcript_repr: C::Scalar,
-    /// Legacy field that indicates wether the circuit was compiled with compressed selectors or
-    /// not using the legacy API.
-    pub compress_selectors: Option<bool>,
 }
 
 // Current version of the VK
@@ -187,7 +184,6 @@ impl<C: CurveAffine> VerifyingKey<C> {
             cs_degree,
             // Temporary, this is not pinned.
             transcript_repr: C::Scalar::ZERO,
-            compress_selectors: None,
         };
 
         let mut hasher = Blake2bParams::new()
