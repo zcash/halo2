@@ -1,7 +1,7 @@
 use crate::plonk::{Error, ErrorBack};
-use crate::poly::commitment::{CommitmentScheme, Params, Prover};
+use crate::poly::commitment::{self, CommitmentScheme, Params};
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
-use halo2_backend::plonk::{prover::ProverV2, ProvingKey};
+use halo2_backend::plonk::{prover::Prover, ProvingKey};
 use halo2_frontend::circuit::{compile_circuit_cs, WitnessCalculator};
 use halo2_frontend::plonk::Circuit;
 use halo2_middleware::ff::{FromUniformBytes, WithSmallOrderMulGroup};
@@ -19,7 +19,7 @@ use std::collections::HashMap;
 pub fn create_proof_with_engine<
     'params,
     Scheme: CommitmentScheme,
-    P: Prover<'params, Scheme>,
+    P: commitment::Prover<'params, Scheme>,
     E: EncodedChallenge<Scheme::Curve>,
     R: RngCore,
     T: TranscriptWrite<Scheme::Curve, E>,
@@ -50,7 +50,7 @@ where
         .enumerate()
         .map(|(i, circuit)| WitnessCalculator::new(params.k(), circuit, &config, &cs, instances[i]))
         .collect();
-    let mut prover = ProverV2::<Scheme, P, _, _, _, _>::new_with_engine(
+    let mut prover = Prover::<Scheme, P, _, _, _, _>::new_with_engine(
         engine, params, pk, instances, rng, transcript,
     )?;
     let mut challenges = HashMap::new();
@@ -72,7 +72,7 @@ where
 pub fn create_proof<
     'params,
     Scheme: CommitmentScheme,
-    P: Prover<'params, Scheme>,
+    P: commitment::Prover<'params, Scheme>,
     E: EncodedChallenge<Scheme::Curve>,
     R: RngCore,
     T: TranscriptWrite<Scheme::Curve, E>,

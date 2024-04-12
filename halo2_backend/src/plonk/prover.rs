@@ -14,7 +14,7 @@ use crate::plonk::{
     ProvingKey,
 };
 use crate::poly::{
-    commitment::{Blind, CommitmentScheme, Params, Prover},
+    commitment::{self, Blind, CommitmentScheme, Params},
     Basis, Coeff, LagrangeCoeff, Polynomial, ProverQuery,
 };
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
@@ -39,29 +39,29 @@ struct AdviceSingle<C: CurveAffine, B: Basis> {
 }
 
 /// The prover object used to create proofs interactively by passing the witnesses to commit at
-/// each phase.  This works for a single proof.  This is a wrapper over ProverV2.
+/// each phase.  This works for a single proof.  This is a wrapper over Prover.
 #[derive(Debug)]
-pub struct ProverV2Single<
+pub struct ProverSingle<
     'a,
     'params,
     Scheme: CommitmentScheme,
-    P: Prover<'params, Scheme>,
+    P: commitment::Prover<'params, Scheme>,
     E: EncodedChallenge<Scheme::Curve>,
     R: RngCore,
     T: TranscriptWrite<Scheme::Curve, E>,
     M: MsmAccel<Scheme::Curve>,
->(ProverV2<'a, 'params, Scheme, P, E, R, T, M>);
+>(Prover<'a, 'params, Scheme, P, E, R, T, M>);
 
 impl<
         'a,
         'params,
         Scheme: CommitmentScheme,
-        P: Prover<'params, Scheme>,
+        P: commitment::Prover<'params, Scheme>,
         E: EncodedChallenge<Scheme::Curve>,
         R: RngCore,
         T: TranscriptWrite<Scheme::Curve, E>,
         M: MsmAccel<Scheme::Curve>,
-    > ProverV2Single<'a, 'params, Scheme, P, E, R, T, M>
+    > ProverSingle<'a, 'params, Scheme, P, E, R, T, M>
 {
     /// Create a new prover object
     pub fn new_with_engine(
@@ -77,7 +77,7 @@ impl<
     where
         Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     {
-        Ok(Self(ProverV2::new_with_engine(
+        Ok(Self(Prover::new_with_engine(
             engine,
             params,
             pk,
@@ -95,12 +95,12 @@ impl<
         instance: &[&[Scheme::Scalar]],
         rng: R,
         transcript: &'a mut T,
-    ) -> Result<ProverV2Single<'a, 'params, Scheme, P, E, R, T, H2cEngine>, Error>
+    ) -> Result<ProverSingle<'a, 'params, Scheme, P, E, R, T, H2cEngine>, Error>
     where
         Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     {
         let engine = PlonkEngineConfig::build_default();
-        ProverV2Single::new_with_engine(engine, params, pk, instance, rng, transcript)
+        ProverSingle::new_with_engine(engine, params, pk, instance, rng, transcript)
     }
 
     /// Commit the `witness` at `phase` and return the challenges after `phase`.
@@ -127,11 +127,11 @@ impl<
 /// The prover object used to create proofs interactively by passing the witnesses to commit at
 /// each phase.  This supports batch proving.
 #[derive(Debug)]
-pub struct ProverV2<
+pub struct Prover<
     'a,
     'params,
     Scheme: CommitmentScheme,
-    P: Prover<'params, Scheme>,
+    P: commitment::Prover<'params, Scheme>,
     E: EncodedChallenge<Scheme::Curve>,
     R: RngCore,
     T: TranscriptWrite<Scheme::Curve, E>,
@@ -163,12 +163,12 @@ impl<
         'a,
         'params,
         Scheme: CommitmentScheme,
-        P: Prover<'params, Scheme>,
+        P: commitment::Prover<'params, Scheme>,
         E: EncodedChallenge<Scheme::Curve>,
         R: RngCore,
         T: TranscriptWrite<Scheme::Curve, E>,
         M: MsmAccel<Scheme::Curve>,
-    > ProverV2<'a, 'params, Scheme, P, E, R, T, M>
+    > Prover<'a, 'params, Scheme, P, E, R, T, M>
 {
     /// Create a new prover object
     pub fn new_with_engine(
@@ -289,7 +289,7 @@ impl<
 
         let challenges = HashMap::<usize, Scheme::Scalar>::with_capacity(meta.num_challenges);
 
-        Ok(ProverV2 {
+        Ok(Prover {
             engine,
             params,
             pk,
@@ -912,11 +912,11 @@ impl<
         circuits_instances: &[&[&[Scheme::Scalar]]],
         rng: R,
         transcript: &'a mut T,
-    ) -> Result<ProverV2<'a, 'params, Scheme, P, E, R, T, H2cEngine>, Error>
+    ) -> Result<Prover<'a, 'params, Scheme, P, E, R, T, H2cEngine>, Error>
     where
         Scheme::Scalar: WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     {
         let engine = PlonkEngineConfig::build_default();
-        ProverV2::new_with_engine(engine, params, pk, circuits_instances, rng, transcript)
+        Prover::new_with_engine(engine, params, pk, circuits_instances, rng, transcript)
     }
 }

@@ -22,7 +22,7 @@ use crate::{
     },
 };
 use halo2_middleware::circuit::{
-    Any, ColumnMid, CompiledCircuitV2, ConstraintSystemMid, ExpressionMid, VarMid,
+    Any, ColumnMid, CompiledCircuit, ConstraintSystemMid, ExpressionMid, VarMid,
 };
 use halo2_middleware::{lookup, poly::Rotation, shuffle};
 use std::collections::HashMap;
@@ -40,9 +40,9 @@ where
 }
 
 /// Generate a `VerifyingKey` from an instance of `CompiledCircuit`.
-pub fn keygen_vk_v2<'params, C, P>(
+pub fn keygen_vk<'params, C, P>(
     params: &P,
-    circuit: &CompiledCircuitV2<C::Scalar>,
+    circuit: &CompiledCircuit<C::Scalar>,
 ) -> Result<VerifyingKey<C>, Error>
 where
     C: CurveAffine,
@@ -88,10 +88,10 @@ where
 }
 
 /// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `CompiledCircuit`.
-pub fn keygen_pk_v2<'params, C, P>(
+pub fn keygen_pk<'params, C, P>(
     params: &P,
     vk: VerifyingKey<C>,
-    circuit: &CompiledCircuitV2<C::Scalar>,
+    circuit: &CompiledCircuit<C::Scalar>,
 ) -> Result<ProvingKey<C>, Error>
 where
     C: CurveAffine,

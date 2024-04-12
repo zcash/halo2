@@ -138,7 +138,7 @@ pub struct ConstraintSystemMid<F: Field> {
 
 /// Data that needs to be preprocessed from a circuit
 #[derive(Debug, Clone)]
-pub struct PreprocessingV2<F: Field> {
+pub struct Preprocessing<F: Field> {
     pub permutation: permutation::AssemblyMid,
     pub fixed: Vec<Vec<F>>,
 }
@@ -146,8 +146,8 @@ pub struct PreprocessingV2<F: Field> {
 /// This is a description of a low level Plonkish compiled circuit. Contains the Constraint System
 /// as well as the fixed columns and copy constraints information.
 #[derive(Debug, Clone)]
-pub struct CompiledCircuitV2<F: Field> {
-    pub preprocessing: PreprocessingV2<F>,
+pub struct CompiledCircuit<F: Field> {
+    pub preprocessing: Preprocessing<F>,
     pub cs: ConstraintSystemMid<F>,
 }
 

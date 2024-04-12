@@ -7,8 +7,8 @@ static ALLOC: dhat::Alloc = dhat::Alloc;
 
 use halo2_backend::{
     plonk::{
-        keygen::{keygen_pk_v2, keygen_vk_v2},
-        prover::ProverV2Single,
+        keygen::{keygen_pk, keygen_vk},
+        prover::ProverSingle,
         verifier::{verify_proof, verify_proof_single},
     },
     transcript::{
@@ -508,7 +508,9 @@ fn test_mycircuit_full_legacy() {
     #[cfg(feature = "heap-profiling")]
     let _profiler = dhat::Profiler::new_heap();
 
-    use halo2_proofs::plonk::{create_proof, keygen_pk, keygen_vk};
+    use halo2_proofs::plonk::{
+        create_proof, keygen_pk as keygen_pk_legacy, keygen_vk as keygen_vk_legacy,
+    };
 
     let k = K;
     let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
@@ -518,8 +520,8 @@ fn test_mycircuit_full_legacy() {
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let verifier_params = params.verifier_params();
     let start = Instant::now();
-    let vk = keygen_vk(&params, &circuit).expect("keygen_vk should not fail");
-    let pk = keygen_pk(&params, vk.clone(), &circuit).expect("keygen_pk should not fail");
+    let vk = keygen_vk_legacy(&params, &circuit).expect("keygen_vk should not fail");
+    let pk = keygen_pk_legacy(&params, vk.clone(), &circuit).expect("keygen_pk should not fail");
     println!("Keygen: {:?}", start.elapsed());
 
     // Proving
@@ -580,9 +582,8 @@ fn test_mycircuit_full_split() {
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let verifier_params = params.verifier_params();
     let start = Instant::now();
-    let vk = keygen_vk_v2(&params, &compiled_circuit).expect("keygen_vk should not fail");
-    let pk =
-        keygen_pk_v2(&params, vk.clone(), &compiled_circuit).expect("keygen_pk should not fail");
+    let vk = keygen_vk(&params, &compiled_circuit).expect("keygen_vk should not fail");
+    let pk = keygen_pk(&params, vk.clone(), &compiled_circuit).expect("keygen_pk should not fail");
     println!("Keygen: {:?}", start.elapsed());
     drop(compiled_circuit);
 
@@ -597,7 +598,7 @@ fn test_mycircuit_full_split() {
     let start = Instant::now();
     let mut witness_calc = WitnessCalculator::new(k, &circuit, &config, &cs, instances_slice);
     let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
-    let mut prover = ProverV2Single::<
+    let mut prover = ProverSingle::<
         KZGCommitmentScheme<Bn256>,
         ProverSHPLONK<'_, Bn256>,
         _,

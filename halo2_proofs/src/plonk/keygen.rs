@@ -1,6 +1,6 @@
 use crate::plonk::Error;
 use halo2_backend::plonk::{
-    keygen::{keygen_pk_v2, keygen_vk_v2},
+    keygen::{keygen_pk as backend_keygen_pk, keygen_vk as backend_keygen_vk},
     ProvingKey, VerifyingKey,
 };
 use halo2_backend::{arithmetic::CurveAffine, poly::commitment::Params};
@@ -38,7 +38,7 @@ where
     C::Scalar: FromUniformBytes<64>,
 {
     let (compiled_circuit, _, _) = compile_circuit(params.k(), circuit, compress_selectors)?;
-    let mut vk = keygen_vk_v2(params, &compiled_circuit)?;
+    let mut vk = backend_keygen_vk(params, &compiled_circuit)?;
     vk.compress_selectors = Some(compress_selectors);
     Ok(vk)
 }
@@ -59,5 +59,5 @@ where
         circuit,
         vk.compress_selectors.unwrap_or_default(),
     )?;
-    Ok(keygen_pk_v2(params, vk, &compiled_circuit)?)
+    Ok(backend_keygen_pk(params, vk, &compiled_circuit)?)
 }

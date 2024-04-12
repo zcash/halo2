@@ -7,7 +7,7 @@ use crate::plonk::{
     Advice, Assignment, Circuit, ConstraintSystem, FirstPhase, Fixed, FloorPlanner, Instance,
     SecondPhase, SelectorsToFixed, ThirdPhase,
 };
-use halo2_middleware::circuit::{Any, CompiledCircuitV2, PreprocessingV2};
+use halo2_middleware::circuit::{Any, CompiledCircuit, Preprocessing};
 use halo2_middleware::ff::{BatchInvert, Field};
 use std::collections::BTreeSet;
 use std::collections::HashMap;
@@ -73,7 +73,7 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
     compress_selectors: bool,
 ) -> Result<
     (
-        CompiledCircuitV2<F>,
+        CompiledCircuit<F>,
         ConcreteCircuit::Config,
         ConstraintSystem<F>,
     ),
@@ -116,7 +116,7 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
     #[cfg(feature = "thread-safe-region")]
     assembly.permutation.copies.sort();
 
-    let preprocessing = PreprocessingV2 {
+    let preprocessing = Preprocessing {
         permutation: halo2_middleware::permutation::AssemblyMid {
             copies: assembly.permutation.copies,
         },
@@ -124,7 +124,7 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
     };
 
     Ok((
-        CompiledCircuitV2 {
+        CompiledCircuit {
             cs: cs.clone().into(),
             preprocessing,
         },
