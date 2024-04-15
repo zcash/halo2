@@ -17,7 +17,8 @@ pub mod plonk;
 pub mod circuit {
     pub use halo2_frontend::circuit::floor_planner;
     pub use halo2_frontend::circuit::{
-        AssignedCell, Cell, Chip, Layouter, Region, SimpleFloorPlanner, Value,
+        AssignedCell, Cell, Chip, Layouter, NamespacedLayouter, Region, RegionIndex,
+        SimpleFloorPlanner, Table, Value,
     };
 }
 /// This module provides common utilities, traits and structures for group,
@@ -40,14 +41,14 @@ pub mod dev {
 /// the committed polynomials at arbitrary points.
 pub mod poly {
     pub use halo2_backend::poly::VerificationStrategy;
-    pub use halo2_backend::poly::{commitment, ipa, kzg};
+    pub use halo2_backend::poly::{commitment, ipa, kzg, EvaluationDomain};
     pub use halo2_middleware::poly::Rotation;
 }
 /// This module contains utilities and traits for dealing with Fiat-Shamir
 /// transcripts.
 pub mod transcript {
     pub use halo2_backend::transcript::{
-        Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge, TranscriptRead,
+        Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge, Transcript, TranscriptRead,
         TranscriptReadBuffer, TranscriptWrite, TranscriptWriterBuffer,
     };
 }

@@ -20,8 +20,9 @@ pub use verifier::verify_proof;
 pub use error::Error;
 pub use halo2_backend::plonk::{Error as ErrorBack, ProvingKey, VerifyingKey};
 pub use halo2_frontend::plonk::{
-    Advice, Assigned, Challenge, Circuit, Column, ConstraintSystem, Error as ErrorFront,
-    Expression, FirstPhase, Fixed, Instance, SecondPhase, Selector, TableColumn, ThirdPhase,
+    Advice, Assigned, Assignment, Challenge, Circuit, Column, ColumnType, ConstraintSystem,
+    Constraints, Error as ErrorFront, Expression, FirstPhase, Fixed, FixedQuery, FloorPlanner,
+    Instance, Phase, SecondPhase, Selector, TableColumn, ThirdPhase, VirtualCells,
 };
 pub use halo2_middleware::circuit::{Any, ConstraintSystemMid};
 
