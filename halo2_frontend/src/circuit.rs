@@ -133,7 +133,7 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
     ))
 }
 
-pub struct WitnessCollection<'a, F: Field> {
+struct WitnessCollection<'a, F: Field> {
     k: u32,
     current_phase: sealed::Phase,
     advice_column_phase: &'a Vec<sealed::Phase>,

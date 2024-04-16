@@ -14,22 +14,22 @@ use crate::{
 
 use super::Argument;
 
-pub struct Committed<C: CurveAffine> {
+pub(in crate::plonk) struct Committed<C: CurveAffine> {
     random_poly_commitment: C,
 }
 
-pub struct Constructed<C: CurveAffine> {
+pub(in crate::plonk) struct Constructed<C: CurveAffine> {
     h_commitments: Vec<C>,
     random_poly_commitment: C,
 }
 
-pub struct PartiallyEvaluated<C: CurveAffine> {
+pub(in crate::plonk) struct PartiallyEvaluated<C: CurveAffine> {
     h_commitments: Vec<C>,
     random_poly_commitment: C,
     random_eval: C::Scalar,
 }
 
-pub struct Evaluated<C: CurveAffine, M: MSM<C>> {
+pub(in crate::plonk) struct Evaluated<C: CurveAffine, M: MSM<C>> {
     h_commitment: M,
     random_poly_commitment: C,
     expected_h_eval: C::Scalar,

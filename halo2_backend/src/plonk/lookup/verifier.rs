@@ -12,17 +12,17 @@ use halo2_middleware::circuit::Any;
 use halo2_middleware::ff::Field;
 use halo2_middleware::poly::Rotation;
 
-pub struct PermutationCommitments<C: CurveAffine> {
+pub(crate) struct PermutationCommitments<C: CurveAffine> {
     permuted_input_commitment: C,
     permuted_table_commitment: C,
 }
 
-pub struct Committed<C: CurveAffine> {
+pub(crate) struct Committed<C: CurveAffine> {
     permuted: PermutationCommitments<C>,
     product_commitment: C,
 }
 
-pub struct Evaluated<C: CurveAffine> {
+pub(crate) struct Evaluated<C: CurveAffine> {
     committed: Committed<C>,
     product_eval: C::Scalar,
     product_next_eval: C::Scalar,

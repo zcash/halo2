@@ -230,13 +230,8 @@ impl<C: CurveAffine> VerifyingKey<C> {
         &self.fixed_commitments
     }
 
-    /// Returns `VerifyingKey` of permutation
-    pub fn permutation(&self) -> &permutation::VerifyingKey<C> {
-        &self.permutation
-    }
-
     /// Returns `ConstraintSystem`
-    pub fn cs(&self) -> &ConstraintSystemBack<C::Scalar> {
+    pub(crate) fn cs(&self) -> &ConstraintSystemBack<C::Scalar> {
         &self.cs
     }
 
@@ -388,21 +383,21 @@ impl<C: CurveAffine> VerifyingKey<C> {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct Theta;
-pub type ChallengeTheta<F> = ChallengeScalar<F, Theta>;
+pub(crate) struct Theta;
+pub(crate) type ChallengeTheta<F> = ChallengeScalar<F, Theta>;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Beta;
-pub type ChallengeBeta<F> = ChallengeScalar<F, Beta>;
+pub(crate) struct Beta;
+pub(crate) type ChallengeBeta<F> = ChallengeScalar<F, Beta>;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Gamma;
-pub type ChallengeGamma<F> = ChallengeScalar<F, Gamma>;
+pub(crate) struct Gamma;
+pub(crate) type ChallengeGamma<F> = ChallengeScalar<F, Gamma>;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Y;
-pub type ChallengeY<F> = ChallengeScalar<F, Y>;
+pub(crate) struct Y;
+pub(crate) type ChallengeY<F> = ChallengeScalar<F, Y>;
 
 #[derive(Clone, Copy, Debug)]
-pub struct X;
-pub type ChallengeX<F> = ChallengeScalar<F, X>;
+pub(crate) struct X;
+pub(crate) type ChallengeX<F> = ChallengeScalar<F, X>;

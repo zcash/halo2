@@ -65,7 +65,7 @@ impl<F: Field, V: Variable> Expression<F, V> {
         }
     }
 
-    fn write_identifier<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+    pub fn write_identifier<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
         match self {
             Expression::Constant(scalar) => write!(writer, "{scalar:?}"),
             Expression::Var(v) => v.write_identifier(writer),
@@ -121,11 +121,6 @@ impl<F: Field, V: Variable> Expression<F, V> {
             Expression::Sum(a, b) => a.complexity() + b.complexity() + 15,
             Expression::Product(a, b) => a.complexity() + b.complexity() + 30,
         }
-    }
-
-    /// Square this expression.
-    pub fn square(self) -> Self {
-        self.clone() * self
     }
 }
 

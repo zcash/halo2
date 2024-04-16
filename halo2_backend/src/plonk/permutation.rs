@@ -11,22 +11,17 @@ pub use halo2_middleware::permutation::ArgumentMid as Argument;
 
 use std::io;
 
-pub mod keygen;
-pub mod prover;
-pub mod verifier;
+pub(crate) mod keygen;
+pub(crate) mod prover;
+pub(crate) mod verifier;
 
 /// The verifying key for a single permutation argument.
 #[derive(Clone, Debug)]
-pub struct VerifyingKey<C: CurveAffine> {
+pub(crate) struct VerifyingKey<C: CurveAffine> {
     commitments: Vec<C>,
 }
 
 impl<C: CurveAffine> VerifyingKey<C> {
-    /// Returns commitments of sigma polynomials
-    pub fn commitments(&self) -> &Vec<C> {
-        &self.commitments
-    }
-
     pub(crate) fn write<W: io::Write>(&self, writer: &mut W, format: SerdeFormat) -> io::Result<()>
     where
         C: SerdeCurveAffine,

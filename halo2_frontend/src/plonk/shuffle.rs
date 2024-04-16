@@ -32,7 +32,7 @@ impl<F: Field> Argument<F> {
         }
     }
 
-    pub fn required_degree(&self) -> usize {
+    pub(crate) fn required_degree(&self) -> usize {
         assert_eq!(self.input_expressions.len(), self.shuffle_expressions.len());
 
         let mut input_degree = 1;

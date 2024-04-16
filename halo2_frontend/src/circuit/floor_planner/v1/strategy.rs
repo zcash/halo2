@@ -47,7 +47,7 @@ impl EmptySpace {
 ///
 /// This is a set of [a_start, a_end) pairs representing disjoint allocated intervals.
 #[derive(Clone, Default, Debug)]
-pub struct Allocations(BTreeSet<AllocatedRegion>);
+pub(crate) struct Allocations(BTreeSet<AllocatedRegion>);
 
 impl Allocations {
     /// Returns the row that forms the unbounded unallocated interval [row, None).
@@ -100,7 +100,7 @@ impl Allocations {
 }
 
 /// Allocated rows within a circuit.
-pub type CircuitAllocations = HashMap<RegionColumn, Allocations>;
+pub(crate) type CircuitAllocations = HashMap<RegionColumn, Allocations>;
 
 /// - `start` is the current start row of the region (not of this column).
 /// - `slack` is the maximum number of rows the start could be moved down, taking into
@@ -163,7 +163,7 @@ fn first_fit_region(
 
 /// Positions the regions starting at the earliest row for which none of the columns are
 /// in use, taking into account gaps between earlier regions.
-pub fn slot_in(
+fn slot_in(
     region_shapes: Vec<RegionShape>,
 ) -> (Vec<(RegionStart, RegionShape)>, CircuitAllocations) {
     // Tracks the empty regions for each column.
@@ -196,7 +196,7 @@ pub fn slot_in(
 }
 
 /// Sorts the regions by advice area and then lays them out with the [`slot_in`] strategy.
-pub fn slot_in_biggest_advice_first(
+pub(crate) fn slot_in_biggest_advice_first(
     region_shapes: Vec<RegionShape>,
 ) -> (Vec<RegionStart>, CircuitAllocations) {
     let mut sorted_regions: Vec<_> = region_shapes.into_iter().collect();

@@ -97,7 +97,7 @@ pub struct ConstraintSystemBack<F: Field> {
 impl<F: Field> ConstraintSystemBack<F> {
     /// Compute the degree of the constraint system (the maximum degree of all
     /// constraints).
-    pub fn degree(&self) -> usize {
+    pub(crate) fn degree(&self) -> usize {
         // The permutation argument will serve alongside the gates, so must be
         // accounted for.
         let mut degree = permutation_argument_required_degree();
@@ -140,7 +140,7 @@ impl<F: Field> ConstraintSystemBack<F> {
 
     /// Compute the number of blinding factors necessary to perfectly blind
     /// each of the prover's witness polynomials.
-    pub fn blinding_factors(&self) -> usize {
+    pub(crate) fn blinding_factors(&self) -> usize {
         // All of the prover's advice columns are evaluated at no more than
         let factors = *self.num_advice_queries.iter().max().unwrap_or(&1);
         // distinct points during gate checks.
@@ -169,7 +169,7 @@ impl<F: Field> ConstraintSystemBack<F> {
 
     /// Returns the minimum necessary rows that need to exist in order to
     /// account for e.g. blinding factors.
-    pub fn minimum_rows(&self) -> usize {
+    pub(crate) fn minimum_rows(&self) -> usize {
         self.blinding_factors() // m blinding factors
             + 1 // for l_{-(m + 1)} (l_last)
             + 1 // for l_0 (just for extra breathing room for the permutation
@@ -179,7 +179,7 @@ impl<F: Field> ConstraintSystemBack<F> {
             + 1 // for at least one row
     }
 
-    pub fn get_any_query_index(&self, column: ColumnMid, at: Rotation) -> usize {
+    pub(crate) fn get_any_query_index(&self, column: ColumnMid, at: Rotation) -> usize {
         let queries = match column.column_type {
             Any::Advice => &self.advice_queries,
             Any::Fixed => &self.fixed_queries,
@@ -194,7 +194,7 @@ impl<F: Field> ConstraintSystemBack<F> {
     }
 
     /// Returns the list of phases
-    pub fn phases(&self) -> impl Iterator<Item = u8> {
+    pub(crate) fn phases(&self) -> impl Iterator<Item = u8> {
         let max_phase = self
             .advice_column_phase
             .iter()
@@ -207,7 +207,7 @@ impl<F: Field> ConstraintSystemBack<F> {
     /// Obtain a pinned version of this constraint system; a structure with the
     /// minimal parameters needed to determine the rest of the constraint
     /// system.
-    pub fn pinned(&self) -> PinnedConstraintSystem<'_, F> {
+    pub(crate) fn pinned(&self) -> PinnedConstraintSystem<'_, F> {
         PinnedConstraintSystem {
             num_fixed_columns: &self.num_fixed_columns,
             num_advice_columns: &self.num_advice_columns,
@@ -238,7 +238,7 @@ impl<'a, F: Field> std::fmt::Debug for PinnedGates<'a, F> {
 }
 
 /// Represents the minimal parameters that determine a `ConstraintSystem`.
-pub struct PinnedConstraintSystem<'a, F: Field> {
+pub(crate) struct PinnedConstraintSystem<'a, F: Field> {
     num_fixed_columns: &'a usize,
     num_advice_columns: &'a usize,
     num_instance_columns: &'a usize,

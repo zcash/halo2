@@ -10,14 +10,14 @@ use crate::plonk::{
 
 /// Assembly to be used in circuit synthesis.
 #[derive(Debug)]
-pub struct Assembly<F: Field> {
-    pub k: u32,
-    pub fixed: Vec<Vec<Assigned<F>>>,
-    pub permutation: permutation::Assembly,
-    pub selectors: Vec<Vec<bool>>,
+pub(crate) struct Assembly<F: Field> {
+    pub(crate) k: u32,
+    pub(crate) fixed: Vec<Vec<Assigned<F>>>,
+    pub(crate) permutation: permutation::Assembly,
+    pub(crate) selectors: Vec<Vec<bool>>,
     // A range of available rows for assignment and copies.
-    pub usable_rows: Range<usize>,
-    pub _marker: std::marker::PhantomData<F>,
+    pub(crate) usable_rows: Range<usize>,
+    pub(crate) _marker: std::marker::PhantomData<F>,
 }
 
 impl<F: Field> Assignment<F> for Assembly<F> {

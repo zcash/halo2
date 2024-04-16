@@ -14,7 +14,7 @@ pub use halo2curves::{CurveAffine, CurveExt};
 /// This represents an element of a group with basic operations that can be
 /// performed. This allows an FFT implementation (for example) to operate
 /// generically over either a field or elliptic curve group.
-pub trait FftGroup<Scalar: Field>:
+pub(crate) trait FftGroup<Scalar: Field>:
     Copy + Send + Sync + 'static + GroupOpsOwned + ScalarMulOwned<Scalar>
 {
 }
@@ -27,7 +27,7 @@ where
 }
 
 /// Convert coefficient bases group elements to lagrange basis by inverse FFT.
-pub fn g_to_lagrange<C: CurveAffine>(g_projective: Vec<C::Curve>, k: u32) -> Vec<C> {
+pub(crate) fn g_to_lagrange<C: CurveAffine>(g_projective: Vec<C::Curve>, k: u32) -> Vec<C> {
     let n_inv = C::Scalar::TWO_INV.pow_vartime([k as u64, 0, 0, 0]);
     let mut omega_inv = C::Scalar::ROOT_OF_UNITY_INV;
     for _ in k..C::Scalar::S {
@@ -54,7 +54,7 @@ pub fn g_to_lagrange<C: CurveAffine>(g_projective: Vec<C::Curve>, k: u32) -> Vec
 }
 
 /// This evaluates a provided polynomial (in coefficient form) at `point`.
-pub fn eval_polynomial<F: Field>(poly: &[F], point: F) -> F {
+pub(crate) fn eval_polynomial<F: Field>(poly: &[F], point: F) -> F {
     fn evaluate<F: Field>(poly: &[F], point: F) -> F {
         poly.iter()
             .rev()
@@ -84,7 +84,7 @@ pub fn eval_polynomial<F: Field>(poly: &[F], point: F) -> F {
 /// This computes the inner product of two vectors `a` and `b`.
 ///
 /// This function will panic if the two vectors are not the same size.
-pub fn compute_inner_product<F: Field>(a: &[F], b: &[F]) -> F {
+pub(crate) fn compute_inner_product<F: Field>(a: &[F], b: &[F]) -> F {
     // TODO: parallelize?
     assert_eq!(a.len(), b.len());
 
@@ -98,7 +98,7 @@ pub fn compute_inner_product<F: Field>(a: &[F], b: &[F]) -> F {
 
 /// Divides polynomial `a` in `X` by `X - b` with
 /// no remainder.
-pub fn kate_division<'a, F: Field, I: IntoIterator<Item = &'a F>>(a: I, mut b: F) -> Vec<F>
+pub(crate) fn kate_division<'a, F: Field, I: IntoIterator<Item = &'a F>>(a: I, mut b: F) -> Vec<F>
 where
     I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
 {
@@ -174,7 +174,7 @@ pub fn parallelize<T: Send, F: Fn(&mut [T], usize) + Send + Sync + Clone>(v: &mu
 /// Returns coefficients of an n - 1 degree polynomial given a set of n points
 /// and their evaluations. This function will panic if two values in `points`
 /// are the same.
-pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
+pub(crate) fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
     assert_eq!(points.len(), evals.len());
     if points.len() == 1 {
         // Constant polynomial
@@ -229,7 +229,7 @@ pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
     }
 }
 
-pub fn evaluate_vanishing_polynomial<F: Field>(roots: &[F], z: F) -> F {
+pub(crate) fn evaluate_vanishing_polynomial<F: Field>(roots: &[F], z: F) -> F {
     fn evaluate<F: Field>(roots: &[F], z: F) -> F {
         roots.iter().fold(F::ONE, |acc, point| (z - point) * acc)
     }
@@ -249,7 +249,7 @@ pub fn evaluate_vanishing_polynomial<F: Field>(roots: &[F], z: F) -> F {
     }
 }
 
-pub fn powers<F: Field>(base: F) -> impl Iterator<Item = F> {
+pub(crate) fn powers<F: Field>(base: F) -> impl Iterator<Item = F> {
     std::iter::successors(Some(F::ONE), move |power| Some(base * power))
 }
 

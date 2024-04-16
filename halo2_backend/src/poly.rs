@@ -28,15 +28,10 @@ pub mod kzg;
 mod multiopen_test;
 
 pub use domain::*;
-pub use query::{ProverQuery, VerifierQuery};
+pub(crate) use query::{ProverQuery, VerifierQuery};
 pub use strategy::{Guard, VerificationStrategy};
 
-// TODO: move everything from the poly module to the backend.  This requires that the frontend
-// works without Poly (and just Vec<F>).
-// https://github.com/privacy-scaling-explorations/halo2/issues/257
-
 /// This is an error that could occur during proving or circuit synthesis.
-// TODO: these errors need to be cleaned up
 #[derive(Debug)]
 pub enum Error {
     /// OpeningProof is not well-formed

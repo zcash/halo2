@@ -9,4 +9,3 @@ pub mod shuffle;
 pub use assigned::*;
 pub use circuit::*;
 pub use error::*;
-pub use keygen::*;

@@ -16,7 +16,7 @@ use halo2_middleware::permutation::{ArgumentMid, AssemblyMid};
 
 /// Struct that accumulates all the necessary data in order to construct the permutation argument.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Assembly {
+pub(crate) struct Assembly {
     /// Columns that participate on the copy permutation argument.
     columns: Vec<ColumnMid>,
     /// Mapping of the actual copies done.

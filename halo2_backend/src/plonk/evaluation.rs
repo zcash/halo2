@@ -173,7 +173,7 @@ impl Calculation {
 
 /// Evaluator
 #[derive(Clone, Default, Debug)]
-pub struct Evaluator<C: CurveAffine> {
+pub(crate) struct Evaluator<C: CurveAffine> {
     ///  Custom gates evalution
     custom_gates: GraphEvaluator<C>,
     ///  Lookups evalution
@@ -835,7 +835,7 @@ impl<C: CurveAffine> GraphEvaluator<C> {
 }
 
 /// Simple evaluation of an [`ExpressionBack`] over the provided lagrange polynomials
-pub fn evaluate<F: Field, B: LagrangeBasis>(
+pub(crate) fn evaluate<F: Field, B: LagrangeBasis>(
     expression: &ExpressionBack<F>,
     size: usize,
     rot_scale: i32,

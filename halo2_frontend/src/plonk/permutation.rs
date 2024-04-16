@@ -62,14 +62,14 @@ impl Argument {
 }
 
 #[derive(Clone, Debug)]
-pub struct Assembly {
+pub(crate) struct Assembly {
     pub(crate) n: usize,
     pub(crate) columns: Vec<Column<Any>>,
     pub(crate) copies: Vec<(Cell, Cell)>,
 }
 
 impl Assembly {
-    pub fn new(n: usize, p: &Argument) -> Self {
+    pub(crate) fn new(n: usize, p: &Argument) -> Self {
         Self {
             n,
             columns: p.columns.clone(),
@@ -77,7 +77,7 @@ impl Assembly {
         }
     }
 
-    pub fn copy(
+    pub(crate) fn copy(
         &mut self,
         left_column: Column<Any>,
         left_row: usize,
