@@ -62,6 +62,9 @@ impl<'params, C: CurveAffine> ParamsVerifier<'params, C> for ParamsIPA<C> {}
 impl<'params, C: CurveAffine> Params<'params, C> for ParamsIPA<C> {
     type MSM = MSMIPA<'params, C>;
 
+    type ParamsVerifier = Self;
+    type ParamsProver = Self;
+
     fn k(&self) -> u32 {
         self.k
     }
@@ -81,6 +84,10 @@ impl<'params, C: CurveAffine> Params<'params, C> for ParamsIPA<C> {
 
     fn empty_msm(&'params self) -> MSMIPA<C> {
         MSMIPA::new(self)
+    }
+
+    fn verifier_params(&'params self) -> &'params Self::ParamsVerifier {
+        self
     }
 
     /// This commits to a polynomial using its evaluations over the $2^k$ size
@@ -145,12 +152,6 @@ impl<'params, C: CurveAffine> Params<'params, C> for ParamsIPA<C> {
 }
 
 impl<'params, C: CurveAffine> ParamsProver<'params, C> for ParamsIPA<C> {
-    type ParamsVerifier = ParamsVerifierIPA<C>;
-
-    fn verifier_params(&'params self) -> &'params Self::ParamsVerifier {
-        self
-    }
-
     /// Initializes parameters for the curve, given a random oracle to draw
     /// points from.
     fn new(k: u32) -> Self {

@@ -15,6 +15,7 @@ use crate::poly::kzg::strategy::GuardKZG;
 use crate::poly::query::{CommitmentReference, VerifierQuery};
 use crate::poly::Error;
 use crate::transcript::{EncodedChallenge, TranscriptRead};
+use group::prime::PrimeCurveAffine;
 use halo2_middleware::ff::Field;
 use halo2curves::pairing::{Engine, MultiMillerLoop};
 use halo2curves::CurveExt;
@@ -126,7 +127,7 @@ where
             r_outer_acc += power_of_v * r_inner_acc * z_diff_i;
         }
         let mut outer_msm = outer_msm.normalize();
-        let g1: E::G1 = self.params.g[0].into();
+        let g1: E::G1 = <E::G1Affine as PrimeCurveAffine>::generator().into();
         outer_msm.append_term(-r_outer_acc, g1);
         outer_msm.append_term(-z_0, h1.into());
         outer_msm.append_term(*u, h2.into());

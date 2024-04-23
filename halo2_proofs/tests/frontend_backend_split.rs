@@ -28,7 +28,7 @@ use halo2_frontend::{
     },
 };
 use halo2_middleware::{ff::Field, poly::Rotation};
-use halo2_proofs::poly::commitment::ParamsProver;
+use halo2_proofs::poly::commitment::Params;
 use std::collections::HashMap;
 
 #[derive(Clone)]

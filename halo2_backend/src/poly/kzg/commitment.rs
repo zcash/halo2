@@ -280,6 +280,12 @@ where
 {
     type MSM = MSMKZG<E>;
 
+    /// Verifier parameters.
+    type ParamsVerifier = ParamsVerifierKZG<E>;
+
+    /// Prover parameters.
+    type ParamsProver = Self;
+
     fn k(&self) -> u32 {
         self.k
     }
@@ -300,6 +306,10 @@ where
 
     fn empty_msm(&'params self) -> MSMKZG<E> {
         MSMKZG::new()
+    }
+
+    fn verifier_params(&'params self) -> &'params Self::ParamsVerifier {
+        self
     }
 
     fn commit_lagrange(
@@ -341,12 +351,6 @@ where
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
-    type ParamsVerifier = ParamsVerifierKZG<E>;
-
-    fn verifier_params(&'params self) -> &'params Self::ParamsVerifier {
-        self
-    }
-
     fn new(k: u32) -> Self {
         Self::setup(k, OsRng)
     }

@@ -13,6 +13,8 @@ use crate::poly::query::{CommitmentReference, VerifierQuery};
 use crate::poly::Error;
 use crate::transcript::{EncodedChallenge, TranscriptRead};
 
+use group::prime::PrimeCurve;
+use group::prime::PrimeCurveAffine;
 use halo2_middleware::ff::Field;
 use halo2curves::pairing::{Engine, MultiMillerLoop};
 use halo2curves::CurveExt;
@@ -116,7 +118,7 @@ where
 
         msm_accumulator.right.add_msm(&witness_with_aux);
         msm_accumulator.right.add_msm(&commitment_multi);
-        let g0: E::G1 = self.params.g[0].into();
+        let g0: E::G1 = <E::G1Affine as PrimeCurveAffine>::generator().into();
         msm_accumulator.right.append_term(eval_multi, -g0);
 
         Ok(Self::Guard::new(msm_accumulator))
