@@ -370,7 +370,7 @@ mod test {
         let mut commitment_msm = MSMIPA::new(&params);
         commitment_msm.append_term(Fq::one(), p.into());
 
-        let guard = verify_proof(&params, commitment_msm, &mut transcript, *x, v).unwrap();
+        let guard = verify_proof(commitment_msm, &mut transcript, *x, v).unwrap();
         let ch_verifier = transcript.squeeze_challenge();
         assert_eq!(*ch_prover, *ch_verifier);
 

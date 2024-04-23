@@ -1,11 +1,12 @@
 use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use halo2_middleware::ff::Field;
 
 use super::{construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4};
 use crate::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine};
 use crate::poly::commitment::{Params, Verifier, MSM};
-use crate::poly::ipa::commitment::{IPACommitmentScheme, ParamsIPA, ParamsVerifierIPA};
+use crate::poly::ipa::commitment::{IPACommitmentScheme, ParamsVerifierIPA};
 use crate::poly::ipa::msm::MSMIPA;
 use crate::poly::ipa::strategy::GuardIPA;
 use crate::poly::query::{CommitmentReference, VerifierQuery};
@@ -14,20 +15,20 @@ use crate::transcript::{EncodedChallenge, TranscriptRead};
 
 /// IPA multi-open verifier
 #[derive(Debug)]
-pub struct VerifierIPA<'params, C: CurveAffine> {
-    params: &'params ParamsIPA<C>,
+pub struct VerifierIPA<C: CurveAffine> {
+    _marker: PhantomData<C>,
 }
 
-impl<'params, C: CurveAffine> Verifier<'params, IPACommitmentScheme<C>>
-    for VerifierIPA<'params, C>
-{
+impl<'params, C: CurveAffine> Verifier<'params, IPACommitmentScheme<C>> for VerifierIPA<C> {
     type Guard = GuardIPA<'params, C>;
     type MSMAccumulator = MSMIPA<'params, C>;
 
     const QUERY_INSTANCE: bool = true;
 
-    fn new(params: &'params ParamsVerifierIPA<C>) -> Self {
-        Self { params }
+    fn new(_params: &'params ParamsVerifierIPA<C>) -> Self {
+        Self {
+            _marker: PhantomData,
+        }
     }
 
     fn verify_proof<'com, E: EncodedChallenge<C>, T: TranscriptRead<C, E>, I>(
@@ -52,7 +53,7 @@ impl<'params, C: CurveAffine> Verifier<'params, IPACommitmentScheme<C>>
         // Compress the commitments and expected evaluations at x together.
         // using the challenge x_1
         let mut q_commitments: Vec<_> = vec![
-        (self.params.empty_msm(), C::Scalar::ONE); // (accumulator, next x_1 power).
+        (msm.params.empty_msm(), C::Scalar::ONE); // (accumulator, next x_1 power).
         point_sets.len()];
 
         // A vec of vecs of evals. The outer vec corresponds to the point set,
@@ -143,6 +144,6 @@ impl<'params, C: CurveAffine> Verifier<'params, IPACommitmentScheme<C>>
         );
 
         // Verify the opening proof
-        super::commitment::verify_proof(self.params, msm, transcript, *x_3, v)
+        super::commitment::verify_proof(msm, transcript, *x_3, v)
     }
 }

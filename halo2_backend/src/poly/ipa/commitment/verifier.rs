@@ -1,6 +1,5 @@
 use group::ff::{BatchInvert, Field};
 
-use super::ParamsIPA;
 use crate::{arithmetic::CurveAffine, poly::ipa::strategy::GuardIPA};
 use crate::{
     poly::{commitment::MSM, ipa::msm::MSMIPA, Error},
@@ -11,13 +10,12 @@ use crate::{
 /// point `x` that the polynomial commitment `P` opens purportedly to the value
 /// `v`. The provided `msm` should evaluate to the commitment `P` being opened.
 pub fn verify_proof<'params, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
-    params: &'params ParamsIPA<C>,
     mut msm: MSMIPA<'params, C>,
     transcript: &mut T,
     x: C::Scalar,
     v: C::Scalar,
 ) -> Result<GuardIPA<'params, C>, Error> {
-    let k = params.k as usize;
+    let k = msm.params.k as usize;
 
     // P' = P - [v] G_0 + [ξ] S
     msm.add_constant_term(-v); // add [-v] G_0

@@ -31,8 +31,7 @@ struct BatchStrategy<'params, C: CurveAffine> {
     msm: MSMIPA<'params, C>,
 }
 
-impl<'params, C: CurveAffine>
-    VerificationStrategy<'params, IPACommitmentScheme<C>, VerifierIPA<'params, C>>
+impl<'params, C: CurveAffine> VerificationStrategy<'params, IPACommitmentScheme<C>, VerifierIPA<C>>
     for BatchStrategy<'params, C>
 {
     type Output = MSMIPA<'params, C>;
