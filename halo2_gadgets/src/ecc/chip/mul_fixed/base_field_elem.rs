@@ -1,10 +1,8 @@
 use super::super::{EccBaseFieldElemFixed, EccPoint, FixedPoints, NUM_WINDOWS, T_P};
 use super::H_BASE;
 
-use crate::utilities::bool_check;
-use crate::{
-    sinsemilla::primitives as sinsemilla,
-    utilities::{bitrange_subset, lookup_range_check::LookupRangeCheckConfig, range_check},
+use crate::utilities::{
+    bitrange_subset, bool_check, lookup_range_check::DefaultLookupRangeCheck, range_check,
 };
 
 use group::ff::PrimeField;
@@ -18,18 +16,23 @@ use pasta_curves::pallas;
 use std::convert::TryInto;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
+pub struct Config<
+    Fixed: FixedPoints<pallas::Affine>,
+    LookupRangeCheckConfig: DefaultLookupRangeCheck,
+> {
     q_mul_fixed_base_field: Selector,
     canon_advices: [Column<Advice>; 3],
-    lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+    lookup_config: LookupRangeCheckConfig,
     super_config: super::Config<Fixed>,
 }
 
-impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
+impl<Fixed: FixedPoints<pallas::Affine>, LookupRangeCheckConfig: DefaultLookupRangeCheck>
+    Config<Fixed, LookupRangeCheckConfig>
+{
     pub(crate) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         canon_advices: [Column<Advice>; 3],
-        lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+        lookup_config: LookupRangeCheckConfig,
         super_config: super::Config<Fixed>,
     ) -> Self {
         for advice in canon_advices.iter() {
@@ -388,6 +391,7 @@ pub mod tests {
     use pasta_curves::pallas;
     use rand::rngs::OsRng;
 
+    use crate::utilities::lookup_range_check::DefaultLookupRangeCheck;
     use crate::{
         ecc::{
             chip::{EccChip, FixedPoint, H},
@@ -397,8 +401,8 @@ pub mod tests {
         utilities::UtilitiesInstructions,
     };
 
-    pub(crate) fn test_mul_fixed_base_field(
-        chip: EccChip<TestFixedBases>,
+    pub(crate) fn test_mul_fixed_base_field<LookupRangeCheckConfig: DefaultLookupRangeCheck>(
+        chip: EccChip<TestFixedBases, LookupRangeCheckConfig>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
         test_single_base(
@@ -410,22 +414,22 @@ pub mod tests {
     }
 
     #[allow(clippy::op_ref)]
-    fn test_single_base(
-        chip: EccChip<TestFixedBases>,
+    fn test_single_base<LookupRangeCheckConfig: DefaultLookupRangeCheck>(
+        chip: EccChip<TestFixedBases, LookupRangeCheckConfig>,
         mut layouter: impl Layouter<pallas::Base>,
-        base: FixedPointBaseField<pallas::Affine, EccChip<TestFixedBases>>,
+        base: FixedPointBaseField<pallas::Affine, EccChip<TestFixedBases, LookupRangeCheckConfig>>,
         base_val: pallas::Affine,
     ) -> Result<(), Error> {
         let rng = OsRng;
 
         let column = chip.config().advices[0];
 
-        fn constrain_equal_non_id(
-            chip: EccChip<TestFixedBases>,
+        fn constrain_equal_non_id<LookupRangeCheckConfig: DefaultLookupRangeCheck>(
+            chip: EccChip<TestFixedBases, LookupRangeCheckConfig>,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
             scalar_val: pallas::Base,
-            result: Point<pallas::Affine, EccChip<TestFixedBases>>,
+            result: Point<pallas::Affine, EccChip<TestFixedBases, LookupRangeCheckConfig>>,
         ) -> Result<(), Error> {
             // Move scalar from base field into scalar field (which always fits for Pallas).
             let scalar = pallas::Scalar::from_repr(scalar_val.to_repr()).unwrap();
@@ -464,10 +468,10 @@ pub mod tests {
         {
             let h = pallas::Base::from(H as u64);
             let scalar_fixed = "1333333333333333333333333333333333333333333333333333333333333333333333333333333333334"
-                        .chars()
-                        .fold(pallas::Base::zero(), |acc, c| {
-                            acc * &h + &pallas::Base::from(c.to_digit(8).unwrap() as u64)
-                        });
+                .chars()
+                .fold(pallas::Base::zero(), |acc, c| {
+                    acc * &h + &pallas::Base::from(c.to_digit(8).unwrap() as u64)
+                });
             let result = {
                 let scalar_fixed = chip.load_private(
                     layouter.namespace(|| "mul with double"),

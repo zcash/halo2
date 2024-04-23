@@ -192,9 +192,10 @@ pub mod tests {
         tests::{FullWidth, TestFixedBases},
         FixedPoint, NonIdentityPoint, Point, ScalarFixed,
     };
+    use crate::utilities::lookup_range_check::DefaultLookupRangeCheck;
 
-    pub(crate) fn test_mul_fixed(
-        chip: EccChip<TestFixedBases>,
+    pub(crate) fn test_mul_fixed<LookupRangeCheckConfig: DefaultLookupRangeCheck>(
+        chip: EccChip<TestFixedBases, LookupRangeCheckConfig>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
         let test_base = FullWidth::from_pallas_generator();
@@ -209,18 +210,18 @@ pub mod tests {
     }
 
     #[allow(clippy::op_ref)]
-    fn test_single_base(
-        chip: EccChip<TestFixedBases>,
+    fn test_single_base<LookupRangeCheckConfig: DefaultLookupRangeCheck>(
+        chip: EccChip<TestFixedBases, LookupRangeCheckConfig>,
         mut layouter: impl Layouter<pallas::Base>,
-        base: FixedPoint<pallas::Affine, EccChip<TestFixedBases>>,
+        base: FixedPoint<pallas::Affine, EccChip<TestFixedBases, LookupRangeCheckConfig>>,
         base_val: pallas::Affine,
     ) -> Result<(), Error> {
-        fn constrain_equal_non_id(
-            chip: EccChip<TestFixedBases>,
+        fn constrain_equal_non_id<LookupRangeCheckConfig: DefaultLookupRangeCheck>(
+            chip: EccChip<TestFixedBases, LookupRangeCheckConfig>,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
             scalar_val: pallas::Scalar,
-            result: Point<pallas::Affine, EccChip<TestFixedBases>>,
+            result: Point<pallas::Affine, EccChip<TestFixedBases, LookupRangeCheckConfig>>,
         ) -> Result<(), Error> {
             let expected = NonIdentityPoint::new(
                 chip,

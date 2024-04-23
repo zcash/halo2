@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 use halo2_proofs::{
     arithmetic::CurveAffine,
-    circuit::{AssignedCell, Chip, Layouter, Value},
+    circuit::{Chip, Layouter, Value},
     plonk::Error,
 };
 
@@ -60,15 +60,6 @@ pub trait EccInstructions<C: CurveAffine>:
         value: Value<C>,
     ) -> Result<Self::Point, Error>;
 
-    /// Witnesses the given constant point as a private input to the circuit.
-    /// This allows the point to be the identity, mapped to (0, 0) in
-    /// affine coordinates.
-    fn witness_point_from_constant(
-        &self,
-        layouter: &mut impl Layouter<C::Base>,
-        value: C,
-    ) -> Result<Self::Point, Error>;
-
     /// Witnesses the given point as a private input to the circuit.
     /// This returns an error if the point is the identity.
     fn witness_point_non_id(
@@ -118,15 +109,6 @@ pub trait EccInstructions<C: CurveAffine>:
         layouter: &mut impl Layouter<C::Base>,
         a: &A,
         b: &B,
-    ) -> Result<Self::Point, Error>;
-
-    /// Performs variable-base sign-scalar multiplication, returning `[sign] point`
-    /// `sign` must be in {-1, 1}.
-    fn mul_sign(
-        &self,
-        layouter: &mut impl Layouter<C::Base>,
-        sign: &AssignedCell<C::Base, C::Base>,
-        point: &Self::Point,
     ) -> Result<Self::Point, Error>;
 
     /// Performs variable-base scalar multiplication, returning `[scalar] base`.
@@ -249,7 +231,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> ScalarFixed<C, EccChip> {
 #[derive(Debug)]
 pub struct ScalarFixedShort<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
-    inner: EccChip::ScalarFixedShort,
+    pub(crate) inner: EccChip::ScalarFixedShort,
 }
 
 impl<C: CurveAffine, EccChip: EccInstructions<C>> ScalarFixedShort<C, EccChip> {
@@ -393,8 +375,8 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq>
 /// A point on a specific elliptic curve.
 #[derive(Copy, Clone, Debug)]
 pub struct Point<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
-    chip: EccChip,
-    inner: EccChip::Point,
+    pub(crate) chip: EccChip,
+    pub(crate) inner: EccChip::Point,
 }
 
 impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, EccChip> {
@@ -405,16 +387,6 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
         value: Value<C>,
     ) -> Result<Self, Error> {
         let point = chip.witness_point(&mut layouter, value);
-        point.map(|inner| Point { chip, inner })
-    }
-
-    /// Constructs a new point with the given fixed value.
-    pub fn new_from_constant(
-        chip: EccChip,
-        mut layouter: impl Layouter<C::Base>,
-        value: C,
-    ) -> Result<Self, Error> {
-        let point = chip.witness_point_from_constant(&mut layouter, value);
         point.map(|inner| Point { chip, inner })
     }
 
@@ -458,21 +430,6 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
             .map(|inner| Point {
                 chip: self.chip.clone(),
                 inner,
-            })
-    }
-
-    /// Returns `[sign] self`.
-    /// `sign` must be in {-1, 1}.
-    pub fn mul_sign(
-        &self,
-        mut layouter: impl Layouter<C::Base>,
-        sign: &AssignedCell<C::Base, C::Base>,
-    ) -> Result<Point<C, EccChip>, Error> {
-        self.chip
-            .mul_sign(&mut layouter, sign, &self.inner)
-            .map(|point| Point {
-                chip: self.chip.clone(),
-                inner: point,
             })
     }
 }
@@ -617,7 +574,6 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> FixedPointShort<C, EccChip> {
         Self { chip, inner }
     }
 }
-
 #[cfg(test)]
 pub(crate) mod tests {
     use ff::PrimeField;
@@ -638,7 +594,7 @@ pub(crate) mod tests {
         },
         FixedPoints,
     };
-    use crate::utilities::lookup_range_check::LookupRangeCheckConfig;
+    use crate::utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig};
 
     #[derive(Debug, Eq, PartialEq, Clone)]
     pub(crate) struct TestFixedBases;
@@ -772,7 +728,10 @@ pub(crate) mod tests {
 
     #[allow(non_snake_case)]
     impl Circuit<pallas::Base> for MyCircuit {
-        type Config = EccConfig<TestFixedBases>;
+        type Config = EccConfig<
+            TestFixedBases,
+            LookupRangeCheckConfig<pallas::Base, { crate::sinsemilla::primitives::K }>,
+        >;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
@@ -793,7 +752,6 @@ pub(crate) mod tests {
                 meta.advice_column(),
             ];
             let lookup_table = meta.lookup_table_column();
-            let table_range_check_tag = meta.lookup_table_column();
             let lagrange_coeffs = [
                 meta.fixed_column(),
                 meta.fixed_column(),
@@ -808,13 +766,11 @@ pub(crate) mod tests {
             let constants = meta.fixed_column();
             meta.enable_constant(constants);
 
-            let range_check = LookupRangeCheckConfig::configure(
-                meta,
-                advices[9],
-                lookup_table,
-                table_range_check_tag,
-            );
-            EccChip::<TestFixedBases>::configure(meta, advices, lagrange_coeffs, range_check)
+            let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
+            EccChip::<
+                TestFixedBases,
+                LookupRangeCheckConfig<pallas::Base, { crate::sinsemilla::primitives::K }>,
+            >::configure(meta, advices, lagrange_coeffs, range_check)
         }
 
         fn synthesize(
@@ -911,14 +867,6 @@ pub(crate) mod tests {
                     layouter.namespace(|| "variable-base scalar mul"),
                     &p,
                     p_val,
-                )?;
-            }
-
-            // Test variable-base sign-scalar multiplication
-            {
-                super::chip::mul_fixed::short::tests::test_mul_sign(
-                    chip.clone(),
-                    layouter.namespace(|| "variable-base sign-scalar mul"),
                 )?;
             }
 

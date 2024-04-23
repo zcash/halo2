@@ -36,6 +36,7 @@ pub trait MerkleInstructions<
     fn hash_layer(
         &self,
         layouter: impl Layouter<C::Base>,
+        is_Q_public: bool,
         Q: C,
         l: usize,
         left: Self::Var,
@@ -117,6 +118,7 @@ where
     pub fn calculate_root(
         &self,
         mut layouter: impl Layouter<C::Base>,
+        is_Q_public: bool,
         leaf: MerkleChip::Var,
     ) -> Result<MerkleChip::Var, Error> {
         // Each chip processes `ceil(PATH_LENGTH / PAR)` layers.
@@ -159,6 +161,7 @@ where
             //     M^l_i = MerkleCRH(l, M^{l+1}_{2i}, M^{l+1}_{2i+1})
             node = chip.hash_layer(
                 layouter.namespace(|| format!("MerkleCRH({}, left, right)", l)),
+                is_Q_public,
                 Q,
                 l,
                 pair.0,
@@ -184,7 +187,11 @@ pub mod tests {
             tests::{TestCommitDomain, TestHashDomain},
             HashDomains,
         },
-        utilities::{i2lebsp, lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
+        utilities::{
+            i2lebsp,
+            lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
+            UtilitiesInstructions,
+        },
     };
 
     use group::ff::{Field, PrimeField, PrimeFieldBits};
@@ -195,6 +202,7 @@ pub mod tests {
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
+    use crate::sinsemilla::chip::generator_table::GeneratorTableConfig;
     use rand::{rngs::OsRng, RngCore};
     use std::{convert::TryInto, iter};
 
@@ -209,8 +217,20 @@ pub mod tests {
 
     impl Circuit<pallas::Base> for MyCircuit {
         type Config = (
-            MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases>,
-            MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases>,
+            MerkleConfig<
+                TestHashDomain,
+                TestCommitDomain,
+                TestFixedBases,
+                LookupRangeCheckConfig<pallas::Base, { crate::sinsemilla::primitives::K }>,
+                GeneratorTableConfig,
+            >,
+            MerkleConfig<
+                TestHashDomain,
+                TestCommitDomain,
+                TestFixedBases,
+                LookupRangeCheckConfig<pallas::Base, { crate::sinsemilla::primitives::K }>,
+                GeneratorTableConfig,
+            >,
         );
         type FloorPlanner = SimpleFloorPlanner;
 
@@ -246,28 +266,34 @@ pub mod tests {
                 meta.lookup_table_column(),
                 meta.lookup_table_column(),
                 meta.lookup_table_column(),
-                meta.lookup_table_column(),
             );
 
-            let range_check =
-                LookupRangeCheckConfig::configure(meta, advices[9], lookup.0, lookup.3);
+            let table = GeneratorTableConfig {
+                table_idx: lookup.0,
+                table_x: lookup.1,
+                table_y: lookup.2,
+            };
+
+            let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup.0);
 
             let sinsemilla_config_1 = SinsemillaChip::configure(
+                true,
                 meta,
                 advices[5..].try_into().unwrap(),
                 advices[7],
                 fixed_y_q_1,
-                lookup,
+                table,
                 range_check,
             );
             let config1 = MerkleChip::configure(meta, sinsemilla_config_1);
 
             let sinsemilla_config_2 = SinsemillaChip::configure(
+                true,
                 meta,
                 advices[..5].try_into().unwrap(),
                 advices[2],
                 fixed_y_q_2,
-                lookup,
+                table,
                 range_check,
             );
             let config2 = MerkleChip::configure(meta, sinsemilla_config_2);
@@ -281,10 +307,13 @@ pub mod tests {
             mut layouter: impl Layouter<pallas::Base>,
         ) -> Result<(), Error> {
             // Load generator table (shared across both configs)
-            SinsemillaChip::<TestHashDomain, TestCommitDomain, TestFixedBases>::load(
-                config.0.sinsemilla_config.clone(),
-                &mut layouter,
-            )?;
+            SinsemillaChip::<
+                TestHashDomain,
+                TestCommitDomain,
+                TestFixedBases,
+                LookupRangeCheckConfig<pallas::Base, { crate::sinsemilla::primitives::K }>,
+                GeneratorTableConfig,
+            >::load(config.0.sinsemilla_config.clone(), &mut layouter)?;
 
             // Construct Merkle chips which will be placed side-by-side in the circuit.
             let chip_1 = MerkleChip::construct(config.0.clone());
@@ -304,7 +333,7 @@ pub mod tests {
             };
 
             let computed_final_root =
-                path.calculate_root(layouter.namespace(|| "calculate root"), leaf)?;
+                path.calculate_root(layouter.namespace(|| "calculate root"), true, leaf)?;
 
             self.leaf
                 .zip(self.leaf_pos)

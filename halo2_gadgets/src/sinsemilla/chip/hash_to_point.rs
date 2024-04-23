@@ -3,6 +3,7 @@ use super::{NonIdentityEccPoint, SinsemillaChip};
 use crate::{
     ecc::FixedPoints,
     sinsemilla::primitives::{self as sinsemilla, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S},
+    utilities::lookup_range_check::DefaultLookupRangeCheck,
 };
 
 use ff::Field;
@@ -14,19 +15,31 @@ use halo2_proofs::{
 use group::ff::{PrimeField, PrimeFieldBits};
 use pasta_curves::{arithmetic::CurveAffine, pallas};
 
+use crate::sinsemilla::chip::generator_table::DefaultGeneratorTable;
 use std::ops::Deref;
 
-impl<Hash, Commit, Fixed> SinsemillaChip<Hash, Commit, Fixed>
+/// Define an enum that can hold either type
+#[derive(Debug, Clone)]
+pub enum EccPointQ<'a> {
+    PublicPoint(pallas::Affine),
+    PrivatePoint(&'a NonIdentityEccPoint),
+}
+
+impl<Hash, Commit, Fixed, LookupRangeCheckConfig, GeneratorTableConfigType>
+    SinsemillaChip<Hash, Commit, Fixed, LookupRangeCheckConfig, GeneratorTableConfigType>
 where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
+    LookupRangeCheckConfig: DefaultLookupRangeCheck,
+    GeneratorTableConfigType: DefaultGeneratorTable,
 {
     /// [Specification](https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial).
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
     pub(super) fn hash_message(
         &self,
+        is_Q_public: bool,
         region: &mut Region<'_, pallas::Base>,
         Q: pallas::Affine,
         message: &<Self as SinsemillaInstructions<
@@ -41,70 +54,33 @@ where
         ),
         Error,
     > {
-        let (offset, x_a, y_a) = self.public_initialization(region, Q)?;
+        // todo: add doc about is_Q_public
+        let (offset, x_a, y_a) = if is_Q_public {
+            self.public_initialization_vanilla(region, Q)?
+        } else {
+            self.public_initialization(region, Q)?
+        };
 
         let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
 
         #[cfg(test)]
-        #[allow(non_snake_case)]
-        // Check equivalence to result from primitives::sinsemilla::hash_to_point
-        {
-            use crate::sinsemilla::primitives::{K, S_PERSONALIZATION};
-
-            use group::{prime::PrimeCurveAffine, Curve};
-            use pasta_curves::arithmetic::CurveExt;
-
-            let field_elems: Value<Vec<_>> = message
-                .iter()
-                .map(|piece| piece.field_elem().map(|elem| (elem, piece.num_words())))
-                .collect();
-
-            field_elems
-                .zip(x_a.value().zip(y_a.value()))
-                .assert_if_known(|(field_elems, (x_a, y_a))| {
-                    // Get message as a bitstring.
-                    let bitstring: Vec<bool> = field_elems
-                        .iter()
-                        .flat_map(|(elem, num_words)| {
-                            elem.to_le_bits().into_iter().take(K * num_words)
-                        })
-                        .collect();
-
-                    let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
-                    let S = |chunk: &[bool]| hasher_S(&lebs2ip_k(chunk).to_le_bytes());
-
-                    // We can use complete addition here because it differs from
-                    // incomplete addition with negligible probability.
-                    let expected_point = bitstring
-                        .chunks(K)
-                        .fold(Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
-                    let actual_point =
-                        pallas::Affine::from_xy(x_a.evaluate(), y_a.evaluate()).unwrap();
-                    expected_point.to_affine() == actual_point
-                });
-        }
-
-        x_a.value()
-            .zip(y_a.value())
-            .error_if_known_and(|(x_a, y_a)| x_a.is_zero_vartime() || y_a.is_zero_vartime())?;
-        Ok((
-            NonIdentityEccPoint::from_coordinates_unchecked(x_a.0, y_a),
-            zs_sum,
-        ))
+        self.check_hash_result(EccPointQ::PublicPoint(Q), message, x_a, y_a, zs_sum)
     }
 
-    /// [Specification](https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial).
+    #[cfg(test)]
     #[allow(non_snake_case)]
-    #[allow(clippy::type_complexity)]
-    pub(super) fn hash_message_with_private_init(
+    // Check equivalence to result from primitives::sinsemilla::hash_to_point
+    pub(crate) fn check_hash_result(
         &self,
-        region: &mut Region<'_, pallas::Base>,
-        Q: &NonIdentityEccPoint,
+        Q: EccPointQ,
         message: &<Self as SinsemillaInstructions<
             pallas::Affine,
             { sinsemilla::K },
             { sinsemilla::C },
         >>::Message,
+        x_a: X<pallas::Base>,
+        y_a: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+        zs_sum: Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
     ) -> Result<
         (
             NonIdentityEccPoint,
@@ -112,49 +88,42 @@ where
         ),
         Error,
     > {
-        let (offset, x_a, y_a) = self.private_initialization(region, Q)?;
+        use crate::sinsemilla::primitives::{K, S_PERSONALIZATION};
 
-        let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
+        use group::{prime::PrimeCurveAffine, Curve};
+        use pasta_curves::arithmetic::CurveExt;
 
-        #[cfg(test)]
-        #[allow(non_snake_case)]
-        // Check equivalence to result from primitives::sinsemilla::hash_to_point
-        {
-            use crate::sinsemilla::primitives::{K, S_PERSONALIZATION};
+        let field_elems: Value<Vec<_>> = message
+            .iter()
+            .map(|piece| piece.field_elem().map(|elem| (elem, piece.num_words())))
+            .collect();
 
-            use group::{prime::PrimeCurveAffine, Curve};
-            use pasta_curves::arithmetic::CurveExt;
+        let value_Q = match Q {
+            EccPointQ::PublicPoint(p) => Value::known(p),
+            EccPointQ::PrivatePoint(p) => p.point(),
+        };
 
-            let field_elems: Value<Vec<_>> = message
-                .iter()
-                .map(|piece| piece.field_elem().map(|elem| (elem, piece.num_words())))
-                .collect();
+        field_elems
+            .zip(x_a.value().zip(y_a.value()))
+            .zip(value_Q)
+            .assert_if_known(|((field_elems, (x_a, y_a)), value_Q)| {
+                // Get message as a bitstring.
+                let bitstring: Vec<bool> = field_elems
+                    .iter()
+                    .flat_map(|(elem, num_words)| elem.to_le_bits().into_iter().take(K * num_words))
+                    .collect();
 
-            field_elems
-                .zip(x_a.value().zip(y_a.value()))
-                .zip(Q.point())
-                .assert_if_known(|((field_elems, (x_a, y_a)), Q)| {
-                    // Get message as a bitstring.
-                    let bitstring: Vec<bool> = field_elems
-                        .iter()
-                        .flat_map(|(elem, num_words)| {
-                            elem.to_le_bits().into_iter().take(K * num_words)
-                        })
-                        .collect();
+                let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
+                let S = |chunk: &[bool]| hasher_S(&lebs2ip_k(chunk).to_le_bytes());
 
-                    let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
-                    let S = |chunk: &[bool]| hasher_S(&lebs2ip_k(chunk).to_le_bytes());
-
-                    // We can use complete addition here because it differs from
-                    // incomplete addition with negligible probability.
-                    let expected_point = bitstring
-                        .chunks(K)
-                        .fold(Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
-                    let actual_point =
-                        pallas::Affine::from_xy(x_a.evaluate(), y_a.evaluate()).unwrap();
-                    expected_point.to_affine() == actual_point
-                });
-        }
+                // We can use complete addition here because it differs from
+                // incomplete addition with negligible probability.
+                let expected_point = bitstring
+                    .chunks(K)
+                    .fold(value_Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
+                let actual_point = pallas::Affine::from_xy(x_a.evaluate(), y_a.evaluate()).unwrap();
+                expected_point.to_affine() == actual_point
+            });
 
         x_a.value()
             .zip(y_a.value())
@@ -168,17 +137,16 @@ where
     #[allow(non_snake_case)]
     /// Assign the coordinates of the initial public point `Q`
     ///
-    /// | offset | x_A | x_P | q_sinsemilla4 |
+    /// | offset | x_A | q_sinsemilla4 | fixed_y_q |
     /// --------------------------------------
-    /// |   0    |     | y_Q |               |
-    /// |   1    | x_Q |     |       1       |
-    fn public_initialization(
+    /// |   0    | x_Q |   1           |   y_Q     |
+    pub(crate) fn public_initialization_vanilla(
         &self,
         region: &mut Region<'_, pallas::Base>,
         Q: pallas::Affine,
     ) -> Result<(usize, X<pallas::Base>, Y<pallas::Base>), Error> {
         let config = self.config().clone();
-        let mut offset = 0;
+        let offset = 0;
 
         // Get the `x`- and `y`-coordinates of the starting `Q` base.
         let x_q = *Q.coordinates().unwrap().x();
@@ -187,19 +155,17 @@ where
         // Constrain the initial x_a, lambda_1, lambda_2, x_p using the q_sinsemilla4
         // selector.
         let y_a: Y<pallas::Base> = {
-            // Enable `q_sinsemilla4` on the second row.
-            config.q_sinsemilla4.enable(region, offset + 1)?;
-            let y_a: AssignedCell<Assigned<pallas::Base>, pallas::Base> = region
-                .assign_advice_from_constant(
-                    || "fixed y_q",
-                    config.double_and_add.x_p,
-                    offset,
-                    y_q.into(),
-                )?;
+            // Enable `q_sinsemilla4` on the first row.
+            config.q_sinsemilla4.enable(region, offset)?;
+            region.assign_fixed(
+                || "fixed y_q",
+                config.fixed_y_q,
+                offset,
+                || Value::known(y_q),
+            )?;
 
-            y_a.value_field().into()
+            Value::known(y_q.into()).into()
         };
-        offset += 1;
 
         // Constrain the initial x_q to equal the x-coordinate of the domain's `Q`.
         let x_a: X<pallas::Base> = {
@@ -216,47 +182,9 @@ where
         Ok((offset, x_a, y_a))
     }
 
-    #[allow(non_snake_case)]
-    /// Assign the coordinates of the initial private point `Q`
-    ///
-    /// | offset | x_A | x_P | q_sinsemilla4 |
-    /// --------------------------------------
-    /// |   0    |     | y_Q |               |
-    /// |   1    | x_Q |     |         1     |
-    fn private_initialization(
-        &self,
-        region: &mut Region<'_, pallas::Base>,
-        Q: &NonIdentityEccPoint,
-    ) -> Result<(usize, X<pallas::Base>, Y<pallas::Base>), Error> {
-        let config = self.config().clone();
-        let mut offset = 0;
-
-        // Assign `x_Q` and `y_Q` in the region and constrain the initial x_a, lambda_1, lambda_2,
-        // x_p, y_Q using the q_sinsemilla4 selector.
-        let y_a: Y<pallas::Base> = {
-            // Enable `q_sinsemilla4` on the second row.
-            config.q_sinsemilla4.enable(region, offset + 1)?;
-            let q_y: AssignedCell<Assigned<pallas::Base>, pallas::Base> = Q.y().into();
-            let y_a: AssignedCell<Assigned<pallas::Base>, pallas::Base> =
-                q_y.copy_advice(|| "fixed y_q", region, config.double_and_add.x_p, offset)?;
-
-            y_a.value_field().into()
-        };
-        offset += 1;
-
-        let x_a: X<pallas::Base> = {
-            let q_x: AssignedCell<Assigned<pallas::Base>, pallas::Base> = Q.x().into();
-            let x_a = q_x.copy_advice(|| "fixed x_q", region, config.double_and_add.x_a, offset)?;
-
-            x_a.into()
-        };
-
-        Ok((offset, x_a, y_a))
-    }
-
     #[allow(clippy::type_complexity)]
     /// Hash `message` from the initial point `Q`.
-    fn hash_all_pieces(
+    pub(crate) fn hash_all_pieces(
         &self,
         region: &mut Region<'_, pallas::Base>,
         mut offset: usize,
@@ -534,7 +462,7 @@ where
 }
 
 /// The x-coordinate of the accumulator in a Sinsemilla hash instance.
-struct X<F: Field>(AssignedCell<Assigned<F>, F>);
+pub(crate) struct X<F: Field>(pub(crate) AssignedCell<Assigned<F>, F>);
 
 impl<F: Field> From<AssignedCell<Assigned<F>, F>> for X<F> {
     fn from(cell_value: AssignedCell<Assigned<F>, F>) -> Self {
@@ -555,7 +483,7 @@ impl<F: Field> Deref for X<F> {
 /// This is never actually witnessed until the last round, since it
 /// can be derived from other variables. Thus it only exists as a field
 /// element, not a `CellValue`.
-struct Y<F: Field>(Value<Assigned<F>>);
+pub(crate) struct Y<F: Field>(pub(crate) Value<Assigned<F>>);
 
 impl<F: Field> From<Value<Assigned<F>>> for Y<F> {
     fn from(value: Value<Assigned<F>>) -> Self {

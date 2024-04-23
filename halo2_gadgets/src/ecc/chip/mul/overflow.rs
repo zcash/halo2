@@ -1,6 +1,6 @@
 use super::{T_Q, Z};
 use crate::{
-    sinsemilla::primitives as sinsemilla, utilities::lookup_range_check::LookupRangeCheckConfig,
+    sinsemilla::primitives as sinsemilla, utilities::lookup_range_check::DefaultLookupRangeCheck,
 };
 
 use group::ff::PrimeField;
@@ -15,19 +15,19 @@ use pasta_curves::pallas;
 use std::iter;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct Config {
+pub struct Config<LookupRangeCheckConfig: DefaultLookupRangeCheck> {
     // Selector to check z_0 = alpha + t_q (mod p)
     q_mul_overflow: Selector,
     // 10-bit lookup table
-    lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+    lookup_config: LookupRangeCheckConfig,
     // Advice columns
     advices: [Column<Advice>; 3],
 }
 
-impl Config {
+impl<LookupRangeCheckConfig: DefaultLookupRangeCheck> Config<LookupRangeCheckConfig> {
     pub(super) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
-        lookup_config: LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>,
+        lookup_config: LookupRangeCheckConfig,
         advices: [Column<Advice>; 3],
     ) -> Self {
         for advice in advices.iter() {
