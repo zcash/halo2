@@ -368,10 +368,6 @@ where
         assert!(bases.len() >= size);
         engine.msm(&scalars, &bases[0..size])
     }
-
-    fn get_g(&self) -> &[E::G1Affine] {
-        &self.g
-    }
 }
 
 #[cfg(test)]
