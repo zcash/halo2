@@ -6,7 +6,7 @@ use crate::arithmetic::powers;
 use crate::helpers::SerdeCurveAffine;
 use crate::poly::commitment::Verifier;
 use crate::poly::commitment::MSM;
-use crate::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
+use crate::poly::kzg::commitment::KZGCommitmentScheme;
 use crate::poly::kzg::msm::{DualMSM, MSMKZG};
 use crate::poly::kzg::strategy::GuardKZG;
 use crate::poly::query::Query;
@@ -32,8 +32,8 @@ where
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
-    type Guard = GuardKZG<'params, E>;
-    type MSMAccumulator = DualMSM<'params, E>;
+    type Guard = GuardKZG<E>;
+    type MSMAccumulator = DualMSM<E>;
 
     const QUERY_INSTANCE: bool = false;
 
@@ -52,7 +52,7 @@ where
         &self,
         transcript: &mut T,
         queries: I,
-        mut msm_accumulator: DualMSM<'params, E>,
+        mut msm_accumulator: DualMSM<E>,
     ) -> Result<Self::Guard, Error>
     where
         I: IntoIterator<Item = VerifierQuery<'com, E::G1Affine, MSMKZG<E>>> + Clone,

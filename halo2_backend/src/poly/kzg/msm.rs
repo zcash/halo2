@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use super::commitment::ParamsKZG;
+use super::commitment::{ParamsKZG, ParamsVerifierKZG};
 use crate::{arithmetic::parallelize, poly::commitment::MSM};
 use group::{Curve, Group};
 use halo2_middleware::zal::traits::MsmAccel;
@@ -136,37 +136,35 @@ where
     }
 }
 
-impl<'params, E: MultiMillerLoop + Debug> From<&'params ParamsKZG<E>> for DualMSM<'params, E>
+impl<'params, E: MultiMillerLoop + Debug> From<&'params ParamsKZG<E>> for DualMSM<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
-    fn from(params: &'params ParamsKZG<E>) -> Self {
-        DualMSM::new(params)
+    fn from(_params: &'params ParamsKZG<E>) -> Self {
+        DualMSM::new()
     }
 }
 
 /// Two channel MSM accumulator
 #[derive(Debug, Clone)]
-pub struct DualMSM<'a, E: Engine>
+pub struct DualMSM<E: Engine>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
-    pub(crate) params: &'a ParamsKZG<E>,
     pub(crate) left: MSMKZG<E>,
     pub(crate) right: MSMKZG<E>,
 }
 
-impl<'a, E: MultiMillerLoop + Debug> DualMSM<'a, E>
+impl<E: MultiMillerLoop + Debug> DualMSM<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
     /// Create a new two channel MSM accumulator instance
-    pub fn new(params: &'a ParamsKZG<E>) -> Self {
+    pub fn new() -> Self {
         Self {
-            params,
             left: MSMKZG::new(),
             right: MSMKZG::new(),
         }
@@ -185,9 +183,9 @@ where
     }
 
     /// Performs final pairing check with given verifier params and two channel linear combination
-    pub fn check(self, engine: &impl MsmAccel<E::G1Affine>) -> bool {
-        let s_g2_prepared = E::G2Prepared::from(self.params.s_g2);
-        let n_g2_prepared = E::G2Prepared::from(-self.params.g2);
+    pub fn check(self, engine: &impl MsmAccel<E::G1Affine>, params: &ParamsVerifierKZG<E>) -> bool {
+        let s_g2_prepared = E::G2Prepared::from(params.s_g2);
+        let n_g2_prepared = E::G2Prepared::from((-E::G2::generator()).into());
 
         let left = self.left.eval(engine);
         let right = self.right.eval(engine);

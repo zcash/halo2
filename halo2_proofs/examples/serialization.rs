@@ -182,7 +182,7 @@ fn main() {
         VerifierGWC<Bn256>,
         Challenge255<G1Affine>,
         Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>>,
-        SingleStrategy<'_, Bn256>,
+        SingleStrategy<Bn256>,
     >(
         &params,
         pk.get_vk(),

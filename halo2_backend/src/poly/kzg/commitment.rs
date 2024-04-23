@@ -270,7 +270,7 @@ where
 // TODO: see the issue at https://github.com/appliedzkp/halo2/issues/45
 // So we probably need much smaller verifier key. However for new bases in g1 should be in verifier keys.
 /// KZG multi-open verification parameters
-pub type ParamsVerifierKZG<C> = ParamsKZG<C>;
+pub type ParamsVerifierKZG<E> = ParamsKZG<E>;
 
 impl<'params, E: Engine + Debug> Params<'params, E::G1Affine> for ParamsKZG<E>
 where
