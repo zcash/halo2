@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use super::{construct_intermediate_sets, ChallengeU, ChallengeV};
 use crate::arithmetic::powers;
@@ -13,7 +14,6 @@ use crate::poly::query::{CommitmentReference, VerifierQuery};
 use crate::poly::Error;
 use crate::transcript::{EncodedChallenge, TranscriptRead};
 
-use group::prime::PrimeCurve;
 use group::prime::PrimeCurveAffine;
 use halo2_middleware::ff::Field;
 use halo2curves::pairing::{Engine, MultiMillerLoop};
@@ -21,11 +21,11 @@ use halo2curves::CurveExt;
 
 #[derive(Debug)]
 /// Concrete KZG verifier with GWC variant
-pub struct VerifierGWC<'params, E: Engine> {
-    params: &'params ParamsKZG<E>,
+pub struct VerifierGWC<E: Engine> {
+    _marker: PhantomData<E>,
 }
 
-impl<'params, E> Verifier<'params, KZGCommitmentScheme<E>> for VerifierGWC<'params, E>
+impl<'params, E> Verifier<'params, KZGCommitmentScheme<E>> for VerifierGWC<E>
 where
     E: MultiMillerLoop + Debug,
     E::G1Affine: SerdeCurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
@@ -37,8 +37,10 @@ where
 
     const QUERY_INSTANCE: bool = false;
 
-    fn new(params: &'params ParamsKZG<E>) -> Self {
-        Self { params }
+    fn new(_params: &'params ParamsKZG<E>) -> Self {
+        Self {
+            _marker: PhantomData,
+        }
     }
 
     fn verify_proof<

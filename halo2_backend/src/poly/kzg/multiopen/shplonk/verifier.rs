@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use super::ChallengeY;
 use super::{construct_intermediate_sets, ChallengeU, ChallengeV};
@@ -23,11 +24,11 @@ use std::ops::MulAssign;
 
 /// Concrete KZG multiopen verifier with SHPLONK variant
 #[derive(Debug)]
-pub struct VerifierSHPLONK<'params, E: Engine> {
-    params: &'params ParamsKZG<E>,
+pub struct VerifierSHPLONK<E: Engine> {
+    _marker: PhantomData<E>,
 }
 
-impl<'params, E> Verifier<'params, KZGCommitmentScheme<E>> for VerifierSHPLONK<'params, E>
+impl<'params, E> Verifier<'params, KZGCommitmentScheme<E>> for VerifierSHPLONK<E>
 where
     E: MultiMillerLoop + Debug,
     E::Fr: Ord,
@@ -40,8 +41,10 @@ where
 
     const QUERY_INSTANCE: bool = false;
 
-    fn new(params: &'params ParamsKZG<E>) -> Self {
-        Self { params }
+    fn new(_params: &'params ParamsKZG<E>) -> Self {
+        Self {
+            _marker: PhantomData,
+        }
     }
 
     /// Verify a multi-opening proof

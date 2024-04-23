@@ -551,7 +551,7 @@ fn test_mycircuit_full_legacy() {
         Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
     let strategy = SingleStrategy::new(verifier_params);
 
-    verify_proof::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<'_, Bn256>, _, _, _>(
+    verify_proof::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<Bn256>, _, _, _>(
         &params,
         &vk,
         strategy,
@@ -631,7 +631,7 @@ fn test_mycircuit_full_split() {
         Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
     let strategy = SingleStrategy::new(verifier_params);
 
-    verify_proof_single::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<'_, Bn256>, _, _, _>(
+    verify_proof_single::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<Bn256>, _, _, _>(
         &params,
         &vk,
         strategy,

@@ -179,7 +179,7 @@ fn main() {
     let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
     assert!(verify_proof::<
         KZGCommitmentScheme<Bn256>,
-        VerifierGWC<'_, Bn256>,
+        VerifierGWC<Bn256>,
         Challenge255<G1Affine>,
         Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>>,
         SingleStrategy<'_, Bn256>,
