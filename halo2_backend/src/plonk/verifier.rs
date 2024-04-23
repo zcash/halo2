@@ -490,7 +490,7 @@ where
     // We are now convinced the circuit is satisfied so long as the
     // polynomial commitments open to the correct values.
 
-    let verifier = V::new(params);
+    let verifier = V::new();
     strategy.process(|msm| {
         verifier
             .verify_proof(transcript, queries, msm)

@@ -41,7 +41,7 @@ where
 
     const QUERY_INSTANCE: bool = false;
 
-    fn new(_params: &'params ParamsKZG<E>) -> Self {
+    fn new() -> Self {
         Self {
             _marker: PhantomData,
         }

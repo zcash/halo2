@@ -179,7 +179,7 @@ mod test {
         proof: &'a [u8],
         should_fail: bool,
     ) {
-        let verifier = V::new(params);
+        let verifier = V::new();
 
         let mut transcript = T::init(proof);
 

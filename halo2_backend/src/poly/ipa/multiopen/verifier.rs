@@ -6,7 +6,7 @@ use halo2_middleware::ff::Field;
 use super::{construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4};
 use crate::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine};
 use crate::poly::commitment::{Params, Verifier, MSM};
-use crate::poly::ipa::commitment::{IPACommitmentScheme, ParamsVerifierIPA};
+use crate::poly::ipa::commitment::IPACommitmentScheme;
 use crate::poly::ipa::msm::MSMIPA;
 use crate::poly::ipa::strategy::GuardIPA;
 use crate::poly::query::{CommitmentReference, VerifierQuery};
@@ -25,7 +25,7 @@ impl<'params, C: CurveAffine> Verifier<'params, IPACommitmentScheme<C>> for Veri
 
     const QUERY_INSTANCE: bool = true;
 
-    fn new(_params: &'params ParamsVerifierIPA<C>) -> Self {
+    fn new() -> Self {
         Self {
             _marker: PhantomData,
         }

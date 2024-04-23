@@ -193,7 +193,7 @@ pub trait Verifier<'params, Scheme: CommitmentScheme> {
     const QUERY_INSTANCE: bool;
 
     /// Creates new verifier instance
-    fn new(params: &'params Scheme::ParamsVerifier) -> Self;
+    fn new() -> Self;
 
     /// Process the proof and return unfinished result named `Guard`
     fn verify_proof<
