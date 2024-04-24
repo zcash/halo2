@@ -46,7 +46,7 @@ where
     }
 }
 
-impl<E: Engine + Debug> MSM<E::G1Affine> for MSMKZG<E>
+impl<E: Engine> MSM<E::G1Affine> for MSMKZG<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
@@ -101,7 +101,7 @@ where
     projectives_msms: Vec<MSMKZG<E>>,
 }
 
-impl<E: Engine + Debug> Default for PreMSM<E>
+impl<E: Engine> Default for PreMSM<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
@@ -113,7 +113,7 @@ where
     }
 }
 
-impl<E: Engine + Debug> PreMSM<E>
+impl<E: Engine> PreMSM<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
@@ -157,7 +157,7 @@ where
     pub(crate) right: MSMKZG<E>,
 }
 
-impl<E: MultiMillerLoop + Debug> DualMSM<E>
+impl<E: MultiMillerLoop> DualMSM<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,

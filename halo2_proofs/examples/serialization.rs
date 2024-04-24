@@ -175,7 +175,8 @@ fn main() {
     .expect("prover should not fail");
     let proof = transcript.finalize();
 
-    let strategy = SingleStrategy::new(&params);
+    let verifier_params = &params.verifier_params();
+    let strategy = SingleStrategy::new(verifier_params);
     let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
     assert!(verify_proof::<
         KZGCommitmentScheme<Bn256>,
@@ -184,7 +185,7 @@ fn main() {
         Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>>,
         SingleStrategy<Bn256>,
     >(
-        &params,
+        &verifier_params,
         pk.get_vk(),
         strategy,
         &[instances],

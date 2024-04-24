@@ -38,7 +38,7 @@ mod test {
             Blake2bWrite<_, _, Challenge255<_>>,
         >(&engine, &params);
 
-        let verifier_params = params.verifier_params();
+        let verifier_params = params;
 
         verify::<
             IPACommitmentScheme<EqAffine>,
@@ -46,7 +46,7 @@ mod test {
             _,
             Blake2bRead<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
-        >(verifier_params, &proof[..], false);
+        >(&verifier_params, &proof[..], false);
 
         verify::<
             IPACommitmentScheme<EqAffine>,
@@ -54,7 +54,7 @@ mod test {
             _,
             Blake2bRead<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
-        >(verifier_params, &proof[..], true);
+        >(&verifier_params, &proof[..], true);
     }
 
     #[test]
@@ -76,7 +76,7 @@ mod test {
             Keccak256Write<_, _, Challenge255<_>>,
         >(&engine, &params);
 
-        let verifier_params = params.verifier_params();
+        let verifier_params = params;
 
         verify::<
             IPACommitmentScheme<EqAffine>,
@@ -84,7 +84,7 @@ mod test {
             _,
             Keccak256Read<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
-        >(verifier_params, &proof[..], false);
+        >(&verifier_params, &proof[..], false);
 
         verify::<
             IPACommitmentScheme<EqAffine>,
@@ -92,7 +92,7 @@ mod test {
             _,
             Keccak256Read<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
-        >(verifier_params, &proof[..], true);
+        >(&verifier_params, &proof[..], true);
     }
 
     #[test]
@@ -114,7 +114,7 @@ mod test {
         let verifier_params = params.verifier_params();
 
         verify::<_, VerifierGWC<_>, _, Blake2bRead<_, _, Challenge255<_>>, AccumulatorStrategy<_>>(
-            verifier_params,
+            &verifier_params,
             &proof[..],
             false,
         );
@@ -125,7 +125,7 @@ mod test {
             _,
             Blake2bRead<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
-        >(verifier_params, &proof[..], true);
+        >(&verifier_params, &proof[..], true);
     }
 
     #[test]
@@ -155,7 +155,7 @@ mod test {
             _,
             Blake2bRead<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
-        >(verifier_params, &proof[..], false);
+        >(&verifier_params, &proof[..], false);
 
         verify::<
             KZGCommitmentScheme<Bn256>,
@@ -163,7 +163,7 @@ mod test {
             _,
             Blake2bRead<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
-        >(verifier_params, &proof[..], true);
+        >(&verifier_params, &proof[..], true);
     }
 
     fn verify<

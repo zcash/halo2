@@ -62,9 +62,6 @@ impl<'params, C: CurveAffine> ParamsVerifier<'params, C> for ParamsIPA<C> {}
 impl<'params, C: CurveAffine> Params<'params, C> for ParamsIPA<C> {
     type MSM = MSMIPA<'params, C>;
 
-    type ParamsVerifier = Self;
-    type ParamsProver = Self;
-
     fn k(&self) -> u32 {
         self.k
     }
@@ -82,12 +79,8 @@ impl<'params, C: CurveAffine> Params<'params, C> for ParamsIPA<C> {
         self.g_lagrange = g_to_lagrange(self.g.iter().map(|g| g.to_curve()).collect(), k);
     }
 
-    fn empty_msm(&'params self) -> MSMIPA<C> {
+    fn empty_msm(&self) -> MSMIPA<C> {
         MSMIPA::new(self)
-    }
-
-    fn verifier_params(&'params self) -> &'params Self::ParamsVerifier {
-        self
     }
 
     /// This commits to a polynomial using its evaluations over the $2^k$ size

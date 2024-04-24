@@ -7,6 +7,7 @@ use halo2_middleware::zal::{
     impls::{PlonkEngine, PlonkEngineConfig},
     traits::MsmAccel,
 };
+use halo2_proofs::arithmetic::Field;
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::dev::MockProver;
 use halo2_proofs::plonk::{
@@ -21,7 +22,6 @@ use halo2_proofs::transcript::{
     Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge, TranscriptReadBuffer,
     TranscriptWriterBuffer,
 };
-use halo2_proofs::{arithmetic::Field, poly::commitment::Params};
 use rand_core::{OsRng, RngCore};
 use std::marker::PhantomData;
 
@@ -596,7 +596,7 @@ fn plonk_api() {
             _,
             Blake2bRead<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
-        >(verifier_params, pk.get_vk(), &proof[..]);
+        >(&verifier_params, pk.get_vk(), &proof[..]);
     }
 
     fn test_plonk_api_shplonk() {
@@ -625,7 +625,7 @@ fn plonk_api() {
             _,
             Blake2bRead<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
-        >(verifier_params, pk.get_vk(), &proof[..]);
+        >(&verifier_params, pk.get_vk(), &proof[..]);
     }
 
     fn test_plonk_api_ipa() {
@@ -646,7 +646,7 @@ fn plonk_api() {
             rng, &params, &pk,
         );
 
-        let verifier_params = params.verifier_params();
+        let verifier_params = params;
 
         verify_proof::<
             _,
@@ -654,7 +654,7 @@ fn plonk_api() {
             _,
             Blake2bRead<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
-        >(verifier_params, pk.get_vk(), &proof[..]);
+        >(&verifier_params, pk.get_vk(), &proof[..]);
 
         // Check that the verification key has not changed unexpectedly
         {

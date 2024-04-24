@@ -24,11 +24,7 @@ pub trait CommitmentScheme {
     type Curve: CurveAffine<ScalarExt = Self::Scalar>;
 
     /// Constant prover parameters
-    type ParamsProver: for<'params> ParamsProver<
-        'params,
-        Self::Curve,
-        ParamsVerifier = Self::ParamsVerifier,
-    >;
+    type ParamsProver: for<'params> ParamsProver<'params, Self::Curve>;
 
     /// Constant verifier parameters
     type ParamsVerifier: for<'params> ParamsVerifier<'params, Self::Curve>;
@@ -40,16 +36,12 @@ pub trait CommitmentScheme {
     fn read_params<R: io::Read>(reader: &mut R) -> io::Result<Self::ParamsProver>;
 }
 
+/// Common for Verifier and Prover.
+///
 /// Parameters for circuit synthesis and prover parameters.
 pub trait Params<'params, C: CurveAffine>: Sized + Clone + Debug {
     /// Multiscalar multiplication engine
     type MSM: MSM<C> + 'params;
-
-    /// Verifier parameters.
-    type ParamsVerifier: ParamsVerifier<'params, C>;
-
-    /// Prover parameters.
-    type ParamsProver: ParamsProver<'params, C>;
 
     /// Logarithmic size of the circuit
     fn k(&self) -> u32;
@@ -63,9 +55,6 @@ pub trait Params<'params, C: CurveAffine>: Sized + Clone + Debug {
     /// Generates an empty multiscalar multiplication struct using the
     /// appropriate params.
     fn empty_msm(&'params self) -> Self::MSM;
-
-    /// Returns verification parameters.
-    fn verifier_params(&'params self) -> &'params Self::ParamsVerifier;
 
     /// This commits to a polynomial using its evaluations over the $2^k$ size
     /// evaluation domain. The commitment will be blinded by the blinding factor
