@@ -51,7 +51,6 @@ where
         // FIXME: calling construct_base is possibly(!) non-optimal
         let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
 
-        #[cfg(test)]
         self.check_hash_result(EccPointQ::PrivatePoint(Q), message, x_a, y_a, zs_sum)
     }
 
