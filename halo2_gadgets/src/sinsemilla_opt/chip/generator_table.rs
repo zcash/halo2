@@ -11,8 +11,6 @@ use crate::sinsemilla::{
     chip::generator_table::GeneratorTableConfig,
     primitives::{K, SINSEMILLA_S},
 };
-use crate::utilities::lookup_range_check::{DefaultLookupRangeCheck, LookupRangeCheckConfig};
-use crate::utilities_opt::lookup_range_check::LookupRangeCheckConfigOptimized;
 
 /// Table containing independent generators S[0..2^k]
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]

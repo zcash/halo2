@@ -12,7 +12,6 @@ use crate::utilities::lookup_range_check::DefaultLookupRangeCheck;
 use crate::{
     sinsemilla::{merkle::chip::MerkleChip, primitives as sinsemilla},
     sinsemilla_opt::SinsemillaInstructionsOptimized,
-    utilities_opt::lookup_range_check::DefaultLookupRangeCheckConfigOptimized,
     {
         ecc::FixedPoints,
         sinsemilla::{CommitDomains, HashDomains},

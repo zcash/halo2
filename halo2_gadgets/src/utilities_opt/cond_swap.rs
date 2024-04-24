@@ -292,7 +292,6 @@ mod tests {
                     CondSwapChip::configure(meta, advices[0..5].try_into().unwrap());
 
                 let table_idx = meta.lookup_table_column();
-                let table_range_check_tag = meta.lookup_table_column();
 
                 let lagrange_coeffs = [
                     meta.fixed_column(),

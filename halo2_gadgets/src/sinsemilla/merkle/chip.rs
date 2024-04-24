@@ -9,7 +9,7 @@ use pasta_curves::pallas;
 
 use super::MerkleInstructions;
 
-use crate::sinsemilla::chip::generator_table::{DefaultGeneratorTable, GeneratorTableConfig};
+use crate::sinsemilla::chip::generator_table::{DefaultGeneratorTable};
 use crate::{
     sinsemilla::{primitives as sinsemilla, MessagePiece},
     utilities::{lookup_range_check::DefaultLookupRangeCheck, RangeConstrained},

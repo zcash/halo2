@@ -1,29 +1,20 @@
 //! Chip implementations for the Sinsemilla gadgets.
 
 use super::SinsemillaInstructionsOptimized;
-use crate::sinsemilla::chip::generator_table::{DefaultGeneratorTable, GeneratorTableConfig};
-use crate::sinsemilla_opt::chip::generator_table::GeneratorTableConfigOptimized;
-use crate::utilities::lookup_range_check::{DefaultLookupRangeCheck, LookupRangeCheckConfig};
-use crate::utilities_opt::lookup_range_check::LookupRangeCheckConfigOptimized;
+use crate::sinsemilla::chip::generator_table::{DefaultGeneratorTable};
+use crate::utilities::lookup_range_check::{DefaultLookupRangeCheck};
 use crate::{
-    ecc::{chip::NonIdentityEccPoint, FixedPoints},
+    ecc::{FixedPoints},
     sinsemilla::{
-        chip::{SinsemillaChip, SinsemillaConfig},
-        message::{Message, MessagePiece},
-        primitives as sinsemilla, CommitDomains, HashDomains, SinsemillaInstructions,
+        chip::{SinsemillaChip},
+        primitives as sinsemilla, CommitDomains, HashDomains,
     },
-    utilities_opt::lookup_range_check::DefaultLookupRangeCheckConfigOptimized,
 };
-use halo2_proofs::plonk::Expression;
 use halo2_proofs::{
-    circuit::{AssignedCell, Chip, Layouter, Value},
-    plonk::{
-        Advice, Column, ConstraintSystem, Constraints, Error, Fixed, TableColumn, VirtualCells,
-    },
-    poly::Rotation,
+    circuit::{Layouter},
+    plonk::Error,
 };
 use pasta_curves::pallas;
-use pasta_curves::pallas::Base;
 
 pub(crate) mod generator_table;
 

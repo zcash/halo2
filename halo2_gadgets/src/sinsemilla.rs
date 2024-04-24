@@ -78,7 +78,7 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     /// This returns both the resulting point, as well as the message
     /// decomposition in the form of intermediate values in a cumulative
     /// sum.
-    ///
+    /// The initial point `Q` is a public point if is_Q_public = true.
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
     fn hash_to_point(
@@ -316,6 +316,7 @@ where
     }
 
     #[allow(clippy::type_complexity)]
+    #[allow(non_snake_case)]
     /// $\mathsf{SinsemillaHashToPoint}$ from [§ 5.4.1.9][concretesinsemillahash].
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
@@ -335,6 +336,7 @@ where
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
     #[allow(clippy::type_complexity)]
+    #[allow(non_snake_case)]
     pub fn hash(
         &self,
         layouter: impl Layouter<C::Base>,
@@ -416,6 +418,7 @@ where
     }
 
     #[allow(clippy::type_complexity)]
+    #[allow(non_snake_case)]
     /// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
     ///
     /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit
@@ -447,6 +450,7 @@ where
     }
 
     #[allow(clippy::type_complexity)]
+    #[allow(non_snake_case)]
     /// $\mathsf{SinsemillaShortCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
     ///
     /// [concretesinsemillacommit]: https://zips.z.cash/protocol/nu5.pdf#concretesinsemillacommit

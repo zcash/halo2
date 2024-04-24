@@ -17,18 +17,14 @@ use halo2_proofs::{
     circuit::{AssignedCell, Chip, Layouter, Value},
     plonk::{
         Advice, Column, ConstraintSystem, Constraints, Error, Expression, Fixed, Selector,
-        TableColumn, VirtualCells,
+        VirtualCells,
     },
     poly::Rotation,
 };
 use pasta_curves::pallas;
 use pasta_curves::pallas::Base;
-
 pub(crate) mod generator_table;
-use crate::sinsemilla::chip::generator_table::{DefaultGeneratorTable, GeneratorTable};
-use crate::sinsemilla_opt::chip::generator_table::GeneratorTableConfigOptimized;
-use crate::utilities_opt::lookup_range_check::LookupRangeCheckConfigOptimized;
-use generator_table::GeneratorTableConfig;
+use crate::sinsemilla::chip::generator_table::{DefaultGeneratorTable};
 
 pub(crate) mod hash_to_point;
 

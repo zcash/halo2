@@ -1,4 +1,3 @@
-use ff::PrimeFieldBits;
 use group::ff::PrimeField;
 use halo2_proofs::{
     circuit::{Layouter, Value},
@@ -8,7 +7,6 @@ use halo2_proofs::{
 use std::fmt::Debug;
 
 use super::{CommitDomains, FixedPoints, HashDomains};
-use crate::utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig};
 use crate::{
     sinsemilla::primitives::{self as sinsemilla, SINSEMILLA_S},
     utilities::lookup_range_check::DefaultLookupRangeCheck,

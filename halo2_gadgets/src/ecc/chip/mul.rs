@@ -461,7 +461,7 @@ pub mod tests {
         Curve,
     };
     use halo2_proofs::{
-        circuit::{Chip, Layouter, Value},
+        circuit::{Layouter, Value},
         plonk::Error,
     };
     use pasta_curves::pallas;

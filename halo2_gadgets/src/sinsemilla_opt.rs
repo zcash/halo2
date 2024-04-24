@@ -78,6 +78,7 @@ where
         + Eq,
 {
     #[allow(clippy::type_complexity)]
+    #[allow(non_snake_case)]
     /// Evaluates the Sinsemilla hash of `message` from the public initial point `Q` stored
     /// into `CommitDomain`.
     pub fn hash(
@@ -159,7 +160,6 @@ pub(crate) mod tests {
                 tests::{FullWidth, TestFixedBases},
                 NonIdentityPoint,
             },
-            utilities::lookup_range_check::LookupRangeCheckConfig,
         },
     };
 

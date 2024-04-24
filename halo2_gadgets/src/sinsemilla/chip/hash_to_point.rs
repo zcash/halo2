@@ -63,7 +63,6 @@ where
 
         let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
 
-        #[cfg(test)]
         self.check_hash_result(EccPointQ::PublicPoint(Q), message, x_a, y_a, zs_sum)
     }
 
@@ -88,42 +87,47 @@ where
         ),
         Error,
     > {
-        use crate::sinsemilla::primitives::{K, S_PERSONALIZATION};
+        #[cfg(test)]
+        #[allow(non_snake_case)]
+        {
+            use crate::sinsemilla::primitives::{K, S_PERSONALIZATION};
 
-        use group::{prime::PrimeCurveAffine, Curve};
-        use pasta_curves::arithmetic::CurveExt;
+            use group::{prime::PrimeCurveAffine, Curve};
+            use pasta_curves::arithmetic::CurveExt;
 
-        let field_elems: Value<Vec<_>> = message
-            .iter()
-            .map(|piece| piece.field_elem().map(|elem| (elem, piece.num_words())))
-            .collect();
+            let field_elems: Value<Vec<_>> = message
+                .iter()
+                .map(|piece| piece.field_elem().map(|elem| (elem, piece.num_words())))
+                .collect();
 
-        let value_Q = match Q {
-            EccPointQ::PublicPoint(p) => Value::known(p),
-            EccPointQ::PrivatePoint(p) => p.point(),
-        };
+            let value_Q = match Q {
+                EccPointQ::PublicPoint(p) => Value::known(p),
+                EccPointQ::PrivatePoint(p) => p.point(),
+            };
 
-        field_elems
-            .zip(x_a.value().zip(y_a.value()))
-            .zip(value_Q)
-            .assert_if_known(|((field_elems, (x_a, y_a)), value_Q)| {
-                // Get message as a bitstring.
-                let bitstring: Vec<bool> = field_elems
-                    .iter()
-                    .flat_map(|(elem, num_words)| elem.to_le_bits().into_iter().take(K * num_words))
-                    .collect();
+            field_elems
+                .zip(x_a.value().zip(y_a.value()))
+                .zip(value_Q)
+                .assert_if_known(|((field_elems, (x_a, y_a)), value_Q)| {
+                    // Get message as a bitstring.
+                    let bitstring: Vec<bool> = field_elems
+                        .iter()
+                        .flat_map(|(elem, num_words)| elem.to_le_bits().into_iter().take(K * num_words))
+                        .collect();
 
-                let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
-                let S = |chunk: &[bool]| hasher_S(&lebs2ip_k(chunk).to_le_bytes());
+                    let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
+                    let S = |chunk: &[bool]| hasher_S(&lebs2ip_k(chunk).to_le_bytes());
 
-                // We can use complete addition here because it differs from
-                // incomplete addition with negligible probability.
-                let expected_point = bitstring
-                    .chunks(K)
-                    .fold(value_Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
-                let actual_point = pallas::Affine::from_xy(x_a.evaluate(), y_a.evaluate()).unwrap();
-                expected_point.to_affine() == actual_point
-            });
+                    // We can use complete addition here because it differs from
+                    // incomplete addition with negligible probability.
+                    let expected_point = bitstring
+                        .chunks(K)
+                        .fold(value_Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
+                    let actual_point = pallas::Affine::from_xy(x_a.evaluate(), y_a.evaluate()).unwrap();
+                    expected_point.to_affine() == actual_point
+                });
+        }
+
 
         x_a.value()
             .zip(y_a.value())

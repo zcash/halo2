@@ -163,9 +163,6 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfigOptimized<F, K> {
         config
     }
 
-    pub(crate) fn table_range_check_tag(&self) -> TableColumn {
-        self.table_range_check_tag
-    }
 }
 
 impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K>

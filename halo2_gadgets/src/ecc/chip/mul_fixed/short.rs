@@ -252,7 +252,6 @@ pub mod tests {
         plonk::{Any, Error},
     };
     use pasta_curves::pallas;
-    use std::marker::PhantomData;
 
     use crate::utilities::lookup_range_check::{DefaultLookupRangeCheck, LookupRangeCheck};
     use crate::{
