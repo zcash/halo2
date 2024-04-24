@@ -63,10 +63,9 @@ pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
 #[allow(clippy::too_many_arguments)]
 pub(in crate::plonk) fn lookup_commit_permuted<
     'a,
-    'params: 'a,
     F: WithSmallOrderMulGroup<3>,
     C,
-    P: Params<'params, C>,
+    P: Params<C>,
     E: EncodedChallenge<C>,
     R: RngCore,
     T: TranscriptWrite<C, E>,
@@ -170,8 +169,7 @@ impl<C: CurveAffine> Permuted<C> {
     /// added to the Lookup and finally returned by the method.
     #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn commit_product<
-        'params,
-        P: Params<'params, C>,
+        P: Params<C>,
         E: EncodedChallenge<C>,
         R: RngCore,
         T: TranscriptWrite<C, E>,
@@ -397,7 +395,7 @@ type ExpressionPair<F> = (Polynomial<F, LagrangeCoeff>, Polynomial<F, LagrangeCo
 /// - the first row in a sequence of like values in A' is the row
 ///   that has the corresponding value in S'.
 /// This method returns (A', S') if no errors are encountered.
-fn permute_expression_pair<'params, C: CurveAffine, P: Params<'params, C>, R: RngCore>(
+fn permute_expression_pair<C: CurveAffine, P: Params<C>, R: RngCore>(
     pk: &ProvingKey<C>,
     params: &P,
     domain: &EvaluationDomain<C::Scalar>,

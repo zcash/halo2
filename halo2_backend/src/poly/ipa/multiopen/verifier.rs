@@ -5,7 +5,7 @@ use halo2_middleware::ff::Field;
 
 use super::{construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4};
 use crate::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine};
-use crate::poly::commitment::{Params, ParamsVerifier, Verifier, MSM};
+use crate::poly::commitment::{ParamsVerifier, Verifier, MSM};
 use crate::poly::ipa::commitment::IPACommitmentScheme;
 use crate::poly::ipa::msm::MSMIPA;
 use crate::poly::ipa::strategy::GuardIPA;

@@ -6,7 +6,7 @@ use crate::{
     arithmetic::CurveAffine,
     plonk::{ChallengeX, ChallengeY, Error, VerifyingKey},
     poly::{
-        commitment::{Params, ParamsVerifier, MSM},
+        commitment::{ParamsVerifier, MSM},
         VerifierQuery,
     },
     transcript::{read_n_points, EncodedChallenge, TranscriptRead},

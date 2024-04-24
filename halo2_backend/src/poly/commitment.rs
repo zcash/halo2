@@ -24,7 +24,7 @@ pub trait CommitmentScheme {
     type Curve: CurveAffine<ScalarExt = Self::Scalar>;
 
     /// Constant prover parameters
-    type ParamsProver: for<'params> ParamsProver<'params, Self::Curve>;
+    type ParamsProver: ParamsProver<Self::Curve>;
 
     /// Constant verifier parameters
     type ParamsVerifier: for<'params> ParamsVerifier<'params, Self::Curve>;
@@ -39,10 +39,7 @@ pub trait CommitmentScheme {
 /// Common for Verifier and Prover.
 ///
 /// Parameters for circuit synthesis and prover parameters.
-pub trait Params<'params, C: CurveAffine>: Sized + Clone + Debug {
-    /// Multiscalar multiplication engine
-    type MSM: MSM<C> + 'params;
-
+pub trait Params<C: CurveAffine>: Sized + Clone + Debug {
     /// Logarithmic size of the circuit
     fn k(&self) -> u32;
 
@@ -67,7 +64,7 @@ pub trait Params<'params, C: CurveAffine>: Sized + Clone + Debug {
 }
 
 /// Parameters for circuit synthesis and prover parameters.
-pub trait ParamsProver<'params, C: CurveAffine>: Params<'params, C> {
+pub trait ParamsProver<C: CurveAffine>: Params<C> {
     /// Returns new instance of parameters
     fn new(k: u32) -> Self;
 
@@ -86,7 +83,9 @@ pub trait ParamsProver<'params, C: CurveAffine>: Params<'params, C> {
 }
 
 /// Verifier specific functionality with circuit constraints
-pub trait ParamsVerifier<'params, C: CurveAffine>: Params<'params, C> {
+pub trait ParamsVerifier<'params, C: CurveAffine>: Params<C> {
+    /// Multiscalar multiplication engine
+    type MSM: MSM<C> + 'params;
     /// Generates an empty multiscalar multiplication struct using the
     /// appropriate params.
     fn empty_msm(&'params self) -> Self::MSM;
@@ -199,7 +198,7 @@ pub trait Verifier<'params, Scheme: CommitmentScheme> {
                 Item = VerifierQuery<
                     'com,
                     Scheme::Curve,
-                    <Scheme::ParamsVerifier as Params<'params, Scheme::Curve>>::MSM,
+                    <Scheme::ParamsVerifier as ParamsVerifier<'params, Scheme::Curve>>::MSM,
                 >,
             > + Clone;
 }

@@ -38,8 +38,7 @@ pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
 
 impl<C: CurveAffine> Argument<C> {
     pub(in crate::plonk) fn commit<
-        'params,
-        P: ParamsProver<'params, C>,
+        P: ParamsProver<C>,
         E: EncodedChallenge<C>,
         R: RngCore,
         T: TranscriptWrite<C, E>,
@@ -100,8 +99,7 @@ impl<C: CurveAffine> Argument<C> {
 
 impl<C: CurveAffine> Committed<C> {
     pub(in crate::plonk) fn construct<
-        'params,
-        P: ParamsProver<'params, C>,
+        P: ParamsProver<C>,
         E: EncodedChallenge<C>,
         R: RngCore,
         T: TranscriptWrite<C, E>,

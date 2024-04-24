@@ -38,14 +38,12 @@ pub struct ParamsVerifierKZG<E: Engine> {
     pub(crate) s_g2: E::G2Affine,
 }
 
-impl<'params, E: Engine> Params<'params, E::G1Affine> for ParamsVerifierKZG<E>
+impl<E: Engine> Params<E::G1Affine> for ParamsVerifierKZG<E>
 where
     E::G1Affine: SerdeCurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
-    type MSM = MSMKZG<E>;
-
     fn k(&self) -> u32 {
         self.k
     }
@@ -87,6 +85,7 @@ where
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
+    type MSM = MSMKZG<E>;
     fn empty_msm(&'params self) -> MSMKZG<E> {
         MSMKZG::new()
     }
@@ -349,14 +348,12 @@ where
 /// KZG multi-open verification parameters
 // pub type ParamsVerifierKZG<E> = ParamsKZG<E>;
 
-impl<'params, E: Engine> Params<'params, E::G1Affine> for ParamsKZG<E>
+impl<E: Engine> Params<E::G1Affine> for ParamsKZG<E>
 where
     E::G1Affine: SerdeCurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
-    type MSM = MSMKZG<E>;
-
     fn k(&self) -> u32 {
         self.k
     }
@@ -396,12 +393,13 @@ where
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
+    type MSM = MSMKZG<E>;
     fn empty_msm(&self) -> MSMKZG<E> {
         MSMKZG::new()
     }
 }
 
-impl<'params, E: Engine> ParamsProver<'params, E::G1Affine> for ParamsKZG<E>
+impl<E: Engine> ParamsProver<E::G1Affine> for ParamsKZG<E>
 where
     E::G1Affine: SerdeCurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,

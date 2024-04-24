@@ -46,7 +46,7 @@ pub fn keygen_vk<'params, C, P>(
 ) -> Result<VerifyingKey<C>, Error>
 where
     C: CurveAffine,
-    P: Params<'params, C>,
+    P: Params<C>,
     C::Scalar: FromUniformBytes<64>,
 {
     let cs_mid = &circuit.cs;
@@ -88,14 +88,14 @@ where
 }
 
 /// Generate a `ProvingKey` from a `VerifyingKey` and an instance of `CompiledCircuit`.
-pub fn keygen_pk<'params, C, P>(
+pub fn keygen_pk<C, P>(
     params: &P,
     vk: VerifyingKey<C>,
     circuit: &CompiledCircuit<C::Scalar>,
 ) -> Result<ProvingKey<C>, Error>
 where
     C: CurveAffine,
-    P: Params<'params, C>,
+    P: Params<C>,
 {
     let cs = &circuit.cs;
 

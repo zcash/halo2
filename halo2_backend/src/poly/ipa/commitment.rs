@@ -58,14 +58,13 @@ impl<C: CurveAffine> CommitmentScheme for IPACommitmentScheme<C> {
 pub type ParamsVerifierIPA<C> = ParamsIPA<C>;
 
 impl<'params, C: CurveAffine> ParamsVerifier<'params, C> for ParamsIPA<C> {
+    type MSM = MSMIPA<'params, C>;
     fn empty_msm(&self) -> MSMIPA<C> {
         MSMIPA::new(self)
     }
 }
 
-impl<'params, C: CurveAffine> Params<'params, C> for ParamsIPA<C> {
-    type MSM = MSMIPA<'params, C>;
-
+impl<C: CurveAffine> Params<C> for ParamsIPA<C> {
     fn k(&self) -> u32 {
         self.k
     }
@@ -135,7 +134,7 @@ impl<'params, C: CurveAffine> Params<'params, C> for ParamsIPA<C> {
     }
 }
 
-impl<'params, C: CurveAffine> ParamsProver<'params, C> for ParamsIPA<C> {
+impl<C: CurveAffine> ParamsProver<C> for ParamsIPA<C> {
     /// Initializes parameters for the curve, given a random oracle to draw
     /// points from.
     fn new(k: u32) -> Self {
