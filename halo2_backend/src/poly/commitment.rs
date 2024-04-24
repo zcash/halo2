@@ -49,9 +49,6 @@ pub trait Params<'params, C: CurveAffine>: Sized + Clone + Debug {
     /// Size of the circuit
     fn n(&self) -> u64;
 
-    /// Downsize `Params` with smaller `k`.
-    fn downsize(&mut self, k: u32);
-
     /// Generates an empty multiscalar multiplication struct using the
     /// appropriate params.
     fn empty_msm(&'params self) -> Self::MSM;
@@ -77,6 +74,9 @@ pub trait Params<'params, C: CurveAffine>: Sized + Clone + Debug {
 pub trait ParamsProver<'params, C: CurveAffine>: Params<'params, C> {
     /// Returns new instance of parameters
     fn new(k: u32) -> Self;
+
+    /// Downsize `Params` with smaller `k`.
+    fn downsize(&mut self, k: u32);
 
     /// This computes a commitment to a polynomial described by the provided
     /// slice of coefficients. The commitment may be blinded by the blinding

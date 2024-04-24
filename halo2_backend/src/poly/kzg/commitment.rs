@@ -54,10 +54,6 @@ where
         1 << self.k
     }
 
-    fn downsize(&mut self, _k: u32) {
-        panic!("Cannot downsize Verifier parameters");
-    }
-
     fn empty_msm(&'params self) -> MSMKZG<E> {
         MSMKZG::new()
     }
@@ -370,17 +366,7 @@ where
         self.n
     }
 
-    fn downsize(&mut self, k: u32) {
-        assert!(k <= self.k);
-
-        self.k = k;
-        self.n = 1 << k;
-
-        self.g.truncate(self.n as usize);
-        self.g_lagrange = g_to_lagrange(self.g.iter().map(|g| g.to_curve()).collect(), k);
-    }
-
-    fn empty_msm(&'params self) -> MSMKZG<E> {
+    fn empty_msm(&self) -> MSMKZG<E> {
         MSMKZG::new()
     }
 
@@ -425,6 +411,16 @@ where
 {
     fn new(k: u32) -> Self {
         Self::setup(k, OsRng)
+    }
+
+    fn downsize(&mut self, k: u32) {
+        assert!(k <= self.k);
+
+        self.k = k;
+        self.n = 1 << k;
+
+        self.g.truncate(self.n as usize);
+        self.g_lagrange = g_to_lagrange(self.g.iter().map(|g| g.to_curve()).collect(), k);
     }
 
     fn commit(

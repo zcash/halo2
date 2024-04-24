@@ -70,15 +70,6 @@ impl<'params, C: CurveAffine> Params<'params, C> for ParamsIPA<C> {
         self.n
     }
 
-    fn downsize(&mut self, k: u32) {
-        assert!(k <= self.k);
-
-        self.k = k;
-        self.n = 1 << k;
-        self.g.truncate(self.n as usize);
-        self.g_lagrange = g_to_lagrange(self.g.iter().map(|g| g.to_curve()).collect(), k);
-    }
-
     fn empty_msm(&self) -> MSMIPA<C> {
         MSMIPA::new(self)
     }
@@ -202,6 +193,14 @@ impl<'params, C: CurveAffine> ParamsProver<'params, C> for ParamsIPA<C> {
         }
     }
 
+    fn downsize(&mut self, k: u32) {
+        assert!(k <= self.k);
+
+        self.k = k;
+        self.n = 1 << k;
+        self.g.truncate(self.n as usize);
+        self.g_lagrange = g_to_lagrange(self.g.iter().map(|g| g.to_curve()).collect(), k);
+    }
     /// This computes a commitment to a polynomial described by the provided
     /// slice of coefficients. The commitment will be blinded by the blinding
     /// factor `r`.

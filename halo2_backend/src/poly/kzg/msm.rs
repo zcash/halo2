@@ -136,12 +136,12 @@ where
     }
 }
 
-impl<'params, E: MultiMillerLoop + Debug> From<&'params ParamsKZG<E>> for DualMSM<E>
+impl<E: MultiMillerLoop> From<&ParamsKZG<E>> for DualMSM<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
-    fn from(_params: &'params ParamsKZG<E>) -> Self {
+    fn from(_params: &ParamsKZG<E>) -> Self {
         DualMSM::new()
     }
 }
