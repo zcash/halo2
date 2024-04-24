@@ -5,7 +5,7 @@ use halo2_middleware::ff::Field;
 
 use super::{construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4};
 use crate::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine};
-use crate::poly::commitment::{Params, Verifier, MSM};
+use crate::poly::commitment::{Params, ParamsVerifier, Verifier, MSM};
 use crate::poly::ipa::commitment::IPACommitmentScheme;
 use crate::poly::ipa::msm::MSMIPA;
 use crate::poly::ipa::strategy::GuardIPA;
@@ -52,8 +52,10 @@ impl<'params, C: CurveAffine> Verifier<'params, IPACommitmentScheme<C>> for Veri
 
         // Compress the commitments and expected evaluations at x together.
         // using the challenge x_1
+        let empty_msm = ParamsVerifier::<'params, C>::empty_msm(msm.params);
         let mut q_commitments: Vec<_> = vec![
-        (msm.params.empty_msm(), C::Scalar::ONE); // (accumulator, next x_1 power).
+
+        (empty_msm, C::Scalar::ONE); // (accumulator, next x_1 power).
         point_sets.len()];
 
         // A vec of vecs of evals. The outer vec corresponds to the point set,

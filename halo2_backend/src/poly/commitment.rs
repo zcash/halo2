@@ -49,10 +49,6 @@ pub trait Params<'params, C: CurveAffine>: Sized + Clone + Debug {
     /// Size of the circuit
     fn n(&self) -> u64;
 
-    /// Generates an empty multiscalar multiplication struct using the
-    /// appropriate params.
-    fn empty_msm(&'params self) -> Self::MSM;
-
     /// This commits to a polynomial using its evaluations over the $2^k$ size
     /// evaluation domain. The commitment will be blinded by the blinding factor
     /// `r`.
@@ -90,7 +86,11 @@ pub trait ParamsProver<'params, C: CurveAffine>: Params<'params, C> {
 }
 
 /// Verifier specific functionality with circuit constraints
-pub trait ParamsVerifier<'params, C: CurveAffine>: Params<'params, C> {}
+pub trait ParamsVerifier<'params, C: CurveAffine>: Params<'params, C> {
+    /// Generates an empty multiscalar multiplication struct using the
+    /// appropriate params.
+    fn empty_msm(&'params self) -> Self::MSM;
+}
 
 /// Multiscalar multiplication engine
 pub trait MSM<C: CurveAffine>: Clone + Debug + Send + Sync {

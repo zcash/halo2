@@ -57,7 +57,11 @@ impl<C: CurveAffine> CommitmentScheme for IPACommitmentScheme<C> {
 /// Verifier parameters
 pub type ParamsVerifierIPA<C> = ParamsIPA<C>;
 
-impl<'params, C: CurveAffine> ParamsVerifier<'params, C> for ParamsIPA<C> {}
+impl<'params, C: CurveAffine> ParamsVerifier<'params, C> for ParamsIPA<C> {
+    fn empty_msm(&self) -> MSMIPA<C> {
+        MSMIPA::new(self)
+    }
+}
 
 impl<'params, C: CurveAffine> Params<'params, C> for ParamsIPA<C> {
     type MSM = MSMIPA<'params, C>;
@@ -68,10 +72,6 @@ impl<'params, C: CurveAffine> Params<'params, C> for ParamsIPA<C> {
 
     fn n(&self) -> u64 {
         self.n
-    }
-
-    fn empty_msm(&self) -> MSMIPA<C> {
-        MSMIPA::new(self)
     }
 
     /// This commits to a polynomial using its evaluations over the $2^k$ size

@@ -54,10 +54,6 @@ where
         1 << self.k
     }
 
-    fn empty_msm(&'params self) -> MSMKZG<E> {
-        MSMKZG::new()
-    }
-
     fn commit_lagrange(
         &self,
         engine: &impl MsmAccel<E::G1Affine>,
@@ -91,6 +87,9 @@ where
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
+    fn empty_msm(&'params self) -> MSMKZG<E> {
+        MSMKZG::new()
+    }
 }
 
 /// Umbrella commitment scheme construction for all KZG variants
@@ -366,10 +365,6 @@ where
         self.n
     }
 
-    fn empty_msm(&self) -> MSMKZG<E> {
-        MSMKZG::new()
-    }
-
     fn commit_lagrange(
         &self,
         engine: &impl MsmAccel<E::G1Affine>,
@@ -401,6 +396,9 @@ where
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
+    fn empty_msm(&self) -> MSMKZG<E> {
+        MSMKZG::new()
+    }
 }
 
 impl<'params, E: Engine> ParamsProver<'params, E::G1Affine> for ParamsKZG<E>
