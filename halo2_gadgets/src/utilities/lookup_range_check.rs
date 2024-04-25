@@ -72,6 +72,8 @@ pub struct LookupRangeCheckConfig<F: PrimeFieldBits, const K: usize> {
 /// FIXME: add doc
 pub trait LookupRangeCheck<F: PrimeFieldBits, const K: usize> {
     /// FIXME: add doc
+    fn is_optimized() -> bool;
+    /// FIXME: add doc
     fn config(&self) -> &LookupRangeCheckConfig<F, K>;
 
     /// FIXME: add doc
@@ -235,7 +237,6 @@ pub trait LookupRangeCheck<F: PrimeFieldBits, const K: usize> {
                 // Copy `element` to use in the k-bit lookup.
                 let element =
                     element.copy_advice(|| "element", &mut region, self.config().running_sum, 0)?;
-
                 self.short_range_check(&mut region, element, num_bits)
             },
         )
@@ -273,6 +274,10 @@ pub trait LookupRangeCheck<F: PrimeFieldBits, const K: usize> {
 }
 
 impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCheckConfig<F, K> {
+    fn is_optimized() -> bool {
+        false
+    }
+
     fn config(&self) -> &LookupRangeCheckConfig<F, K> {
         self
     }

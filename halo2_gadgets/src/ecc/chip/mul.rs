@@ -62,7 +62,7 @@ pub struct Config<LookupRangeCheckConfig: DefaultLookupRangeCheck> {
 }
 
 impl<LookupRangeCheckConfig: DefaultLookupRangeCheck> Config<LookupRangeCheckConfig> {
-    pub(super) fn configure(
+    pub(crate) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         add_config: add::Config,
         lookup_config: LookupRangeCheckConfig,
@@ -461,13 +461,13 @@ pub mod tests {
         Curve,
     };
     use halo2_proofs::{
-        circuit::{Layouter, Value},
+        circuit::{Chip, Layouter, Value},
         plonk::Error,
     };
     use pasta_curves::pallas;
     use rand::rngs::OsRng;
 
-    use crate::utilities::lookup_range_check::DefaultLookupRangeCheck;
+    use crate::utilities::lookup_range_check::{DefaultLookupRangeCheck, LookupRangeCheckConfig};
     use crate::{
         ecc::{
             chip::{EccChip, EccPoint},

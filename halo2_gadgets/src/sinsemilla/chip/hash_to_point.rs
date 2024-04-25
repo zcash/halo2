@@ -1,5 +1,5 @@
 use super::super::{CommitDomains, HashDomains, SinsemillaInstructions};
-use super::{NonIdentityEccPoint, SinsemillaChip};
+use super::{NonIdentityEccPoint, SinsemillaChip, SinsemillaConfig};
 use crate::{
     ecc::FixedPoints,
     sinsemilla::primitives::{self as sinsemilla, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S},
@@ -15,7 +15,6 @@ use halo2_proofs::{
 use group::ff::{PrimeField, PrimeFieldBits};
 use pasta_curves::{arithmetic::CurveAffine, pallas};
 
-use crate::sinsemilla::chip::generator_table::DefaultGeneratorTable;
 use std::ops::Deref;
 
 /// Define an enum that can hold either type
@@ -25,21 +24,19 @@ pub enum EccPointQ<'a> {
     PrivatePoint(&'a NonIdentityEccPoint),
 }
 
-impl<Hash, Commit, Fixed, LookupRangeCheckConfig, GeneratorTableConfigType>
-    SinsemillaChip<Hash, Commit, Fixed, LookupRangeCheckConfig, GeneratorTableConfigType>
+impl<Hash, Commit, Fixed, LookupRangeCheckConfig>
+    SinsemillaChip<Hash, Commit, Fixed, LookupRangeCheckConfig>
 where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
     LookupRangeCheckConfig: DefaultLookupRangeCheck,
-    GeneratorTableConfigType: DefaultGeneratorTable,
 {
     /// [Specification](https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial).
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
     pub(super) fn hash_message(
         &self,
-        is_Q_public: bool,
         region: &mut Region<'_, pallas::Base>,
         Q: pallas::Affine,
         message: &<Self as SinsemillaInstructions<
@@ -54,11 +51,12 @@ where
         ),
         Error,
     > {
-        // todo: add doc about is_Q_public
-        let (offset, x_a, y_a) = if is_Q_public {
-            self.public_initialization_vanilla(region, Q)?
-        } else {
+        // todo: add doc about LookupRangeCheckConfig::is_optimized()
+        //let (offset, x_a, y_a) = self.public_initialization(region, Q)?;
+        let (offset, x_a, y_a) = if LookupRangeCheckConfig::is_optimized() {
             self.public_initialization(region, Q)?
+        } else {
+            self.public_initialization_vanilla(region, Q)?
         };
 
         let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
@@ -66,7 +64,6 @@ where
         self.check_hash_result(EccPointQ::PublicPoint(Q), message, x_a, y_a, zs_sum)
     }
 
-    #[cfg(test)]
     #[allow(non_snake_case)]
     // Check equivalence to result from primitives::sinsemilla::hash_to_point
     pub(crate) fn check_hash_result(
@@ -88,7 +85,6 @@ where
         Error,
     > {
         #[cfg(test)]
-        #[allow(non_snake_case)]
         {
             use crate::sinsemilla::primitives::{K, S_PERSONALIZATION};
 
@@ -112,7 +108,9 @@ where
                     // Get message as a bitstring.
                     let bitstring: Vec<bool> = field_elems
                         .iter()
-                        .flat_map(|(elem, num_words)| elem.to_le_bits().into_iter().take(K * num_words))
+                        .flat_map(|(elem, num_words)| {
+                            elem.to_le_bits().into_iter().take(K * num_words)
+                        })
                         .collect();
 
                     let hasher_S = pallas::Point::hash_to_curve(S_PERSONALIZATION);
@@ -123,11 +121,11 @@ where
                     let expected_point = bitstring
                         .chunks(K)
                         .fold(value_Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
-                    let actual_point = pallas::Affine::from_xy(x_a.evaluate(), y_a.evaluate()).unwrap();
+                    let actual_point =
+                        pallas::Affine::from_xy(x_a.evaluate(), y_a.evaluate()).unwrap();
                     expected_point.to_affine() == actual_point
                 });
         }
-
 
         x_a.value()
             .zip(y_a.value())
@@ -139,7 +137,8 @@ where
     }
 
     #[allow(non_snake_case)]
-    /// Assign the coordinates of the initial public point `Q`
+    /// Assign the coordinates of the initial public point `Q`,
+    /// y_Q to a fixed column
     ///
     /// | offset | x_A | q_sinsemilla4 | fixed_y_q |
     /// --------------------------------------

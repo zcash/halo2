@@ -36,7 +36,6 @@ pub trait MerkleInstructions<
     fn hash_layer(
         &self,
         layouter: impl Layouter<C::Base>,
-        is_Q_public: bool,
         Q: C,
         l: usize,
         left: Self::Var,
@@ -57,11 +56,11 @@ pub struct MerklePath<
 > where
     MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
 {
-    chips: [MerkleChip; PAR],
-    domain: MerkleChip::HashDomains,
-    leaf_pos: Value<u32>,
+    pub(crate) chips: [MerkleChip; PAR],
+    pub(crate) domain: MerkleChip::HashDomains,
+    pub(crate) leaf_pos: Value<u32>,
     // The Merkle path is ordered from leaves to root.
-    path: Value<[C::Base; PATH_LENGTH]>,
+    pub(crate) path: Value<[C::Base; PATH_LENGTH]>,
 }
 
 impl<
@@ -118,7 +117,6 @@ where
     pub fn calculate_root(
         &self,
         mut layouter: impl Layouter<C::Base>,
-        is_Q_public: bool,
         leaf: MerkleChip::Var,
     ) -> Result<MerkleChip::Var, Error> {
         // Each chip processes `ceil(PATH_LENGTH / PAR)` layers.
@@ -161,7 +159,6 @@ where
             //     M^l_i = MerkleCRH(l, M^{l+1}_{2i}, M^{l+1}_{2i+1})
             node = chip.hash_layer(
                 layouter.namespace(|| format!("MerkleCRH({}, left, right)", l)),
-                is_Q_public,
                 Q,
                 l,
                 pair.0,
@@ -202,7 +199,6 @@ pub mod tests {
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    use crate::sinsemilla::chip::generator_table::GeneratorTableConfig;
     use rand::{rngs::OsRng, RngCore};
     use std::{convert::TryInto, iter};
 
@@ -222,14 +218,12 @@ pub mod tests {
                 TestCommitDomain,
                 TestFixedBases,
                 LookupRangeCheckConfig<pallas::Base, { crate::sinsemilla::primitives::K }>,
-                GeneratorTableConfig,
             >,
             MerkleConfig<
                 TestHashDomain,
                 TestCommitDomain,
                 TestFixedBases,
                 LookupRangeCheckConfig<pallas::Base, { crate::sinsemilla::primitives::K }>,
-                GeneratorTableConfig,
             >,
         );
         type FloorPlanner = SimpleFloorPlanner;
@@ -268,32 +262,24 @@ pub mod tests {
                 meta.lookup_table_column(),
             );
 
-            let table = GeneratorTableConfig {
-                table_idx: lookup.0,
-                table_x: lookup.1,
-                table_y: lookup.2,
-            };
-
             let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup.0);
 
             let sinsemilla_config_1 = SinsemillaChip::configure(
-                true,
                 meta,
                 advices[5..].try_into().unwrap(),
                 advices[7],
                 fixed_y_q_1,
-                table,
+                lookup,
                 range_check,
             );
             let config1 = MerkleChip::configure(meta, sinsemilla_config_1);
 
             let sinsemilla_config_2 = SinsemillaChip::configure(
-                true,
                 meta,
                 advices[..5].try_into().unwrap(),
                 advices[2],
                 fixed_y_q_2,
-                table,
+                lookup,
                 range_check,
             );
             let config2 = MerkleChip::configure(meta, sinsemilla_config_2);
@@ -312,7 +298,6 @@ pub mod tests {
                 TestCommitDomain,
                 TestFixedBases,
                 LookupRangeCheckConfig<pallas::Base, { crate::sinsemilla::primitives::K }>,
-                GeneratorTableConfig,
             >::load(config.0.sinsemilla_config.clone(), &mut layouter)?;
 
             // Construct Merkle chips which will be placed side-by-side in the circuit.
@@ -333,7 +318,7 @@ pub mod tests {
             };
 
             let computed_final_root =
-                path.calculate_root(layouter.namespace(|| "calculate root"), true, leaf)?;
+                path.calculate_root(layouter.namespace(|| "calculate root"), leaf)?;
 
             self.leaf
                 .zip(self.leaf_pos)
@@ -422,7 +407,7 @@ pub mod tests {
 
         let circuit = MyCircuit::default();
         halo2_proofs::dev::CircuitLayout::default()
-            .show_labels(false)
+            .show_labels(true)
             .render(11, &circuit, &root)
             .unwrap();
     }

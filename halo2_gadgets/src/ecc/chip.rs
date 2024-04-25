@@ -74,7 +74,7 @@ impl EccPoint {
     }
 
     #[cfg(test)]
-    pub(crate) fn is_identity(&self) -> Value<bool> {
+    fn is_identity(&self) -> Value<bool> {
         self.x.value().map(|x| x.is_zero_vartime())
     }
 }

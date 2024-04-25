@@ -4,9 +4,9 @@ use halo2_proofs::{
     plonk::{ConstraintSystem, Error, Expression, TableColumn},
     poly::Rotation,
 };
-use std::fmt::Debug;
 
 use super::{CommitDomains, FixedPoints, HashDomains};
+use crate::utilities::lookup_range_check::LookupRangeCheckConfig;
 use crate::{
     sinsemilla::primitives::{self as sinsemilla, SINSEMILLA_S},
     utilities::lookup_range_check::DefaultLookupRangeCheck,
@@ -21,36 +21,25 @@ pub struct GeneratorTableConfig {
     pub table_y: TableColumn,
 }
 
-/// FIXME: add doc
-pub trait GeneratorTable {
-    fn config(&self) -> &GeneratorTableConfig;
-
+impl GeneratorTableConfig {
     #[allow(clippy::too_many_arguments)]
     #[allow(non_snake_case)]
     /// Even though the lookup table can be used in other parts of the circuit,
     /// this specific configuration sets up Sinsemilla-specific constraints
     /// controlled by `q_sinsemilla`, and would likely not apply to other chips.
-    fn configure<Hash, Commit, F, LookupRangeCheckConfig, GeneratorTableConfigType>(
-        &self,
+    pub fn configure<Hash, Commit, F, LookupRangeCheckConfig>(
         meta: &mut ConstraintSystem<pallas::Base>,
-        config: &super::SinsemillaConfig<
-            Hash,
-            Commit,
-            F,
-            LookupRangeCheckConfig,
-            GeneratorTableConfigType,
-        >,
+        config: &super::SinsemillaConfig<Hash, Commit, F, LookupRangeCheckConfig>,
     ) where
         Hash: HashDomains<pallas::Affine>,
         F: FixedPoints<pallas::Affine>,
         Commit: CommitDomains<pallas::Affine, F, Hash>,
         LookupRangeCheckConfig: DefaultLookupRangeCheck,
-        GeneratorTableConfigType: DefaultGeneratorTable,
     {
         let (table_idx, table_x, table_y) = (
-            self.config().table_idx,
-            self.config().table_x,
-            self.config().table_y,
+            config.generator_table.table_idx,
+            config.generator_table.table_x,
+            config.generator_table.table_y,
         );
 
         // https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial
@@ -93,14 +82,7 @@ pub trait GeneratorTable {
         });
     }
 
-    fn load(&self, layouter: &mut impl Layouter<pallas::Base>) -> Result<(), Error>;
-}
-impl GeneratorTable for GeneratorTableConfig {
-    fn config(&self) -> &GeneratorTableConfig {
-        self
-    }
-
-    fn load(&self, layouter: &mut impl Layouter<pallas::Base>) -> Result<(), Error> {
+    pub fn load(&self, layouter: &mut impl Layouter<pallas::Base>) -> Result<(), Error> {
         layouter.assign_table(
             || "generator_table",
             |mut table| {
@@ -119,8 +101,3 @@ impl GeneratorTable for GeneratorTableConfig {
         )
     }
 }
-
-/// FIXME: add doc
-pub trait DefaultGeneratorTable: GeneratorTable + Eq + PartialEq + Clone + Copy + Debug {}
-
-impl DefaultGeneratorTable for GeneratorTableConfig {}

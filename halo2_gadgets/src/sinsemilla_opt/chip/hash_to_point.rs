@@ -5,7 +5,6 @@ use halo2_proofs::{
     plonk::{Assigned, Error},
 };
 
-use crate::sinsemilla::chip::generator_table::DefaultGeneratorTable;
 use crate::sinsemilla::chip::hash_to_point::EccPointQ;
 use crate::sinsemilla::chip::SinsemillaChip;
 use crate::utilities::lookup_range_check::DefaultLookupRangeCheck;
@@ -18,14 +17,13 @@ use crate::{
     },
 };
 
-impl<Hash, Commit, Fixed, LookupRangeCheckConfig, GeneratorTableConfigType>
-    SinsemillaChip<Hash, Commit, Fixed, LookupRangeCheckConfig, GeneratorTableConfigType>
+impl<Hash, Commit, Fixed, LookupRangeCheckConfig>
+    SinsemillaChip<Hash, Commit, Fixed, LookupRangeCheckConfig>
 where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
     LookupRangeCheckConfig: DefaultLookupRangeCheck,
-    GeneratorTableConfigType: DefaultGeneratorTable,
 {
     /// [Specification](https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial).
     #[allow(non_snake_case)]
@@ -55,7 +53,7 @@ where
     }
 
     #[allow(non_snake_case)]
-    /// Assign the coordinates of the initial public point `Q`
+    /// Assign the coordinates of the initial public point `Q` to advice columns
     ///
     /// | offset | x_A | x_P | q_sinsemilla4 |
     /// --------------------------------------

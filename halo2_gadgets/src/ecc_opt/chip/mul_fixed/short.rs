@@ -76,7 +76,8 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 
 #[cfg(test)]
 pub mod tests {
-    use group::{ff::PrimeField, Curve, Group};
+    use ff::PrimeField;
+    use group::{Curve, Group};
     use halo2_proofs::{
         arithmetic::CurveAffine,
         circuit::{AssignedCell, Chip, Layouter, Value},
@@ -84,16 +85,83 @@ pub mod tests {
     };
     use pasta_curves::pallas;
 
-    use crate::utilities::lookup_range_check::{DefaultLookupRangeCheck, LookupRangeCheck};
+    use crate::ecc::tests::Short;
+    use crate::ecc::ScalarFixedShort;
+    use crate::utilities::lookup_range_check::DefaultLookupRangeCheck;
     use crate::utilities_opt::lookup_range_check::LookupRangeCheckConfigOptimized;
     use crate::{
-        ecc::{
-            chip::{EccChip},
-            tests::{Short, TestFixedBases},
-            Point, ScalarFixedShort,
+        ecc::{chip::EccChip, tests::TestFixedBases, Point},
+        utilities::{
+            lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
+            UtilitiesInstructions,
         },
-        utilities::UtilitiesInstructions,
     };
+
+    pub(crate) fn test_mul_sign<LookupRangeCheckConfig: DefaultLookupRangeCheck>(
+        chip: EccChip<TestFixedBases, LookupRangeCheckConfig>,
+        mut layouter: impl Layouter<pallas::Base>,
+    ) -> Result<(), Error> {
+        // Generate a random non-identity point P
+        let p_val = pallas::Point::random(rand::rngs::OsRng).to_affine();
+        let p = Point::new(
+            chip.clone(),
+            layouter.namespace(|| "P"),
+            Value::known(p_val),
+        )?;
+
+        // Create -P
+        let p_neg_val = -p_val;
+        let p_neg = Point::new(
+            chip.clone(),
+            layouter.namespace(|| "-P"),
+            Value::known(p_neg_val),
+        )?;
+
+        // Create the identity point
+        let identity = Point::new(
+            chip.clone(),
+            layouter.namespace(|| "identity"),
+            Value::known(pallas::Point::identity().to_affine()),
+        )?;
+
+        // Create -1 and 1 scalars
+        let pos_sign = chip.load_private(
+            layouter.namespace(|| "positive sign"),
+            chip.config().advices[0],
+            Value::known(pallas::Base::one()),
+        )?;
+        let neg_sign = chip.load_private(
+            layouter.namespace(|| "negative sign"),
+            chip.config().advices[1],
+            Value::known(-pallas::Base::one()),
+        )?;
+
+        // [1] P == P
+        {
+            let result = p.mul_sign(layouter.namespace(|| "[1] P"), &pos_sign)?;
+            result.constrain_equal(layouter.namespace(|| "constrain [1] P"), &p)?;
+        }
+
+        // [-1] P == -P
+        {
+            let result = p.mul_sign(layouter.namespace(|| "[1] P"), &neg_sign)?;
+            result.constrain_equal(layouter.namespace(|| "constrain [1] P"), &p_neg)?;
+        }
+
+        // [1] 0 == 0
+        {
+            let result = identity.mul_sign(layouter.namespace(|| "[1] O"), &pos_sign)?;
+            result.constrain_equal(layouter.namespace(|| "constrain [1] 0"), &identity)?;
+        }
+
+        // [-1] 0 == 0
+        {
+            let result = identity.mul_sign(layouter.namespace(|| "[-1] O"), &neg_sign)?;
+            result.constrain_equal(layouter.namespace(|| "constrain [1] 0"), &identity)?;
+        }
+
+        Ok(())
+    }
 
     #[test]
     fn invalid_magnitude_sign() {
@@ -144,6 +212,7 @@ pub mod tests {
                     meta.advice_column(),
                 ];
                 let lookup_table = meta.lookup_table_column();
+                let table_range_check_tag = meta.lookup_table_column();
                 let lagrange_coeffs = [
                     meta.fixed_column(),
                     meta.fixed_column(),
@@ -159,8 +228,12 @@ pub mod tests {
                 let constants = meta.fixed_column();
                 meta.enable_constant(constants);
 
-                let range_check =
-                    LookupRangeCheckConfigOptimized::configure(meta, advices[9], lookup_table);
+                let range_check = LookupRangeCheckConfigOptimized::configure_with_tag(
+                    meta,
+                    advices[9],
+                    lookup_table,
+                    table_range_check_tag,
+                );
                 EccChip::<
                     TestFixedBases,
                     LookupRangeCheckConfigOptimized<
@@ -363,72 +436,6 @@ pub mod tests {
         }
     }
 
-    pub(crate) fn test_mul_sign<LookupRangeCheckConfig: DefaultLookupRangeCheck>(
-        chip: EccChip<TestFixedBases, LookupRangeCheckConfig>,
-        mut layouter: impl Layouter<pallas::Base>,
-    ) -> Result<(), Error> {
-        // Generate a random non-identity point P
-        let p_val = pallas::Point::random(rand::rngs::OsRng).to_affine();
-        let p = Point::new(
-            chip.clone(),
-            layouter.namespace(|| "P"),
-            Value::known(p_val),
-        )?;
-
-        // Create -P
-        let p_neg_val = -p_val;
-        let p_neg = Point::new(
-            chip.clone(),
-            layouter.namespace(|| "-P"),
-            Value::known(p_neg_val),
-        )?;
-
-        // Create the identity point
-        let identity = Point::new(
-            chip.clone(),
-            layouter.namespace(|| "identity"),
-            Value::known(pallas::Point::identity().to_affine()),
-        )?;
-
-        // Create -1 and 1 scalars
-        let pos_sign = chip.load_private(
-            layouter.namespace(|| "positive sign"),
-            chip.config().advices[0],
-            Value::known(pallas::Base::one()),
-        )?;
-        let neg_sign = chip.load_private(
-            layouter.namespace(|| "negative sign"),
-            chip.config().advices[1],
-            Value::known(-pallas::Base::one()),
-        )?;
-
-        // [1] P == P
-        {
-            let result = p.mul_sign(layouter.namespace(|| "[1] P"), &pos_sign)?;
-            result.constrain_equal(layouter.namespace(|| "constrain [1] P"), &p)?;
-        }
-
-        // [-1] P == -P
-        {
-            let result = p.mul_sign(layouter.namespace(|| "[1] P"), &neg_sign)?;
-            result.constrain_equal(layouter.namespace(|| "constrain [1] P"), &p_neg)?;
-        }
-
-        // [1] 0 == 0
-        {
-            let result = identity.mul_sign(layouter.namespace(|| "[1] O"), &pos_sign)?;
-            result.constrain_equal(layouter.namespace(|| "constrain [1] 0"), &identity)?;
-        }
-
-        // [-1] 0 == 0
-        {
-            let result = identity.mul_sign(layouter.namespace(|| "[-1] O"), &neg_sign)?;
-            result.constrain_equal(layouter.namespace(|| "constrain [1] 0"), &identity)?;
-        }
-
-        Ok(())
-    }
-
     #[test]
     fn invalid_sign_in_mul_sign() {
         use crate::{ecc::chip::EccConfig, utilities::UtilitiesInstructions};
@@ -473,6 +480,7 @@ pub mod tests {
                     meta.advice_column(),
                 ];
                 let lookup_table = meta.lookup_table_column();
+                let table_range_check_tag = meta.lookup_table_column();
                 let lagrange_coeffs = [
                     meta.fixed_column(),
                     meta.fixed_column(),
@@ -488,8 +496,12 @@ pub mod tests {
                 let constants = meta.fixed_column();
                 meta.enable_constant(constants);
 
-                let range_check =
-                    LookupRangeCheckConfigOptimized::configure(meta, advices[9], lookup_table);
+                let range_check = LookupRangeCheckConfigOptimized::configure_with_tag(
+                    meta,
+                    advices[9],
+                    lookup_table,
+                    table_range_check_tag,
+                );
                 EccChip::<
                     TestFixedBases,
                     LookupRangeCheckConfigOptimized<

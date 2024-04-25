@@ -6,12 +6,13 @@ use halo2_proofs::{
 };
 use pasta_curves::pallas;
 
-use crate::sinsemilla::chip::generator_table::DefaultGeneratorTable;
 use crate::sinsemilla::chip::SinsemillaChip;
-use crate::utilities::lookup_range_check::DefaultLookupRangeCheck;
+use crate::sinsemilla::SinsemillaInstructions;
+use crate::utilities_opt::lookup_range_check::LookupRangeCheckConfigOptimized;
 use crate::{
     sinsemilla::{merkle::chip::MerkleChip, primitives as sinsemilla},
     sinsemilla_opt::SinsemillaInstructionsOptimized,
+    utilities_opt::lookup_range_check::DefaultLookupRangeCheckConfigOptimized,
     {
         ecc::FixedPoints,
         sinsemilla::{CommitDomains, HashDomains},
@@ -20,15 +21,12 @@ use crate::{
     },
 };
 
-impl<Hash, Commit, F, LookupRangeCheckConfig, GeneratorTableConfigType>
-    CondSwapInstructionsOptimized<pallas::Base>
-    for MerkleChip<Hash, Commit, F, LookupRangeCheckConfig, GeneratorTableConfigType>
+impl<Hash, Commit, F> CondSwapInstructionsOptimized<pallas::Base>
+    for MerkleChip<Hash, Commit, F, DefaultLookupRangeCheckConfigOptimized>
 where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    LookupRangeCheckConfig: DefaultLookupRangeCheck,
-    GeneratorTableConfigType: DefaultGeneratorTable,
 {
     fn mux(
         &self,
@@ -43,15 +41,13 @@ where
     }
 }
 
-impl<Hash, Commit, F, LookupRangeCheckConfig, GeneratorTableConfigType>
+impl<Hash, Commit, F>
     SinsemillaInstructionsOptimized<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }>
-    for MerkleChip<Hash, Commit, F, LookupRangeCheckConfig, GeneratorTableConfigType>
+    for MerkleChip<Hash, Commit, F, DefaultLookupRangeCheckConfigOptimized>
 where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    LookupRangeCheckConfig: DefaultLookupRangeCheck,
-    GeneratorTableConfigType: DefaultGeneratorTable,
 {
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
@@ -66,8 +62,7 @@ where
             Hash,
             Commit,
             F,
-            LookupRangeCheckConfig,
-            GeneratorTableConfigType,
+            LookupRangeCheckConfigOptimized<pallas::Base, { crate::sinsemilla::primitives::K }>,
         >::construct(config);
         chip.hash_to_point_with_private_init(layouter, Q, message)
     }

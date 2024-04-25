@@ -48,7 +48,7 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfigOptimized<F, K> {
     /// # Side-effects
     ///
     /// Both the `running_sum` and `constants` columns will be equality-enabled.
-    fn configure_with_tag(
+    pub(crate) fn configure_with_tag(
         meta: &mut ConstraintSystem<F>,
         running_sum: Column<Advice>,
         table_idx: TableColumn,
@@ -163,11 +163,18 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfigOptimized<F, K> {
         config
     }
 
+    pub(crate) fn table_range_check_tag(&self) -> TableColumn {
+        self.table_range_check_tag
+    }
 }
 
 impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K>
     for LookupRangeCheckConfigOptimized<F, K>
 {
+    fn is_optimized() -> bool {
+        true
+    }
+
     fn config(&self) -> &LookupRangeCheckConfig<F, K> {
         &self.base
     }

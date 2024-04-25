@@ -5,6 +5,7 @@
 use std::fmt::Debug;
 
 use pasta_curves::arithmetic::CurveAffine;
+use pasta_curves::pallas;
 
 use halo2_proofs::{circuit::Layouter, plonk::Error};
 
@@ -78,13 +79,11 @@ where
         + Eq,
 {
     #[allow(clippy::type_complexity)]
-    #[allow(non_snake_case)]
     /// Evaluates the Sinsemilla hash of `message` from the public initial point `Q` stored
     /// into `CommitDomain`.
     pub fn hash(
         &self,
         layouter: impl Layouter<C::Base>,
-        is_Q_public: bool,
         message: Message<C, SinsemillaChip, K, MAX_WORDS>,
     ) -> Result<
         (
@@ -94,7 +93,7 @@ where
         Error,
     > {
         assert_eq!(self.M.sinsemilla_chip, message.chip);
-        self.M.hash_to_point(layouter, is_Q_public, message)
+        self.M.hash_to_point(layouter, message)
     }
 
     #[allow(non_snake_case)]
@@ -160,6 +159,7 @@ pub(crate) mod tests {
                 tests::{FullWidth, TestFixedBases},
                 NonIdentityPoint,
             },
+            utilities::lookup_range_check::LookupRangeCheckConfig,
         },
     };
 
@@ -167,9 +167,7 @@ pub(crate) mod tests {
     use lazy_static::lazy_static;
     use pasta_curves::pallas;
 
-    use crate::sinsemilla::chip::generator_table::GeneratorTableConfig;
-    use crate::sinsemilla_opt::chip::generator_table::GeneratorTableConfigOptimized;
-    use crate::utilities::lookup_range_check::LookupRangeCheck;
+    use crate::sinsemilla_opt::chip::SinsemillaChipOptimized;
     use crate::utilities_opt::lookup_range_check::LookupRangeCheckConfigOptimized;
     use std::convert::TryInto;
 
@@ -219,14 +217,12 @@ pub(crate) mod tests {
                 TestCommitDomain,
                 TestFixedBases,
                 LookupRangeCheckConfigOptimized<pallas::Base, { crate::sinsemilla::primitives::K }>,
-                GeneratorTableConfigOptimized,
             >,
             SinsemillaConfig<
                 TestHashDomain,
                 TestCommitDomain,
                 TestFixedBases,
                 LookupRangeCheckConfigOptimized<pallas::Base, { crate::sinsemilla::primitives::K }>,
-                GeneratorTableConfigOptimized,
             >,
         );
         type FloorPlanner = SimpleFloorPlanner;
@@ -255,6 +251,7 @@ pub(crate) mod tests {
             meta.enable_constant(constants);
 
             let table_idx = meta.lookup_table_column();
+            let table_range_check_tag = meta.lookup_table_column();
             let lagrange_coeffs = [
                 meta.fixed_column(),
                 meta.fixed_column(),
@@ -266,25 +263,19 @@ pub(crate) mod tests {
                 meta.fixed_column(),
             ];
 
-            // todo: check the lookup.3 and LookupRangeCheckConfigOptimized::configure, to see if one more column is created
             // Fixed columns for the Sinsemilla generator lookup table
             let lookup = (
                 table_idx,
                 meta.lookup_table_column(),
                 meta.lookup_table_column(),
-                meta.lookup_table_column(),
             );
 
-            let range_check =
-                LookupRangeCheckConfigOptimized::configure(meta, advices[9], table_idx);
-            let table = GeneratorTableConfigOptimized {
-                base: GeneratorTableConfig {
-                    table_idx: lookup.0,
-                    table_x: lookup.1,
-                    table_y: lookup.2,
-                },
-                table_range_check_tag: lookup.3,
-            };
+            let range_check = LookupRangeCheckConfigOptimized::configure_with_tag(
+                meta,
+                advices[9],
+                table_idx,
+                table_range_check_tag,
+            );
 
             let ecc_config = EccChip::<
                 TestFixedBases,
@@ -292,21 +283,19 @@ pub(crate) mod tests {
             >::configure(meta, advices, lagrange_coeffs, range_check);
 
             let config1 = SinsemillaChip::configure(
-                false,
                 meta,
                 advices[..5].try_into().unwrap(),
                 advices[2],
                 lagrange_coeffs[0],
-                table,
+                lookup,
                 range_check,
             );
             let config2 = SinsemillaChip::configure(
-                false,
                 meta,
                 advices[5..].try_into().unwrap(),
                 advices[7],
                 lagrange_coeffs[1],
-                table,
+                lookup,
                 range_check,
             );
             (ecc_config, config1, config2)
@@ -321,14 +310,12 @@ pub(crate) mod tests {
 
             let ecc_chip = EccChip::construct(config.0);
 
+            // todo: check SinsemillaChipOptimized::load
             // The two `SinsemillaChip`s share the same lookup table.
-            SinsemillaChip::<
-                TestHashDomain,
-                TestCommitDomain,
-                TestFixedBases,
-                LookupRangeCheckConfigOptimized<pallas::Base, { crate::sinsemilla::primitives::K }>,
-                GeneratorTableConfigOptimized,
-            >::load(config.1.clone(), &mut layouter)?;
+            SinsemillaChipOptimized::<TestHashDomain, TestCommitDomain, TestFixedBases>::load(
+                config.1.clone(),
+                &mut layouter,
+            )?;
 
             // This MerkleCRH example is purely for illustrative purposes.
             // It is not an implementation of the Orchard protocol spec.
@@ -395,7 +382,7 @@ pub(crate) mod tests {
                 // Parent
                 let (parent, _) = {
                     let message = Message::from_pieces(chip1, vec![l, left, right]);
-                    merkle_crh.hash_to_point(layouter.namespace(|| "parent"), false, message)?
+                    merkle_crh.hash_to_point(layouter.namespace(|| "parent"), message)?
                 };
 
                 parent.constrain_equal(
@@ -425,7 +412,7 @@ pub(crate) mod tests {
                         layouter.namespace(|| "witness message"),
                         message.clone(),
                     )?;
-                    test_commit.commit(layouter.namespace(|| "commit"), false, message, r)?
+                    test_commit.commit(layouter.namespace(|| "commit"), message, r)?
                 };
 
                 // Witness expected result.

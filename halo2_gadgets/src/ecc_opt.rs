@@ -59,7 +59,6 @@ impl<C: CurveAffine, EccChip: EccInstructionsOptimized<C> + Clone + Debug + Eq> 
             })
     }
 }
-
 #[cfg(test)]
 pub(crate) mod tests {
     use ff::PrimeField;
@@ -98,6 +97,19 @@ pub(crate) mod tests {
             find_zs_and_us(*BASE, NUM_WINDOWS).unwrap();
         static ref ZS_AND_US_SHORT: Vec<(u64, [pallas::Base; H])> =
             find_zs_and_us(*BASE, NUM_WINDOWS_SHORT).unwrap();
+    }
+
+    impl FullWidth {
+        pub(crate) fn from_pallas_generator() -> Self {
+            FullWidth(*BASE, &ZS_AND_US)
+        }
+
+        pub(crate) fn from_parts(
+            base: pallas::Affine,
+            zs_and_us: &'static [(u64, [pallas::Base; H])],
+        ) -> Self {
+            FullWidth(base, zs_and_us)
+        }
     }
 
     impl FixedPoint<pallas::Affine> for FullWidth {
@@ -226,6 +238,7 @@ pub(crate) mod tests {
                 meta.advice_column(),
             ];
             let lookup_table = meta.lookup_table_column();
+            let table_range_check_tag = meta.lookup_table_column();
             let lagrange_coeffs = [
                 meta.fixed_column(),
                 meta.fixed_column(),
@@ -240,8 +253,12 @@ pub(crate) mod tests {
             let constants = meta.fixed_column();
             meta.enable_constant(constants);
 
-            let range_check =
-                LookupRangeCheckConfigOptimized::configure(meta, advices[9], lookup_table);
+            let range_check = LookupRangeCheckConfigOptimized::configure_with_tag(
+                meta,
+                advices[9],
+                lookup_table,
+                table_range_check_tag,
+            );
             EccChip::<
                 crate::ecc::tests::TestFixedBases,
                 LookupRangeCheckConfigOptimized<pallas::Base, { crate::sinsemilla::primitives::K }>,

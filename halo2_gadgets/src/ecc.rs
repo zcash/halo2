@@ -574,6 +574,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> FixedPointShort<C, EccChip> {
         Self { chip, inner }
     }
 }
+
 #[cfg(test)]
 pub(crate) mod tests {
     use ff::PrimeField;
@@ -594,7 +595,10 @@ pub(crate) mod tests {
         },
         FixedPoints,
     };
-    use crate::utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig};
+    use crate::{
+        sinsemilla::primitives as sinsemilla,
+        utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
+    };
 
     #[derive(Debug, Eq, PartialEq, Clone)]
     pub(crate) struct TestFixedBases;

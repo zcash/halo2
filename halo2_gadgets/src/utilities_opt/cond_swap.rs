@@ -120,113 +120,18 @@ impl CondSwapChip<pallas::Base> {
 
 #[cfg(test)]
 mod tests {
-    use super::{CondSwapChip, CondSwapInstructions};
-    use crate::utilities::cond_swap::CondSwapConfig;
-    use crate::utilities::lookup_range_check::LookupRangeCheck;
-    use crate::utilities::UtilitiesInstructions;
+    use crate::utilities::cond_swap::{CondSwapChip, CondSwapConfig};
     use crate::utilities_opt::lookup_range_check::LookupRangeCheckConfigOptimized;
-    use group::ff::{Field, PrimeField};
-    use halo2_proofs::{
-        circuit::{Layouter, SimpleFloorPlanner, Value},
-        dev::MockProver,
-        plonk::{Circuit, ConstraintSystem, Error},
-    };
-    use pasta_curves::pallas::Base;
-    use rand::rngs::OsRng;
-
-    #[test]
-    fn cond_swap() {
-        #[derive(Default)]
-        struct MyCircuit<F: Field> {
-            a: Value<F>,
-            b: Value<F>,
-            swap: Value<bool>,
-        }
-
-        impl<F: PrimeField> Circuit<F> for MyCircuit<F> {
-            type Config = CondSwapConfig;
-            type FloorPlanner = SimpleFloorPlanner;
-
-            fn without_witnesses(&self) -> Self {
-                Self::default()
-            }
-
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
-                let advices = [
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                ];
-
-                CondSwapChip::<F>::configure(meta, advices)
-            }
-
-            fn synthesize(
-                &self,
-                config: Self::Config,
-                mut layouter: impl Layouter<F>,
-            ) -> Result<(), Error> {
-                let chip = CondSwapChip::<F>::construct(config.clone());
-
-                // Load the pair and the swap flag into the circuit.
-                let a = chip.load_private(layouter.namespace(|| "a"), config.a, self.a)?;
-                // Return the swapped pair.
-                let swapped_pair = chip.swap(
-                    layouter.namespace(|| "swap"),
-                    (a.clone(), self.b),
-                    self.swap,
-                )?;
-
-                self.swap
-                    .zip(a.value().zip(self.b.as_ref()))
-                    .zip(swapped_pair.0.value().zip(swapped_pair.1.value()))
-                    .assert_if_known(|((swap, (a, b)), (a_swapped, b_swapped))| {
-                        if *swap {
-                            // Check that `a` and `b` have been swapped
-                            (a_swapped == b) && (b_swapped == a)
-                        } else {
-                            // Check that `a` and `b` have not been swapped
-                            (a_swapped == a) && (b_swapped == b)
-                        }
-                    });
-
-                Ok(())
-            }
-        }
-
-        let rng = OsRng;
-
-        // Test swap case
-        {
-            let circuit: MyCircuit<Base> = MyCircuit {
-                a: Value::known(Base::random(rng)),
-                b: Value::known(Base::random(rng)),
-                swap: Value::known(true),
-            };
-            let prover = MockProver::<Base>::run(3, &circuit, vec![]).unwrap();
-            assert_eq!(prover.verify(), Ok(()));
-        }
-
-        // Test non-swap case
-        {
-            let circuit: MyCircuit<Base> = MyCircuit {
-                a: Value::known(Base::random(rng)),
-                b: Value::known(Base::random(rng)),
-                swap: Value::known(false),
-            };
-            let prover = MockProver::<Base>::run(3, &circuit, vec![]).unwrap();
-            assert_eq!(prover.verify(), Ok(()));
-        }
-    }
 
     #[test]
     fn test_mux() {
-        use crate::ecc::{
-            chip::{EccChip, EccConfig},
-            tests::TestFixedBases,
-            NonIdentityPoint, Point,
+        use crate::{
+            ecc::{
+                chip::{EccChip, EccConfig},
+                tests::TestFixedBases,
+                NonIdentityPoint, Point,
+            },
+            utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
         };
 
         use group::{cofactor::CofactorCurveAffine, Curve, Group};
