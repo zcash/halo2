@@ -66,7 +66,7 @@ serde_json = "1"
 getrandom = { version = "0.2", features = ["js"] }
 
 [features]
-default = ["batch", "bits"]
+default = ["batch", "bits", "halo2_frontend/default", "halo2_backend/default"]
 dev-graph = ["halo2_frontend/dev-graph", "plotters"]
 test-dev-graph = [
     "halo2_frontend/test-dev-graph",
@@ -75,15 +75,15 @@ test-dev-graph = [
     "plotters/bitmap_encoder",
     "plotters/ttf"
 ]
-bits = ["halo2curves/bits"]
-gadget-traces = []
-thread-safe-region = []
-sanity-checks = []
-batch = ["rand_core/getrandom"]
+bits = ["halo2curves/bits", "halo2_frontend/bits", "halo2_backend/bits"]
+gadget-traces = ["halo2_frontend/gadget-traces"]
+thread-safe-region = ["halo2_frontend/thread-safe-region"]
+sanity-checks = ["halo2_backend/sanity-checks"]
+batch = ["rand_core/getrandom", "halo2_backend/batch"]
 circuit-params = ["halo2_frontend/circuit-params"]
-heap-profiling = []
+heap-profiling = ["halo2_frontend/heap-profiling"]
 cost-estimator = ["halo2_frontend/cost-estimator"]
-derive_serde = ["halo2curves/derive_serde"]
+derive_serde = ["halo2curves/derive_serde", "halo2_frontend/derive_serde", "halo2_backend/derive_serde"]
 
 [lib]
 bench = false

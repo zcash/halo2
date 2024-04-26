@@ -53,10 +53,8 @@ getrandom = { version = "0.2", features = ["js"] }
 [features]
 default = ["batch", "bits"]
 bits = ["halo2curves/bits"]
-gadget-traces = ["backtrace"]
 sanity-checks = []
 batch = ["rand_core/getrandom"]
-cost-estimator = ["serde", "serde_derive"]
 derive_serde = ["halo2curves/derive_serde"]
 
 [lib]
