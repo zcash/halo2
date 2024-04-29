@@ -5,7 +5,6 @@
 use std::fmt::Debug;
 
 use pasta_curves::arithmetic::CurveAffine;
-use pasta_curves::pallas;
 
 use halo2_proofs::{circuit::Layouter, plonk::Error};
 
@@ -18,10 +17,15 @@ pub mod chip;
 pub mod merkle;
 pub mod primitives;
 
-/// FIXME: add a doc
+/// `SinsemillaInstructionsOptimized` provides an optimized set of instructions
+/// for implementing the Sinsemilla hash function and commitment scheme
+/// on elliptic curves. This trait is an extension of the `SinsemillaInstructions` trait,
+/// designed to enhance performance in specific cryptographic scenarios.ld
+
 pub trait SinsemillaInstructionsOptimized<C: CurveAffine, const K: usize, const MAX_WORDS: usize>:
-    SinsemillaInstructions<C, K, MAX_WORDS>
+SinsemillaInstructions<C, K, MAX_WORDS>
 {
+
     /// Hashes a message to an ECC curve point.
     /// This returns both the resulting point, as well as the message
     /// decomposition in the form of intermediate values in a cumulative
@@ -159,7 +163,6 @@ pub(crate) mod tests {
                 tests::{FullWidth, TestFixedBases},
                 NonIdentityPoint,
             },
-            utilities::lookup_range_check::LookupRangeCheckConfig,
         },
     };
 
@@ -310,7 +313,6 @@ pub(crate) mod tests {
 
             let ecc_chip = EccChip::construct(config.0);
 
-            // todo: check SinsemillaChipOptimized::load
             // The two `SinsemillaChip`s share the same lookup table.
             SinsemillaChipOptimized::<TestHashDomain, TestCommitDomain, TestFixedBases>::load(
                 config.1.clone(),

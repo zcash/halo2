@@ -15,19 +15,19 @@ use pasta_curves::pallas;
 use std::iter;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct Config<LookupRangeCheckConfig: DefaultLookupRangeCheck> {
+pub struct Config<Lookup: DefaultLookupRangeCheck> {
     // Selector to check z_0 = alpha + t_q (mod p)
     q_mul_overflow: Selector,
     // 10-bit lookup table
-    lookup_config: LookupRangeCheckConfig,
+    lookup_config: Lookup,
     // Advice columns
     advices: [Column<Advice>; 3],
 }
 
-impl<LookupRangeCheckConfig: DefaultLookupRangeCheck> Config<LookupRangeCheckConfig> {
+impl<Lookup: DefaultLookupRangeCheck> Config<Lookup> {
     pub(super) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
-        lookup_config: LookupRangeCheckConfig,
+        lookup_config: Lookup,
         advices: [Column<Advice>; 3],
     ) -> Self {
         for advice in advices.iter() {

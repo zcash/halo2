@@ -46,7 +46,7 @@ const INCOMPLETE_LO_LEN: usize = INCOMPLETE_LEN - INCOMPLETE_HI_LEN;
 const COMPLETE_RANGE: Range<usize> = INCOMPLETE_LEN..(INCOMPLETE_LEN + NUM_COMPLETE_BITS);
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct Config<LookupRangeCheckConfig: DefaultLookupRangeCheck> {
+pub struct Config<Lookup: DefaultLookupRangeCheck> {
     // Selector used to check switching logic on LSB
     q_mul_lsb: Selector,
     // Configuration used in complete addition
@@ -58,14 +58,14 @@ pub struct Config<LookupRangeCheckConfig: DefaultLookupRangeCheck> {
     // Configuration used for complete addition part of double-and-add algorithm
     complete_config: complete::Config,
     // Configuration used to check for overflow
-    overflow_config: overflow::Config<LookupRangeCheckConfig>,
+    overflow_config: overflow::Config<Lookup>,
 }
 
-impl<LookupRangeCheckConfig: DefaultLookupRangeCheck> Config<LookupRangeCheckConfig> {
+impl<Lookup: DefaultLookupRangeCheck> Config<Lookup> {
     pub(crate) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         add_config: add::Config,
-        lookup_config: LookupRangeCheckConfig,
+        lookup_config: Lookup,
         advices: [Column<Advice>; 10],
     ) -> Self {
         let hi_config = incomplete::Config::configure(
@@ -461,13 +461,13 @@ pub mod tests {
         Curve,
     };
     use halo2_proofs::{
-        circuit::{Chip, Layouter, Value},
+        circuit::{Layouter, Value},
         plonk::Error,
     };
     use pasta_curves::pallas;
     use rand::rngs::OsRng;
 
-    use crate::utilities::lookup_range_check::{DefaultLookupRangeCheck, LookupRangeCheckConfig};
+    use crate::utilities::lookup_range_check::{DefaultLookupRangeCheck};
     use crate::{
         ecc::{
             chip::{EccChip, EccPoint},
@@ -477,10 +477,10 @@ pub mod tests {
         utilities::UtilitiesInstructions,
     };
 
-    pub(crate) fn test_mul<LookupRangeCheckConfig: DefaultLookupRangeCheck>(
-        chip: EccChip<TestFixedBases, LookupRangeCheckConfig>,
+    pub(crate) fn test_mul<Lookup: DefaultLookupRangeCheck>(
+        chip: EccChip<TestFixedBases, Lookup>,
         mut layouter: impl Layouter<pallas::Base>,
-        p: &NonIdentityPoint<pallas::Affine, EccChip<TestFixedBases, LookupRangeCheckConfig>>,
+        p: &NonIdentityPoint<pallas::Affine, EccChip<TestFixedBases, Lookup>>,
         p_val: pallas::Affine,
     ) -> Result<(), Error> {
         let column = chip.config.advices[0];

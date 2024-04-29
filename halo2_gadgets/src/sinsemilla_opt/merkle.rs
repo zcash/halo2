@@ -8,11 +8,10 @@ pub mod tests {
     use crate::{
         ecc::tests::TestFixedBases,
         sinsemilla::{
-            chip::SinsemillaChip,
             tests::{TestCommitDomain, TestHashDomain},
             HashDomains,
         },
-        utilities::{i2lebsp, lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
+        utilities::{i2lebsp, UtilitiesInstructions},
     };
 
     use group::ff::{Field, PrimeField, PrimeFieldBits};
@@ -23,13 +22,13 @@ pub mod tests {
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    use crate::sinsemilla::merkle::chip::{MerkleChip, MerkleConfig};
+    use crate::sinsemilla::merkle::chip::{MerkleConfig};
     use crate::sinsemilla::merkle::MerklePath;
     use crate::sinsemilla_opt::chip::SinsemillaChipOptimized;
-    use crate::utilities::lookup_range_check::LookupRangeCheck;
     use crate::utilities_opt::lookup_range_check::LookupRangeCheckConfigOptimized;
     use rand::{rngs::OsRng, RngCore};
     use std::{convert::TryInto, iter};
+    use crate::sinsemilla_opt::merkle::chip::MerkleChipOptimized;
 
     const MERKLE_DEPTH: usize = 32;
 
@@ -99,7 +98,7 @@ pub mod tests {
                 table_range_check_tag,
             );
 
-            let sinsemilla_config_1 = SinsemillaChip::configure(
+            let sinsemilla_config_1 = SinsemillaChipOptimized::configure(
                 meta,
                 advices[5..].try_into().unwrap(),
                 advices[7],
@@ -107,9 +106,9 @@ pub mod tests {
                 lookup,
                 range_check,
             );
-            let config1 = MerkleChip::configure(meta, sinsemilla_config_1);
+            let config1 = MerkleChipOptimized::configure(meta, sinsemilla_config_1);
 
-            let sinsemilla_config_2 = SinsemillaChip::configure(
+            let sinsemilla_config_2 = SinsemillaChipOptimized::configure(
                 meta,
                 advices[..5].try_into().unwrap(),
                 advices[2],
@@ -117,7 +116,7 @@ pub mod tests {
                 lookup,
                 range_check,
             );
-            let config2 = MerkleChip::configure(meta, sinsemilla_config_2);
+            let config2 = MerkleChipOptimized::configure(meta, sinsemilla_config_2);
 
             (config1, config2)
         }
@@ -134,8 +133,8 @@ pub mod tests {
             )?;
 
             // Construct Merkle chips which will be placed side-by-side in the circuit.
-            let chip_1 = MerkleChip::construct(config.0.clone());
-            let chip_2 = MerkleChip::construct(config.1.clone());
+            let chip_1 = MerkleChipOptimized::construct(config.0.clone());
+            let chip_2 = MerkleChipOptimized::construct(config.1.clone());
 
             let leaf = chip_1.load_private(
                 layouter.namespace(|| ""),

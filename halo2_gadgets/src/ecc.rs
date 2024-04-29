@@ -596,7 +596,6 @@ pub(crate) mod tests {
         FixedPoints,
     };
     use crate::{
-        sinsemilla::primitives as sinsemilla,
         utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
     };
 

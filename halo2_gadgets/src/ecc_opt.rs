@@ -99,19 +99,6 @@ pub(crate) mod tests {
             find_zs_and_us(*BASE, NUM_WINDOWS_SHORT).unwrap();
     }
 
-    impl FullWidth {
-        pub(crate) fn from_pallas_generator() -> Self {
-            FullWidth(*BASE, &ZS_AND_US)
-        }
-
-        pub(crate) fn from_parts(
-            base: pallas::Affine,
-            zs_and_us: &'static [(u64, [pallas::Base; H])],
-        ) -> Self {
-            FullWidth(base, zs_and_us)
-        }
-    }
-
     impl FixedPoint<pallas::Affine> for FullWidth {
         type FixedScalarKind = FullScalar;
 

@@ -1,5 +1,5 @@
 use super::super::{CommitDomains, HashDomains, SinsemillaInstructions};
-use super::{NonIdentityEccPoint, SinsemillaChip, SinsemillaConfig};
+use super::{NonIdentityEccPoint, SinsemillaChip};
 use crate::{
     ecc::FixedPoints,
     sinsemilla::primitives::{self as sinsemilla, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S},
@@ -24,18 +24,18 @@ pub enum EccPointQ<'a> {
     PrivatePoint(&'a NonIdentityEccPoint),
 }
 
-impl<Hash, Commit, Fixed, LookupRangeCheckConfig>
-    SinsemillaChip<Hash, Commit, Fixed, LookupRangeCheckConfig>
+impl<Hash, Commit, Fixed, Lookup>
+    SinsemillaChip<Hash, Commit, Fixed, Lookup>
 where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
-    LookupRangeCheckConfig: DefaultLookupRangeCheck,
+    Lookup: DefaultLookupRangeCheck,
 {
     /// [Specification](https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial).
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
-    pub(super) fn hash_message(
+    pub(crate) fn hash_message(
         &self,
         region: &mut Region<'_, pallas::Base>,
         Q: pallas::Affine,
@@ -51,13 +51,7 @@ where
         ),
         Error,
     > {
-        // todo: add doc about LookupRangeCheckConfig::is_optimized()
-        //let (offset, x_a, y_a) = self.public_initialization(region, Q)?;
-        let (offset, x_a, y_a) = if LookupRangeCheckConfig::is_optimized() {
-            self.public_initialization(region, Q)?
-        } else {
-            self.public_initialization_vanilla(region, Q)?
-        };
+        let (offset, x_a, y_a) = self.public_initialization_vanilla(region, Q)?;
 
         let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
 
@@ -65,6 +59,7 @@ where
     }
 
     #[allow(non_snake_case)]
+    #[allow(unused_variables)]
     // Check equivalence to result from primitives::sinsemilla::hash_to_point
     pub(crate) fn check_hash_result(
         &self,

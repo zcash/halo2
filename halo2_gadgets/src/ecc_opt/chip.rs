@@ -19,8 +19,8 @@ use super::EccInstructionsOptimized;
 pub(crate) mod mul_fixed;
 pub(super) mod witness_point;
 
-impl<Fixed: FixedPoints<pallas::Affine>, LookupRangeCheckConfig: DefaultLookupRangeCheck>
-    EccInstructionsOptimized<pallas::Affine> for EccChip<Fixed, LookupRangeCheckConfig>
+impl<Fixed: FixedPoints<pallas::Affine>, Lookup: DefaultLookupRangeCheck>
+    EccInstructionsOptimized<pallas::Affine> for EccChip<Fixed, Lookup>
 where
     <Fixed as FixedPoints<pallas::Affine>>::Base:
         FixedPoint<pallas::Affine, FixedScalarKind = BaseFieldElem>,

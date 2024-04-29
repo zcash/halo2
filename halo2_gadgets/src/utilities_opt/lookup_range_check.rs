@@ -171,10 +171,6 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfigOptimized<F, K> {
 impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K>
     for LookupRangeCheckConfigOptimized<F, K>
 {
-    fn is_optimized() -> bool {
-        true
-    }
-
     fn config(&self) -> &LookupRangeCheckConfig<F, K> {
         &self.base
     }

@@ -17,14 +17,39 @@ use crate::{
     },
 };
 
-impl<Hash, Commit, Fixed, LookupRangeCheckConfig>
-    SinsemillaChip<Hash, Commit, Fixed, LookupRangeCheckConfig>
+impl<Hash, Commit, Fixed, Lookup>
+    SinsemillaChip<Hash, Commit, Fixed, Lookup>
 where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
-    LookupRangeCheckConfig: DefaultLookupRangeCheck,
+    Lookup: DefaultLookupRangeCheck,
 {
+    #[allow(non_snake_case)]
+    #[allow(clippy::type_complexity)]
+    pub(crate) fn hash_message_zsa(
+        &self,
+        region: &mut Region<'_, pallas::Base>,
+        Q: pallas::Affine,
+        message: &<Self as SinsemillaInstructions<
+            pallas::Affine,
+            { sinsemilla::K },
+            { sinsemilla::C },
+        >>::Message,
+    ) -> Result<
+        (
+            NonIdentityEccPoint,
+            Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
+        ),
+        Error,
+    > {
+        // Coordinates of the initial point `Q` are assigned to advice columns
+        let (offset, x_a, y_a) = self.public_initialization(region, Q)?;
+
+        let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
+
+        self.check_hash_result(EccPointQ::PublicPoint(Q), message, x_a, y_a, zs_sum)
+    }
     /// [Specification](https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial).
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
@@ -46,7 +71,6 @@ where
     > {
         let (offset, x_a, y_a) = self.private_initialization(region, Q)?;
 
-        // FIXME: calling construct_base is possibly(!) non-optimal
         let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
 
         self.check_hash_result(EccPointQ::PrivatePoint(Q), message, x_a, y_a, zs_sum)

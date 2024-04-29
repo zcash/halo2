@@ -92,13 +92,12 @@ pub mod tests {
     use crate::{
         ecc::{chip::EccChip, tests::TestFixedBases, Point},
         utilities::{
-            lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
             UtilitiesInstructions,
         },
     };
 
-    pub(crate) fn test_mul_sign<LookupRangeCheckConfig: DefaultLookupRangeCheck>(
-        chip: EccChip<TestFixedBases, LookupRangeCheckConfig>,
+    pub(crate) fn test_mul_sign<Lookup: DefaultLookupRangeCheck>(
+        chip: EccChip<TestFixedBases, Lookup>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
         // Generate a random non-identity point P

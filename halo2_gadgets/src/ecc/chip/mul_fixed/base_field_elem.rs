@@ -18,21 +18,21 @@ use std::convert::TryInto;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Config<
     Fixed: FixedPoints<pallas::Affine>,
-    LookupRangeCheckConfig: DefaultLookupRangeCheck,
+    Lookup: DefaultLookupRangeCheck,
 > {
     q_mul_fixed_base_field: Selector,
     canon_advices: [Column<Advice>; 3],
-    lookup_config: LookupRangeCheckConfig,
+    lookup_config: Lookup,
     super_config: super::Config<Fixed>,
 }
 
-impl<Fixed: FixedPoints<pallas::Affine>, LookupRangeCheckConfig: DefaultLookupRangeCheck>
-    Config<Fixed, LookupRangeCheckConfig>
+impl<Fixed: FixedPoints<pallas::Affine>, Lookup: DefaultLookupRangeCheck>
+    Config<Fixed, Lookup>
 {
     pub(crate) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         canon_advices: [Column<Advice>; 3],
-        lookup_config: LookupRangeCheckConfig,
+        lookup_config: Lookup,
         super_config: super::Config<Fixed>,
     ) -> Self {
         for advice in canon_advices.iter() {
@@ -401,8 +401,8 @@ pub mod tests {
         utilities::UtilitiesInstructions,
     };
 
-    pub(crate) fn test_mul_fixed_base_field<LookupRangeCheckConfig: DefaultLookupRangeCheck>(
-        chip: EccChip<TestFixedBases, LookupRangeCheckConfig>,
+    pub(crate) fn test_mul_fixed_base_field<Lookup: DefaultLookupRangeCheck>(
+        chip: EccChip<TestFixedBases, Lookup>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
         test_single_base(
@@ -414,22 +414,22 @@ pub mod tests {
     }
 
     #[allow(clippy::op_ref)]
-    fn test_single_base<LookupRangeCheckConfig: DefaultLookupRangeCheck>(
-        chip: EccChip<TestFixedBases, LookupRangeCheckConfig>,
+    fn test_single_base<Lookup: DefaultLookupRangeCheck>(
+        chip: EccChip<TestFixedBases, Lookup>,
         mut layouter: impl Layouter<pallas::Base>,
-        base: FixedPointBaseField<pallas::Affine, EccChip<TestFixedBases, LookupRangeCheckConfig>>,
+        base: FixedPointBaseField<pallas::Affine, EccChip<TestFixedBases, Lookup>>,
         base_val: pallas::Affine,
     ) -> Result<(), Error> {
         let rng = OsRng;
 
         let column = chip.config().advices[0];
 
-        fn constrain_equal_non_id<LookupRangeCheckConfig: DefaultLookupRangeCheck>(
-            chip: EccChip<TestFixedBases, LookupRangeCheckConfig>,
+        fn constrain_equal_non_id<Lookup: DefaultLookupRangeCheck>(
+            chip: EccChip<TestFixedBases, Lookup>,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
             scalar_val: pallas::Base,
-            result: Point<pallas::Affine, EccChip<TestFixedBases, LookupRangeCheckConfig>>,
+            result: Point<pallas::Affine, EccChip<TestFixedBases, Lookup>>,
         ) -> Result<(), Error> {
             // Move scalar from base field into scalar field (which always fits for Pallas).
             let scalar = pallas::Scalar::from_repr(scalar_val.to_repr()).unwrap();

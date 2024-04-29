@@ -136,7 +136,7 @@ impl From<NonIdentityEccPoint> for EccPoint {
 #[allow(non_snake_case)]
 pub struct EccConfig<
     FixedPoints: super::FixedPoints<pallas::Affine>,
-    LookupRangeCheckConfig: DefaultLookupRangeCheck,
+    Lookup: DefaultLookupRangeCheck,
 > {
     /// Advice columns needed by instructions in the ECC chip.
     pub advices: [Column<Advice>; 10],
@@ -148,20 +148,20 @@ pub struct EccConfig<
     add: add::Config,
 
     /// Variable-base scalar multiplication
-    mul: mul::Config<LookupRangeCheckConfig>,
+    mul: mul::Config<Lookup>,
 
     /// Fixed-base full-width scalar multiplication
     mul_fixed_full: mul_fixed::full_width::Config<FixedPoints>,
     /// Fixed-base signed short scalar multiplication
     pub(crate) mul_fixed_short: mul_fixed::short::Config<FixedPoints>,
     /// Fixed-base mul using a base field element as a scalar
-    mul_fixed_base_field: mul_fixed::base_field_elem::Config<FixedPoints, LookupRangeCheckConfig>,
+    mul_fixed_base_field: mul_fixed::base_field_elem::Config<FixedPoints, Lookup>,
 
     /// Witness point
     pub(crate) witness_point: witness_point::Config,
 
     /// Lookup range check using 10-bit lookup table
-    pub lookup_config: LookupRangeCheckConfig,
+    pub lookup_config: Lookup,
 }
 
 /// A trait representing the kind of scalar used with a particular `FixedPoint`.
@@ -229,17 +229,17 @@ pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EccChip<
     FixedPoints: super::FixedPoints<pallas::Affine>,
-    LookupRangeCheckConfig: DefaultLookupRangeCheck,
+    Lookup: DefaultLookupRangeCheck,
 > {
-    config: EccConfig<FixedPoints, LookupRangeCheckConfig>,
+    config: EccConfig<FixedPoints, Lookup>,
 }
 
 impl<
         FixedPoints: super::FixedPoints<pallas::Affine>,
-        LookupRangeCheckConfig: DefaultLookupRangeCheck,
-    > Chip<pallas::Base> for EccChip<FixedPoints, LookupRangeCheckConfig>
+    Lookup: DefaultLookupRangeCheck,
+    > Chip<pallas::Base> for EccChip<FixedPoints, Lookup>
 {
-    type Config = EccConfig<FixedPoints, LookupRangeCheckConfig>;
+    type Config = EccConfig<FixedPoints, Lookup>;
     type Loaded = ();
 
     fn config(&self) -> &Self::Config {
@@ -253,16 +253,16 @@ impl<
 
 impl<
         Fixed: super::FixedPoints<pallas::Affine>,
-        LookupRangeCheckConfig: DefaultLookupRangeCheck,
-    > UtilitiesInstructions<pallas::Base> for EccChip<Fixed, LookupRangeCheckConfig>
+    Lookup: DefaultLookupRangeCheck,
+    > UtilitiesInstructions<pallas::Base> for EccChip<Fixed, Lookup>
 {
     type Var = AssignedCell<pallas::Base, pallas::Base>;
 }
 
 impl<
         FixedPoints: super::FixedPoints<pallas::Affine>,
-        LookupRangeCheckConfig: DefaultLookupRangeCheck,
-    > EccChip<FixedPoints, LookupRangeCheckConfig>
+    Lookup: DefaultLookupRangeCheck,
+    > EccChip<FixedPoints, Lookup>
 {
     /// Reconstructs this chip from the given config.
     pub fn construct(config: <Self as Chip<pallas::Base>>::Config) -> Self {
@@ -277,7 +277,7 @@ impl<
         meta: &mut ConstraintSystem<pallas::Base>,
         advices: [Column<Advice>; 10],
         lagrange_coeffs: [Column<Fixed>; 8],
-        range_check: LookupRangeCheckConfig,
+        range_check: Lookup,
     ) -> <Self as Chip<pallas::Base>>::Config {
         // Create witness point gate
         let witness_point = witness_point::Config::configure(meta, advices[0], advices[1]);
@@ -315,7 +315,7 @@ impl<
 
         // Create gate that is only used in fixed-base mul using a base field element.
         let mul_fixed_base_field =
-            mul_fixed::base_field_elem::Config::<FixedPoints, LookupRangeCheckConfig>::configure(
+            mul_fixed::base_field_elem::Config::<FixedPoints, Lookup>::configure(
                 meta,
                 advices[6..9].try_into().unwrap(),
                 range_check,
@@ -421,8 +421,8 @@ pub enum ScalarVar {
     FullWidth,
 }
 
-impl<Fixed: FixedPoints<pallas::Affine>, LookupRangeCheckConfig: DefaultLookupRangeCheck>
-    EccInstructions<pallas::Affine> for EccChip<Fixed, LookupRangeCheckConfig>
+impl<Fixed: FixedPoints<pallas::Affine>, Lookup: DefaultLookupRangeCheck>
+    EccInstructions<pallas::Affine> for EccChip<Fixed, Lookup>
 where
     <Fixed as FixedPoints<pallas::Affine>>::Base:
         FixedPoint<pallas::Affine, FixedScalarKind = BaseFieldElem>,
@@ -609,8 +609,8 @@ where
     }
 }
 
-impl<Fixed: FixedPoints<pallas::Affine>, LookupRangeCheckConfig: DefaultLookupRangeCheck>
-    BaseFitsInScalarInstructions<pallas::Affine> for EccChip<Fixed, LookupRangeCheckConfig>
+impl<Fixed: FixedPoints<pallas::Affine>, Lookup: DefaultLookupRangeCheck>
+    BaseFitsInScalarInstructions<pallas::Affine> for EccChip<Fixed, Lookup>
 where
     <Fixed as FixedPoints<pallas::Affine>>::Base:
         FixedPoint<pallas::Affine, FixedScalarKind = BaseFieldElem>,
