@@ -22,13 +22,13 @@ pub mod tests {
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    use crate::sinsemilla::merkle::chip::{MerkleConfig};
+    use crate::sinsemilla::merkle::chip::MerkleConfig;
     use crate::sinsemilla::merkle::MerklePath;
     use crate::sinsemilla_opt::chip::SinsemillaChipOptimized;
+    use crate::sinsemilla_opt::merkle::chip::MerkleChipOptimized;
     use crate::utilities_opt::lookup_range_check::LookupRangeCheckConfigOptimized;
     use rand::{rngs::OsRng, RngCore};
     use std::{convert::TryInto, iter};
-    use crate::sinsemilla_opt::merkle::chip::MerkleChipOptimized;
 
     const MERKLE_DEPTH: usize = 32;
 

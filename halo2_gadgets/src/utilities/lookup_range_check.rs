@@ -287,7 +287,6 @@ pub trait LookupRangeCheck<F: PrimeFieldBits, const K: usize> {
 }
 
 impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCheckConfig<F, K> {
-
     fn config(&self) -> &LookupRangeCheckConfig<F, K> {
         self
     }
@@ -440,5 +439,3 @@ pub trait DefaultLookupRangeCheck:
 }
 
 impl DefaultLookupRangeCheck for LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }> {}
-
-

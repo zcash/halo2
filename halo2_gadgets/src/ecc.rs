@@ -595,9 +595,7 @@ pub(crate) mod tests {
         },
         FixedPoints,
     };
-    use crate::{
-        utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
-    };
+    use crate::utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig};
 
     #[derive(Debug, Eq, PartialEq, Clone)]
     pub(crate) struct TestFixedBases;

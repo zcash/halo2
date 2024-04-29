@@ -16,19 +16,14 @@ use pasta_curves::pallas;
 use std::convert::TryInto;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Config<
-    Fixed: FixedPoints<pallas::Affine>,
-    Lookup: DefaultLookupRangeCheck,
-> {
+pub struct Config<Fixed: FixedPoints<pallas::Affine>, Lookup: DefaultLookupRangeCheck> {
     q_mul_fixed_base_field: Selector,
     canon_advices: [Column<Advice>; 3],
     lookup_config: Lookup,
     super_config: super::Config<Fixed>,
 }
 
-impl<Fixed: FixedPoints<pallas::Affine>, Lookup: DefaultLookupRangeCheck>
-    Config<Fixed, Lookup>
-{
+impl<Fixed: FixedPoints<pallas::Affine>, Lookup: DefaultLookupRangeCheck> Config<Fixed, Lookup> {
     pub(crate) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         canon_advices: [Column<Advice>; 3],

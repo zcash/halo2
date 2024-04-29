@@ -91,9 +91,7 @@ pub mod tests {
     use crate::utilities_opt::lookup_range_check::LookupRangeCheckConfigOptimized;
     use crate::{
         ecc::{chip::EccChip, tests::TestFixedBases, Point},
-        utilities::{
-            UtilitiesInstructions,
-        },
+        utilities::UtilitiesInstructions,
     };
 
     pub(crate) fn test_mul_sign<Lookup: DefaultLookupRangeCheck>(

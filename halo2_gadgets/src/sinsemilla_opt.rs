@@ -23,9 +23,8 @@ pub mod primitives;
 /// designed to enhance performance in specific cryptographic scenarios.ld
 
 pub trait SinsemillaInstructionsOptimized<C: CurveAffine, const K: usize, const MAX_WORDS: usize>:
-SinsemillaInstructions<C, K, MAX_WORDS>
+    SinsemillaInstructions<C, K, MAX_WORDS>
 {
-
     /// Hashes a message to an ECC curve point.
     /// This returns both the resulting point, as well as the message
     /// decomposition in the form of intermediate values in a cumulative
@@ -156,14 +155,12 @@ pub(crate) mod tests {
 
     use crate::{
         ecc::ScalarFixed,
-        sinsemilla::primitives::{self as sinsemilla, K},
-        {
-            ecc::{
-                chip::{find_zs_and_us, EccChip, EccConfig, H, NUM_WINDOWS},
-                tests::{FullWidth, TestFixedBases},
-                NonIdentityPoint,
-            },
+        ecc::{
+            chip::{find_zs_and_us, EccChip, EccConfig, H, NUM_WINDOWS},
+            tests::{FullWidth, TestFixedBases},
+            NonIdentityPoint,
         },
+        sinsemilla::primitives::{self as sinsemilla, K},
     };
 
     use group::{ff::Field, Curve};

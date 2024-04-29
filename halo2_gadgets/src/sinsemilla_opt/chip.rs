@@ -28,19 +28,19 @@ mod hash_to_point;
 /// [Chip description](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html#plonk--halo-2-constraints).
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct SinsemillaChipOptimized<Hash, Commit, Fixed>
-    where
-        Hash: HashDomains<pallas::Affine>,
-        Fixed: FixedPoints<pallas::Affine>,
-        Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
+where
+    Hash: HashDomains<pallas::Affine>,
+    Fixed: FixedPoints<pallas::Affine>,
+    Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
 {
     inner: SinsemillaChip<Hash, Commit, Fixed, DefaultLookupRangeCheckConfigOptimized>,
 }
 
 impl<Hash, Commit, Fixed> Chip<pallas::Base> for SinsemillaChipOptimized<Hash, Commit, Fixed>
-    where
-        Hash: HashDomains<pallas::Affine>,
-        Fixed: FixedPoints<pallas::Affine>,
-        Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
+where
+    Hash: HashDomains<pallas::Affine>,
+    Fixed: FixedPoints<pallas::Affine>,
+    Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
 {
     type Config = SinsemillaConfig<Hash, Commit, Fixed, DefaultLookupRangeCheckConfigOptimized>;
     type Loaded = ();
@@ -55,18 +55,18 @@ impl<Hash, Commit, Fixed> Chip<pallas::Base> for SinsemillaChipOptimized<Hash, C
 }
 
 impl<Hash, Commit, F> SinsemillaChipOptimized<Hash, Commit, F>
-    where
-        Hash: HashDomains<pallas::Affine>,
-        F: FixedPoints<pallas::Affine>,
-        Commit: CommitDomains<pallas::Affine, F, Hash>,
+where
+    Hash: HashDomains<pallas::Affine>,
+    F: FixedPoints<pallas::Affine>,
+    Commit: CommitDomains<pallas::Affine, F, Hash>,
 {
     /// Reconstructs this chip from the given config.
     pub fn construct(config: <Self as Chip<pallas::Base>>::Config) -> Self {
         Self {
             inner:
-            SinsemillaChip::<Hash, Commit, F, DefaultLookupRangeCheckConfigOptimized>::construct(
-                config,
-            ),
+                SinsemillaChip::<Hash, Commit, F, DefaultLookupRangeCheckConfigOptimized>::construct(
+                    config,
+                ),
         }
     }
 
@@ -145,11 +145,11 @@ impl<Hash, Commit, F> SinsemillaChipOptimized<Hash, Commit, F>
 
 // Implement `SinsemillaInstructions` for `SinsemillaChip`
 impl<Hash, Commit, F> SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }>
-for SinsemillaChipOptimized<Hash, Commit, F>
-    where
-        Hash: HashDomains<pallas::Affine>,
-        F: FixedPoints<pallas::Affine>,
-        Commit: CommitDomains<pallas::Affine, F, Hash>,
+    for SinsemillaChipOptimized<Hash, Commit, F>
+where
+    Hash: HashDomains<pallas::Affine>,
+    F: FixedPoints<pallas::Affine>,
+    Commit: CommitDomains<pallas::Affine, F, Hash>,
 {
     type CellValue = AssignedCell<pallas::Base, pallas::Base>;
 
@@ -196,12 +196,12 @@ for SinsemillaChipOptimized<Hash, Commit, F>
 
 // Implement `SinsemillaInstructions` for `SinsemillaChip`
 impl<Hash, Commit, F>
-SinsemillaInstructionsOptimized<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }>
-for SinsemillaChipOptimized<Hash, Commit, F>
-    where
-        Hash: HashDomains<pallas::Affine>,
-        F: FixedPoints<pallas::Affine>,
-        Commit: CommitDomains<pallas::Affine, F, Hash>,
+    SinsemillaInstructionsOptimized<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }>
+    for SinsemillaChipOptimized<Hash, Commit, F>
+where
+    Hash: HashDomains<pallas::Affine>,
+    F: FixedPoints<pallas::Affine>,
+    Commit: CommitDomains<pallas::Affine, F, Hash>,
 {
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
@@ -213,7 +213,10 @@ for SinsemillaChipOptimized<Hash, Commit, F>
     ) -> Result<(Self::NonIdentityPoint, Vec<Self::RunningSum>), Error> {
         layouter.assign_region(
             || "hash_to_point",
-            |mut region| self.inner.hash_message_with_private_init(&mut region, Q, &message),
+            |mut region| {
+                self.inner
+                    .hash_message_with_private_init(&mut region, Q, &message)
+            },
         )
     }
 }

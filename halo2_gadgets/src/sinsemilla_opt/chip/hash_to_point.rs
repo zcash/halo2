@@ -17,8 +17,7 @@ use crate::{
     },
 };
 
-impl<Hash, Commit, Fixed, Lookup>
-    SinsemillaChip<Hash, Commit, Fixed, Lookup>
+impl<Hash, Commit, Fixed, Lookup> SinsemillaChip<Hash, Commit, Fixed, Lookup>
 where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,

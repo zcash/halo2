@@ -227,17 +227,13 @@ pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
 
 /// An [`EccInstructions`] chip that uses 10 advice columns.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct EccChip<
-    FixedPoints: super::FixedPoints<pallas::Affine>,
-    Lookup: DefaultLookupRangeCheck,
-> {
+pub struct EccChip<FixedPoints: super::FixedPoints<pallas::Affine>, Lookup: DefaultLookupRangeCheck>
+{
     config: EccConfig<FixedPoints, Lookup>,
 }
 
-impl<
-        FixedPoints: super::FixedPoints<pallas::Affine>,
-    Lookup: DefaultLookupRangeCheck,
-    > Chip<pallas::Base> for EccChip<FixedPoints, Lookup>
+impl<FixedPoints: super::FixedPoints<pallas::Affine>, Lookup: DefaultLookupRangeCheck>
+    Chip<pallas::Base> for EccChip<FixedPoints, Lookup>
 {
     type Config = EccConfig<FixedPoints, Lookup>;
     type Loaded = ();
@@ -251,18 +247,14 @@ impl<
     }
 }
 
-impl<
-        Fixed: super::FixedPoints<pallas::Affine>,
-    Lookup: DefaultLookupRangeCheck,
-    > UtilitiesInstructions<pallas::Base> for EccChip<Fixed, Lookup>
+impl<Fixed: super::FixedPoints<pallas::Affine>, Lookup: DefaultLookupRangeCheck>
+    UtilitiesInstructions<pallas::Base> for EccChip<Fixed, Lookup>
 {
     type Var = AssignedCell<pallas::Base, pallas::Base>;
 }
 
-impl<
-        FixedPoints: super::FixedPoints<pallas::Affine>,
-    Lookup: DefaultLookupRangeCheck,
-    > EccChip<FixedPoints, Lookup>
+impl<FixedPoints: super::FixedPoints<pallas::Affine>, Lookup: DefaultLookupRangeCheck>
+    EccChip<FixedPoints, Lookup>
 {
     /// Reconstructs this chip from the given config.
     pub fn construct(config: <Self as Chip<pallas::Base>>::Config) -> Self {

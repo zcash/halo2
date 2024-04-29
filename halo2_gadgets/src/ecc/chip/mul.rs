@@ -467,7 +467,7 @@ pub mod tests {
     use pasta_curves::pallas;
     use rand::rngs::OsRng;
 
-    use crate::utilities::lookup_range_check::{DefaultLookupRangeCheck};
+    use crate::utilities::lookup_range_check::DefaultLookupRangeCheck;
     use crate::{
         ecc::{
             chip::{EccChip, EccPoint},

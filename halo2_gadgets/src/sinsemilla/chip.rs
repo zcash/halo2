@@ -63,8 +63,7 @@ where
     pub(crate) _marker: PhantomData<(Hash, Commit, F)>,
 }
 
-impl<Hash, Commit, F, Lookup>
-    SinsemillaConfig<Hash, Commit, F, Lookup>
+impl<Hash, Commit, F, Lookup> SinsemillaConfig<Hash, Commit, F, Lookup>
 where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
@@ -109,8 +108,7 @@ where
     config: SinsemillaConfig<Hash, Commit, Fixed, Lookup>,
 }
 
-impl<Hash, Commit, Fixed, Lookup> Chip<pallas::Base>
-    for SinsemillaChip<Hash, Commit, Fixed, Lookup>
+impl<Hash, Commit, Fixed, Lookup> Chip<pallas::Base> for SinsemillaChip<Hash, Commit, Fixed, Lookup>
 where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
@@ -129,8 +127,7 @@ where
     }
 }
 
-impl<Hash, Commit, F, Lookup>
-    SinsemillaChip<Hash, Commit, F, Lookup>
+impl<Hash, Commit, F, Lookup> SinsemillaChip<Hash, Commit, F, Lookup>
 where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
