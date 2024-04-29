@@ -407,7 +407,7 @@ pub mod tests {
 
         let circuit = MyCircuit::default();
         halo2_proofs::dev::CircuitLayout::default()
-            .show_labels(true)
+            .show_labels(false)
             .render(11, &circuit, &root)
             .unwrap();
     }

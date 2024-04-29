@@ -31,8 +31,6 @@ pub struct LookupRangeCheckConfigOptimized<F: PrimeFieldBits, const K: usize> {
     base: LookupRangeCheckConfig<F, K>,
     q_range_check_4: Selector,
     q_range_check_5: Selector,
-    // FIXME: Instead of making it pub, add a method in LookupRangeCheckConfig that returns table_range_check_tag
-    //pub(crate)
     table_range_check_tag: TableColumn,
 }
 
@@ -63,7 +61,6 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfigOptimized<F, K> {
         let q_range_check_4 = meta.complex_selector();
         let q_range_check_5 = meta.complex_selector();
 
-        // FIXME: q_range_check_4 and q_range_check_5 need to be created here
         // if the order of the creation makes a difference
         let config = LookupRangeCheckConfigOptimized {
             base: LookupRangeCheckConfig {
@@ -83,7 +80,6 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheckConfigOptimized<F, K> {
         meta.lookup(|meta| {
             let q_lookup = meta.query_selector(config.base.q_lookup);
             let q_running = meta.query_selector(config.base.q_running);
-            // FIXME: q_range_check_4 and q_range_check_5 need to be created here
             // if the order of the creation makes a difference
             let z_cur = meta.query_advice(config.base.running_sum, Rotation::cur());
             let one = Expression::Constant(F::ONE);
