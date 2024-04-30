@@ -69,13 +69,7 @@ where
         x_a: X<pallas::Base>,
         y_a: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
         zs_sum: Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
-    ) -> Result<
-        (
-            NonIdentityEccPoint,
-            Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
-        ),
-        Error,
-    > {
+    ) -> HashResult {
         #[cfg(test)]
         {
             use crate::sinsemilla::primitives::{K, S_PERSONALIZATION};
