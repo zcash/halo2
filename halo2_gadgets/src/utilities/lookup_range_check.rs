@@ -335,8 +335,8 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCh
 
             // In the short range check, the word is directly witnessed.
             let short_lookup = {
-                let short_word = z_cur.clone();
-                let q_short = one.clone() - q_running;
+                let short_word = z_cur;
+                let q_short = one - q_running;
 
                 q_short * short_word
             };

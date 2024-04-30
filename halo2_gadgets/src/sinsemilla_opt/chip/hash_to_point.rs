@@ -7,7 +7,7 @@ use halo2_proofs::{
 
 use crate::sinsemilla::chip::hash_to_point::EccPointQ;
 use crate::sinsemilla::chip::SinsemillaChip;
-use crate::utilities::lookup_range_check::DefaultLookupRangeCheck;
+use crate::sinsemilla_opt::chip::SinsemillaChipOptimized;
 use crate::{
     ecc::{chip::NonIdentityEccPoint, FixedPoints},
     sinsemilla::{
@@ -17,16 +17,15 @@ use crate::{
     },
 };
 
-impl<Hash, Commit, Fixed, Lookup> SinsemillaChip<Hash, Commit, Fixed, Lookup>
+impl<Hash, Commit, Fixed> SinsemillaChipOptimized<Hash, Commit, Fixed>
 where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
-    Lookup: DefaultLookupRangeCheck,
 {
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
-    pub(crate) fn hash_message_zsa(
+    pub(crate) fn hash_message(
         &self,
         region: &mut Region<'_, pallas::Base>,
         Q: pallas::Affine,
@@ -45,9 +44,17 @@ where
         // Coordinates of the initial point `Q` are assigned to advice columns
         let (offset, x_a, y_a) = self.public_initialization(region, Q)?;
 
-        let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
+        let (x_a, y_a, zs_sum) =
+            SinsemillaChip::hash_all_pieces(&self.inner, region, offset, message, x_a, y_a)?;
 
-        self.check_hash_result(EccPointQ::PublicPoint(Q), message, x_a, y_a, zs_sum)
+        SinsemillaChip::check_hash_result(
+            &self.inner,
+            EccPointQ::PublicPoint(Q),
+            message,
+            x_a,
+            y_a,
+            zs_sum,
+        )
     }
     /// [Specification](https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial).
     #[allow(non_snake_case)]
@@ -70,9 +77,17 @@ where
     > {
         let (offset, x_a, y_a) = self.private_initialization(region, Q)?;
 
-        let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
+        let (x_a, y_a, zs_sum) =
+            SinsemillaChip::hash_all_pieces(&self.inner, region, offset, message, x_a, y_a)?;
 
-        self.check_hash_result(EccPointQ::PrivatePoint(Q), message, x_a, y_a, zs_sum)
+        SinsemillaChip::check_hash_result(
+            &self.inner,
+            EccPointQ::PrivatePoint(Q),
+            message,
+            x_a,
+            y_a,
+            zs_sum,
+        )
     }
 
     #[allow(non_snake_case)]

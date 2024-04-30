@@ -114,7 +114,7 @@ where
     ) -> Result<Self::Var, Error> {
         // Todo: simplify the body? copied and pasted from the body of the hash_layer function in halo2_gadgets/src/sinsemilla/merkle/chip.rs
 
-        let config = self.config().clone();
+        let config = self.base.config().clone();
 
         // We need to hash `l || left || right`, where `l` is a 10-bit value.
         // We allow `left` and `right` to be non-canonical 255-bit encodings.
@@ -131,7 +131,7 @@ where
 
         // `a = a_0||a_1` = `l` || (bits 0..=239 of `left`)
         let a = MessagePiece::from_subpieces(
-            self.clone(),
+            self.base.clone(),
             layouter.namespace(|| "Witness a = a_0 || a_1"),
             [
                 RangeConstrained::bitrange_of(Value::known(&pallas::Base::from(l as u64)), 0..10),
@@ -164,7 +164,7 @@ where
             )?;
 
             let b = MessagePiece::from_subpieces(
-                self.clone(),
+                self.base.clone(),
                 layouter.namespace(|| "Witness b = b_0 || b_1 || b_2"),
                 [b_0, b_1.value(), b_2.value()],
             )?;
@@ -174,7 +174,7 @@ where
 
         // c = bits 5..=254 of `right`
         let c = MessagePiece::from_subpieces(
-            self.clone(),
+            self.base.clone(),
             layouter.namespace(|| "Witness c"),
             [RangeConstrained::bitrange_of(
                 right.value(),

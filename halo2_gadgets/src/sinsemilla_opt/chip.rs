@@ -143,7 +143,7 @@ where
     }
 }
 
-// Implement `SinsemillaInstructions` for `SinsemillaChip`
+// Implement `SinsemillaInstructions` for `SinsemillaChipOptimized`
 impl<Hash, Commit, F> SinsemillaInstructions<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }>
     for SinsemillaChipOptimized<Hash, Commit, F>
 where
@@ -185,7 +185,7 @@ where
     ) -> Result<(Self::NonIdentityPoint, Vec<Self::RunningSum>), Error> {
         layouter.assign_region(
             || "hash_to_point",
-            |mut region| self.inner.hash_message_zsa(&mut region, Q, &message),
+            |mut region| self.hash_message(&mut region, Q, &message),
         )
     }
 
@@ -194,7 +194,7 @@ where
     }
 }
 
-// Implement `SinsemillaInstructions` for `SinsemillaChip`
+// Implement `SinsemillaInstructionsOptimized` for `SinsemillaChipOptimized`
 impl<Hash, Commit, F>
     SinsemillaInstructionsOptimized<pallas::Affine, { sinsemilla::K }, { sinsemilla::C }>
     for SinsemillaChipOptimized<Hash, Commit, F>
@@ -213,10 +213,7 @@ where
     ) -> Result<(Self::NonIdentityPoint, Vec<Self::RunningSum>), Error> {
         layouter.assign_region(
             || "hash_to_point",
-            |mut region| {
-                self.inner
-                    .hash_message_with_private_init(&mut region, Q, &message)
-            },
+            |mut region| self.hash_message_with_private_init(&mut region, Q, &message),
         )
     }
 }

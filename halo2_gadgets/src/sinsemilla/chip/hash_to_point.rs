@@ -24,6 +24,10 @@ pub enum EccPointQ<'a> {
     PrivatePoint(&'a NonIdentityEccPoint),
 }
 
+type HashOutput = NonIdentityEccPoint;
+type CellMatrix = Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>;
+type HashResult = Result<(HashOutput, CellMatrix), Error>;
+
 impl<Hash, Commit, Fixed, Lookup> SinsemillaChip<Hash, Commit, Fixed, Lookup>
 where
     Hash: HashDomains<pallas::Affine>,
@@ -43,14 +47,8 @@ where
             { sinsemilla::K },
             { sinsemilla::C },
         >>::Message,
-    ) -> Result<
-        (
-            NonIdentityEccPoint,
-            Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
-        ),
-        Error,
-    > {
-        let (offset, x_a, y_a) = self.public_initialization_vanilla(region, Q)?;
+    ) -> HashResult {
+        let (offset, x_a, y_a) = self.public_initialization(region, Q)?;
 
         let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
 
@@ -137,7 +135,7 @@ where
     /// | offset | x_A | q_sinsemilla4 | fixed_y_q |
     /// --------------------------------------
     /// |   0    | x_Q |   1           |   y_Q     |
-    pub(crate) fn public_initialization_vanilla(
+    pub(crate) fn public_initialization(
         &self,
         region: &mut Region<'_, pallas::Base>,
         Q: pallas::Affine,
