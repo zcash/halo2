@@ -55,6 +55,7 @@ impl Proof {
 }
 
 /// test the proof size.
+#[allow(dead_code)]
 pub(crate) fn test_proof_size<C>(
     k: u32,
     circuit: C,
@@ -90,6 +91,7 @@ pub fn read_test_case<R: Read>(mut r: R) -> std::io::Result<Proof> {
 }
 
 /// write multiple proofs to a file
+#[allow(dead_code)]
 pub(crate) fn write_all_test_case<W: Write>(mut w: W, proofs: &Vec<Proof>) -> std::io::Result<()> {
     for proof in proofs {
         w.write_all(proof.as_ref())?;

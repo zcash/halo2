@@ -651,20 +651,14 @@ pub(crate) mod tests {
             }
         }
 
-        if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
-        } else {
-            // Parse the hardcoded proof test case.
-            let proofs = {
-                let test_case_bytes =
-                    fs::read("src/utilities/circuit_proof_test_case_short_range_check.bin")
-                        .unwrap();
-                read_all_proofs(&test_case_bytes[..]).expect("proof must be valid")
-            };
-        }
+        let proofs = {
+            let test_case_bytes =
+                fs::read("src/utilities/circuit_proof_test_case_short_range_check.bin").unwrap();
+            read_all_proofs(&test_case_bytes[..]).expect("proof must be valid")
+        };
 
         // Setup phase: generate parameters
         let params: Params<Affine> = Params::new(11);
-        let mut proofs = Vec::new();
 
         // Edge case: zero bits
         // case 0
@@ -689,24 +683,16 @@ pub(crate) mod tests {
                 );
             }
             // Test that the proof size is as expected.
-            test_proof_size(11, circuit.clone(), &params, &vk);
+            test_proof_size(11, circuit, &params, &vk);
 
             // serialized_proof_test_case
             {
-                if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
-                    let proof = Proof::create(&vk, &params, circuit).unwrap();
-                    assert!(proof.verify(&vk, &params).is_ok());
-                    proofs.push(proof.clone());
-                } else {
-                    match proofs.get(0) {
-                        Some(proof) => {
-                            println!("proof={:?}", proof);
-
-                            assert_eq!(proof.as_ref().len(), 1888);
-                            assert!(proof.verify(&vk, &params).is_ok());
-                        }
-                        None => println!("Index out of bounds"),
+                match proofs.get(0) {
+                    Some(proof) => {
+                        assert_eq!(proof.as_ref().len(), 1888);
+                        assert!(proof.verify(&vk, &params).is_ok());
                     }
+                    None => println!("Index out of bounds"),
                 }
             }
         }
@@ -734,24 +720,16 @@ pub(crate) mod tests {
                 );
             }
             // Test that the proof size is as expected.
-            test_proof_size(11, circuit.clone(), &params, &vk);
+            test_proof_size(11, circuit, &params, &vk);
 
             // serialized_proof_test_case
             {
-                if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
-                    let proof = Proof::create(&vk, &params, circuit).unwrap();
-                    assert!(proof.verify(&vk, &params).is_ok());
-                    proofs.push(proof.clone());
-                } else {
-                    match proofs.get(1) {
-                        Some(proof) => {
-                            println!("proof={:?}", proof);
-
-                            assert_eq!(proof.as_ref().len(), 1888);
-                            assert!(proof.verify(&vk, &params).is_ok());
-                        }
-                        None => println!("Index out of bounds"),
+                match proofs.get(1) {
+                    Some(proof) => {
+                        assert_eq!(proof.as_ref().len(), 1888);
+                        assert!(proof.verify(&vk, &params).is_ok());
                     }
+                    None => println!("Index out of bounds"),
                 }
             }
         }
@@ -779,24 +757,16 @@ pub(crate) mod tests {
                 );
             }
             // Test that the proof size is as expected.
-            test_proof_size(11, circuit.clone(), &params, &vk);
+            test_proof_size(11, circuit, &params, &vk);
 
             // serialized_proof_test_case
             {
-                if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
-                    let proof = Proof::create(&vk, &params, circuit).unwrap();
-                    assert!(proof.verify(&vk, &params).is_ok());
-                    proofs.push(proof.clone());
-                } else {
-                    match proofs.get(2) {
-                        Some(proof) => {
-                            println!("proof={:?}", proof);
-
-                            assert_eq!(proof.as_ref().len(), 1888);
-                            assert!(proof.verify(&vk, &params).is_ok());
-                        }
-                        None => println!("Index out of bounds"),
+                match proofs.get(2) {
+                    Some(proof) => {
+                        assert_eq!(proof.as_ref().len(), 1888);
+                        assert!(proof.verify(&vk, &params).is_ok());
                     }
+                    None => println!("Index out of bounds"),
                 }
             }
         }
