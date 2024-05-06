@@ -454,41 +454,14 @@ pub(crate) mod tests {
         plonk,
         plonk::{Circuit, ConstraintSystem, Error},
     };
-    use pasta_curves::{pallas, vesta};
+    use pasta_curves::{pallas};
 
-    use halo2_proofs::plonk::{SingleVerifier, VerifyingKey};
     use halo2_proofs::poly::commitment::Params;
-    use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
     use pasta_curves::vesta::Affine;
-    use rand::rngs::OsRng;
-    use std::{convert::TryInto, marker::PhantomData};
+    use std::{convert::TryInto, fs, marker::PhantomData};
+    use crate::utilities::test_circuit::{Proof, read_test_case, test_proof_size, write_test_case};
 
-    pub(crate) fn test_proof_size<C>(
-        k: u32,
-        circuit: C,
-        params: Params<Affine>,
-        vk: VerifyingKey<Affine>,
-    ) where
-        C: Circuit<pallas::Base>,
-    {
-        // Test that the proof size is as expected.
-        let circuit_cost =
-            halo2_proofs::dev::CircuitCost::<pasta_curves::vesta::Point, _>::measure(k, &circuit);
-        let expected_proof_size = usize::from(circuit_cost.proof_size(1));
 
-        let pk = plonk::keygen_pk(&params, vk.clone(), &circuit).unwrap();
-        let mut transcript = Blake2bWrite::<_, vesta::Affine, _>::init(vec![]);
-        plonk::create_proof(&params, &pk, &[circuit], &[&[]], OsRng, &mut transcript).unwrap();
-        let proof = transcript.finalize();
-
-        let strategy = SingleVerifier::new(&params);
-        let mut transcript: Blake2bRead<&[u8], vesta::Affine, Challenge255<vesta::Affine>> =
-            Blake2bRead::init(&proof[..]);
-        let verify = plonk::verify_proof(&params, &vk, strategy, &[&[]], &mut transcript);
-        // Round-trip assertion: check the proof is valid and matches expected values.
-        assert!(verify.is_ok());
-        assert_eq!(proof.len(), expected_proof_size);
-    }
     #[test]
     fn lookup_range_check() {
         #[derive(Clone, Copy)]
@@ -596,6 +569,33 @@ pub(crate) mod tests {
                     format!("{:#?}\n", vk.pinned()),
                     include_str!("vk_lookup_range_check").replace("\r\n", "\n")
                 );
+            }
+
+            // serialized_proof_test_case
+            {
+                if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
+                    let create_proof = || -> std::io::Result<()> {
+                        let proof = Proof::create(
+                            &vk,
+                            &params,
+                            circuit,
+                        ).unwrap();
+                        assert!(proof.verify(&vk, &params).is_ok());
+
+                        let file = std::fs::File::create("src/utilities/circuit_proof_test_case_lookup_range_check.bin")?;
+                        write_test_case(file, &proof)
+                    };
+                    create_proof().expect("should be able to write new proof");
+                }
+                // Parse the hardcoded proof test case.
+                let proof= {
+                    let test_case_bytes = fs::read("src/utilities/circuit_proof_test_case_lookup_range_check.bin").unwrap();
+                    read_test_case(&test_case_bytes[..]).expect("proof must be valid")
+                };
+
+                // todo: check size
+                assert_eq!(proof.as_ref().len(), 4160);
+                assert!(proof.verify(&vk, &params).is_ok());
             }
 
             // Test that the proof size is as expected.
