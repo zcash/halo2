@@ -456,7 +456,10 @@ pub(crate) mod tests {
     };
     use pasta_curves::pallas;
 
-    use crate::utilities::test_circuit::{read_test_case, test_proof_size, write_test_case, Proof, read_all_proofs, write_all_test_case};
+    use crate::utilities::test_circuit::{
+        read_all_proofs, read_test_case, test_proof_size, write_all_test_case, write_test_case,
+        Proof,
+    };
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
     use std::{convert::TryInto, fs, marker::PhantomData};
@@ -648,13 +651,13 @@ pub(crate) mod tests {
             }
         }
 
-
         if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
-        }
-        else {
+        } else {
             // Parse the hardcoded proof test case.
-            let proofs= {
-                let test_case_bytes = fs::read("src/utilities/circuit_proof_test_case_short_range_check.bin").unwrap();
+            let proofs = {
+                let test_case_bytes =
+                    fs::read("src/utilities/circuit_proof_test_case_short_range_check.bin")
+                        .unwrap();
                 read_all_proofs(&test_case_bytes[..]).expect("proof must be valid")
             };
         }
@@ -694,8 +697,7 @@ pub(crate) mod tests {
                     let proof = Proof::create(&vk, &params, circuit).unwrap();
                     assert!(proof.verify(&vk, &params).is_ok());
                     proofs.push(proof.clone());
-                }
-                else {
+                } else {
                     match proofs.get(0) {
                         Some(proof) => {
                             println!("proof={:?}", proof);
@@ -707,8 +709,6 @@ pub(crate) mod tests {
                     }
                 }
             }
-
-
         }
 
         // Edge case: K bits
@@ -742,8 +742,7 @@ pub(crate) mod tests {
                     let proof = Proof::create(&vk, &params, circuit).unwrap();
                     assert!(proof.verify(&vk, &params).is_ok());
                     proofs.push(proof.clone());
-                }
-                else {
+                } else {
                     match proofs.get(1) {
                         Some(proof) => {
                             println!("proof={:?}", proof);
@@ -755,7 +754,6 @@ pub(crate) mod tests {
                     }
                 }
             }
-
         }
 
         // Element within `num_bits`
@@ -789,8 +787,7 @@ pub(crate) mod tests {
                     let proof = Proof::create(&vk, &params, circuit).unwrap();
                     assert!(proof.verify(&vk, &params).is_ok());
                     proofs.push(proof.clone());
-                }
-                else {
+                } else {
                     match proofs.get(2) {
                         Some(proof) => {
                             println!("proof={:?}", proof);
@@ -806,9 +803,8 @@ pub(crate) mod tests {
 
         if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
             let create_proof = || -> std::io::Result<()> {
-
                 let file = std::fs::File::create(
-                    "src/utilities/circuit_proof_test_case_short_range_check.bin"
+                    "src/utilities/circuit_proof_test_case_short_range_check.bin",
                 )?;
                 write_all_test_case(file, &proofs)
             };
@@ -832,8 +828,6 @@ pub(crate) mod tests {
                     },
                 }])
             );
-
-
         }
 
         // Element larger than K bits
@@ -862,8 +856,6 @@ pub(crate) mod tests {
                     },
                 ])
             );
-
-
         }
 
         // Element which is not within `num_bits`, but which has a shifted value within
@@ -892,8 +884,6 @@ pub(crate) mod tests {
                     },
                 }])
             );
-
-
         }
     }
 }

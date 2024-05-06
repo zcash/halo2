@@ -1,6 +1,5 @@
 //! functions used for circuit test
 
-use std::io;
 use halo2_proofs::plonk;
 use halo2_proofs::plonk::{Circuit, SingleVerifier, VerifyingKey};
 use halo2_proofs::poly::commitment::Params;
@@ -8,6 +7,7 @@ use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite};
 use pasta_curves::vesta::Affine;
 use pasta_curves::{pallas, vesta};
 use rand::rngs::OsRng;
+use std::io;
 use std::io::{Read, Write};
 
 /// A proof structure
@@ -90,10 +90,7 @@ pub fn read_test_case<R: Read>(mut r: R) -> std::io::Result<Proof> {
 }
 
 /// write multiple proofs to a file
-pub(crate) fn write_all_test_case<W: Write>(
-    mut w: W,
-    proofs: &Vec<Proof>,
-) -> std::io::Result<()> {
+pub(crate) fn write_all_test_case<W: Write>(mut w: W, proofs: &Vec<Proof>) -> std::io::Result<()> {
     for proof in proofs {
         w.write_all(proof.as_ref())?;
     }
