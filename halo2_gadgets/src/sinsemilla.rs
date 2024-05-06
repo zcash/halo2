@@ -462,6 +462,7 @@ pub(crate) mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
+        plonk,
         plonk::{Circuit, ConstraintSystem, Error},
     };
     use rand::rngs::OsRng;
@@ -488,6 +489,9 @@ pub(crate) mod tests {
     use lazy_static::lazy_static;
     use pasta_curves::pallas;
 
+    use crate::utilities::lookup_range_check::tests::test_proof_size;
+    use halo2_proofs::poly::commitment::Params;
+    use pasta_curves::vesta::Affine;
     use std::convert::TryInto;
 
     pub(crate) const PERSONALIZATION: &str = "MerkleCRH";
@@ -759,6 +763,27 @@ pub(crate) mod tests {
         let circuit = MyCircuit {};
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
+    }
+
+    #[test]
+    fn round_trip() {
+        let k = 11;
+        let circuit = MyCircuit {};
+
+        // Setup phase: generate parameters, vk for the circuit.
+        let params: Params<Affine> = Params::new(k);
+        let vk = plonk::keygen_vk(&params, &circuit).unwrap();
+
+        // Test that the pinned verification key (representing the circuit)
+        // is as expected.
+        {
+            //panic!("{:#?}", vk.pinned());
+            assert_eq!(
+                format!("{:#?}\n", vk.pinned()),
+                include_str!("vk_sinsemilla_chip").replace("\r\n", "\n")
+            );
+        }
+        test_proof_size(11, circuit, params, vk)
     }
 
     #[cfg(feature = "test-dev-graph")]

@@ -439,3 +439,336 @@ pub trait DefaultLookupRangeCheck:
 }
 
 impl DefaultLookupRangeCheck for LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }> {}
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use super::{LookupRangeCheck, LookupRangeCheckConfig};
+
+    use super::super::lebs2ip;
+    use crate::sinsemilla::primitives::K;
+
+    use ff::{Field, PrimeFieldBits};
+    use halo2_proofs::{
+        circuit::{Layouter, SimpleFloorPlanner, Value},
+        dev::{FailureLocation, MockProver, VerifyFailure},
+        plonk,
+        plonk::{Circuit, ConstraintSystem, Error},
+    };
+    use pasta_curves::{pallas, vesta};
+
+    use halo2_proofs::plonk::{SingleVerifier, VerifyingKey};
+    use halo2_proofs::poly::commitment::Params;
+    use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
+    use pasta_curves::vesta::Affine;
+    use rand::rngs::OsRng;
+    use std::{convert::TryInto, marker::PhantomData};
+
+    pub(crate) fn test_proof_size<C>(
+        k: u32,
+        circuit: C,
+        params: Params<Affine>,
+        vk: VerifyingKey<Affine>,
+    ) where
+        C: Circuit<pallas::Base>,
+    {
+        // Test that the proof size is as expected.
+        let circuit_cost =
+            halo2_proofs::dev::CircuitCost::<pasta_curves::vesta::Point, _>::measure(k, &circuit);
+        let expected_proof_size = usize::from(circuit_cost.proof_size(1));
+
+        let pk = plonk::keygen_pk(&params, vk.clone(), &circuit).unwrap();
+        let mut transcript = Blake2bWrite::<_, vesta::Affine, _>::init(vec![]);
+        plonk::create_proof(&params, &pk, &[circuit], &[&[]], OsRng, &mut transcript).unwrap();
+        let proof = transcript.finalize();
+
+        let strategy = SingleVerifier::new(&params);
+        let mut transcript: Blake2bRead<&[u8], vesta::Affine, Challenge255<vesta::Affine>> =
+            Blake2bRead::init(&proof[..]);
+        let verify = plonk::verify_proof(&params, &vk, strategy, &[&[]], &mut transcript);
+        // Round-trip assertion: check the proof is valid and matches expected values.
+        assert!(verify.is_ok());
+        assert_eq!(proof.len(), expected_proof_size);
+    }
+    #[test]
+    fn lookup_range_check() {
+        #[derive(Clone, Copy)]
+        struct MyCircuit<F: PrimeFieldBits> {
+            num_words: usize,
+            _marker: PhantomData<F>,
+        }
+
+        impl<F: PrimeFieldBits> Circuit<F> for MyCircuit<F> {
+            type Config = LookupRangeCheckConfig<F, K>;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                *self
+            }
+
+            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+                let running_sum = meta.advice_column();
+                let table_idx = meta.lookup_table_column();
+                let constants = meta.fixed_column();
+                meta.enable_constant(constants);
+
+                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, table_idx)
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<F>,
+            ) -> Result<(), Error> {
+                // Load table_idx
+                config.load(&mut layouter)?;
+
+                // Lookup constraining element to be no longer than num_words * K bits.
+                let elements_and_expected_final_zs = [
+                    (F::from((1 << (self.num_words * K)) - 1), F::ZERO, true), // a word that is within self.num_words * K bits long
+                    (F::from(1 << (self.num_words * K)), F::ONE, false), // a word that is just over self.num_words * K bits long
+                ];
+
+                fn expected_zs<F: PrimeFieldBits, const K: usize>(
+                    element: F,
+                    num_words: usize,
+                ) -> Vec<F> {
+                    let chunks = {
+                        element
+                            .to_le_bits()
+                            .iter()
+                            .by_vals()
+                            .take(num_words * K)
+                            .collect::<Vec<_>>()
+                            .chunks_exact(K)
+                            .map(|chunk| F::from(lebs2ip::<K>(chunk.try_into().unwrap())))
+                            .collect::<Vec<_>>()
+                    };
+                    let expected_zs = {
+                        let inv_two_pow_k = F::from(1 << K).invert().unwrap();
+                        chunks.iter().fold(vec![element], |mut zs, a_i| {
+                            // z_{i + 1} = (z_i - a_i) / 2^{K}
+                            let z = (zs[zs.len() - 1] - a_i) * inv_two_pow_k;
+                            zs.push(z);
+                            zs
+                        })
+                    };
+                    expected_zs
+                }
+
+                for (element, expected_final_z, strict) in elements_and_expected_final_zs.iter() {
+                    let expected_zs = expected_zs::<F, K>(*element, self.num_words);
+
+                    let zs = config.witness_check(
+                        layouter.namespace(|| format!("Lookup {:?}", self.num_words)),
+                        Value::known(*element),
+                        self.num_words,
+                        *strict,
+                    )?;
+
+                    assert_eq!(*expected_zs.last().unwrap(), *expected_final_z);
+
+                    for (expected_z, z) in expected_zs.into_iter().zip(zs.iter()) {
+                        z.value().assert_if_known(|z| &&expected_z == z);
+                    }
+                }
+                Ok(())
+            }
+        }
+
+        {
+            let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                num_words: 6,
+                _marker: PhantomData,
+            };
+
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(prover.verify(), Ok(()));
+
+            // Setup phase: generate parameters, vk for the circuit.
+            let params: Params<Affine> = Params::new(11);
+            let vk = plonk::keygen_vk(&params, &circuit).unwrap();
+
+            // Test that the pinned verification key (representing the circuit)
+            // is as expected.
+            {
+                //panic!("{:#?}", vk.pinned());
+                assert_eq!(
+                    format!("{:#?}\n", vk.pinned()),
+                    include_str!("vk_lookup_range_check").replace("\r\n", "\n")
+                );
+            }
+
+            // Test that the proof size is as expected.
+            test_proof_size(11, circuit, params, vk)
+        }
+    }
+
+    #[test]
+    fn short_range_check() {
+        struct MyCircuit<F: PrimeFieldBits> {
+            element: Value<F>,
+            num_bits: usize,
+        }
+
+        impl<F: PrimeFieldBits> Circuit<F> for MyCircuit<F> {
+            type Config = LookupRangeCheckConfig<F, K>;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                MyCircuit {
+                    element: Value::unknown(),
+                    num_bits: self.num_bits,
+                }
+            }
+
+            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+                let running_sum = meta.advice_column();
+                let table_idx = meta.lookup_table_column();
+                let constants = meta.fixed_column();
+                meta.enable_constant(constants);
+
+                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, table_idx)
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<F>,
+            ) -> Result<(), Error> {
+                // Load table_idx
+                config.load(&mut layouter)?;
+
+                // Lookup constraining element to be no longer than num_bits.
+                config.witness_short_check(
+                    layouter.namespace(|| format!("Lookup {:?} bits", self.num_bits)),
+                    self.element,
+                    self.num_bits,
+                )?;
+
+                Ok(())
+            }
+        }
+
+        // Edge case: zero bits
+        {
+            let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                element: Value::known(pallas::Base::ZERO),
+                num_bits: 0,
+            };
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(prover.verify(), Ok(()));
+
+            // Setup phase: generate parameters, vk for the circuit.
+            let params: Params<Affine> = Params::new(11);
+            let vk = plonk::keygen_vk(&params, &circuit).unwrap();
+
+            // Test that the pinned verification key (representing the circuit)
+            // is as expected. Which indicates the layouters are the same.
+            {
+                //panic!("{:#?}", vk.pinned());
+                assert_eq!(
+                    format!("{:#?}\n", vk.pinned()),
+                    include_str!("vk_short_range_check").replace("\r\n", "\n")
+                );
+            }
+
+            // Test that the proof size is as expected.
+            test_proof_size(11, circuit, params, vk)
+        }
+
+        // Edge case: K bits
+        {
+            let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                element: Value::known(pallas::Base::from((1 << K) - 1)),
+                num_bits: K,
+            };
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(prover.verify(), Ok(()));
+        }
+
+        // Element within `num_bits`
+        {
+            let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                element: Value::known(pallas::Base::from((1 << 6) - 1)),
+                num_bits: 6,
+            };
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(prover.verify(), Ok(()));
+        }
+
+        // Element larger than `num_bits` but within K bits
+        {
+            let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                element: Value::known(pallas::Base::from(1 << 6)),
+                num_bits: 6,
+            };
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(
+                prover.verify(),
+                Err(vec![VerifyFailure::Lookup {
+                    lookup_index: 0,
+                    location: FailureLocation::InRegion {
+                        region: (1, "Range check 6 bits").into(),
+                        offset: 1,
+                    },
+                }])
+            );
+        }
+
+        // Element larger than K bits
+        {
+            let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                element: Value::known(pallas::Base::from(1 << K)),
+                num_bits: 6,
+            };
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(
+                prover.verify(),
+                Err(vec![
+                    VerifyFailure::Lookup {
+                        lookup_index: 0,
+                        location: FailureLocation::InRegion {
+                            region: (1, "Range check 6 bits").into(),
+                            offset: 0,
+                        },
+                    },
+                    VerifyFailure::Lookup {
+                        lookup_index: 0,
+                        location: FailureLocation::InRegion {
+                            region: (1, "Range check 6 bits").into(),
+                            offset: 1,
+                        },
+                    },
+                ])
+            );
+        }
+
+        // Element which is not within `num_bits`, but which has a shifted value within
+        // num_bits
+        {
+            let num_bits = 6;
+            let shifted = pallas::Base::from((1 << num_bits) - 1);
+            // Recall that shifted = element * 2^{K-s}
+            //          => element = shifted * 2^{s-K}
+            let element = shifted
+                * pallas::Base::from(1 << (K as u64 - num_bits))
+                    .invert()
+                    .unwrap();
+            let circuit: MyCircuit<pallas::Base> = MyCircuit {
+                element: Value::known(element),
+                num_bits: num_bits as usize,
+            };
+            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+            assert_eq!(
+                prover.verify(),
+                Err(vec![VerifyFailure::Lookup {
+                    lookup_index: 0,
+                    location: FailureLocation::InRegion {
+                        region: (1, "Range check 6 bits").into(),
+                        offset: 0,
+                    },
+                }])
+            );
+        }
+    }
+}

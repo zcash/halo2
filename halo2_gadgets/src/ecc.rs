@@ -580,13 +580,16 @@ pub(crate) mod tests {
     use ff::PrimeField;
     use group::{prime::PrimeCurveAffine, Curve, Group};
 
+    use halo2_proofs::poly::commitment::Params;
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
+        plonk,
         plonk::{Circuit, ConstraintSystem, Error},
     };
     use lazy_static::lazy_static;
     use pasta_curves::pallas;
+    use pasta_curves::vesta::Affine;
 
     use super::{
         chip::{
@@ -595,6 +598,7 @@ pub(crate) mod tests {
         },
         FixedPoints,
     };
+    use crate::utilities::lookup_range_check::tests::test_proof_size;
     use crate::utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig};
 
     #[derive(Debug, Eq, PartialEq, Clone)]
@@ -907,6 +911,26 @@ pub(crate) mod tests {
         assert_eq!(prover.verify(), Ok(()))
     }
 
+    #[test]
+    fn round_trip() {
+        let k = 11;
+        let circuit = MyCircuit { test_errors: false };
+
+        // Setup phase: generate parameters, vk for the circuit.
+        let params: Params<Affine> = Params::new(k);
+        let vk = plonk::keygen_vk(&params, &circuit).unwrap();
+
+        // Test that the pinned verification key (representing the circuit)
+        // is as expected.
+        {
+            //panic!("{:#?}", vk.pinned());
+            assert_eq!(
+                format!("{:#?}\n", vk.pinned()),
+                include_str!("vk_ecc_chip").replace("\r\n", "\n")
+            );
+        }
+        test_proof_size(k, circuit, params, vk)
+    }
     #[cfg(feature = "test-dev-graph")]
     #[test]
     fn print_ecc_chip() {

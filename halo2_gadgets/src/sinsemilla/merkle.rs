@@ -196,9 +196,12 @@ pub mod tests {
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
         pasta::pallas,
+        plonk,
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
+    use halo2_proofs::poly::commitment::Params;
+    use pasta_curves::vesta::Affine;
     use rand::{rngs::OsRng, RngCore};
     use std::{convert::TryInto, iter};
 
@@ -370,9 +373,7 @@ pub mod tests {
             Ok(())
         }
     }
-
-    #[test]
-    fn merkle_chip() {
+    fn generate_circuit() -> MyCircuit {
         let mut rng = OsRng;
 
         // Choose a random leaf and position
@@ -385,15 +386,42 @@ pub mod tests {
             .collect();
 
         // The root is provided as a public input in the Orchard circuit.
-
-        let circuit = MyCircuit {
+        MyCircuit {
             leaf: Value::known(leaf),
             leaf_pos: Value::known(pos),
             merkle_path: Value::known(path.try_into().unwrap()),
-        };
+        }
+    }
+
+    #[test]
+    fn merkle_chip() {
+        let circuit = generate_circuit();
 
         let prover = MockProver::run(11, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
+    }
+
+    #[test]
+    fn round_trip() {
+        let k = 11;
+        let circuit = generate_circuit();
+
+        // Setup phase: generate parameters, vk for the circuit.
+        let params: Params<Affine> = Params::new(k);
+        let vk = plonk::keygen_vk(&params, &circuit).unwrap();
+
+        // Test that the pinned verification key (representing the circuit)
+        // is as expected. Which indicates the layouters are the same.
+        {
+            //panic!("{:#?}", vk.pinned());
+            assert_eq!(
+                format!("{:#?}\n", vk.pinned()),
+                include_str!("vk_merkle_chip").replace("\r\n", "\n")
+            );
+        }
+
+        // Test that the proof size is as expected.
+        crate::utilities::lookup_range_check::tests::test_proof_size(k, circuit, params, vk)
     }
 
     #[cfg(feature = "test-dev-graph")]
