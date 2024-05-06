@@ -422,7 +422,7 @@ pub mod tests {
         }
 
         // Test that the proof size is as expected.
-        test_proof_size(k, circuit, params, vk)
+        test_proof_size(k, circuit, &params, &vk)
     }
 
     #[test]

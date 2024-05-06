@@ -929,7 +929,7 @@ pub(crate) mod tests {
                 include_str!("vk_ecc_chip").replace("\r\n", "\n")
             );
         }
-        test_proof_size(k, circuit, params, vk)
+        test_proof_size(k, circuit, &params, &vk)
     }
 
     #[test]

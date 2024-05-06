@@ -456,7 +456,7 @@ pub(crate) mod tests {
     };
     use pasta_curves::pallas;
 
-    use crate::utilities::test_circuit::{read_test_case, test_proof_size, write_test_case, Proof};
+    use crate::utilities::test_circuit::{read_test_case, test_proof_size, write_test_case, Proof, read_all_proofs, write_all_test_case};
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
     use std::{convert::TryInto, fs, marker::PhantomData};
@@ -597,12 +597,13 @@ pub(crate) mod tests {
             }
 
             // Test that the proof size is as expected.
-            test_proof_size(11, circuit, params, vk)
+            test_proof_size(11, circuit, &params, &vk)
         }
     }
 
     #[test]
     fn short_range_check() {
+        #[derive(Clone, Copy)]
         struct MyCircuit<F: PrimeFieldBits> {
             element: Value<F>,
             num_bits: usize,
@@ -647,7 +648,23 @@ pub(crate) mod tests {
             }
         }
 
+
+        if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
+        }
+        else {
+            // Parse the hardcoded proof test case.
+            let proofs= {
+                let test_case_bytes = fs::read("src/utilities/circuit_proof_test_case_short_range_check.bin").unwrap();
+                read_all_proofs(&test_case_bytes[..]).expect("proof must be valid")
+            };
+        }
+
+        // Setup phase: generate parameters
+        let params: Params<Affine> = Params::new(11);
+        let mut proofs = Vec::new();
+
         // Edge case: zero bits
+        // case 0
         {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
                 element: Value::known(pallas::Base::ZERO),
@@ -656,8 +673,7 @@ pub(crate) mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            // Setup phase: generate parameters, vk for the circuit.
-            let params: Params<Affine> = Params::new(11);
+            // generate vk
             let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
             // Test that the pinned verification key (representing the circuit)
@@ -666,15 +682,37 @@ pub(crate) mod tests {
                 //panic!("{:#?}", vk.pinned());
                 assert_eq!(
                     format!("{:#?}\n", vk.pinned()),
-                    include_str!("vk_short_range_check").replace("\r\n", "\n")
+                    include_str!("vk_short_range_check_0").replace("\r\n", "\n")
                 );
             }
-
             // Test that the proof size is as expected.
-            test_proof_size(11, circuit, params, vk)
+            test_proof_size(11, circuit.clone(), &params, &vk);
+
+            // serialized_proof_test_case
+            {
+                if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
+                    let proof = Proof::create(&vk, &params, circuit).unwrap();
+                    assert!(proof.verify(&vk, &params).is_ok());
+                    proofs.push(proof.clone());
+                }
+                else {
+                    match proofs.get(0) {
+                        Some(proof) => {
+                            println!("proof={:?}", proof);
+
+                            assert_eq!(proof.as_ref().len(), 1888);
+                            assert!(proof.verify(&vk, &params).is_ok());
+                        }
+                        None => println!("Index out of bounds"),
+                    }
+                }
+            }
+
+
         }
 
         // Edge case: K bits
+        // case 1
         {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
                 element: Value::known(pallas::Base::from((1 << K) - 1)),
@@ -682,9 +720,46 @@ pub(crate) mod tests {
             };
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
+
+            // generate vk
+            let vk = plonk::keygen_vk(&params, &circuit).unwrap();
+
+            // Test that the pinned verification key (representing the circuit)
+            // is as expected. Which indicates the layouters are the same.
+            {
+                //panic!("{:#?}", vk.pinned());
+                assert_eq!(
+                    format!("{:#?}\n", vk.pinned()),
+                    include_str!("vk_short_range_check_1").replace("\r\n", "\n")
+                );
+            }
+            // Test that the proof size is as expected.
+            test_proof_size(11, circuit.clone(), &params, &vk);
+
+            // serialized_proof_test_case
+            {
+                if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
+                    let proof = Proof::create(&vk, &params, circuit).unwrap();
+                    assert!(proof.verify(&vk, &params).is_ok());
+                    proofs.push(proof.clone());
+                }
+                else {
+                    match proofs.get(1) {
+                        Some(proof) => {
+                            println!("proof={:?}", proof);
+
+                            assert_eq!(proof.as_ref().len(), 1888);
+                            assert!(proof.verify(&vk, &params).is_ok());
+                        }
+                        None => println!("Index out of bounds"),
+                    }
+                }
+            }
+
         }
 
         // Element within `num_bits`
+        // case 2
         {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
                 element: Value::known(pallas::Base::from((1 << 6) - 1)),
@@ -692,6 +767,52 @@ pub(crate) mod tests {
             };
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
+
+            // generate vk
+            let vk = plonk::keygen_vk(&params, &circuit).unwrap();
+
+            // Test that the pinned verification key (representing the circuit)
+            // is as expected. Which indicates the layouters are the same.
+            {
+                //panic!("{:#?}", vk.pinned());
+                assert_eq!(
+                    format!("{:#?}\n", vk.pinned()),
+                    include_str!("vk_short_range_check_2").replace("\r\n", "\n")
+                );
+            }
+            // Test that the proof size is as expected.
+            test_proof_size(11, circuit.clone(), &params, &vk);
+
+            // serialized_proof_test_case
+            {
+                if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
+                    let proof = Proof::create(&vk, &params, circuit).unwrap();
+                    assert!(proof.verify(&vk, &params).is_ok());
+                    proofs.push(proof.clone());
+                }
+                else {
+                    match proofs.get(2) {
+                        Some(proof) => {
+                            println!("proof={:?}", proof);
+
+                            assert_eq!(proof.as_ref().len(), 1888);
+                            assert!(proof.verify(&vk, &params).is_ok());
+                        }
+                        None => println!("Index out of bounds"),
+                    }
+                }
+            }
+        }
+
+        if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
+            let create_proof = || -> std::io::Result<()> {
+
+                let file = std::fs::File::create(
+                    "src/utilities/circuit_proof_test_case_short_range_check.bin"
+                )?;
+                write_all_test_case(file, &proofs)
+            };
+            create_proof().expect("should be able to write new proof");
         }
 
         // Element larger than `num_bits` but within K bits
@@ -711,6 +832,8 @@ pub(crate) mod tests {
                     },
                 }])
             );
+
+
         }
 
         // Element larger than K bits
@@ -739,6 +862,8 @@ pub(crate) mod tests {
                     },
                 ])
             );
+
+
         }
 
         // Element which is not within `num_bits`, but which has a shifted value within
@@ -767,6 +892,8 @@ pub(crate) mod tests {
                     },
                 }])
             );
+
+
         }
     }
 }

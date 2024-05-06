@@ -783,7 +783,7 @@ pub(crate) mod tests {
                 include_str!("vk_sinsemilla_chip").replace("\r\n", "\n")
             );
         }
-        test_proof_size(11, circuit, params, vk)
+        test_proof_size(11, circuit, &params, &vk)
     }
 
     #[test]

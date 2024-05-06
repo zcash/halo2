@@ -1,5 +1,6 @@
 //! functions used for circuit test
 
+use std::io;
 use halo2_proofs::plonk;
 use halo2_proofs::plonk::{Circuit, SingleVerifier, VerifyingKey};
 use halo2_proofs::poly::commitment::Params;
@@ -53,12 +54,12 @@ impl Proof {
     }
 }
 
-#[allow(dead_code)]
+/// test the proof size.
 pub(crate) fn test_proof_size<C>(
     k: u32,
     circuit: C,
-    params: Params<Affine>,
-    vk: VerifyingKey<Affine>,
+    params: &Params<Affine>,
+    vk: &VerifyingKey<Affine>,
 ) where
     C: Circuit<pallas::Base>,
 {
@@ -67,9 +68,9 @@ pub(crate) fn test_proof_size<C>(
         halo2_proofs::dev::CircuitCost::<pasta_curves::vesta::Point, _>::measure(k, &circuit);
     let expected_proof_size = usize::from(circuit_cost.proof_size(1));
 
-    let proof = Proof::create(&vk, &params, circuit).unwrap();
+    let proof = Proof::create(vk, params, circuit).unwrap();
 
-    assert!(proof.verify(&vk, &params).is_ok());
+    assert!(proof.verify(vk, params).is_ok());
     assert_eq!(proof.as_ref().len(), expected_proof_size);
 }
 
@@ -86,4 +87,26 @@ pub fn read_test_case<R: Read>(mut r: R) -> std::io::Result<Proof> {
     let proof = Proof::new(proof_bytes);
 
     Ok(proof)
+}
+
+/// write multiple proofs to a file
+pub(crate) fn write_all_test_case<W: Write>(
+    mut w: W,
+    proofs: &Vec<Proof>,
+) -> std::io::Result<()> {
+    for proof in proofs {
+        w.write_all(proof.as_ref())?;
+    }
+    Ok(())
+}
+
+/// read multiple proofs from a file
+pub fn read_all_proofs<R: Read>(mut r: R) -> io::Result<Vec<Proof>> {
+    let mut proofs = Vec::new();
+    let mut buffer = vec![0u8; 1888];
+
+    while let Ok(()) = r.read_exact(&mut buffer) {
+        proofs.push(Proof::new(buffer.clone()));
+    }
+    Ok(proofs)
 }
