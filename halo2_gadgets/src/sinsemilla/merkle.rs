@@ -200,11 +200,11 @@ pub mod tests {
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
+    use crate::utilities::test_circuit::{read_test_case, test_proof_size, write_test_case, Proof};
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
     use rand::{rngs::OsRng, RngCore};
     use std::{convert::TryInto, iter};
-    use crate::utilities::test_circuit::{Proof, read_test_case, test_proof_size, write_test_case};
 
     const MERKLE_DEPTH: usize = 32;
 
@@ -431,28 +431,25 @@ pub mod tests {
 
         let circuit = generate_circuit();
         // Setup phase: generate parameters, vk for the circuit.
-        let params:Params<Affine> = Params::new(11);
+        let params: Params<Affine> = Params::new(11);
         let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
         if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
             let create_proof = || -> std::io::Result<()> {
-                let proof = Proof::create(
-                    &vk,
-                    &params,
-                    circuit,
-                ).unwrap();
+                let proof = Proof::create(&vk, &params, circuit).unwrap();
                 assert!(proof.verify(&vk, &params).is_ok());
 
-
-                let file = std::fs::File::create("src/sinsemilla/circuit_proof_test_case_merkle.bin")?;
+                let file =
+                    std::fs::File::create("src/sinsemilla/circuit_proof_test_case_merkle.bin")?;
                 write_test_case(file, &proof)
             };
             create_proof().expect("should be able to write new proof");
         }
 
         // Parse the hardcoded proof test case.
-        let proof= {
-            let test_case_bytes = fs::read("src/sinsemilla/circuit_proof_test_case_merkle.bin").unwrap();
+        let proof = {
+            let test_case_bytes =
+                fs::read("src/sinsemilla/circuit_proof_test_case_merkle.bin").unwrap();
             read_test_case(&test_case_bytes[..]).expect("proof must be valid")
         };
 

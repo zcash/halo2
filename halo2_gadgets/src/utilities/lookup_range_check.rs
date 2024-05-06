@@ -454,13 +454,12 @@ pub(crate) mod tests {
         plonk,
         plonk::{Circuit, ConstraintSystem, Error},
     };
-    use pasta_curves::{pallas};
+    use pasta_curves::pallas;
 
+    use crate::utilities::test_circuit::{read_test_case, test_proof_size, write_test_case, Proof};
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
     use std::{convert::TryInto, fs, marker::PhantomData};
-    use crate::utilities::test_circuit::{Proof, read_test_case, test_proof_size, write_test_case};
-
 
     #[test]
     fn lookup_range_check() {
@@ -575,26 +574,25 @@ pub(crate) mod tests {
             {
                 if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
                     let create_proof = || -> std::io::Result<()> {
-                        let proof = Proof::create(
-                            &vk,
-                            &params,
-                            circuit,
-                        ).unwrap();
+                        let proof = Proof::create(&vk, &params, circuit).unwrap();
                         assert!(proof.verify(&vk, &params).is_ok());
 
-                        let file = std::fs::File::create("src/utilities/circuit_proof_test_case_lookup_range_check.bin")?;
+                        let file = std::fs::File::create(
+                            "src/utilities/circuit_proof_test_case_lookup_range_check.bin",
+                        )?;
                         write_test_case(file, &proof)
                     };
                     create_proof().expect("should be able to write new proof");
                 }
                 // Parse the hardcoded proof test case.
-                let proof= {
-                    let test_case_bytes = fs::read("src/utilities/circuit_proof_test_case_lookup_range_check.bin").unwrap();
+                let proof = {
+                    let test_case_bytes =
+                        fs::read("src/utilities/circuit_proof_test_case_lookup_range_check.bin")
+                            .unwrap();
                     read_test_case(&test_case_bytes[..]).expect("proof must be valid")
                 };
 
-                // todo: check size
-                assert_eq!(proof.as_ref().len(), 4160);
+                assert_eq!(proof.as_ref().len(), 1888);
                 assert!(proof.verify(&vk, &params).is_ok());
             }
 

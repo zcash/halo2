@@ -599,7 +599,7 @@ pub(crate) mod tests {
         FixedPoints,
     };
     use crate::utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig};
-    use crate::utilities::test_circuit::{Proof, read_test_case, test_proof_size, write_test_case};
+    use crate::utilities::test_circuit::{read_test_case, test_proof_size, write_test_case, Proof};
 
     #[derive(Debug, Eq, PartialEq, Clone)]
     pub(crate) struct TestFixedBases;
@@ -938,16 +938,12 @@ pub(crate) mod tests {
 
         let circuit = MyCircuit { test_errors: false };
         // Setup phase: generate parameters, vk for the circuit.
-        let params:Params<Affine> = Params::new(11);
+        let params: Params<Affine> = Params::new(11);
         let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
         if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
             let create_proof = || -> std::io::Result<()> {
-                let proof = Proof::create(
-                    &vk,
-                    &params,
-                    circuit,
-                ).unwrap();
+                let proof = Proof::create(&vk, &params, circuit).unwrap();
                 assert!(proof.verify(&vk, &params).is_ok());
 
                 let file = std::fs::File::create("src/circuit_proof_test_case_ecc.bin")?;
@@ -957,12 +953,11 @@ pub(crate) mod tests {
         }
 
         // Parse the hardcoded proof test case.
-        let proof= {
+        let proof = {
             let test_case_bytes = fs::read("src/circuit_proof_test_case_ecc.bin").unwrap();
             read_test_case(&test_case_bytes[..]).expect("proof must be valid")
         };
 
-        // todo: check size
         assert_eq!(proof.as_ref().len(), 3872);
         assert!(proof.verify(&vk, &params).is_ok());
     }
