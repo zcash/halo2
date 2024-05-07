@@ -41,10 +41,10 @@ pub trait SinsemillaInstructionsOptimized<C: CurveAffine, const K: usize, const 
 }
 
 impl<C: CurveAffine, SinsemillaChip, EccChip, const K: usize, const MAX_WORDS: usize>
-    HashDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>
-where
-    SinsemillaChip: SinsemillaInstructionsOptimized<C, K, MAX_WORDS> + Clone + Debug + Eq,
-    EccChip: EccInstructions<
+HashDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>
+    where
+        SinsemillaChip: SinsemillaInstructionsOptimized<C, K, MAX_WORDS> + Clone + Debug + Eq,
+        EccChip: EccInstructions<
             C,
             NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
             FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
@@ -70,10 +70,10 @@ where
 }
 
 impl<C: CurveAffine, SinsemillaChip, EccChip, const K: usize, const MAX_WORDS: usize>
-    CommitDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>
-where
-    SinsemillaChip: SinsemillaInstructionsOptimized<C, K, MAX_WORDS> + Clone + Debug + Eq,
-    EccChip: EccInstructions<
+CommitDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>
+    where
+        SinsemillaChip: SinsemillaInstructionsOptimized<C, K, MAX_WORDS> + Clone + Debug + Eq,
+        EccChip: EccInstructions<
             C,
             NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
             FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,

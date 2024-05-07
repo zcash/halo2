@@ -54,7 +54,7 @@ impl Proof {
     }
 }
 
-/// test the proof size.
+/// Test that the proof size is as expected.
 #[allow(dead_code)]
 pub(crate) fn test_proof_size<C>(
     k: u32,
@@ -64,7 +64,6 @@ pub(crate) fn test_proof_size<C>(
 ) where
     C: Circuit<pallas::Base>,
 {
-    // Test that the proof size is as expected.
     let circuit_cost =
         halo2_proofs::dev::CircuitCost::<pasta_curves::vesta::Point, _>::measure(k, &circuit);
     let expected_proof_size = usize::from(circuit_cost.proof_size(1));
@@ -100,9 +99,9 @@ pub(crate) fn write_all_test_case<W: Write>(mut w: W, proofs: &Vec<Proof>) -> st
 }
 
 /// read multiple proofs from a file
-pub fn read_all_proofs<R: Read>(mut r: R) -> io::Result<Vec<Proof>> {
+pub fn read_all_proofs<R: Read>(mut r: R, proof_size: usize) -> io::Result<Vec<Proof>> {
     let mut proofs = Vec::new();
-    let mut buffer = vec![0u8; 1888];
+    let mut buffer = vec![0u8; proof_size];
 
     while let Ok(()) = r.read_exact(&mut buffer) {
         proofs.push(Proof::new(buffer.clone()));

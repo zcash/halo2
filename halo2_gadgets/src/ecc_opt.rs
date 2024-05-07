@@ -61,7 +61,6 @@ impl<C: CurveAffine, EccChip: EccInstructionsOptimized<C> + Clone + Debug + Eq> 
 }
 #[cfg(test)]
 pub(crate) mod tests {
-    use ff::PrimeField;
     use group::{prime::PrimeCurveAffine, Curve, Group};
 
     use halo2_proofs::{
@@ -69,131 +68,11 @@ pub(crate) mod tests {
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
-    use lazy_static::lazy_static;
     use pasta_curves::pallas;
 
-    use crate::ecc::{
-        chip::{
-            find_zs_and_us, BaseFieldElem, EccChip, EccConfig, FixedPoint, FullScalar, ShortScalar,
-            H, NUM_WINDOWS, NUM_WINDOWS_SHORT,
-        },
-        FixedPoints,
-    };
+    use crate::ecc::chip::{EccChip, EccConfig};
     use crate::utilities::lookup_range_check::LookupRangeCheck;
     use crate::utilities_opt::lookup_range_check::LookupRangeCheckConfigOptimized;
-
-    #[derive(Debug, Eq, PartialEq, Clone)]
-    pub(crate) struct TestFixedBases;
-    #[derive(Debug, Eq, PartialEq, Clone)]
-    pub(crate) struct FullWidth(pallas::Affine, &'static [(u64, [pallas::Base; H])]);
-    #[derive(Debug, Eq, PartialEq, Clone)]
-    pub(crate) struct BaseField;
-    #[derive(Debug, Eq, PartialEq, Clone)]
-    pub(crate) struct Short;
-
-    lazy_static! {
-        static ref BASE: pallas::Affine = pallas::Point::generator().to_affine();
-        static ref ZS_AND_US: Vec<(u64, [pallas::Base; H])> =
-            find_zs_and_us(*BASE, NUM_WINDOWS).unwrap();
-        static ref ZS_AND_US_SHORT: Vec<(u64, [pallas::Base; H])> =
-            find_zs_and_us(*BASE, NUM_WINDOWS_SHORT).unwrap();
-    }
-
-    impl FixedPoint<pallas::Affine> for FullWidth {
-        type FixedScalarKind = FullScalar;
-
-        fn generator(&self) -> pallas::Affine {
-            self.0
-        }
-
-        fn u(&self) -> Vec<[[u8; 32]; H]> {
-            self.1
-                .iter()
-                .map(|(_, us)| {
-                    [
-                        us[0].to_repr(),
-                        us[1].to_repr(),
-                        us[2].to_repr(),
-                        us[3].to_repr(),
-                        us[4].to_repr(),
-                        us[5].to_repr(),
-                        us[6].to_repr(),
-                        us[7].to_repr(),
-                    ]
-                })
-                .collect()
-        }
-
-        fn z(&self) -> Vec<u64> {
-            self.1.iter().map(|(z, _)| *z).collect()
-        }
-    }
-
-    impl FixedPoint<pallas::Affine> for BaseField {
-        type FixedScalarKind = BaseFieldElem;
-
-        fn generator(&self) -> pallas::Affine {
-            *BASE
-        }
-
-        fn u(&self) -> Vec<[[u8; 32]; H]> {
-            ZS_AND_US
-                .iter()
-                .map(|(_, us)| {
-                    [
-                        us[0].to_repr(),
-                        us[1].to_repr(),
-                        us[2].to_repr(),
-                        us[3].to_repr(),
-                        us[4].to_repr(),
-                        us[5].to_repr(),
-                        us[6].to_repr(),
-                        us[7].to_repr(),
-                    ]
-                })
-                .collect()
-        }
-
-        fn z(&self) -> Vec<u64> {
-            ZS_AND_US.iter().map(|(z, _)| *z).collect()
-        }
-    }
-
-    impl FixedPoint<pallas::Affine> for Short {
-        type FixedScalarKind = ShortScalar;
-
-        fn generator(&self) -> pallas::Affine {
-            *BASE
-        }
-
-        fn u(&self) -> Vec<[[u8; 32]; H]> {
-            ZS_AND_US_SHORT
-                .iter()
-                .map(|(_, us)| {
-                    [
-                        us[0].to_repr(),
-                        us[1].to_repr(),
-                        us[2].to_repr(),
-                        us[3].to_repr(),
-                        us[4].to_repr(),
-                        us[5].to_repr(),
-                        us[6].to_repr(),
-                        us[7].to_repr(),
-                    ]
-                })
-                .collect()
-        }
-
-        fn z(&self) -> Vec<u64> {
-            ZS_AND_US_SHORT.iter().map(|(z, _)| *z).collect()
-        }
-    }
-
-    impl FixedPoints<pallas::Affine> for TestFixedBases {
-        type FullScalar = FullWidth;
-        type ShortScalar = Short;
-        type Base = BaseField;
-    }
 
     struct MyCircuit {
         test_errors: bool,

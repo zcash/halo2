@@ -276,12 +276,12 @@ pub struct HashDomain<
 > where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
     EccChip: EccInstructions<
-            C,
-            NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
-            FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
-        > + Clone
-        + Debug
-        + Eq,
+        C,
+        NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
+        FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
+    > + Clone
+    + Debug
+    + Eq,
 {
     pub(crate) sinsemilla_chip: SinsemillaChip,
     pub(crate) ecc_chip: EccChip,
@@ -289,10 +289,10 @@ pub struct HashDomain<
 }
 
 impl<C: CurveAffine, SinsemillaChip, EccChip, const K: usize, const MAX_WORDS: usize>
-    HashDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>
-where
-    SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
-    EccChip: EccInstructions<
+HashDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>
+    where
+        SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
+        EccChip: EccInstructions<
             C,
             NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
             FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
@@ -376,22 +376,22 @@ pub struct CommitDomain<
 > where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
     EccChip: EccInstructions<
-            C,
-            NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
-            FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
-        > + Clone
-        + Debug
-        + Eq,
+        C,
+        NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
+        FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
+    > + Clone
+    + Debug
+    + Eq,
 {
     pub(crate) M: HashDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>,
     pub(crate) R: ecc::FixedPoint<C, EccChip>,
 }
 
 impl<C: CurveAffine, SinsemillaChip, EccChip, const K: usize, const MAX_WORDS: usize>
-    CommitDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>
-where
-    SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
-    EccChip: EccInstructions<
+CommitDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>
+    where
+        SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
+        EccChip: EccInstructions<
             C,
             NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
             FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
@@ -403,7 +403,6 @@ where
     pub fn new(
         sinsemilla_chip: SinsemillaChip,
         ecc_chip: EccChip,
-        // TODO: Instead of using SinsemilllaChip::CommitDomains, just use something that implements a CommitDomains trait
         domain: &SinsemillaChip::CommitDomains,
     ) -> Self {
         CommitDomain {
@@ -429,12 +428,6 @@ where
         Error,
     > {
         assert_eq!(self.M.sinsemilla_chip, message.chip);
-
-        // FIXME: consider returning ZSA version of the following lines.
-        // It's not a breaking change because `blinding_factor` simply wraps `R.mul`
-        // and `hash` simply wraps `M.hash_to_point` - are those wrapper really needed?
-        //let blind = self.blinding_factor(layouter.namespace(|| "[r] R"), r)?;
-        //let (p, zs) = self.hash(layouter.namespace(|| "M"), message)?;
         let (blind, _) = self.R.mul(layouter.namespace(|| "[r] R"), r)?;
         let (p, zs) = self.M.hash_to_point(layouter.namespace(|| "M"), message)?;
         let commitment = p.add(layouter.namespace(|| "M + [r] R"), &blind)?;

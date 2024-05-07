@@ -654,7 +654,7 @@ pub(crate) mod tests {
         let proofs = {
             let test_case_bytes =
                 fs::read("src/utilities/circuit_proof_test_case_short_range_check.bin").unwrap();
-            read_all_proofs(&test_case_bytes[..]).expect("proof must be valid")
+            read_all_proofs(&test_case_bytes[..], 1888).expect("proof must be valid")
         };
 
         // Setup phase: generate parameters
