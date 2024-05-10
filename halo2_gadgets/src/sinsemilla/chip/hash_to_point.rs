@@ -19,6 +19,7 @@ use std::ops::Deref;
 
 /// Define an enum that can hold either type
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum EccPointQ<'a> {
     PublicPoint(pallas::Affine),
     PrivatePoint(&'a NonIdentityEccPoint),
