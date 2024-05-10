@@ -22,12 +22,9 @@
 #![deny(unsafe_code)]
 
 pub mod ecc;
-pub mod ecc_opt;
 pub mod poseidon;
 #[cfg(feature = "unstable-sha256-gadget")]
 #[cfg_attr(docsrs, doc(cfg(feature = "unstable-sha256-gadget")))]
 pub mod sha256;
 pub mod sinsemilla;
-pub mod sinsemilla_opt;
 pub mod utilities;
-pub mod utilities_opt;

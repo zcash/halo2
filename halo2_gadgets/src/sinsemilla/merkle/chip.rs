@@ -200,6 +200,8 @@ where
     }
 }
 
+/// The MerkleSinsemillaInstructions trait extends the capabilities of SinsemillaInstructions,
+/// for specific cryptographic operations involving generic lookup.
 pub(crate) trait MerkleSinsemillaInstructions<Hash, Commit, F, Lookup>
 where
     Self: SinsemillaInstructions<

@@ -184,8 +184,6 @@ impl HashDomain {
 #[derive(Debug)]
 #[allow(non_snake_case)]
 pub struct CommitDomain {
-    // FIXME: THis comment came from ZSA version
-    /// A domain in which $\mathsf{SinsemillaHashToPoint}$ and $\mathsf{SinsemillaHash}$ can be used
     pub(crate) M: HashDomain,
     pub(crate) R: pallas::Point,
 }

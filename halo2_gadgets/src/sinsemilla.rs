@@ -403,6 +403,7 @@ CommitDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>
     pub fn new(
         sinsemilla_chip: SinsemillaChip,
         ecc_chip: EccChip,
+        // TODO: Instead of using SinsemilllaChip::CommitDomains, just use something that implements a CommitDomains trait
         domain: &SinsemillaChip::CommitDomains,
     ) -> Self {
         CommitDomain {
