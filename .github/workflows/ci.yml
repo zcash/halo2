@@ -32,6 +32,17 @@ jobs:
           command: test
           args: --verbose --release --workspace --no-default-features --features "${{ matrix.features }}"
 
+  examples:
+    name: Run the examples
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+      - name: Run examples
+        run: |
+          .github/scripts/run-examples.sh
+
   build:
     name: Build target ${{ matrix.target }}
     runs-on: ubuntu-latest

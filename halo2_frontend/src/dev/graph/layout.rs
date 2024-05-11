@@ -104,8 +104,7 @@ impl CircuitLayout {
             cs.constants.clone(),
         )
         .unwrap();
-        let (cs, selectors_to_fixed) = cs.selectors_to_fixed_compressed();
-        let selector_polys = selectors_to_fixed.convert::<F>(layout.selectors);
+        let (cs, selector_polys) = cs.compress_selectors(layout.selectors);
         let non_selector_fixed_columns = cs.num_fixed_columns - selector_polys.len();
 
         // Figure out what order to render the columns in.

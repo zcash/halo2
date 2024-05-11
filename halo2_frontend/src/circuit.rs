@@ -5,7 +5,7 @@ use crate::plonk::{
     permutation,
     sealed::{self, SealedPhase},
     Advice, Assignment, Circuit, ConstraintSystem, FirstPhase, Fixed, FloorPlanner, Instance,
-    SecondPhase, SelectorsToFixed, ThirdPhase,
+    SecondPhase, ThirdPhase,
 };
 use halo2_middleware::circuit::{Any, CompiledCircuit, Preprocessing};
 use halo2_middleware::ff::{BatchInvert, Field};
@@ -31,36 +31,6 @@ pub mod layouter;
 
 pub use table_layouter::{SimpleTableLayouter, TableLayouter};
 
-/// Compile a circuit, only generating the `Config` and the `ConstraintSystem` related information,
-/// skipping all preprocessing data.
-/// The `ConcreteCircuit::Config`, `ConstraintSystem<F>` and `SelectorsToFixed` are outputs for the
-/// frontend itself, which will be used for witness generation and fixed column assignment.
-/// The `ConstraintSystem<F>` can be converted to `ConstraintSystemMid<F>` to be used to interface
-/// with the backend.
-pub fn compile_circuit_cs<F: Field, ConcreteCircuit: Circuit<F>>(
-    compress_selectors: bool,
-    #[cfg(feature = "circuit-params")] params: ConcreteCircuit::Params,
-) -> (
-    ConcreteCircuit::Config,
-    ConstraintSystem<F>,
-    SelectorsToFixed,
-) {
-    let mut cs = ConstraintSystem::default();
-    #[cfg(feature = "circuit-params")]
-    let config = ConcreteCircuit::configure_with_params(&mut cs, params);
-    #[cfg(not(feature = "circuit-params"))]
-    let config = ConcreteCircuit::configure(&mut cs);
-    let cs = cs;
-
-    let (cs, selectors_to_fixed) = if compress_selectors {
-        cs.selectors_to_fixed_compressed()
-    } else {
-        cs.selectors_to_fixed_direct()
-    };
-
-    (config, cs, selectors_to_fixed)
-}
-
 /// Compile a circuit.  Runs configure and synthesize on the circuit in order to materialize the
 /// circuit into its columns and the column configuration; as well as doing the fixed column and
 /// copy constraints assignments.  The output of this function can then be used for the key
@@ -81,16 +51,17 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
 > {
     let n = 2usize.pow(k);
 
-    // After this, the ConstraintSystem should not have any selectors: `verify` does not need them, and `keygen_pk` regenerates `cs` from scratch anyways.
-    let (config, cs, selectors_to_fixed) = compile_circuit_cs::<_, ConcreteCircuit>(
-        compress_selectors,
-        #[cfg(feature = "circuit-params")]
-        circuit.params(),
-    );
+    let mut cs = ConstraintSystem::default();
+    #[cfg(feature = "circuit-params")]
+    let config = ConcreteCircuit::configure_with_params(&mut cs, circuit.params());
+    #[cfg(not(feature = "circuit-params"))]
+    let config = ConcreteCircuit::configure(&mut cs);
+    let cs = cs;
 
     if n < cs.minimum_rows() {
         return Err(Error::not_enough_rows_available(k));
     }
+
     let mut assembly = plonk::keygen::Assembly {
         k,
         fixed: vec![vec![F::ZERO.into(); n]; cs.num_fixed_columns],
@@ -109,7 +80,14 @@ pub fn compile_circuit<F: Field, ConcreteCircuit: Circuit<F>>(
     )?;
 
     let mut fixed = batch_invert_assigned(assembly.fixed);
-    let selector_polys = selectors_to_fixed.convert(assembly.selectors);
+    let (cs, selector_polys) = if compress_selectors {
+        cs.compress_selectors(assembly.selectors)
+    } else {
+        // After this, the ConstraintSystem should not have any selectors: `verify` does not need them, and `keygen_pk` regenerates `cs` from scratch anyways.
+        let selectors = std::mem::take(&mut assembly.selectors);
+        cs.directly_convert_selectors_to_fixed(selectors)
+    };
+
     fixed.extend(selector_polys);
 
     // sort the "copies" for deterministic ordering

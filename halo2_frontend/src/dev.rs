@@ -710,8 +710,7 @@ impl<F: FromUniformBytes<64> + Ord> MockProver<F> {
             )?;
         }
 
-        let (cs, selectors_to_fixed) = prover.cs.selectors_to_fixed_compressed();
-        let selector_polys = selectors_to_fixed.convert(prover.selectors.clone());
+        let (cs, selector_polys) = prover.cs.compress_selectors(prover.selectors.clone());
         prover.cs = cs;
         prover.fixed.extend(selector_polys.into_iter().map(|poly| {
             let mut v = vec![CellValue::Unassigned; n];

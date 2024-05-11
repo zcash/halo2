@@ -282,7 +282,7 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
             cs.constants.clone(),
         )
         .unwrap();
-        let (cs, _) = cs.selectors_to_fixed_compressed();
+        let (cs, _) = cs.compress_selectors(layout.selectors);
 
         assert!((1 << k) >= cs.minimum_rows());
 
