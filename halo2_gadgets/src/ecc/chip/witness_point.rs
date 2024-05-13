@@ -12,14 +12,14 @@ use halo2_proofs::{
 };
 use pasta_curves::{arithmetic::CurveAffine, pallas};
 
-pub(crate) type Coordinates = (
+type Coordinates = (
     AssignedCell<Assigned<pallas::Base>, pallas::Base>,
     AssignedCell<Assigned<pallas::Base>, pallas::Base>,
 );
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Config {
-    pub(crate) q_point: Selector,
+    q_point: Selector,
     q_point_non_id: Selector,
     // x-coordinate
     pub x: Column<Advice>,

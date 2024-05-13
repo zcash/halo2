@@ -13,8 +13,8 @@ use pasta_curves::pallas;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Config<Fixed: FixedPoints<pallas::Affine>> {
     // Selector used for fixed-base scalar mul with short signed exponent.
-    pub(crate) q_mul_fixed_short: Selector,
-    pub(crate) super_config: super::Config<Fixed>,
+    q_mul_fixed_short: Selector,
+    super_config: super::Config<Fixed>,
 }
 
 impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
@@ -400,8 +400,6 @@ pub mod tests {
 
         Ok(())
     }
-
-    // todo: fixit
 
     #[test]
     fn invalid_magnitude_sign() {

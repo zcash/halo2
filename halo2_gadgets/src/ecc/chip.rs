@@ -14,12 +14,12 @@ use pasta_curves::{arithmetic::CurveAffine, pallas};
 
 use std::convert::TryInto;
 
-pub(crate) mod add;
-pub(crate) mod add_incomplete;
+pub(super) mod add;
+pub(super) mod add_incomplete;
 pub mod constants;
-pub(crate) mod mul;
-pub(crate) mod mul_fixed;
-pub(crate) mod witness_point;
+pub(super) mod mul;
+pub(super) mod mul_fixed;
+pub(super) mod witness_point;
 
 pub use constants::*;
 
@@ -34,11 +34,11 @@ pub struct EccPoint {
     /// x-coordinate
     ///
     /// Stored as an `Assigned<F>` to enable batching inversions.
-    pub(crate) x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+    x: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
     /// y-coordinate
     ///
     /// Stored as an `Assigned<F>` to enable batching inversions.
-    pub(crate) y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+    y: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
 }
 
 impl EccPoint {
@@ -153,12 +153,12 @@ pub struct EccConfig<
     /// Fixed-base full-width scalar multiplication
     mul_fixed_full: mul_fixed::full_width::Config<FixedPoints>,
     /// Fixed-base signed short scalar multiplication
-    pub(crate) mul_fixed_short: mul_fixed::short::Config<FixedPoints>,
+    mul_fixed_short: mul_fixed::short::Config<FixedPoints>,
     /// Fixed-base mul using a base field element as a scalar
     mul_fixed_base_field: mul_fixed::base_field_elem::Config<FixedPoints, Lookup>,
 
     /// Witness point
-    pub(crate) witness_point: witness_point::Config,
+    witness_point: witness_point::Config,
 
     /// Lookup range check using 10-bit lookup table
     pub lookup_config: Lookup,
@@ -345,7 +345,7 @@ pub struct EccScalarFixed {
 type MagnitudeCell = AssignedCell<pallas::Base, pallas::Base>;
 // TODO: Make V an enum Sign { Positive, Negative }
 type SignCell = AssignedCell<pallas::Base, pallas::Base>;
-pub(crate) type MagnitudeSign = (MagnitudeCell, SignCell);
+type MagnitudeSign = (MagnitudeCell, SignCell);
 
 /// A signed short scalar used for fixed-base scalar multiplication.
 /// A short scalar must have magnitude in the range [0..2^64), with

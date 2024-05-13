@@ -62,7 +62,7 @@ pub struct Config<Lookup: DefaultLookupRangeCheck> {
 }
 
 impl<Lookup: DefaultLookupRangeCheck> Config<Lookup> {
-    pub(crate) fn configure(
+    pub(super) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         add_config: add::Config,
         lookup_config: Lookup,
@@ -460,6 +460,7 @@ pub mod tests {
         ff::{Field, PrimeField},
         Curve,
     };
+    use halo2_proofs::circuit::Chip;
     use halo2_proofs::{
         circuit::{Layouter, Value},
         plonk::Error,
@@ -483,7 +484,7 @@ pub mod tests {
         p: &NonIdentityPoint<pallas::Affine, EccChip<TestFixedBases, Lookup>>,
         p_val: pallas::Affine,
     ) -> Result<(), Error> {
-        let column = chip.config.advices[0];
+        let column = chip.config().advices[0];
 
         fn constrain_equal_non_id<
             EccChip: EccInstructions<pallas::Affine, Point = EccPoint> + Clone + Eq + std::fmt::Debug,

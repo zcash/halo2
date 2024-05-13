@@ -231,7 +231,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> ScalarFixed<C, EccChip> {
 #[derive(Debug)]
 pub struct ScalarFixedShort<C: CurveAffine, EccChip: EccInstructions<C>> {
     chip: EccChip,
-    pub(crate) inner: EccChip::ScalarFixedShort,
+    inner: EccChip::ScalarFixedShort,
 }
 
 impl<C: CurveAffine, EccChip: EccInstructions<C>> ScalarFixedShort<C, EccChip> {
@@ -375,8 +375,8 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq>
 /// A point on a specific elliptic curve.
 #[derive(Copy, Clone, Debug)]
 pub struct Point<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> {
-    pub(crate) chip: EccChip,
-    pub(crate) inner: EccChip::Point,
+    chip: EccChip,
+    inner: EccChip::Point,
 }
 
 impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, EccChip> {

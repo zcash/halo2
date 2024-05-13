@@ -41,11 +41,11 @@ pub struct Config<FixedPoints: super::FixedPoints<pallas::Affine>> {
     fixed_z: Column<Fixed>,
     // Decomposition of an `n-1`-bit scalar into `k`-bit windows:
     // a = a_0 + 2^k(a_1) + 2^{2k}(a_2) + ... + 2^{(n-1)k}(a_{n-1})
-    pub(crate) window: Column<Advice>,
+    window: Column<Advice>,
     // y-coordinate of accumulator (only used in the final row).
-    pub(crate) u: Column<Advice>,
+    u: Column<Advice>,
     // Configuration for `add`
-    pub(crate) add_config: add::Config,
+    add_config: add::Config,
     // Configuration for `add_incomplete`
     add_incomplete_config: add_incomplete::Config,
     _marker: PhantomData<FixedPoints>,
