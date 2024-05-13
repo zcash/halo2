@@ -463,10 +463,10 @@ pub mod tests {
         {
             let h = pallas::Base::from(H as u64);
             let scalar_fixed = "1333333333333333333333333333333333333333333333333333333333333333333333333333333333334"
-                    .chars()
-                    .fold(pallas::Base::zero(), |acc, c| {
-                        acc * &h + &pallas::Base::from(c.to_digit(8).unwrap() as u64)
-                    });
+                        .chars()
+                        .fold(pallas::Base::zero(), |acc, c| {
+                            acc * &h + &pallas::Base::from(c.to_digit(8).unwrap() as u64)
+                        });
             let result = {
                 let scalar_fixed = chip.load_private(
                     layouter.namespace(|| "mul with double"),
