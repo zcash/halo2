@@ -28,7 +28,7 @@ impl GeneratorTableConfig {
     /// controlled by `q_sinsemilla`, and would likely not apply to other chips.
     pub fn configure<Hash, Commit, F, Lookup>(
         meta: &mut ConstraintSystem<pallas::Base>,
-        config: &super::SinsemillaConfig<Hash, Commit, F, Lookup>,
+        config: super::SinsemillaConfig<Hash, Commit, F, Lookup>,
     ) where
         Hash: HashDomains<pallas::Affine>,
         F: FixedPoints<pallas::Affine>,

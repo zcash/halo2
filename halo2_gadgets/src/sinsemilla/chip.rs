@@ -215,7 +215,7 @@ where
         };
 
         // Set up lookup argument
-        GeneratorTableConfig::configure(meta, &config);
+        GeneratorTableConfig::configure(meta, config.clone());
 
         config
     }
