@@ -23,10 +23,10 @@ use halo2_proofs::{
 };
 use pasta_curves::pallas;
 
-pub(crate) mod generator_table;
+mod generator_table;
 use generator_table::GeneratorTableConfig;
 
-pub(crate) mod hash_to_point;
+mod hash_to_point;
 
 /// Configuration for the Sinsemilla hash chip
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -38,29 +38,29 @@ where
     Lookup: DefaultLookupRangeCheck,
 {
     /// Binary selector used in lookup argument and in the body of the Sinsemilla hash.
-    pub(crate) q_sinsemilla1: Selector,
+    q_sinsemilla1: Selector,
     /// Non-binary selector used in lookup argument and in the body of the Sinsemilla hash.
-    pub(crate) q_sinsemilla2: Column<Fixed>,
+    q_sinsemilla2: Column<Fixed>,
     /// q_sinsemilla2 is used to define a synthetic selector,
     ///         q_sinsemilla3 = (q_sinsemilla2) ⋅ (q_sinsemilla2 - 1)
     /// Simple selector used to constrain hash initialization to be consistent with
     /// the y-coordinate of the domain $Q$.
-    pub(crate) q_sinsemilla4: Selector,
+    q_sinsemilla4: Selector,
     /// Fixed column used to load the y-coordinate of the domain $Q$.
-    pub(crate) fixed_y_q: Column<Fixed>,
+    fixed_y_q: Column<Fixed>,
     /// Logic specific to merged double-and-add.
-    pub(crate) double_and_add: DoubleAndAdd,
+    double_and_add: DoubleAndAdd,
     /// Advice column used to load the message.
-    pub(crate) bits: Column<Advice>,
+    bits: Column<Advice>,
     /// Advice column used to witness message pieces. This may or may not be the same
     /// column as `bits`.
-    pub(crate) witness_pieces: Column<Advice>,
+    witness_pieces: Column<Advice>,
     /// The lookup table where $(\mathsf{idx}, x_p, y_p)$ are loaded for the $2^K$
     /// generators of the Sinsemilla hash.
-    pub(crate) generator_table: GeneratorTableConfig,
+    pub(super) generator_table: GeneratorTableConfig,
     /// An advice column configured to perform lookup range checks.
-    pub(crate) lookup_config: Lookup,
-    pub(crate) _marker: PhantomData<(Hash, Commit, F)>,
+    lookup_config: Lookup,
+    _marker: PhantomData<(Hash, Commit, F)>,
 }
 
 impl<Hash, Commit, F, Lookup> SinsemillaConfig<Hash, Commit, F, Lookup>
@@ -149,8 +149,79 @@ where
         config.generator_table.load(layouter)
     }
 
+    /// # Side-effects
+    ///
+    /// All columns in `advices` and will be equality-enabled.
+    #[allow(clippy::too_many_arguments)]
     #[allow(non_snake_case)]
-    pub(crate) fn create_initial_y_q_gate(
+    pub fn configure(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        advices: [Column<Advice>; 5],
+        witness_pieces: Column<Advice>,
+        fixed_y_q: Column<Fixed>,
+        lookup: (TableColumn, TableColumn, TableColumn),
+        range_check: Lookup,
+    ) -> <Self as Chip<pallas::Base>>::Config {
+        // create SinsemillaConfig
+        let config = Self::create_config(
+            meta,
+            advices,
+            witness_pieces,
+            fixed_y_q,
+            lookup,
+            range_check,
+        );
+
+        Self::create_initial_y_q_gate(meta, &config);
+
+        Self::create_sinsemilla_gate(meta, &config);
+
+        config
+    }
+
+    pub(crate) fn create_config(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        advices: [Column<Advice>; 5],
+        witness_pieces: Column<Advice>,
+        fixed_y_q: Column<Fixed>,
+        lookup: (TableColumn, TableColumn, TableColumn),
+        range_check: Lookup,
+    ) -> <Self as Chip<pallas::Base>>::Config {
+        // Enable equality on all advice columns
+        for advice in advices.iter() {
+            meta.enable_equality(*advice);
+        }
+
+        let config = SinsemillaConfig::<Hash, Commit, F, Lookup> {
+            q_sinsemilla1: meta.complex_selector(),
+            q_sinsemilla2: meta.fixed_column(),
+            q_sinsemilla4: meta.selector(),
+            fixed_y_q,
+            double_and_add: DoubleAndAdd {
+                x_a: advices[0],
+                x_p: advices[1],
+                lambda_1: advices[3],
+                lambda_2: advices[4],
+            },
+            bits: advices[2],
+            witness_pieces,
+            generator_table: GeneratorTableConfig {
+                table_idx: lookup.0,
+                table_x: lookup.1,
+                table_y: lookup.2,
+            },
+            lookup_config: range_check,
+            _marker: PhantomData,
+        };
+
+        // Set up lookup argument
+        GeneratorTableConfig::configure(meta, &config);
+
+        config
+    }
+
+    #[allow(non_snake_case)]
+    fn create_initial_y_q_gate(
         meta: &mut ConstraintSystem<pallas::Base>,
         config: &SinsemillaConfig<Hash, Commit, F, Lookup>,
     ) {
@@ -239,77 +310,6 @@ where
 
             Constraints::with_selector(q_s1, [("Secant line", secant_line), ("y check", y_check)])
         });
-    }
-
-    pub(crate) fn create_config(
-        meta: &mut ConstraintSystem<pallas::Base>,
-        advices: [Column<Advice>; 5],
-        witness_pieces: Column<Advice>,
-        fixed_y_q: Column<Fixed>,
-        lookup: (TableColumn, TableColumn, TableColumn),
-        range_check: Lookup,
-    ) -> <Self as Chip<pallas::Base>>::Config {
-        // Enable equality on all advice columns
-        for advice in advices.iter() {
-            meta.enable_equality(*advice);
-        }
-
-        let config = SinsemillaConfig::<Hash, Commit, F, Lookup> {
-            q_sinsemilla1: meta.complex_selector(),
-            q_sinsemilla2: meta.fixed_column(),
-            q_sinsemilla4: meta.selector(),
-            fixed_y_q,
-            double_and_add: DoubleAndAdd {
-                x_a: advices[0],
-                x_p: advices[1],
-                lambda_1: advices[3],
-                lambda_2: advices[4],
-            },
-            bits: advices[2],
-            witness_pieces,
-            generator_table: GeneratorTableConfig {
-                table_idx: lookup.0,
-                table_x: lookup.1,
-                table_y: lookup.2,
-            },
-            lookup_config: range_check,
-            _marker: PhantomData,
-        };
-
-        // Set up lookup argument
-        GeneratorTableConfig::configure(meta, &config);
-
-        config
-    }
-
-    /// # Side-effects
-    ///
-    /// All columns in `advices` and will be equality-enabled.
-    #[allow(clippy::too_many_arguments)]
-    #[allow(non_snake_case)]
-    pub fn configure(
-        meta: &mut ConstraintSystem<pallas::Base>,
-        advices: [Column<Advice>; 5],
-        witness_pieces: Column<Advice>,
-        fixed_y_q: Column<Fixed>,
-        lookup: (TableColumn, TableColumn, TableColumn),
-        range_check: Lookup,
-    ) -> <Self as Chip<pallas::Base>>::Config {
-        // create SinsemillaConfig
-        let config = Self::create_config(
-            meta,
-            advices,
-            witness_pieces,
-            fixed_y_q,
-            lookup,
-            range_check,
-        );
-
-        Self::create_initial_y_q_gate(meta, &config);
-
-        Self::create_sinsemilla_gate(meta, &config);
-
-        config
     }
 }
 

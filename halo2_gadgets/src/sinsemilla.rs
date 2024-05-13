@@ -15,7 +15,7 @@ use std::fmt::Debug;
 
 pub mod chip;
 pub mod merkle;
-pub(crate) mod message;
+mod message;
 pub mod primitives;
 
 /// The set of circuit instructions required to use the [`Sinsemilla`](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html) gadget.
@@ -102,8 +102,8 @@ pub struct Message<C: CurveAffine, SinsemillaChip, const K: usize, const MAX_WOR
 where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
 {
-    pub(crate) chip: SinsemillaChip,
-    pub(crate) inner: SinsemillaChip::Message,
+    chip: SinsemillaChip,
+    inner: SinsemillaChip::Message,
 }
 
 impl<C: CurveAffine, SinsemillaChip, const K: usize, const MAX_WORDS: usize>
@@ -112,7 +112,7 @@ where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
 {
     #![allow(dead_code)]
-    pub(crate) fn from_bitstring(
+    fn from_bitstring(
         chip: SinsemillaChip,
         mut layouter: impl Layouter<C::Base>,
         bitstring: Vec<Value<bool>>,
@@ -186,7 +186,7 @@ where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
 {
     #![allow(dead_code)]
-    pub(crate) fn from_bitstring(
+    fn from_bitstring(
         chip: SinsemillaChip,
         layouter: impl Layouter<C::Base>,
         bitstring: &[Value<bool>],
@@ -276,23 +276,22 @@ pub struct HashDomain<
 > where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
     EccChip: EccInstructions<
-        C,
-        NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
-        FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
-    > + Clone
-    + Debug
-    + Eq,
+            C,
+            NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
+            FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
+        > + Clone
+        + Debug
+        + Eq,
 {
-    pub(crate) sinsemilla_chip: SinsemillaChip,
-    pub(crate) ecc_chip: EccChip,
-    pub(crate) Q: C,
+    sinsemilla_chip: SinsemillaChip,
+    ecc_chip: EccChip,
+    Q: C,
 }
 
 impl<C: CurveAffine, SinsemillaChip, EccChip, const K: usize, const MAX_WORDS: usize>
-HashDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>
-    where
-        SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
-        EccChip: EccInstructions<
+    HashDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS> where
+    SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
+    EccChip: EccInstructions<
             C,
             NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
             FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
@@ -376,22 +375,21 @@ pub struct CommitDomain<
 > where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
     EccChip: EccInstructions<
-        C,
-        NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
-        FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
-    > + Clone
-    + Debug
-    + Eq,
+            C,
+            NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
+            FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
+        > + Clone
+        + Debug
+        + Eq,
 {
-    pub(crate) M: HashDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>,
-    pub(crate) R: ecc::FixedPoint<C, EccChip>,
+    M: HashDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>,
+    R: ecc::FixedPoint<C, EccChip>,
 }
 
 impl<C: CurveAffine, SinsemillaChip, EccChip, const K: usize, const MAX_WORDS: usize>
-CommitDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>
-    where
-        SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
-        EccChip: EccInstructions<
+    CommitDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS> where
+    SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
+    EccChip: EccInstructions<
             C,
             NonIdentityPoint = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
             FixedPoints = <SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::FixedPoints,
