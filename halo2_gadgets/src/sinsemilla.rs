@@ -289,7 +289,8 @@ pub struct HashDomain<
 }
 
 impl<C: CurveAffine, SinsemillaChip, EccChip, const K: usize, const MAX_WORDS: usize>
-    HashDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS> where
+    HashDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>
+    where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
     EccChip: EccInstructions<
             C,
@@ -387,7 +388,8 @@ pub struct CommitDomain<
 }
 
 impl<C: CurveAffine, SinsemillaChip, EccChip, const K: usize, const MAX_WORDS: usize>
-    CommitDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS> where
+    CommitDomain<C, SinsemillaChip, EccChip, K, MAX_WORDS>
+    where
     SinsemillaChip: SinsemillaInstructions<C, K, MAX_WORDS> + Clone + Debug + Eq,
     EccChip: EccInstructions<
             C,
