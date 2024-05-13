@@ -65,7 +65,7 @@ where
     /// | offset | x_A | q_sinsemilla4 | fixed_y_q |
     /// --------------------------------------
     /// |   0    | x_Q |   1           |   y_Q     |
-    pub(crate) fn public_initialization(
+    fn public_initialization(
         &self,
         region: &mut Region<'_, pallas::Base>,
         Q: pallas::Affine,
@@ -109,7 +109,7 @@ where
 
     #[allow(clippy::type_complexity)]
     /// Hash `message` from the initial point `Q`.
-    pub(crate) fn hash_all_pieces(
+    fn hash_all_pieces(
         &self,
         region: &mut Region<'_, pallas::Base>,
         mut offset: usize,
@@ -180,7 +180,9 @@ where
     }
 
     #[allow(unused_variables)]
-    pub(crate) fn check_hash_result(
+    #[allow(non_snake_case)]
+    #[allow(clippy::type_complexity)]
+    fn check_hash_result(
         &self,
         Q: EccPointQ,
         message: &<Self as SinsemillaInstructions<
@@ -199,7 +201,6 @@ where
         Error,
     > {
         #[cfg(test)]
-        #[allow(non_snake_case)]
         // Check equivalence to result from primitives::sinsemilla::hash_to_point
         {
             use crate::sinsemilla::primitives::{K, S_PERSONALIZATION};

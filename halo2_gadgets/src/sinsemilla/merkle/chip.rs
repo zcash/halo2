@@ -35,10 +35,10 @@ where
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
     Lookup: DefaultLookupRangeCheck,
 {
-    pub(crate) advices: [Column<Advice>; 5],
-    pub(crate) q_decompose: Selector,
-    pub(crate) cond_swap_config: CondSwapConfig,
-    pub(crate) sinsemilla_config: SinsemillaConfig<Hash, Commit, Fixed, Lookup>,
+    advices: [Column<Advice>; 5],
+    q_decompose: Selector,
+    pub(super) cond_swap_config: CondSwapConfig,
+    pub(super) sinsemilla_config: SinsemillaConfig<Hash, Commit, Fixed, Lookup>,
 }
 
 /// Chip implementing `MerkleInstructions`.
@@ -59,7 +59,7 @@ where
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
     Lookup: DefaultLookupRangeCheck,
 {
-    pub(crate) config: MerkleConfig<Hash, Commit, Fixed, Lookup>,
+    config: MerkleConfig<Hash, Commit, Fixed, Lookup>,
 }
 
 impl<Hash, Commit, Fixed, Lookup> Chip<pallas::Base> for MerkleChip<Hash, Commit, Fixed, Lookup>

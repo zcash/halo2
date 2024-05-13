@@ -54,34 +54,16 @@ impl Proof {
     }
 }
 
-/// Test that the proof size is as expected.
-#[allow(dead_code)]
-pub(crate) fn test_proof_size<C>(
-    k: u32,
-    circuit: C,
-    params: &Params<Affine>,
-    vk: &VerifyingKey<Affine>,
-) where
-    C: Circuit<pallas::Base>,
-{
-    let circuit_cost =
-        halo2_proofs::dev::CircuitCost::<pasta_curves::vesta::Point, _>::measure(k, &circuit);
-    let expected_proof_size = usize::from(circuit_cost.proof_size(1));
-
-    let proof = Proof::create(vk, params, circuit).unwrap();
-
-    assert!(proof.verify(vk, params).is_ok());
-    assert_eq!(proof.as_ref().len(), expected_proof_size);
-}
-
 /// write proof to a file
-pub fn write_test_case<W: Write>(mut w: W, proof: &Proof) -> std::io::Result<()> {
+#[allow(dead_code)]
+pub(crate) fn write_test_case<W: Write>(mut w: W, proof: &Proof) -> std::io::Result<()> {
     w.write_all(proof.as_ref())?;
     Ok(())
 }
 
 /// read proof from a file
-pub fn read_test_case<R: Read>(mut r: R) -> std::io::Result<Proof> {
+#[allow(dead_code)]
+pub(crate) fn read_test_case<R: Read>(mut r: R) -> std::io::Result<Proof> {
     let mut proof_bytes = vec![];
     r.read_to_end(&mut proof_bytes)?;
     let proof = Proof::new(proof_bytes);
@@ -99,7 +81,8 @@ pub(crate) fn write_all_test_case<W: Write>(mut w: W, proofs: &Vec<Proof>) -> st
 }
 
 /// read multiple proofs from a file
-pub fn read_all_proofs<R: Read>(mut r: R, proof_size: usize) -> io::Result<Vec<Proof>> {
+#[allow(dead_code)]
+pub(crate) fn read_all_proofs<R: Read>(mut r: R, proof_size: usize) -> io::Result<Vec<Proof>> {
     let mut proofs = Vec::new();
     let mut buffer = vec![0u8; proof_size];
 

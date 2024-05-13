@@ -56,7 +56,7 @@ fn extract_p_bottom(point: CtOption<pallas::Point>) -> CtOption<pallas::Base> {
 
 /// Pads the given iterator (which MUST have length $\leq K * C$) with zero-bits to a
 /// multiple of $K$ bits.
-pub(crate) struct Pad<I: Iterator<Item = bool>> {
+struct Pad<I: Iterator<Item = bool>> {
     /// The iterator we are padding.
     inner: I,
     /// The measured length of the inner iterator.
@@ -184,8 +184,8 @@ impl HashDomain {
 #[derive(Debug)]
 #[allow(non_snake_case)]
 pub struct CommitDomain {
-    pub(crate) M: HashDomain,
-    pub(crate) R: pallas::Point,
+    M: HashDomain,
+    R: pallas::Point,
 }
 
 impl CommitDomain {

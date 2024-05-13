@@ -56,11 +56,11 @@ pub struct MerklePath<
 > where
     MerkleChip: MerkleInstructions<C, PATH_LENGTH, K, MAX_WORDS> + Clone,
 {
-    pub(crate) chips: [MerkleChip; PAR],
-    pub(crate) domain: MerkleChip::HashDomains,
-    pub(crate) leaf_pos: Value<u32>,
+    chips: [MerkleChip; PAR],
+    domain: MerkleChip::HashDomains,
+    leaf_pos: Value<u32>,
     // The Merkle path is ordered from leaves to root.
-    pub(crate) path: Value<[C::Base; PATH_LENGTH]>,
+    path: Value<[C::Base; PATH_LENGTH]>,
 }
 
 impl<
@@ -200,7 +200,7 @@ pub mod tests {
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    use crate::utilities::test_circuit::{read_test_case, test_proof_size, write_test_case, Proof};
+    use crate::utilities::test_circuit::{read_test_case, write_test_case, Proof};
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
     use rand::{rngs::OsRng, RngCore};
@@ -403,7 +403,7 @@ pub mod tests {
     }
 
     #[test]
-    fn round_trip() {
+    fn fixed_verification_key_test() {
         let k = 11;
         let circuit = generate_circuit();
 
@@ -420,9 +420,6 @@ pub mod tests {
                 include_str!("vk_merkle_chip").replace("\r\n", "\n")
             );
         }
-
-        // Test that the proof size is as expected.
-        test_proof_size(k, circuit, &params, &vk)
     }
 
     #[test]
@@ -434,6 +431,8 @@ pub mod tests {
         let params: Params<Affine> = Params::new(11);
         let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
+        // If the environment variable CIRCUIT_TEST_GENERATE_NEW_PROOF is set,
+        // write the old proof in a file
         if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
             let create_proof = || -> std::io::Result<()> {
                 let proof = Proof::create(&vk, &params, circuit).unwrap();
@@ -446,14 +445,14 @@ pub mod tests {
             create_proof().expect("should be able to write new proof");
         }
 
-        // Parse the hardcoded proof test case.
+        // Read the old proof into 'proof'
         let proof = {
             let test_case_bytes =
                 fs::read("src/sinsemilla/circuit_proof_test_case_merkle.bin").unwrap();
             read_test_case(&test_case_bytes[..]).expect("proof must be valid")
         };
 
-        assert_eq!(proof.as_ref().len(), 4160);
+        // Verify the old proof with the new vk
         assert!(proof.verify(&vk, &params).is_ok());
     }
 

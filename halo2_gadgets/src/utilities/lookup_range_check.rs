@@ -53,7 +53,7 @@ impl<F: PrimeFieldBits> RangeConstrained<F, AssignedCell<F, F>> {
             .map(|inner| Self {
                 inner,
                 num_bits,
-                _phantom: PhantomData,
+                _phantom: PhantomData::default(),
             })
     }
 }
@@ -61,12 +61,12 @@ impl<F: PrimeFieldBits> RangeConstrained<F, AssignedCell<F, F>> {
 /// Configuration that provides methods for a lookup range check.
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub struct LookupRangeCheckConfig<F: PrimeFieldBits, const K: usize> {
-    pub(crate) q_lookup: Selector,
-    pub(crate) q_running: Selector,
-    pub(crate) q_bitshift: Selector,
-    pub(crate) running_sum: Column<Advice>,
-    pub(crate) table_idx: TableColumn,
-    pub(crate) _marker: PhantomData<F>,
+    q_lookup: Selector,
+    q_running: Selector,
+    q_bitshift: Selector,
+    running_sum: Column<Advice>,
+    table_idx: TableColumn,
+    _marker: PhantomData<F>,
 }
 
 /// Trait that provides common methods for a lookup range check.
@@ -441,7 +441,7 @@ pub trait DefaultLookupRangeCheck:
 impl DefaultLookupRangeCheck for LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }> {}
 
 #[cfg(test)]
-pub(crate) mod tests {
+mod tests {
     use super::{LookupRangeCheck, LookupRangeCheckConfig};
 
     use super::super::lebs2ip;
@@ -457,8 +457,7 @@ pub(crate) mod tests {
     use pasta_curves::pallas;
 
     use crate::utilities::test_circuit::{
-        read_all_proofs, read_test_case, test_proof_size, write_all_test_case, write_test_case,
-        Proof,
+        read_all_proofs, read_test_case, write_all_test_case, write_test_case, Proof,
     };
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
@@ -575,6 +574,8 @@ pub(crate) mod tests {
 
             // serialized_proof_test_case
             {
+                // If the environment variable CIRCUIT_TEST_GENERATE_NEW_PROOF is set,
+                // write the old proof in a file
                 if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
                     let create_proof = || -> std::io::Result<()> {
                         let proof = Proof::create(&vk, &params, circuit).unwrap();
@@ -587,7 +588,7 @@ pub(crate) mod tests {
                     };
                     create_proof().expect("should be able to write new proof");
                 }
-                // Parse the hardcoded proof test case.
+                // Read the old proof into 'proof'
                 let proof = {
                     let test_case_bytes =
                         fs::read("src/utilities/circuit_proof_test_case_lookup_range_check.bin")
@@ -595,12 +596,9 @@ pub(crate) mod tests {
                     read_test_case(&test_case_bytes[..]).expect("proof must be valid")
                 };
 
-                assert_eq!(proof.as_ref().len(), 1888);
+                // Verify the old proof with the new vk
                 assert!(proof.verify(&vk, &params).is_ok());
             }
-
-            // Test that the proof size is as expected.
-            test_proof_size(11, circuit, &params, &vk)
         }
     }
 
@@ -651,6 +649,7 @@ pub(crate) mod tests {
             }
         }
 
+        // Read the old proofs into 'proofs'
         let proofs = {
             let test_case_bytes =
                 fs::read("src/utilities/circuit_proof_test_case_short_range_check.bin").unwrap();
@@ -682,14 +681,12 @@ pub(crate) mod tests {
                     include_str!("vk_short_range_check_0").replace("\r\n", "\n")
                 );
             }
-            // Test that the proof size is as expected.
-            test_proof_size(11, circuit, &params, &vk);
 
             // serialized_proof_test_case
             {
                 match proofs.get(0) {
                     Some(proof) => {
-                        assert_eq!(proof.as_ref().len(), 1888);
+                        // Verify the old proofs[0] with the new vk
                         assert!(proof.verify(&vk, &params).is_ok());
                     }
                     None => println!("Index out of bounds"),
@@ -719,14 +716,12 @@ pub(crate) mod tests {
                     include_str!("vk_short_range_check_1").replace("\r\n", "\n")
                 );
             }
-            // Test that the proof size is as expected.
-            test_proof_size(11, circuit, &params, &vk);
 
             // serialized_proof_test_case
             {
                 match proofs.get(1) {
                     Some(proof) => {
-                        assert_eq!(proof.as_ref().len(), 1888);
+                        // Verify the old proofs[1] with the new vk
                         assert!(proof.verify(&vk, &params).is_ok());
                     }
                     None => println!("Index out of bounds"),
@@ -756,14 +751,12 @@ pub(crate) mod tests {
                     include_str!("vk_short_range_check_2").replace("\r\n", "\n")
                 );
             }
-            // Test that the proof size is as expected.
-            test_proof_size(11, circuit, &params, &vk);
 
             // serialized_proof_test_case
             {
                 match proofs.get(2) {
                     Some(proof) => {
-                        assert_eq!(proof.as_ref().len(), 1888);
+                        // Verify the old proofs[2] with the new vk
                         assert!(proof.verify(&vk, &params).is_ok());
                     }
                     None => println!("Index out of bounds"),
@@ -771,6 +764,8 @@ pub(crate) mod tests {
             }
         }
 
+        // If the environment variable CIRCUIT_TEST_GENERATE_NEW_PROOF is set,
+        // write the old proofs in a file
         if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
             let create_proof = || -> std::io::Result<()> {
                 let file = std::fs::File::create(

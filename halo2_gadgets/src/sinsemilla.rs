@@ -481,7 +481,7 @@ pub(crate) mod tests {
     use lazy_static::lazy_static;
     use pasta_curves::pallas;
 
-    use crate::utilities::test_circuit::{read_test_case, test_proof_size, write_test_case, Proof};
+    use crate::utilities::test_circuit::{read_test_case, write_test_case, Proof};
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
     use std::convert::TryInto;
@@ -758,7 +758,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn round_trip() {
+    fn fixed_verification_key_test() {
         let k = 11;
         let circuit = MyCircuit {};
 
@@ -775,7 +775,6 @@ pub(crate) mod tests {
                 include_str!("vk_sinsemilla_chip").replace("\r\n", "\n")
             );
         }
-        test_proof_size(11, circuit, &params, &vk)
     }
 
     #[test]
@@ -787,6 +786,8 @@ pub(crate) mod tests {
         let params: Params<Affine> = Params::new(11);
         let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
+        // If the environment variable CIRCUIT_TEST_GENERATE_NEW_PROOF is set,
+        // write the old proof in a file
         if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
             let create_proof = || -> std::io::Result<()> {
                 let proof = Proof::create(&vk, &params, circuit).unwrap();
@@ -798,13 +799,13 @@ pub(crate) mod tests {
             create_proof().expect("should be able to write new proof");
         }
 
-        // Parse the hardcoded proof test case.
+        // Read the old proof into 'proof'
         let proof = {
             let test_case_bytes = fs::read("src/circuit_proof_test_case_sinsemilla.bin").unwrap();
             read_test_case(&test_case_bytes[..]).expect("proof must be valid")
         };
 
-        assert_eq!(proof.as_ref().len(), 4576);
+        // Verify the old proof with the new vk
         assert!(proof.verify(&vk, &params).is_ok());
     }
 

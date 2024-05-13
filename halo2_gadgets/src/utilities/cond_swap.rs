@@ -29,7 +29,7 @@ pub trait CondSwapInstructions<F: Field>: UtilitiesInstructions<F> {
 /// A chip implementing a conditional swap.
 #[derive(Clone, Debug)]
 pub struct CondSwapChip<F> {
-    pub(crate) config: CondSwapConfig,
+    config: CondSwapConfig,
     _marker: PhantomData<F>,
 }
 
@@ -49,12 +49,12 @@ impl<F: Field> Chip<F> for CondSwapChip<F> {
 /// Configuration for the [`CondSwapChip`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CondSwapConfig {
-    pub(crate) q_swap: Selector,
-    pub(crate) a: Column<Advice>,
-    pub(crate) b: Column<Advice>,
-    pub(crate) a_swapped: Column<Advice>,
-    pub(crate) b_swapped: Column<Advice>,
-    pub(crate) swap: Column<Advice>,
+    q_swap: Selector,
+    a: Column<Advice>,
+    b: Column<Advice>,
+    a_swapped: Column<Advice>,
+    b_swapped: Column<Advice>,
+    swap: Column<Advice>,
 }
 
 #[cfg(test)]
