@@ -25,10 +25,6 @@ pub enum EccPointQ<'a> {
     PrivatePoint(&'a NonIdentityEccPoint),
 }
 
-type HashOutput = NonIdentityEccPoint;
-type CellMatrix = Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>;
-type HashResult = Result<(HashOutput, CellMatrix), Error>;
-
 impl<Hash, Commit, Fixed, Lookup> SinsemillaChip<Hash, Commit, Fixed, Lookup>
 where
     Hash: HashDomains<pallas::Affine>,
@@ -48,7 +44,13 @@ where
             { sinsemilla::K },
             { sinsemilla::C },
         >>::Message,
-    ) -> HashResult {
+    ) -> Result<
+        (
+            NonIdentityEccPoint,
+            Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
+        ),
+        Error,
+    > {
         let (offset, x_a, y_a) = self.public_initialization(region, Q)?;
 
         let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
@@ -177,9 +179,7 @@ where
         Ok((x_a, y_a, zs_sum))
     }
 
-    #[allow(non_snake_case)]
     #[allow(unused_variables)]
-    // Check equivalence to result from primitives::sinsemilla::hash_to_point
     pub(crate) fn check_hash_result(
         &self,
         Q: EccPointQ,
@@ -191,8 +191,16 @@ where
         x_a: X<pallas::Base>,
         y_a: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
         zs_sum: Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
-    ) -> HashResult {
+    ) -> Result<
+        (
+            NonIdentityEccPoint,
+            Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
+        ),
+        Error,
+    > {
         #[cfg(test)]
+        #[allow(non_snake_case)]
+        // Check equivalence to result from primitives::sinsemilla::hash_to_point
         {
             use crate::sinsemilla::primitives::{K, S_PERSONALIZATION};
 
@@ -452,7 +460,7 @@ where
 }
 
 /// The x-coordinate of the accumulator in a Sinsemilla hash instance.
-pub(crate) struct X<F: Field>(pub(crate) AssignedCell<Assigned<F>, F>);
+struct X<F: Field>(AssignedCell<Assigned<F>, F>);
 
 impl<F: Field> From<AssignedCell<Assigned<F>, F>> for X<F> {
     fn from(cell_value: AssignedCell<Assigned<F>, F>) -> Self {
@@ -473,7 +481,7 @@ impl<F: Field> Deref for X<F> {
 /// This is never actually witnessed until the last round, since it
 /// can be derived from other variables. Thus it only exists as a field
 /// element, not a `CellValue`.
-pub(crate) struct Y<F: Field>(pub(crate) Value<Assigned<F>>);
+struct Y<F: Field>(Value<Assigned<F>>);
 
 impl<F: Field> From<Value<Assigned<F>>> for Y<F> {
     fn from(value: Value<Assigned<F>>) -> Self {
