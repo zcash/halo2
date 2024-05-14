@@ -468,7 +468,7 @@ mod tests {
     use pasta_curves::pallas;
 
     use crate::utilities::test_circuit::{
-        read_all_proofs, read_test_case, write_all_test_case, write_test_case, Proof,
+        conditionally_save_circuit_to_disk, read_all_proofs, read_test_case, write_all_test_case,
     };
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
@@ -582,20 +582,13 @@ mod tests {
 
             // serialized_proof_test_case
             {
-                // If the environment variable CIRCUIT_TEST_GENERATE_NEW_PROOF is set,
-                // write the old proof in a file
-                if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
-                    let create_proof = || -> std::io::Result<()> {
-                        let proof = Proof::create(&vk, &params, circuit).unwrap();
-                        assert!(proof.verify(&vk, &params).is_ok());
+                conditionally_save_circuit_to_disk(
+                    &vk,
+                    &params,
+                    circuit,
+                    "src/utilities/circuit_proof_test_case_lookup_range_check.bin",
+                );
 
-                        let file = std::fs::File::create(
-                            "src/utilities/circuit_proof_test_case_lookup_range_check.bin",
-                        )?;
-                        write_test_case(file, &proof)
-                    };
-                    create_proof().expect("should be able to write new proof");
-                }
                 // read proof from disk
                 let proof = {
                     let test_case_bytes =

@@ -599,7 +599,7 @@ pub(crate) mod tests {
         FixedPoints,
     };
     use crate::utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig};
-    use crate::utilities::test_circuit::{read_test_case, write_test_case, Proof};
+    use crate::utilities::test_circuit::{conditionally_save_circuit_to_disk, read_test_case};
 
     #[derive(Debug, Eq, PartialEq, Clone)]
     pub(crate) struct TestFixedBases;
@@ -937,18 +937,12 @@ pub(crate) mod tests {
         let params: Params<Affine> = Params::new(11);
         let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
-        // If the environment variable CIRCUIT_TEST_GENERATE_NEW_PROOF is set,
-        // write the old proof in a file
-        if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
-            let create_proof = || -> std::io::Result<()> {
-                let proof = Proof::create(&vk, &params, circuit).unwrap();
-                assert!(proof.verify(&vk, &params).is_ok());
-
-                let file = std::fs::File::create("src/circuit_proof_test_case_ecc.bin")?;
-                write_test_case(file, &proof)
-            };
-            create_proof().expect("should be able to write new proof");
-        }
+        conditionally_save_circuit_to_disk(
+            &vk,
+            &params,
+            circuit,
+            "src/circuit_proof_test_case_ecc.bin",
+        );
 
         // read proof from disk
         let proof = {

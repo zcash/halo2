@@ -91,3 +91,24 @@ pub(crate) fn read_all_proofs<R: Read>(mut r: R, proof_size: usize) -> io::Resul
     }
     Ok(proofs)
 }
+
+#[cfg(test)]
+pub(crate) fn conditionally_save_circuit_to_disk<C: Circuit<pallas::Base>>(
+    vk: &VerifyingKey<Affine>,
+    params: &Params<Affine>,
+    circuit: C,
+    file_name: &str,
+) {
+    // If the environment variable CIRCUIT_TEST_GENERATE_NEW_PROOF is set,
+    // write the old proof in a file
+    if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
+        let create_proof = || -> std::io::Result<()> {
+            let proof = Proof::create(vk, params, circuit).unwrap();
+            assert!(proof.verify(vk, params).is_ok());
+
+            let file = std::fs::File::create(file_name)?;
+            write_test_case(file, &proof)
+        };
+        create_proof().expect("should be able to write new proof");
+    }
+}
