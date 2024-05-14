@@ -119,7 +119,7 @@ pub(crate) fn test_serialized_proof_with_vk<C: Circuit<pallas::Base>>(
     };
 
     // Verify the old proof with the new vk
-    assert!(proof.verify(&vk, &params).is_ok());
+    assert!(proof.verify(&vk, params).is_ok());
 }
 
 #[cfg(test)]
