@@ -14,8 +14,8 @@ description = """
 Halo2 frontend implementation.  This package implements an API to write circuits, handles witness generation and contains the MockProver.
 """
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/zcash/halo2"
-documentation = "https://docs.rs/halo2_proofs"
+repository = "https://github.com/privacy-scaling-explorations/halo2"
+documentation = "https://privacy-scaling-explorations.github.io/halo2/"
 readme = "README.md"
 categories = ["cryptography"]
 keywords = ["halo", "proofs", "zkp", "zkSNARKs"]
