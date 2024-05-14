@@ -81,25 +81,6 @@ fn read_test_case<R: Read>(mut r: R) -> io::Result<Proof> {
     Ok(proof)
 }
 
-/// write multiple proofs to a file
-pub(crate) fn write_all_test_case<W: Write>(mut w: W, proofs: &Vec<Proof>) -> io::Result<()> {
-    for proof in proofs {
-        w.write_all(proof.as_ref())?;
-    }
-    Ok(())
-}
-
-/// read multiple proofs from a file
-pub(crate) fn read_all_proofs<R: Read>(mut r: R, proof_size: usize) -> io::Result<Vec<Proof>> {
-    let mut proofs = Vec::new();
-    let mut buffer = vec![0u8; proof_size];
-
-    while let Ok(()) = r.read_exact(&mut buffer) {
-        proofs.push(Proof::new(buffer.clone()));
-    }
-    Ok(proofs)
-}
-
 pub(crate) fn conditionally_save_proof_to_disk<C: Circuit<pallas::Base>>(
     vk: &VerifyingKey<Affine>,
     params: &Params<Affine>,
@@ -126,7 +107,6 @@ pub(crate) fn serialized_proof_test_case_with_circuit<C: Circuit<pallas::Base>>(
 ) {
     // Setup phase: generate parameters, vk for the circuit.
     let params: Params<Affine> = Params::new(11);
-
     let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
     // Conditionally save proof to disk

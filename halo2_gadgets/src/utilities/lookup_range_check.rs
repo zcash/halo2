@@ -467,12 +467,10 @@ mod tests {
     };
     use pasta_curves::pallas;
 
-    use crate::tests::circuit::{
-        read_all_proofs, serialized_proof_test_case_with_circuit, write_all_test_case,
-    };
+    use crate::tests::circuit::serialized_proof_test_case_with_circuit;
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
-    use std::{convert::TryInto, fs, marker::PhantomData};
+    use std::{convert::TryInto, marker::PhantomData};
 
     #[test]
     fn lookup_range_check() {
@@ -633,13 +631,6 @@ mod tests {
             }
         }
 
-        // read proof from disk
-        let proofs = {
-            let test_case_bytes =
-                fs::read("src/tests/circuit_proof_test_case_short_range_check.bin").unwrap();
-            read_all_proofs(&test_case_bytes[..], 1888).expect("proof must be valid")
-        };
-
         // Setup phase: generate parameters
         let params: Params<Affine> = Params::new(11);
 
@@ -663,15 +654,8 @@ mod tests {
             );
 
             // serialized_proof_test_case
-            {
-                match proofs.get(0) {
-                    Some(proof) => {
-                        // Verify the stored proof (case 0) against the generated vk
-                        assert!(proof.verify(&vk, &params).is_ok());
-                    }
-                    None => println!("Index out of bounds"),
-                }
-            }
+            let file_name = "src/tests/circuit_proof_test_case_short_range_check_0.bin";
+            serialized_proof_test_case_with_circuit(circuit, file_name);
         }
 
         // Edge case: K bits (case 1)
@@ -694,15 +678,8 @@ mod tests {
             );
 
             // serialized_proof_test_case
-            {
-                match proofs.get(1) {
-                    Some(proof) => {
-                        // Verify the stored proof (case 1) against the generated vk
-                        assert!(proof.verify(&vk, &params).is_ok());
-                    }
-                    None => println!("Index out of bounds"),
-                }
-            }
+            let file_name = "src/tests/circuit_proof_test_case_short_range_check_1.bin";
+            serialized_proof_test_case_with_circuit(circuit, file_name);
         }
 
         // Element within `num_bits` (case 2)
@@ -725,27 +702,8 @@ mod tests {
             );
 
             // serialized_proof_test_case
-            {
-                match proofs.get(2) {
-                    Some(proof) => {
-                        // Verify the stored proof (case 2) against the generated vk
-                        assert!(proof.verify(&vk, &params).is_ok());
-                    }
-                    None => println!("Index out of bounds"),
-                }
-            }
-        }
-
-        // If the environment variable CIRCUIT_TEST_GENERATE_NEW_PROOF is set,
-        // write the old proofs in a file
-        if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
-            let create_proof = || -> std::io::Result<()> {
-                let file = std::fs::File::create(
-                    "src/tests/circuit_proof_test_case_short_range_check.bin",
-                )?;
-                write_all_test_case(file, &proofs)
-            };
-            create_proof().expect("should be able to write new proof");
+            let file_name = "src/tests/circuit_proof_test_case_short_range_check_2.bin";
+            serialized_proof_test_case_with_circuit(circuit, file_name);
         }
 
         // Element larger than `num_bits` but within K bits
