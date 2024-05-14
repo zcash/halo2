@@ -1,15 +1,26 @@
 //! functions used for circuit test
 
-use halo2_proofs::plonk;
-use halo2_proofs::plonk::{Circuit, SingleVerifier, VerifyingKey};
-use halo2_proofs::poly::commitment::Params;
-use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite};
-use pasta_curves::vesta::Affine;
-use pasta_curves::{pallas, vesta};
+use std::{
+    env, fs,
+    io::{
+        self, {Read, Write},
+    },
+};
+
 use rand::rngs::OsRng;
-use std::io::{Read, Write};
-#[allow(unused_imports)]
-use std::{fs, io};
+
+use pasta_curves::{
+    vesta::Affine,
+    {pallas, vesta},
+};
+
+use halo2_proofs::{
+    plonk::{
+        self, {Circuit, SingleVerifier, VerifyingKey},
+    },
+    poly::commitment::Params,
+    transcript::{Blake2bRead, Blake2bWrite},
+};
 
 /// A proof structure
 #[derive(Clone, Debug)]
@@ -56,15 +67,13 @@ impl Proof {
 }
 
 /// write proof to a file
-#[allow(dead_code)]
-pub(crate) fn write_test_case<W: Write>(mut w: W, proof: &Proof) -> std::io::Result<()> {
+fn write_test_case<W: Write>(mut w: W, proof: &Proof) -> io::Result<()> {
     w.write_all(proof.as_ref())?;
     Ok(())
 }
 
 /// read proof from a file
-#[allow(dead_code)]
-pub(crate) fn read_test_case<R: Read>(mut r: R) -> std::io::Result<Proof> {
+fn read_test_case<R: Read>(mut r: R) -> io::Result<Proof> {
     let mut proof_bytes = vec![];
     r.read_to_end(&mut proof_bytes)?;
     let proof = Proof::new(proof_bytes);
@@ -73,8 +82,7 @@ pub(crate) fn read_test_case<R: Read>(mut r: R) -> std::io::Result<Proof> {
 }
 
 /// write multiple proofs to a file
-#[allow(dead_code)]
-pub(crate) fn write_all_test_case<W: Write>(mut w: W, proofs: &Vec<Proof>) -> std::io::Result<()> {
+pub(crate) fn write_all_test_case<W: Write>(mut w: W, proofs: &Vec<Proof>) -> io::Result<()> {
     for proof in proofs {
         w.write_all(proof.as_ref())?;
     }
@@ -82,7 +90,6 @@ pub(crate) fn write_all_test_case<W: Write>(mut w: W, proofs: &Vec<Proof>) -> st
 }
 
 /// read multiple proofs from a file
-#[allow(dead_code)]
 pub(crate) fn read_all_proofs<R: Read>(mut r: R, proof_size: usize) -> io::Result<Vec<Proof>> {
     let mut proofs = Vec::new();
     let mut buffer = vec![0u8; proof_size];
@@ -93,7 +100,6 @@ pub(crate) fn read_all_proofs<R: Read>(mut r: R, proof_size: usize) -> io::Resul
     Ok(proofs)
 }
 
-#[cfg(test)]
 pub(crate) fn conditionally_save_proof_to_disk<C: Circuit<pallas::Base>>(
     vk: &VerifyingKey<Affine>,
     params: &Params<Affine>,
@@ -102,19 +108,18 @@ pub(crate) fn conditionally_save_proof_to_disk<C: Circuit<pallas::Base>>(
 ) {
     // If the environment variable CIRCUIT_TEST_GENERATE_NEW_PROOF is set,
     // write the old proof in a file
-    if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
-        let create_proof = || -> std::io::Result<()> {
+    if env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
+        let create_proof = || -> io::Result<()> {
             let proof = Proof::create(vk, params, circuit).unwrap();
             assert!(proof.verify(vk, params).is_ok());
 
-            let file = std::fs::File::create(file_name)?;
+            let file = fs::File::create(file_name)?;
             write_test_case(file, &proof)
         };
         create_proof().expect("should be able to write new proof");
     }
 }
 
-#[cfg(test)]
 pub(crate) fn serialized_proof_test_case_with_circuit<C: Circuit<pallas::Base>>(
     circuit: C,
     file_name: &str,

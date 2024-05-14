@@ -28,3 +28,6 @@ pub mod poseidon;
 pub mod sha256;
 pub mod sinsemilla;
 pub mod utilities;
+
+#[cfg(test)]
+pub mod tests;

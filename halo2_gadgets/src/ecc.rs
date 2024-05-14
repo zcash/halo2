@@ -598,8 +598,10 @@ pub(crate) mod tests {
         },
         FixedPoints,
     };
-    use crate::utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig};
-    use crate::utilities::test_circuit::serialized_proof_test_case_with_circuit;
+    use crate::{
+        tests::circuit::serialized_proof_test_case_with_circuit,
+        utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
+    };
 
     #[derive(Debug, Eq, PartialEq, Clone)]
     pub(crate) struct TestFixedBases;
@@ -931,7 +933,7 @@ pub(crate) mod tests {
     #[test]
     fn serialized_proof_test_case() {
         let circuit = MyCircuit { test_errors: false };
-        let file_name = "src/circuit_proof_test_case_ecc.bin";
+        let file_name = "src/tests/circuit_proof_test_case_ecc.bin";
 
         serialized_proof_test_case_with_circuit(circuit, file_name);
     }

@@ -184,6 +184,7 @@ pub mod tests {
             tests::{TestCommitDomain, TestHashDomain},
             HashDomains,
         },
+        tests::circuit::serialized_proof_test_case_with_circuit,
         utilities::{
             i2lebsp,
             lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
@@ -200,7 +201,6 @@ pub mod tests {
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    use crate::utilities::test_circuit::serialized_proof_test_case_with_circuit;
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
     use rand::{rngs::OsRng, RngCore};
@@ -421,7 +421,7 @@ pub mod tests {
     #[test]
     fn serialized_proof_test_case() {
         let circuit = generate_circuit();
-        let file_name = "src/sinsemilla/circuit_proof_test_case_merkle.bin";
+        let file_name = "src/tests/circuit_proof_test_case_merkle.bin";
 
         serialized_proof_test_case_with_circuit(circuit, file_name);
     }

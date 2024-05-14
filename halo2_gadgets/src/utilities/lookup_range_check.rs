@@ -467,7 +467,7 @@ mod tests {
     };
     use pasta_curves::pallas;
 
-    use crate::utilities::test_circuit::{
+    use crate::tests::circuit::{
         read_all_proofs, serialized_proof_test_case_with_circuit, write_all_test_case,
     };
     use halo2_proofs::poly::commitment::Params;
@@ -581,7 +581,7 @@ mod tests {
             );
 
             // serialized_proof_test_case
-            let file_name = "src/utilities/circuit_proof_test_case_lookup_range_check.bin";
+            let file_name = "src/tests/circuit_proof_test_case_lookup_range_check.bin";
             serialized_proof_test_case_with_circuit(circuit, file_name);
         }
     }
@@ -636,7 +636,7 @@ mod tests {
         // read proof from disk
         let proofs = {
             let test_case_bytes =
-                fs::read("src/utilities/circuit_proof_test_case_short_range_check.bin").unwrap();
+                fs::read("src/tests/circuit_proof_test_case_short_range_check.bin").unwrap();
             read_all_proofs(&test_case_bytes[..], 1888).expect("proof must be valid")
         };
 
@@ -741,7 +741,7 @@ mod tests {
         if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
             let create_proof = || -> std::io::Result<()> {
                 let file = std::fs::File::create(
-                    "src/utilities/circuit_proof_test_case_short_range_check.bin",
+                    "src/tests/circuit_proof_test_case_short_range_check.bin",
                 )?;
                 write_all_test_case(file, &proofs)
             };
