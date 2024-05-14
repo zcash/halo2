@@ -7,8 +7,9 @@ use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite};
 use pasta_curves::vesta::Affine;
 use pasta_curves::{pallas, vesta};
 use rand::rngs::OsRng;
-use std::io;
 use std::io::{Read, Write};
+#[allow(unused_imports)]
+use std::{fs, io};
 
 /// A proof structure
 #[derive(Clone, Debug)]
