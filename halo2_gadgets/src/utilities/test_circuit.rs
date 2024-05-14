@@ -93,7 +93,7 @@ pub(crate) fn read_all_proofs<R: Read>(mut r: R, proof_size: usize) -> io::Resul
 }
 
 #[cfg(test)]
-pub(crate) fn conditionally_save_proof_to_disk<C: Circuit<pallas::Base>>(
+pub(crate) fn test_serialized_proof_with_vk<C: Circuit<pallas::Base>>(
     vk: &VerifyingKey<Affine>,
     params: &Params<Affine>,
     circuit: C,
@@ -111,4 +111,23 @@ pub(crate) fn conditionally_save_proof_to_disk<C: Circuit<pallas::Base>>(
         };
         create_proof().expect("should be able to write new proof");
     }
+
+    // read proof from disk
+    let proof = {
+        let test_case_bytes = std::fs::read(file_name).unwrap();
+        read_test_case(&test_case_bytes[..]).expect("proof must be valid")
+    };
+
+    // Verify the old proof with the new vk
+    assert!(proof.verify(&vk, &params).is_ok());
+}
+
+#[cfg(test)]
+pub(crate) fn test_serialized_proof<C: Circuit<pallas::Base>>(circuit: C, file_name: &str) {
+    // Setup phase: generate parameters, vk for the circuit.
+    let params: Params<Affine> = Params::new(11);
+
+    let vk = plonk::keygen_vk(&params, &circuit).unwrap();
+
+    test_serialized_proof_with_vk(&vk, &params, circuit, file_name);
 }

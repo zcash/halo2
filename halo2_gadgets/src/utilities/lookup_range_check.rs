@@ -468,7 +468,7 @@ mod tests {
     use pasta_curves::pallas;
 
     use crate::utilities::test_circuit::{
-        conditionally_save_proof_to_disk, read_all_proofs, read_test_case, write_all_test_case,
+        read_all_proofs, test_serialized_proof_with_vk, write_all_test_case,
     };
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
@@ -580,26 +580,12 @@ mod tests {
                 include_str!("vk_lookup_range_check_0").replace("\r\n", "\n")
             );
 
-            // serialized_proof_test_case
-            {
-                conditionally_save_proof_to_disk(
-                    &vk,
-                    &params,
-                    circuit,
-                    "src/utilities/circuit_proof_test_case_lookup_range_check.bin",
-                );
-
-                // read proof from disk
-                let proof = {
-                    let test_case_bytes =
-                        fs::read("src/utilities/circuit_proof_test_case_lookup_range_check.bin")
-                            .unwrap();
-                    read_test_case(&test_case_bytes[..]).expect("proof must be valid")
-                };
-
-                // Verify the old proof with the new vk
-                assert!(proof.verify(&vk, &params).is_ok());
-            }
+            test_serialized_proof_with_vk(
+                &vk,
+                &params,
+                circuit,
+                "src/utilities/circuit_proof_test_case_lookup_range_check.bin",
+            );
         }
     }
 

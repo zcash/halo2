@@ -187,6 +187,7 @@ pub mod tests {
         utilities::{
             i2lebsp,
             lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
+            test_circuit::test_serialized_proof,
             UtilitiesInstructions,
         },
     };
@@ -200,7 +201,6 @@ pub mod tests {
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    use crate::utilities::test_circuit::{conditionally_save_proof_to_disk, read_test_case};
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
     use rand::{rngs::OsRng, RngCore};
@@ -420,25 +420,10 @@ pub mod tests {
 
     #[test]
     fn serialized_proof_test_case() {
-        use std::fs;
-
-        let circuit = generate_circuit();
-        // Setup phase: generate parameters, vk for the circuit.
-        let params: Params<Affine> = Params::new(11);
-        let vk = plonk::keygen_vk(&params, &circuit).unwrap();
-
-        let file_name = "src/sinsemilla/circuit_proof_test_case_merkle.bin";
-
-        conditionally_save_proof_to_disk(&vk, &params, circuit, file_name);
-
-        // read proof from disk
-        let proof = {
-            let test_case_bytes = fs::read(file_name).unwrap();
-            read_test_case(&test_case_bytes[..]).expect("proof must be valid")
-        };
-
-        // Verify the old proof with the new vk
-        assert!(proof.verify(&vk, &params).is_ok());
+        test_serialized_proof(
+            generate_circuit(),
+            "src/sinsemilla/circuit_proof_test_case_merkle.bin",
+        );
     }
 
     #[cfg(feature = "test-dev-graph")]
