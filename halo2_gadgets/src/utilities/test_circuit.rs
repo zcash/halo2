@@ -93,7 +93,7 @@ pub(crate) fn read_all_proofs<R: Read>(mut r: R, proof_size: usize) -> io::Resul
 }
 
 #[cfg(test)]
-pub(crate) fn conditionally_save_circuit_to_disk<C: Circuit<pallas::Base>>(
+pub(crate) fn conditionally_save_proof_to_disk<C: Circuit<pallas::Base>>(
     vk: &VerifyingKey<Affine>,
     params: &Params<Affine>,
     circuit: C,

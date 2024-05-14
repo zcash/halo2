@@ -599,7 +599,7 @@ pub(crate) mod tests {
         FixedPoints,
     };
     use crate::utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig};
-    use crate::utilities::test_circuit::{conditionally_save_circuit_to_disk, read_test_case};
+    use crate::utilities::test_circuit::{conditionally_save_proof_to_disk, read_test_case};
 
     #[derive(Debug, Eq, PartialEq, Clone)]
     pub(crate) struct TestFixedBases;
@@ -937,7 +937,7 @@ pub(crate) mod tests {
         let params: Params<Affine> = Params::new(11);
         let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
-        conditionally_save_circuit_to_disk(
+        conditionally_save_proof_to_disk(
             &vk,
             &params,
             circuit,

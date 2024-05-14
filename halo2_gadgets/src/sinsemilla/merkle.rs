@@ -200,7 +200,7 @@ pub mod tests {
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    use crate::utilities::test_circuit::{conditionally_save_circuit_to_disk, read_test_case};
+    use crate::utilities::test_circuit::{conditionally_save_proof_to_disk, read_test_case};
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
     use rand::{rngs::OsRng, RngCore};
@@ -429,7 +429,7 @@ pub mod tests {
 
         let file_name = "src/sinsemilla/circuit_proof_test_case_merkle.bin";
 
-        conditionally_save_circuit_to_disk(&vk, &params, circuit, file_name);
+        conditionally_save_proof_to_disk(&vk, &params, circuit, file_name);
 
         // read proof from disk
         let proof = {
