@@ -769,7 +769,7 @@ pub(crate) mod tests {
         // is as expected.
         assert_eq!(
             format!("{:#?}\n", vk.pinned()),
-            include_str!("vk_sinsemilla_chip_0").replace("\r\n", "\n")
+            include_str!("tests/vk_sinsemilla_chip_0").replace("\r\n", "\n")
         );
     }
 

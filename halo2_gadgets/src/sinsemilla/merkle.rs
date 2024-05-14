@@ -414,7 +414,7 @@ pub mod tests {
         // is as expected. Which indicates the layouters are the same.
         assert_eq!(
             format!("{:#?}\n", vk.pinned()),
-            include_str!("vk_merkle_chip_0").replace("\r\n", "\n")
+            include_str!("../tests/vk_merkle_chip_0").replace("\r\n", "\n")
         );
     }
 

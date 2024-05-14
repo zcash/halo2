@@ -577,7 +577,7 @@ mod tests {
             // is as expected.
             assert_eq!(
                 format!("{:#?}\n", vk.pinned()),
-                include_str!("vk_lookup_range_check_0").replace("\r\n", "\n")
+                include_str!("../tests/vk_lookup_range_check_0").replace("\r\n", "\n")
             );
 
             // serialized_proof_test_case
@@ -659,7 +659,7 @@ mod tests {
             // is as expected. Which indicates the layouters are the same.
             assert_eq!(
                 format!("{:#?}\n", vk.pinned()),
-                include_str!("vk_short_range_check_0").replace("\r\n", "\n")
+                include_str!("../tests/vk_short_range_check_0").replace("\r\n", "\n")
             );
 
             // serialized_proof_test_case
@@ -690,7 +690,7 @@ mod tests {
             // is as expected. Which indicates the layouters are the same.
             assert_eq!(
                 format!("{:#?}\n", vk.pinned()),
-                include_str!("vk_short_range_check_1").replace("\r\n", "\n")
+                include_str!("../tests/vk_short_range_check_1").replace("\r\n", "\n")
             );
 
             // serialized_proof_test_case
@@ -721,7 +721,7 @@ mod tests {
             // is as expected. Which indicates the layouters are the same.
             assert_eq!(
                 format!("{:#?}\n", vk.pinned()),
-                include_str!("vk_short_range_check_2").replace("\r\n", "\n")
+                include_str!("../tests/vk_short_range_check_2").replace("\r\n", "\n")
             );
 
             // serialized_proof_test_case
