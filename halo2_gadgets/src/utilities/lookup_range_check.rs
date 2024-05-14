@@ -291,6 +291,17 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCh
         self
     }
 
+    /// The `running_sum` advice column breaks the field element into `K`-bit
+    /// words. It is used to construct the input expression to the lookup
+    /// argument.
+    ///
+    /// The `table_idx` fixed column contains values from [0..2^K). Looking up
+    /// a value in `table_idx` constrains it to be within this range. The table
+    /// can be loaded outside this helper.
+    ///
+    /// # Side-effects
+    ///
+    /// Both the `running_sum` and `constants` columns will be equality-enabled.
     fn configure(
         meta: &mut ConstraintSystem<F>,
         running_sum: Column<Advice>,
@@ -431,14 +442,14 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCh
     }
 }
 
-/// The `DefaultLookupRangeCheck` trait extends the `LookupRangeCheck` with additional
+/// The `PallasLookupRC` trait extends the `LookupRangeCheck` with additional
 /// standard traits necessary for effective use in cryptographic contexts.
-pub trait DefaultLookupRangeCheck:
+pub trait PallasLookupRC:
     LookupRangeCheck<pallas::Base, { sinsemilla::K }> + Eq + PartialEq + Clone + Copy + Debug
 {
 }
 
-impl DefaultLookupRangeCheck for LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }> {}
+impl PallasLookupRC for LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }> {}
 
 #[cfg(test)]
 mod tests {
@@ -564,13 +575,10 @@ mod tests {
 
             // Test that the pinned verification key (representing the circuit)
             // is as expected.
-            {
-                //panic!("{:#?}", vk.pinned());
-                assert_eq!(
-                    format!("{:#?}\n", vk.pinned()),
-                    include_str!("vk_lookup_range_check").replace("\r\n", "\n")
-                );
-            }
+            assert_eq!(
+                format!("{:#?}\n", vk.pinned()),
+                include_str!("vk_lookup_range_check_0").replace("\r\n", "\n")
+            );
 
             // serialized_proof_test_case
             {
@@ -588,7 +596,7 @@ mod tests {
                     };
                     create_proof().expect("should be able to write new proof");
                 }
-                // Read the old proof into 'proof'
+                // read proof from disk
                 let proof = {
                     let test_case_bytes =
                         fs::read("src/utilities/circuit_proof_test_case_lookup_range_check.bin")
@@ -649,7 +657,7 @@ mod tests {
             }
         }
 
-        // Read the old proofs into 'proofs'
+        // read proof from disk
         let proofs = {
             let test_case_bytes =
                 fs::read("src/utilities/circuit_proof_test_case_short_range_check.bin").unwrap();
@@ -659,8 +667,7 @@ mod tests {
         // Setup phase: generate parameters
         let params: Params<Affine> = Params::new(11);
 
-        // Edge case: zero bits
-        // case 0
+        // Edge case: zero bits (case 0)
         {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
                 element: Value::known(pallas::Base::ZERO),
@@ -674,19 +681,16 @@ mod tests {
 
             // Test that the pinned verification key (representing the circuit)
             // is as expected. Which indicates the layouters are the same.
-            {
-                //panic!("{:#?}", vk.pinned());
-                assert_eq!(
-                    format!("{:#?}\n", vk.pinned()),
-                    include_str!("vk_short_range_check_0").replace("\r\n", "\n")
-                );
-            }
+            assert_eq!(
+                format!("{:#?}\n", vk.pinned()),
+                include_str!("vk_short_range_check_0").replace("\r\n", "\n")
+            );
 
             // serialized_proof_test_case
             {
                 match proofs.get(0) {
                     Some(proof) => {
-                        // Verify the old proofs[0] with the new vk
+                        // Verify the stored proof (case 0) against the generated vk
                         assert!(proof.verify(&vk, &params).is_ok());
                     }
                     None => println!("Index out of bounds"),
@@ -694,8 +698,7 @@ mod tests {
             }
         }
 
-        // Edge case: K bits
-        // case 1
+        // Edge case: K bits (case 1)
         {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
                 element: Value::known(pallas::Base::from((1 << K) - 1)),
@@ -709,19 +712,16 @@ mod tests {
 
             // Test that the pinned verification key (representing the circuit)
             // is as expected. Which indicates the layouters are the same.
-            {
-                //panic!("{:#?}", vk.pinned());
-                assert_eq!(
-                    format!("{:#?}\n", vk.pinned()),
-                    include_str!("vk_short_range_check_1").replace("\r\n", "\n")
-                );
-            }
+            assert_eq!(
+                format!("{:#?}\n", vk.pinned()),
+                include_str!("vk_short_range_check_1").replace("\r\n", "\n")
+            );
 
             // serialized_proof_test_case
             {
                 match proofs.get(1) {
                     Some(proof) => {
-                        // Verify the old proofs[1] with the new vk
+                        // Verify the stored proof (case 1) against the generated vk
                         assert!(proof.verify(&vk, &params).is_ok());
                     }
                     None => println!("Index out of bounds"),
@@ -729,8 +729,7 @@ mod tests {
             }
         }
 
-        // Element within `num_bits`
-        // case 2
+        // Element within `num_bits` (case 2)
         {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
                 element: Value::known(pallas::Base::from((1 << 6) - 1)),
@@ -744,19 +743,16 @@ mod tests {
 
             // Test that the pinned verification key (representing the circuit)
             // is as expected. Which indicates the layouters are the same.
-            {
-                //panic!("{:#?}", vk.pinned());
-                assert_eq!(
-                    format!("{:#?}\n", vk.pinned()),
-                    include_str!("vk_short_range_check_2").replace("\r\n", "\n")
-                );
-            }
+            assert_eq!(
+                format!("{:#?}\n", vk.pinned()),
+                include_str!("vk_short_range_check_2").replace("\r\n", "\n")
+            );
 
             // serialized_proof_test_case
             {
                 match proofs.get(2) {
                     Some(proof) => {
-                        // Verify the old proofs[2] with the new vk
+                        // Verify the stored proof (case 2) against the generated vk
                         assert!(proof.verify(&vk, &params).is_ok());
                     }
                     None => println!("Index out of bounds"),

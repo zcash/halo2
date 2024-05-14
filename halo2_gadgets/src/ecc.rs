@@ -922,13 +922,10 @@ pub(crate) mod tests {
 
         // Test that the pinned verification key (representing the circuit)
         // is as expected.
-        {
-            //panic!("{:#?}", vk.pinned());
-            assert_eq!(
-                format!("{:#?}\n", vk.pinned()),
-                include_str!("vk_ecc_chip").replace("\r\n", "\n")
-            );
-        }
+        assert_eq!(
+            format!("{:#?}\n", vk.pinned()),
+            include_str!("vk_ecc_chip_0").replace("\r\n", "\n")
+        );
     }
 
     #[test]
@@ -953,7 +950,7 @@ pub(crate) mod tests {
             create_proof().expect("should be able to write new proof");
         }
 
-        // Read the old proof into 'proof'
+        // read proof from disk
         let proof = {
             let test_case_bytes = fs::read("src/circuit_proof_test_case_ecc.bin").unwrap();
             read_test_case(&test_case_bytes[..]).expect("proof must be valid")

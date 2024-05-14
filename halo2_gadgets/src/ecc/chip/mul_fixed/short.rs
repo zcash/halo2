@@ -253,7 +253,7 @@ pub mod tests {
     };
     use pasta_curves::pallas;
 
-    use crate::utilities::lookup_range_check::{DefaultLookupRangeCheck, LookupRangeCheck};
+    use crate::utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRC};
     use crate::{
         ecc::{
             chip::{EccChip, FixedPoint, MagnitudeSign},
@@ -264,7 +264,7 @@ pub mod tests {
     };
 
     #[allow(clippy::op_ref)]
-    pub(crate) fn test_mul_fixed_short<Lookup: DefaultLookupRangeCheck>(
+    pub(crate) fn test_mul_fixed_short<Lookup: PallasLookupRC>(
         chip: EccChip<TestFixedBases, Lookup>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
@@ -272,7 +272,7 @@ pub mod tests {
         let base_val = Short.generator();
         let test_short = FixedPointShort::from_inner(chip.clone(), Short);
 
-        fn load_magnitude_sign<Lookup: DefaultLookupRangeCheck>(
+        fn load_magnitude_sign<Lookup: PallasLookupRC>(
             chip: EccChip<TestFixedBases, Lookup>,
             mut layouter: impl Layouter<pallas::Base>,
             magnitude: pallas::Base,
@@ -290,7 +290,7 @@ pub mod tests {
             Ok((magnitude, sign))
         }
 
-        fn constrain_equal_non_id<Lookup: DefaultLookupRangeCheck>(
+        fn constrain_equal_non_id<Lookup: PallasLookupRC>(
             chip: EccChip<TestFixedBases, Lookup>,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,

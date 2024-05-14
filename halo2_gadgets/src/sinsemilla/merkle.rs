@@ -205,7 +205,6 @@ pub mod tests {
     use pasta_curves::vesta::Affine;
     use rand::{rngs::OsRng, RngCore};
     use std::{convert::TryInto, iter};
-
     const MERKLE_DEPTH: usize = 32;
 
     #[derive(Default)]
@@ -413,13 +412,10 @@ pub mod tests {
 
         // Test that the pinned verification key (representing the circuit)
         // is as expected. Which indicates the layouters are the same.
-        {
-            //panic!("{:#?}", vk.pinned());
-            assert_eq!(
-                format!("{:#?}\n", vk.pinned()),
-                include_str!("vk_merkle_chip").replace("\r\n", "\n")
-            );
-        }
+        assert_eq!(
+            format!("{:#?}\n", vk.pinned()),
+            include_str!("vk_merkle_chip_0").replace("\r\n", "\n")
+        );
     }
 
     #[test]
@@ -431,6 +427,8 @@ pub mod tests {
         let params: Params<Affine> = Params::new(11);
         let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
+        let file_name = "src/sinsemilla/circuit_proof_test_case_merkle.bin";
+
         // If the environment variable CIRCUIT_TEST_GENERATE_NEW_PROOF is set,
         // write the old proof in a file
         if std::env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
@@ -438,17 +436,15 @@ pub mod tests {
                 let proof = Proof::create(&vk, &params, circuit).unwrap();
                 assert!(proof.verify(&vk, &params).is_ok());
 
-                let file =
-                    std::fs::File::create("src/sinsemilla/circuit_proof_test_case_merkle.bin")?;
+                let file = std::fs::File::create(file_name)?;
                 write_test_case(file, &proof)
             };
             create_proof().expect("should be able to write new proof");
         }
 
-        // Read the old proof into 'proof'
+        // read proof from disk
         let proof = {
-            let test_case_bytes =
-                fs::read("src/sinsemilla/circuit_proof_test_case_merkle.bin").unwrap();
+            let test_case_bytes = fs::read(file_name).unwrap();
             read_test_case(&test_case_bytes[..]).expect("proof must be valid")
         };
 
