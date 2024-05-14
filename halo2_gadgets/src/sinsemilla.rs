@@ -475,10 +475,7 @@ pub(crate) mod tests {
                 tests::{FullWidth, TestFixedBases},
                 NonIdentityPoint,
             },
-            utilities::{
-                lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
-                test_circuit::test_serialized_proof,
-            },
+            utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
         },
     };
 
@@ -486,6 +483,7 @@ pub(crate) mod tests {
     use lazy_static::lazy_static;
     use pasta_curves::pallas;
 
+    use crate::utilities::test_circuit::serialized_proof_test_case_with_circuit;
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
     use std::convert::TryInto;
@@ -780,7 +778,10 @@ pub(crate) mod tests {
 
     #[test]
     fn serialized_proof_test_case() {
-        test_serialized_proof(MyCircuit {}, "src/circuit_proof_test_case_sinsemilla.bin");
+        let circuit = MyCircuit {};
+        let file_name = "src/circuit_proof_test_case_sinsemilla.bin";
+
+        serialized_proof_test_case_with_circuit(circuit, file_name);
     }
 
     #[cfg(feature = "test-dev-graph")]

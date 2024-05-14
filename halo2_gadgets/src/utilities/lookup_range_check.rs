@@ -468,7 +468,7 @@ mod tests {
     use pasta_curves::pallas;
 
     use crate::utilities::test_circuit::{
-        read_all_proofs, test_serialized_proof_with_vk, write_all_test_case,
+        read_all_proofs, serialized_proof_test_case_with_circuit, write_all_test_case,
     };
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
@@ -580,12 +580,9 @@ mod tests {
                 include_str!("vk_lookup_range_check_0").replace("\r\n", "\n")
             );
 
-            test_serialized_proof_with_vk(
-                &vk,
-                &params,
-                circuit,
-                "src/utilities/circuit_proof_test_case_lookup_range_check.bin",
-            );
+            // serialized_proof_test_case
+            let file_name = "src/utilities/circuit_proof_test_case_lookup_range_check.bin";
+            serialized_proof_test_case_with_circuit(circuit, file_name);
         }
     }
 

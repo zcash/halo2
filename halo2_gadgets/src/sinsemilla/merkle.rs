@@ -187,7 +187,6 @@ pub mod tests {
         utilities::{
             i2lebsp,
             lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
-            test_circuit::test_serialized_proof,
             UtilitiesInstructions,
         },
     };
@@ -201,6 +200,7 @@ pub mod tests {
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
+    use crate::utilities::test_circuit::serialized_proof_test_case_with_circuit;
     use halo2_proofs::poly::commitment::Params;
     use pasta_curves::vesta::Affine;
     use rand::{rngs::OsRng, RngCore};
@@ -420,10 +420,10 @@ pub mod tests {
 
     #[test]
     fn serialized_proof_test_case() {
-        test_serialized_proof(
-            generate_circuit(),
-            "src/sinsemilla/circuit_proof_test_case_merkle.bin",
-        );
+        let circuit = generate_circuit();
+        let file_name = "src/sinsemilla/circuit_proof_test_case_merkle.bin";
+
+        serialized_proof_test_case_with_circuit(circuit, file_name);
     }
 
     #[cfg(feature = "test-dev-graph")]
