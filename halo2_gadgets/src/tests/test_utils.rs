@@ -20,7 +20,7 @@ use halo2_proofs::{
     transcript::{Blake2bRead, Blake2bWrite},
 };
 
-const TEST_DATA_DIR: &str = "src/tests/circuit_reference_data";
+const TEST_DATA_DIR: &str = "src/tests/circuit_data";
 
 /// A proof structure
 #[derive(Clone, Debug)]
