@@ -2,10 +2,7 @@
 
 use std::{
     env, fs,
-    io::{
-        self, {Read, Write},
-    },
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use rand::rngs::OsRng;
@@ -82,7 +79,7 @@ pub(crate) fn fixed_verification_key_test_with_circuit<C: Circuit<pallas::Base>>
     let vk_text = format!("{:#?}\n", vk.pinned());
 
     if env::var_os("CIRCUIT_TEST_GENERATE_NEW_VK").is_some() {
-        fs::write(full_file_name, vk_text).expect("Unable to write vk test file")
+        fs::write(&full_file_name, &vk_text).expect("Unable to write vk test file")
     }
 
     // Test that the pinned verification key (representing the circuit)
@@ -95,42 +92,19 @@ pub(crate) fn fixed_verification_key_test_with_circuit<C: Circuit<pallas::Base>>
     );
 }
 
-/// write proof to a file
-fn write_test_case<W: Write>(mut w: W, proof: &Proof) -> io::Result<()> {
-    w.write_all(proof.as_ref())?;
-    Ok(())
-}
-
-/// read proof from a file
-fn read_test_case<R: Read>(mut r: R) -> io::Result<Proof> {
-    let mut proof_bytes = vec![];
-    r.read_to_end(&mut proof_bytes)?;
-    let proof = Proof::new(proof_bytes);
-
-    Ok(proof)
-}
-
 fn conditionally_save_proof_to_disk<C: Circuit<pallas::Base>>(
     vk: &VerifyingKey<Affine>,
     params: &Params<Affine>,
     circuit: C,
-    file_name: &str,
+    full_file_name: &PathBuf,
 ) {
-    let full_file_name = Path::new(TEST_DATA_DIR)
-        .join(file_name)
-        .with_extension("bin");
-
     // If the environment variable CIRCUIT_TEST_GENERATE_NEW_PROOF is set,
     // write the old proof in a file
     if env::var_os("CIRCUIT_TEST_GENERATE_NEW_PROOF").is_some() {
-        let create_proof = || -> io::Result<()> {
-            let proof = Proof::create(vk, params, circuit).unwrap();
-            assert!(proof.verify(vk, params).is_ok());
+        let proof = Proof::create(vk, params, circuit).unwrap();
+        assert!(proof.verify(vk, params).is_ok());
 
-            let file = fs::File::create(full_file_name).expect("Unable to write proof test file");
-            write_test_case(file, &proof)
-        };
-        create_proof().expect("should be able to write new proof");
+        fs::write(full_file_name, proof.as_ref()).expect("Unable to write proof test file");
     }
 }
 
@@ -147,13 +121,10 @@ pub(crate) fn serialized_proof_test_case_with_circuit<C: Circuit<pallas::Base>>(
     let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
     // Conditionally save proof to disk
-    conditionally_save_proof_to_disk(&vk, &params, circuit, file_name);
+    conditionally_save_proof_to_disk(&vk, &params, circuit, &full_file_name);
 
     // Read proof from disk
-    let proof = {
-        let test_case_bytes = fs::read(full_file_name).expect("Unable to read proof test file");
-        read_test_case(&test_case_bytes[..]).expect("proof must be valid")
-    };
+    let proof = Proof::new(fs::read(full_file_name).expect("Unable to read proof test file"));
 
     // Verify the old proof with the new vk
     assert!(proof.verify(&vk, &params).is_ok());
