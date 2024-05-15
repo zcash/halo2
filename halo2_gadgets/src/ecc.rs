@@ -915,18 +915,15 @@ pub(crate) mod tests {
     #[test]
     fn fixed_verification_key_test() {
         let circuit = MyCircuit { test_errors: false };
-        let file_name = "src/tests/vk_ecc_chip_0";
-
-        fixed_verification_key_test_with_circuit(&circuit, file_name);
+        fixed_verification_key_test_with_circuit(&circuit, "vk_ecc_chip_0");
     }
 
     #[test]
     fn serialized_proof_test_case() {
         let circuit = MyCircuit { test_errors: false };
-        let file_name = "src/tests/circuit_proof_test_case_ecc.bin";
-
-        serialized_proof_test_case_with_circuit(circuit, file_name);
+        serialized_proof_test_case_with_circuit(circuit, "circuit_proof_test_case_ecc");
     }
+
     #[cfg(feature = "test-dev-graph")]
     #[test]
     fn print_ecc_chip() {

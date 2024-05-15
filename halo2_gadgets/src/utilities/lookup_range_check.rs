@@ -566,10 +566,12 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            fixed_verification_key_test_with_circuit(&circuit, "src/tests/vk_lookup_range_check_0");
+            fixed_verification_key_test_with_circuit(&circuit, "vk_lookup_range_check_0");
 
-            let file_name = "src/tests/circuit_proof_test_case_lookup_range_check.bin";
-            serialized_proof_test_case_with_circuit(circuit, file_name);
+            serialized_proof_test_case_with_circuit(
+                circuit,
+                "circuit_proof_test_case_lookup_range_check",
+            );
         }
     }
 
@@ -629,10 +631,12 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            fixed_verification_key_test_with_circuit(&circuit, "src/tests/vk_short_range_check_0");
+            fixed_verification_key_test_with_circuit(&circuit, "vk_short_range_check_0");
 
-            let file_name = "src/tests/circuit_proof_test_case_short_range_check_0.bin";
-            serialized_proof_test_case_with_circuit(circuit, file_name);
+            serialized_proof_test_case_with_circuit(
+                circuit,
+                "circuit_proof_test_case_short_range_check_0",
+            );
         }
 
         // Edge case: K bits (case 1)
@@ -644,10 +648,12 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            fixed_verification_key_test_with_circuit(&circuit, "src/tests/vk_short_range_check_1");
+            fixed_verification_key_test_with_circuit(&circuit, "vk_short_range_check_1");
 
-            let file_name = "src/tests/circuit_proof_test_case_short_range_check_1.bin";
-            serialized_proof_test_case_with_circuit(circuit, file_name);
+            serialized_proof_test_case_with_circuit(
+                circuit,
+                "circuit_proof_test_case_short_range_check_1",
+            );
         }
 
         // Element within `num_bits` (case 2)
@@ -659,10 +665,12 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            fixed_verification_key_test_with_circuit(&circuit, "src/tests/vk_short_range_check_2");
+            fixed_verification_key_test_with_circuit(&circuit, "vk_short_range_check_2");
 
-            let file_name = "src/tests/circuit_proof_test_case_short_range_check_2.bin";
-            serialized_proof_test_case_with_circuit(circuit, file_name);
+            serialized_proof_test_case_with_circuit(
+                circuit,
+                "circuit_proof_test_case_short_range_check_2",
+            );
         }
 
         // Element larger than `num_bits` but within K bits

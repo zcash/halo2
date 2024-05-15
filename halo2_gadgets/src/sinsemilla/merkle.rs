@@ -403,17 +403,13 @@ pub mod tests {
     #[test]
     fn fixed_verification_key_test() {
         let circuit = generate_circuit();
-        let file_name = "src/tests/vk_merkle_chip_0";
-
-        fixed_verification_key_test_with_circuit(&circuit, file_name);
+        fixed_verification_key_test_with_circuit(&circuit, "vk_merkle_chip_0");
     }
 
     #[test]
     fn serialized_proof_test_case() {
         let circuit = generate_circuit();
-        let file_name = "src/tests/circuit_proof_test_case_merkle.bin";
-
-        serialized_proof_test_case_with_circuit(circuit, file_name);
+        serialized_proof_test_case_with_circuit(circuit, "circuit_proof_test_case_merkle");
     }
 
     #[cfg(feature = "test-dev-graph")]
