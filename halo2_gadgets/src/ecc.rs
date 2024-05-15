@@ -599,7 +599,7 @@ pub(crate) mod tests {
         tests::test_utils::{
             fixed_verification_key_test_with_circuit, serialized_proof_test_case_with_circuit,
         },
-        utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
+        utilities::lookup_range_check::{LookupRangeCheck, PallasLookupConfig},
     };
 
     #[derive(Debug, Eq, PartialEq, Clone)]
@@ -734,10 +734,7 @@ pub(crate) mod tests {
 
     #[allow(non_snake_case)]
     impl Circuit<pallas::Base> for MyCircuit {
-        type Config = EccConfig<
-            TestFixedBases,
-            LookupRangeCheckConfig<pallas::Base, { crate::sinsemilla::primitives::K }>,
-        >;
+        type Config = EccConfig<TestFixedBases, PallasLookupConfig>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
@@ -772,11 +769,13 @@ pub(crate) mod tests {
             let constants = meta.fixed_column();
             meta.enable_constant(constants);
 
-            let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
-            EccChip::<
-                TestFixedBases,
-                LookupRangeCheckConfig<pallas::Base, { crate::sinsemilla::primitives::K }>,
-            >::configure(meta, advices, lagrange_coeffs, range_check)
+            let range_check = PallasLookupConfig::configure(meta, advices[9], lookup_table);
+            EccChip::<TestFixedBases, PallasLookupConfig>::configure(
+                meta,
+                advices,
+                lagrange_coeffs,
+                range_check,
+            )
         }
 
         fn synthesize(

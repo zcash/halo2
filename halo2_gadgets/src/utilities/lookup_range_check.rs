@@ -442,14 +442,22 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCh
     }
 }
 
-/// The `PallasLookupRC` trait extends the `LookupRangeCheck` with additional
-/// standard traits necessary for effective use in cryptographic contexts.
-pub trait PallasLookupRC:
+/// This trait is a shorthand for `LookupRangeCheck` specialized with `pallas::Base` and
+/// `sinsemilla::K`. In this crate, `LookupRangeCheck` is always used with these parameters.
+/// By defining this trait, we reduce verbosity and improve readability. Besides, it extends
+/// the `LookupRangeCheck` with additional standard traits necessary for effective use in
+/// cryptographic contexts.
+pub trait PallasLookup:
     LookupRangeCheck<pallas::Base, { sinsemilla::K }> + Eq + PartialEq + Clone + Copy + Debug
 {
 }
 
-impl PallasLookupRC for LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }> {}
+/// In this crate, `LookupRangeCheckConfig` is always used with `pallas::Base` as the prime field
+/// and the constant `K` from the `sinsemilla` module. To reduce verbosity and improve readability,
+/// we introduce this alias and use it instead of that long construction.
+pub type PallasLookupConfig = LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>;
+
+impl PallasLookup for PallasLookupConfig {}
 
 #[cfg(test)]
 mod tests {

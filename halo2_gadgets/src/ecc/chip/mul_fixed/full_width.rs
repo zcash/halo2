@@ -192,9 +192,9 @@ pub mod tests {
         tests::{FullWidth, TestFixedBases},
         FixedPoint, NonIdentityPoint, Point, ScalarFixed,
     };
-    use crate::utilities::lookup_range_check::PallasLookupRC;
+    use crate::utilities::lookup_range_check::PallasLookup;
 
-    pub(crate) fn test_mul_fixed<Lookup: PallasLookupRC>(
+    pub(crate) fn test_mul_fixed<Lookup: PallasLookup>(
         chip: EccChip<TestFixedBases, Lookup>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
@@ -210,13 +210,13 @@ pub mod tests {
     }
 
     #[allow(clippy::op_ref)]
-    fn test_single_base<Lookup: PallasLookupRC>(
+    fn test_single_base<Lookup: PallasLookup>(
         chip: EccChip<TestFixedBases, Lookup>,
         mut layouter: impl Layouter<pallas::Base>,
         base: FixedPoint<pallas::Affine, EccChip<TestFixedBases, Lookup>>,
         base_val: pallas::Affine,
     ) -> Result<(), Error> {
-        fn constrain_equal_non_id<Lookup: PallasLookupRC>(
+        fn constrain_equal_non_id<Lookup: PallasLookup>(
             chip: EccChip<TestFixedBases, Lookup>,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
