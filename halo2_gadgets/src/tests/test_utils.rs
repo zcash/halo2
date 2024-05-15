@@ -20,7 +20,7 @@ use halo2_proofs::{
     transcript::{Blake2bRead, Blake2bWrite},
 };
 
-const TEST_DATA_DIR: &str = "src/tests";
+const TEST_DATA_DIR: &str = "src/tests/circuit_reference_data";
 
 /// A proof structure
 #[derive(Clone, Debug)]
@@ -70,7 +70,9 @@ pub(crate) fn fixed_verification_key_test_with_circuit<C: Circuit<pallas::Base>>
     circuit: &C,
     file_name: &str,
 ) {
-    let full_file_name = Path::new(TEST_DATA_DIR).join(file_name);
+    let full_file_name = Path::new(TEST_DATA_DIR)
+        .join(file_name)
+        .with_extension("vk.txt");
 
     // Setup phase: generate parameters, vk for the circuit.
     let params: Params<Affine> = Params::new(11);
@@ -114,7 +116,7 @@ pub(crate) fn serialized_proof_test_case_with_circuit<C: Circuit<pallas::Base>>(
 ) {
     let full_file_name = Path::new(TEST_DATA_DIR)
         .join(file_name)
-        .with_extension("bin");
+        .with_extension("proof.bin");
 
     // Setup phase: generate parameters, vk for the circuit.
     let params: Params<Affine> = Params::new(11);

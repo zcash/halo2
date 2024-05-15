@@ -574,11 +574,11 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            fixed_verification_key_test_with_circuit(&circuit, "vk_lookup_range_check_0");
+            fixed_verification_key_test_with_circuit(&circuit, "lookup_range_check");
 
             serialized_proof_test_case_with_circuit(
                 circuit,
-                "circuit_proof_test_case_lookup_range_check",
+                "lookup_range_check",
             );
         }
     }
@@ -639,11 +639,11 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            fixed_verification_key_test_with_circuit(&circuit, "vk_short_range_check_0");
+            fixed_verification_key_test_with_circuit(&circuit, "short_range_check_0");
 
             serialized_proof_test_case_with_circuit(
                 circuit,
-                "circuit_proof_test_case_short_range_check_0",
+                "short_range_check_0",
             );
         }
 
@@ -656,11 +656,11 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            fixed_verification_key_test_with_circuit(&circuit, "vk_short_range_check_1");
+            fixed_verification_key_test_with_circuit(&circuit, "short_range_check_1");
 
             serialized_proof_test_case_with_circuit(
                 circuit,
-                "circuit_proof_test_case_short_range_check_1",
+                "short_range_check_1",
             );
         }
 
@@ -673,11 +673,11 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            fixed_verification_key_test_with_circuit(&circuit, "vk_short_range_check_2");
+            fixed_verification_key_test_with_circuit(&circuit, "short_range_check_2");
 
             serialized_proof_test_case_with_circuit(
                 circuit,
-                "circuit_proof_test_case_short_range_check_2",
+                "short_range_check_2",
             );
         }
 

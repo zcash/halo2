@@ -914,13 +914,13 @@ pub(crate) mod tests {
     #[test]
     fn fixed_verification_key_test() {
         let circuit = MyCircuit { test_errors: false };
-        fixed_verification_key_test_with_circuit(&circuit, "vk_ecc_chip_0");
+        fixed_verification_key_test_with_circuit(&circuit, "ecc_chip");
     }
 
     #[test]
     fn serialized_proof_test_case() {
         let circuit = MyCircuit { test_errors: false };
-        serialized_proof_test_case_with_circuit(circuit, "circuit_proof_test_case_ecc");
+        serialized_proof_test_case_with_circuit(circuit, "ecc_chip");
     }
 
     #[cfg(feature = "test-dev-graph")]

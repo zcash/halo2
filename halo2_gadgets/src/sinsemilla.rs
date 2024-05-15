@@ -747,13 +747,13 @@ pub(crate) mod tests {
     #[test]
     fn fixed_verification_key_test() {
         let circuit = MyCircuit {};
-        fixed_verification_key_test_with_circuit(&circuit, "vk_sinsemilla_chip_0");
+        fixed_verification_key_test_with_circuit(&circuit, "sinsemilla_chip");
     }
 
     #[test]
     fn serialized_proof_test_case() {
         let circuit = MyCircuit {};
-        serialized_proof_test_case_with_circuit(circuit, "circuit_proof_test_case_sinsemilla");
+        serialized_proof_test_case_with_circuit(circuit, "sinsemilla_chip");
     }
 
     #[cfg(feature = "test-dev-graph")]

@@ -393,13 +393,13 @@ pub mod tests {
     #[test]
     fn fixed_verification_key_test() {
         let circuit = generate_circuit();
-        fixed_verification_key_test_with_circuit(&circuit, "vk_merkle_chip_0");
+        fixed_verification_key_test_with_circuit(&circuit, "merkle_chip");
     }
 
     #[test]
     fn serialized_proof_test_case() {
         let circuit = generate_circuit();
-        serialized_proof_test_case_with_circuit(circuit, "circuit_proof_test_case_merkle");
+        serialized_proof_test_case_with_circuit(circuit, "merkle_chip");
     }
 
     #[cfg(feature = "test-dev-graph")]
