@@ -576,10 +576,7 @@ mod tests {
 
             fixed_verification_key_test_with_circuit(&circuit, "lookup_range_check");
 
-            serialized_proof_test_case_with_circuit(
-                circuit,
-                "lookup_range_check",
-            );
+            serialized_proof_test_case_with_circuit(circuit, "lookup_range_check");
         }
     }
 
@@ -641,10 +638,7 @@ mod tests {
 
             fixed_verification_key_test_with_circuit(&circuit, "short_range_check_0");
 
-            serialized_proof_test_case_with_circuit(
-                circuit,
-                "short_range_check_0",
-            );
+            serialized_proof_test_case_with_circuit(circuit, "short_range_check_0");
         }
 
         // Edge case: K bits (case 1)
@@ -658,10 +652,7 @@ mod tests {
 
             fixed_verification_key_test_with_circuit(&circuit, "short_range_check_1");
 
-            serialized_proof_test_case_with_circuit(
-                circuit,
-                "short_range_check_1",
-            );
+            serialized_proof_test_case_with_circuit(circuit, "short_range_check_1");
         }
 
         // Element within `num_bits` (case 2)
@@ -675,10 +666,7 @@ mod tests {
 
             fixed_verification_key_test_with_circuit(&circuit, "short_range_check_2");
 
-            serialized_proof_test_case_with_circuit(
-                circuit,
-                "short_range_check_2",
-            );
+            serialized_proof_test_case_with_circuit(circuit, "short_range_check_2");
         }
 
         // Element larger than `num_bits` but within K bits
