@@ -3,6 +3,7 @@ use super::{NonIdentityEccPoint, SinsemillaChip};
 use crate::{
     ecc::FixedPoints,
     sinsemilla::primitives::{self as sinsemilla, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S},
+    utilities::lookup_range_check::PallasLookupRC,
 };
 
 use ff::Field;
@@ -16,11 +17,20 @@ use pasta_curves::{arithmetic::CurveAffine, pallas};
 
 use std::ops::Deref;
 
-impl<Hash, Commit, Fixed> SinsemillaChip<Hash, Commit, Fixed>
+/// Define an enum that can hold either type
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub enum EccPointQ<'a> {
+    PublicPoint(pallas::Affine),
+    PrivatePoint(&'a NonIdentityEccPoint),
+}
+
+impl<Hash, Commit, Fixed, Lookup> SinsemillaChip<Hash, Commit, Fixed, Lookup>
 where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
+    Lookup: PallasLookupRC,
 {
     /// [Specification](https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial).
     #[allow(non_snake_case)]
@@ -41,8 +51,27 @@ where
         ),
         Error,
     > {
+        let (offset, x_a, y_a) = self.public_initialization(region, Q)?;
+
+        let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
+
+        self.check_hash_result(EccPointQ::PublicPoint(Q), message, x_a, y_a, zs_sum)
+    }
+
+    #[allow(non_snake_case)]
+    /// Assign the coordinates of the initial public point `Q`,
+    /// y_Q to a fixed column
+    ///
+    /// | offset | x_A | q_sinsemilla4 | fixed_y_q |
+    /// --------------------------------------
+    /// |   0    | x_Q |   1           |   y_Q     |
+    fn public_initialization(
+        &self,
+        region: &mut Region<'_, pallas::Base>,
+        Q: pallas::Affine,
+    ) -> Result<(usize, X<pallas::Base>, Y<pallas::Base>), Error> {
         let config = self.config().clone();
-        let mut offset = 0;
+        let offset = 0;
 
         // Get the `x`- and `y`-coordinates of the starting `Q` base.
         let x_q = *Q.coordinates().unwrap().x();
@@ -50,7 +79,7 @@ where
 
         // Constrain the initial x_a, lambda_1, lambda_2, x_p using the q_sinsemilla4
         // selector.
-        let mut y_a: Y<pallas::Base> = {
+        let y_a: Y<pallas::Base> = {
             // Enable `q_sinsemilla4` on the first row.
             config.q_sinsemilla4.enable(region, offset)?;
             region.assign_fixed(
@@ -64,7 +93,7 @@ where
         };
 
         // Constrain the initial x_q to equal the x-coordinate of the domain's `Q`.
-        let mut x_a: X<pallas::Base> = {
+        let x_a: X<pallas::Base> = {
             let x_a = region.assign_advice_from_constant(
                 || "fixed x_q",
                 config.double_and_add.x_a,
@@ -74,6 +103,32 @@ where
 
             x_a.into()
         };
+
+        Ok((offset, x_a, y_a))
+    }
+
+    #[allow(clippy::type_complexity)]
+    /// Hash `message` from the initial point `Q`.
+    fn hash_all_pieces(
+        &self,
+        region: &mut Region<'_, pallas::Base>,
+        mut offset: usize,
+        message: &<Self as SinsemillaInstructions<
+            pallas::Affine,
+            { sinsemilla::K },
+            { sinsemilla::C },
+        >>::Message,
+        mut x_a: X<pallas::Base>,
+        mut y_a: Y<pallas::Base>,
+    ) -> Result<
+        (
+            X<pallas::Base>,
+            AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+            Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
+        ),
+        Error,
+    > {
+        let config = self.config().clone();
 
         let mut zs_sum: Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>> = Vec::new();
 
@@ -121,8 +176,31 @@ where
             y_a_cell
         };
 
+        Ok((x_a, y_a, zs_sum))
+    }
+
+    #[allow(unused_variables)]
+    #[allow(non_snake_case)]
+    #[allow(clippy::type_complexity)]
+    fn check_hash_result(
+        &self,
+        Q: EccPointQ,
+        message: &<Self as SinsemillaInstructions<
+            pallas::Affine,
+            { sinsemilla::K },
+            { sinsemilla::C },
+        >>::Message,
+        x_a: X<pallas::Base>,
+        y_a: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+        zs_sum: Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
+    ) -> Result<
+        (
+            NonIdentityEccPoint,
+            Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
+        ),
+        Error,
+    > {
         #[cfg(test)]
-        #[allow(non_snake_case)]
         // Check equivalence to result from primitives::sinsemilla::hash_to_point
         {
             use crate::sinsemilla::primitives::{K, S_PERSONALIZATION};
@@ -135,9 +213,15 @@ where
                 .map(|piece| piece.field_elem().map(|elem| (elem, piece.num_words())))
                 .collect();
 
+            let value_Q = match Q {
+                EccPointQ::PublicPoint(p) => Value::known(p),
+                EccPointQ::PrivatePoint(p) => p.point(),
+            };
+
             field_elems
                 .zip(x_a.value().zip(y_a.value()))
-                .assert_if_known(|(field_elems, (x_a, y_a))| {
+                .zip(value_Q)
+                .assert_if_known(|((field_elems, (x_a, y_a)), value_Q)| {
                     // Get message as a bitstring.
                     let bitstring: Vec<bool> = field_elems
                         .iter()
@@ -153,7 +237,7 @@ where
                     // incomplete addition with negligible probability.
                     let expected_point = bitstring
                         .chunks(K)
-                        .fold(Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
+                        .fold(value_Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
                     let actual_point =
                         pallas::Affine::from_xy(x_a.evaluate(), y_a.evaluate()).unwrap();
                     expected_point.to_affine() == actual_point

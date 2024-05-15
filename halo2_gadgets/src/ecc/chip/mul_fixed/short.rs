@@ -253,6 +253,7 @@ pub mod tests {
     };
     use pasta_curves::pallas;
 
+    use crate::utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRC};
     use crate::{
         ecc::{
             chip::{EccChip, FixedPoint, MagnitudeSign},
@@ -263,16 +264,16 @@ pub mod tests {
     };
 
     #[allow(clippy::op_ref)]
-    pub(crate) fn test_mul_fixed_short(
-        chip: EccChip<TestFixedBases>,
+    pub(crate) fn test_mul_fixed_short<Lookup: PallasLookupRC>(
+        chip: EccChip<TestFixedBases, Lookup>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
         // test_short
         let base_val = Short.generator();
         let test_short = FixedPointShort::from_inner(chip.clone(), Short);
 
-        fn load_magnitude_sign(
-            chip: EccChip<TestFixedBases>,
+        fn load_magnitude_sign<Lookup: PallasLookupRC>(
+            chip: EccChip<TestFixedBases, Lookup>,
             mut layouter: impl Layouter<pallas::Base>,
             magnitude: pallas::Base,
             sign: pallas::Base,
@@ -289,12 +290,12 @@ pub mod tests {
             Ok((magnitude, sign))
         }
 
-        fn constrain_equal_non_id(
-            chip: EccChip<TestFixedBases>,
+        fn constrain_equal_non_id<Lookup: PallasLookupRC>(
+            chip: EccChip<TestFixedBases, Lookup>,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
             scalar_val: pallas::Scalar,
-            result: Point<pallas::Affine, EccChip<TestFixedBases>>,
+            result: Point<pallas::Affine, EccChip<TestFixedBases, Lookup>>,
         ) -> Result<(), Error> {
             let expected = NonIdentityPoint::new(
                 chip,
@@ -425,7 +426,10 @@ pub mod tests {
         }
 
         impl Circuit<pallas::Base> for MyCircuit {
-            type Config = EccConfig<TestFixedBases>;
+            type Config = EccConfig<
+                TestFixedBases,
+                LookupRangeCheckConfig<pallas::Base, { crate::sinsemilla::primitives::K }>,
+            >;
             type FloorPlanner = SimpleFloorPlanner;
 
             fn without_witnesses(&self) -> Self {
@@ -462,7 +466,10 @@ pub mod tests {
                 meta.enable_constant(constants);
 
                 let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
-                EccChip::<TestFixedBases>::configure(meta, advices, lagrange_coeffs, range_check)
+                EccChip::<
+                    TestFixedBases,
+                    LookupRangeCheckConfig<pallas::Base, { crate::sinsemilla::primitives::K }>,
+                >::configure(meta, advices, lagrange_coeffs, range_check)
             }
 
             fn synthesize(

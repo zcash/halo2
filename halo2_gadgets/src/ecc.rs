@@ -595,7 +595,12 @@ pub(crate) mod tests {
         },
         FixedPoints,
     };
-    use crate::utilities::lookup_range_check::LookupRangeCheckConfig;
+    use crate::{
+        tests::circuit::{
+            fixed_verification_key_test_with_circuit, serialized_proof_test_case_with_circuit,
+        },
+        utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
+    };
 
     #[derive(Debug, Eq, PartialEq, Clone)]
     pub(crate) struct TestFixedBases;
@@ -729,7 +734,10 @@ pub(crate) mod tests {
 
     #[allow(non_snake_case)]
     impl Circuit<pallas::Base> for MyCircuit {
-        type Config = EccConfig<TestFixedBases>;
+        type Config = EccConfig<
+            TestFixedBases,
+            LookupRangeCheckConfig<pallas::Base, { crate::sinsemilla::primitives::K }>,
+        >;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
@@ -765,7 +773,10 @@ pub(crate) mod tests {
             meta.enable_constant(constants);
 
             let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
-            EccChip::<TestFixedBases>::configure(meta, advices, lagrange_coeffs, range_check)
+            EccChip::<
+                TestFixedBases,
+                LookupRangeCheckConfig<pallas::Base, { crate::sinsemilla::primitives::K }>,
+            >::configure(meta, advices, lagrange_coeffs, range_check)
         }
 
         fn synthesize(
@@ -899,6 +910,18 @@ pub(crate) mod tests {
         let circuit = MyCircuit { test_errors: true };
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
+    }
+
+    #[test]
+    fn fixed_verification_key_test() {
+        let circuit = MyCircuit { test_errors: false };
+        fixed_verification_key_test_with_circuit(&circuit, "vk_ecc_chip_0");
+    }
+
+    #[test]
+    fn serialized_proof_test_case() {
+        let circuit = MyCircuit { test_errors: false };
+        serialized_proof_test_case_with_circuit(circuit, "circuit_proof_test_case_ecc");
     }
 
     #[cfg(feature = "test-dev-graph")]
