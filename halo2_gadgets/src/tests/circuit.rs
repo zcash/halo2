@@ -66,6 +66,22 @@ impl Proof {
     }
 }
 
+pub(crate) fn fixed_verification_key_test_with_circuit<C: Circuit<pallas::Base>>(
+    circuit: &C,
+    file_name: &str,
+) {
+    // Setup phase: generate parameters, vk for the circuit.
+    let params: Params<Affine> = Params::new(11);
+    let vk = plonk::keygen_vk(&params, circuit).unwrap();
+
+    // Test that the pinned verification key (representing the circuit)
+    // is as expected.
+    assert_eq!(
+        format!("{:#?}\n", vk.pinned()),
+        fs::read_to_string(file_name).unwrap().replace("\r\n", "\n")
+    );
+}
+
 /// write proof to a file
 fn write_test_case<W: Write>(mut w: W, proof: &Proof) -> io::Result<()> {
     w.write_all(proof.as_ref())?;

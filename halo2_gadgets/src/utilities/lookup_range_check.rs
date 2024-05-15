@@ -462,14 +462,13 @@ mod tests {
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::{FailureLocation, MockProver, VerifyFailure},
-        plonk,
         plonk::{Circuit, ConstraintSystem, Error},
     };
     use pasta_curves::pallas;
 
-    use crate::tests::circuit::serialized_proof_test_case_with_circuit;
-    use halo2_proofs::poly::commitment::Params;
-    use pasta_curves::vesta::Affine;
+    use crate::tests::circuit::{
+        fixed_verification_key_test_with_circuit, serialized_proof_test_case_with_circuit,
+    };
     use std::{convert::TryInto, marker::PhantomData};
 
     #[test]
@@ -567,18 +566,8 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            // Setup phase: generate parameters, vk for the circuit.
-            let params: Params<Affine> = Params::new(11);
-            let vk = plonk::keygen_vk(&params, &circuit).unwrap();
+            fixed_verification_key_test_with_circuit(&circuit, "src/tests/vk_lookup_range_check_0");
 
-            // Test that the pinned verification key (representing the circuit)
-            // is as expected.
-            assert_eq!(
-                format!("{:#?}\n", vk.pinned()),
-                include_str!("../tests/vk_lookup_range_check_0").replace("\r\n", "\n")
-            );
-
-            // serialized_proof_test_case
             let file_name = "src/tests/circuit_proof_test_case_lookup_range_check.bin";
             serialized_proof_test_case_with_circuit(circuit, file_name);
         }
@@ -631,9 +620,6 @@ mod tests {
             }
         }
 
-        // Setup phase: generate parameters
-        let params: Params<Affine> = Params::new(11);
-
         // Edge case: zero bits (case 0)
         {
             let circuit: MyCircuit<pallas::Base> = MyCircuit {
@@ -643,17 +629,8 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            // generate vk
-            let vk = plonk::keygen_vk(&params, &circuit).unwrap();
+            fixed_verification_key_test_with_circuit(&circuit, "src/tests/vk_short_range_check_0");
 
-            // Test that the pinned verification key (representing the circuit)
-            // is as expected. Which indicates the layouters are the same.
-            assert_eq!(
-                format!("{:#?}\n", vk.pinned()),
-                include_str!("../tests/vk_short_range_check_0").replace("\r\n", "\n")
-            );
-
-            // serialized_proof_test_case
             let file_name = "src/tests/circuit_proof_test_case_short_range_check_0.bin";
             serialized_proof_test_case_with_circuit(circuit, file_name);
         }
@@ -667,17 +644,8 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            // generate vk
-            let vk = plonk::keygen_vk(&params, &circuit).unwrap();
+            fixed_verification_key_test_with_circuit(&circuit, "src/tests/vk_short_range_check_1");
 
-            // Test that the pinned verification key (representing the circuit)
-            // is as expected. Which indicates the layouters are the same.
-            assert_eq!(
-                format!("{:#?}\n", vk.pinned()),
-                include_str!("../tests/vk_short_range_check_1").replace("\r\n", "\n")
-            );
-
-            // serialized_proof_test_case
             let file_name = "src/tests/circuit_proof_test_case_short_range_check_1.bin";
             serialized_proof_test_case_with_circuit(circuit, file_name);
         }
@@ -691,17 +659,8 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            // generate vk
-            let vk = plonk::keygen_vk(&params, &circuit).unwrap();
+            fixed_verification_key_test_with_circuit(&circuit, "src/tests/vk_short_range_check_2");
 
-            // Test that the pinned verification key (representing the circuit)
-            // is as expected. Which indicates the layouters are the same.
-            assert_eq!(
-                format!("{:#?}\n", vk.pinned()),
-                include_str!("../tests/vk_short_range_check_2").replace("\r\n", "\n")
-            );
-
-            // serialized_proof_test_case
             let file_name = "src/tests/circuit_proof_test_case_short_range_check_2.bin";
             serialized_proof_test_case_with_circuit(circuit, file_name);
         }

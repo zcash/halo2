@@ -580,16 +580,13 @@ pub(crate) mod tests {
     use ff::PrimeField;
     use group::{prime::PrimeCurveAffine, Curve, Group};
 
-    use halo2_proofs::poly::commitment::Params;
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
-        plonk,
         plonk::{Circuit, ConstraintSystem, Error},
     };
     use lazy_static::lazy_static;
     use pasta_curves::pallas;
-    use pasta_curves::vesta::Affine;
 
     use super::{
         chip::{
@@ -599,7 +596,9 @@ pub(crate) mod tests {
         FixedPoints,
     };
     use crate::{
-        tests::circuit::serialized_proof_test_case_with_circuit,
+        tests::circuit::{
+            fixed_verification_key_test_with_circuit, serialized_proof_test_case_with_circuit,
+        },
         utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
     };
 
@@ -915,19 +914,10 @@ pub(crate) mod tests {
 
     #[test]
     fn fixed_verification_key_test() {
-        let k = 11;
         let circuit = MyCircuit { test_errors: false };
+        let file_name = "src/tests/vk_ecc_chip_0";
 
-        // Setup phase: generate parameters, vk for the circuit.
-        let params: Params<Affine> = Params::new(k);
-        let vk = plonk::keygen_vk(&params, &circuit).unwrap();
-
-        // Test that the pinned verification key (representing the circuit)
-        // is as expected.
-        assert_eq!(
-            format!("{:#?}\n", vk.pinned()),
-            include_str!("tests/vk_ecc_chip_0").replace("\r\n", "\n")
-        );
+        fixed_verification_key_test_with_circuit(&circuit, file_name);
     }
 
     #[test]

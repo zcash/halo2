@@ -184,7 +184,9 @@ pub mod tests {
             tests::{TestCommitDomain, TestHashDomain},
             HashDomains,
         },
-        tests::circuit::serialized_proof_test_case_with_circuit,
+        tests::circuit::{
+            fixed_verification_key_test_with_circuit, serialized_proof_test_case_with_circuit,
+        },
         utilities::{
             i2lebsp,
             lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
@@ -197,12 +199,9 @@ pub mod tests {
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
         pasta::pallas,
-        plonk,
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    use halo2_proofs::poly::commitment::Params;
-    use pasta_curves::vesta::Affine;
     use rand::{rngs::OsRng, RngCore};
     use std::{convert::TryInto, iter};
     const MERKLE_DEPTH: usize = 32;
@@ -403,19 +402,10 @@ pub mod tests {
 
     #[test]
     fn fixed_verification_key_test() {
-        let k = 11;
         let circuit = generate_circuit();
+        let file_name = "src/tests/vk_merkle_chip_0";
 
-        // Setup phase: generate parameters, vk for the circuit.
-        let params: Params<Affine> = Params::new(k);
-        let vk = plonk::keygen_vk(&params, &circuit).unwrap();
-
-        // Test that the pinned verification key (representing the circuit)
-        // is as expected. Which indicates the layouters are the same.
-        assert_eq!(
-            format!("{:#?}\n", vk.pinned()),
-            include_str!("../tests/vk_merkle_chip_0").replace("\r\n", "\n")
-        );
+        fixed_verification_key_test_with_circuit(&circuit, file_name);
     }
 
     #[test]
