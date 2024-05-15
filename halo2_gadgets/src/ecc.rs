@@ -596,7 +596,7 @@ pub(crate) mod tests {
         FixedPoints,
     };
     use crate::{
-        tests::circuit::{
+        tests::test_utils::{
             fixed_verification_key_test_with_circuit, serialized_proof_test_case_with_circuit,
         },
         utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},

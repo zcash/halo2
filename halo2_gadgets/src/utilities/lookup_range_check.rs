@@ -466,7 +466,7 @@ mod tests {
     };
     use pasta_curves::pallas;
 
-    use crate::tests::circuit::{
+    use crate::tests::test_utils::{
         fixed_verification_key_test_with_circuit, serialized_proof_test_case_with_circuit,
     };
     use std::{convert::TryInto, marker::PhantomData};
