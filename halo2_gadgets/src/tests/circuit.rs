@@ -83,16 +83,16 @@ pub(crate) fn fixed_verification_key_test_with_circuit<C: Circuit<pallas::Base>>
 
     if env::var_os("CIRCUIT_TEST_GENERATE_NEW_VK").is_some() {
         fs::write(full_file_name, vk_text).expect("Unable to write vk test file")
-    } else {
-        // Test that the pinned verification key (representing the circuit)
-        // is as expected.
-        assert_eq!(
-            vk_text,
-            fs::read_to_string(full_file_name)
-                .expect("Unable to read vk test file")
-                .replace("\r\n", "\n")
-        );
     }
+
+    // Test that the pinned verification key (representing the circuit)
+    // is as expected.
+    assert_eq!(
+        vk_text,
+        fs::read_to_string(full_file_name)
+            .expect("Unable to read vk test file")
+            .replace("\r\n", "\n")
+    );
 }
 
 /// write proof to a file
