@@ -1,6 +1,6 @@
 use super::{add, EccPoint, NonIdentityEccPoint, ScalarVar, T_Q};
 use crate::utilities::{
-    lookup_range_check::PallasLookup,
+    lookup_range_check::{PallasLookup, PallasLookupConfig},
     {bool_check, ternary},
 };
 use std::{
@@ -46,7 +46,7 @@ const INCOMPLETE_LO_LEN: usize = INCOMPLETE_LEN - INCOMPLETE_HI_LEN;
 const COMPLETE_RANGE: Range<usize> = INCOMPLETE_LEN..(INCOMPLETE_LEN + NUM_COMPLETE_BITS);
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct Config<Lookup: PallasLookup> {
+pub struct Config<Lookup: PallasLookup = PallasLookupConfig> {
     // Selector used to check switching logic on LSB
     q_mul_lsb: Selector,
     // Configuration used in complete addition

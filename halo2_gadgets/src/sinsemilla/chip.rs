@@ -9,7 +9,7 @@ use crate::{
         chip::{DoubleAndAdd, NonIdentityEccPoint},
         FixedPoints,
     },
-    utilities::lookup_range_check::PallasLookup,
+    utilities::lookup_range_check::{PallasLookup, PallasLookupConfig},
 };
 use std::marker::PhantomData;
 
@@ -30,7 +30,7 @@ mod hash_to_point;
 
 /// Configuration for the Sinsemilla hash chip
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub struct SinsemillaConfig<Hash, Commit, F, Lookup>
+pub struct SinsemillaConfig<Hash, Commit, F, Lookup = PallasLookupConfig>
 where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
@@ -98,7 +98,7 @@ where
 ///
 /// [Chip description](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html#plonk--halo-2-constraints).
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub struct SinsemillaChip<Hash, Commit, Fixed, Lookup>
+pub struct SinsemillaChip<Hash, Commit, Fixed, Lookup = PallasLookupConfig>
 where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,

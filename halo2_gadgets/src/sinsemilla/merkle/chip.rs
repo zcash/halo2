@@ -11,7 +11,10 @@ use super::MerkleInstructions;
 
 use crate::{
     sinsemilla::{primitives as sinsemilla, MessagePiece},
-    utilities::{lookup_range_check::PallasLookup, RangeConstrained},
+    utilities::{
+        lookup_range_check::{PallasLookup, PallasLookupConfig},
+        RangeConstrained,
+    },
     {
         ecc::FixedPoints,
         sinsemilla::{
@@ -28,7 +31,7 @@ use group::ff::PrimeField;
 
 /// Configuration for the `MerkleChip` implementation.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct MerkleConfig<Hash, Commit, Fixed, Lookup>
+pub struct MerkleConfig<Hash, Commit, Fixed, Lookup = PallasLookupConfig>
 where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
@@ -52,7 +55,7 @@ where
 /// This chip does **NOT** constrain `left⋆` and `right⋆` to be canonical encodings of
 /// `left` and `right`.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct MerkleChip<Hash, Commit, Fixed, Lookup>
+pub struct MerkleChip<Hash, Commit, Fixed, Lookup = PallasLookupConfig>
 where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,

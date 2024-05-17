@@ -2,7 +2,9 @@ use super::super::{EccBaseFieldElemFixed, EccPoint, FixedPoints, NUM_WINDOWS, T_
 use super::H_BASE;
 
 use crate::utilities::{
-    bitrange_subset, bool_check, lookup_range_check::PallasLookup, range_check,
+    bitrange_subset, bool_check,
+    lookup_range_check::{PallasLookup, PallasLookupConfig},
+    range_check,
 };
 
 use group::ff::PrimeField;
@@ -16,7 +18,7 @@ use pasta_curves::pallas;
 use std::convert::TryInto;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Config<Fixed: FixedPoints<pallas::Affine>, Lookup: PallasLookup> {
+pub struct Config<Fixed: FixedPoints<pallas::Affine>, Lookup: PallasLookup = PallasLookupConfig> {
     q_mul_fixed_base_field: Selector,
     canon_advices: [Column<Advice>; 3],
     lookup_config: Lookup,

@@ -1,7 +1,10 @@
 //! Chip implementations for the ECC gadgets.
 
 use super::{BaseFitsInScalarInstructions, EccInstructions, FixedPoints};
-use crate::utilities::{lookup_range_check::PallasLookup, UtilitiesInstructions};
+use crate::utilities::{
+    lookup_range_check::{PallasLookup, PallasLookupConfig},
+    UtilitiesInstructions,
+};
 use arrayvec::ArrayVec;
 
 use ff::PrimeField;
@@ -134,7 +137,10 @@ impl From<NonIdentityEccPoint> for EccPoint {
 /// Configuration for [`EccChip`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[allow(non_snake_case)]
-pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>, Lookup: PallasLookup> {
+pub struct EccConfig<
+    FixedPoints: super::FixedPoints<pallas::Affine>,
+    Lookup: PallasLookup = PallasLookupConfig,
+> {
     /// Advice columns needed by instructions in the ECC chip.
     pub advices: [Column<Advice>; 10],
 
@@ -224,7 +230,10 @@ pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
 
 /// An [`EccInstructions`] chip that uses 10 advice columns.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct EccChip<FixedPoints: super::FixedPoints<pallas::Affine>, Lookup: PallasLookup> {
+pub struct EccChip<
+    FixedPoints: super::FixedPoints<pallas::Affine>,
+    Lookup: PallasLookup = PallasLookupConfig,
+> {
     config: EccConfig<FixedPoints, Lookup>,
 }
 
