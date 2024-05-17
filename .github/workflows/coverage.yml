@@ -1,0 +1,28 @@
+name: coverage
+
+on: [push]
+jobs:
+  test:
+    name: coverage
+    runs-on: ubuntu-latest
+    container:
+      image: xd009642/tarpaulin:0.30.0
+      options: --security-opt seccomp=unconfined
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Generate code coverage
+        run: |
+          cargo tarpaulin --tests --examples --verbose --all-features --workspace --timeout 120 --out xml
+      
+      - name: Workaround for codecov/feedback#263
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE" 
+      
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          
