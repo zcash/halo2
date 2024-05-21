@@ -128,7 +128,8 @@ impl Circuit<Fr> for StandardPlonk {
     }
 }
 
-fn main() {
+#[test]
+fn test_serialization() {
     let k = 4;
     let circuit = StandardPlonk(Fr::random(OsRng));
     let params = ParamsKZG::<Bn256>::setup(k, OsRng);

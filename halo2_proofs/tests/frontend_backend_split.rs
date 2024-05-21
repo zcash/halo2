@@ -505,7 +505,7 @@ const WIDTH_FACTOR: usize = 1;
 
 #[test]
 fn test_mycircuit_full_legacy() {
-    #[cfg(all(feature = "heap-profiling", not(tarpaulin)))]
+    #[cfg(all(feature = "heap-profiling", not(coverage)))]
     let _profiler = dhat::Profiler::new_heap();
 
     use halo2_proofs::plonk::{
@@ -566,7 +566,7 @@ fn test_mycircuit_full_legacy() {
 fn test_mycircuit_full_split() {
     use halo2_middleware::zal::impls::{H2cEngine, PlonkEngineConfig};
 
-    #[cfg(all(feature = "heap-profiling", not(tarpaulin)))]
+    #[cfg(all(feature = "heap-profiling", not(coverage)))]
     let _profiler = dhat::Profiler::new_heap();
 
     let engine = PlonkEngineConfig::new()

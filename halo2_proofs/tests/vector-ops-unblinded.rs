@@ -515,7 +515,8 @@ where
     proof
 }
 
-fn main() {
+#[test]
+fn test_vector_ops_unbinded() {
     use halo2curves::pasta::Fp;
 
     const N: usize = 10;

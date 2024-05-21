@@ -190,7 +190,8 @@ where
     assert_eq!(accepted, expected);
 }
 
-fn main() {
+#[test]
+fn test_shuffle_api() {
     use halo2_proofs::dev::MockProver;
     use halo2curves::pasta::Fp;
     const K: u32 = 4;

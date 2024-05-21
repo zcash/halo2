@@ -314,7 +314,8 @@ fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
     assert_eq!(accepted, expected);
 }
 
-fn main() {
+#[test]
+fn test_shuffle() {
     const W: usize = 4;
     const H: usize = 32;
     const K: u32 = 8;
