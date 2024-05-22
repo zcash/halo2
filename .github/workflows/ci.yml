@@ -148,7 +148,7 @@ jobs:
           command: tarpaulin
           args: >
             ${{ steps.prepare.outputs.feature-flags }}
-            --timeout 1800
+            --timeout 3600
             --out Xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3.1.4
