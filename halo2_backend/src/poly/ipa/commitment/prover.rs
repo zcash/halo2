@@ -114,8 +114,11 @@ pub fn create_proof_with_engine<
         let r_j_randomness = C::Scalar::random(&mut rng);
         let l_j = l_j + engine.msm(&[value_l_j * z, l_j_randomness], &[params.u, params.w]);
         let r_j = r_j + engine.msm(&[value_r_j * z, r_j_randomness], &[params.u, params.w]);
-        let l_j = l_j.to_affine();
-        let r_j = r_j.to_affine();
+        let [l_j, r_j] = {
+            let mut affines = [C::identity(); 2];
+            C::CurveExt::batch_normalize(&[l_j, r_j], &mut affines);
+            affines
+        };
 
         // Feed L and R into the real transcript
         transcript.write_point(l_j)?;

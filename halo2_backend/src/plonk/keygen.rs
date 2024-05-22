@@ -64,20 +64,23 @@ where
     )?
     .build_vk(params, &domain, &cs.permutation);
 
-    let fixed_commitments = circuit
-        .preprocessing
-        .fixed
-        .iter()
-        .map(|poly| {
-            params
-                .commit_lagrange(
+    let fixed_commitments = {
+        let fixed_commitments_projective: Vec<C::CurveExt> = circuit
+            .preprocessing
+            .fixed
+            .iter()
+            .map(|poly| {
+                params.commit_lagrange(
                     &H2cEngine::new(),
                     &Polynomial::new_lagrange_from_vec(poly.clone()),
                     Blind::default(),
                 )
-                .to_affine()
-        })
-        .collect();
+            })
+            .collect();
+        let mut fixed_commitments = vec![C::identity(); fixed_commitments_projective.len()];
+        C::CurveExt::batch_normalize(&fixed_commitments_projective, &mut fixed_commitments);
+        fixed_commitments
+    };
 
     Ok(VerifyingKey::from_parts(
         domain,

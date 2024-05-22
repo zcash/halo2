@@ -1,9 +1,11 @@
 //! Verify a plonk proof
 
+use group::prime::PrimeCurveAffine;
 use group::Curve;
 use halo2_middleware::circuit::Any;
 use halo2_middleware::ff::{Field, FromUniformBytes, WithSmallOrderMulGroup};
 use halo2_middleware::zal::impls::H2cEngine;
+use halo2curves::CurveAffine;
 use std::iter;
 
 use super::{vanishing, VerifyingKey};
@@ -78,7 +80,9 @@ where
     // 1. Get the commitments of the instance polynomials. ----------------------------------------
 
     let instance_commitments = if V::QUERY_INSTANCE {
-        instances
+        let mut instance_commitments = Vec::with_capacity(instances.len());
+
+        let instances_projective = instances
             .iter()
             .map(|instance| {
                 instance
@@ -91,13 +95,22 @@ where
                         poly.resize(params.n() as usize, Scheme::Scalar::ZERO);
                         let poly = vk.domain.lagrange_from_vec(poly);
 
-                        Ok(params
-                            .commit_lagrange(&default_engine, &poly, Blind::default())
-                            .to_affine())
+                        Ok(params.commit_lagrange(&default_engine, &poly, Blind::default()))
                     })
                     .collect::<Result<Vec<_>, _>>()
             })
-            .collect::<Result<Vec<_>, _>>()?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        for instance_projective in instances_projective {
+            let mut affines =
+                vec![<Scheme as CommitmentScheme>::Curve::identity(); instance_projective.len()];
+            <<Scheme as CommitmentScheme>::Curve as CurveAffine>::CurveExt::batch_normalize(
+                &instance_projective,
+                &mut affines,
+            );
+            instance_commitments.push(affines);
+        }
+        instance_commitments
     } else {
         vec![vec![]; instances.len()]
     };

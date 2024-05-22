@@ -130,19 +130,29 @@ where
     let mut commit_values = |values: &Polynomial<C::Scalar, LagrangeCoeff>| {
         let poly = pk.vk.domain.lagrange_to_coeff(values.clone());
         let blind = Blind(C::Scalar::random(&mut rng));
-        let commitment = params
-            .commit_lagrange(&engine.msm_backend, values, blind)
-            .to_affine();
+        let commitment = params.commit_lagrange(&engine.msm_backend, values, blind);
         (poly, blind, commitment)
     };
 
     // Commit to permuted input expression
-    let (permuted_input_poly, permuted_input_blind, permuted_input_commitment) =
+    let (permuted_input_poly, permuted_input_blind, permuted_input_commitment_projective) =
         commit_values(&permuted_input_expression);
 
     // Commit to permuted table expression
-    let (permuted_table_poly, permuted_table_blind, permuted_table_commitment) =
+    let (permuted_table_poly, permuted_table_blind, permuted_table_commitment_projective) =
         commit_values(&permuted_table_expression);
+
+    let [permuted_input_commitment, permuted_table_commitment] = {
+        let mut affines = [C::identity(); 2];
+        C::CurveExt::batch_normalize(
+            &[
+                permuted_input_commitment_projective,
+                permuted_table_commitment_projective,
+            ],
+            &mut affines,
+        );
+        affines
+    };
 
     // Hash permuted input commitment
     transcript.write_point(permuted_input_commitment)?;

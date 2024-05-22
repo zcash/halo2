@@ -174,15 +174,14 @@ pub(in crate::plonk) fn permutation_commit<
 
         let blind = Blind(C::Scalar::random(&mut rng));
 
-        let permutation_product_commitment_projective =
-            params.commit_lagrange(&engine.msm_backend, &z, blind);
+        let permutation_product_commitment = params
+            .commit_lagrange(&engine.msm_backend, &z, blind)
+            .to_affine();
         let permutation_product_blind = blind;
         let z = domain.lagrange_to_coeff(z);
         let permutation_product_poly = z.clone();
 
-        let permutation_product_coset = domain.coeff_to_extended(z.clone());
-
-        let permutation_product_commitment = permutation_product_commitment_projective.to_affine();
+        let permutation_product_coset = domain.coeff_to_extended(z);
 
         // Hash the permutation product commitment
         transcript.write_point(permutation_product_commitment)?;

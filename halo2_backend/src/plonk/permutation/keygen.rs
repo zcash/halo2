@@ -261,15 +261,20 @@ pub(crate) fn build_vk<'params, C: CurveAffine, P: Params<'params, C>>(
     }
 
     // Pre-compute commitments for the URS.
-    let mut commitments = Vec::with_capacity(p.columns.len());
-    for permutation in &permutations {
-        // Compute commitment to permutation polynomial
-        commitments.push(
-            params
-                .commit_lagrange(&H2cEngine::new(), permutation, Blind::default())
-                .to_affine(),
-        );
-    }
+    let commitments = {
+        let mut commitments_projective = Vec::with_capacity(p.columns.len());
+        for permutation in &permutations {
+            // Compute commitment to permutation polynomial
+            commitments_projective.push(params.commit_lagrange(
+                &H2cEngine::new(),
+                permutation,
+                Blind::default(),
+            ));
+        }
+        let mut commitments = vec![C::identity(); p.columns.len()];
+        C::CurveExt::batch_normalize(&commitments_projective, &mut commitments);
+        commitments
+    };
 
     VerifyingKey { commitments }
 }

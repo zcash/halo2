@@ -195,8 +195,13 @@ impl<'params, C: CurveAffine> ParamsProver<'params, C> for ParamsIPA<C> {
         let g_lagrange = g_to_lagrange(g_projective, k);
 
         let hasher = C::CurveExt::hash_to_curve("Halo2-Parameters");
-        let w = hasher(&[1]).to_affine();
-        let u = hasher(&[2]).to_affine();
+
+        let [w, u] = {
+            let projectives = vec![hasher(&[1]), hasher(&[2])];
+            let mut affines = [C::identity(); 2];
+            C::CurveExt::batch_normalize(&projectives, &mut affines);
+            affines
+        };
 
         ParamsIPA {
             k,
