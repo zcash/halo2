@@ -28,7 +28,6 @@ use halo2_frontend::{
     },
 };
 use halo2_middleware::{ff::Field, poly::Rotation};
-use halo2_proofs::poly::commitment::ParamsProver;
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -518,7 +517,6 @@ fn test_mycircuit_full_legacy() {
     // Setup
     let mut rng = BlockRng::new(OneNg {});
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
-    let verifier_params = params.verifier_params();
     let start = Instant::now();
     let vk = keygen_vk_legacy(&params, &circuit).expect("keygen_vk should not fail");
     let pk = keygen_pk_legacy(&params, vk.clone(), &circuit).expect("keygen_pk should not fail");
@@ -549,10 +547,11 @@ fn test_mycircuit_full_legacy() {
     let start = Instant::now();
     let mut verifier_transcript =
         Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
-    let strategy = SingleStrategy::new(verifier_params);
+    let verifier_params = params.verifier_params();
+    let strategy = SingleStrategy::new(&verifier_params);
 
-    verify_proof::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<'_, Bn256>, _, _, _>(
-        &params,
+    verify_proof::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<Bn256>, _, _, _>(
+        &verifier_params,
         &vk,
         strategy,
         &[instances_slice],
@@ -580,7 +579,6 @@ fn test_mycircuit_full_split() {
     // Setup
     let mut rng = BlockRng::new(OneNg {});
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
-    let verifier_params = params.verifier_params();
     let start = Instant::now();
     let vk = keygen_vk(&params, &compiled_circuit).expect("keygen_vk should not fail");
     let pk = keygen_pk(&params, vk.clone(), &compiled_circuit).expect("keygen_pk should not fail");
@@ -629,10 +627,11 @@ fn test_mycircuit_full_split() {
     println!("Verifying...");
     let mut verifier_transcript =
         Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof.as_slice());
-    let strategy = SingleStrategy::new(verifier_params);
+    let verifier_params = params.verifier_params();
+    let strategy = SingleStrategy::new(&verifier_params);
 
-    verify_proof_single::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<'_, Bn256>, _, _, _>(
-        &params,
+    verify_proof_single::<KZGCommitmentScheme<Bn256>, VerifierSHPLONK<Bn256>, _, _, _>(
+        &verifier_params,
         &vk,
         strategy,
         instances_slice,

@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use super::ChallengeY;
 use super::{construct_intermediate_sets, ChallengeU, ChallengeV};
@@ -8,13 +9,14 @@ use crate::arithmetic::{
 use crate::helpers::SerdeCurveAffine;
 use crate::poly::commitment::Verifier;
 use crate::poly::commitment::MSM;
-use crate::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
+use crate::poly::kzg::commitment::KZGCommitmentScheme;
 use crate::poly::kzg::msm::DualMSM;
 use crate::poly::kzg::msm::{PreMSM, MSMKZG};
 use crate::poly::kzg::strategy::GuardKZG;
 use crate::poly::query::{CommitmentReference, VerifierQuery};
 use crate::poly::Error;
 use crate::transcript::{EncodedChallenge, TranscriptRead};
+use group::prime::PrimeCurveAffine;
 use halo2_middleware::ff::Field;
 use halo2curves::pairing::{Engine, MultiMillerLoop};
 use halo2curves::CurveExt;
@@ -22,11 +24,11 @@ use std::ops::MulAssign;
 
 /// Concrete KZG multiopen verifier with SHPLONK variant
 #[derive(Debug)]
-pub struct VerifierSHPLONK<'params, E: Engine> {
-    params: &'params ParamsKZG<E>,
+pub struct VerifierSHPLONK<E: Engine> {
+    _marker: PhantomData<E>,
 }
 
-impl<'params, E> Verifier<'params, KZGCommitmentScheme<E>> for VerifierSHPLONK<'params, E>
+impl<'params, E> Verifier<'params, KZGCommitmentScheme<E>> for VerifierSHPLONK<E>
 where
     E: MultiMillerLoop + Debug,
     E::Fr: Ord,
@@ -34,13 +36,15 @@ where
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
-    type Guard = GuardKZG<'params, E>;
-    type MSMAccumulator = DualMSM<'params, E>;
+    type Guard = GuardKZG<E>;
+    type MSMAccumulator = DualMSM<E>;
 
     const QUERY_INSTANCE: bool = false;
 
-    fn new(params: &'params ParamsKZG<E>) -> Self {
-        Self { params }
+    fn new() -> Self {
+        Self {
+            _marker: PhantomData,
+        }
     }
 
     /// Verify a multi-opening proof
@@ -53,7 +57,7 @@ where
         &self,
         transcript: &mut T,
         queries: I,
-        mut msm_accumulator: DualMSM<'params, E>,
+        mut msm_accumulator: DualMSM<E>,
     ) -> Result<Self::Guard, Error>
     where
         I: IntoIterator<Item = VerifierQuery<'com, E::G1Affine, MSMKZG<E>>> + Clone,
@@ -126,7 +130,7 @@ where
             r_outer_acc += power_of_v * r_inner_acc * z_diff_i;
         }
         let mut outer_msm = outer_msm.normalize();
-        let g1: E::G1 = self.params.g[0].into();
+        let g1: E::G1 = <E::G1Affine as PrimeCurveAffine>::generator().into();
         outer_msm.append_term(-r_outer_acc, g1);
         outer_msm.append_term(-z_0, h1.into());
         outer_msm.append_term(*u, h2.into());

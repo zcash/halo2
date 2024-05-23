@@ -596,7 +596,7 @@ fn plonk_api() {
             _,
             Blake2bRead<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
-        >(verifier_params, pk.get_vk(), &proof[..]);
+        >(&verifier_params, pk.get_vk(), &proof[..]);
     }
 
     fn test_plonk_api_shplonk() {
@@ -625,7 +625,7 @@ fn plonk_api() {
             _,
             Blake2bRead<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
-        >(verifier_params, pk.get_vk(), &proof[..]);
+        >(&verifier_params, pk.get_vk(), &proof[..]);
     }
 
     fn test_plonk_api_ipa() {
@@ -646,7 +646,7 @@ fn plonk_api() {
             rng, &params, &pk,
         );
 
-        let verifier_params = params.verifier_params();
+        let verifier_params = params;
 
         verify_proof::<
             _,
@@ -654,7 +654,7 @@ fn plonk_api() {
             _,
             Blake2bRead<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
-        >(verifier_params, pk.get_vk(), &proof[..]);
+        >(&verifier_params, pk.get_vk(), &proof[..]);
 
         // Check that the verification key has not changed unexpectedly
         {

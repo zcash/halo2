@@ -1,4 +1,4 @@
-use crate::plonk::Error;
+use crate::{plonk::Error, poly::commitment::ParamsVerifier};
 use group::ff::Field;
 use halo2_middleware::ff::FromUniformBytes;
 use halo2_middleware::zal::impls::H2cEngine;
@@ -12,7 +12,7 @@ use crate::{
     },
     plonk::VerifyingKey,
     poly::{
-        commitment::{Params, MSM},
+        commitment::MSM,
         ipa::{
             commitment::{IPACommitmentScheme, ParamsVerifierIPA},
             msm::MSMIPA,
@@ -31,8 +31,7 @@ struct BatchStrategy<'params, C: CurveAffine> {
     msm: MSMIPA<'params, C>,
 }
 
-impl<'params, C: CurveAffine>
-    VerificationStrategy<'params, IPACommitmentScheme<C>, VerifierIPA<'params, C>>
+impl<'params, C: CurveAffine> VerificationStrategy<'params, IPACommitmentScheme<C>, VerifierIPA<C>>
     for BatchStrategy<'params, C>
 {
     type Output = MSMIPA<'params, C>;
@@ -125,7 +124,7 @@ where
                 })
             })
             .try_fold_and_reduce(
-                || params.empty_msm(),
+                || ParamsVerifier::<'_, C>::empty_msm(params),
                 |acc, res| res.map(|proof_msm| accumulate_msm(acc, proof_msm)),
             );
 

@@ -76,8 +76,7 @@ pub struct AccumulatorStrategy<'params, C: CurveAffine> {
     msm: MSMIPA<'params, C>,
 }
 
-impl<'params, C: CurveAffine>
-    VerificationStrategy<'params, IPACommitmentScheme<C>, VerifierIPA<'params, C>>
+impl<'params, C: CurveAffine> VerificationStrategy<'params, IPACommitmentScheme<C>, VerifierIPA<C>>
     for AccumulatorStrategy<'params, C>
 {
     type Output = Self;
@@ -117,8 +116,7 @@ pub struct SingleStrategy<'params, C: CurveAffine> {
     msm: MSMIPA<'params, C>,
 }
 
-impl<'params, C: CurveAffine>
-    VerificationStrategy<'params, IPACommitmentScheme<C>, VerifierIPA<'params, C>>
+impl<'params, C: CurveAffine> VerificationStrategy<'params, IPACommitmentScheme<C>, VerifierIPA<C>>
     for SingleStrategy<'params, C>
 {
     type Output = ();

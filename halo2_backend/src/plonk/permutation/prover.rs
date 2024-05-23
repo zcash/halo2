@@ -48,9 +48,8 @@ pub(crate) struct Evaluated<C: CurveAffine> {
 
 #[allow(clippy::too_many_arguments)]
 pub(in crate::plonk) fn permutation_commit<
-    'params,
     C: CurveAffine,
-    P: Params<'params, C>,
+    P: Params<C>,
     E: EncodedChallenge<C>,
     R: RngCore,
     T: TranscriptWrite<C, E>,

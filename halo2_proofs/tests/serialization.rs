@@ -176,16 +176,17 @@ fn test_serialization() {
     .expect("prover should not fail");
     let proof = transcript.finalize();
 
-    let strategy = SingleStrategy::new(&params);
+    let verifier_params = params.verifier_params();
+    let strategy = SingleStrategy::new(&verifier_params);
     let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
     assert!(verify_proof::<
         KZGCommitmentScheme<Bn256>,
-        VerifierGWC<'_, Bn256>,
+        VerifierGWC<Bn256>,
         Challenge255<G1Affine>,
         Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>>,
-        SingleStrategy<'_, Bn256>,
+        SingleStrategy<Bn256>,
     >(
-        &params,
+        &verifier_params,
         pk.get_vk(),
         strategy,
         &[instances],

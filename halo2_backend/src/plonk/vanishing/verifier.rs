@@ -6,7 +6,7 @@ use crate::{
     arithmetic::CurveAffine,
     plonk::{ChallengeX, ChallengeY, Error, VerifyingKey},
     poly::{
-        commitment::{Params, MSM},
+        commitment::{ParamsVerifier, MSM},
         VerifierQuery,
     },
     transcript::{read_n_points, EncodedChallenge, TranscriptRead},
@@ -86,7 +86,7 @@ impl<C: CurveAffine> Constructed<C> {
 }
 
 impl<C: CurveAffine> PartiallyEvaluated<C> {
-    pub(in crate::plonk) fn verify<'params, P: Params<'params, C>>(
+    pub(in crate::plonk) fn verify<'params, P: ParamsVerifier<'params, C>>(
         self,
         params: &'params P,
         expressions: impl Iterator<Item = C::Scalar>,

@@ -1,5 +1,5 @@
 use super::{
-    commitment::{KZGCommitmentScheme, ParamsKZG},
+    commitment::{KZGCommitmentScheme, ParamsVerifierKZG},
     msm::DualMSM,
 };
 use crate::{
@@ -21,105 +21,108 @@ use std::fmt::Debug;
 
 /// Wrapper for linear verification accumulator
 #[derive(Debug, Clone)]
-pub struct GuardKZG<'params, E: MultiMillerLoop + Debug>
+pub struct GuardKZG<E: MultiMillerLoop>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
-    pub(crate) msm_accumulator: DualMSM<'params, E>,
+    pub(crate) msm_accumulator: DualMSM<E>,
 }
 
 /// Define accumulator type as `DualMSM`
-impl<'params, E> Guard<KZGCommitmentScheme<E>> for GuardKZG<'params, E>
+impl<E> Guard<KZGCommitmentScheme<E>> for GuardKZG<E>
 where
     E: MultiMillerLoop + Debug,
     E::G1Affine: SerdeCurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
-    type MSMAccumulator = DualMSM<'params, E>;
+    type MSMAccumulator = DualMSM<E>;
 }
 
 /// KZG specific operations
-impl<'params, E: MultiMillerLoop + Debug> GuardKZG<'params, E>
+impl<E> GuardKZG<E>
 where
+    E: MultiMillerLoop,
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
-    pub(crate) fn new(msm_accumulator: DualMSM<'params, E>) -> Self {
+    pub(crate) fn new(msm_accumulator: DualMSM<E>) -> Self {
         Self { msm_accumulator }
     }
 }
 
 /// A verifier that checks multiple proofs in a batch
 #[derive(Clone, Debug)]
-pub struct AccumulatorStrategy<'params, E: Engine>
+pub struct AccumulatorStrategy<E: Engine>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
-    pub(crate) msm_accumulator: DualMSM<'params, E>,
+    pub(crate) msm_accumulator: DualMSM<E>,
+    params: ParamsVerifierKZG<E>,
 }
 
-impl<'params, E: MultiMillerLoop + Debug> AccumulatorStrategy<'params, E>
+impl<E> AccumulatorStrategy<E>
 where
+    E: MultiMillerLoop,
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
     /// Constructs an empty batch verifier
-    pub fn new(params: &'params ParamsKZG<E>) -> Self {
+    pub fn new(params: &ParamsVerifierKZG<E>) -> Self {
         AccumulatorStrategy {
-            msm_accumulator: DualMSM::new(params),
+            msm_accumulator: DualMSM::new(),
+            params: params.clone(),
         }
     }
 
     /// Constructs and initialized new batch verifier
-    pub fn with(msm_accumulator: DualMSM<'params, E>) -> Self {
-        AccumulatorStrategy { msm_accumulator }
+    pub fn with(msm_accumulator: DualMSM<E>, params: &ParamsVerifierKZG<E>) -> Self {
+        AccumulatorStrategy {
+            msm_accumulator,
+            params: params.clone(),
+        }
     }
 }
 
 /// A verifier that checks a single proof
 #[derive(Clone, Debug)]
-pub struct SingleStrategy<'params, E: Engine>
+pub struct SingleStrategy<E: Engine>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
-    pub(crate) msm: DualMSM<'params, E>,
+    pub(crate) msm: DualMSM<E>,
+    params: ParamsVerifierKZG<E>,
 }
 
-impl<'params, E: MultiMillerLoop + Debug> SingleStrategy<'params, E>
+impl<'params, E: MultiMillerLoop + Debug> SingleStrategy<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
     /// Constructs an empty batch verifier
-    pub fn new(params: &'params ParamsKZG<E>) -> Self {
+    pub fn new(params: &'params ParamsVerifierKZG<E>) -> Self {
         SingleStrategy {
-            msm: DualMSM::new(params),
+            msm: DualMSM::new(),
+            params: params.clone(),
         }
     }
 }
 
-impl<
-        'params,
-        E: MultiMillerLoop + Debug,
-        V: Verifier<
-            'params,
-            KZGCommitmentScheme<E>,
-            MSMAccumulator = DualMSM<'params, E>,
-            Guard = GuardKZG<'params, E>,
-        >,
-    > VerificationStrategy<'params, KZGCommitmentScheme<E>, V> for AccumulatorStrategy<'params, E>
+impl<'params, E, V> VerificationStrategy<'params, KZGCommitmentScheme<E>, V>
+    for AccumulatorStrategy<E>
 where
+    E: MultiMillerLoop + Debug,
+    V: Verifier<'params, KZGCommitmentScheme<E>, MSMAccumulator = DualMSM<E>, Guard = GuardKZG<E>>,
     E::G1Affine: SerdeCurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
     type Output = Self;
 
-    fn new(params: &'params ParamsKZG<E>) -> Self {
+    fn new(params: &'params ParamsVerifierKZG<E>) -> Self {
         AccumulatorStrategy::new(params)
     }
 
@@ -133,34 +136,28 @@ where
         let guard = f(self.msm_accumulator)?;
         Ok(Self {
             msm_accumulator: guard.msm_accumulator,
+            params: self.params,
         })
     }
 
     fn finalize(self) -> bool {
         // ZAL: Verification is (supposedly) cheap, hence we don't use an accelerator engine
         let default_engine = H2cEngine::new();
-        self.msm_accumulator.check(&default_engine)
+        self.msm_accumulator.check(&default_engine, &self.params)
     }
 }
 
-impl<
-        'params,
-        E: MultiMillerLoop + Debug,
-        V: Verifier<
-            'params,
-            KZGCommitmentScheme<E>,
-            MSMAccumulator = DualMSM<'params, E>,
-            Guard = GuardKZG<'params, E>,
-        >,
-    > VerificationStrategy<'params, KZGCommitmentScheme<E>, V> for SingleStrategy<'params, E>
+impl<'params, E, V> VerificationStrategy<'params, KZGCommitmentScheme<E>, V> for SingleStrategy<E>
 where
+    E: MultiMillerLoop + Debug,
+    V: Verifier<'params, KZGCommitmentScheme<E>, MSMAccumulator = DualMSM<E>, Guard = GuardKZG<E>>,
     E::G1Affine: SerdeCurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
     type Output = ();
 
-    fn new(params: &'params ParamsKZG<E>) -> Self {
+    fn new(params: &'params ParamsVerifierKZG<E>) -> Self {
         Self::new(params)
     }
 
@@ -173,7 +170,7 @@ where
         let msm = guard.msm_accumulator;
         // Verification is (supposedly) cheap, hence we don't use an accelerator engine
         let default_engine = H2cEngine::new();
-        if msm.check(&default_engine) {
+        if msm.check(&default_engine, &self.params) {
             Ok(())
         } else {
             Err(Error::ConstraintSystemFailure)

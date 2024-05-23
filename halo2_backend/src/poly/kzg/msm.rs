@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use super::commitment::ParamsKZG;
+use super::commitment::ParamsVerifierKZG;
 use crate::{arithmetic::parallelize, poly::commitment::MSM};
 use group::{Curve, Group};
 use halo2_middleware::zal::traits::MsmAccel;
@@ -46,7 +46,7 @@ where
     }
 }
 
-impl<E: Engine + Debug> MSM<E::G1Affine> for MSMKZG<E>
+impl<E: Engine> MSM<E::G1Affine> for MSMKZG<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
@@ -101,7 +101,7 @@ where
     projectives_msms: Vec<MSMKZG<E>>,
 }
 
-impl<E: Engine + Debug> Default for PreMSM<E>
+impl<E: Engine> Default for PreMSM<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
@@ -113,7 +113,7 @@ where
     }
 }
 
-impl<E: Engine + Debug> PreMSM<E>
+impl<E: Engine> PreMSM<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
@@ -136,37 +136,25 @@ where
     }
 }
 
-impl<'params, E: MultiMillerLoop + Debug> From<&'params ParamsKZG<E>> for DualMSM<'params, E>
-where
-    E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
-    E::G1: CurveExt<AffineExt = E::G1Affine>,
-{
-    fn from(params: &'params ParamsKZG<E>) -> Self {
-        DualMSM::new(params)
-    }
-}
-
 /// Two channel MSM accumulator
-#[derive(Debug, Clone)]
-pub struct DualMSM<'a, E: Engine>
+#[derive(Debug, Default, Clone)]
+pub struct DualMSM<E: Engine>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
-    pub(crate) params: &'a ParamsKZG<E>,
     pub(crate) left: MSMKZG<E>,
     pub(crate) right: MSMKZG<E>,
 }
 
-impl<'a, E: MultiMillerLoop + Debug> DualMSM<'a, E>
+impl<E: MultiMillerLoop> DualMSM<E>
 where
     E::G1Affine: CurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
 {
     /// Create a new two channel MSM accumulator instance
-    pub fn new(params: &'a ParamsKZG<E>) -> Self {
+    pub fn new() -> Self {
         Self {
-            params,
             left: MSMKZG::new(),
             right: MSMKZG::new(),
         }
@@ -185,9 +173,9 @@ where
     }
 
     /// Performs final pairing check with given verifier params and two channel linear combination
-    pub fn check(self, engine: &impl MsmAccel<E::G1Affine>) -> bool {
-        let s_g2_prepared = E::G2Prepared::from(self.params.s_g2);
-        let n_g2_prepared = E::G2Prepared::from(-self.params.g2);
+    pub fn check(self, engine: &impl MsmAccel<E::G1Affine>, params: &ParamsVerifierKZG<E>) -> bool {
+        let s_g2_prepared = E::G2Prepared::from(params.s_g2);
+        let n_g2_prepared = E::G2Prepared::from((-E::G2::generator()).into());
 
         let left = self.left.eval(engine);
         let right = self.right.eval(engine);

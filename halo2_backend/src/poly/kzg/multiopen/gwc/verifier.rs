@@ -1,11 +1,12 @@
 use std::fmt::Debug;
+use std::marker::PhantomData;
 
 use super::{construct_intermediate_sets, ChallengeU, ChallengeV};
 use crate::arithmetic::powers;
 use crate::helpers::SerdeCurveAffine;
 use crate::poly::commitment::Verifier;
 use crate::poly::commitment::MSM;
-use crate::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
+use crate::poly::kzg::commitment::KZGCommitmentScheme;
 use crate::poly::kzg::msm::{DualMSM, MSMKZG};
 use crate::poly::kzg::strategy::GuardKZG;
 use crate::poly::query::Query;
@@ -13,30 +14,33 @@ use crate::poly::query::{CommitmentReference, VerifierQuery};
 use crate::poly::Error;
 use crate::transcript::{EncodedChallenge, TranscriptRead};
 
+use group::prime::PrimeCurveAffine;
 use halo2_middleware::ff::Field;
 use halo2curves::pairing::{Engine, MultiMillerLoop};
 use halo2curves::CurveExt;
 
 #[derive(Debug)]
 /// Concrete KZG verifier with GWC variant
-pub struct VerifierGWC<'params, E: Engine> {
-    params: &'params ParamsKZG<E>,
+pub struct VerifierGWC<E: Engine> {
+    _marker: PhantomData<E>,
 }
 
-impl<'params, E> Verifier<'params, KZGCommitmentScheme<E>> for VerifierGWC<'params, E>
+impl<'params, E> Verifier<'params, KZGCommitmentScheme<E>> for VerifierGWC<E>
 where
     E: MultiMillerLoop + Debug,
     E::G1Affine: SerdeCurveAffine<ScalarExt = <E as Engine>::Fr, CurveExt = <E as Engine>::G1>,
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
-    type Guard = GuardKZG<'params, E>;
-    type MSMAccumulator = DualMSM<'params, E>;
+    type Guard = GuardKZG<E>;
+    type MSMAccumulator = DualMSM<E>;
 
     const QUERY_INSTANCE: bool = false;
 
-    fn new(params: &'params ParamsKZG<E>) -> Self {
-        Self { params }
+    fn new() -> Self {
+        Self {
+            _marker: PhantomData,
+        }
     }
 
     fn verify_proof<
@@ -48,7 +52,7 @@ where
         &self,
         transcript: &mut T,
         queries: I,
-        mut msm_accumulator: DualMSM<'params, E>,
+        mut msm_accumulator: DualMSM<E>,
     ) -> Result<Self::Guard, Error>
     where
         I: IntoIterator<Item = VerifierQuery<'com, E::G1Affine, MSMKZG<E>>> + Clone,
@@ -116,7 +120,7 @@ where
 
         msm_accumulator.right.add_msm(&witness_with_aux);
         msm_accumulator.right.add_msm(&commitment_multi);
-        let g0: E::G1 = self.params.g[0].into();
+        let g0: E::G1 = <E::G1Affine as PrimeCurveAffine>::generator().into();
         msm_accumulator.right.append_term(eval_multi, -g0);
 
         Ok(Self::Guard::new(msm_accumulator))
