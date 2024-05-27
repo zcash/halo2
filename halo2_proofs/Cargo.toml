@@ -44,7 +44,7 @@ harness = false
 halo2_middleware = { path = "../halo2_middleware" }
 halo2_backend = { path = "../halo2_backend" }
 halo2_frontend = { path = "../halo2_frontend" }
-halo2curves = { version = "0.6.0", default-features = false }
+halo2curves = { version = "0.6.1", default-features = false }
 rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
 plotters = { version = "0.3.0", default-features = false, optional = true }
 group = "0.13"
