@@ -132,7 +132,7 @@ pub enum CommitmentReference<'r, C: CurveAffine, M: MSM<C>> {
 impl<'r, C: CurveAffine, M: MSM<C>> Copy for CommitmentReference<'r, C, M> {}
 
 impl<'r, C: CurveAffine, M: MSM<C>> PartialEq for CommitmentReference<'r, C, M> {
-    #![allow(clippy::vtable_address_comparisons)]
+    #![allow(ambiguous_wide_pointer_comparisons)]
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (&CommitmentReference::Commitment(a), &CommitmentReference::Commitment(b)) => {

@@ -10,6 +10,7 @@ use std::marker::PhantomData;
 
 /// This represents an advice column at a certain row in the ConstraintSystem
 #[derive(Copy, Clone, Debug)]
+#[allow(dead_code)]
 pub struct Variable(Column<Advice>, usize);
 
 #[derive(Clone)]

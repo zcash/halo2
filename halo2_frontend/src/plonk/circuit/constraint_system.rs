@@ -15,6 +15,7 @@ use std::fmt::Debug;
 /// Represents an index into a vector where each entry corresponds to a distinct
 /// point that polynomials are queried at.
 #[derive(Copy, Clone, Debug)]
+#[allow(dead_code)]
 pub(crate) struct PointIndex(pub usize);
 
 /// A "virtual cell" is a PLONK cell that has been queried at a particular relative offset

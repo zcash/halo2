@@ -14,6 +14,7 @@ pub use halo2curves::{CurveAffine, CurveExt};
 /// This represents an element of a group with basic operations that can be
 /// performed. This allows an FFT implementation (for example) to operate
 /// generically over either a field or elliptic curve group.
+#[allow(dead_code)]
 pub(crate) trait FftGroup<Scalar: Field>:
     Copy + Send + Sync + 'static + GroupOpsOwned + ScalarMulOwned<Scalar>
 {

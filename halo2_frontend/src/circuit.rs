@@ -394,7 +394,7 @@ fn batch_invert_assigned<F: Field>(assigned: Vec<Vec<Assigned<F>>>) -> Vec<Vec<F
 // `Assigned<F>`.
 fn poly_invert<F: Field>(
     poly: &[Assigned<F>],
-    inv_denoms: impl Iterator<Item = F> + ExactSizeIterator,
+    inv_denoms: impl ExactSizeIterator<Item = F>,
 ) -> Vec<F> {
     assert_eq!(inv_denoms.len(), poly.len());
     poly.iter()

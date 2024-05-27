@@ -131,7 +131,7 @@ where
         let mut point_index_set = BTreeSet::new();
         for (commitment, point_idx_set) in commitment_set_map.iter() {
             if query.get_commitment() == *commitment {
-                point_index_set = point_idx_set.clone();
+                point_index_set.clone_from(point_idx_set);
             }
         }
         assert!(!point_index_set.is_empty());

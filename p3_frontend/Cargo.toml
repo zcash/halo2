@@ -1,0 +1,37 @@
+[package]
+name = "p3_frontend"
+version = "0.3.0"
+authors = [
+    "Privacy Scaling Explorations team",
+]
+edition = "2021"
+description = """
+Plonky3 frontend implementation.  Allows using a circuit defined with the Air trait from plonky3 to be proved with a halo2 backend.
+"""
+license = "MIT OR Apache-2.0"
+categories = ["cryptography"]
+keywords = ["halo", "proofs", "zkp", "zkSNARKs", "plonky3"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
+
+[dependencies]
+p3-air = { git = "https://github.com/Plonky3/Plonky3", rev = "7b5b8a6" }
+p3-util = { git = "https://github.com/Plonky3/Plonky3", rev = "7b5b8a6" }
+p3-matrix = { git = "https://github.com/Plonky3/Plonky3", rev = "7b5b8a6" }
+p3-field = { git = "https://github.com/Plonky3/Plonky3", rev = "7b5b8a6" }
+p3-uni-stark = { git = "https://github.com/Plonky3/Plonky3", rev = "7b5b8a6" }
+halo2_middleware = { path = "../halo2_middleware" }
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
+num-bigint = { version = "0.4.3", default-features = false }
+
+[dev-dependencies]
+halo2curves = { version = "0.6.0", default-features = false }
+rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
+halo2_backend = { path = "../halo2_backend" }
+serde_test = { version = "1.0" }
+p3-keccak-air = { git = "https://github.com/Plonky3/Plonky3", rev = "7b5b8a6" }
+p3-keccak = { git = "https://github.com/Plonky3/Plonky3", rev = "7b5b8a6" }
+p3-util = { git = "https://github.com/Plonky3/Plonky3", rev = "7b5b8a6" }
+rand = "0.8.5"

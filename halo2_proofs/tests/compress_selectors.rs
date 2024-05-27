@@ -45,6 +45,7 @@ struct MyCircuitConfig {
 
     s_add: Selector,
     s_mul: Selector,
+    #[allow(dead_code)]
     s_cubed: Selector,
 
     PI: Column<Instance>,
@@ -82,6 +83,7 @@ trait MyCircuitComposer<F: Field> {
         row: usize,
     ) -> Result<(), Error>;
 
+    #[allow(dead_code)]
     fn cube<FM>(&self, layouter: &mut impl Layouter<F>, f: FM) -> Result<(Cell, Cell), Error>
     where
         FM: FnMut() -> Value<(Assigned<F>, Assigned<F>)>;
@@ -362,6 +364,7 @@ fn test_mycircuit(
     let pk = keygen_pk_custom(&params, vk.clone(), &circuit, pk_keygen_compress_selectors)?;
 
     // Proving
+    #[allow(clippy::useless_vec)]
     let instances = vec![vec![Fr::one(), Fr::from_u128(3)]];
     let instances_slice: &[&[Fr]] = &(instances
         .iter()

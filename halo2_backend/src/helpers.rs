@@ -132,5 +132,5 @@ pub(crate) fn write_polynomial_slice<W: io::Write, F: SerdePrimeField, B>(
 /// Gets the total number of bytes of a slice of polynomials, assuming all polynomials are the same length
 pub(crate) fn polynomial_slice_byte_length<F: PrimeField, B>(slice: &[Polynomial<F, B>]) -> usize {
     let field_len = F::default().to_repr().as_ref().len();
-    4 + slice.len() * (4 + field_len * slice.get(0).map(|poly| poly.len()).unwrap_or(0))
+    4 + slice.len() * (4 + field_len * slice.first().map(|poly| poly.len()).unwrap_or(0))
 }

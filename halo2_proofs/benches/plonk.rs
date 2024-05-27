@@ -28,6 +28,7 @@ use criterion::{BenchmarkId, Criterion};
 fn criterion_benchmark(c: &mut Criterion) {
     /// This represents an advice column at a certain row in the ConstraintSystem
     #[derive(Copy, Clone, Debug)]
+    #[allow(dead_code)]
     pub struct Variable(Column<Advice>, usize);
 
     #[derive(Clone)]
