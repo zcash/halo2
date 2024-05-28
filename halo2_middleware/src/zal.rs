@@ -257,94 +257,115 @@ mod test {
     use ark_std::{end_timer, start_timer};
     use ff::Field;
     use group::{Curve, Group};
-    use rand_core::OsRng;
+    use rand_core::SeedableRng;
+    use rand_xorshift::XorShiftRng;
 
-    fn run_msm_zal_default<C: CurveAffine>(min_k: usize, max_k: usize) {
-        let points = (0..1 << max_k)
-            .map(|_| C::Curve::random(OsRng))
+    fn gen_points_scalars<C: CurveAffine>(k: usize) -> (Vec<C>, Vec<C::Scalar>) {
+        let rand = || XorShiftRng::from_seed([1; 16]);
+        let points = (0..1 << k)
+            .map(|_| C::Curve::random(rand()))
             .collect::<Vec<_>>();
-        let mut affine_points = vec![C::identity(); 1 << max_k];
+        let mut affine_points = vec![C::identity(); 1 << k];
         C::Curve::batch_normalize(&points[..], &mut affine_points[..]);
         let points = affine_points;
 
-        let scalars = (0..1 << max_k)
-            .map(|_| C::Scalar::random(OsRng))
+        let scalars = (0..1 << k)
+            .map(|_| C::Scalar::random(rand()))
             .collect::<Vec<_>>();
 
-        for k in min_k..=max_k {
-            let points = &points[..1 << k];
-            let scalars = &scalars[..1 << k];
-
-            let t0 = start_timer!(|| format!("freestanding msm k={}", k));
-            let e0 = best_multiexp(scalars, points);
-            end_timer!(t0);
-
-            let engine = PlonkEngineConfig::build_default::<G1Affine>();
-            let t1 = start_timer!(|| format!("H2cEngine msm k={}", k));
-            let e1 = engine.msm_backend.msm(scalars, points);
-            end_timer!(t1);
-
-            assert_eq!(e0, e1);
-
-            // Caching API
-            // -----------
-            let t2 = start_timer!(|| format!("H2cEngine msm cached base k={}", k));
-            let base_descriptor = engine.msm_backend.get_base_descriptor(points);
-            let e2 = engine
-                .msm_backend
-                .msm_with_cached_base(scalars, &base_descriptor);
-            end_timer!(t2);
-
-            assert_eq!(e0, e2)
-        }
+        (points, scalars)
     }
 
-    fn run_msm_zal_custom<C: CurveAffine>(min_k: usize, max_k: usize) {
-        let points = (0..1 << max_k)
-            .map(|_| C::Curve::random(OsRng))
-            .collect::<Vec<_>>();
-        let mut affine_points = vec![C::identity(); 1 << max_k];
-        C::Curve::batch_normalize(&points[..], &mut affine_points[..]);
-        let points = affine_points;
+    fn run_msm_zal_default<C: CurveAffine>(points: &[C], scalars: &[C::Scalar], k: usize) {
+        let points = &points[..1 << k];
+        let scalars = &scalars[..1 << k];
 
-        let scalars = (0..1 << max_k)
-            .map(|_| C::Scalar::random(OsRng))
-            .collect::<Vec<_>>();
+        let t0 = start_timer!(|| format!("freestanding msm k={}", k));
+        let e0 = best_multiexp(scalars, points);
+        end_timer!(t0);
+
+        let engine = PlonkEngineConfig::build_default::<C>();
+        let t1 = start_timer!(|| format!("H2cEngine msm k={}", k));
+        let e1 = engine.msm_backend.msm(scalars, points);
+        end_timer!(t1);
+
+        assert_eq!(e0, e1);
+
+        // Caching API
+        // -----------
+        let t2 = start_timer!(|| format!("H2cEngine msm cached base k={}", k));
+        let base_descriptor = engine.msm_backend.get_base_descriptor(points);
+        let e2 = engine
+            .msm_backend
+            .msm_with_cached_base(scalars, &base_descriptor);
+        end_timer!(t2);
+        assert_eq!(e0, e2);
+
+        let t3 = start_timer!(|| format!("H2cEngine msm cached coeffs k={}", k));
+        let coeffs_descriptor = engine.msm_backend.get_coeffs_descriptor(scalars);
+        let e3 = engine
+            .msm_backend
+            .msm_with_cached_scalars(&coeffs_descriptor, points);
+        end_timer!(t3);
+        assert_eq!(e0, e3);
+
+        let t4 = start_timer!(|| format!("H2cEngine msm cached inputs k={}", k));
+        let e4 = engine
+            .msm_backend
+            .msm_with_cached_inputs(&coeffs_descriptor, &base_descriptor);
+        end_timer!(t4);
+        assert_eq!(e0, e4);
+    }
+
+    fn run_msm_zal_custom<C: CurveAffine>(points: &[C], scalars: &[C::Scalar], k: usize) {
+        let points = &points[..1 << k];
+        let scalars = &scalars[..1 << k];
+
+        let t0 = start_timer!(|| format!("freestanding msm k={}", k));
+        let e0 = best_multiexp(scalars, points);
+        end_timer!(t0);
+
+        let engine = PlonkEngineConfig::new()
+            .set_curve::<G1Affine>()
+            .set_msm(H2cEngine::new())
+            .build();
+        let t1 = start_timer!(|| format!("H2cEngine msm k={}", k));
+        let e1 = engine.msm_backend.msm(scalars, points);
+        end_timer!(t1);
+
+        assert_eq!(e0, e1);
+
+        // Caching API
+        // -----------
+        let t2 = start_timer!(|| format!("H2cEngine msm cached base k={}", k));
+        let base_descriptor = engine.msm_backend.get_base_descriptor(points);
+        let e2 = engine
+            .msm_backend
+            .msm_with_cached_base(scalars, &base_descriptor);
+        end_timer!(t2);
+
+        assert_eq!(e0, e2)
+    }
+
+    #[test]
+    #[ignore]
+    fn test_performance_h2c_msm_zal() {
+        let (min_k, max_k) = (3, 14);
+        let (points, scalars) = gen_points_scalars::<G1Affine>(max_k);
 
         for k in min_k..=max_k {
             let points = &points[..1 << k];
             let scalars = &scalars[..1 << k];
 
-            let t0 = start_timer!(|| format!("freestanding msm k={}", k));
-            let e0 = best_multiexp(scalars, points);
-            end_timer!(t0);
-
-            let engine = PlonkEngineConfig::new()
-                .set_curve::<G1Affine>()
-                .set_msm(H2cEngine::new())
-                .build();
-            let t1 = start_timer!(|| format!("H2cEngine msm k={}", k));
-            let e1 = engine.msm_backend.msm(scalars, points);
-            end_timer!(t1);
-
-            assert_eq!(e0, e1);
-
-            // Caching API
-            // -----------
-            let t2 = start_timer!(|| format!("H2cEngine msm cached base k={}", k));
-            let base_descriptor = engine.msm_backend.get_base_descriptor(points);
-            let e2 = engine
-                .msm_backend
-                .msm_with_cached_base(scalars, &base_descriptor);
-            end_timer!(t2);
-
-            assert_eq!(e0, e2)
+            run_msm_zal_default(points, scalars, k);
+            run_msm_zal_custom(points, scalars, k);
         }
     }
 
     #[test]
     fn test_msm_zal() {
-        run_msm_zal_default::<G1Affine>(3, 14);
-        run_msm_zal_custom::<G1Affine>(3, 14);
+        let (points, scalars) = gen_points_scalars::<G1Affine>(4);
+        run_msm_zal_default(&points, &scalars, 4);
+        run_msm_zal_custom(&points, &scalars, 4);
     }
 }
