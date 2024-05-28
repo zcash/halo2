@@ -571,7 +571,7 @@ mod tests {
 
             test_against_stored_vk(&circuit, "lookup_range_check");
 
-            test_against_stored_proof(circuit, "lookup_range_check");
+            test_against_stored_proof(circuit, "lookup_range_check", 0);
         }
     }
 
@@ -631,9 +631,9 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            test_against_stored_vk(&circuit, "short_range_check_0");
+            test_against_stored_vk(&circuit, "short_range_check_case0");
 
-            test_against_stored_proof(circuit, "short_range_check_0");
+            test_against_stored_proof(circuit, "short_range_check_case0", 0);
         }
 
         // Edge case: K bits (case 1)
@@ -645,9 +645,9 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            test_against_stored_vk(&circuit, "short_range_check_1");
+            test_against_stored_vk(&circuit, "short_range_check_case1");
 
-            test_against_stored_proof(circuit, "short_range_check_1");
+            test_against_stored_proof(circuit, "short_range_check_case1", 0);
         }
 
         // Element within `num_bits` (case 2)
@@ -659,9 +659,9 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            test_against_stored_vk(&circuit, "short_range_check_2");
+            test_against_stored_vk(&circuit, "short_range_check_case2");
 
-            test_against_stored_proof(circuit, "short_range_check_2");
+            test_against_stored_proof(circuit, "short_range_check_case2", 0);
         }
 
         // Element larger than `num_bits` but within K bits

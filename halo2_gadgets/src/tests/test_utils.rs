@@ -21,8 +21,7 @@ use halo2_proofs::{
 };
 
 const TEST_DATA_DIR: &str = "src/tests/circuit_data";
-const GEN_ENV_VAR_VK: &str = "CIRCUIT_TEST_GENERATE_NEW_VK";
-const GEN_ENV_VAR_PROOF: &str = "CIRCUIT_TEST_GENERATE_NEW_PROOF";
+const GEN_ENV_VAR: &str = "CIRCUIT_TEST_GENERATE_NEW_DATA";
 
 /// A proof structure
 #[derive(Clone, Debug)]
@@ -80,7 +79,7 @@ pub(crate) fn test_against_stored_vk<C: Circuit<pallas::Base>>(circuit: &C, circ
 
     let vk_text = format!("{:#?}\n", vk.pinned());
 
-    if env::var_os(GEN_ENV_VAR_VK).is_some() {
+    if env::var_os(GEN_ENV_VAR).is_some() {
         fs::write(&full_file_name, &vk_text).expect("Unable to write vk test file")
     }
 
@@ -100,7 +99,7 @@ fn conditionally_save_proof_to_disk<C: Circuit<pallas::Base>>(
     circuit: C,
     full_file_name: &PathBuf,
 ) {
-    if env::var_os(GEN_ENV_VAR_PROOF).is_some() {
+    if env::var_os(GEN_ENV_VAR).is_some() {
         let proof = Proof::create(vk, params, circuit).unwrap();
         assert!(proof.verify(vk, params).is_ok());
 
@@ -109,9 +108,13 @@ fn conditionally_save_proof_to_disk<C: Circuit<pallas::Base>>(
 }
 
 /// Test the generated circuit against the stored proof.
-pub(crate) fn test_against_stored_proof<C: Circuit<pallas::Base>>(circuit: C, circuit_name: &str) {
+pub(crate) fn test_against_stored_proof<C: Circuit<pallas::Base>>(
+    circuit: C,
+    circuit_name: &str,
+    index: usize,
+) {
     let full_file_name = Path::new(TEST_DATA_DIR)
-        .join(format!("proof_{circuit_name}"))
+        .join(format!("proof_{circuit_name}_{index}"))
         .with_extension("bin");
 
     // Setup phase: generate parameters, vk for the circuit.

@@ -751,7 +751,7 @@ pub(crate) mod tests {
     #[test]
     fn serialized_proof_test_case() {
         let circuit = MyCircuit {};
-        test_against_stored_proof(circuit, "sinsemilla_chip");
+        test_against_stored_proof(circuit, "sinsemilla_chip", 0);
     }
 
     #[cfg(feature = "test-dev-graph")]

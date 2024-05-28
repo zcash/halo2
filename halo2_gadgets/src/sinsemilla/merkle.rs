@@ -397,7 +397,7 @@ pub mod tests {
     #[test]
     fn serialized_proof_test_case() {
         let circuit = generate_circuit();
-        test_against_stored_proof(circuit, "merkle_chip");
+        test_against_stored_proof(circuit, "merkle_chip", 0);
     }
 
     #[cfg(feature = "test-dev-graph")]
