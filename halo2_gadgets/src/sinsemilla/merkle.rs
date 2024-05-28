@@ -184,9 +184,7 @@ pub mod tests {
             tests::{TestCommitDomain, TestHashDomain},
             HashDomains,
         },
-        tests::test_utils::{
-            test_against_stored_vk, test_against_stored_proof,
-        },
+        tests::test_utils::{test_against_stored_proof, test_against_stored_vk},
         utilities::{
             i2lebsp,
             lookup_range_check::{LookupRangeCheck, PallasLookupRC10b},

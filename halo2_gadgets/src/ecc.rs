@@ -596,9 +596,7 @@ pub(crate) mod tests {
         FixedPoints,
     };
     use crate::{
-        tests::test_utils::{
-            test_against_stored_vk, test_against_stored_proof,
-        },
+        tests::test_utils::{test_against_stored_proof, test_against_stored_vk},
         utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRC10b},
     };
 

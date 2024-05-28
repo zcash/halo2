@@ -471,9 +471,7 @@ mod tests {
     };
     use pasta_curves::pallas;
 
-    use crate::tests::test_utils::{
-        test_against_stored_vk, test_against_stored_proof,
-    };
+    use crate::tests::test_utils::{test_against_stored_proof, test_against_stored_vk};
     use std::{convert::TryInto, marker::PhantomData};
 
     #[test]

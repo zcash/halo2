@@ -69,10 +69,7 @@ impl Proof {
 }
 
 /// Test the generated vk against the stored vk.
-pub(crate) fn test_against_stored_vk<C: Circuit<pallas::Base>>(
-    circuit: &C,
-    circuit_name: &str,
-) {
+pub(crate) fn test_against_stored_vk<C: Circuit<pallas::Base>>(circuit: &C, circuit_name: &str) {
     let full_file_name = Path::new(TEST_DATA_DIR)
         .join(format!("vk_{circuit_name}"))
         .with_extension("rdata");
@@ -112,10 +109,7 @@ fn conditionally_save_proof_to_disk<C: Circuit<pallas::Base>>(
 }
 
 /// Test the generated circuit against the stored proof.
-pub(crate) fn test_against_stored_proof<C: Circuit<pallas::Base>>(
-    circuit: C,
-    circuit_name: &str,
-) {
+pub(crate) fn test_against_stored_proof<C: Circuit<pallas::Base>>(circuit: C, circuit_name: &str) {
     let full_file_name = Path::new(TEST_DATA_DIR)
         .join(format!("proof_{circuit_name}"))
         .with_extension("bin");
