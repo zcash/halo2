@@ -1,5 +1,8 @@
 use super::{T_Q, Z};
-use crate::{sinsemilla::primitives as sinsemilla, utilities::lookup_range_check::PallasLookupRC};
+use crate::{
+    sinsemilla::primitives as sinsemilla,
+    utilities::lookup_range_check::{PallasLookupRC, PallasLookupRC10b},
+};
 
 use group::ff::PrimeField;
 use halo2_proofs::circuit::AssignedCell;
@@ -13,7 +16,7 @@ use pasta_curves::pallas;
 use std::iter;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct Config<Lookup: PallasLookupRC> {
+pub struct Config<Lookup: PallasLookupRC = PallasLookupRC10b> {
     // Selector to check z_0 = alpha + t_q (mod p)
     q_mul_overflow: Selector,
     // 10-bit lookup table
