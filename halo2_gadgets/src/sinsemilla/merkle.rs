@@ -185,11 +185,11 @@ pub mod tests {
             HashDomains,
         },
         tests::test_utils::{
-            fixed_verification_key_test_with_circuit, serialized_proof_test_case_with_circuit,
+            test_against_stored_vk, test_against_stored_proof,
         },
         utilities::{
             i2lebsp,
-            lookup_range_check::{LookupRangeCheck, PallasLookupConfig},
+            lookup_range_check::{LookupRangeCheck, PallasLookupRC10b},
             UtilitiesInstructions,
         },
     };
@@ -215,8 +215,8 @@ pub mod tests {
 
     impl Circuit<pallas::Base> for MyCircuit {
         type Config = (
-            MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases, PallasLookupConfig>,
-            MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases, PallasLookupConfig>,
+            MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases, PallasLookupRC10b>,
+            MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases, PallasLookupRC10b>,
         );
         type FloorPlanner = SimpleFloorPlanner;
 
@@ -254,7 +254,7 @@ pub mod tests {
                 meta.lookup_table_column(),
             );
 
-            let range_check = PallasLookupConfig::configure(meta, advices[9], lookup.0);
+            let range_check = PallasLookupRC10b::configure(meta, advices[9], lookup.0);
 
             let sinsemilla_config_1 = SinsemillaChip::configure(
                 meta,
@@ -289,7 +289,7 @@ pub mod tests {
                 TestHashDomain,
                 TestCommitDomain,
                 TestFixedBases,
-                PallasLookupConfig,
+                PallasLookupRC10b,
             >::load(config.0.sinsemilla_config.clone(), &mut layouter)?;
 
             // Construct Merkle chips which will be placed side-by-side in the circuit.
@@ -393,13 +393,13 @@ pub mod tests {
     #[test]
     fn fixed_verification_key_test() {
         let circuit = generate_circuit();
-        fixed_verification_key_test_with_circuit(&circuit, "merkle_chip");
+        test_against_stored_vk(&circuit, "merkle_chip");
     }
 
     #[test]
     fn serialized_proof_test_case() {
         let circuit = generate_circuit();
-        serialized_proof_test_case_with_circuit(circuit, "merkle_chip");
+        test_against_stored_proof(circuit, "merkle_chip");
     }
 
     #[cfg(feature = "test-dev-graph")]

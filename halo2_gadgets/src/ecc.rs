@@ -597,9 +597,9 @@ pub(crate) mod tests {
     };
     use crate::{
         tests::test_utils::{
-            fixed_verification_key_test_with_circuit, serialized_proof_test_case_with_circuit,
+            test_against_stored_vk, test_against_stored_proof,
         },
-        utilities::lookup_range_check::{LookupRangeCheck, PallasLookupConfig},
+        utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRC10b},
     };
 
     #[derive(Debug, Eq, PartialEq, Clone)]
@@ -734,7 +734,7 @@ pub(crate) mod tests {
 
     #[allow(non_snake_case)]
     impl Circuit<pallas::Base> for MyCircuit {
-        type Config = EccConfig<TestFixedBases, PallasLookupConfig>;
+        type Config = EccConfig<TestFixedBases, PallasLookupRC10b>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
@@ -769,8 +769,8 @@ pub(crate) mod tests {
             let constants = meta.fixed_column();
             meta.enable_constant(constants);
 
-            let range_check = PallasLookupConfig::configure(meta, advices[9], lookup_table);
-            EccChip::<TestFixedBases, PallasLookupConfig>::configure(
+            let range_check = PallasLookupRC10b::configure(meta, advices[9], lookup_table);
+            EccChip::<TestFixedBases, PallasLookupRC10b>::configure(
                 meta,
                 advices,
                 lagrange_coeffs,
@@ -914,13 +914,13 @@ pub(crate) mod tests {
     #[test]
     fn fixed_verification_key_test() {
         let circuit = MyCircuit { test_errors: false };
-        fixed_verification_key_test_with_circuit(&circuit, "ecc_chip");
+        test_against_stored_vk(&circuit, "ecc_chip");
     }
 
     #[test]
     fn serialized_proof_test_case() {
         let circuit = MyCircuit { test_errors: false };
-        serialized_proof_test_case_with_circuit(circuit, "ecc_chip");
+        test_against_stored_proof(circuit, "ecc_chip");
     }
 
     #[cfg(feature = "test-dev-graph")]

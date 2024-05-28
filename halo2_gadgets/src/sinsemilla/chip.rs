@@ -9,7 +9,7 @@ use crate::{
         chip::{DoubleAndAdd, NonIdentityEccPoint},
         FixedPoints,
     },
-    utilities::lookup_range_check::PallasLookup,
+    utilities::lookup_range_check::PallasLookupRC,
 };
 use std::marker::PhantomData;
 
@@ -35,7 +35,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
     /// Binary selector used in lookup argument and in the body of the Sinsemilla hash.
     q_sinsemilla1: Selector,
@@ -68,7 +68,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
     /// Returns an array of all advice columns in this config, in arbitrary order.
     pub(super) fn advices(&self) -> [Column<Advice>; 5] {
@@ -103,7 +103,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
     config: SinsemillaConfig<Hash, Commit, Fixed, Lookup>,
 }
@@ -113,7 +113,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
     type Config = SinsemillaConfig<Hash, Commit, Fixed, Lookup>;
     type Loaded = ();
@@ -132,7 +132,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
     /// Reconstructs this chip from the given config.
     pub fn construct(config: <Self as Chip<pallas::Base>>::Config) -> Self {
@@ -220,6 +220,7 @@ where
         config
     }
 
+    /// Assign y_q to a fixed column
     #[allow(non_snake_case)]
     fn create_initial_y_q_gate(
         meta: &mut ConstraintSystem<pallas::Base>,
@@ -321,7 +322,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
     type CellValue = AssignedCell<pallas::Base, pallas::Base>;
 

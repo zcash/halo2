@@ -260,13 +260,13 @@ pub mod tests {
             FixedPointShort, NonIdentityPoint, Point, ScalarFixedShort,
         },
         utilities::{
-            lookup_range_check::{LookupRangeCheck, PallasLookup, PallasLookupConfig},
+            lookup_range_check::{LookupRangeCheck, PallasLookupRC, PallasLookupRC10b},
             UtilitiesInstructions,
         },
     };
 
     #[allow(clippy::op_ref)]
-    pub(crate) fn test_mul_fixed_short<Lookup: PallasLookup>(
+    pub(crate) fn test_mul_fixed_short<Lookup: PallasLookupRC>(
         chip: EccChip<TestFixedBases, Lookup>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
@@ -274,7 +274,7 @@ pub mod tests {
         let base_val = Short.generator();
         let test_short = FixedPointShort::from_inner(chip.clone(), Short);
 
-        fn load_magnitude_sign<Lookup: PallasLookup>(
+        fn load_magnitude_sign<Lookup: PallasLookupRC>(
             chip: EccChip<TestFixedBases, Lookup>,
             mut layouter: impl Layouter<pallas::Base>,
             magnitude: pallas::Base,
@@ -292,7 +292,7 @@ pub mod tests {
             Ok((magnitude, sign))
         }
 
-        fn constrain_equal_non_id<Lookup: PallasLookup>(
+        fn constrain_equal_non_id<Lookup: PallasLookupRC>(
             chip: EccChip<TestFixedBases, Lookup>,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
@@ -428,7 +428,7 @@ pub mod tests {
         }
 
         impl Circuit<pallas::Base> for MyCircuit {
-            type Config = EccConfig<TestFixedBases, PallasLookupConfig>;
+            type Config = EccConfig<TestFixedBases, PallasLookupRC10b>;
             type FloorPlanner = SimpleFloorPlanner;
 
             fn without_witnesses(&self) -> Self {
@@ -464,8 +464,8 @@ pub mod tests {
                 let constants = meta.fixed_column();
                 meta.enable_constant(constants);
 
-                let range_check = PallasLookupConfig::configure(meta, advices[9], lookup_table);
-                EccChip::<TestFixedBases, PallasLookupConfig>::configure(
+                let range_check = PallasLookupRC10b::configure(meta, advices[9], lookup_table);
+                EccChip::<TestFixedBases, PallasLookupRC10b>::configure(
                     meta,
                     advices,
                     lagrange_coeffs,

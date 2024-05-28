@@ -1,7 +1,7 @@
 //! Chip implementations for the ECC gadgets.
 
 use super::{BaseFitsInScalarInstructions, EccInstructions, FixedPoints};
-use crate::utilities::{lookup_range_check::PallasLookup, UtilitiesInstructions};
+use crate::utilities::{lookup_range_check::PallasLookupRC, UtilitiesInstructions};
 use arrayvec::ArrayVec;
 
 use ff::PrimeField;
@@ -134,7 +134,7 @@ impl From<NonIdentityEccPoint> for EccPoint {
 /// Configuration for [`EccChip`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[allow(non_snake_case)]
-pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>, Lookup: PallasLookup> {
+pub struct EccConfig<FixedPoints: super::FixedPoints<pallas::Affine>, Lookup: PallasLookupRC> {
     /// Advice columns needed by instructions in the ECC chip.
     pub advices: [Column<Advice>; 10],
 
@@ -224,11 +224,11 @@ pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
 
 /// An [`EccInstructions`] chip that uses 10 advice columns.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct EccChip<FixedPoints: super::FixedPoints<pallas::Affine>, Lookup: PallasLookup> {
+pub struct EccChip<FixedPoints: super::FixedPoints<pallas::Affine>, Lookup: PallasLookupRC> {
     config: EccConfig<FixedPoints, Lookup>,
 }
 
-impl<FixedPoints: super::FixedPoints<pallas::Affine>, Lookup: PallasLookup> Chip<pallas::Base>
+impl<FixedPoints: super::FixedPoints<pallas::Affine>, Lookup: PallasLookupRC> Chip<pallas::Base>
     for EccChip<FixedPoints, Lookup>
 {
     type Config = EccConfig<FixedPoints, Lookup>;
@@ -243,13 +243,13 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>, Lookup: PallasLookup> Chip
     }
 }
 
-impl<Fixed: super::FixedPoints<pallas::Affine>, Lookup: PallasLookup>
+impl<Fixed: super::FixedPoints<pallas::Affine>, Lookup: PallasLookupRC>
     UtilitiesInstructions<pallas::Base> for EccChip<Fixed, Lookup>
 {
     type Var = AssignedCell<pallas::Base, pallas::Base>;
 }
 
-impl<FixedPoints: super::FixedPoints<pallas::Affine>, Lookup: PallasLookup>
+impl<FixedPoints: super::FixedPoints<pallas::Affine>, Lookup: PallasLookupRC>
     EccChip<FixedPoints, Lookup>
 {
     /// Reconstructs this chip from the given config.
@@ -409,7 +409,7 @@ pub enum ScalarVar {
     FullWidth,
 }
 
-impl<Fixed: FixedPoints<pallas::Affine>, Lookup: PallasLookup> EccInstructions<pallas::Affine>
+impl<Fixed: FixedPoints<pallas::Affine>, Lookup: PallasLookupRC> EccInstructions<pallas::Affine>
     for EccChip<Fixed, Lookup>
 where
     <Fixed as FixedPoints<pallas::Affine>>::Base:
@@ -597,7 +597,7 @@ where
     }
 }
 
-impl<Fixed: FixedPoints<pallas::Affine>, Lookup: PallasLookup>
+impl<Fixed: FixedPoints<pallas::Affine>, Lookup: PallasLookupRC>
     BaseFitsInScalarInstructions<pallas::Affine> for EccChip<Fixed, Lookup>
 where
     <Fixed as FixedPoints<pallas::Affine>>::Base:

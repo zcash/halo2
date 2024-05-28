@@ -473,9 +473,9 @@ pub(crate) mod tests {
         },
         sinsemilla::primitives::{self as sinsemilla, K},
         tests::test_utils::{
-            fixed_verification_key_test_with_circuit, serialized_proof_test_case_with_circuit,
+            test_against_stored_vk, test_against_stored_proof,
         },
-        utilities::lookup_range_check::{LookupRangeCheck, PallasLookupConfig},
+        utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRC10b},
     };
 
     use group::{ff::Field, Curve};
@@ -521,9 +521,9 @@ pub(crate) mod tests {
     impl Circuit<pallas::Base> for MyCircuit {
         #[allow(clippy::type_complexity)]
         type Config = (
-            EccConfig<TestFixedBases, PallasLookupConfig>,
-            SinsemillaConfig<TestHashDomain, TestCommitDomain, TestFixedBases, PallasLookupConfig>,
-            SinsemillaConfig<TestHashDomain, TestCommitDomain, TestFixedBases, PallasLookupConfig>,
+            EccConfig<TestFixedBases, PallasLookupRC10b>,
+            SinsemillaConfig<TestHashDomain, TestCommitDomain, TestFixedBases, PallasLookupRC10b>,
+            SinsemillaConfig<TestHashDomain, TestCommitDomain, TestFixedBases, PallasLookupRC10b>,
         );
         type FloorPlanner = SimpleFloorPlanner;
 
@@ -569,9 +569,9 @@ pub(crate) mod tests {
                 meta.lookup_table_column(),
             );
 
-            let range_check = PallasLookupConfig::configure(meta, advices[9], table_idx);
+            let range_check = PallasLookupRC10b::configure(meta, advices[9], table_idx);
 
-            let ecc_config = EccChip::<TestFixedBases, PallasLookupConfig>::configure(
+            let ecc_config = EccChip::<TestFixedBases, PallasLookupRC10b>::configure(
                 meta,
                 advices,
                 lagrange_coeffs,
@@ -611,7 +611,7 @@ pub(crate) mod tests {
                 TestHashDomain,
                 TestCommitDomain,
                 TestFixedBases,
-                PallasLookupConfig,
+                PallasLookupRC10b,
             >::load(config.1.clone(), &mut layouter)?;
 
             // This MerkleCRH example is purely for illustrative purposes.
@@ -747,13 +747,13 @@ pub(crate) mod tests {
     #[test]
     fn fixed_verification_key_test() {
         let circuit = MyCircuit {};
-        fixed_verification_key_test_with_circuit(&circuit, "sinsemilla_chip");
+        test_against_stored_vk(&circuit, "sinsemilla_chip");
     }
 
     #[test]
     fn serialized_proof_test_case() {
         let circuit = MyCircuit {};
-        serialized_proof_test_case_with_circuit(circuit, "sinsemilla_chip");
+        test_against_stored_proof(circuit, "sinsemilla_chip");
     }
 
     #[cfg(feature = "test-dev-graph")]

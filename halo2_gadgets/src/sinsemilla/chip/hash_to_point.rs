@@ -3,7 +3,7 @@ use super::{NonIdentityEccPoint, SinsemillaChip};
 use crate::{
     ecc::FixedPoints,
     sinsemilla::primitives::{self as sinsemilla, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S},
-    utilities::lookup_range_check::PallasLookup,
+    utilities::lookup_range_check::PallasLookupRC,
 };
 
 use ff::Field;
@@ -30,7 +30,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
     /// [Specification](https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial).
     #[allow(non_snake_case)]

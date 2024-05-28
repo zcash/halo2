@@ -442,22 +442,19 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCh
     }
 }
 
-/// This trait is a shorthand for `LookupRangeCheck` specialized with `pallas::Base` and
-/// `sinsemilla::K`. In this crate, `LookupRangeCheck` is always used with these parameters.
-/// By defining this trait, we reduce verbosity and improve readability. Besides, it extends
-/// the `LookupRangeCheck` with additional standard traits necessary for effective use in
-/// cryptographic contexts.
-pub trait PallasLookup:
+/// `PallasLookupRC` a shorthand for `LookupRangeCheck` specialized with `pallas::Base` and
+/// `sinsemilla::K` and used to improve readability. In addition, it extends
+/// the `LookupRangeCheck` with additional standard traits.
+pub trait PallasLookupRC:
     LookupRangeCheck<pallas::Base, { sinsemilla::K }> + Eq + PartialEq + Clone + Copy + Debug
 {
 }
 
-/// In this crate, `LookupRangeCheckConfig` is always used with `pallas::Base` as the prime field
-/// and the constant `K` from the `sinsemilla` module. To reduce verbosity and improve readability,
-/// we introduce this alias and use it instead of that long construction.
-pub type PallasLookupConfig = LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>;
+/// `PallasLookupRC10b` is a shorthand for `LookupRangeCheckConfig` specialized with
+/// `pallas::Base` and `sinsemilla::K` and used to improve readability```
+pub type PallasLookupRC10b = LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>;
 
-impl PallasLookup for PallasLookupConfig {}
+impl PallasLookupRC for PallasLookupRC10b {}
 
 #[cfg(test)]
 mod tests {
@@ -475,7 +472,7 @@ mod tests {
     use pasta_curves::pallas;
 
     use crate::tests::test_utils::{
-        fixed_verification_key_test_with_circuit, serialized_proof_test_case_with_circuit,
+        test_against_stored_vk, test_against_stored_proof,
     };
     use std::{convert::TryInto, marker::PhantomData};
 
@@ -574,9 +571,9 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            fixed_verification_key_test_with_circuit(&circuit, "lookup_range_check");
+            test_against_stored_vk(&circuit, "lookup_range_check");
 
-            serialized_proof_test_case_with_circuit(circuit, "lookup_range_check");
+            test_against_stored_proof(circuit, "lookup_range_check");
         }
     }
 
@@ -636,9 +633,9 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            fixed_verification_key_test_with_circuit(&circuit, "short_range_check_0");
+            test_against_stored_vk(&circuit, "short_range_check_0");
 
-            serialized_proof_test_case_with_circuit(circuit, "short_range_check_0");
+            test_against_stored_proof(circuit, "short_range_check_0");
         }
 
         // Edge case: K bits (case 1)
@@ -650,9 +647,9 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            fixed_verification_key_test_with_circuit(&circuit, "short_range_check_1");
+            test_against_stored_vk(&circuit, "short_range_check_1");
 
-            serialized_proof_test_case_with_circuit(circuit, "short_range_check_1");
+            test_against_stored_proof(circuit, "short_range_check_1");
         }
 
         // Element within `num_bits` (case 2)
@@ -664,9 +661,9 @@ mod tests {
             let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
 
-            fixed_verification_key_test_with_circuit(&circuit, "short_range_check_2");
+            test_against_stored_vk(&circuit, "short_range_check_2");
 
-            serialized_proof_test_case_with_circuit(circuit, "short_range_check_2");
+            test_against_stored_proof(circuit, "short_range_check_2");
         }
 
         // Element larger than `num_bits` but within K bits

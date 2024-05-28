@@ -11,7 +11,7 @@ use super::MerkleInstructions;
 
 use crate::{
     sinsemilla::{primitives as sinsemilla, MessagePiece},
-    utilities::{lookup_range_check::PallasLookup, RangeConstrained},
+    utilities::{lookup_range_check::PallasLookupRC, RangeConstrained},
     {
         ecc::FixedPoints,
         sinsemilla::{
@@ -33,7 +33,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
     advices: [Column<Advice>; 5],
     q_decompose: Selector,
@@ -57,7 +57,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
     config: MerkleConfig<Hash, Commit, Fixed, Lookup>,
 }
@@ -67,7 +67,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
     type Config = MerkleConfig<Hash, Commit, Fixed, Lookup>;
     type Loaded = ();
@@ -86,7 +86,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
     /// Configures the [`MerkleChip`].
     pub fn configure(
@@ -200,8 +200,7 @@ where
     }
 }
 
-/// The MerkleSinsemillaInstructions trait extends the capabilities of SinsemillaInstructions,
-/// for specific cryptographic operations involving generic lookup.
+/// Defines the concrete types of `SinsemillaInstructions` required by the `MerkleCRH`.
 pub(crate) trait MerkleSinsemillaInstructions<Hash, Commit, F, Lookup>
 where
     Self: SinsemillaInstructions<
@@ -227,7 +226,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
     F: FixedPoints<pallas::Affine>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
 }
 
@@ -237,7 +236,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
 }
 
@@ -255,7 +254,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
     #[allow(non_snake_case)]
     fn hash_layer(
@@ -474,7 +473,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
     type Var = AssignedCell<pallas::Base, pallas::Base>;
 }
@@ -485,7 +484,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
     #[allow(clippy::type_complexity)]
     fn swap(
@@ -507,7 +506,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookup,
+    Lookup: PallasLookupRC,
 {
     type CellValue = <SinsemillaChip<Hash, Commit, F, Lookup> as SinsemillaInstructions<
         pallas::Affine,

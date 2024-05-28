@@ -2,7 +2,7 @@ use super::super::{EccBaseFieldElemFixed, EccPoint, FixedPoints, NUM_WINDOWS, T_
 use super::H_BASE;
 
 use crate::utilities::{
-    bitrange_subset, bool_check, lookup_range_check::PallasLookup, range_check,
+    bitrange_subset, bool_check, lookup_range_check::PallasLookupRC, range_check,
 };
 
 use group::ff::PrimeField;
@@ -16,14 +16,14 @@ use pasta_curves::pallas;
 use std::convert::TryInto;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Config<Fixed: FixedPoints<pallas::Affine>, Lookup: PallasLookup> {
+pub struct Config<Fixed: FixedPoints<pallas::Affine>, Lookup: PallasLookupRC> {
     q_mul_fixed_base_field: Selector,
     canon_advices: [Column<Advice>; 3],
     lookup_config: Lookup,
     super_config: super::Config<Fixed>,
 }
 
-impl<Fixed: FixedPoints<pallas::Affine>, Lookup: PallasLookup> Config<Fixed, Lookup> {
+impl<Fixed: FixedPoints<pallas::Affine>, Lookup: PallasLookupRC> Config<Fixed, Lookup> {
     pub(crate) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         canon_advices: [Column<Advice>; 3],
@@ -386,7 +386,7 @@ pub mod tests {
     use pasta_curves::pallas;
     use rand::rngs::OsRng;
 
-    use crate::utilities::lookup_range_check::PallasLookup;
+    use crate::utilities::lookup_range_check::PallasLookupRC;
     use crate::{
         ecc::{
             chip::{EccChip, FixedPoint, H},
@@ -396,7 +396,7 @@ pub mod tests {
         utilities::UtilitiesInstructions,
     };
 
-    pub(crate) fn test_mul_fixed_base_field<Lookup: PallasLookup>(
+    pub(crate) fn test_mul_fixed_base_field<Lookup: PallasLookupRC>(
         chip: EccChip<TestFixedBases, Lookup>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
@@ -409,7 +409,7 @@ pub mod tests {
     }
 
     #[allow(clippy::op_ref)]
-    fn test_single_base<Lookup: PallasLookup>(
+    fn test_single_base<Lookup: PallasLookupRC>(
         chip: EccChip<TestFixedBases, Lookup>,
         mut layouter: impl Layouter<pallas::Base>,
         base: FixedPointBaseField<pallas::Affine, EccChip<TestFixedBases, Lookup>>,
@@ -419,7 +419,7 @@ pub mod tests {
 
         let column = chip.config().advices[0];
 
-        fn constrain_equal_non_id<Lookup: PallasLookup>(
+        fn constrain_equal_non_id<Lookup: PallasLookupRC>(
             chip: EccChip<TestFixedBases, Lookup>,
             mut layouter: impl Layouter<pallas::Base>,
             base_val: pallas::Affine,
