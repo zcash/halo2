@@ -261,16 +261,17 @@ mod test {
     use rand_xorshift::XorShiftRng;
 
     fn gen_points_scalars<C: CurveAffine>(k: usize) -> (Vec<C>, Vec<C::Scalar>) {
-        let rand = || XorShiftRng::from_seed([1; 16]);
+        let mut rng = XorShiftRng::seed_from_u64(3141592u64);
+
         let points = (0..1 << k)
-            .map(|_| C::Curve::random(rand()))
+            .map(|_| C::Curve::random(&mut rng))
             .collect::<Vec<_>>();
         let mut affine_points = vec![C::identity(); 1 << k];
         C::Curve::batch_normalize(&points[..], &mut affine_points[..]);
         let points = affine_points;
 
         let scalars = (0..1 << k)
-            .map(|_| C::Scalar::random(rand()))
+            .map(|_| C::Scalar::random(&mut rng))
             .collect::<Vec<_>>();
 
         (points, scalars)
@@ -364,8 +365,9 @@ mod test {
 
     #[test]
     fn test_msm_zal() {
-        let (points, scalars) = gen_points_scalars::<G1Affine>(4);
-        run_msm_zal_default(&points, &scalars, 4);
-        run_msm_zal_custom(&points, &scalars, 4);
+        const MSM_SIZE: usize = 12;
+        let (points, scalars) = gen_points_scalars::<G1Affine>(MSM_SIZE);
+        run_msm_zal_default(&points, &scalars, MSM_SIZE);
+        run_msm_zal_custom(&points, &scalars, MSM_SIZE);
     }
 }
