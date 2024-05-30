@@ -597,7 +597,7 @@ pub(crate) mod tests {
     };
     use crate::{
         tests::test_utils::{test_against_stored_proof, test_against_stored_vk},
-        utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRC10b},
+        utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRCConfig},
     };
 
     #[derive(Debug, Eq, PartialEq, Clone)]
@@ -732,7 +732,7 @@ pub(crate) mod tests {
 
     #[allow(non_snake_case)]
     impl Circuit<pallas::Base> for MyCircuit {
-        type Config = EccConfig<TestFixedBases, PallasLookupRC10b>;
+        type Config = EccConfig<TestFixedBases, PallasLookupRCConfig>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
@@ -767,8 +767,8 @@ pub(crate) mod tests {
             let constants = meta.fixed_column();
             meta.enable_constant(constants);
 
-            let range_check = PallasLookupRC10b::configure(meta, advices[9], lookup_table);
-            EccChip::<TestFixedBases, PallasLookupRC10b>::configure(
+            let range_check = PallasLookupRCConfig::configure(meta, advices[9], lookup_table);
+            EccChip::<TestFixedBases, PallasLookupRCConfig>::configure(
                 meta,
                 advices,
                 lagrange_coeffs,

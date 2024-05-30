@@ -2,7 +2,7 @@
 
 use super::{BaseFitsInScalarInstructions, EccInstructions, FixedPoints};
 use crate::utilities::{
-    lookup_range_check::{PallasLookupRC, PallasLookupRC10b},
+    lookup_range_check::{PallasLookupRC, PallasLookupRCConfig},
     UtilitiesInstructions,
 };
 use arrayvec::ArrayVec;
@@ -139,7 +139,7 @@ impl From<NonIdentityEccPoint> for EccPoint {
 #[allow(non_snake_case)]
 pub struct EccConfig<
     FixedPoints: super::FixedPoints<pallas::Affine>,
-    Lookup: PallasLookupRC = PallasLookupRC10b,
+    Lookup: PallasLookupRC = PallasLookupRCConfig,
 > {
     /// Advice columns needed by instructions in the ECC chip.
     pub advices: [Column<Advice>; 10],
@@ -232,7 +232,7 @@ pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EccChip<
     FixedPoints: super::FixedPoints<pallas::Affine>,
-    Lookup: PallasLookupRC = PallasLookupRC10b,
+    Lookup: PallasLookupRC = PallasLookupRCConfig,
 > {
     config: EccConfig<FixedPoints, Lookup>,
 }
