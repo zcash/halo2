@@ -97,7 +97,7 @@ impl Config {
         });
     }
 
-    pub(super) fn overflow_check(
+    pub(super) fn overflow_check_base(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         alpha: AssignedCell<pallas::Base, pallas::Base>,
