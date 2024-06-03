@@ -804,9 +804,7 @@ impl<
         let permutations_evaluated: Vec<permutation::prover::Evaluated<Scheme::Curve>> =
             permutations_commited
                 .into_iter()
-                .map(|permutation| -> Result<_, _> {
-                    permutation.construct().evaluate(pk, x, self.transcript)
-                })
+                .map(|permutation| -> Result<_, _> { permutation.evaluate(pk, x, self.transcript) })
                 .collect::<Result<Vec<_>, _>>()?;
 
         // Evaluate the lookups, if any, at omega^i x.

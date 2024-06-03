@@ -408,8 +408,16 @@ impl<C: CurveAffine> Evaluator<C> {
                 let chunk_len = pk.vk.cs.degree() - 2;
                 let delta_start = beta * C::Scalar::ZETA;
 
-                let first_set = sets.first().unwrap();
-                let last_set = sets.last().unwrap();
+                let permutation_product_cosets: Vec<
+                    Polynomial<C::ScalarExt, ExtendedLagrangeCoeff>,
+                > = sets
+                    .iter()
+                    .map(|set| domain.coeff_to_extended(set.permutation_product_poly.clone()))
+                    .collect();
+
+                let first_set_permutation_product_coset =
+                    permutation_product_cosets.first().unwrap();
+                let last_set_permutation_product_coset = permutation_product_cosets.last().unwrap();
 
                 // Permutation constraints
                 parallelize(&mut values, |values, start| {
@@ -422,22 +430,21 @@ impl<C: CurveAffine> Evaluator<C> {
                         // Enforce only for the first set.
                         // l_0(X) * (1 - z_0(X)) = 0
                         *value = *value * y
-                            + ((one - first_set.permutation_product_coset[idx]) * l0[idx]);
+                            + ((one - first_set_permutation_product_coset[idx]) * l0[idx]);
                         // Enforce only for the last set.
                         // l_last(X) * (z_l(X)^2 - z_l(X)) = 0
                         *value = *value * y
-                            + ((last_set.permutation_product_coset[idx]
-                                * last_set.permutation_product_coset[idx]
-                                - last_set.permutation_product_coset[idx])
+                            + ((last_set_permutation_product_coset[idx]
+                                * last_set_permutation_product_coset[idx]
+                                - last_set_permutation_product_coset[idx])
                                 * l_last[idx]);
                         // Except for the first set, enforce.
                         // l_0(X) * (z_i(X) - z_{i-1}(\omega^(last) X)) = 0
-                        for (set_idx, set) in sets.iter().enumerate() {
+                        for set_idx in 0..sets.len() {
                             if set_idx != 0 {
                                 *value = *value * y
-                                    + ((set.permutation_product_coset[idx]
-                                        - permutation.sets[set_idx - 1].permutation_product_coset
-                                            [r_last])
+                                    + ((permutation_product_cosets[set_idx][idx]
+                                        - permutation_product_cosets[set_idx - 1][r_last])
                                         * l0[idx]);
                             }
                         }
@@ -447,12 +454,13 @@ impl<C: CurveAffine> Evaluator<C> {
                         // - z_i(X) \prod_j (p(X) + \delta^j \beta X + \gamma)
                         // )
                         let mut current_delta = delta_start * beta_term;
-                        for ((set, columns), cosets) in sets
-                            .iter()
-                            .zip(p.columns.chunks(chunk_len))
-                            .zip(pk.permutation.cosets.chunks(chunk_len))
+                        for ((permutation_product_coset, columns), cosets) in
+                            permutation_product_cosets
+                                .iter()
+                                .zip(p.columns.chunks(chunk_len))
+                                .zip(pk.permutation.cosets.chunks(chunk_len))
                         {
-                            let mut left = set.permutation_product_coset[r_next];
+                            let mut left = permutation_product_coset[r_next];
                             for (values, permutation) in columns
                                 .iter()
                                 .map(|&column| match column.column_type {
@@ -465,7 +473,7 @@ impl<C: CurveAffine> Evaluator<C> {
                                 left *= values[idx] + beta * permutation[idx] + gamma;
                             }
 
-                            let mut right = set.permutation_product_coset[idx];
+                            let mut right = permutation_product_coset[idx];
                             for values in columns.iter().map(|&column| match column.column_type {
                                 Any::Advice => &advice[column.index],
                                 Any::Fixed => &fixed[column.index],

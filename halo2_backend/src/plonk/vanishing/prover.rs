@@ -131,18 +131,20 @@ impl<C: CurveAffine> Committed<C> {
             .collect();
 
         // Compute commitments to each h(X) piece
-        let h_commitments_projective: Vec<_> = h_pieces
-            .iter()
-            .zip(h_blinds.iter())
-            .map(|(h_piece, blind)| params.commit(&engine.msm_backend, h_piece, *blind))
-            .collect();
-        let mut h_commitments = vec![C::identity(); h_commitments_projective.len()];
-        C::Curve::batch_normalize(&h_commitments_projective, &mut h_commitments);
-        let h_commitments = h_commitments;
+        let h_commitments = {
+            let h_commitments_projective: Vec<_> = h_pieces
+                .iter()
+                .zip(h_blinds.iter())
+                .map(|(h_piece, blind)| params.commit(&engine.msm_backend, h_piece, *blind))
+                .collect();
+            let mut h_commitments = vec![C::identity(); h_commitments_projective.len()];
+            C::Curve::batch_normalize(&h_commitments_projective, &mut h_commitments);
+            h_commitments
+        };
 
         // Hash each h(X) piece
-        for c in h_commitments.iter() {
-            transcript.write_point(*c)?;
+        for c in h_commitments {
+            transcript.write_point(c)?;
         }
 
         Ok(Constructed {

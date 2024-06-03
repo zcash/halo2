@@ -13,7 +13,7 @@ use crate::{
     plonk::{self, permutation::ProvingKey, ChallengeBeta, ChallengeGamma, ChallengeX, Error},
     poly::{
         commitment::{Blind, Params},
-        Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, ProverQuery,
+        Coeff, LagrangeCoeff, Polynomial, ProverQuery,
     },
     transcript::{EncodedChallenge, TranscriptWrite},
 };
@@ -25,7 +25,6 @@ use halo2_middleware::poly::Rotation;
 
 pub(crate) struct CommittedSet<C: CurveAffine> {
     pub(crate) permutation_product_poly: Polynomial<C::Scalar, Coeff>,
-    pub(crate) permutation_product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
     permutation_product_blind: Blind<C::Scalar>,
 }
 
@@ -33,17 +32,8 @@ pub(crate) struct Committed<C: CurveAffine> {
     pub(crate) sets: Vec<CommittedSet<C>>,
 }
 
-pub(crate) struct ConstructedSet<C: CurveAffine> {
-    permutation_product_poly: Polynomial<C::Scalar, Coeff>,
-    permutation_product_blind: Blind<C::Scalar>,
-}
-
-pub(crate) struct Constructed<C: CurveAffine> {
-    sets: Vec<ConstructedSet<C>>,
-}
-
 pub(crate) struct Evaluated<C: CurveAffine> {
-    constructed: Constructed<C>,
+    constructed: Committed<C>,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -177,37 +167,18 @@ pub(in crate::plonk) fn permutation_commit<
             .commit_lagrange(&engine.msm_backend, &z, blind)
             .to_affine();
         let permutation_product_blind = blind;
-        let z = domain.lagrange_to_coeff(z);
-        let permutation_product_poly = z.clone();
-
-        let permutation_product_coset = domain.coeff_to_extended(z);
+        let permutation_product_poly = domain.lagrange_to_coeff(z);
 
         // Hash the permutation product commitment
         transcript.write_point(permutation_product_commitment)?;
 
         sets.push(CommittedSet {
             permutation_product_poly,
-            permutation_product_coset,
             permutation_product_blind,
         });
     }
 
     Ok(Committed { sets })
-}
-
-impl<C: CurveAffine> Committed<C> {
-    pub(in crate::plonk) fn construct(self) -> Constructed<C> {
-        Constructed {
-            sets: self
-                .sets
-                .iter()
-                .map(|set| ConstructedSet {
-                    permutation_product_poly: set.permutation_product_poly.clone(),
-                    permutation_product_blind: set.permutation_product_blind,
-                })
-                .collect(),
-        }
-    }
 }
 
 impl<C: CurveAffine> super::ProvingKey<C> {
@@ -236,7 +207,7 @@ impl<C: CurveAffine> super::ProvingKey<C> {
     }
 }
 
-impl<C: CurveAffine> Constructed<C> {
+impl<C: CurveAffine> Committed<C> {
     pub(in crate::plonk) fn evaluate<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
         self,
         pk: &plonk::ProvingKey<C>,
