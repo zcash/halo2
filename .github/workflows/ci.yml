@@ -52,8 +52,10 @@ jobs:
         with:
           beta-features: ${{ matrix.stage == 'beta' }}
           nightly-features: ${{ matrix.stage == 'nightly' }}
+      - name: Update apt
+        run: sudo apt-get update
       - name: Install cross-platform support dependencies
-        run: sudo apt install gcc-multilib
+        run: sudo apt-get install gcc-multilib
       - run: rustup target add i686-unknown-linux-gnu
       - name: Run tests
         run: >
