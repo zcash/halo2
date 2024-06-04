@@ -23,9 +23,9 @@ use halo2_proofs::{
 const TEST_DATA_DIR: &str = "src/tests/circuit_data";
 const GEN_ENV_VAR: &str = "CIRCUIT_TEST_GENERATE_NEW_DATA";
 
-/// A proof structure
 #[derive(Clone, Debug)]
 pub struct Proof(Vec<u8>);
+
 impl AsRef<[u8]> for Proof {
     fn as_ref(&self) -> &[u8] {
         &self.0
@@ -61,6 +61,7 @@ impl Proof {
         let mut transcript = Blake2bRead::init(&self.0[..]);
         plonk::verify_proof(params, vk, strategy, &[&[]], &mut transcript)
     }
+
     /// Constructs a new Proof value.
     pub fn new(bytes: Vec<u8>) -> Self {
         Proof(bytes)
@@ -91,8 +92,7 @@ pub(crate) fn test_against_stored_vk<C: Circuit<pallas::Base>>(circuit: &C, circ
     );
 }
 
-/// If the environment variable GEN_ENV_VAR_PROOF is set,
-/// write the old proof in a file
+/// If the env variable GEN_ENV_VAR is set, write the `Proof` to a file
 fn conditionally_save_proof_to_disk<C: Circuit<pallas::Base>>(
     vk: &VerifyingKey<Affine>,
     params: &Params<Affine>,
@@ -121,12 +121,11 @@ pub(crate) fn test_against_stored_proof<C: Circuit<pallas::Base>>(
     let params: Params<Affine> = Params::new(11);
     let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
-    // Conditionally save proof to disk
     conditionally_save_proof_to_disk(&vk, &params, circuit, &full_file_name);
 
-    // Read proof from disk
+    // Read the proof from storage
     let proof = Proof::new(fs::read(full_file_name).expect("Unable to read proof test file"));
 
-    // Verify the old proof with the new vk
+    // Verify the stored proof with the generated vk
     assert!(proof.verify(&vk, &params).is_ok());
 }

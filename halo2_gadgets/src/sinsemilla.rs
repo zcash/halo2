@@ -473,7 +473,7 @@ pub(crate) mod tests {
         },
         sinsemilla::primitives::{self as sinsemilla, K},
         tests::test_utils::{test_against_stored_proof, test_against_stored_vk},
-        utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRC10b},
+        utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRCConfig},
     };
 
     use group::{ff::Field, Curve};
@@ -519,9 +519,19 @@ pub(crate) mod tests {
     impl Circuit<pallas::Base> for MyCircuit {
         #[allow(clippy::type_complexity)]
         type Config = (
-            EccConfig<TestFixedBases, PallasLookupRC10b>,
-            SinsemillaConfig<TestHashDomain, TestCommitDomain, TestFixedBases, PallasLookupRC10b>,
-            SinsemillaConfig<TestHashDomain, TestCommitDomain, TestFixedBases, PallasLookupRC10b>,
+            EccConfig<TestFixedBases, PallasLookupRCConfig>,
+            SinsemillaConfig<
+                TestHashDomain,
+                TestCommitDomain,
+                TestFixedBases,
+                PallasLookupRCConfig,
+            >,
+            SinsemillaConfig<
+                TestHashDomain,
+                TestCommitDomain,
+                TestFixedBases,
+                PallasLookupRCConfig,
+            >,
         );
         type FloorPlanner = SimpleFloorPlanner;
 
@@ -567,9 +577,9 @@ pub(crate) mod tests {
                 meta.lookup_table_column(),
             );
 
-            let range_check = PallasLookupRC10b::configure(meta, advices[9], table_idx);
+            let range_check = PallasLookupRCConfig::configure(meta, advices[9], table_idx);
 
-            let ecc_config = EccChip::<TestFixedBases, PallasLookupRC10b>::configure(
+            let ecc_config = EccChip::<TestFixedBases, PallasLookupRCConfig>::configure(
                 meta,
                 advices,
                 lagrange_coeffs,
@@ -609,7 +619,7 @@ pub(crate) mod tests {
                 TestHashDomain,
                 TestCommitDomain,
                 TestFixedBases,
-                PallasLookupRC10b,
+                PallasLookupRCConfig,
             >::load(config.1.clone(), &mut layouter)?;
 
             // This MerkleCRH example is purely for illustrative purposes.

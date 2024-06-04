@@ -3,7 +3,7 @@ use super::H_BASE;
 
 use crate::utilities::{
     bitrange_subset, bool_check,
-    lookup_range_check::{PallasLookupRC, PallasLookupRC10b},
+    lookup_range_check::{PallasLookupRC, PallasLookupRCConfig},
     range_check,
 };
 
@@ -18,7 +18,8 @@ use pasta_curves::pallas;
 use std::convert::TryInto;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Config<Fixed: FixedPoints<pallas::Affine>, Lookup: PallasLookupRC = PallasLookupRC10b> {
+pub struct Config<Fixed: FixedPoints<pallas::Affine>, Lookup: PallasLookupRC = PallasLookupRCConfig>
+{
     q_mul_fixed_base_field: Selector,
     canon_advices: [Column<Advice>; 3],
     lookup_config: Lookup,

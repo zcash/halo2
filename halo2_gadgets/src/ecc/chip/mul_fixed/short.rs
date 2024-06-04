@@ -260,7 +260,7 @@ pub mod tests {
             FixedPointShort, NonIdentityPoint, Point, ScalarFixedShort,
         },
         utilities::{
-            lookup_range_check::{LookupRangeCheck, PallasLookupRC, PallasLookupRC10b},
+            lookup_range_check::{LookupRangeCheck, PallasLookupRC, PallasLookupRCConfig},
             UtilitiesInstructions,
         },
     };
@@ -428,7 +428,7 @@ pub mod tests {
         }
 
         impl Circuit<pallas::Base> for MyCircuit {
-            type Config = EccConfig<TestFixedBases, PallasLookupRC10b>;
+            type Config = EccConfig<TestFixedBases, PallasLookupRCConfig>;
             type FloorPlanner = SimpleFloorPlanner;
 
             fn without_witnesses(&self) -> Self {
@@ -464,8 +464,8 @@ pub mod tests {
                 let constants = meta.fixed_column();
                 meta.enable_constant(constants);
 
-                let range_check = PallasLookupRC10b::configure(meta, advices[9], lookup_table);
-                EccChip::<TestFixedBases, PallasLookupRC10b>::configure(
+                let range_check = PallasLookupRCConfig::configure(meta, advices[9], lookup_table);
+                EccChip::<TestFixedBases, PallasLookupRCConfig>::configure(
                     meta,
                     advices,
                     lagrange_coeffs,

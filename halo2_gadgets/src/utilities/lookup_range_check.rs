@@ -450,11 +450,11 @@ pub trait PallasLookupRC:
 {
 }
 
-/// `PallasLookupRC10b` is a shorthand for `LookupRangeCheckConfig` specialized with
+/// `PallasLookupRCConfig` is a shorthand for `LookupRangeCheckConfig` specialized with
 /// `pallas::Base` and `sinsemilla::K` and used to improve readability```
-pub type PallasLookupRC10b = LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>;
+pub type PallasLookupRCConfig = LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>;
 
-impl PallasLookupRC for PallasLookupRC10b {}
+impl PallasLookupRC for PallasLookupRCConfig {}
 
 #[cfg(test)]
 mod tests {
