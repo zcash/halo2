@@ -8,7 +8,7 @@ use halo2_middleware::ff::{Field, PrimeField};
 use halo2_middleware::zal::traits::MsmAccel;
 use halo2curves::pairing::Engine;
 use halo2curves::{CurveAffine, CurveExt};
-use rand_core::{OsRng, RngCore};
+use rand_core::RngCore;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -139,8 +139,8 @@ where
     type ParamsProver = ParamsKZG<E>;
     type ParamsVerifier = ParamsVerifierKZG<E>;
 
-    fn new_params(k: u32) -> Self::ParamsProver {
-        ParamsKZG::new(k)
+    fn new_params(k: u32, rng: impl RngCore) -> Self::ParamsProver {
+        ParamsKZG::new(k, rng)
     }
 
     fn read_params<R: io::Read>(reader: &mut R) -> io::Result<Self::ParamsProver> {
@@ -429,8 +429,8 @@ where
     E::G1: CurveExt<AffineExt = E::G1Affine>,
     E::G2Affine: SerdeCurveAffine,
 {
-    fn new(k: u32) -> Self {
-        Self::setup(k, OsRng)
+    fn new(k: u32, rng: impl RngCore) -> Self {
+        Self::setup(k, rng)
     }
 
     fn commit(
@@ -455,6 +455,7 @@ mod test {
     use crate::poly::kzg::commitment::ParamsKZG;
     use halo2_middleware::ff::Field;
     use halo2_middleware::zal::impls::H2cEngine;
+    use rand_core::OsRng;
 
     #[test]
     fn test_commit_lagrange() {
@@ -466,7 +467,7 @@ mod test {
         use halo2curves::bn256::{Bn256, Fr};
 
         let engine = H2cEngine::new();
-        let params = ParamsKZG::<Bn256>::new(K);
+        let params = ParamsKZG::<Bn256>::new(K, OsRng);
         let domain = EvaluationDomain::new(1, K);
 
         let mut a = domain.empty_lagrange();
@@ -492,7 +493,7 @@ mod test {
         use super::super::commitment::Params;
         use halo2curves::bn256::Bn256;
 
-        let params0 = ParamsKZG::<Bn256>::new(K);
+        let params0 = ParamsKZG::<Bn256>::new(K, OsRng);
         let mut data = vec![];
         <ParamsKZG<_> as Params<_>>::write(&params0, &mut data).unwrap();
         let params1: ParamsKZG<Bn256> = Params::read::<_>(&mut &data[..]).unwrap();

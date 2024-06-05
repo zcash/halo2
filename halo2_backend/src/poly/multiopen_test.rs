@@ -29,7 +29,7 @@ mod test {
         const K: u32 = 4;
 
         let engine = H2cEngine::new();
-        let params = ParamsIPA::<EqAffine>::new(K);
+        let params = ParamsIPA::<EqAffine>::new(K, OsRng);
 
         let proof = create_proof::<
             IPACommitmentScheme<EqAffine>,
@@ -67,7 +67,7 @@ mod test {
         const K: u32 = 4;
 
         let engine = H2cEngine::new();
-        let params = ParamsIPA::<EqAffine>::new(K);
+        let params = ParamsIPA::<EqAffine>::new(K, OsRng);
 
         let proof = create_proof::<
             IPACommitmentScheme<EqAffine>,
@@ -105,7 +105,7 @@ mod test {
         const K: u32 = 4;
 
         let engine = H2cEngine::new();
-        let params = ParamsKZG::<Bn256>::new(K);
+        let params = ParamsKZG::<Bn256>::new(K, OsRng);
 
         let proof = create_proof::<_, ProverGWC<_>, _, Blake2bWrite<_, _, Challenge255<_>>>(
             &engine, &params,
@@ -138,7 +138,7 @@ mod test {
         const K: u32 = 4;
 
         let engine = H2cEngine::new();
-        let params = ParamsKZG::<Bn256>::new(K);
+        let params = ParamsKZG::<Bn256>::new(K, OsRng);
 
         let proof = create_proof::<
             KZGCommitmentScheme<Bn256>,

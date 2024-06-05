@@ -1,6 +1,7 @@
 use std::{marker::PhantomData, vec};
 
 use ff::FromUniformBytes;
+use halo2_debug::{keccak_hex, one_rng};
 use halo2_proofs::{
     arithmetic::Field,
     circuit::{Layouter, SimpleFloorPlanner, Value},
@@ -23,7 +24,6 @@ use halo2_proofs::{
     },
 };
 use halo2curves::{pasta::EqAffine, CurveAffine};
-use rand_core::OsRng;
 
 struct ShuffleChip<F: Field> {
     config: ShuffleConfig,
@@ -148,11 +148,13 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
     }
 }
 
-fn test_prover<C: CurveAffine>(k: u32, circuit: MyCircuit<C::Scalar>, expected: bool)
+fn test_prover<C: CurveAffine>(k: u32, circuit: MyCircuit<C::Scalar>, expected: bool) -> Vec<u8>
 where
     C::Scalar: FromUniformBytes<64>,
 {
-    let params = ParamsIPA::<C>::new(k);
+    let mut rng = one_rng();
+
+    let params = ParamsIPA::<C>::new(k, &mut rng);
     let vk = keygen_vk(&params, &circuit).unwrap();
     let pk = keygen_pk(&params, vk, &circuit).unwrap();
 
@@ -164,7 +166,7 @@ where
             &pk,
             &[circuit],
             &[&[]],
-            OsRng,
+            rng,
             &mut transcript,
         )
         .expect("proof generation should not fail");
@@ -188,6 +190,8 @@ where
     };
 
     assert_eq!(accepted, expected);
+
+    proof
 }
 
 #[test]
@@ -213,5 +217,11 @@ fn test_shuffle_api() {
     };
     let prover = MockProver::run(K, &circuit, vec![]).unwrap();
     prover.assert_satisfied();
-    test_prover::<EqAffine>(K, circuit, true);
+    let _proof = test_prover::<EqAffine>(K, circuit, true);
+
+    #[cfg(all(feature = "vector-tests", not(coverage)))]
+    assert_eq!(
+        "6f9141496227a467b91395cbc601c69764660ce6aac5624e319119887ce0453c",
+        keccak_hex(_proof),
+    );
 }

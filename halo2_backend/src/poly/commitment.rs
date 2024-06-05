@@ -30,7 +30,7 @@ pub trait CommitmentScheme {
     type ParamsVerifier: for<'params> ParamsVerifier<'params, Self::Curve>;
 
     /// Wrapper for parameter generator
-    fn new_params(k: u32) -> Self::ParamsProver;
+    fn new_params(k: u32, rng: impl RngCore) -> Self::ParamsProver;
 
     /// Wrapper for parameter reader
     fn read_params<R: io::Read>(reader: &mut R) -> io::Result<Self::ParamsProver>;
@@ -69,7 +69,7 @@ pub trait Params<C: CurveAffine>: Sized + Clone + Debug {
 /// Parameters for circuit synthesis and prover parameters.
 pub trait ParamsProver<C: CurveAffine>: Params<C> {
     /// Returns new instance of parameters
-    fn new(k: u32) -> Self;
+    fn new(k: u32, rng: impl RngCore) -> Self;
 
     /// This computes a commitment to a polynomial described by the provided
     /// slice of coefficients. The commitment may be blinded by the blinding

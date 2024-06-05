@@ -1,4 +1,5 @@
 use ff::{BatchInvert, FromUniformBytes};
+use halo2_debug::one_rng;
 use halo2_proofs::{
     arithmetic::{CurveAffine, Field},
     circuit::{floor_planner::V1, Layouter, Value},
@@ -18,7 +19,8 @@ use halo2_proofs::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
-use rand_core::{OsRng, RngCore};
+use rand_chacha::ChaCha20Rng;
+use rand_core::{RngCore, SeedableRng};
 use std::iter;
 
 fn rand_2d_array<F: Field, R: RngCore, const W: usize, const H: usize>(rng: &mut R) -> [[F; H]; W] {
@@ -273,10 +275,13 @@ fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
     k: u32,
     circuit: MyCircuit<C::Scalar, W, H>,
     expected: bool,
-) where
+) -> Vec<u8>
+where
     C::Scalar: FromUniformBytes<64>,
 {
-    let params = ParamsIPA::<C>::new(k);
+    let mut rng = one_rng();
+
+    let params = ParamsIPA::<C>::new(k, &mut rng);
     let vk = keygen_vk(&params, &circuit).unwrap();
     let pk = keygen_pk(&params, vk, &circuit).unwrap();
 
@@ -288,7 +293,7 @@ fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
             &pk,
             &[circuit],
             &[&[]],
-            OsRng,
+            rng,
             &mut transcript,
         )
         .expect("proof generation should not fail");
@@ -312,6 +317,8 @@ fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
     };
 
     assert_eq!(accepted, expected);
+
+    proof
 }
 
 #[test]
@@ -320,11 +327,18 @@ fn test_shuffle() {
     const H: usize = 32;
     const K: u32 = 8;
 
-    let circuit = &MyCircuit::<_, W, H>::rand(&mut OsRng);
+    let mut shuffle_rng = ChaCha20Rng::seed_from_u64(0xdeadbeef);
+    let circuit = &MyCircuit::<_, W, H>::rand(&mut shuffle_rng);
 
     {
         test_mock_prover(K, circuit.clone(), Ok(()));
-        test_prover::<EqAffine, W, H>(K, circuit.clone(), true);
+        let _proof = test_prover::<EqAffine, W, H>(K, circuit.clone(), true);
+
+        #[cfg(all(feature = "vector-tests", not(coverage)))]
+        assert_eq!(
+            "deeffa8f048fedfaf412b39484899714e46d08ed349c767341c8d6373ba25edc",
+            halo2_debug::keccak_hex(_proof),
+        );
     }
 
     #[cfg(not(feature = "sanity-checks"))]
@@ -348,6 +362,11 @@ fn test_shuffle() {
                 },
             )]),
         );
-        test_prover::<EqAffine, W, H>(K, circuit, false);
+        let _proof = test_prover::<EqAffine, W, H>(K, circuit, false);
+        #[cfg(all(feature = "vector-tests", not(coverage)))]
+        assert_eq!(
+            "0b4e97f2d561fae56fe893333eba2df5228c78e80f8bd7c509d4d40d127dff92",
+            halo2_debug::keccak_hex(_proof),
+        );
     }
 }

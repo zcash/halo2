@@ -3,6 +3,7 @@
 
 use assert_matches::assert_matches;
 use ff::{FromUniformBytes, WithSmallOrderMulGroup};
+use halo2_debug::one_rng;
 use halo2_middleware::zal::{
     impls::{PlonkEngine, PlonkEngineConfig},
     traits::MsmAccel,
@@ -436,7 +437,7 @@ fn plonk_api() {
 
             // Check that we get an error if we try to initialize the proving key with a value of
             // k that is too small for the minimum required number of rows.
-            let much_too_small_params= <$scheme as CommitmentScheme>::ParamsProver::new(1);
+            let much_too_small_params= <$scheme as CommitmentScheme>::ParamsProver::new(1, OsRng);
             assert_matches!(
                 keygen_vk(&much_too_small_params, &empty_circuit),
                 Err(Error::Frontend(ErrorFront::NotEnoughRowsAvailable {
@@ -446,7 +447,7 @@ fn plonk_api() {
 
             // Check that we get an error if we try to initialize the proving key with a value of
             // k that is too small for the number of rows the circuit uses.
-            let slightly_too_small_params = <$scheme as CommitmentScheme>::ParamsProver::new(K-1);
+            let slightly_too_small_params = <$scheme as CommitmentScheme>::ParamsProver::new(K-1,OsRng);
             assert_matches!(
                 keygen_vk(&slightly_too_small_params, &empty_circuit),
                 Err(Error::Frontend(ErrorFront::NotEnoughRowsAvailable {
@@ -578,15 +579,16 @@ fn plonk_api() {
         use halo2curves::bn256::Bn256;
 
         type Scheme = KZGCommitmentScheme<Bn256>;
+
         bad_keys!(Scheme);
 
-        let params = ParamsKZG::<Bn256>::new(K);
-        let rng = OsRng;
+        let mut rng = one_rng();
 
+        let params = ParamsKZG::<Bn256>::new(K, &mut rng);
         let pk = keygen::<KZGCommitmentScheme<_>>(&params);
 
         let proof = create_proof::<_, ProverGWC<_>, _, _, Blake2bWrite<_, _, Challenge255<_>>>(
-            rng, &params, &pk,
+            &mut rng, &params, &pk,
         );
 
         let verifier_params = params.verifier_params();
@@ -598,6 +600,12 @@ fn plonk_api() {
             Blake2bRead<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
         >(&verifier_params, pk.get_vk(), &proof[..]);
+
+        #[cfg(all(feature = "vector-tests", not(coverage)))]
+        assert_eq!(
+            "fce5b7c977f643baeafb383f1793daa6795aeae3d708616381af0f6f8e4170f7",
+            halo2_debug::keccak_hex(proof),
+        );
     }
 
     fn test_plonk_api_shplonk() {
@@ -609,8 +617,8 @@ fn plonk_api() {
         type Scheme = KZGCommitmentScheme<Bn256>;
         bad_keys!(Scheme);
 
-        let params = ParamsKZG::<Bn256>::new(K);
-        let rng = OsRng;
+        let mut rng = one_rng();
+        let params = ParamsKZG::<Bn256>::new(K, &mut rng);
 
         let pk = keygen::<KZGCommitmentScheme<_>>(&params);
 
@@ -627,6 +635,12 @@ fn plonk_api() {
             Blake2bRead<_, _, Challenge255<_>>,
             AccumulatorStrategy<_>,
         >(&verifier_params, pk.get_vk(), &proof[..]);
+
+        #[cfg(all(feature = "vector-tests", not(coverage)))]
+        assert_eq!(
+            "e0121d6d53892969fbf4e08ddc74c4cba02695b7c6421e62a30f9c30b8ae4ae6",
+            halo2_debug::keccak_hex(proof),
+        );
     }
 
     fn test_plonk_api_ipa() {
@@ -638,13 +652,13 @@ fn plonk_api() {
         type Scheme = IPACommitmentScheme<EqAffine>;
         bad_keys!(Scheme);
 
-        let params = ParamsIPA::<EqAffine>::new(K);
-        let rng = OsRng;
+        let mut rng = one_rng();
+        let params = ParamsIPA::<EqAffine>::new(K, &mut rng);
 
         let pk = keygen::<IPACommitmentScheme<EqAffine>>(&params);
 
         let proof = create_proof::<_, ProverIPA<_>, _, _, Blake2bWrite<_, _, Challenge255<_>>>(
-            rng, &params, &pk,
+            &mut rng, &params, &pk,
         );
 
         let verifier_params = params;

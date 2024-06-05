@@ -4,6 +4,7 @@ use std::{
 };
 
 use ff::Field;
+use halo2_debug::one_rng;
 use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
     plonk::{
@@ -24,7 +25,6 @@ use halo2_proofs::{
     SerdeFormat,
 };
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
-use rand_core::OsRng;
 
 #[derive(Clone, Copy)]
 struct StandardPlonkConfig {
@@ -131,8 +131,11 @@ impl Circuit<Fr> for StandardPlonk {
 #[test]
 fn test_serialization() {
     let k = 4;
-    let circuit = StandardPlonk(Fr::random(OsRng));
-    let params = ParamsKZG::<Bn256>::setup(k, OsRng);
+
+    let mut rng = one_rng();
+
+    let circuit = StandardPlonk(Fr::random(&mut rng));
+    let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let compress_selectors = true;
     let vk = keygen_vk_custom(&params, &circuit, compress_selectors).expect("vk should not fail");
     let pk = keygen_pk(&params, vk, &circuit).expect("pk should not fail");
@@ -165,14 +168,7 @@ fn test_serialization() {
         _,
         Blake2bWrite<Vec<u8>, G1Affine, Challenge255<_>>,
         _,
-    >(
-        &params,
-        &pk,
-        &[circuit],
-        &[instances],
-        OsRng,
-        &mut transcript,
-    )
+    >(&params, &pk, &[circuit], &[instances], rng, &mut transcript)
     .expect("prover should not fail");
     let proof = transcript.finalize();
 
@@ -193,4 +189,10 @@ fn test_serialization() {
         &mut transcript
     )
     .is_ok());
+
+    #[cfg(all(feature = "vector-tests", not(coverage)))]
+    assert_eq!(
+        "42d69881fc453fc9eac7cb51487cf98ac049db97bae0ce05338917d18d99ef21",
+        halo2_debug::keccak_hex(proof),
+    )
 }

@@ -1,10 +1,6 @@
 #![allow(clippy::many_single_char_names)]
 #![allow(clippy::op_ref)]
 
-#[cfg(feature = "heap-profiling")]
-#[global_allocator]
-static ALLOC: dhat::Alloc = dhat::Alloc;
-
 use halo2_backend::{
     plonk::{
         keygen::{keygen_pk, keygen_vk},
@@ -15,6 +11,7 @@ use halo2_backend::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
+use halo2_debug::one_rng;
 use halo2_frontend::{
     circuit::{
         compile_circuit, AssignedCell, Layouter, Region, SimpleFloorPlanner, Value,
@@ -470,22 +467,6 @@ use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
 use halo2_proofs::poly::kzg::multiopen::{ProverSHPLONK, VerifierSHPLONK};
 use halo2_proofs::poly::kzg::strategy::SingleStrategy;
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
-use rand_core::block::BlockRng;
-use rand_core::block::BlockRngCore;
-
-// One number generator, that can be used as a deterministic Rng, outputing fixed values.
-struct OneNg {}
-
-impl BlockRngCore for OneNg {
-    type Item = u32;
-    type Results = [u32; 16];
-
-    fn generate(&mut self, results: &mut Self::Results) {
-        for elem in results.iter_mut() {
-            *elem = 1;
-        }
-    }
-}
 
 #[test]
 fn test_mycircuit_mock() {
@@ -504,9 +485,6 @@ const WIDTH_FACTOR: usize = 1;
 
 #[test]
 fn test_mycircuit_full_legacy() {
-    #[cfg(all(feature = "heap-profiling", not(coverage)))]
-    let _profiler = dhat::Profiler::new_heap();
-
     use halo2_proofs::plonk::{
         create_proof, keygen_pk as keygen_pk_legacy, keygen_vk as keygen_vk_legacy,
     };
@@ -515,7 +493,7 @@ fn test_mycircuit_full_legacy() {
     let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
 
     // Setup
-    let mut rng = BlockRng::new(OneNg {});
+    let mut rng = one_rng();
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let start = Instant::now();
     let vk = keygen_vk_legacy(&params, &circuit).expect("keygen_vk should not fail");
@@ -559,14 +537,17 @@ fn test_mycircuit_full_legacy() {
     )
     .expect("verify succeeds");
     println!("Verify: {:?}", start.elapsed());
+
+    #[cfg(all(feature = "vector-tests", not(coverage)))]
+    assert_eq!(
+        "abd4d6d18640def2cb3e3b4de0afe61ec2c5e64705f4386e8f96468d110e9df9",
+        halo2_debug::keccak_hex(proof),
+    );
 }
 
 #[test]
 fn test_mycircuit_full_split() {
     use halo2_middleware::zal::impls::{H2cEngine, PlonkEngineConfig};
-
-    #[cfg(all(feature = "heap-profiling", not(coverage)))]
-    let _profiler = dhat::Profiler::new_heap();
 
     let engine = PlonkEngineConfig::new()
         .set_curve::<G1Affine>()
@@ -574,10 +555,10 @@ fn test_mycircuit_full_split() {
         .build();
     let k = K;
     let circuit: MyCircuit<Fr, WIDTH_FACTOR> = MyCircuit::new(k, 42);
-    let (compiled_circuit, config, cs) = compile_circuit(k, &circuit, false).unwrap();
+    let (compiled_circuit, config, cs) = compile_circuit(k, &circuit, true).unwrap();
 
     // Setup
-    let mut rng = BlockRng::new(OneNg {});
+    let mut rng = one_rng();
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let start = Instant::now();
     let vk = keygen_vk(&params, &compiled_circuit).expect("keygen_vk should not fail");
@@ -639,4 +620,10 @@ fn test_mycircuit_full_split() {
     )
     .expect("verify succeeds");
     println!("Verify: {:?}", start.elapsed());
+
+    #[cfg(all(feature = "vector-tests", not(coverage)))]
+    assert_eq!(
+        "abd4d6d18640def2cb3e3b4de0afe61ec2c5e64705f4386e8f96468d110e9df9",
+        halo2_debug::keccak_hex(proof),
+    );
 }

@@ -4,6 +4,7 @@
 use std::marker::PhantomData;
 
 use ff::FromUniformBytes;
+use halo2_debug::{keccak_hex, one_rng};
 use halo2_proofs::{
     arithmetic::{CurveAffine, Field},
     circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner, Value},
@@ -21,7 +22,6 @@ use halo2_proofs::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
-use rand_core::OsRng;
 
 // ANCHOR: instructions
 trait NumericInstructions<F: Field>: Chip<F> {
@@ -475,7 +475,9 @@ fn test_prover<C: CurveAffine>(
 where
     C::Scalar: FromUniformBytes<64>,
 {
-    let params = ParamsIPA::<C>::new(k);
+    let mut rng = one_rng();
+
+    let params = ParamsIPA::<C>::new(k, &mut rng);
     let vk = keygen_vk(&params, &circuit).unwrap();
     let pk = keygen_pk(&params, vk, &circuit).unwrap();
 
@@ -487,7 +489,7 @@ where
             &pk,
             &[circuit],
             &[&[&instances]],
-            OsRng,
+            rng,
             &mut transcript,
         )
         .expect("proof generation should not fail");
@@ -545,8 +547,19 @@ fn test_vector_ops_unbinded() {
 
     // the commitments will be the first columns of the proof transcript so we can compare them easily
     let proof_1 = test_prover::<halo2curves::pasta::EqAffine>(k, mul_circuit, true, c_mul);
+    #[cfg(all(feature = "vector-tests", not(coverage)))]
+    assert_eq!(
+        "99d6cadd2596dce8dc8918907ba9cb051a5d9775f9fb7ed6ac51cc75e41e6da4",
+        keccak_hex(&proof_1),
+    );
+
     // the commitments will be the first columns of the proof transcript so we can compare them easily
     let proof_2 = test_prover::<halo2curves::pasta::EqAffine>(k, add_circuit, true, c_add);
+    #[cfg(all(feature = "vector-tests", not(coverage)))]
+    assert_eq!(
+        "159fe77867a8ee7e1cac1da22d375e864816bbbbb0b8b1d6f2ace241b35c115a",
+        keccak_hex(&proof_2),
+    );
 
     // the commitments will be the first columns of the proof transcript so we can compare them easily
     // here we compare the first 10 bytes of the commitments

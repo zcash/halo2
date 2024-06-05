@@ -10,6 +10,7 @@ use halo2_proofs::poly::Rotation;
 use halo2_backend::transcript::{
     Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
 };
+use halo2_debug::one_rng;
 use halo2_middleware::zal::impls::{H2cEngine, PlonkEngineConfig};
 use halo2_proofs::arithmetic::Field;
 use halo2_proofs::plonk::{
@@ -20,22 +21,6 @@ use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
 use halo2_proofs::poly::kzg::multiopen::{ProverSHPLONK, VerifierSHPLONK};
 use halo2_proofs::poly::kzg::strategy::SingleStrategy;
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
-use rand_core::block::BlockRng;
-use rand_core::block::BlockRngCore;
-
-// One number generator, that can be used as a deterministic Rng, outputing fixed values.
-pub struct OneNg {}
-
-impl BlockRngCore for OneNg {
-    type Item = u32;
-    type Results = [u32; 16];
-
-    fn generate(&mut self, results: &mut Self::Results) {
-        for elem in results.iter_mut() {
-            *elem = 1;
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 struct MyCircuitConfig {
@@ -344,7 +329,7 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
 fn test_mycircuit(
     vk_keygen_compress_selectors: bool,
     pk_keygen_compress_selectors: bool,
-) -> Result<(), halo2_proofs::plonk::Error> {
+) -> Result<Vec<u8>, halo2_proofs::plonk::Error> {
     let engine = PlonkEngineConfig::new()
         .set_curve::<G1Affine>()
         .set_msm(H2cEngine::new())
@@ -357,7 +342,7 @@ fn test_mycircuit(
     };
 
     // Setup
-    let mut rng = BlockRng::new(OneNg {});
+    let mut rng = one_rng();
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let verifier_params = params.verifier_params();
     let vk = keygen_vk_custom(&params, &circuit, vk_keygen_compress_selectors)?;
@@ -395,7 +380,9 @@ fn test_mycircuit(
         &[instances_slice],
         &mut verifier_transcript,
     )
-    .map_err(halo2_proofs::plonk::Error::Backend)
+    .map_err(halo2_proofs::plonk::Error::Backend)?;
+
+    Ok(proof)
 }
 
 /*
@@ -436,12 +423,24 @@ How the `compress_selectors` works in `MyCircuit` under the hood:
 */
 
 #[test]
-fn test_success() {
+fn test_success() -> Result<(), halo2_proofs::plonk::Error> {
     // vk & pk keygen both WITH compress
-    assert!(test_mycircuit(true, true).is_ok());
+    let _proof = test_mycircuit(true, true)?;
+    #[cfg(all(feature = "vector-tests", not(coverage)))]
+    assert_eq!(
+        "088a7a9782efb2b9518e3c181ab126c9d621feb83b61dc21c93aaf4acf1c818c",
+        halo2_debug::keccak_hex(_proof),
+    );
 
     // vk & pk keygen both WITHOUT compress
-    assert!(test_mycircuit(false, false).is_ok());
+    let _proof = test_mycircuit(false, false)?;
+    #[cfg(all(feature = "vector-tests", not(coverage)))]
+    assert_eq!(
+        "b799363093b85f956c9f68d001e99bd68901147dc4059eaf70f9cacbf02b6886",
+        halo2_debug::keccak_hex(_proof),
+    );
+
+    Ok(())
 }
 
 #[should_panic]

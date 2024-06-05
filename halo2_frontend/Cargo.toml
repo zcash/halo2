@@ -60,7 +60,6 @@ bits = ["halo2curves/bits"]
 gadget-traces = ["backtrace"]
 thread-safe-region = []
 circuit-params = []
-heap-profiling = []
 cost-estimator = ["serde", "serde_derive"]
 derive_serde = ["halo2curves/derive_serde"]
 
