@@ -275,11 +275,9 @@ impl<'a, F: Field> std::fmt::Debug for PinnedConstraintSystem<'a, F> {
             .field("instance_queries", self.instance_queries)
             .field("fixed_queries", self.fixed_queries)
             .field("permutation", self.permutation)
-            .field("lookups", self.lookups);
-        if !self.shuffles.is_empty() {
-            debug_struct.field("shuffles", self.shuffles);
-        }
-        debug_struct.field("minimum_degree", self.minimum_degree);
+            .field("lookups", self.lookups)
+            .field("shuffles", self.shuffles)
+            .field("minimum_degree", self.minimum_degree);
         debug_struct.finish()
     }
 }

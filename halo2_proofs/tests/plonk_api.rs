@@ -1112,6 +1112,7 @@ fn plonk_api() {
                 ],
             },
         ],
+        shuffles: [],
         minimum_degree: None,
     },
     fixed_commitments: [
