@@ -238,6 +238,8 @@ impl<'a, F: Field> std::fmt::Debug for PinnedGates<'a, F> {
 }
 
 /// Represents the minimal parameters that determine a `ConstraintSystem`.
+#[allow(dead_code)]
+#[derive(Debug)]
 pub(crate) struct PinnedConstraintSystem<'a, F: Field> {
     num_fixed_columns: &'a usize,
     num_advice_columns: &'a usize,
@@ -253,33 +255,6 @@ pub(crate) struct PinnedConstraintSystem<'a, F: Field> {
     lookups: &'a Vec<LookupArgumentBack<F>>,
     shuffles: &'a Vec<ShuffleArgumentBack<F>>,
     minimum_degree: &'a Option<usize>,
-}
-
-impl<'a, F: Field> std::fmt::Debug for PinnedConstraintSystem<'a, F> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut debug_struct = f.debug_struct("PinnedConstraintSystem");
-        debug_struct
-            .field("num_fixed_columns", self.num_fixed_columns)
-            .field("num_advice_columns", self.num_advice_columns)
-            .field("num_instance_columns", self.num_instance_columns);
-        // Only show multi-phase related fields if it's used.
-        if *self.num_challenges > 0 {
-            debug_struct
-                .field("num_challenges", self.num_challenges)
-                .field("advice_column_phase", self.advice_column_phase)
-                .field("challenge_phase", self.challenge_phase);
-        }
-        debug_struct
-            .field("gates", &self.gates)
-            .field("advice_queries", self.advice_queries)
-            .field("instance_queries", self.instance_queries)
-            .field("fixed_queries", self.fixed_queries)
-            .field("permutation", self.permutation)
-            .field("lookups", self.lookups)
-            .field("shuffles", self.shuffles)
-            .field("minimum_degree", self.minimum_degree);
-        debug_struct.finish()
-    }
 }
 
 // Cost functions: arguments required degree

@@ -674,6 +674,15 @@ fn plonk_api() {
         num_fixed_columns: 7,
         num_advice_columns: 5,
         num_instance_columns: 1,
+        num_challenges: 0,
+        advice_column_phase: [
+            0,
+            0,
+            0,
+            0,
+            0,
+        ],
+        challenge_phase: [],
         gates: [
             Sum(
                 Sum(
