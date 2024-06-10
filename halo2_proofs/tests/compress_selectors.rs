@@ -3,6 +3,8 @@
 use std::marker::PhantomData;
 
 use ff::PrimeField;
+use halo2_debug::display::expr_disp_names;
+use halo2_frontend::circuit::compile_circuit;
 use halo2_frontend::plonk::Error;
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::poly::Rotation;
@@ -10,6 +12,7 @@ use halo2_proofs::poly::Rotation;
 use halo2_backend::transcript::{
     Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
 };
+use halo2_middleware::circuit::{Any, ColumnMid};
 use halo2_middleware::zal::impls::{H2cEngine, PlonkEngineConfig};
 use halo2_proofs::arithmetic::Field;
 use halo2_proofs::plonk::{
@@ -101,12 +104,16 @@ impl<F: Field> MyCircuitChip<F> {
         let l = meta.advice_column();
         let r = meta.advice_column();
         let o = meta.advice_column();
+        meta.annotate_column(l, || "l");
+        meta.annotate_column(r, || "r");
+        meta.annotate_column(o, || "o");
 
         let s_add = meta.selector();
         let s_mul = meta.selector();
         let s_cubed = meta.selector();
 
         let PI = meta.instance_column();
+        meta.annotate_column(PI, || "pi");
 
         meta.enable_equality(l);
         meta.enable_equality(r);
@@ -434,6 +441,63 @@ How the `compress_selectors` works in `MyCircuit` under the hood:
     at rotation 0.
 
 */
+
+#[test]
+fn test_compress_gates() {
+    let k = 4;
+    let circuit: MyCircuit<Fr> = MyCircuit {
+        x: Value::known(Fr::one()),
+        y: Value::known(Fr::one()),
+        constant: Fr::one(),
+    };
+
+    // Without compression
+
+    let (mut compress_false, _, _) = compile_circuit(k, &circuit, false).unwrap();
+
+    let names = &mut compress_false.cs.general_column_annotations;
+    names.insert(ColumnMid::new(Any::Fixed, 0), "s_add".to_string());
+    names.insert(ColumnMid::new(Any::Fixed, 1), "s_mul".to_string());
+    names.insert(ColumnMid::new(Any::Fixed, 2), "s_cubed".to_string());
+    let cs = &compress_false.cs;
+    let names = &cs.general_column_annotations;
+    assert_eq!(3, cs.gates.len());
+    assert_eq!(
+        "s_add * (l + r - o)",
+        format!("{}", expr_disp_names(&cs.gates[0].poly, names))
+    );
+    assert_eq!(
+        "s_mul * (l * r - o)",
+        format!("{}", expr_disp_names(&cs.gates[1].poly, names))
+    );
+    assert_eq!(
+        "s_cubed * (l * l * l - o)",
+        format!("{}", expr_disp_names(&cs.gates[2].poly, names))
+    );
+
+    // With compression
+
+    let (mut compress_true, _, _) = compile_circuit(k, &circuit, true).unwrap();
+
+    let names = &mut compress_true.cs.general_column_annotations;
+    names.insert(ColumnMid::new(Any::Fixed, 0), "s_add_mul".to_string());
+    names.insert(ColumnMid::new(Any::Fixed, 1), "s_cubed".to_string());
+    let cs = &compress_true.cs;
+    let names = &cs.general_column_annotations;
+    assert_eq!(3, cs.gates.len());
+    assert_eq!(
+        "s_add_mul * (2 - s_add_mul) * (l + r - o)",
+        format!("{}", expr_disp_names(&cs.gates[0].poly, names))
+    );
+    assert_eq!(
+        "s_add_mul * (1 - s_add_mul) * (l * r - o)",
+        format!("{}", expr_disp_names(&cs.gates[1].poly, names))
+    );
+    assert_eq!(
+        "s_cubed * (l * l * l - o)",
+        format!("{}", expr_disp_names(&cs.gates[2].poly, names))
+    );
+}
 
 #[test]
 fn test_success() {

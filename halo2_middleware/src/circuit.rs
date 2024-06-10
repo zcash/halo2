@@ -34,12 +34,44 @@ pub struct QueryMid {
     pub rotation: Rotation,
 }
 
+impl QueryMid {
+    pub fn new(column_type: Any, column_index: usize, rotation: Rotation) -> Self {
+        Self {
+            column_index,
+            column_type,
+            rotation,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum VarMid {
     /// This is a generic column query
     Query(QueryMid),
     /// This is a challenge
     Challenge(ChallengeMid),
+}
+
+impl fmt::Display for VarMid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            VarMid::Query(query) => {
+                match query.column_type {
+                    Any::Fixed => write!(f, "f")?,
+                    Any::Advice => write!(f, "a")?,
+                    Any::Instance => write!(f, "i")?,
+                };
+                write!(f, "{}", query.column_index)?;
+                if query.rotation.0 != 0 {
+                    write!(f, "[{}]", query.rotation.0)?;
+                }
+                Ok(())
+            }
+            VarMid::Challenge(challenge) => {
+                write!(f, "ch{}", challenge.index())
+            }
+        }
+    }
 }
 
 impl Variable for VarMid {
@@ -58,19 +90,7 @@ impl Variable for VarMid {
     }
 
     fn write_identifier<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-        match self {
-            VarMid::Query(query) => {
-                match query.column_type {
-                    Any::Fixed => write!(writer, "fixed")?,
-                    Any::Advice => write!(writer, "advice")?,
-                    Any::Instance => write!(writer, "instance")?,
-                };
-                write!(writer, "[{}][{}]", query.column_index, query.rotation.0)
-            }
-            VarMid::Challenge(challenge) => {
-                write!(writer, "challenge[{}]", challenge.index())
-            }
-        }
+        write!(writer, "{}", self)
     }
 }
 
@@ -134,6 +154,19 @@ pub struct ConstraintSystemMid<F: Field> {
     // larger amount than actually needed. This can be used, for example, to
     // force the permutation argument to involve more columns in the same set.
     pub minimum_degree: Option<usize>,
+}
+
+impl<F: Field> ConstraintSystemMid<F> {
+    /// Returns the number of phases
+    pub fn phases(&self) -> usize {
+        let max_phase = self
+            .advice_column_phase
+            .iter()
+            .copied()
+            .max()
+            .unwrap_or_default();
+        max_phase as usize + 1
+    }
 }
 
 /// Data that needs to be preprocessed from a circuit

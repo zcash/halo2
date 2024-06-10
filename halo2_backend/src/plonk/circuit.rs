@@ -25,6 +25,12 @@ pub enum VarBack {
     Challenge(ChallengeMid),
 }
 
+impl std::fmt::Display for VarBack {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 impl Variable for VarBack {
     fn degree(&self) -> usize {
         match self {
@@ -40,8 +46,8 @@ impl Variable for VarBack {
         }
     }
 
-    fn write_identifier<W: std::io::Write>(&self, _writer: &mut W) -> std::io::Result<()> {
-        unimplemented!("unused method")
+    fn write_identifier<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        write!(writer, "{}", self)
     }
 }
 

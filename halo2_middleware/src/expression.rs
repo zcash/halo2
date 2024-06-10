@@ -3,7 +3,7 @@ use core::ops::{Add, Mul, Neg, Sub};
 use ff::Field;
 use std::iter::{Product, Sum};
 
-pub trait Variable: Clone + Copy + std::fmt::Debug + Eq + PartialEq {
+pub trait Variable: Clone + Copy + std::fmt::Debug + std::fmt::Display + Eq + PartialEq {
     /// Degree that an expression would have if it was only this variable.
     fn degree(&self) -> usize;
 

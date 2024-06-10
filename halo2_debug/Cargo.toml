@@ -1,0 +1,27 @@
+[package]
+name = "halo2_debug"
+version = "0.3.0"
+authors = [
+    "Privacy Scaling Explorations team",
+]
+edition = "2021"
+rust-version = "1.66.0"
+description = """
+Halo2 Debug.  This package contains utilities for debugging and testing within
+the halo2 ecosystem.
+"""
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/privacy-scaling-explorations/halo2"
+documentation = "https://privacy-scaling-explorations.github.io/halo2/"
+categories = ["cryptography"]
+keywords = ["halo", "proofs", "zkp", "zkSNARKs"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs", "--html-in-header", "katex-header.html"]
+
+[dependencies]
+ff = "0.13"
+halo2curves = { version = "0.6.1", default-features = false }
+num-bigint = "0.4.5"
+halo2_middleware = { path = "../halo2_middleware" }

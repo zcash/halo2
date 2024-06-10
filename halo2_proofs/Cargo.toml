@@ -61,6 +61,7 @@ gumdrop = "0.8"
 proptest = "1"
 dhat = "0.3.2"
 serde_json = "1"
+halo2_debug = { path = "../halo2_debug" }
 
 [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
 getrandom = { version = "0.2", features = ["js"] }

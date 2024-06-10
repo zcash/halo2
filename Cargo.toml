@@ -5,6 +5,7 @@ members = [
     "halo2_frontend",
     "halo2_middleware",
     "halo2_backend",
+    "halo2_debug",
     "p3_frontend",
 ]
 resolver = "2"

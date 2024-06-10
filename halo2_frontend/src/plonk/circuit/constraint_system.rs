@@ -795,6 +795,16 @@ impl<F: Field> ConstraintSystem<F> {
         AR: Into<String>,
         T: Into<Column<Any>>,
     {
+        self.annotate_column(column, annotation)
+    }
+
+    /// Annotate a column.
+    pub fn annotate_column<A, AR, T>(&mut self, column: T, annotation: A)
+    where
+        A: Fn() -> AR,
+        AR: Into<String>,
+        T: Into<Column<Any>>,
+    {
         let col_any = column.into();
         // We don't care if the table has already an annotation. If it's the case we keep the new one.
         self.general_column_annotations.insert(
