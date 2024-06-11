@@ -30,7 +30,7 @@ pub fn create_proof_with_engine<
     params: &'params Scheme::ParamsProver,
     pk: &ProvingKey<Scheme::Curve>,
     circuits: &[ConcreteCircuit],
-    instances: &[&[&[Scheme::Scalar]]],
+    instances: &[Vec<Vec<Scheme::Scalar>>],
     rng: R,
     transcript: &mut T,
 ) -> Result<(), Error>
@@ -51,7 +51,9 @@ where
     let mut witness_calcs: Vec<_> = circuits
         .iter()
         .enumerate()
-        .map(|(i, circuit)| WitnessCalculator::new(params.k(), circuit, &config, &cs, instances[i]))
+        .map(|(i, circuit)| {
+            WitnessCalculator::new(params.k(), circuit, &config, &cs, instances[i].as_slice())
+        })
         .collect();
     let mut prover = Prover::<Scheme, P, _, _, _, _>::new_with_engine(
         engine, params, pk, instances, rng, transcript,
@@ -84,7 +86,7 @@ pub fn create_proof<
     params: &'params Scheme::ParamsProver,
     pk: &ProvingKey<Scheme::Curve>,
     circuits: &[ConcreteCircuit],
-    instances: &[&[&[Scheme::Scalar]]],
+    instances: &[Vec<Vec<Scheme::Scalar>>],
     rng: R,
     transcript: &mut T,
 ) -> Result<(), Error>
@@ -160,7 +162,7 @@ fn test_create_proof() {
         &params,
         &pk,
         &[MyCircuit, MyCircuit],
-        &[&[], &[]],
+        &[vec![], vec![]],
         OsRng,
         &mut transcript,
     )
@@ -220,7 +222,7 @@ fn test_create_proof_custom() {
         &params,
         &pk,
         &[MyCircuit, MyCircuit],
-        &[&[], &[]],
+        &[vec![], vec![]],
         OsRng,
         &mut transcript,
     )

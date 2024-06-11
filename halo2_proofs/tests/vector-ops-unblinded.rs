@@ -479,6 +479,7 @@ where
     let vk = keygen_vk(&params, &circuit).unwrap();
     let pk = keygen_pk(&params, vk, &circuit).unwrap();
 
+    let instances = vec![vec![instances]];
     let proof = {
         let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
 
@@ -486,7 +487,7 @@ where
             &params,
             &pk,
             &[circuit],
-            &[&[&instances]],
+            &instances,
             OsRng,
             &mut transcript,
         )
@@ -503,7 +504,7 @@ where
             &params,
             pk.get_vk(),
             strategy,
-            &[&[&instances]],
+            &instances,
             &mut transcript,
         )
         .map(|strategy| strategy.finalize())

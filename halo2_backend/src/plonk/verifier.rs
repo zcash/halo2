@@ -34,7 +34,7 @@ pub fn verify_proof_single<'params, Scheme, V, E, T, Strategy>(
     params: &'params Scheme::ParamsVerifier,
     vk: &VerifyingKey<Scheme::Curve>,
     strategy: Strategy,
-    instance: &[&[Scheme::Scalar]],
+    instance: Vec<Vec<Scheme::Scalar>>,
     transcript: &mut T,
 ) -> Result<Strategy::Output, Error>
 where
@@ -60,7 +60,7 @@ pub fn verify_proof<
     params: &'params Scheme::ParamsVerifier,
     vk: &VerifyingKey<Scheme::Curve>,
     strategy: Strategy,
-    instances: &[&[&[Scheme::Scalar]]],
+    instances: &[Vec<Vec<Scheme::Scalar>>],
     transcript: &mut T,
 ) -> Result<Strategy::Output, Error>
 where
@@ -301,9 +301,12 @@ where
                     .instance_queries
                     .iter()
                     .map(|(column, rotation)| {
-                        let instances = instances[column.index];
+                        let instances = &instances[column.index];
                         let offset = (max_rotation - rotation.0) as usize;
-                        compute_inner_product(instances, &l_i_s[offset..offset + instances.len()])
+                        compute_inner_product(
+                            instances.as_slice(),
+                            &l_i_s[offset..offset + instances.len()],
+                        )
                     })
                     .collect::<Vec<_>>()
             })

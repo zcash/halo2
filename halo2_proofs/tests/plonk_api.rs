@@ -489,7 +489,7 @@ fn plonk_api() {
     where
         Scheme::Scalar: Ord + WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     {
-        let (a, instance, lookup_table) = common!(Scheme);
+        let (a, instance_val, lookup_table) = common!(Scheme);
 
         let circuit: MyCircuit<Scheme::Scalar> = MyCircuit {
             a: Value::known(a),
@@ -498,19 +498,20 @@ fn plonk_api() {
 
         let mut transcript = T::init(vec![]);
 
+        let instance = [vec![vec![instance_val]], vec![vec![instance_val]]];
         create_plonk_proof_with_engine::<Scheme, P, _, _, _, _, _>(
             engine,
             params,
             pk,
             &[circuit.clone(), circuit.clone()],
-            &[&[&[instance]], &[&[instance]]],
+            &instance,
             rng,
             &mut transcript,
         )
         .expect("proof generation should not fail");
 
         // Check this circuit is satisfied.
-        let prover = match MockProver::run(K, &circuit, vec![vec![instance]]) {
+        let prover = match MockProver::run(K, &circuit, vec![vec![instance_val]]) {
             Ok(prover) => prover,
             Err(e) => panic!("{e:?}"),
         };
@@ -553,20 +554,14 @@ fn plonk_api() {
     ) where
         Scheme::Scalar: Ord + WithSmallOrderMulGroup<3> + FromUniformBytes<64>,
     {
-        let (_, instance, _) = common!(Scheme);
-        let pubinputs = [instance];
+        let (_, instance_val, _) = common!(Scheme);
 
         let mut transcript = T::init(proof);
+        let instance = [vec![vec![instance_val]], vec![vec![instance_val]]];
 
         let strategy = Strategy::new(params_verifier);
-        let strategy = verify_plonk_proof(
-            params_verifier,
-            vk,
-            strategy,
-            &[&[&pubinputs[..]], &[&pubinputs[..]]],
-            &mut transcript,
-        )
-        .unwrap();
+        let strategy =
+            verify_plonk_proof(params_verifier, vk, strategy, &instance, &mut transcript).unwrap();
 
         assert!(strategy.finalize());
     }

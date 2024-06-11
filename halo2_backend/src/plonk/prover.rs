@@ -68,9 +68,7 @@ impl<
         engine: PlonkEngine<Scheme::Curve, M>,
         params: &'params Scheme::ParamsProver,
         pk: &'a ProvingKey<Scheme::Curve>,
-        // TODO: If this was a vector the usage would be simpler
-        // https://github.com/privacy-scaling-explorations/halo2/issues/265
-        instance: &[&[Scheme::Scalar]],
+        instance: Vec<Vec<Scheme::Scalar>>,
         rng: R,
         transcript: &'a mut T,
     ) -> Result<Self, Error>
@@ -90,9 +88,7 @@ impl<
     pub fn new(
         params: &'params Scheme::ParamsProver,
         pk: &'a ProvingKey<Scheme::Curve>,
-        // TODO: If this was a vector the usage would be simpler
-        // https://github.com/privacy-scaling-explorations/halo2/issues/265
-        instance: &[&[Scheme::Scalar]],
+        instance: Vec<Vec<Scheme::Scalar>>,
         rng: R,
         transcript: &'a mut T,
     ) -> Result<ProverSingle<'a, 'params, Scheme, P, E, R, T, H2cEngine>, Error>
@@ -175,9 +171,7 @@ impl<
         engine: PlonkEngine<Scheme::Curve, M>,
         params: &'params Scheme::ParamsProver,
         pk: &'a ProvingKey<Scheme::Curve>,
-        // TODO: If this was a vector the usage would be simpler.
-        // https://github.com/privacy-scaling-explorations/halo2/issues/265
-        circuits_instances: &[&[&[Scheme::Scalar]]],
+        circuits_instances: &[Vec<Vec<Scheme::Scalar>>],
         rng: R,
         transcript: &'a mut T,
     ) -> Result<Self, Error>
@@ -201,7 +195,7 @@ impl<
         // commit_instance_fn is a helper function to return the polynomials (and its commitments) of
         // instance columns while updating the transcript.
         let mut commit_instance_fn =
-            |instance: &[&[Scheme::Scalar]]| -> Result<InstanceSingle<Scheme::Curve>, Error> {
+            |instance: &[Vec<Scheme::Scalar>]| -> Result<InstanceSingle<Scheme::Curve>, Error> {
                 // Create a lagrange polynomial for each instance column
 
                 let instance_values = instance
@@ -905,9 +899,7 @@ impl<
     pub fn new(
         params: &'params Scheme::ParamsProver,
         pk: &'a ProvingKey<Scheme::Curve>,
-        // TODO: If this was a vector the usage would be simpler.
-        // https://github.com/privacy-scaling-explorations/halo2/issues/265
-        circuits_instances: &[&[&[Scheme::Scalar]]],
+        circuits_instances: &[Vec<Vec<Scheme::Scalar>>],
         rng: R,
         transcript: &'a mut T,
     ) -> Result<Prover<'a, 'params, Scheme, P, E, R, T, H2cEngine>, Error>

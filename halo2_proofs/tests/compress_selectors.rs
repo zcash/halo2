@@ -372,11 +372,7 @@ fn test_mycircuit(
 
     // Proving
     #[allow(clippy::useless_vec)]
-    let instances = vec![vec![Fr::one(), Fr::from_u128(3)]];
-    let instances_slice: &[&[Fr]] = &(instances
-        .iter()
-        .map(|instance| instance.as_slice())
-        .collect::<Vec<_>>());
+    let instances = vec![vec![vec![Fr::one(), Fr::from_u128(3)]]];
 
     let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
     create_proof_with_engine::<KZGCommitmentScheme<Bn256>, ProverSHPLONK<'_, Bn256>, _, _, _, _, _>(
@@ -384,7 +380,7 @@ fn test_mycircuit(
         &params,
         &pk,
         &[circuit],
-        &[instances_slice],
+        instances.as_slice(),
         &mut rng,
         &mut transcript,
     )?;
@@ -399,7 +395,7 @@ fn test_mycircuit(
         &verifier_params,
         &vk,
         strategy,
-        &[instances_slice],
+        instances.as_slice(),
         &mut verifier_transcript,
     )
     .map_err(halo2_proofs::plonk::Error::Backend)

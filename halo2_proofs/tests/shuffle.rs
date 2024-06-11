@@ -287,7 +287,7 @@ fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
             &params,
             &pk,
             &[circuit],
-            &[&[]],
+            &[vec![]],
             OsRng,
             &mut transcript,
         )
@@ -304,7 +304,7 @@ fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
             &params,
             pk.get_vk(),
             strategy,
-            &[&[]],
+            &[vec![]],
             &mut transcript,
         )
         .map(|strategy| strategy.finalize())

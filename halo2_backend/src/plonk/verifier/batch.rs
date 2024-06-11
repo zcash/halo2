@@ -99,7 +99,6 @@ where
             // `is_zero() == false` then this argument won't be able to interfere with it
             // to make it true, with high probability.
             acc.scale(C::Scalar::random(OsRng));
-
             acc.add_msm(&msm);
             acc
         }
@@ -109,16 +108,9 @@ where
             .into_par_iter()
             .enumerate()
             .map(|(i, item)| {
-                let instances: Vec<Vec<_>> = item
-                    .instances
-                    .iter()
-                    .map(|i| i.iter().map(|c| &c[..]).collect())
-                    .collect();
-                let instances: Vec<_> = instances.iter().map(|i| &i[..]).collect();
-
                 let strategy = BatchStrategy::new(params);
                 let mut transcript = Blake2bRead::init(&item.proof[..]);
-                verify_proof(params, vk, strategy, &instances, &mut transcript).map_err(|e| {
+                verify_proof(params, vk, strategy, &item.instances, &mut transcript).map_err(|e| {
                     tracing::debug!("Batch item {} failed verification: {}", i, e);
                     e
                 })

@@ -156,7 +156,7 @@ fn test_serialization() {
 
     std::fs::remove_file("serialization-test.pk").unwrap();
 
-    let instances: &[&[Fr]] = &[&[circuit.0]];
+    let instances: Vec<Vec<Vec<Fr>>> = vec![vec![vec![circuit.0]]];
     let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
     create_proof::<
         KZGCommitmentScheme<Bn256>,
@@ -169,7 +169,7 @@ fn test_serialization() {
         &params,
         &pk,
         &[circuit],
-        &[instances],
+        instances.as_slice(),
         OsRng,
         &mut transcript,
     )
@@ -189,7 +189,7 @@ fn test_serialization() {
         &verifier_params,
         pk.get_vk(),
         strategy,
-        &[instances],
+        instances.as_slice(),
         &mut transcript
     )
     .is_ok());

@@ -87,7 +87,6 @@ pub(crate) fn setup_prove_verify(
     // Proving
     println!("Proving...");
     let start = Instant::now();
-    let vec_slices: Vec<&[Fr]> = pis.iter().map(|pi| &pi[..]).collect();
     let mut transcript = Blake2bWrite::<_, G1Affine, Challenge255<_>>::init(vec![]);
     let mut prover = ProverSingle::<
         KZGCommitmentScheme<Bn256>,
@@ -96,7 +95,7 @@ pub(crate) fn setup_prove_verify(
         _,
         _,
         H2cEngine,
-    >::new(&params, &pk, &vec_slices, &mut rng, &mut transcript)
+    >::new(&params, &pk, pis.to_vec(), &mut rng, &mut transcript)
     .unwrap();
     println!("phase 0");
     prover.commit_phase(0, witness).unwrap();
@@ -115,7 +114,7 @@ pub(crate) fn setup_prove_verify(
         &verifier_params,
         &vk,
         strategy,
-        &vec_slices,
+        pis.to_vec(),
         &mut verifier_transcript,
     )
     .expect("verify succeeds");

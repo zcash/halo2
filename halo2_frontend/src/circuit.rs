@@ -117,7 +117,7 @@ struct WitnessCollection<'a, F: Field> {
     advice_column_phase: &'a Vec<sealed::Phase>,
     advice: Vec<Vec<Assigned<F>>>,
     challenges: &'a HashMap<usize, F>,
-    instances: &'a [&'a [F]],
+    instances: &'a [Vec<F>],
     usable_rows: RangeTo<usize>,
 }
 
@@ -259,7 +259,7 @@ pub struct WitnessCalculator<'a, F: Field, ConcreteCircuit: Circuit<F>> {
     circuit: &'a ConcreteCircuit,
     config: &'a ConcreteCircuit::Config,
     cs: &'a ConstraintSystem<F>,
-    instances: &'a [&'a [F]],
+    instances: &'a [Vec<F>],
     next_phase: u8,
 }
 
@@ -270,7 +270,7 @@ impl<'a, F: Field, ConcreteCircuit: Circuit<F>> WitnessCalculator<'a, F, Concret
         circuit: &'a ConcreteCircuit,
         config: &'a ConcreteCircuit::Config,
         cs: &'a ConstraintSystem<F>,
-        instances: &'a [&'a [F]],
+        instances: &'a [Vec<F>],
     ) -> Self {
         let n = 2usize.pow(k);
         let unusable_rows_start = n - (cs.blinding_factors() + 1);
