@@ -202,6 +202,7 @@ pub mod tests {
 
     use rand::{rngs::OsRng, RngCore};
     use std::{convert::TryInto, iter};
+
     const MERKLE_DEPTH: usize = 32;
 
     #[derive(Default)]
@@ -360,6 +361,7 @@ pub mod tests {
             Ok(())
         }
     }
+
     fn generate_circuit() -> MyCircuit {
         let mut rng = OsRng;
 

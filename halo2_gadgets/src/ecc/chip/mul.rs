@@ -460,22 +460,20 @@ pub mod tests {
         ff::{Field, PrimeField},
         Curve,
     };
-    use halo2_proofs::circuit::Chip;
     use halo2_proofs::{
-        circuit::{Layouter, Value},
+        circuit::{Chip, Layouter, Value},
         plonk::Error,
     };
     use pasta_curves::pallas;
     use rand::rngs::OsRng;
 
-    use crate::utilities::lookup_range_check::PallasLookupRC;
     use crate::{
         ecc::{
             chip::{EccChip, EccPoint},
             tests::TestFixedBases,
             EccInstructions, NonIdentityPoint, Point, ScalarVar,
         },
-        utilities::UtilitiesInstructions,
+        utilities::{lookup_range_check::PallasLookupRC, UtilitiesInstructions},
     };
 
     pub(crate) fn test_mul<Lookup: PallasLookupRC>(

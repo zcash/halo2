@@ -17,7 +17,7 @@ use pasta_curves::{arithmetic::CurveAffine, pallas};
 
 use std::ops::Deref;
 
-/// Define an enum that can hold either type
+/// Define an enum that can hold either a public or a private ECC Point
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub enum EccPointQ<'a> {
@@ -51,7 +51,7 @@ where
         ),
         Error,
     > {
-        let (offset, x_a, y_a) = self.public_initialization(region, Q)?;
+        let (offset, x_a, y_a) = self.public_q_initialization(region, Q)?;
 
         let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
 
@@ -59,13 +59,14 @@ where
     }
 
     #[allow(non_snake_case)]
-    /// Assign the coordinates of the initial public point `Q`,
-    /// y_Q to a fixed column
+    /// Assign the coordinates of the initial public point `Q`
+    /// - `x_Q` in a advice column, and
+    /// - `y_Q` in a fixed column.
     ///
     /// | offset | x_A | q_sinsemilla4 | fixed_y_q |
     /// --------------------------------------
     /// |   0    | x_Q |   1           |   y_Q     |
-    fn public_initialization(
+    fn public_q_initialization(
         &self,
         region: &mut Region<'_, pallas::Base>,
         Q: pallas::Affine,

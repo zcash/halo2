@@ -1,9 +1,6 @@
-//! functions used for circuit test
+//! Functions used for circuit test.
 
-use std::{
-    env, fs,
-    path::{Path, PathBuf},
-};
+use std::{env, fs, path::Path};
 
 use rand::rngs::OsRng;
 
@@ -33,14 +30,14 @@ impl AsRef<[u8]> for Proof {
 }
 
 impl Proof {
-    /// Creates a proof for the given circuits and instances.
+    /// Creates a proof for the given circuit and instances.
     pub fn create<C>(
         vk: &VerifyingKey<Affine>,
         params: &Params<Affine>,
         circuit: C,
     ) -> Result<Self, plonk::Error>
-    where
-        C: Circuit<pallas::Base>,
+        where
+            C: Circuit<pallas::Base>,
     {
         let pk = plonk::keygen_pk(params, vk.clone(), &circuit).unwrap();
 
@@ -69,8 +66,10 @@ impl Proof {
 }
 
 /// Test the generated vk against the stored vk.
+///
+/// If the env variable GEN_ENV_VAR is set, save `vk` into a file.
 pub(crate) fn test_against_stored_vk<C: Circuit<pallas::Base>>(circuit: &C, circuit_name: &str) {
-    let full_file_name = Path::new(TEST_DATA_DIR)
+    let file_path = Path::new(TEST_DATA_DIR)
         .join(format!("vk_{circuit_name}"))
         .with_extension("rdata");
 
@@ -81,39 +80,26 @@ pub(crate) fn test_against_stored_vk<C: Circuit<pallas::Base>>(circuit: &C, circ
     let vk_text = format!("{:#?}\n", vk.pinned());
 
     if env::var_os(GEN_ENV_VAR).is_some() {
-        fs::write(&full_file_name, &vk_text).expect("Unable to write vk test file")
-    }
-
-    assert_eq!(
-        vk_text,
-        fs::read_to_string(full_file_name)
-            .expect("Unable to read vk test file")
-            .replace("\r\n", "\n")
-    );
-}
-
-/// If the env variable GEN_ENV_VAR is set, write the `Proof` to a file
-fn conditionally_save_proof_to_disk<C: Circuit<pallas::Base>>(
-    vk: &VerifyingKey<Affine>,
-    params: &Params<Affine>,
-    circuit: C,
-    full_file_name: &PathBuf,
-) {
-    if env::var_os(GEN_ENV_VAR).is_some() {
-        let proof = Proof::create(vk, params, circuit).unwrap();
-        assert!(proof.verify(vk, params).is_ok());
-
-        fs::write(full_file_name, proof.as_ref()).expect("Unable to write proof test file");
+        fs::write(&file_path, &vk_text).expect("Unable to write vk test file");
+    } else {
+        assert_eq!(
+            vk_text,
+            fs::read_to_string(file_path)
+                .expect("Unable to read vk test file")
+                .replace("\r\n", "\n")
+        );
     }
 }
 
 /// Test the generated circuit against the stored proof.
+///
+/// If the env variable GEN_ENV_VAR is set, save `vk` into a file.
 pub(crate) fn test_against_stored_proof<C: Circuit<pallas::Base>>(
     circuit: C,
     circuit_name: &str,
     index: usize,
 ) {
-    let full_file_name = Path::new(TEST_DATA_DIR)
+    let file_path = Path::new(TEST_DATA_DIR)
         .join(format!("proof_{circuit_name}_{index}"))
         .with_extension("bin");
 
@@ -121,10 +107,15 @@ pub(crate) fn test_against_stored_proof<C: Circuit<pallas::Base>>(
     let params: Params<Affine> = Params::new(11);
     let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
-    conditionally_save_proof_to_disk(&vk, &params, circuit, &full_file_name);
-
-    // Read the proof from storage
-    let proof = Proof::new(fs::read(full_file_name).expect("Unable to read proof test file"));
+    let proof = if env::var_os(GEN_ENV_VAR).is_some() {
+        // Create the proof and save it into a file
+        let proof = Proof::create(&vk, &params, circuit).unwrap();
+        fs::write(&file_path, proof.as_ref()).expect("Unable to write proof test file");
+        proof
+    } else {
+        // Read the proof from storage
+        Proof::new(fs::read(file_path).expect("Unable to read proof test file"))
+    };
 
     // Verify the stored proof with the generated vk
     assert!(proof.verify(&vk, &params).is_ok());
