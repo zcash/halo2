@@ -36,8 +36,8 @@ impl Proof {
         params: &Params<Affine>,
         circuit: C,
     ) -> Result<Self, plonk::Error>
-        where
-            C: Circuit<pallas::Base>,
+    where
+        C: Circuit<pallas::Base>,
     {
         let pk = plonk::keygen_pk(params, vk.clone(), &circuit).unwrap();
 
