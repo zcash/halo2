@@ -19,7 +19,7 @@ jobs:
           - feature_set: basic
             features: batch,dev-graph,gadget-traces
           - feature_set: all
-            features: batch,dev-graph,gadget-traces,test-dev-graph,thread-safe-region,sanity-checks,circuit-params
+            features: batch,dev-graph,gadget-traces,test-dev-graph,thread-safe-region,sanity-checks,circuit-params,lookup-any-sanity-checks
 
     steps:
       - uses: actions/checkout@v3

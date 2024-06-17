@@ -48,7 +48,7 @@ serde_json = "1"
 getrandom = { version = "0.2", features = ["js"] }
 
 [features]
-default = ["bits"]
+default = ["bits", "lookup-any-sanity-checks"]
 dev-graph = ["plotters", "tabbycat"]
 test-dev-graph = [
     "dev-graph",
@@ -63,6 +63,7 @@ circuit-params = []
 heap-profiling = []
 cost-estimator = ["serde", "serde_derive"]
 derive_serde = ["halo2curves/derive_serde"]
+lookup-any-sanity-checks = []
 
 [lib]
 bench = false

@@ -1336,7 +1336,7 @@ mod tests {
     }
 
     #[test]
-    fn bad_lookup_any() {
+    fn bad_lookup_any_faulty_synthesis() {
         const K: u32 = 4;
 
         #[derive(Clone)]
@@ -1345,6 +1345,7 @@ mod tests {
             table: Column<Instance>,
             advice_table: Column<Advice>,
             q: Selector,
+            s_ltable: Selector,
         }
 
         struct FaultyCircuit {}
@@ -1360,6 +1361,7 @@ mod tests {
                 let q = meta.complex_selector();
                 let table = meta.instance_column();
                 let advice_table = meta.advice_column();
+                let s_ltable = meta.complex_selector();
 
                 meta.annotate_lookup_any_column(table, || "Inst-Table");
                 meta.enable_equality(table);
@@ -1371,17 +1373,14 @@ mod tests {
                     let q = cells.query_selector(q);
                     let advice_table = cells.query_advice(advice_table, Rotation::cur());
                     let table = cells.query_instance(table, Rotation::cur());
+                    let s_ltable = cells.query_selector(s_ltable);
 
                     // If q is enabled, a must be in the table.
-                    // When q is not enabled, lookup the default value instead.
-                    let not_q = Expression::Constant(Fp::one()) - q.clone();
-                    let default = Expression::Constant(Fp::from(2));
+                    // If `s_ltable` is enabled, the value of `advice_table` & `table` is used as lookup table.
                     vec![
-                        (
-                            q.clone() * a.clone() + not_q.clone() * default.clone(),
-                            table,
-                        ),
-                        (q * a + not_q * default, advice_table),
+                        (q.clone() * a.clone(), table * s_ltable.clone()),
+                        (q.clone() * a, advice_table * s_ltable.clone()),
+                        (q, s_ltable),
                     ]
                 });
 
@@ -1390,6 +1389,7 @@ mod tests {
                     q,
                     table,
                     advice_table,
+                    s_ltable,
                 }
             }
 
@@ -1402,15 +1402,9 @@ mod tests {
                 config: Self::Config,
                 mut layouter: impl Layouter<Fp>,
             ) -> Result<(), Error> {
-                // No assignment needed for the table as is an Instance Column.
-
                 layouter.assign_region(
-                    || "Good synthesis",
+                    || "Assign dynamic table",
                     |mut region| {
-                        // Enable the lookup on rows 0 and 1.
-                        config.q.enable(&mut region, 0)?;
-                        config.q.enable(&mut region, 1)?;
-
                         for i in 0..4 {
                             // Load Advice lookup table with Instance lookup table values.
                             region.assign_advice_from_instance(
@@ -1420,22 +1414,14 @@ mod tests {
                                 config.advice_table,
                                 i,
                             )?;
+
+                            // Enable the rows, which are used for lookup table values.
+                            region.enable_selector(
+                                || format!("enabling table row {}", i),
+                                &config.s_ltable,
+                                i,
+                            )?;
                         }
-
-                        // Assign a = 2 and a = 6.
-                        region.assign_advice(
-                            || "a = 2",
-                            config.a,
-                            0,
-                            || Value::known(Fp::from(2)),
-                        )?;
-                        region.assign_advice(
-                            || "a = 6",
-                            config.a,
-                            1,
-                            || Value::known(Fp::from(6)),
-                        )?;
-
                         Ok(())
                     },
                 )?;
@@ -1446,17 +1432,6 @@ mod tests {
                         // Enable the lookup on rows 0 and 1.
                         config.q.enable(&mut region, 0)?;
                         config.q.enable(&mut region, 1)?;
-
-                        for i in 0..4 {
-                            // Load Advice lookup table with Instance lookup table values.
-                            region.assign_advice_from_instance(
-                                || "Advice from instance tables",
-                                config.table,
-                                i,
-                                config.advice_table,
-                                i,
-                            )?;
-                        }
 
                         // Assign a = 4.
                         region.assign_advice(
@@ -1505,6 +1480,364 @@ mod tests {
                 }
             }])
         );
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "pair of tagging expressions(query of the tag columns or mutiple query combinations) should be included"
+    )]
+    fn bad_lookup_any_not_add_tagging_pairs() {
+        const K: u32 = 4;
+
+        #[derive(Clone)]
+        #[allow(dead_code)]
+        struct FaultyCircuitConfig {
+            a: Column<Advice>,
+            table: Column<Instance>,
+            advice_table: Column<Advice>,
+            q: Selector,
+            s_ltable: Selector,
+        }
+
+        struct FaultyCircuit {}
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+            #[cfg(feature = "circuit-params")]
+            type Params = ();
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let q = meta.complex_selector();
+                let table = meta.instance_column();
+                let advice_table = meta.advice_column();
+                let s_ltable = meta.complex_selector();
+
+                meta.annotate_lookup_any_column(table, || "Inst-Table");
+                meta.enable_equality(table);
+                meta.annotate_lookup_any_column(advice_table, || "Adv-Table");
+                meta.enable_equality(advice_table);
+
+                meta.lookup_any("lookup", |cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+                    let q = cells.query_selector(q);
+                    let advice_table = cells.query_advice(advice_table, Rotation::cur());
+                    let table = cells.query_instance(table, Rotation::cur());
+                    let s_ltable = cells.query_selector(s_ltable);
+
+                    // If q is enabled, a must be in the table.
+                    vec![
+                        (q.clone() * a.clone(), s_ltable.clone() * table),
+                        (q * a, s_ltable * advice_table),
+                    ]
+                });
+
+                FaultyCircuitConfig {
+                    a,
+                    q,
+                    table,
+                    advice_table,
+                    s_ltable,
+                }
+            }
+
+            fn without_witnesses(&self) -> Self {
+                Self {}
+            }
+
+            fn synthesize(&self, _: Self::Config, _: impl Layouter<Fp>) -> Result<(), Error> {
+                unreachable!("Should not be called because of configuration error");
+            }
+        }
+
+        let _ = MockProver::run(
+            K,
+            &FaultyCircuit {},
+            // This is our "lookup table".
+            vec![vec![
+                Fp::from(1u64),
+                Fp::from(2u64),
+                Fp::from(4u64),
+                Fp::from(6u64),
+            ]],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "all table expressions need selector/fixed query for tagging")]
+    fn bad_lookup_any_no_fixed_col_or_selector() {
+        const K: u32 = 4;
+
+        #[derive(Clone)]
+        #[allow(dead_code)]
+        struct FaultyCircuitConfig {
+            a: Column<Advice>,
+            table: Column<Instance>,
+            advice_table: Column<Advice>,
+            q: Selector,
+        }
+
+        struct FaultyCircuit {}
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+            #[cfg(feature = "circuit-params")]
+            type Params = ();
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let q = meta.complex_selector();
+                let table = meta.instance_column();
+                let advice_table = meta.advice_column();
+
+                meta.annotate_lookup_any_column(table, || "Inst-Table");
+                meta.enable_equality(table);
+                meta.annotate_lookup_any_column(advice_table, || "Adv-Table");
+                meta.enable_equality(advice_table);
+
+                meta.lookup_any("lookup", |cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+                    let q = cells.query_selector(q);
+                    let advice_table = cells.query_advice(advice_table, Rotation::cur());
+                    let table = cells.query_instance(table, Rotation::cur());
+
+                    // If q is enabled, a must be in the table.
+                    vec![(q.clone() * a.clone(), table), (q * a, advice_table)]
+                });
+
+                FaultyCircuitConfig {
+                    a,
+                    q,
+                    table,
+                    advice_table,
+                }
+            }
+
+            fn without_witnesses(&self) -> Self {
+                Self {}
+            }
+
+            fn synthesize(&self, _: Self::Config, _: impl Layouter<Fp>) -> Result<(), Error> {
+                unreachable!("Should not be called because of configuration error");
+            }
+        }
+
+        let _ = MockProver::run(
+            K,
+            &FaultyCircuit {},
+            // This is our "lookup table".
+            vec![vec![
+                Fp::from(1u64),
+                Fp::from(2u64),
+                Fp::from(4u64),
+                Fp::from(6u64),
+            ]],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "all table expressions contain only fixed query, should use `lookup` api instead of `lookup_any`"
+    )]
+    fn bad_lookup_any_use_only_fixed_col() {
+        const K: u32 = 4;
+
+        #[derive(Clone)]
+        #[allow(dead_code)]
+        struct FaultyCircuitConfig {
+            a: Column<Advice>,
+            fixed_table: Column<Fixed>,
+            q: Selector,
+        }
+
+        struct FaultyCircuit {}
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+            #[cfg(feature = "circuit-params")]
+            type Params = ();
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let q = meta.complex_selector();
+                let fixed_table = meta.fixed_column();
+
+                meta.annotate_lookup_any_column(fixed_table, || "Fixed-Table");
+                meta.enable_equality(fixed_table);
+
+                meta.lookup_any("lookup", |cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+                    let q = cells.query_selector(q);
+                    let fixed_table = cells.query_fixed(fixed_table, Rotation::cur());
+
+                    // If q is enabled, a must be in the table.
+                    vec![(q * a, fixed_table)]
+                });
+
+                FaultyCircuitConfig { a, q, fixed_table }
+            }
+
+            fn without_witnesses(&self) -> Self {
+                Self {}
+            }
+
+            fn synthesize(&self, _: Self::Config, _: impl Layouter<Fp>) -> Result<(), Error> {
+                unreachable!("Should not be called because of configuration error");
+            }
+        }
+
+        let _ = MockProver::run(
+            K,
+            &FaultyCircuit {},
+            // This is our "lookup table".
+            vec![vec![
+                Fp::from(1u64),
+                Fp::from(2u64),
+                Fp::from(4u64),
+                Fp::from(6u64),
+            ]],
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn good_lookup_any() {
+        const K: u32 = 4;
+
+        #[derive(Clone)]
+        struct GoodLookupAnyCircuitConfig {
+            a: Column<Advice>,
+            table: Column<Instance>,
+            advice_table: Column<Advice>,
+            q: Selector,
+            s_ltable: Selector,
+        }
+
+        struct GoodLookupAnyCircuit {}
+
+        impl Circuit<Fp> for GoodLookupAnyCircuit {
+            type Config = GoodLookupAnyCircuitConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+            #[cfg(feature = "circuit-params")]
+            type Params = ();
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let q = meta.complex_selector();
+                let table = meta.instance_column();
+                let advice_table = meta.advice_column();
+                let s_ltable = meta.complex_selector();
+
+                meta.annotate_lookup_any_column(table, || "Inst-Table");
+                meta.enable_equality(table);
+                meta.annotate_lookup_any_column(advice_table, || "Adv-Table");
+                meta.enable_equality(advice_table);
+
+                meta.lookup_any("lookup", |cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+                    let q = cells.query_selector(q);
+                    let advice_table = cells.query_advice(advice_table, Rotation::cur());
+                    let table = cells.query_instance(table, Rotation::cur());
+                    let s_ltable = cells.query_selector(s_ltable);
+
+                    // If q is enabled, a must be in the table.
+                    // If `s_ltable` is enabled, the value of `advice_table` & `table` is used as lookup table.
+                    vec![
+                        (q.clone() * a.clone(), table * s_ltable.clone()),
+                        (q.clone() * a, advice_table * s_ltable.clone()),
+                        (q, s_ltable),
+                    ]
+                });
+
+                GoodLookupAnyCircuitConfig {
+                    a,
+                    q,
+                    table,
+                    advice_table,
+                    s_ltable,
+                }
+            }
+
+            fn without_witnesses(&self) -> Self {
+                Self {}
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
+            ) -> Result<(), Error> {
+                layouter.assign_region(
+                    || "Assign dynamic table",
+                    |mut region| {
+                        for i in 0..4 {
+                            // Load Advice lookup table with Instance lookup table values.
+                            region.assign_advice_from_instance(
+                                || "Advice from instance tables",
+                                config.table,
+                                i,
+                                config.advice_table,
+                                i,
+                            )?;
+
+                            // Enable the rows, which are used for lookup table values.
+                            region.enable_selector(
+                                || format!("enabling table row {}", i),
+                                &config.s_ltable,
+                                i,
+                            )?;
+                        }
+                        Ok(())
+                    },
+                )?;
+
+                layouter.assign_region(
+                    || "Good synthesis",
+                    |mut region| {
+                        // Enable the lookup on rows 0 and 1.
+                        config.q.enable(&mut region, 0)?;
+                        config.q.enable(&mut region, 1)?;
+
+                        // Assign a = 2 and a = 6.
+                        region.assign_advice(
+                            || "a = 2",
+                            config.a,
+                            0,
+                            || Value::known(Fp::from(2)),
+                        )?;
+                        region.assign_advice(
+                            || "a = 6",
+                            config.a,
+                            1,
+                            || Value::known(Fp::from(6)),
+                        )?;
+
+                        Ok(())
+                    },
+                )?;
+
+                Ok(())
+            }
+        }
+
+        let prover = MockProver::run(
+            K,
+            &GoodLookupAnyCircuit {},
+            // This is our "lookup table".
+            vec![vec![
+                Fp::from(1u64),
+                Fp::from(2u64),
+                Fp::from(4u64),
+                Fp::from(6u64),
+            ]],
+        )
+        .unwrap();
+        assert_eq!(prover.verify(), Ok(()));
     }
 
     #[test]

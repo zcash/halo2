@@ -389,12 +389,25 @@ impl<F: Field> ConstraintSystem<F> {
     ///
     /// `table_map` returns a map between input expressions and the table expressions
     /// they need to match.
+    ///
+    /// **NOTE:**   
+    ///   We should use extra `Fixed` column or `Selector` for tagging the table rows.  
+    ///   Also, it is needed to include a pair of tagging expressions(`[lookup_activator, table_activator]`) in the `table_map`.
+    ///   Otherwise, we have soundness error.(See [here](https://github.com/privacy-scaling-explorations/halo2/issues/335))  
+    ///   For correct use, please reference
+    ///   [here](https://github.com/privacy-scaling-explorations/halo2/blob/main/halo2_proofs/tests/frontend_backend_split.rs)
+    ///   and [here](https://github.com/privacy-scaling-explorations/halo2/blob/main/halo2_frontend/src/dev.rs).
     pub fn lookup_any<S: AsRef<str>>(
         &mut self,
         name: S,
         table_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, Expression<F>)>,
     ) -> usize {
         let mut cells = VirtualCells::new(self);
+
+        let mut is_all_table_expr_single_fixed = true;
+        let mut is_all_table_expr_contain_fixed_or_selector = true;
+        let mut is_tagging_exprs_pair_exists = false;
+
         let table_map = table_map(&mut cells)
             .into_iter()
             .map(|(mut input, mut table)| {
@@ -404,11 +417,38 @@ impl<F: Field> ConstraintSystem<F> {
                 if table.contains_simple_selector() {
                     panic!("expression containing simple selector supplied to lookup argument");
                 }
+
+                is_all_table_expr_single_fixed &= table.degree() == 1 && table.contains_fixed_col();
+                is_all_table_expr_contain_fixed_or_selector &=
+                    table.contains_fixed_col_or_selector();
+                is_tagging_exprs_pair_exists |=
+                    table.contains_fixed_col_or_selector() && table.degree() == 1;
+
                 input.query_cells(&mut cells);
                 table.query_cells(&mut cells);
                 (input, table)
             })
             .collect();
+
+        #[cfg(feature = "lookup-any-sanity-checks")]
+        {
+            // NOTE: These checks try to detect unsound cases of lookups and are only active
+            // with the `lookup-any-sanity-checks`.  False positives may exist: in some
+            // particular scenarios the lookup can be sound but these checks will not pass,
+            // leading to panics.  For those cases you can disable the
+            // `lookup-any-sanity-checks` feature.  We will appreciate it if you report false
+            // positives by opening issues on the repository.
+            if is_all_table_expr_single_fixed {
+                panic!("all table expressions contain only fixed query, should use `lookup` api instead of `lookup_any`");
+            }
+            if !is_all_table_expr_contain_fixed_or_selector {
+                panic!("all table expressions need selector/fixed query for tagging");
+            }
+            if !is_tagging_exprs_pair_exists {
+                panic!("pair of tagging expressions(query of the tag columns or mutiple query combinations) should be included");
+            }
+        }
+
         let index = self.lookups.len();
 
         self.lookups
