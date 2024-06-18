@@ -126,7 +126,7 @@ impl FailureLocation {
 }
 
 /// The reasons why a particular circuit is not satisfied.
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone)]
 pub enum VerifyFailure {
     /// A cell used in an active gate was not assigned to.
     CellNotAssigned {

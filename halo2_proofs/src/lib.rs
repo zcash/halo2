@@ -28,7 +28,9 @@ pub mod arithmetic {
 }
 /// Tools for developing circuits.
 pub mod dev {
-    pub use halo2_frontend::dev::{metadata, FailureLocation, MockProver, VerifyFailure};
+    pub use halo2_frontend::dev::{
+        metadata, CellValue, FailureLocation, InstanceValue, MockProver, VerifyFailure,
+    };
 
     #[cfg(feature = "cost-estimator")]
     pub use halo2_frontend::dev::cost_model;

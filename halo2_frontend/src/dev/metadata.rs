@@ -46,7 +46,7 @@ impl fmt::Display for DebugColumn {
 
 /// A "virtual cell" is a PLONK cell that has been queried at a particular relative offset
 /// within a custom gate.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct VirtualCell {
     name: String,
     pub(super) column: Column,

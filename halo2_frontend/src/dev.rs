@@ -342,6 +342,18 @@ impl<F: Field> MockProver<F> {
     }
 }
 
+impl<F: Field> MockProver<F> {
+    /// Return the content of an advice column as mutable
+    pub fn advice_mut(&mut self, column_index: usize) -> &mut [CellValue<F>] {
+        self.advice[column_index].as_mut_slice()
+    }
+
+    /// Return the content of an instance column as mutable
+    pub fn instance_mut(&mut self, column_index: usize) -> &mut [InstanceValue<F>] {
+        self.instance[column_index].as_mut_slice()
+    }
+}
+
 impl<F: Field> Assignment<F> for MockProver<F> {
     fn enter_region<NR, N>(&mut self, name: N)
     where
@@ -1246,6 +1258,7 @@ mod tests {
 
     use super::{FailureLocation, MockProver, VerifyFailure};
     use crate::circuit::{Layouter, SimpleFloorPlanner, Value};
+    use crate::dev::{CellValue, InstanceValue};
     use crate::plonk::{
         Advice, Circuit, Column, ConstraintSystem, Error, Expression, Fixed, Instance, Selector,
         TableColumn,
@@ -2119,5 +2132,125 @@ mod tests {
                 ],
             },])
         )
+    }
+
+    #[test]
+    fn modify_proof() {
+        const K: u32 = 4;
+
+        struct EasyCircuit {}
+
+        #[derive(Clone)]
+        struct EasyCircuitConfig {
+            a: Column<Advice>,
+            b: Column<Instance>,
+            q: Selector,
+        }
+
+        impl Circuit<Fp> for EasyCircuit {
+            type Config = EasyCircuitConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+            #[cfg(feature = "circuit-params")]
+            type Params = ();
+
+            fn without_witnesses(&self) -> Self {
+                Self {}
+            }
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let b = meta.instance_column();
+                let q = meta.selector();
+
+                meta.enable_equality(a);
+                meta.enable_equality(b);
+
+                meta.create_gate("squared", |cells| {
+                    let cur = cells.query_advice(a, Rotation::cur());
+                    let next = cells.query_advice(a, Rotation::next());
+                    let q = cells.query_selector(q);
+
+                    vec![q * (next - cur.clone() * cur)]
+                });
+
+                EasyCircuitConfig { a, b, q }
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
+            ) -> Result<(), Error> {
+                let out = layouter.assign_region(
+                    || "main region",
+                    |mut region| {
+                        config.q.enable(&mut region, 0)?;
+                        config.q.enable(&mut region, 1)?;
+
+                        region.assign_advice(|| "a0", config.a, 0, || Value::known(Fp::from(3)))?;
+                        region.assign_advice(|| "a1", config.a, 1, || Value::known(Fp::from(9)))?;
+                        region.assign_advice(|| "a2", config.a, 2, || Value::known(Fp::from(81)))
+                    },
+                )?;
+
+                layouter.constrain_instance(out.cell(), config.b, 0)
+            }
+        }
+
+        let mut prover = MockProver::run(K, &EasyCircuit {}, vec![vec![Fp::from(81)]]).unwrap();
+        assert_eq!(prover.verify(), Ok(()));
+
+        let err1 = VerifyFailure::ConstraintNotSatisfied {
+            constraint: ((0, "squared").into(), 0, "").into(),
+            location: FailureLocation::InRegion {
+                region: (0, "main region").into(),
+                offset: 1,
+            },
+            cell_values: vec![
+                (
+                    (ColumnMid::new(Any::Advice, 0), 0).into(),
+                    "0x9".to_string(),
+                ),
+                (
+                    (ColumnMid::new(Any::Advice, 0), 1).into(),
+                    "0xa".to_string(),
+                ),
+            ],
+        };
+
+        let err2 = VerifyFailure::Permutation {
+            column: ColumnMid::new(Any::Advice, 0),
+            location: FailureLocation::InRegion {
+                region: (0, "main region").into(),
+                offset: 2,
+            },
+        };
+
+        // first we modify the instance -> this results in the permutation being unsatisfied
+        let instance = prover.instance_mut(0);
+        instance[0] = InstanceValue::Assigned(Fp::from(11));
+        assert_eq!(prover.verify(), Err(vec![err2.clone()]));
+
+        // then we modify the witness -> the contraint `squared` will fail
+        let advice0 = prover.advice_mut(0);
+        advice0[2] = CellValue::Assigned(Fp::from(10));
+        assert_eq!(prover.verify(), Err(vec![err1, err2]));
+
+        // we reset back to original values
+        let instance = prover.instance_mut(0);
+        instance[0] = InstanceValue::Assigned(Fp::from(81));
+        let advice0 = prover.advice_mut(0);
+        advice0[2] = CellValue::Assigned(Fp::from(81));
+        assert_eq!(prover.verify(), Ok(()));
+
+        // and now we try to trick the verifier
+        // we assign on row 0 `Fp - 3`, which is also a square root of 9
+        // but will overflow the prime field
+        let sqrt_9 = Fp::zero() - Fp::from(3);
+        let advice0 = prover.advice_mut(0);
+        advice0[0] = CellValue::Assigned(sqrt_9);
+
+        // if this verifies correctly -> we have an issue and we are missing a range check
+        assert_eq!(prover.verify(), Ok(()));
     }
 }
