@@ -69,7 +69,6 @@ where
     }
     Ok(prover.create_proof()?)
 }
-
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
 /// generated previously for the same circuit. The provided `instances`

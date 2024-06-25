@@ -17,10 +17,9 @@ jobs:
         os: [ubuntu-latest, windows-latest, macOS-latest]
         include:
           - feature_set: basic
-            features: batch,dev-graph,gadget-traces
+            features: --features batch,dev-graph,gadget-traces
           - feature_set: all
-            features: batch,dev-graph,gadget-traces,test-dev-graph,thread-safe-region,sanity-checks,circuit-params,lookup-any-sanity-checks
-
+            features: --all-features
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -30,7 +29,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --verbose --release --workspace --no-default-features --features "${{ matrix.features }}"
+          args: --verbose --release --workspace --no-default-features ${{ matrix.features }}
 
   examples:
     name: Run the examples

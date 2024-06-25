@@ -1,6 +1,8 @@
 use std::{marker::PhantomData, vec};
 
 use ff::FromUniformBytes;
+use halo2_debug::test_rng;
+use halo2_proofs::poly::commitment::ParamsProver;
 use halo2_proofs::{
     arithmetic::Field,
     circuit::{Layouter, SimpleFloorPlanner, Value},
@@ -10,7 +12,6 @@ use halo2_proofs::{
     },
     poly::Rotation,
     poly::{
-        commitment::ParamsProver,
         ipa::{
             commitment::{IPACommitmentScheme, ParamsIPA},
             multiopen::{ProverIPA, VerifierIPA},
@@ -23,7 +24,6 @@ use halo2_proofs::{
     },
 };
 use halo2curves::{pasta::EqAffine, CurveAffine};
-use rand_core::OsRng;
 
 struct ShuffleChip<F: Field> {
     config: ShuffleConfig,
@@ -148,10 +148,12 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
     }
 }
 
-fn test_prover<C: CurveAffine>(k: u32, circuit: MyCircuit<C::Scalar>, expected: bool)
+fn test_prover<C: CurveAffine>(k: u32, circuit: MyCircuit<C::Scalar>, expected: bool) -> Vec<u8>
 where
     C::Scalar: FromUniformBytes<64>,
 {
+    let rng = test_rng();
+
     let params = ParamsIPA::<C>::new(k);
     let vk = keygen_vk(&params, &circuit).unwrap();
     let pk = keygen_pk(&params, vk, &circuit).unwrap();
@@ -164,7 +166,7 @@ where
             &pk,
             &[circuit],
             &[vec![]],
-            OsRng,
+            rng,
             &mut transcript,
         )
         .expect("proof generation should not fail");
@@ -188,30 +190,37 @@ where
     };
 
     assert_eq!(accepted, expected);
+
+    proof
 }
 
 #[test]
 fn test_shuffle_api() {
-    use halo2_proofs::dev::MockProver;
-    use halo2curves::pasta::Fp;
-    const K: u32 = 4;
-    let input_0 = [1, 2, 4, 1]
-        .map(|e: u64| Value::known(Fp::from(e)))
-        .to_vec();
-    let input_1 = [10, 20, 40, 10].map(Fp::from).to_vec();
-    let shuffle_0 = [4, 1, 1, 2]
-        .map(|e: u64| Value::known(Fp::from(e)))
-        .to_vec();
-    let shuffle_1 = [40, 10, 10, 20]
-        .map(|e: u64| Value::known(Fp::from(e)))
-        .to_vec();
-    let circuit = MyCircuit {
-        input_0,
-        input_1,
-        shuffle_0,
-        shuffle_1,
-    };
-    let prover = MockProver::run(K, &circuit, vec![]).unwrap();
-    prover.assert_satisfied();
-    test_prover::<EqAffine>(K, circuit, true);
+    halo2_debug::test_result(
+        || {
+            use halo2_proofs::dev::MockProver;
+            use halo2curves::pasta::Fp;
+            const K: u32 = 4;
+            let input_0 = [1, 2, 4, 1]
+                .map(|e: u64| Value::known(Fp::from(e)))
+                .to_vec();
+            let input_1 = [10, 20, 40, 10].map(Fp::from).to_vec();
+            let shuffle_0 = [4, 1, 1, 2]
+                .map(|e: u64| Value::known(Fp::from(e)))
+                .to_vec();
+            let shuffle_1 = [40, 10, 10, 20]
+                .map(|e: u64| Value::known(Fp::from(e)))
+                .to_vec();
+            let circuit = MyCircuit {
+                input_0,
+                input_1,
+                shuffle_0,
+                shuffle_1,
+            };
+            let prover = MockProver::run(K, &circuit, vec![]).unwrap();
+            prover.assert_satisfied();
+            test_prover::<EqAffine>(K, circuit, true)
+        },
+        "54f4fec1776178aadf8816754d7877f1de685e0ffb5b6af4db20f557d87550d6",
+    );
 }

@@ -11,6 +11,7 @@ use halo2_backend::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
+use halo2_debug::test_rng;
 use halo2_middleware::circuit::CompiledCircuit;
 use halo2_middleware::zal::impls::H2cEngine;
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
@@ -20,23 +21,7 @@ use p3_frontend::{
     CompileParams, FWrap, SymbolicAirBuilder,
 };
 use p3_matrix::dense::RowMajorMatrix;
-use rand_core::block::BlockRng;
-use rand_core::block::BlockRngCore;
 use std::time::Instant;
-
-// One number generator.  Can be used as a deterministic Rng, outputing fixed values continuously.
-pub(crate) struct OneNg {}
-
-impl BlockRngCore for OneNg {
-    type Item = u32;
-    type Results = [u32; 16];
-
-    fn generate(&mut self, results: &mut Self::Results) {
-        for elem in results.iter_mut() {
-            *elem = 1;
-        }
-    }
-}
 
 #[allow(clippy::type_complexity)]
 pub(crate) fn compile_witgen<A>(
@@ -76,7 +61,7 @@ pub(crate) fn setup_prove_verify(
     witness: Vec<Option<Vec<Fr>>>,
 ) {
     // Setup
-    let mut rng = BlockRng::new(OneNg {});
+    let mut rng = test_rng();
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let verifier_params = params.verifier_params();
     let start = Instant::now();

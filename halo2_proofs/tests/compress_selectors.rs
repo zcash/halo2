@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 
 use ff::PrimeField;
 use halo2_debug::display::expr_disp_names;
+use halo2_debug::{test_result, test_rng};
 use halo2_frontend::circuit::compile_circuit;
 use halo2_frontend::plonk::Error;
 use halo2_proofs::circuit::{Cell, Layouter, SimpleFloorPlanner, Value};
@@ -23,22 +24,6 @@ use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
 use halo2_proofs::poly::kzg::multiopen::{ProverSHPLONK, VerifierSHPLONK};
 use halo2_proofs::poly::kzg::strategy::SingleStrategy;
 use halo2curves::bn256::{Bn256, Fr, G1Affine};
-use rand_core::block::BlockRng;
-use rand_core::block::BlockRngCore;
-
-// One number generator, that can be used as a deterministic Rng, outputing fixed values.
-pub struct OneNg {}
-
-impl BlockRngCore for OneNg {
-    type Item = u32;
-    type Results = [u32; 16];
-
-    fn generate(&mut self, results: &mut Self::Results) {
-        for elem in results.iter_mut() {
-            *elem = 1;
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 struct MyCircuitConfig {
@@ -351,7 +336,7 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
 fn test_mycircuit(
     vk_keygen_compress_selectors: bool,
     pk_keygen_compress_selectors: bool,
-) -> Result<(), halo2_proofs::plonk::Error> {
+) -> Result<Vec<u8>, halo2_proofs::plonk::Error> {
     let engine = PlonkEngineConfig::new()
         .set_curve::<G1Affine>()
         .set_msm(H2cEngine::new())
@@ -363,8 +348,9 @@ fn test_mycircuit(
         constant: Fr::one(),
     };
 
+    let mut rng = test_rng();
+
     // Setup
-    let mut rng = BlockRng::new(OneNg {});
     let params = ParamsKZG::<Bn256>::setup(k, &mut rng);
     let verifier_params = params.verifier_params();
     let vk = keygen_vk_custom(&params, &circuit, vk_keygen_compress_selectors)?;
@@ -398,7 +384,9 @@ fn test_mycircuit(
         instances.as_slice(),
         &mut verifier_transcript,
     )
-    .map_err(halo2_proofs::plonk::Error::Backend)
+    .map_err(halo2_proofs::plonk::Error::Backend)?;
+
+    Ok(proof)
 }
 
 /*
@@ -496,12 +484,20 @@ fn test_compress_gates() {
 }
 
 #[test]
-fn test_success() {
+fn test_success() -> Result<(), halo2_proofs::plonk::Error> {
     // vk & pk keygen both WITH compress
-    assert!(test_mycircuit(true, true).is_ok());
+    test_result(
+        || test_mycircuit(true, true).expect("should pass"),
+        "8326140d1873a91630d439a8812d1f104667144e03e0cd5c59eb358ae5d1a4eb",
+    );
 
     // vk & pk keygen both WITHOUT compress
-    assert!(test_mycircuit(false, false).is_ok());
+    test_result(
+        || test_mycircuit(false, false).expect("should pass"),
+        "73dd4c3c9c51d55dc8cf68ca2b5d8acdb40ed44bc8a88d718325bc0023688f64",
+    );
+
+    Ok(())
 }
 
 #[should_panic]

@@ -4,6 +4,7 @@
 use std::marker::PhantomData;
 
 use ff::FromUniformBytes;
+use halo2_debug::test_rng;
 use halo2_proofs::{
     arithmetic::{CurveAffine, Field},
     circuit::{AssignedCell, Chip, Layouter, Region, SimpleFloorPlanner, Value},
@@ -21,7 +22,6 @@ use halo2_proofs::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
-use rand_core::OsRng;
 
 // ANCHOR: instructions
 trait NumericInstructions<F: Field>: Chip<F> {
@@ -360,7 +360,7 @@ impl<F: Field> NumericInstructions<F> for AddChip<F> {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct MulCircuit<F: Field> {
     a: Vec<Value<F>>,
     b: Vec<Value<F>>,
@@ -413,7 +413,7 @@ impl<F: Field> Circuit<F> for MulCircuit<F> {
 }
 // ANCHOR_END: circuit
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct AddCircuit<F: Field> {
     a: Vec<Value<F>>,
     b: Vec<Value<F>>,
@@ -475,6 +475,8 @@ fn test_prover<C: CurveAffine>(
 where
     C::Scalar: FromUniformBytes<64>,
 {
+    let rng = test_rng();
+
     let params = ParamsIPA::<C>::new(k);
     let vk = keygen_vk(&params, &circuit).unwrap();
     let pk = keygen_pk(&params, vk, &circuit).unwrap();
@@ -488,7 +490,7 @@ where
             &pk,
             &[circuit],
             &instances,
-            OsRng,
+            rng,
             &mut transcript,
         )
         .expect("proof generation should not fail");
@@ -545,9 +547,16 @@ fn test_vector_ops_unbinded() {
     };
 
     // the commitments will be the first columns of the proof transcript so we can compare them easily
-    let proof_1 = test_prover::<halo2curves::pasta::EqAffine>(k, mul_circuit, true, c_mul);
+    let proof_1 = halo2_debug::test_result(
+        || test_prover::<halo2curves::pasta::EqAffine>(k, mul_circuit.clone(), true, c_mul.clone()),
+        "1f726eaddd926057e6c2aa8a364d1b4192da27f53c38c9f21d8924ef3eb0f0ab",
+    );
+
     // the commitments will be the first columns of the proof transcript so we can compare them easily
-    let proof_2 = test_prover::<halo2curves::pasta::EqAffine>(k, add_circuit, true, c_add);
+    let proof_2 = halo2_debug::test_result(
+        || test_prover::<halo2curves::pasta::EqAffine>(k, add_circuit.clone(), true, c_add.clone()),
+        "a42eb2f3e4761e6588bfd8db7e7035ead1cc1331017b6b09a7b75ddfbefefc58",
+    );
 
     // the commitments will be the first columns of the proof transcript so we can compare them easily
     // here we compare the first 10 bytes of the commitments

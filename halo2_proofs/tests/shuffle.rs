@@ -1,4 +1,5 @@
 use ff::{BatchInvert, FromUniformBytes};
+use halo2_debug::test_rng;
 use halo2_proofs::{
     arithmetic::{CurveAffine, Field},
     circuit::{floor_planner::V1, Layouter, Value},
@@ -18,7 +19,7 @@ use halo2_proofs::{
         Blake2bRead, Blake2bWrite, Challenge255, TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
-use rand_core::{OsRng, RngCore};
+use rand_core::RngCore;
 use std::iter;
 
 fn rand_2d_array<F: Field, R: RngCore, const W: usize, const H: usize>(rng: &mut R) -> [[F; H]; W] {
@@ -273,9 +274,12 @@ fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
     k: u32,
     circuit: MyCircuit<C::Scalar, W, H>,
     expected: bool,
-) where
+) -> Vec<u8>
+where
     C::Scalar: FromUniformBytes<64>,
 {
+    let rng = test_rng();
+
     let params = ParamsIPA::<C>::new(k);
     let vk = keygen_vk(&params, &circuit).unwrap();
     let pk = keygen_pk(&params, vk, &circuit).unwrap();
@@ -288,7 +292,7 @@ fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
             &pk,
             &[circuit],
             &[vec![]],
-            OsRng,
+            rng,
             &mut transcript,
         )
         .expect("proof generation should not fail");
@@ -312,6 +316,8 @@ fn test_prover<C: CurveAffine, const W: usize, const H: usize>(
     };
 
     assert_eq!(accepted, expected);
+
+    proof
 }
 
 #[test]
@@ -320,12 +326,14 @@ fn test_shuffle() {
     const H: usize = 32;
     const K: u32 = 8;
 
-    let circuit = &MyCircuit::<_, W, H>::rand(&mut OsRng);
+    let circuit = &MyCircuit::<_, W, H>::rand(&mut test_rng());
 
-    {
-        test_mock_prover(K, circuit.clone(), Ok(()));
-        test_prover::<EqAffine, W, H>(K, circuit.clone(), true);
-    }
+    test_mock_prover(K, circuit.clone(), Ok(()));
+
+    halo2_debug::test_result(
+        || test_prover::<EqAffine, W, H>(K, circuit.clone(), true),
+        "8526b66a372eaeccb687c21daf358d4fdb1c9d2b7e81470317c472634c5c1470",
+    );
 
     #[cfg(not(feature = "sanity-checks"))]
     {
@@ -348,6 +356,9 @@ fn test_shuffle() {
                 },
             )]),
         );
-        test_prover::<EqAffine, W, H>(K, circuit, false);
+        halo2_debug::test_result(
+            || test_prover::<EqAffine, W, H>(K, circuit.clone(), false),
+            "27ad558ee60a6675911b87a0df5de49d7c9b5673d723bb05a9811aa33bf486d1",
+        );
     }
 }
