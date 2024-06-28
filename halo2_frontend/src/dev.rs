@@ -1495,6 +1495,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "lookup-any-sanity-checks")]
     #[test]
     #[should_panic(
         expected = "pair of tagging expressions(query of the tag columns or mutiple query combinations) should be included"
@@ -1578,6 +1579,7 @@ mod tests {
         .unwrap();
     }
 
+    #[cfg(feature = "lookup-any-sanity-checks")]
     #[test]
     #[should_panic(expected = "all table expressions need selector/fixed query for tagging")]
     fn bad_lookup_any_no_fixed_col_or_selector() {
@@ -1652,6 +1654,7 @@ mod tests {
         .unwrap();
     }
 
+    #[cfg(feature = "lookup-any-sanity-checks")]
     #[test]
     #[should_panic(
         expected = "all table expressions contain only fixed query, should use `lookup` api instead of `lookup_any`"
