@@ -184,7 +184,7 @@ pub mod tests {
             tests::{TestCommitDomain, TestHashDomain},
             HashDomains,
         },
-        tests::test_utils::{test_against_stored_proof, test_against_stored_vk},
+        tests::test_utils::test_against_stored_circuit,
         utilities::{
             i2lebsp,
             lookup_range_check::{LookupRangeCheck, PallasLookupRCConfig},
@@ -391,15 +391,9 @@ pub mod tests {
     }
 
     #[test]
-    fn fixed_verification_key_test() {
+    fn test_merkle_chip_against_stored_circuit() {
         let circuit = generate_circuit();
-        test_against_stored_vk(&circuit, "merkle_chip");
-    }
-
-    #[test]
-    fn serialized_proof_test_case() {
-        let circuit = generate_circuit();
-        test_against_stored_proof(circuit, "merkle_chip", 0);
+        test_against_stored_circuit(circuit, "merkle_chip", 4160);
     }
 
     #[cfg(feature = "test-dev-graph")]

@@ -472,7 +472,7 @@ pub(crate) mod tests {
             NonIdentityPoint, ScalarFixed,
         },
         sinsemilla::primitives::{self as sinsemilla, K},
-        tests::test_utils::{test_against_stored_proof, test_against_stored_vk},
+        tests::test_utils::test_against_stored_circuit,
         utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRCConfig},
     };
 
@@ -753,15 +753,9 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn fixed_verification_key_test() {
+    fn test_sinsemilla_chip_against_stored_circuit() {
         let circuit = MyCircuit {};
-        test_against_stored_vk(&circuit, "sinsemilla_chip");
-    }
-
-    #[test]
-    fn serialized_proof_test_case() {
-        let circuit = MyCircuit {};
-        test_against_stored_proof(circuit, "sinsemilla_chip", 0);
+        test_against_stored_circuit(circuit, "sinsemilla_chip", 4576);
     }
 
     #[cfg(feature = "test-dev-graph")]

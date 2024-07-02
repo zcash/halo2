@@ -471,272 +471,278 @@ mod tests {
     };
     use pasta_curves::pallas;
 
-    use crate::tests::test_utils::{test_against_stored_proof, test_against_stored_vk};
+    use crate::tests::test_utils::test_against_stored_circuit;
     use std::{convert::TryInto, marker::PhantomData};
+
+    #[derive(Clone, Copy)]
+    struct MyLookupCircuit<F: PrimeFieldBits> {
+        num_words: usize,
+        _marker: PhantomData<F>,
+    }
+
+    impl<F: PrimeFieldBits> Circuit<F> for MyLookupCircuit<F> {
+        type Config = LookupRangeCheckConfig<F, K>;
+        type FloorPlanner = SimpleFloorPlanner;
+
+        fn without_witnesses(&self) -> Self {
+            *self
+        }
+
+        fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            let running_sum = meta.advice_column();
+            let table_idx = meta.lookup_table_column();
+            let constants = meta.fixed_column();
+            meta.enable_constant(constants);
+
+            LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, table_idx)
+        }
+
+        fn synthesize(
+            &self,
+            config: Self::Config,
+            mut layouter: impl Layouter<F>,
+        ) -> Result<(), Error> {
+            // Load table_idx
+            config.load(&mut layouter)?;
+
+            // Lookup constraining element to be no longer than num_words * K bits.
+            let elements_and_expected_final_zs = [
+                (F::from((1 << (self.num_words * K)) - 1), F::ZERO, true), // a word that is within self.num_words * K bits long
+                (F::from(1 << (self.num_words * K)), F::ONE, false), // a word that is just over self.num_words * K bits long
+            ];
+
+            fn expected_zs<F: PrimeFieldBits, const K: usize>(
+                element: F,
+                num_words: usize,
+            ) -> Vec<F> {
+                let chunks = {
+                    element
+                        .to_le_bits()
+                        .iter()
+                        .by_vals()
+                        .take(num_words * K)
+                        .collect::<Vec<_>>()
+                        .chunks_exact(K)
+                        .map(|chunk| F::from(lebs2ip::<K>(chunk.try_into().unwrap())))
+                        .collect::<Vec<_>>()
+                };
+                let expected_zs = {
+                    let inv_two_pow_k = F::from(1 << K).invert().unwrap();
+                    chunks.iter().fold(vec![element], |mut zs, a_i| {
+                        // z_{i + 1} = (z_i - a_i) / 2^{K}
+                        let z = (zs[zs.len() - 1] - a_i) * inv_two_pow_k;
+                        zs.push(z);
+                        zs
+                    })
+                };
+                expected_zs
+            }
+
+            for (element, expected_final_z, strict) in elements_and_expected_final_zs.iter() {
+                let expected_zs = expected_zs::<F, K>(*element, self.num_words);
+
+                let zs = config.witness_check(
+                    layouter.namespace(|| format!("Lookup {:?}", self.num_words)),
+                    Value::known(*element),
+                    self.num_words,
+                    *strict,
+                )?;
+
+                assert_eq!(*expected_zs.last().unwrap(), *expected_final_z);
+
+                for (expected_z, z) in expected_zs.into_iter().zip(zs.iter()) {
+                    z.value().assert_if_known(|z| &&expected_z == z);
+                }
+            }
+            Ok(())
+        }
+    }
 
     #[test]
     fn lookup_range_check() {
-        #[derive(Clone, Copy)]
-        struct MyCircuit<F: PrimeFieldBits> {
-            num_words: usize,
-            _marker: PhantomData<F>,
-        }
+        let circuit: MyLookupCircuit<pallas::Base> = MyLookupCircuit {
+            num_words: 6,
+            _marker: PhantomData,
+        };
 
-        impl<F: PrimeFieldBits> Circuit<F> for MyCircuit<F> {
-            type Config = LookupRangeCheckConfig<F, K>;
-            type FloorPlanner = SimpleFloorPlanner;
+        let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+        assert_eq!(prover.verify(), Ok(()));
+    }
 
-            fn without_witnesses(&self) -> Self {
-                *self
-            }
+    #[test]
+    fn test_lookup_range_check_against_stored_circuit() {
+        let circuit: MyLookupCircuit<pallas::Base> = MyLookupCircuit {
+            num_words: 6,
+            _marker: PhantomData,
+        };
+        test_against_stored_circuit(circuit, "lookup_range_check", 1888);
+    }
 
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
-                let running_sum = meta.advice_column();
-                let table_idx = meta.lookup_table_column();
-                let constants = meta.fixed_column();
-                meta.enable_constant(constants);
+    #[derive(Clone, Copy)]
+    struct MyShortRangeCheckCircuit<F: PrimeFieldBits> {
+        element: Value<F>,
+        num_bits: usize,
+    }
 
-                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, table_idx)
-            }
+    impl<F: PrimeFieldBits> Circuit<F> for MyShortRangeCheckCircuit<F> {
+        type Config = LookupRangeCheckConfig<F, K>;
+        type FloorPlanner = SimpleFloorPlanner;
 
-            fn synthesize(
-                &self,
-                config: Self::Config,
-                mut layouter: impl Layouter<F>,
-            ) -> Result<(), Error> {
-                // Load table_idx
-                config.load(&mut layouter)?;
-
-                // Lookup constraining element to be no longer than num_words * K bits.
-                let elements_and_expected_final_zs = [
-                    (F::from((1 << (self.num_words * K)) - 1), F::ZERO, true), // a word that is within self.num_words * K bits long
-                    (F::from(1 << (self.num_words * K)), F::ONE, false), // a word that is just over self.num_words * K bits long
-                ];
-
-                fn expected_zs<F: PrimeFieldBits, const K: usize>(
-                    element: F,
-                    num_words: usize,
-                ) -> Vec<F> {
-                    let chunks = {
-                        element
-                            .to_le_bits()
-                            .iter()
-                            .by_vals()
-                            .take(num_words * K)
-                            .collect::<Vec<_>>()
-                            .chunks_exact(K)
-                            .map(|chunk| F::from(lebs2ip::<K>(chunk.try_into().unwrap())))
-                            .collect::<Vec<_>>()
-                    };
-                    let expected_zs = {
-                        let inv_two_pow_k = F::from(1 << K).invert().unwrap();
-                        chunks.iter().fold(vec![element], |mut zs, a_i| {
-                            // z_{i + 1} = (z_i - a_i) / 2^{K}
-                            let z = (zs[zs.len() - 1] - a_i) * inv_two_pow_k;
-                            zs.push(z);
-                            zs
-                        })
-                    };
-                    expected_zs
-                }
-
-                for (element, expected_final_z, strict) in elements_and_expected_final_zs.iter() {
-                    let expected_zs = expected_zs::<F, K>(*element, self.num_words);
-
-                    let zs = config.witness_check(
-                        layouter.namespace(|| format!("Lookup {:?}", self.num_words)),
-                        Value::known(*element),
-                        self.num_words,
-                        *strict,
-                    )?;
-
-                    assert_eq!(*expected_zs.last().unwrap(), *expected_final_z);
-
-                    for (expected_z, z) in expected_zs.into_iter().zip(zs.iter()) {
-                        z.value().assert_if_known(|z| &&expected_z == z);
-                    }
-                }
-                Ok(())
+        fn without_witnesses(&self) -> Self {
+            MyShortRangeCheckCircuit {
+                element: Value::unknown(),
+                num_bits: self.num_bits,
             }
         }
 
-        {
-            let circuit: MyCircuit<pallas::Base> = MyCircuit {
-                num_words: 6,
-                _marker: PhantomData,
-            };
+        fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+            let running_sum = meta.advice_column();
+            let table_idx = meta.lookup_table_column();
+            let constants = meta.fixed_column();
+            meta.enable_constant(constants);
 
-            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
-            assert_eq!(prover.verify(), Ok(()));
+            LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, table_idx)
+        }
 
-            test_against_stored_vk(&circuit, "lookup_range_check");
+        fn synthesize(
+            &self,
+            config: Self::Config,
+            mut layouter: impl Layouter<F>,
+        ) -> Result<(), Error> {
+            // Load table_idx
+            config.load(&mut layouter)?;
 
-            test_against_stored_proof(circuit, "lookup_range_check", 0);
+            // Lookup constraining element to be no longer than num_bits.
+            config.witness_short_check(
+                layouter.namespace(|| format!("Lookup {:?} bits", self.num_bits)),
+                self.element,
+                self.num_bits,
+            )?;
+
+            Ok(())
+        }
+    }
+
+    fn test_short_range_check(
+        element: pallas::Base,
+        num_bits: usize,
+        proof_result: &Result<(), Vec<VerifyFailure>>,
+        circuit_name: &str,
+        expected_proof_size: usize,
+    ) {
+        let circuit: MyShortRangeCheckCircuit<pallas::Base> = MyShortRangeCheckCircuit {
+            element: Value::known(element),
+            num_bits,
+        };
+        let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+        assert_eq!(prover.verify(), *proof_result);
+
+        if proof_result.is_ok() {
+            test_against_stored_circuit(circuit, circuit_name, expected_proof_size);
         }
     }
 
     #[test]
     fn short_range_check() {
-        #[derive(Clone, Copy)]
-        struct MyCircuit<F: PrimeFieldBits> {
-            element: Value<F>,
-            num_bits: usize,
-        }
-
-        impl<F: PrimeFieldBits> Circuit<F> for MyCircuit<F> {
-            type Config = LookupRangeCheckConfig<F, K>;
-            type FloorPlanner = SimpleFloorPlanner;
-
-            fn without_witnesses(&self) -> Self {
-                MyCircuit {
-                    element: Value::unknown(),
-                    num_bits: self.num_bits,
-                }
-            }
-
-            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
-                let running_sum = meta.advice_column();
-                let table_idx = meta.lookup_table_column();
-                let constants = meta.fixed_column();
-                meta.enable_constant(constants);
-
-                LookupRangeCheckConfig::<F, K>::configure(meta, running_sum, table_idx)
-            }
-
-            fn synthesize(
-                &self,
-                config: Self::Config,
-                mut layouter: impl Layouter<F>,
-            ) -> Result<(), Error> {
-                // Load table_idx
-                config.load(&mut layouter)?;
-
-                // Lookup constraining element to be no longer than num_bits.
-                config.witness_short_check(
-                    layouter.namespace(|| format!("Lookup {:?} bits", self.num_bits)),
-                    self.element,
-                    self.num_bits,
-                )?;
-
-                Ok(())
-            }
-        }
+        let proof_size = 1888;
 
         // Edge case: zero bits (case 0)
-        {
-            let circuit: MyCircuit<pallas::Base> = MyCircuit {
-                element: Value::known(pallas::Base::ZERO),
-                num_bits: 0,
-            };
-            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
-            assert_eq!(prover.verify(), Ok(()));
-
-            test_against_stored_vk(&circuit, "short_range_check_case0");
-
-            test_against_stored_proof(circuit, "short_range_check_case0", 0);
-        }
+        let element = pallas::Base::ZERO;
+        let num_bits = 0;
+        test_short_range_check(
+            element,
+            num_bits,
+            &Ok(()),
+            "short_range_check_case0",
+            proof_size,
+        );
 
         // Edge case: K bits (case 1)
-        {
-            let circuit: MyCircuit<pallas::Base> = MyCircuit {
-                element: Value::known(pallas::Base::from((1 << K) - 1)),
-                num_bits: K,
-            };
-            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
-            assert_eq!(prover.verify(), Ok(()));
-
-            test_against_stored_vk(&circuit, "short_range_check_case1");
-
-            test_against_stored_proof(circuit, "short_range_check_case1", 0);
-        }
+        let element = pallas::Base::from((1 << K) - 1);
+        let num_bits = K;
+        test_short_range_check(
+            element,
+            num_bits,
+            &Ok(()),
+            "short_range_check_case1",
+            proof_size,
+        );
 
         // Element within `num_bits` (case 2)
-        {
-            let circuit: MyCircuit<pallas::Base> = MyCircuit {
-                element: Value::known(pallas::Base::from((1 << 6) - 1)),
-                num_bits: 6,
-            };
-            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
-            assert_eq!(prover.verify(), Ok(()));
-
-            test_against_stored_vk(&circuit, "short_range_check_case2");
-
-            test_against_stored_proof(circuit, "short_range_check_case2", 0);
-        }
+        let element = pallas::Base::from((1 << 6) - 1);
+        let num_bits = 6;
+        test_short_range_check(
+            element,
+            num_bits,
+            &Ok(()),
+            "short_range_check_case2",
+            proof_size,
+        );
 
         // Element larger than `num_bits` but within K bits
-        {
-            let circuit: MyCircuit<pallas::Base> = MyCircuit {
-                element: Value::known(pallas::Base::from(1 << 6)),
-                num_bits: 6,
-            };
-            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
-            assert_eq!(
-                prover.verify(),
-                Err(vec![VerifyFailure::Lookup {
-                    lookup_index: 0,
-                    location: FailureLocation::InRegion {
-                        region: (1, "Range check 6 bits").into(),
-                        offset: 1,
-                    },
-                }])
-            );
-        }
+        let element = pallas::Base::from(1 << 6);
+        let num_bits = 6;
+        test_short_range_check(
+            element,
+            num_bits,
+            &Err(vec![VerifyFailure::Lookup {
+                lookup_index: 0,
+                location: FailureLocation::InRegion {
+                    region: (1, "Range check 6 bits").into(),
+                    offset: 1,
+                },
+            }]),
+            "not_saved",
+            proof_size,
+        );
 
         // Element larger than K bits
-        {
-            let circuit: MyCircuit<pallas::Base> = MyCircuit {
-                element: Value::known(pallas::Base::from(1 << K)),
-                num_bits: 6,
-            };
-            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
-            assert_eq!(
-                prover.verify(),
-                Err(vec![
-                    VerifyFailure::Lookup {
-                        lookup_index: 0,
-                        location: FailureLocation::InRegion {
-                            region: (1, "Range check 6 bits").into(),
-                            offset: 0,
-                        },
-                    },
-                    VerifyFailure::Lookup {
-                        lookup_index: 0,
-                        location: FailureLocation::InRegion {
-                            region: (1, "Range check 6 bits").into(),
-                            offset: 1,
-                        },
-                    },
-                ])
-            );
-        }
-
-        // Element which is not within `num_bits`, but which has a shifted value within
-        // num_bits
-        {
-            let num_bits = 6;
-            let shifted = pallas::Base::from((1 << num_bits) - 1);
-            // Recall that shifted = element * 2^{K-s}
-            //          => element = shifted * 2^{s-K}
-            let element = shifted
-                * pallas::Base::from(1 << (K as u64 - num_bits))
-                    .invert()
-                    .unwrap();
-            let circuit: MyCircuit<pallas::Base> = MyCircuit {
-                element: Value::known(element),
-                num_bits: num_bits as usize,
-            };
-            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
-            assert_eq!(
-                prover.verify(),
-                Err(vec![VerifyFailure::Lookup {
+        let element = pallas::Base::from(1 << K);
+        let num_bits = 6;
+        test_short_range_check(
+            element,
+            num_bits,
+            &Err(vec![
+                VerifyFailure::Lookup {
                     lookup_index: 0,
                     location: FailureLocation::InRegion {
                         region: (1, "Range check 6 bits").into(),
                         offset: 0,
                     },
-                }])
-            );
-        }
+                },
+                VerifyFailure::Lookup {
+                    lookup_index: 0,
+                    location: FailureLocation::InRegion {
+                        region: (1, "Range check 6 bits").into(),
+                        offset: 1,
+                    },
+                },
+            ]),
+            "not_saved",
+            proof_size,
+        );
+
+        // Element which is not within `num_bits`, but which has a shifted value within num_bits
+        let num_bits = 6;
+        let shifted = pallas::Base::from((1 << num_bits) - 1);
+        // Recall that shifted = element * 2^{K-s}
+        //          => element = shifted * 2^{s-K}
+        let element = shifted
+            * pallas::Base::from(1 << (K as u64 - num_bits))
+                .invert()
+                .unwrap();
+        test_short_range_check(
+            element,
+            num_bits as usize,
+            &Err(vec![VerifyFailure::Lookup {
+                lookup_index: 0,
+                location: FailureLocation::InRegion {
+                    region: (1, "Range check 6 bits").into(),
+                    offset: 0,
+                },
+            }]),
+            "not_saved",
+            proof_size,
+        );
     }
 }

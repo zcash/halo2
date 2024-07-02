@@ -596,7 +596,7 @@ pub(crate) mod tests {
         FixedPoints,
     };
     use crate::{
-        tests::test_utils::{test_against_stored_proof, test_against_stored_vk},
+        tests::test_utils::test_against_stored_circuit,
         utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRCConfig},
     };
 
@@ -910,15 +910,9 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn fixed_verification_key_test() {
+    fn test_ecc_chip_against_stored_circuit() {
         let circuit = MyCircuit { test_errors: false };
-        test_against_stored_vk(&circuit, "ecc_chip");
-    }
-
-    #[test]
-    fn serialized_proof_test_case() {
-        let circuit = MyCircuit { test_errors: false };
-        test_against_stored_proof(circuit, "ecc_chip", 0);
+        test_against_stored_circuit(circuit, "ecc_chip", 3872);
     }
 
     #[cfg(feature = "test-dev-graph")]

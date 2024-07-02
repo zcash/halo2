@@ -65,58 +65,50 @@ impl Proof {
     }
 }
 
-/// Test the generated vk against the stored vk.
+/// Test the generated vk and the generated proof against the stored vk and the stored proof.
 ///
-/// If the env variable GEN_ENV_VAR is set, save `vk` into a file.
-pub(crate) fn test_against_stored_vk<C: Circuit<pallas::Base>>(circuit: &C, circuit_name: &str) {
-    let file_path = Path::new(TEST_DATA_DIR)
+/// If the env variable GEN_ENV_VAR is set, save `vk` and `proof` into a file.
+pub(crate) fn test_against_stored_circuit<C: Circuit<pallas::Base>>(
+    circuit: C,
+    circuit_name: &str,
+    expected_proof_size: usize,
+) {
+    let vk_file_path = Path::new(TEST_DATA_DIR)
         .join(format!("vk_{circuit_name}"))
         .with_extension("rdata");
 
     // Setup phase: generate parameters, vk for the circuit.
     let params: Params<Affine> = Params::new(11);
-    let vk = plonk::keygen_vk(&params, circuit).unwrap();
+    let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
     let vk_text = format!("{:#?}\n", vk.pinned());
 
     if env::var_os(GEN_ENV_VAR).is_some() {
-        fs::write(&file_path, &vk_text).expect("Unable to write vk test file");
+        fs::write(&vk_file_path, &vk_text).expect("Unable to write vk test file");
     } else {
         assert_eq!(
             vk_text,
-            fs::read_to_string(file_path)
+            fs::read_to_string(vk_file_path)
                 .expect("Unable to read vk test file")
                 .replace("\r\n", "\n")
         );
     }
-}
 
-/// Test the generated circuit against the stored proof.
-///
-/// If the env variable GEN_ENV_VAR is set, save `vk` into a file.
-pub(crate) fn test_against_stored_proof<C: Circuit<pallas::Base>>(
-    circuit: C,
-    circuit_name: &str,
-    index: usize,
-) {
-    let file_path = Path::new(TEST_DATA_DIR)
-        .join(format!("proof_{circuit_name}_{index}"))
+    let proof_file_path = Path::new(TEST_DATA_DIR)
+        .join(format!("proof_{circuit_name}"))
         .with_extension("bin");
-
-    // Setup phase: generate parameters, vk for the circuit.
-    let params: Params<Affine> = Params::new(11);
-    let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
     let proof = if env::var_os(GEN_ENV_VAR).is_some() {
         // Create the proof and save it into a file
         let proof = Proof::create(&vk, &params, circuit).unwrap();
-        fs::write(&file_path, proof.as_ref()).expect("Unable to write proof test file");
+        fs::write(&proof_file_path, proof.as_ref()).expect("Unable to write proof test file");
         proof
     } else {
         // Read the proof from storage
-        Proof::new(fs::read(file_path).expect("Unable to read proof test file"))
+        Proof::new(fs::read(proof_file_path).expect("Unable to read proof test file"))
     };
 
-    // Verify the stored proof with the generated vk
+    // Verify the stored proof with the generated or stored vk.
     assert!(proof.verify(&vk, &params).is_ok());
+    assert_eq!(proof.0.len(), expected_proof_size);
 }
