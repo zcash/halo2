@@ -34,8 +34,8 @@ impl<F: PrimeFieldBits> RangeConstrained<F, AssignedCell<F, F>> {
     /// # Panics
     ///
     /// Panics if `bitrange.len() >= K`.
-    pub fn witness_short<const K: usize, L: LookupRangeCheck<F, K>>(
-        lookup_config: &L,
+    pub fn witness_short<const K: usize, Lookup: LookupRangeCheck<F, K>>(
+        lookup_config: &Lookup,
         layouter: impl Layouter<F>,
         value: Value<&F>,
         bitrange: Range<usize>,
@@ -458,10 +458,7 @@ impl PallasLookupRC for PallasLookupRCConfig {}
 
 #[cfg(test)]
 mod tests {
-    use super::{LookupRangeCheck, LookupRangeCheckConfig};
-
     use super::super::lebs2ip;
-    use crate::sinsemilla::primitives::K;
 
     use ff::{Field, PrimeFieldBits};
     use halo2_proofs::{
@@ -471,7 +468,12 @@ mod tests {
     };
     use pasta_curves::pallas;
 
-    use crate::tests::test_utils::test_against_stored_circuit;
+    use crate::{
+        sinsemilla::primitives::K,
+        tests::test_utils::test_against_stored_circuit,
+        utilities::lookup_range_check::{LookupRangeCheck, LookupRangeCheckConfig},
+    };
+
     use std::{convert::TryInto, marker::PhantomData};
 
     #[derive(Clone, Copy)]
