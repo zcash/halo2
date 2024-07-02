@@ -8,7 +8,7 @@ use halo2_proofs::{
 use super::{CommitDomains, FixedPoints, HashDomains};
 use crate::{
     sinsemilla::primitives::{self as sinsemilla, SINSEMILLA_S},
-    utilities::lookup_range_check::PallasLookupRC,
+    utilities::lookup_range_check::PallasLookupRangeCheck,
 };
 use pasta_curves::pallas;
 
@@ -33,7 +33,7 @@ impl GeneratorTableConfig {
         Hash: HashDomains<pallas::Affine>,
         F: FixedPoints<pallas::Affine>,
         Commit: CommitDomains<pallas::Affine, F, Hash>,
-        Lookup: PallasLookupRC,
+        Lookup: PallasLookupRangeCheck,
     {
         let (table_idx, table_x, table_y) = (
             config.generator_table.table_idx,

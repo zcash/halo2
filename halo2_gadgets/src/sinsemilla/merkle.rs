@@ -187,7 +187,7 @@ pub mod tests {
         tests::test_utils::test_against_stored_circuit,
         utilities::{
             i2lebsp,
-            lookup_range_check::{LookupRangeCheck, PallasLookupRCConfig},
+            lookup_range_check::{LookupRangeCheck, PallasLookupRangeCheckConfig},
             UtilitiesInstructions,
         },
     };
@@ -214,8 +214,18 @@ pub mod tests {
 
     impl Circuit<pallas::Base> for MyCircuit {
         type Config = (
-            MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases, PallasLookupRCConfig>,
-            MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases, PallasLookupRCConfig>,
+            MerkleConfig<
+                TestHashDomain,
+                TestCommitDomain,
+                TestFixedBases,
+                PallasLookupRangeCheckConfig,
+            >,
+            MerkleConfig<
+                TestHashDomain,
+                TestCommitDomain,
+                TestFixedBases,
+                PallasLookupRangeCheckConfig,
+            >,
         );
         type FloorPlanner = SimpleFloorPlanner;
 
@@ -253,7 +263,7 @@ pub mod tests {
                 meta.lookup_table_column(),
             );
 
-            let range_check = PallasLookupRCConfig::configure(meta, advices[9], lookup.0);
+            let range_check = PallasLookupRangeCheckConfig::configure(meta, advices[9], lookup.0);
 
             let sinsemilla_config_1 = SinsemillaChip::configure(
                 meta,
@@ -288,7 +298,7 @@ pub mod tests {
                 TestHashDomain,
                 TestCommitDomain,
                 TestFixedBases,
-                PallasLookupRCConfig,
+                PallasLookupRangeCheckConfig,
             >::load(config.0.sinsemilla_config.clone(), &mut layouter)?;
 
             // Construct Merkle chips which will be placed side-by-side in the circuit.

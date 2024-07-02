@@ -473,7 +473,7 @@ pub(crate) mod tests {
         },
         sinsemilla::primitives::{self as sinsemilla, K},
         tests::test_utils::test_against_stored_circuit,
-        utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRCConfig},
+        utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRangeCheckConfig},
     };
 
     use group::{ff::Field, Curve};
@@ -519,18 +519,18 @@ pub(crate) mod tests {
     impl Circuit<pallas::Base> for MyCircuit {
         #[allow(clippy::type_complexity)]
         type Config = (
-            EccConfig<TestFixedBases, PallasLookupRCConfig>,
+            EccConfig<TestFixedBases, PallasLookupRangeCheckConfig>,
             SinsemillaConfig<
                 TestHashDomain,
                 TestCommitDomain,
                 TestFixedBases,
-                PallasLookupRCConfig,
+                PallasLookupRangeCheckConfig,
             >,
             SinsemillaConfig<
                 TestHashDomain,
                 TestCommitDomain,
                 TestFixedBases,
-                PallasLookupRCConfig,
+                PallasLookupRangeCheckConfig,
             >,
         );
         type FloorPlanner = SimpleFloorPlanner;
@@ -577,9 +577,9 @@ pub(crate) mod tests {
                 meta.lookup_table_column(),
             );
 
-            let range_check = PallasLookupRCConfig::configure(meta, advices[9], table_idx);
+            let range_check = PallasLookupRangeCheckConfig::configure(meta, advices[9], table_idx);
 
-            let ecc_config = EccChip::<TestFixedBases, PallasLookupRCConfig>::configure(
+            let ecc_config = EccChip::<TestFixedBases, PallasLookupRangeCheckConfig>::configure(
                 meta,
                 advices,
                 lagrange_coeffs,
@@ -619,7 +619,7 @@ pub(crate) mod tests {
                 TestHashDomain,
                 TestCommitDomain,
                 TestFixedBases,
-                PallasLookupRCConfig,
+                PallasLookupRangeCheckConfig,
             >::load(config.1.clone(), &mut layouter)?;
 
             // This MerkleCRH example is purely for illustrative purposes.

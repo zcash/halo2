@@ -1,6 +1,6 @@
 use super::{add, EccPoint, NonIdentityEccPoint, ScalarVar, T_Q};
 use crate::utilities::{
-    lookup_range_check::{PallasLookupRC, PallasLookupRCConfig},
+    lookup_range_check::{PallasLookupRangeCheck, PallasLookupRangeCheckConfig},
     {bool_check, ternary},
 };
 use std::{
@@ -46,7 +46,7 @@ const INCOMPLETE_LO_LEN: usize = INCOMPLETE_LEN - INCOMPLETE_HI_LEN;
 const COMPLETE_RANGE: Range<usize> = INCOMPLETE_LEN..(INCOMPLETE_LEN + NUM_COMPLETE_BITS);
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct Config<Lookup: PallasLookupRC = PallasLookupRCConfig> {
+pub struct Config<Lookup: PallasLookupRangeCheck = PallasLookupRangeCheckConfig> {
     // Selector used to check switching logic on LSB
     q_mul_lsb: Selector,
     // Configuration used in complete addition
@@ -61,7 +61,7 @@ pub struct Config<Lookup: PallasLookupRC = PallasLookupRCConfig> {
     overflow_config: overflow::Config<Lookup>,
 }
 
-impl<Lookup: PallasLookupRC> Config<Lookup> {
+impl<Lookup: PallasLookupRangeCheck> Config<Lookup> {
     pub(super) fn configure(
         meta: &mut ConstraintSystem<pallas::Base>,
         add_config: add::Config,
@@ -473,10 +473,10 @@ pub mod tests {
             tests::TestFixedBases,
             EccInstructions, NonIdentityPoint, Point, ScalarVar,
         },
-        utilities::{lookup_range_check::PallasLookupRC, UtilitiesInstructions},
+        utilities::{lookup_range_check::PallasLookupRangeCheck, UtilitiesInstructions},
     };
 
-    pub(crate) fn test_mul<Lookup: PallasLookupRC>(
+    pub(crate) fn test_mul<Lookup: PallasLookupRangeCheck>(
         chip: EccChip<TestFixedBases, Lookup>,
         mut layouter: impl Layouter<pallas::Base>,
         p: &NonIdentityPoint<pallas::Affine, EccChip<TestFixedBases, Lookup>>,

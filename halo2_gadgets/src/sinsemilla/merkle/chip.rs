@@ -12,7 +12,7 @@ use super::MerkleInstructions;
 use crate::{
     sinsemilla::{primitives as sinsemilla, MessagePiece},
     utilities::{
-        lookup_range_check::{PallasLookupRC, PallasLookupRCConfig},
+        lookup_range_check::{PallasLookupRangeCheck, PallasLookupRangeCheckConfig},
         RangeConstrained,
     },
     {
@@ -31,12 +31,12 @@ use group::ff::PrimeField;
 
 /// Configuration for the `MerkleChip` implementation.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct MerkleConfig<Hash, Commit, Fixed, Lookup = PallasLookupRCConfig>
+pub struct MerkleConfig<Hash, Commit, Fixed, Lookup = PallasLookupRangeCheckConfig>
 where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
-    Lookup: PallasLookupRC,
+    Lookup: PallasLookupRangeCheck,
 {
     advices: [Column<Advice>; 5],
     q_decompose: Selector,
@@ -55,12 +55,12 @@ where
 /// This chip does **NOT** constrain `left⋆` and `right⋆` to be canonical encodings of
 /// `left` and `right`.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct MerkleChip<Hash, Commit, Fixed, Lookup = PallasLookupRCConfig>
+pub struct MerkleChip<Hash, Commit, Fixed, Lookup = PallasLookupRangeCheckConfig>
 where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
-    Lookup: PallasLookupRC,
+    Lookup: PallasLookupRangeCheck,
 {
     config: MerkleConfig<Hash, Commit, Fixed, Lookup>,
 }
@@ -70,7 +70,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
-    Lookup: PallasLookupRC,
+    Lookup: PallasLookupRangeCheck,
 {
     type Config = MerkleConfig<Hash, Commit, Fixed, Lookup>;
     type Loaded = ();
@@ -89,7 +89,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookupRC,
+    Lookup: PallasLookupRangeCheck,
 {
     /// Configures the [`MerkleChip`].
     pub fn configure(
@@ -210,7 +210,7 @@ where
     Hash: HashDomains<pallas::Affine> + Eq,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash> + Eq,
-    Lookup: PallasLookupRC,
+    Lookup: PallasLookupRangeCheck,
 {
     #[allow(non_snake_case)]
     fn hash_layer(
@@ -429,7 +429,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookupRC,
+    Lookup: PallasLookupRangeCheck,
 {
     type Var = AssignedCell<pallas::Base, pallas::Base>;
 }
@@ -440,7 +440,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookupRC,
+    Lookup: PallasLookupRangeCheck,
 {
     #[allow(clippy::type_complexity)]
     fn swap(
@@ -462,7 +462,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookupRC,
+    Lookup: PallasLookupRangeCheck,
 {
     type CellValue = <SinsemillaChip<Hash, Commit, F, Lookup> as SinsemillaInstructions<
         pallas::Affine,

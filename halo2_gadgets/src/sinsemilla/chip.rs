@@ -9,7 +9,7 @@ use crate::{
         chip::{DoubleAndAdd, NonIdentityEccPoint},
         FixedPoints,
     },
-    utilities::lookup_range_check::{PallasLookupRC, PallasLookupRCConfig},
+    utilities::lookup_range_check::{PallasLookupRangeCheck, PallasLookupRangeCheckConfig},
 };
 use std::marker::PhantomData;
 
@@ -30,12 +30,12 @@ mod hash_to_point;
 
 /// Configuration for the Sinsemilla hash chip
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub struct SinsemillaConfig<Hash, Commit, F, Lookup = PallasLookupRCConfig>
+pub struct SinsemillaConfig<Hash, Commit, F, Lookup = PallasLookupRangeCheckConfig>
 where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookupRC,
+    Lookup: PallasLookupRangeCheck,
 {
     /// Binary selector used in lookup argument and in the body of the Sinsemilla hash.
     q_sinsemilla1: Selector,
@@ -68,7 +68,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookupRC,
+    Lookup: PallasLookupRangeCheck,
 {
     /// Returns an array of all advice columns in this config, in arbitrary order.
     pub(super) fn advices(&self) -> [Column<Advice>; 5] {
@@ -98,12 +98,12 @@ where
 ///
 /// [Chip description](https://zcash.github.io/halo2/design/gadgets/sinsemilla.html#plonk--halo-2-constraints).
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub struct SinsemillaChip<Hash, Commit, Fixed, Lookup = PallasLookupRCConfig>
+pub struct SinsemillaChip<Hash, Commit, Fixed, Lookup = PallasLookupRangeCheckConfig>
 where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
-    Lookup: PallasLookupRC,
+    Lookup: PallasLookupRangeCheck,
 {
     config: SinsemillaConfig<Hash, Commit, Fixed, Lookup>,
 }
@@ -113,7 +113,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     Fixed: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
-    Lookup: PallasLookupRC,
+    Lookup: PallasLookupRangeCheck,
 {
     type Config = SinsemillaConfig<Hash, Commit, Fixed, Lookup>;
     type Loaded = ();
@@ -132,7 +132,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookupRC,
+    Lookup: PallasLookupRangeCheck,
 {
     /// Reconstructs this chip from the given config.
     pub fn construct(config: <Self as Chip<pallas::Base>>::Config) -> Self {
@@ -277,7 +277,7 @@ where
     Hash: HashDomains<pallas::Affine>,
     F: FixedPoints<pallas::Affine>,
     Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookupRC,
+    Lookup: PallasLookupRangeCheck,
 {
     type CellValue = AssignedCell<pallas::Base, pallas::Base>;
 

@@ -442,19 +442,19 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCh
     }
 }
 
-/// `PallasLookupRC` a shorthand for `LookupRangeCheck` specialized with `pallas::Base` and
+/// `PallasLookupRangeCheck` a shorthand for `LookupRangeCheck` specialized with `pallas::Base` and
 /// `sinsemilla::K` and used to improve readability. In addition, it extends
 /// the `LookupRangeCheck` with additional standard traits.
-pub trait PallasLookupRC:
+pub trait PallasLookupRangeCheck:
     LookupRangeCheck<pallas::Base, { sinsemilla::K }> + Eq + PartialEq + Clone + Copy + Debug
 {
 }
 
-/// `PallasLookupRCConfig` is a shorthand for `LookupRangeCheckConfig` specialized with
+/// `PallasLookupRangeCheckConfig` is a shorthand for `LookupRangeCheckConfig` specialized with
 /// `pallas::Base` and `sinsemilla::K` and used to improve readability```
-pub type PallasLookupRCConfig = LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>;
+pub type PallasLookupRangeCheckConfig = LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>;
 
-impl PallasLookupRC for PallasLookupRCConfig {}
+impl PallasLookupRangeCheck for PallasLookupRangeCheckConfig {}
 
 #[cfg(test)]
 mod tests {
