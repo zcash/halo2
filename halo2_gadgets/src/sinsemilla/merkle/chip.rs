@@ -203,60 +203,13 @@ where
     }
 }
 
-/// Defines the concrete types of `SinsemillaInstructions` required by the `MerkleCRH`.
-pub(crate) trait MerkleSinsemillaInstructions<Hash, Commit, F, Lookup>
-where
-    Self: SinsemillaInstructions<
-        pallas::Affine,
-        { sinsemilla::K },
-        { sinsemilla::C },
-        MessagePiece = <SinsemillaChip<Hash, Commit, F, Lookup> as SinsemillaInstructions<
-            pallas::Affine,
-            { sinsemilla::K },
-            { sinsemilla::C },
-        >>::MessagePiece,
-        RunningSum = <SinsemillaChip<Hash, Commit, F, Lookup> as SinsemillaInstructions<
-            pallas::Affine,
-            { sinsemilla::K },
-            { sinsemilla::C },
-        >>::RunningSum,
-        X = <SinsemillaChip<Hash, Commit, F, Lookup> as SinsemillaInstructions<
-            pallas::Affine,
-            { sinsemilla::K },
-            { sinsemilla::C },
-        >>::X,
-    >,
-    Hash: HashDomains<pallas::Affine>,
-    Commit: CommitDomains<pallas::Affine, F, Hash>,
-    F: FixedPoints<pallas::Affine>,
-    Lookup: PallasLookupRC,
-{
-}
-
-impl<Hash, Commit, F, Lookup> MerkleSinsemillaInstructions<Hash, Commit, F, Lookup>
-    for MerkleChip<Hash, Commit, F, Lookup>
-where
-    Hash: HashDomains<pallas::Affine>,
-    F: FixedPoints<pallas::Affine>,
-    Commit: CommitDomains<pallas::Affine, F, Hash>,
-    Lookup: PallasLookupRC,
-{
-}
-
-impl<InstructionsChip, Hash, Commit, Fixed, Lookup, const MERKLE_DEPTH: usize>
+impl<Hash, Commit, Fixed, Lookup, const MERKLE_DEPTH: usize>
     MerkleInstructions<pallas::Affine, MERKLE_DEPTH, { sinsemilla::K }, { sinsemilla::C }>
-    for InstructionsChip
+    for MerkleChip<Hash, Commit, Fixed, Lookup>
 where
-    InstructionsChip: MerkleSinsemillaInstructions<Hash, Commit, Fixed, Lookup>
-        + UtilitiesInstructions<pallas::Base, Var = AssignedCell<pallas::Base, pallas::Base>>
-        + CondSwapInstructions<pallas::Base>
-        + Chip<pallas::Base, Config = MerkleConfig<Hash, Commit, Fixed, Lookup>>
-        + Eq
-        + Clone
-        + std::fmt::Debug,
-    Hash: HashDomains<pallas::Affine>,
+    Hash: HashDomains<pallas::Affine> + Eq,
     Fixed: FixedPoints<pallas::Affine>,
-    Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
+    Commit: CommitDomains<pallas::Affine, Fixed, Hash> + Eq,
     Lookup: PallasLookupRC,
 {
     #[allow(non_snake_case)]
