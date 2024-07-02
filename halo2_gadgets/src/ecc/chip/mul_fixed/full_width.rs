@@ -187,12 +187,14 @@ pub mod tests {
     use pasta_curves::pallas;
     use rand::rngs::OsRng;
 
-    use crate::ecc::{
-        chip::{EccChip, FixedPoint as _, H},
-        tests::{FullWidth, TestFixedBases},
-        FixedPoint, NonIdentityPoint, Point, ScalarFixed,
+    use crate::{
+        ecc::{
+            chip::{EccChip, FixedPoint as _, H},
+            tests::{FullWidth, TestFixedBases},
+            FixedPoint, NonIdentityPoint, Point, ScalarFixed,
+        },
+        utilities::lookup_range_check::PallasLookupRC,
     };
-    use crate::utilities::lookup_range_check::PallasLookupRC;
 
     pub(crate) fn test_mul_fixed<Lookup: PallasLookupRC>(
         chip: EccChip<TestFixedBases, Lookup>,
