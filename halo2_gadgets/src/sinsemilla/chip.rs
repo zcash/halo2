@@ -162,31 +162,6 @@ where
         lookup: (TableColumn, TableColumn, TableColumn),
         range_check: Lookup,
     ) -> <Self as Chip<pallas::Base>>::Config {
-        // create SinsemillaConfig
-        let config = Self::create_config(
-            meta,
-            advices,
-            witness_pieces,
-            fixed_y_q,
-            lookup,
-            range_check,
-        );
-
-        Self::create_initial_y_q_gate(meta, &config);
-
-        Self::create_sinsemilla_gate(meta, &config);
-
-        config
-    }
-
-    pub(crate) fn create_config(
-        meta: &mut ConstraintSystem<pallas::Base>,
-        advices: [Column<Advice>; 5],
-        witness_pieces: Column<Advice>,
-        fixed_y_q: Column<Fixed>,
-        lookup: (TableColumn, TableColumn, TableColumn),
-        range_check: Lookup,
-    ) -> <Self as Chip<pallas::Base>>::Config {
         // Enable equality on all advice columns
         for advice in advices.iter() {
             meta.enable_equality(*advice);
@@ -217,16 +192,13 @@ where
         // Set up lookup argument
         GeneratorTableConfig::configure(meta, config.clone());
 
-        config
-    }
-
-    /// Assign y_q to a fixed column
-    #[allow(non_snake_case)]
-    fn create_initial_y_q_gate(
-        meta: &mut ConstraintSystem<pallas::Base>,
-        config: &SinsemillaConfig<Hash, Commit, F, Lookup>,
-    ) {
         let two = pallas::Base::from(2);
+
+        // Closures for expressions that are derived multiple times
+        // x_r = lambda_1^2 - x_a - x_p
+        let x_r = |meta: &mut VirtualCells<pallas::Base>, rotation| {
+            config.double_and_add.x_r(meta, rotation)
+        };
 
         // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
         let Y_A = |meta: &mut VirtualCells<pallas::Base>, rotation| {
@@ -247,25 +219,6 @@ where
 
             Constraints::with_selector(q_s4, Some(("init_y_q_check", init_y_q_check)))
         });
-    }
-
-    #[allow(non_snake_case)]
-    pub(crate) fn create_sinsemilla_gate(
-        meta: &mut ConstraintSystem<pallas::Base>,
-        config: &SinsemillaConfig<Hash, Commit, F, Lookup>,
-    ) {
-        let two = pallas::Base::from(2);
-
-        // Closures for expressions that are derived multiple times
-        // x_r = lambda_1^2 - x_a - x_p
-        let x_r = |meta: &mut VirtualCells<pallas::Base>, rotation| {
-            config.double_and_add.x_r(meta, rotation)
-        };
-
-        // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
-        let Y_A = |meta: &mut VirtualCells<pallas::Base>, rotation| {
-            config.double_and_add.Y_A(meta, rotation)
-        };
 
         // https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial
         meta.create_gate("Sinsemilla gate", |meta| {
@@ -311,6 +264,8 @@ where
 
             Constraints::with_selector(q_s1, [("Secant line", secant_line), ("y check", y_check)])
         });
+
+        config
     }
 }
 
