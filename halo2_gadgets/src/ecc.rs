@@ -579,6 +579,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> FixedPointShort<C, EccChip> {
 pub(crate) mod tests {
     use ff::PrimeField;
     use group::{prime::PrimeCurveAffine, Curve, Group};
+    use std::marker::PhantomData;
 
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
@@ -597,7 +598,7 @@ pub(crate) mod tests {
     };
     use crate::{
         tests::test_utils::test_against_stored_circuit,
-        utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRangeCheckConfig},
+        utilities::lookup_range_check::{PallasLookupRangeCheck, PallasLookupRangeCheckConfig},
     };
 
     #[derive(Debug, Eq, PartialEq, Clone)]
@@ -726,17 +727,21 @@ pub(crate) mod tests {
         type Base = BaseField;
     }
 
-    struct MyCircuit {
+    struct MyCircuit<Lookup: PallasLookupRangeCheck> {
         test_errors: bool,
+        _lookup_marker: PhantomData<Lookup>,
     }
 
     #[allow(non_snake_case)]
-    impl Circuit<pallas::Base> for MyCircuit {
-        type Config = EccConfig<TestFixedBases, PallasLookupRangeCheckConfig>;
+    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for MyCircuit<Lookup> {
+        type Config = EccConfig<TestFixedBases, Lookup>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            MyCircuit { test_errors: false }
+            MyCircuit {
+                test_errors: false,
+                _lookup_marker: PhantomData,
+            }
         }
 
         fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
@@ -767,9 +772,8 @@ pub(crate) mod tests {
             let constants = meta.fixed_column();
             meta.enable_constant(constants);
 
-            let range_check =
-                PallasLookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
-            EccChip::<TestFixedBases, PallasLookupRangeCheckConfig>::configure(
+            let range_check = Lookup::configure(meta, advices[9], lookup_table);
+            EccChip::<TestFixedBases, Lookup>::configure(
                 meta,
                 advices,
                 lagrange_coeffs,
@@ -904,15 +908,21 @@ pub(crate) mod tests {
 
     #[test]
     fn ecc_chip() {
-        let k = 13;
-        let circuit = MyCircuit { test_errors: true };
+        let k = 11;
+        let circuit: MyCircuit<PallasLookupRangeCheckConfig> = MyCircuit {
+            test_errors: true,
+            _lookup_marker: PhantomData,
+        };
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
     }
 
     #[test]
-    fn test_ecc_chip_against_stored_circuit() {
-        let circuit = MyCircuit { test_errors: false };
+    fn test_against_stored_ecc_chip() {
+        let circuit: MyCircuit<PallasLookupRangeCheckConfig> = MyCircuit {
+            test_errors: false,
+            _lookup_marker: PhantomData,
+        };
         test_against_stored_circuit(circuit, "ecc_chip", 3872);
     }
 
@@ -925,7 +935,10 @@ pub(crate) mod tests {
         root.fill(&WHITE).unwrap();
         let root = root.titled("Ecc Chip Layout", ("sans-serif", 60)).unwrap();
 
-        let circuit = MyCircuit { test_errors: false };
+        let circuit: MyCircuit<PallasLookupRangeCheckConfig> = MyCircuit {
+            test_errors: false,
+            _lookup_marker: PhantomData,
+        };
         halo2_proofs::dev::CircuitLayout::default()
             .render(13, &circuit, &root)
             .unwrap();
