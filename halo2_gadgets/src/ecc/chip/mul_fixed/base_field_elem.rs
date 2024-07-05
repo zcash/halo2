@@ -391,14 +391,13 @@ pub mod tests {
     use pasta_curves::pallas;
     use rand::rngs::OsRng;
 
-    use crate::utilities::lookup_range_check::PallasLookupRangeCheck;
     use crate::{
         ecc::{
             chip::{EccChip, FixedPoint, H},
             tests::{BaseField, TestFixedBases},
             FixedPointBaseField, NonIdentityPoint, Point,
         },
-        utilities::UtilitiesInstructions,
+        utilities::{lookup_range_check::PallasLookupRangeCheck, UtilitiesInstructions},
     };
 
     pub(crate) fn test_mul_fixed_base_field<Lookup: PallasLookupRangeCheck>(

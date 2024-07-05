@@ -473,7 +473,7 @@ pub(crate) mod tests {
         },
         sinsemilla::primitives::{self as sinsemilla, K},
         tests::test_utils::test_against_stored_circuit,
-        utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRangeCheckConfig},
+        utilities::lookup_range_check::{PallasLookupRangeCheck, PallasLookupRangeCheckConfig},
     };
 
     use group::{ff::Field, Curve};
@@ -481,6 +481,7 @@ pub(crate) mod tests {
     use pasta_curves::pallas;
 
     use std::convert::TryInto;
+    use std::marker::PhantomData;
 
     pub(crate) const PERSONALIZATION: &str = "MerkleCRH";
 
@@ -514,29 +515,25 @@ pub(crate) mod tests {
         }
     }
 
-    struct MyCircuit {}
+    struct MyCircuit<Lookup: PallasLookupRangeCheck> {
+        _lookup_marker: PhantomData<Lookup>,
+    }
 
-    impl Circuit<pallas::Base> for MyCircuit {
+    type MyConfig<Lookup> = (
+        EccConfig<TestFixedBases, Lookup>,
+        SinsemillaConfig<TestHashDomain, TestCommitDomain, TestFixedBases, Lookup>,
+        SinsemillaConfig<TestHashDomain, TestCommitDomain, TestFixedBases, Lookup>,
+    );
+
+    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for MyCircuit<Lookup> {
         #[allow(clippy::type_complexity)]
-        type Config = (
-            EccConfig<TestFixedBases, PallasLookupRangeCheckConfig>,
-            SinsemillaConfig<
-                TestHashDomain,
-                TestCommitDomain,
-                TestFixedBases,
-                PallasLookupRangeCheckConfig,
-            >,
-            SinsemillaConfig<
-                TestHashDomain,
-                TestCommitDomain,
-                TestFixedBases,
-                PallasLookupRangeCheckConfig,
-            >,
-        );
+        type Config = MyConfig<Lookup>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            MyCircuit {}
+            MyCircuit {
+                _lookup_marker: PhantomData,
+            }
         }
 
         #[allow(non_snake_case)]
@@ -577,9 +574,9 @@ pub(crate) mod tests {
                 meta.lookup_table_column(),
             );
 
-            let range_check = PallasLookupRangeCheckConfig::configure(meta, advices[9], table_idx);
+            let range_check = Lookup::configure(meta, advices[9], table_idx);
 
-            let ecc_config = EccChip::<TestFixedBases, PallasLookupRangeCheckConfig>::configure(
+            let ecc_config = EccChip::<TestFixedBases, Lookup>::configure(
                 meta,
                 advices,
                 lagrange_coeffs,
@@ -615,12 +612,10 @@ pub(crate) mod tests {
             let ecc_chip = EccChip::construct(config.0);
 
             // The two `SinsemillaChip`s share the same lookup table.
-            SinsemillaChip::<
-                TestHashDomain,
-                TestCommitDomain,
-                TestFixedBases,
-                PallasLookupRangeCheckConfig,
-            >::load(config.1.clone(), &mut layouter)?;
+            SinsemillaChip::<TestHashDomain, TestCommitDomain, TestFixedBases, Lookup>::load(
+                config.1.clone(),
+                &mut layouter,
+            )?;
 
             // This MerkleCRH example is purely for illustrative purposes.
             // It is not an implementation of the Orchard protocol spec.
@@ -747,14 +742,18 @@ pub(crate) mod tests {
     #[test]
     fn sinsemilla_chip() {
         let k = 11;
-        let circuit = MyCircuit {};
+        let circuit: MyCircuit<PallasLookupRangeCheckConfig> = MyCircuit {
+            _lookup_marker: PhantomData,
+        };
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
     }
 
     #[test]
     fn test_sinsemilla_chip_against_stored_circuit() {
-        let circuit = MyCircuit {};
+        let circuit: MyCircuit<PallasLookupRangeCheckConfig> = MyCircuit {
+            _lookup_marker: PhantomData,
+        };
         test_against_stored_circuit(circuit, "sinsemilla_chip", 4576);
     }
 
@@ -768,7 +767,9 @@ pub(crate) mod tests {
         root.fill(&WHITE).unwrap();
         let root = root.titled("SinsemillaHash", ("sans-serif", 60)).unwrap();
 
-        let circuit = MyCircuit {};
+        let circuit: MyCircuit<PallasLookupRangeCheckConfig> = MyCircuit {
+            _lookup_marker: PhantomData,
+        };
         halo2_proofs::dev::CircuitLayout::default()
             .render(11, &circuit, &root)
             .unwrap();
