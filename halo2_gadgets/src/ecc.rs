@@ -918,7 +918,7 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn test_against_stored_ecc_chip() {
+    fn test_ecc_chip_against_stored_circuit() {
         let circuit: MyCircuit<PallasLookupRangeCheckConfig> = MyCircuit {
             test_errors: false,
             _lookup_marker: PhantomData,

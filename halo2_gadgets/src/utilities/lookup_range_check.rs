@@ -58,7 +58,7 @@ impl<F: PrimeFieldBits> RangeConstrained<F, AssignedCell<F, F>> {
     }
 }
 
-/// Configuration that provides methods for a lookup range check.
+/// Configuration that provides methods for a 10-bit lookup range check.
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub struct LookupRangeCheckConfig<F: PrimeFieldBits, const K: usize> {
     q_lookup: Selector,
