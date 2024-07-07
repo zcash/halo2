@@ -186,7 +186,9 @@ pub mod tests {
         },
         tests::test_utils::test_against_stored_circuit,
         utilities::{
-            i2lebsp, lookup_range_check::PallasLookupRangeCheckConfig, UtilitiesInstructions,
+            i2lebsp,
+            lookup_range_check::{PallasLookupRangeCheck, PallasLookupRangeCheckConfig},
+            UtilitiesInstructions,
         },
     };
 
@@ -198,10 +200,8 @@ pub mod tests {
         plonk::{Circuit, ConstraintSystem, Error},
     };
 
-    use crate::utilities::lookup_range_check::PallasLookupRangeCheck;
     use rand::{rngs::OsRng, RngCore};
-    use std::marker::PhantomData;
-    use std::{convert::TryInto, iter};
+    use std::{convert::TryInto, iter, marker::PhantomData};
 
     const MERKLE_DEPTH: usize = 32;
 
