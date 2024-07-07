@@ -248,21 +248,21 @@ pub mod tests {
     use group::{ff::PrimeField, Curve};
     use halo2_proofs::{
         arithmetic::CurveAffine,
-        circuit::{AssignedCell, Chip, Layouter, Value},
-        plonk::{Any, Error},
+        circuit::{AssignedCell, Chip, Layouter, SimpleFloorPlanner, Value},
+        dev::{FailureLocation, MockProver, VerifyFailure},
+        plonk::{Any, Circuit, ConstraintSystem, Error},
     };
     use pasta_curves::pallas;
+    use std::marker::PhantomData;
 
     use crate::{
         ecc::{
-            chip::{EccChip, FixedPoint, MagnitudeSign},
+            chip::{EccChip, EccConfig, FixedPoint, MagnitudeSign},
             tests::{Short, TestFixedBases},
             FixedPointShort, NonIdentityPoint, Point, ScalarFixedShort,
         },
         utilities::{
-            lookup_range_check::{
-                LookupRangeCheck, PallasLookupRangeCheck, PallasLookupRangeCheckConfig,
-            },
+            lookup_range_check::{PallasLookupRangeCheck, PallasLookupRangeCheckConfig},
             UtilitiesInstructions,
         },
     };
@@ -405,267 +405,280 @@ pub mod tests {
         Ok(())
     }
 
-    #[test]
-    fn invalid_magnitude_sign() {
-        use crate::{
-            ecc::chip::{EccConfig, FixedPoint},
-            utilities::UtilitiesInstructions,
-        };
-        use halo2_proofs::{
-            circuit::{Layouter, SimpleFloorPlanner},
-            dev::{FailureLocation, MockProver, VerifyFailure},
-            plonk::{Circuit, ConstraintSystem, Error},
-        };
+    #[derive(Default)]
+    struct MyMagnitudeSignCircuit<Lookup: PallasLookupRangeCheck> {
+        magnitude: Value<pallas::Base>,
+        sign: Value<pallas::Base>,
+        // For test checking
+        magnitude_error: Value<pallas::Base>,
+        _lookup_marker: PhantomData<Lookup>,
+    }
 
-        #[derive(Default)]
-        struct MyCircuit {
-            magnitude: Value<pallas::Base>,
-            sign: Value<pallas::Base>,
-            // For test checking
-            magnitude_error: Value<pallas::Base>,
-        }
+    impl<Lookup: PallasLookupRangeCheck> UtilitiesInstructions<pallas::Base>
+        for MyMagnitudeSignCircuit<Lookup>
+    {
+        type Var = AssignedCell<pallas::Base, pallas::Base>;
+    }
 
-        impl UtilitiesInstructions<pallas::Base> for MyCircuit {
-            type Var = AssignedCell<pallas::Base, pallas::Base>;
-        }
+    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for MyMagnitudeSignCircuit<Lookup> {
+        type Config = EccConfig<TestFixedBases, Lookup>;
+        type FloorPlanner = SimpleFloorPlanner;
 
-        impl Circuit<pallas::Base> for MyCircuit {
-            type Config = EccConfig<TestFixedBases, PallasLookupRangeCheckConfig>;
-            type FloorPlanner = SimpleFloorPlanner;
-
-            fn without_witnesses(&self) -> Self {
-                Self::default()
-            }
-
-            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
-                let advices = [
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                    meta.advice_column(),
-                ];
-                let lookup_table = meta.lookup_table_column();
-                let lagrange_coeffs = [
-                    meta.fixed_column(),
-                    meta.fixed_column(),
-                    meta.fixed_column(),
-                    meta.fixed_column(),
-                    meta.fixed_column(),
-                    meta.fixed_column(),
-                    meta.fixed_column(),
-                    meta.fixed_column(),
-                ];
-
-                // Shared fixed column for loading constants
-                let constants = meta.fixed_column();
-                meta.enable_constant(constants);
-
-                let range_check =
-                    PallasLookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
-                EccChip::<TestFixedBases, PallasLookupRangeCheckConfig>::configure(
-                    meta,
-                    advices,
-                    lagrange_coeffs,
-                    range_check,
-                )
-            }
-
-            fn synthesize(
-                &self,
-                config: Self::Config,
-                mut layouter: impl Layouter<pallas::Base>,
-            ) -> Result<(), Error> {
-                let column = config.advices[0];
-
-                let short_config = config.mul_fixed_short.clone();
-                let magnitude_sign = {
-                    let magnitude = self.load_private(
-                        layouter.namespace(|| "load magnitude"),
-                        column,
-                        self.magnitude,
-                    )?;
-                    let sign =
-                        self.load_private(layouter.namespace(|| "load sign"), column, self.sign)?;
-                    ScalarFixedShort::new(
-                        EccChip::construct(config),
-                        layouter.namespace(|| "signed short scalar"),
-                        (magnitude, sign),
-                    )?
-                };
-
-                short_config.assign(layouter, &magnitude_sign.inner, &Short)?;
-
-                Ok(())
+        fn without_witnesses(&self) -> Self {
+            MyMagnitudeSignCircuit {
+                magnitude: Value::unknown(),
+                sign: Value::unknown(),
+                magnitude_error: Value::unknown(),
+                _lookup_marker: PhantomData,
             }
         }
 
-        // Copied from halo2_proofs::dev::util
-        fn format_value(v: pallas::Base) -> String {
-            use ff::Field;
-            if v.is_zero_vartime() {
-                "0".into()
-            } else if v == pallas::Base::one() {
-                "1".into()
-            } else if v == -pallas::Base::one() {
-                "-1".into()
-            } else {
-                // Format value as hex.
-                let s = format!("{:?}", v);
-                // Remove leading zeroes.
-                let s = s.strip_prefix("0x").unwrap();
-                let s = s.trim_start_matches('0');
-                format!("0x{}", s)
-            }
-        }
-
-        // Magnitude larger than 64 bits should fail
-        {
-            let circuits = [
-                // 2^64
-                MyCircuit {
-                    magnitude: Value::known(pallas::Base::from_u128(1 << 64)),
-                    sign: Value::known(pallas::Base::one()),
-                    magnitude_error: Value::known(pallas::Base::from(1 << 1)),
-                },
-                // -2^64
-                MyCircuit {
-                    magnitude: Value::known(pallas::Base::from_u128(1 << 64)),
-                    sign: Value::known(-pallas::Base::one()),
-                    magnitude_error: Value::known(pallas::Base::from(1 << 1)),
-                },
-                // 2^66
-                MyCircuit {
-                    magnitude: Value::known(pallas::Base::from_u128(1 << 66)),
-                    sign: Value::known(pallas::Base::one()),
-                    magnitude_error: Value::known(pallas::Base::from(1 << 3)),
-                },
-                // -2^66
-                MyCircuit {
-                    magnitude: Value::known(pallas::Base::from_u128(1 << 66)),
-                    sign: Value::known(-pallas::Base::one()),
-                    magnitude_error: Value::known(pallas::Base::from(1 << 3)),
-                },
-                // 2^254
-                MyCircuit {
-                    magnitude: Value::known(pallas::Base::from_u128(1 << 127).square()),
-                    sign: Value::known(pallas::Base::one()),
-                    magnitude_error: Value::known(
-                        pallas::Base::from_u128(1 << 95).square() * pallas::Base::from(2),
-                    ),
-                },
-                // -2^254
-                MyCircuit {
-                    magnitude: Value::known(pallas::Base::from_u128(1 << 127).square()),
-                    sign: Value::known(-pallas::Base::one()),
-                    magnitude_error: Value::known(
-                        pallas::Base::from_u128(1 << 95).square() * pallas::Base::from(2),
-                    ),
-                },
+        fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+            let advices = [
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+                meta.advice_column(),
+            ];
+            let lookup_table = meta.lookup_table_column();
+            let lagrange_coeffs = [
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
+                meta.fixed_column(),
             ];
 
-            for circuit in circuits.iter() {
-                let prover = MockProver::<pallas::Base>::run(11, circuit, vec![]).unwrap();
-                circuit.magnitude_error.assert_if_known(|magnitude_error| {
-                    assert_eq!(
-                        prover.verify(),
-                        Err(vec![
-                            VerifyFailure::ConstraintNotSatisfied {
-                                constraint: (
-                                    (17, "Short fixed-base mul gate").into(),
-                                    0,
-                                    "last_window_check",
-                                )
-                                    .into(),
-                                location: FailureLocation::InRegion {
-                                    region: (3, "Short fixed-base mul (most significant word)")
+            // Shared fixed column for loading constants
+            let constants = meta.fixed_column();
+            meta.enable_constant(constants);
+
+            let range_check = Lookup::configure(meta, advices[9], lookup_table);
+            EccChip::<TestFixedBases, Lookup>::configure(
+                meta,
+                advices,
+                lagrange_coeffs,
+                range_check,
+            )
+        }
+
+        fn synthesize(
+            &self,
+            config: Self::Config,
+            mut layouter: impl Layouter<pallas::Base>,
+        ) -> Result<(), Error> {
+            let column = config.advices[0];
+
+            let short_config = config.mul_fixed_short.clone();
+            let magnitude_sign = {
+                let magnitude = self.load_private(
+                    layouter.namespace(|| "load magnitude"),
+                    column,
+                    self.magnitude,
+                )?;
+                let sign =
+                    self.load_private(layouter.namespace(|| "load sign"), column, self.sign)?;
+                ScalarFixedShort::new(
+                    EccChip::construct(config),
+                    layouter.namespace(|| "signed short scalar"),
+                    (magnitude, sign),
+                )?
+            };
+
+            short_config.assign(layouter, &magnitude_sign.inner, &Short)?;
+
+            Ok(())
+        }
+    }
+
+    // Copied from halo2_proofs::dev::util
+    fn format_value(v: pallas::Base) -> String {
+        use ff::Field;
+        if v.is_zero_vartime() {
+            "0".into()
+        } else if v == pallas::Base::one() {
+            "1".into()
+        } else if v == -pallas::Base::one() {
+            "-1".into()
+        } else {
+            // Format value as hex.
+            let s = format!("{:?}", v);
+            // Remove leading zeroes.
+            let s = s.strip_prefix("0x").unwrap();
+            let s = s.trim_start_matches('0');
+            format!("0x{}", s)
+        }
+    }
+
+    impl<Lookup: PallasLookupRangeCheck> MyMagnitudeSignCircuit<Lookup> {
+        fn test_invalid_magnitude_sign() {
+            // Magnitude larger than 64 bits should fail
+            {
+                let circuits = [
+                    // 2^64
+                    MyMagnitudeSignCircuit::<Lookup> {
+                        magnitude: Value::known(pallas::Base::from_u128(1 << 64)),
+                        sign: Value::known(pallas::Base::one()),
+                        magnitude_error: Value::known(pallas::Base::from(1 << 1)),
+                        _lookup_marker: PhantomData,
+                    },
+                    // -2^64
+                    MyMagnitudeSignCircuit::<Lookup> {
+                        magnitude: Value::known(pallas::Base::from_u128(1 << 64)),
+                        sign: Value::known(-pallas::Base::one()),
+                        magnitude_error: Value::known(pallas::Base::from(1 << 1)),
+                        _lookup_marker: PhantomData,
+                    },
+                    // 2^66
+                    MyMagnitudeSignCircuit::<Lookup> {
+                        magnitude: Value::known(pallas::Base::from_u128(1 << 66)),
+                        sign: Value::known(pallas::Base::one()),
+                        magnitude_error: Value::known(pallas::Base::from(1 << 3)),
+                        _lookup_marker: PhantomData,
+                    },
+                    // -2^66
+                    MyMagnitudeSignCircuit::<Lookup> {
+                        magnitude: Value::known(pallas::Base::from_u128(1 << 66)),
+                        sign: Value::known(-pallas::Base::one()),
+                        magnitude_error: Value::known(pallas::Base::from(1 << 3)),
+                        _lookup_marker: PhantomData,
+                    },
+                    // 2^254
+                    MyMagnitudeSignCircuit::<Lookup> {
+                        magnitude: Value::known(pallas::Base::from_u128(1 << 127).square()),
+                        sign: Value::known(pallas::Base::one()),
+                        magnitude_error: Value::known(
+                            pallas::Base::from_u128(1 << 95).square() * pallas::Base::from(2),
+                        ),
+                        _lookup_marker: PhantomData,
+                    },
+                    // -2^254
+                    MyMagnitudeSignCircuit::<Lookup> {
+                        magnitude: Value::known(pallas::Base::from_u128(1 << 127).square()),
+                        sign: Value::known(-pallas::Base::one()),
+                        magnitude_error: Value::known(
+                            pallas::Base::from_u128(1 << 95).square() * pallas::Base::from(2),
+                        ),
+                        _lookup_marker: PhantomData,
+                    },
+                ];
+
+                for circuit in circuits.iter() {
+                    let prover = MockProver::<pallas::Base>::run(11, circuit, vec![]).unwrap();
+                    circuit.magnitude_error.assert_if_known(|magnitude_error| {
+                        assert_eq!(
+                            prover.verify(),
+                            Err(vec![
+                                VerifyFailure::ConstraintNotSatisfied {
+                                    constraint: (
+                                        (17, "Short fixed-base mul gate").into(),
+                                        0,
+                                        "last_window_check",
+                                    )
                                         .into(),
-                                    offset: 1,
+                                    location: FailureLocation::InRegion {
+                                        region: (3, "Short fixed-base mul (most significant word)")
+                                            .into(),
+                                        offset: 1,
+                                    },
+                                    cell_values: vec![(
+                                        ((Any::Advice, 5).into(), 0).into(),
+                                        format_value(*magnitude_error),
+                                    )],
                                 },
-                                cell_values: vec![(
-                                    ((Any::Advice, 5).into(), 0).into(),
-                                    format_value(*magnitude_error),
-                                )],
-                            },
-                            VerifyFailure::Permutation {
-                                column: (Any::Fixed, 9).into(),
-                                location: FailureLocation::OutsideRegion { row: 0 },
-                            },
-                            VerifyFailure::Permutation {
-                                column: (Any::Advice, 4).into(),
-                                location: FailureLocation::InRegion {
-                                    region: (2, "Short fixed-base mul (incomplete addition)")
-                                        .into(),
-                                    offset: 22,
+                                VerifyFailure::Permutation {
+                                    column: (Any::Fixed, 9).into(),
+                                    location: FailureLocation::OutsideRegion { row: 0 },
                                 },
+                                VerifyFailure::Permutation {
+                                    column: (Any::Advice, 4).into(),
+                                    location: FailureLocation::InRegion {
+                                        region: (2, "Short fixed-base mul (incomplete addition)")
+                                            .into(),
+                                        offset: 22,
+                                    },
+                                },
+                            ])
+                        );
+                        true
+                    });
+                }
+            }
+
+            // Sign that is not +/- 1 should fail
+            {
+                let magnitude_u64 = rand::random::<u64>();
+                let circuit: MyMagnitudeSignCircuit<Lookup> = MyMagnitudeSignCircuit {
+                    magnitude: Value::known(pallas::Base::from(magnitude_u64)),
+                    sign: Value::known(pallas::Base::zero()),
+                    magnitude_error: Value::unknown(),
+                    _lookup_marker: PhantomData,
+                };
+
+                let negation_check_y = {
+                    *(Short.generator() * pallas::Scalar::from(magnitude_u64))
+                        .to_affine()
+                        .coordinates()
+                        .unwrap()
+                        .y()
+                };
+
+                let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
+                assert_eq!(
+                    prover.verify(),
+                    Err(vec![
+                        VerifyFailure::ConstraintNotSatisfied {
+                            constraint: ((17, "Short fixed-base mul gate").into(), 1, "sign_check")
+                                .into(),
+                            location: FailureLocation::InRegion {
+                                region: (3, "Short fixed-base mul (most significant word)").into(),
+                                offset: 1,
                             },
-                        ])
-                    );
-                    true
-                });
+                            cell_values: vec![(
+                                ((Any::Advice, 4).into(), 0).into(),
+                                "0".to_string()
+                            )],
+                        },
+                        VerifyFailure::ConstraintNotSatisfied {
+                            constraint: (
+                                (17, "Short fixed-base mul gate").into(),
+                                3,
+                                "negation_check"
+                            )
+                                .into(),
+                            location: FailureLocation::InRegion {
+                                region: (3, "Short fixed-base mul (most significant word)").into(),
+                                offset: 1,
+                            },
+                            cell_values: vec![
+                                (
+                                    ((Any::Advice, 1).into(), 0).into(),
+                                    format_value(negation_check_y),
+                                ),
+                                (
+                                    ((Any::Advice, 3).into(), 0).into(),
+                                    format_value(negation_check_y),
+                                ),
+                                (((Any::Advice, 4).into(), 0).into(), "0".to_string()),
+                            ],
+                        }
+                    ])
+                );
             }
         }
+    }
 
-        // Sign that is not +/- 1 should fail
-        {
-            let magnitude_u64 = rand::random::<u64>();
-            let circuit = MyCircuit {
-                magnitude: Value::known(pallas::Base::from(magnitude_u64)),
-                sign: Value::known(pallas::Base::zero()),
-                magnitude_error: Value::unknown(),
-            };
-
-            let negation_check_y = {
-                *(Short.generator() * pallas::Scalar::from(magnitude_u64))
-                    .to_affine()
-                    .coordinates()
-                    .unwrap()
-                    .y()
-            };
-
-            let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
-            assert_eq!(
-                prover.verify(),
-                Err(vec![
-                    VerifyFailure::ConstraintNotSatisfied {
-                        constraint: ((17, "Short fixed-base mul gate").into(), 1, "sign_check")
-                            .into(),
-                        location: FailureLocation::InRegion {
-                            region: (3, "Short fixed-base mul (most significant word)").into(),
-                            offset: 1,
-                        },
-                        cell_values: vec![(((Any::Advice, 4).into(), 0).into(), "0".to_string())],
-                    },
-                    VerifyFailure::ConstraintNotSatisfied {
-                        constraint: (
-                            (17, "Short fixed-base mul gate").into(),
-                            3,
-                            "negation_check"
-                        )
-                            .into(),
-                        location: FailureLocation::InRegion {
-                            region: (3, "Short fixed-base mul (most significant word)").into(),
-                            offset: 1,
-                        },
-                        cell_values: vec![
-                            (
-                                ((Any::Advice, 1).into(), 0).into(),
-                                format_value(negation_check_y),
-                            ),
-                            (
-                                ((Any::Advice, 3).into(), 0).into(),
-                                format_value(negation_check_y),
-                            ),
-                            (((Any::Advice, 4).into(), 0).into(), "0".to_string()),
-                        ],
-                    }
-                ])
-            );
-        }
+    #[test]
+    fn invalid_magnitude_sign() {
+        MyMagnitudeSignCircuit::<PallasLookupRangeCheckConfig>::test_invalid_magnitude_sign();
     }
 }
