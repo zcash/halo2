@@ -471,7 +471,9 @@ mod tests {
     use crate::{
         sinsemilla::primitives::K,
         tests::test_utils::test_against_stored_circuit,
-        utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRangeCheckConfig},
+        utilities::lookup_range_check::{
+            LookupRangeCheck, PallasLookupRangeCheck, PallasLookupRangeCheckConfig,
+        },
     };
 
     use std::{convert::TryInto, marker::PhantomData};
@@ -640,19 +642,18 @@ mod tests {
         }
     }
 
-    fn test_short_range_check(
+    fn test_short_range_check<Lookup: PallasLookupRangeCheck>(
         element: pallas::Base,
         num_bits: usize,
         proof_result: &Result<(), Vec<VerifyFailure>>,
         circuit_name: &str,
         expected_proof_size: usize,
     ) {
-        let circuit: MyShortRangeCheckCircuit<pallas::Base, PallasLookupRangeCheckConfig> =
-            MyShortRangeCheckCircuit {
-                element: Value::known(element),
-                num_bits,
-                _lookup_marker: PhantomData,
-            };
+        let circuit: MyShortRangeCheckCircuit<pallas::Base, Lookup> = MyShortRangeCheckCircuit {
+            element: Value::known(element),
+            num_bits,
+            _lookup_marker: PhantomData,
+        };
         let prover = MockProver::<pallas::Base>::run(11, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), *proof_result);
 
@@ -668,7 +669,7 @@ mod tests {
         // Edge case: zero bits (case 0)
         let element = pallas::Base::ZERO;
         let num_bits = 0;
-        test_short_range_check(
+        test_short_range_check::<PallasLookupRangeCheckConfig>(
             element,
             num_bits,
             &Ok(()),
@@ -679,7 +680,7 @@ mod tests {
         // Edge case: K bits (case 1)
         let element = pallas::Base::from((1 << K) - 1);
         let num_bits = K;
-        test_short_range_check(
+        test_short_range_check::<PallasLookupRangeCheckConfig>(
             element,
             num_bits,
             &Ok(()),
@@ -690,7 +691,7 @@ mod tests {
         // Element within `num_bits` (case 2)
         let element = pallas::Base::from((1 << 6) - 1);
         let num_bits = 6;
-        test_short_range_check(
+        test_short_range_check::<PallasLookupRangeCheckConfig>(
             element,
             num_bits,
             &Ok(()),
@@ -708,7 +709,13 @@ mod tests {
                 offset: 1,
             },
         }]);
-        test_short_range_check(element, num_bits, &error, "not_saved", proof_size);
+        test_short_range_check::<PallasLookupRangeCheckConfig>(
+            element,
+            num_bits,
+            &error,
+            "not_saved",
+            proof_size,
+        );
 
         // Element larger than K bits
         let element = pallas::Base::from(1 << K);
@@ -729,7 +736,13 @@ mod tests {
                 },
             },
         ]);
-        test_short_range_check(element, num_bits, &error, "not_saved", proof_size);
+        test_short_range_check::<PallasLookupRangeCheckConfig>(
+            element,
+            num_bits,
+            &error,
+            "not_saved",
+            proof_size,
+        );
 
         // Element which is not within `num_bits`, but which has a shifted value within num_bits
         let num_bits = 6;
@@ -747,6 +760,12 @@ mod tests {
                 offset: 0,
             },
         }]);
-        test_short_range_check(element, num_bits as usize, &error, "not_saved", proof_size);
+        test_short_range_check::<PallasLookupRangeCheckConfig>(
+            element,
+            num_bits as usize,
+            &error,
+            "not_saved",
+            proof_size,
+        );
     }
 }
