@@ -19,10 +19,10 @@ use std::ops::Deref;
 
 /// `EccPointQ` can hold either a public or a private ECC Point
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub enum EccPointQ<'a> {
+pub enum EccPointQ {
     PublicPoint(pallas::Affine),
-    PrivatePoint(&'a NonIdentityEccPoint),
+    // We will use private point for ZSA
+    // PrivatePoint(&'a NonIdentityEccPoint),
 }
 
 impl<Hash, Commit, Fixed, Lookup> SinsemillaChip<Hash, Commit, Fixed, Lookup>
