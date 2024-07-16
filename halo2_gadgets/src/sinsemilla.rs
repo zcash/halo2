@@ -519,6 +519,14 @@ pub(crate) mod tests {
         _lookup_marker: PhantomData<Lookup>,
     }
 
+    impl<Lookup: PallasLookupRangeCheck> MyCircuit<Lookup> {
+        fn new() -> Self {
+            MyCircuit {
+                _lookup_marker: PhantomData,
+            }
+        }
+    }
+
     type MyConfig<Lookup> = (
         EccConfig<TestFixedBases, Lookup>,
         SinsemillaConfig<TestHashDomain, TestCommitDomain, TestFixedBases, Lookup>,
@@ -531,9 +539,7 @@ pub(crate) mod tests {
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            MyCircuit {
-                _lookup_marker: PhantomData,
-            }
+            MyCircuit::new()
         }
 
         #[allow(non_snake_case)]
@@ -742,18 +748,14 @@ pub(crate) mod tests {
     #[test]
     fn sinsemilla_chip() {
         let k = 11;
-        let circuit: MyCircuit<PallasLookupRangeCheckConfig> = MyCircuit {
-            _lookup_marker: PhantomData,
-        };
+        let circuit = MyCircuit::<PallasLookupRangeCheckConfig>::new();
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
     }
 
     #[test]
     fn test_sinsemilla_chip_against_stored_circuit() {
-        let circuit: MyCircuit<PallasLookupRangeCheckConfig> = MyCircuit {
-            _lookup_marker: PhantomData,
-        };
+        let circuit = MyCircuit::<PallasLookupRangeCheckConfig>::new();
         test_against_stored_circuit(circuit, "sinsemilla_chip", 4576);
     }
 
@@ -767,9 +769,7 @@ pub(crate) mod tests {
         root.fill(&WHITE).unwrap();
         let root = root.titled("SinsemillaHash", ("sans-serif", 60)).unwrap();
 
-        let circuit: MyCircuit<PallasLookupRangeCheckConfig> = MyCircuit {
-            _lookup_marker: PhantomData,
-        };
+        let circuit = MyCircuit::<PallasLookupRangeCheckConfig>::new();
         halo2_proofs::dev::CircuitLayout::default()
             .render(11, &circuit, &root)
             .unwrap();
