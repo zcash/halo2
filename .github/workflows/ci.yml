@@ -125,33 +125,34 @@ jobs:
       - name: Test halo2 book
         run: mdbook test -L target/debug/deps book/
 
-#   codecov:
-#     name: Code coverage
-#     runs-on: ubuntu-latest
-# 
-#     steps:
-#       - uses: actions/checkout@v3
-#       # Use stable for this to ensure that cargo-tarpaulin can be built.
-#       - id: prepare
-#         uses: ./.github/actions/prepare
-#         with:
-#           toolchain: stable
-#           nightly-features: true
-#       - name: Install cargo-tarpaulin
-#         uses: actions-rs/cargo@v1
-#         with:
-#           command: install
-#           args: cargo-tarpaulin
-#       - name: Generate coverage report
-#         uses: actions-rs/cargo@v1
-#         with:
-#           command: tarpaulin
-#           args: >
-#             ${{ steps.prepare.outputs.feature-flags }}
-#             --timeout 600
-#             --out Xml
-#       - name: Upload coverage to Codecov
-#         uses: codecov/codecov-action@v3.1.4
+  codecov:
+    name: Code coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      # Use stable for this to ensure that cargo-tarpaulin can be built.
+      - id: prepare
+        uses: ./.github/actions/prepare
+        with:
+          toolchain: stable
+          nightly-features: true
+      - name: Install cargo-tarpaulin
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-tarpaulin
+      - name: Generate coverage report
+        uses: actions-rs/cargo@v1
+        with:
+          command: tarpaulin
+          # Extend the timeout to 3600 to ensure the code coverage test pass
+          args: >
+            ${{ steps.prepare.outputs.feature-flags }}
+            --timeout 3600
+            --out Xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3.1.4
 
   doc-links:
     name: Intra-doc links

@@ -408,7 +408,8 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
         point.map(|inner| Point { chip, inner })
     }
 
-    /// Constructs a new point with the given fixed value.
+    /// Witnesses the given constant point as a private input to the circuit.
+    /// This allows the point to be the identity, mapped to (0, 0) in affine coordinates.
     pub fn new_from_constant(
         chip: EccChip,
         mut layouter: impl Layouter<C::Base>,
@@ -622,14 +623,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> FixedPointShort<C, EccChip> {
 pub(crate) mod tests {
     use ff::PrimeField;
     use group::{prime::PrimeCurveAffine, Curve, Group};
-
-    use halo2_proofs::{
-        circuit::{Layouter, SimpleFloorPlanner, Value},
-        dev::MockProver,
-        plonk::{Circuit, ConstraintSystem, Error},
-    };
-    use lazy_static::lazy_static;
-    use pasta_curves::pallas;
+    use std::marker::PhantomData;
 
     use super::{
         chip::{
@@ -638,7 +632,19 @@ pub(crate) mod tests {
         },
         FixedPoints,
     };
-    use crate::utilities::lookup_range_check::LookupRangeCheckConfig;
+    use crate::{
+        tests::test_utils::test_against_stored_circuit,
+        utilities::lookup_range_check::{
+            PallasLookupRangeCheck, PallasLookupRangeCheck4_5BConfig, PallasLookupRangeCheckConfig,
+        },
+    };
+    use halo2_proofs::{
+        circuit::{Layouter, SimpleFloorPlanner, Value},
+        dev::MockProver,
+        plonk::{Circuit, ConstraintSystem, Error},
+    };
+    use lazy_static::lazy_static;
+    use pasta_curves::pallas;
 
     #[derive(Debug, Eq, PartialEq, Clone)]
     pub(crate) struct TestFixedBases;
@@ -766,17 +772,27 @@ pub(crate) mod tests {
         type Base = BaseField;
     }
 
-    struct MyCircuit {
+    struct EccCircuit<Lookup: PallasLookupRangeCheck> {
         test_errors: bool,
+        _lookup_marker: PhantomData<Lookup>,
+    }
+
+    impl<Lookup: PallasLookupRangeCheck> EccCircuit<Lookup> {
+        fn new(test_errors: bool) -> Self {
+            Self {
+                test_errors,
+                _lookup_marker: PhantomData,
+            }
+        }
     }
 
     #[allow(non_snake_case)]
-    impl Circuit<pallas::Base> for MyCircuit {
-        type Config = EccConfig<TestFixedBases>;
+    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for EccCircuit<Lookup> {
+        type Config = EccConfig<TestFixedBases, Lookup>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            MyCircuit { test_errors: false }
+            EccCircuit::new(false)
         }
 
         fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
@@ -793,7 +809,6 @@ pub(crate) mod tests {
                 meta.advice_column(),
             ];
             let lookup_table = meta.lookup_table_column();
-            let table_range_check_tag = meta.lookup_table_column();
             let lagrange_coeffs = [
                 meta.fixed_column(),
                 meta.fixed_column(),
@@ -808,13 +823,13 @@ pub(crate) mod tests {
             let constants = meta.fixed_column();
             meta.enable_constant(constants);
 
-            let range_check = LookupRangeCheckConfig::configure(
+            let range_check = Lookup::configure(meta, advices[9], lookup_table);
+            EccChip::<TestFixedBases, Lookup>::configure(
                 meta,
-                advices[9],
-                lookup_table,
-                table_range_check_tag,
-            );
-            EccChip::<TestFixedBases>::configure(meta, advices, lagrange_coeffs, range_check)
+                advices,
+                lagrange_coeffs,
+                range_check,
+            )
         }
 
         fn synthesize(
@@ -953,9 +968,15 @@ pub(crate) mod tests {
     #[test]
     fn ecc_chip() {
         let k = 13;
-        let circuit = MyCircuit { test_errors: true };
+        let circuit = EccCircuit::<PallasLookupRangeCheckConfig>::new(true);
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
+    }
+
+    #[test]
+    fn test_ecc_chip_against_stored_circuit() {
+        let circuit = EccCircuit::<PallasLookupRangeCheckConfig>::new(false);
+        test_against_stored_circuit(circuit, "ecc_chip", 3872);
     }
 
     #[cfg(feature = "test-dev-graph")]
@@ -967,7 +988,37 @@ pub(crate) mod tests {
         root.fill(&WHITE).unwrap();
         let root = root.titled("Ecc Chip Layout", ("sans-serif", 60)).unwrap();
 
-        let circuit = MyCircuit { test_errors: false };
+        let circuit = EccCircuit::<PallasLookupRangeCheckConfig>::new(false);
+        halo2_proofs::dev::CircuitLayout::default()
+            .render(13, &circuit, &root)
+            .unwrap();
+    }
+
+    #[test]
+    fn ecc_chip_4_5b() {
+        let k = 13;
+        let circuit = EccCircuit::<PallasLookupRangeCheck4_5BConfig>::new(true);
+        let prover = MockProver::run(k, &circuit, vec![]).unwrap();
+
+        assert_eq!(prover.verify(), Ok(()))
+    }
+
+    #[test]
+    fn test_against_stored_ecc_chip_4_5b() {
+        let circuit = EccCircuit::<PallasLookupRangeCheck4_5BConfig>::new(false);
+        test_against_stored_circuit(circuit, "ecc_chip_4_5b", 3968);
+    }
+
+    #[cfg(feature = "test-dev-graph")]
+    #[test]
+    fn print_ecc_chip_4_5b() {
+        use plotters::prelude::*;
+
+        let root = BitMapBackend::new("ecc-chip-4_5b-layout.png", (1024, 7680)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+        let root = root.titled("Ecc Chip Layout", ("sans-serif", 60)).unwrap();
+
+        let circuit = EccCircuit::<PallasLookupRangeCheck4_5BConfig>::new(false);
         halo2_proofs::dev::CircuitLayout::default()
             .render(13, &circuit, &root)
             .unwrap();

@@ -6,7 +6,10 @@ use halo2_proofs::{
 };
 
 use super::{CommitDomains, FixedPoints, HashDomains};
-use crate::sinsemilla::primitives::{self as sinsemilla, K, SINSEMILLA_S};
+use crate::{
+    sinsemilla::primitives::{self as sinsemilla, K, SINSEMILLA_S},
+    utilities::lookup_range_check::PallasLookupRangeCheck,
+};
 use pasta_curves::pallas;
 
 /// Table containing independent generators S[0..2^k]
@@ -15,7 +18,6 @@ pub struct GeneratorTableConfig {
     pub table_idx: TableColumn,
     pub table_x: TableColumn,
     pub table_y: TableColumn,
-    pub table_range_check_tag: TableColumn,
 }
 
 impl GeneratorTableConfig {
@@ -24,13 +26,14 @@ impl GeneratorTableConfig {
     /// Even though the lookup table can be used in other parts of the circuit,
     /// this specific configuration sets up Sinsemilla-specific constraints
     /// controlled by `q_sinsemilla`, and would likely not apply to other chips.
-    pub fn configure<Hash, Commit, F>(
+    pub fn configure<Hash, Commit, F, Lookup>(
         meta: &mut ConstraintSystem<pallas::Base>,
-        config: super::SinsemillaConfig<Hash, Commit, F>,
+        config: super::SinsemillaConfig<Hash, Commit, F, Lookup>,
     ) where
         Hash: HashDomains<pallas::Affine>,
         F: FixedPoints<pallas::Affine>,
         Commit: CommitDomains<pallas::Affine, F, Hash>,
+        Lookup: PallasLookupRangeCheck,
     {
         let (table_idx, table_x, table_y) = (
             config.generator_table.table_idx,
@@ -79,6 +82,48 @@ impl GeneratorTableConfig {
     }
 
     /// Load the generator table into the circuit.
+    pub fn load(
+        &self,
+        table_range_check_tag: Option<TableColumn>,
+        layouter: &mut impl Layouter<pallas::Base>,
+    ) -> Result<(), Error> {
+        match table_range_check_tag {
+            Some(tag) => self.load_with_tag(tag, layouter),
+            None => self.load_without_tag(layouter),
+        }
+    }
+
+    /// Load the generator table into the circuit.
+    ///
+    /// | table_idx |     table_x    |     table_y    |
+    /// ------------------------------------------------
+    /// |     0     |    X(S\[0\])   |    Y(S\[0\])   |
+    /// |     1     |    X(S\[1\])   |    Y(S\[1\])   |
+    /// |    ...    |      ...       |       ...      |
+    /// |   2^10-1  | X(S\[2^10-1\]) | Y(S\[2^10-1\]) |
+    pub fn load_without_tag(
+        &self,
+        layouter: &mut impl Layouter<pallas::Base>,
+    ) -> Result<(), Error> {
+        layouter.assign_table(
+            || "generator_table",
+            |mut table| {
+                for (index, (x, y)) in SINSEMILLA_S.iter().enumerate() {
+                    table.assign_cell(
+                        || "table_idx",
+                        self.table_idx,
+                        index,
+                        || Value::known(pallas::Base::from(index as u64)),
+                    )?;
+                    table.assign_cell(|| "table_x", self.table_x, index, || Value::known(*x))?;
+                    table.assign_cell(|| "table_y", self.table_y, index, || Value::known(*y))?;
+                }
+                Ok(())
+            },
+        )
+    }
+
+    /// Load the generator table into the circuit.
     ///
     /// | table_idx |     table_x    |     table_y    | table_range_check_tag |
     /// -------------------------------------------------------------------
@@ -94,7 +139,11 @@ impl GeneratorTableConfig {
     /// |     1     |    X(S\[1\])   |    Y(S\[1\])   |           5           |
     /// |    ...    |       ...      |       ...      |           5           |
     /// |   2^5-1   | X(S\[2^5-1\])  | Y(S\[2^5-1\])  |           5           |
-    pub fn load(&self, layouter: &mut impl Layouter<pallas::Base>) -> Result<(), Error> {
+    pub fn load_with_tag(
+        &self,
+        table_range_check_tag: TableColumn,
+        layouter: &mut impl Layouter<pallas::Base>,
+    ) -> Result<(), Error> {
         layouter.assign_table(
             || "generator_table",
             |mut table| {
@@ -107,9 +156,10 @@ impl GeneratorTableConfig {
                     )?;
                     table.assign_cell(|| "table_x", self.table_x, index, || Value::known(*x))?;
                     table.assign_cell(|| "table_y", self.table_y, index, || Value::known(*y))?;
+
                     table.assign_cell(
                         || "table_range_check_tag",
-                        self.table_range_check_tag,
+                        table_range_check_tag,
                         index,
                         || Value::known(pallas::Base::zero()),
                     )?;
@@ -135,7 +185,7 @@ impl GeneratorTableConfig {
                         )?;
                         table.assign_cell(
                             || "table_range_check_tag",
-                            self.table_range_check_tag,
+                            table_range_check_tag,
                             new_index,
                             || Value::known(pallas::Base::from(4_u64)),
                         )?;
@@ -162,7 +212,7 @@ impl GeneratorTableConfig {
                         )?;
                         table.assign_cell(
                             || "table_range_check_tag",
-                            self.table_range_check_tag,
+                            table_range_check_tag,
                             new_index,
                             || Value::known(pallas::Base::from(5_u64)),
                         )?;
