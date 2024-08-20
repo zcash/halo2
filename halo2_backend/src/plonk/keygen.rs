@@ -4,6 +4,7 @@
 
 #![allow(clippy::int_plus_one)]
 
+use ff::{BatchInvert, WithSmallOrderMulGroup};
 use group::Curve;
 use halo2_middleware::ff::{Field, FromUniformBytes};
 use halo2_middleware::zal::impls::H2cEngine;
@@ -131,13 +132,63 @@ where
         .map(Polynomial::new_lagrange_from_vec)
         .collect();
 
-    // Compute l_0(X)
-    // TODO: this can be done more efficiently
-    // https://github.com/privacy-scaling-explorations/halo2/issues/269
-    let mut l0 = vk.domain.empty_lagrange();
-    l0[0] = C::Scalar::ONE;
-    let l0 = vk.domain.lagrange_to_coeff(l0);
-    let l0 = vk.domain.coeff_to_extended(l0);
+    // Compute L_0(X) in the extended co-domain.
+    // L_0(X) the 0th Lagrange polynomial in the original domain.
+    // Its representation in the original domain H = {1, g, g^2, ..., g^(n-1)}
+    // is [1, 0, ..., 0].
+    // We compute its represenation in the extended co-domain
+    // zH = {z, z*w, z*w^2, ... , z*w^(n*k - 1)}, where k is the extension factor
+    // of the domain, and z is the extended root such that w^k = g.
+    // We assume z = F::ZETA, a cubic root the field. This simplifies the computation.
+    //
+    // The computation uses the fomula:
+    // L_i(X) = g^i/n * (X^n -1)/(X-g^i)
+    // L_0(X) = 1/n * (X^n -1)/(X-1)
+    let l0 = {
+        let one = C::ScalarExt::ONE;
+        let zeta = <C::ScalarExt as WithSmallOrderMulGroup<3>>::ZETA;
+
+        let n: u64 = 1 << vk.domain.k();
+        let c = (C::ScalarExt::from(n)).invert().unwrap();
+        let mut l0 = vec![C::ScalarExt::ZERO; vk.domain.extended_len()];
+
+        let w = vk.domain.get_extended_omega();
+        let wn = w.pow_vartime(&[n]);
+        let zeta_n = match n % 3 {
+            1 => zeta,
+            2 => zeta * zeta,
+            _ => one,
+        };
+
+        // Compute denominators.
+        let mut acc = zeta;
+        l0.iter_mut().for_each(|e| {
+            *e = acc - one;
+            acc *= w;
+        });
+        l0.batch_invert();
+
+        // Compute numinators.
+        //  C * (zeta * w^i)^n = (C * zeta^n) * w^(i*n)
+        // We use w^k = g and g^n = 1 to save multiplications.
+        let k = 1 << (vk.domain.extended_k() - vk.domain.k());
+        let mut wn_powers = vec![zeta_n * c; k];
+        for i in 1..k {
+            wn_powers[i] = wn_powers[i - 1] * wn
+        }
+
+        parallelize(&mut l0, |e, mut index| {
+            for e in e {
+                *e *= wn_powers[index % k] - c;
+                index += 1;
+            }
+        });
+
+        Polynomial {
+            values: l0,
+            _marker: std::marker::PhantomData,
+        }
+    };
 
     // Compute l_blind(X) which evaluates to 1 for each blinding factor row
     // and 0 otherwise over the domain.
@@ -150,6 +201,7 @@ where
 
     // Compute l_last(X) which evaluates to 1 on the first inactive row (just
     // before the blinding factors) and 0 otherwise over the domain
+    // TODO L_0 method could be used here too.
     let mut l_last = vk.domain.empty_lagrange();
     l_last[params.n() as usize - vk.cs.blinding_factors() - 1] = C::Scalar::ONE;
     let l_last = vk.domain.lagrange_to_coeff(l_last);
