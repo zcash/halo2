@@ -18,9 +18,12 @@ use pasta_curves::{arithmetic::CurveAffine, pallas};
 use std::ops::Deref;
 
 /// `EccPointQ` can hold either a public or a private ECC Point
+/// (this structure is only used in tests)
 #[derive(Debug, Clone)]
 pub enum EccPointQ<'a> {
+    #[allow(dead_code)]
     PublicPoint(pallas::Affine),
+    #[allow(dead_code)]
     PrivatePoint(&'a NonIdentityEccPoint),
 }
 
