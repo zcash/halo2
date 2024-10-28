@@ -347,7 +347,7 @@ mod tests {
 
         let domain = CommitDomain::new("z.cash:ZSA-NoteCommit");
 
-        let mut os_rng = OsRng::default();
+        let mut os_rng = OsRng;
         let msg: Vec<bool> = (0..36).map(|_| os_rng.gen::<bool>()).collect();
 
         let rcm = pallas::Scalar::random(&mut os_rng);
