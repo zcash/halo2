@@ -20,9 +20,10 @@ use std::ops::Deref;
 /// `EccPointQ` can hold either a public or a private ECC Point
 /// (this structure is only used in tests)
 #[derive(Debug, Clone)]
-#[cfg_attr(test, allow(dead_code))]
 pub enum EccPointQ<'a> {
+    #[allow(dead_code)]
     PublicPoint(pallas::Affine),
+    #[allow(dead_code)]
     PrivatePoint(&'a NonIdentityEccPoint),
 }
 
