@@ -24,7 +24,7 @@ pub async fn prove_play(final_word: String, words_js: JsValue, params_ser: JsVal
 }
 ```
 
-While the specific inputs and their serialisations will depend on your circuit and webapp set up, it's useful to note the format in the specific case of Zordle since your use case will likely be similar:
+While the specific inputs and their serializations will depend on your circuit and webapp set up, it's useful to note the format in the specific case of Zordle since your use case will likely be similar:
 
 This function takes as input the `final_word` that the user aimed for, and the words they attempted to use (in the form of `words_js`). It also takes as input the parameters for the circuit, which are serialized in `params_ser`. We will expand on this in the [Params](#params) section below.
 
@@ -49,7 +49,7 @@ Similar to the prover, we take in input and output a boolean true/false indicati
 
 ### Params
 
-Additionally, both the prover and verifier functions input `params_ser`, a serialised form of the public parameters of the polynomial commitment scheme. These are passed in as input (instead of being regenerated in prove/verify functions) as a performance optimisation since these are constant based only on the circuit's value of `K`. We can store these separately on a static web server and pass them in as input to the WASM. To generate the binary serialised form of these (separately outside the WASM functions), you can run something like:
+Additionally, both the prover and verifier functions input `params_ser`, a serialized form of the public parameters of the polynomial commitment scheme. These are passed in as input (instead of being regenerated in prove/verify functions) as a performance optimization since these are constant based only on the circuit's value of `K`. We can store these separately on a static web server and pass them in as input to the WASM. To generate the binary serialised form of these (separately outside the WASM functions), you can run something like:
 
 ```rust,ignore
 fn write_params(K: u32) {
@@ -120,7 +120,7 @@ Note that `wasm-bindgen-rayon` library is not supported by Safari because it spa
 
 ## Debugging
 
-Often, you'll run into issues with your Rust code and see that the WASM execution errors with `Uncaught (in promise) RuntimeError: unreachable`, a wholly unhelpful error for debugging. This is because the code is compiled in release mode which strips out error messages as a performance optimisation. To debug, you can build the WASM package in debug mode using the flag `--dev` with `wasm-pack build`. This will build in debug mode, slowing down execution significantly but allowing you to see any runtime error messages in the browser console. Additionally, you can install the [`console_error_panic_hook`](https://github.com/rustwasm/console_error_panic_hook) crate (as is done by Zordle) to also get helpful debug messages for runtime panics.
+Often, you'll run into issues with your Rust code and see that the WASM execution errors with `Uncaught (in promise) RuntimeError: unreachable`, a wholly unhelpful error for debugging. This is because the code is compiled in release mode which strips out error messages as a performance optimization. To debug, you can build the WASM package in debug mode using the flag `--dev` with `wasm-pack build`. This will build in debug mode, slowing down execution significantly but allowing you to see any runtime error messages in the browser console. Additionally, you can install the [`console_error_panic_hook`](https://github.com/rustwasm/console_error_panic_hook) crate (as is done by Zordle) to also get helpful debug messages for runtime panics.
 
 ## Credits
 
