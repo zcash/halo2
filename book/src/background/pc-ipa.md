@@ -46,7 +46,7 @@ $\mathbf{a}^{(k)} := \mathbf{a},$ $\mathbf{G}^{(k)} := \mathbf{G}$ and
 $\mathbf{b}^{(k)} := \mathbf{b}.$ In each round $j = k, k-1, \cdots, 1$:
 
 * the prover computes two values $L_j$ and $R_j$ by taking some inner product of
-  $\mathbf{a}^{(j)}$ with $\mathbf{G}^{(j)}$ and $\mathbf{b}^{(j)}$. Note that are in some
+  $\mathbf{a}^{(j)}$ with $\mathbf{G}^{(j)}$ and $\mathbf{b}^{(j)}$. Note that they are in some
   sense "cross-terms": the lower half of $\mathbf{a}$ is used with the higher half of
   $\mathbf{G}$ and $\mathbf{b}$, and vice versa:
 
