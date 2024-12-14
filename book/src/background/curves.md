@@ -284,7 +284,7 @@ This is described in detail in the [Internet draft on Hashing to Elliptic Curves
 Several algorithms can be used depending on efficiency and security requirements. The
 framework used in the Internet Draft makes use of several functions:
 
-* ``hash_to_field``: takes a byte sequence input and maps it to a element in the base
+* ``hash_to_field``: takes a byte sequence input and maps it to an element in the base
   field $\mathbb{F}_p$
 * ``map_to_curve``: takes an $\mathbb{F}_p$ element and maps it to $E_p$.
 
