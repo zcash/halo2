@@ -1,6 +1,6 @@
 [package]
 name = "halo2_poseidon"
-version = "0.0.0"
+version = "0.1.0"
 authors = [
     "Jack Grigg <jack@electriccoin.co>",
     "Daira Emma Hopwood <daira@jacaranda.org>",
