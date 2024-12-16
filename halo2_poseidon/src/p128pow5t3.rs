@@ -1,4 +1,4 @@
-use halo2_proofs::arithmetic::Field;
+use ff::Field;
 use pasta_curves::{pallas::Base as Fp, vesta::Base as Fq};
 
 use super::{Mds, Spec};
@@ -73,9 +73,7 @@ mod tests {
         super::{fp, fq},
         Fp, Fq,
     };
-    use crate::poseidon::primitives::{
-        generate_constants, permute, ConstantLength, Hash, Mds, Spec,
-    };
+    use crate::{generate_constants, permute, ConstantLength, Hash, Mds, Spec};
 
     /// The same Poseidon specification as poseidon::P128Pow5T3, but constructed
     /// such that its constants will be generated at runtime.
@@ -257,7 +255,7 @@ mod tests {
         {
             let (round_constants, mds, _) = super::P128Pow5T3::constants();
 
-            for tv in crate::poseidon::primitives::test_vectors::fp::permute() {
+            for tv in crate::test_vectors::fp::permute() {
                 let mut state = [
                     Fp::from_repr(tv.initial_state[0]).unwrap(),
                     Fp::from_repr(tv.initial_state[1]).unwrap(),
@@ -275,7 +273,7 @@ mod tests {
         {
             let (round_constants, mds, _) = super::P128Pow5T3::constants();
 
-            for tv in crate::poseidon::primitives::test_vectors::fq::permute() {
+            for tv in crate::test_vectors::fq::permute() {
                 let mut state = [
                     Fq::from_repr(tv.initial_state[0]).unwrap(),
                     Fq::from_repr(tv.initial_state[1]).unwrap(),
@@ -293,7 +291,7 @@ mod tests {
 
     #[test]
     fn hash_test_vectors() {
-        for tv in crate::poseidon::primitives::test_vectors::fp::hash() {
+        for tv in crate::test_vectors::fp::hash() {
             let message = [
                 Fp::from_repr(tv.input[0]).unwrap(),
                 Fp::from_repr(tv.input[1]).unwrap(),
@@ -305,7 +303,7 @@ mod tests {
             assert_eq!(result.to_repr(), tv.output);
         }
 
-        for tv in crate::poseidon::primitives::test_vectors::fq::hash() {
+        for tv in crate::test_vectors::fq::hash() {
             let message = [
                 Fq::from_repr(tv.input[0]).unwrap(),
                 Fq::from_repr(tv.input[1]).unwrap(),

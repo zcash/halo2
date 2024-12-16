@@ -340,19 +340,20 @@ impl<
                 let initial_state = initial_state?;
 
                 // Load the input into this region.
-                let load_input_word = |i: usize| {
-                    let (cell, value) = match input.0[i].clone() {
+                let load_input_word = |(i, input_word): (usize, &Option<PaddedWord<F>>)| {
+                    let (cell, value) = match input_word {
                         Some(PaddedWord::Message(word)) => (word.cell(), word.value().copied()),
                         Some(PaddedWord::Padding(padding_value)) => {
+                            let value = Value::known(*padding_value);
                             let cell = region
                                 .assign_fixed(
                                     || format!("load pad_{}", i),
                                     config.rc_b[i],
                                     1,
-                                    || Value::known(padding_value),
+                                    || value,
                                 )?
                                 .cell();
-                            (cell, Value::known(padding_value))
+                            (cell, value)
                         }
                         _ => panic!("Input is not padded"),
                     };
@@ -366,7 +367,12 @@ impl<
 
                     Ok(StateWord(var))
                 };
-                let input: Result<Vec<_>, Error> = (0..RATE).map(load_input_word).collect();
+                let input: Result<Vec<_>, Error> = input
+                    .expose_inner()
+                    .iter()
+                    .enumerate()
+                    .map(load_input_word)
+                    .collect();
                 let input = input?;
 
                 // Constrain the output.
@@ -394,14 +400,8 @@ impl<
     }
 
     fn get_output(state: &State<Self::Word, WIDTH>) -> Squeezing<Self::Word, RATE> {
-        Squeezing(
-            state[..RATE]
-                .iter()
-                .map(|word| Some(word.clone()))
-                .collect::<Vec<_>>()
-                .try_into()
-                .unwrap(),
-        )
+        let vals = state[..RATE].to_vec();
+        Squeezing::init_full(vals.try_into().expect("correct length"))
     }
 }
 
@@ -687,7 +687,7 @@ mod tests {
                 .try_into()
                 .unwrap();
             let (round_constants, mds, _) = S::constants();
-            poseidon::permute::<_, S, WIDTH, RATE>(
+            poseidon::test_only_permute::<_, S, WIDTH, RATE>(
                 &mut expected_final_state,
                 &mds,
                 &round_constants,

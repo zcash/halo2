@@ -12,8 +12,8 @@ pub(crate) mod fq;
 pub(crate) mod grain;
 pub(crate) mod mds;
 
-#[cfg(test)]
-pub(crate) mod test_vectors;
+#[cfg(any(test, feature = "test-dependencies"))]
+pub mod test_vectors;
 
 mod p128pow5t3;
 pub use p128pow5t3::P128Pow5T3;
@@ -21,7 +21,7 @@ pub use p128pow5t3::P128Pow5T3;
 use grain::SboxType;
 
 /// The type used to hold permutation state.
-pub(crate) type State<F, const T: usize> = [F; T];
+pub type State<F, const T: usize> = [F; T];
 
 /// The type used to hold sponge rate.
 pub(crate) type SpongeRate<F, const RATE: usize> = [Option<F>; RATE];
@@ -81,6 +81,18 @@ pub fn generate_constants<
     let (mds, mds_inv) = mds::generate_mds::<F, T>(&mut grain, S::secure_mds());
 
     (round_constants, mds, mds_inv)
+}
+
+/// Runs the Poseidon permutation on the given state.
+///
+/// Exposed for testing purposes only.
+#[cfg(feature = "test-dependencies")]
+pub fn test_only_permute<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>(
+    state: &mut State<F, T>,
+    mds: &Mds<F, T>,
+    round_constants: &[[F; T]],
+) {
+    permute::<F, S, T, RATE>(state, mds, round_constants);
 }
 
 /// Runs the Poseidon permutation on the given state.
@@ -176,13 +188,79 @@ impl<F, const RATE: usize> SpongeMode for Squeezing<F, RATE> {}
 
 impl<F: fmt::Debug, const RATE: usize> Absorbing<F, RATE> {
     pub(crate) fn init_with(val: F) -> Self {
+        let mut state = Self::init_empty();
+        state.absorb(val).expect("state is not full");
+        state
+    }
+
+    /// Initializes an empty sponge in the absorbing state.
+    pub fn init_empty() -> Self {
         Self(
-            iter::once(Some(val))
-                .chain((1..RATE).map(|_| None))
+            (0..RATE)
+                .map(|_| None)
                 .collect::<Vec<_>>()
                 .try_into()
                 .unwrap(),
         )
+    }
+}
+
+impl<F, const RATE: usize> Absorbing<F, RATE> {
+    /// Attempts to absorb a value into the sponge state.
+    ///
+    /// Returns the value if it was not absorbed because the sponge is full.
+    pub fn absorb(&mut self, value: F) -> Result<(), F> {
+        for entry in self.0.iter_mut() {
+            if entry.is_none() {
+                *entry = Some(value);
+                return Ok(());
+            }
+        }
+        // Sponge is full.
+        Err(value)
+    }
+
+    /// Exposes the inner state of the sponge.
+    ///
+    /// This is a low-level API, requiring a detailed understanding of this specific
+    /// Poseidon implementation to use correctly and securely. It is exposed for use by
+    /// the circuit implementation in `halo2_gadgets`, and may be removed from the public
+    /// API if refactoring enables the circuit implementation to move into this crate.
+    pub fn expose_inner(&self) -> &SpongeRate<F, RATE> {
+        &self.0
+    }
+}
+
+impl<F: fmt::Debug, const RATE: usize> Squeezing<F, RATE> {
+    /// Initializes a full sponge in the squeezing state.
+    ///
+    /// This is a low-level API, requiring a detailed understanding of this specific
+    /// Poseidon implementation to use correctly and securely. It is exposed for use by
+    /// the circuit implementation in `halo2_gadgets`, and may be removed from the public
+    /// API if refactoring enables the circuit implementation to move into this crate.
+    pub fn init_full(vals: [F; RATE]) -> Self {
+        Self(
+            vals.into_iter()
+                .map(Some)
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap(),
+        )
+    }
+}
+
+impl<F, const RATE: usize> Squeezing<F, RATE> {
+    /// Attempts to squeeze a value from the sponge state.
+    ///
+    /// Returns `None` if the sponge is empty.
+    pub fn squeeze(&mut self) -> Option<F> {
+        for entry in self.0.iter_mut() {
+            if let Some(inner) = entry.take() {
+                return Some(inner);
+            }
+        }
+        // Sponge is empty.
+        None
     }
 }
 
