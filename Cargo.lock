@@ -845,7 +845,7 @@ dependencies = [
 
 [[package]]
 name = "halo2_gadgets"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "arrayvec",
  "bitvec",
@@ -874,7 +874,7 @@ checksum = "47716fe1ae67969c5e0b2ef826f32db8c3be72be325e1aa3c1951d06b5575ec5"
 
 [[package]]
 name = "halo2_poseidon"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "bitvec",
  "ff",
