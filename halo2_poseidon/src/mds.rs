@@ -1,3 +1,5 @@
+use alloc::vec::Vec;
+
 use ff::FromUniformBytes;
 
 use super::{grain::Grain, Mds};

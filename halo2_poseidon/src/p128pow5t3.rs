@@ -1,3 +1,5 @@
+use alloc::vec::Vec;
+
 use ff::Field;
 use pasta_curves::{pallas::Base as Fp, vesta::Base as Fq};
 
@@ -66,8 +68,10 @@ impl Spec<Fq, 3, 2> for P128Pow5T3 {
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec::Vec;
+    use core::marker::PhantomData;
+
     use ff::{Field, FromUniformBytes, PrimeField};
-    use std::marker::PhantomData;
 
     use super::{
         super::{fp, fq},
