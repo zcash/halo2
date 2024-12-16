@@ -15,3 +15,10 @@ readme = "README.md"
 categories = ["cryptography"]
 
 [dependencies]
+bitvec = "1"
+ff = "0.13"
+group = "0.13"
+pasta_curves = "0.5"
+
+[features]
+test-dependencies = []

@@ -26,6 +26,7 @@ arrayvec = "0.7.0"
 bitvec = "1"
 ff = "0.13"
 group = "0.13"
+halo2_poseidon = { version = "0.0", path = "../halo2_poseidon", default-features = false }
 halo2_proofs = { version = "0.3", path = "../halo2_proofs", default-features = false }
 lazy_static = "1"
 pasta_curves = "0.5"
@@ -40,6 +41,7 @@ plotters = { version = "0.3.0", default-features = false, optional = true }
 
 [dev-dependencies]
 criterion = "0.3"
+halo2_poseidon = { version = "0.0", path = "../halo2_poseidon", default-features = false, features = ["test-dependencies"] }
 proptest = "1.0.0"
 sinsemilla = { version = "0.1", features = ["test-dependencies"] }
 
