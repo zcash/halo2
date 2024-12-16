@@ -1,19 +1,19 @@
 //! Test vectors for [`OrchardNullifier`].
 
-pub(crate) struct PermuteTestVector {
-    pub(crate) initial_state: [[u8; 32]; 3],
-    pub(crate) final_state: [[u8; 32]; 3],
+pub struct PermuteTestVector {
+    pub initial_state: [[u8; 32]; 3],
+    pub final_state: [[u8; 32]; 3],
 }
 
-pub(crate) struct HashTestVector {
-    pub(crate) input: [[u8; 32]; 2],
-    pub(crate) output: [u8; 32],
+pub struct HashTestVector {
+    pub input: [[u8; 32]; 2],
+    pub output: [u8; 32],
 }
 
-pub(crate) mod fp {
+pub mod fp {
     use super::*;
 
-    pub(crate) fn permute() -> Vec<PermuteTestVector> {
+    pub fn permute() -> Vec<PermuteTestVector> {
         use PermuteTestVector as TestVector;
 
         // From https://github.com/zcash-hackworks/zcash-test-vectors/blob/master/orchard_poseidon/permute/fp.py
@@ -417,7 +417,7 @@ pub(crate) mod fp {
         ]
     }
 
-    pub(crate) fn hash() -> Vec<HashTestVector> {
+    pub fn hash() -> Vec<HashTestVector> {
         use HashTestVector as TestVector;
 
         // From https://github.com/zcash-hackworks/zcash-test-vectors/blob/master/orchard_poseidon/hash/fp.py
@@ -635,10 +635,10 @@ pub(crate) mod fp {
     }
 }
 
-pub(crate) mod fq {
+pub mod fq {
     use super::*;
 
-    pub(crate) fn permute() -> Vec<PermuteTestVector> {
+    pub fn permute() -> Vec<PermuteTestVector> {
         use PermuteTestVector as TestVector;
 
         // From https://github.com/zcash-hackworks/zcash-test-vectors/blob/master/orchard_poseidon/permute/fq.py
@@ -1042,7 +1042,7 @@ pub(crate) mod fq {
         ]
     }
 
-    pub(crate) fn hash() -> Vec<HashTestVector> {
+    pub fn hash() -> Vec<HashTestVector> {
         use HashTestVector as TestVector;
 
         // From https://github.com/zcash-hackworks/zcash-test-vectors/blob/master/orchard_poseidon/hash/fq.py
