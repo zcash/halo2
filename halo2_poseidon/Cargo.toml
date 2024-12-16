@@ -15,8 +15,8 @@ readme = "README.md"
 categories = ["cryptography"]
 
 [dependencies]
-bitvec = "1"
-ff = "0.13"
+bitvec = { version = "1", default-features = false }
+ff = { version = "0.13", default-features = false }
 group = "0.13"
 pasta_curves = "0.5"
 
