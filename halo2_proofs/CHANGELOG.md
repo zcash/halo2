@@ -189,7 +189,7 @@ All APIs that represented witnessed values as `Option<V>` now represent them as
     directly, and returns `VerificationStrategy::Output` instead of `Guard`.
   - `ConstraintSystem::enable_equality` and `ConstraintSystem::query_any` now
     take `Into<Column<Any>>` instead of `Column<Any>` as a parameter to avoid
-    excesive `.into()` usage.
+    excessive `.into()` usage.
   - `Error` has been overhauled:
     - `Error` now implements `std::fmt::Display` and `std::error::Error`.
     - `Error` no longer implements `PartialEq`. Tests can check for specific
