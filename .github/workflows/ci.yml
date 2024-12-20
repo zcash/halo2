@@ -20,7 +20,7 @@ jobs:
             extra_flags: --features nightly
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: prepare
         uses: ./.github/actions/prepare
       - name: Run tests
@@ -47,7 +47,7 @@ jobs:
             name_suffix: " with nightly features"
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: prepare
         uses: ./.github/actions/prepare
         with:
@@ -75,7 +75,7 @@ jobs:
           - wasm32-wasi
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: prepare
         uses: ./.github/actions/prepare
         with:
@@ -96,7 +96,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       # Check bitrot with stable (as we don't need benchmarks or the test-dev-graph
       # feature flag to work with MSRV).
       - uses: ./.github/actions/prepare
@@ -113,7 +113,7 @@ jobs:
     name: Book tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/prepare
       - name: cargo build
         uses: actions-rs/cargo@v1
@@ -131,7 +131,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       # Use stable for this to ensure that cargo-tarpaulin can be built.
       - id: prepare
         uses: ./.github/actions/prepare
@@ -159,7 +159,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/prepare
       - name: cargo fetch
         uses: actions-rs/cargo@v1
@@ -179,7 +179,7 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/prepare
       - run: rustup component add rustfmt
       - uses: actions-rs/cargo@v1
