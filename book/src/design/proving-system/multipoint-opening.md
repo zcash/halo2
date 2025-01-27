@@ -92,3 +92,4 @@ The multipoint opening optimization proceeds as such:
 8.  Sample random $x_4$ to keep $f(X)$ and `q_polys` linearly independent.
 9.  Construct `final_poly`, $$final\_poly(X) = f(X) + x_4 q_1(X) + x_4^2 q_2(X),$$
     which is the polynomial we commit to in the inner product argument.
+10. evaluate $final_poly(X)$ at $x_3$, and do ipa argument at the single point $x_3$
