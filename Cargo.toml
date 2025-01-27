@@ -4,4 +4,5 @@ members = [
     "halo2_gadgets",
     "halo2_poseidon",
     "halo2_proofs",
+    "secpq_curves",
 ]
