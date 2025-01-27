@@ -15,7 +15,7 @@ use super::{
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine},
     circuit::Value,
-    plonk::Assigned,
+    plonk::{multiset_equality, Assigned},
     poly::{
         self,
         commitment::{Blind, Params},
@@ -420,6 +420,34 @@ pub fn create_proof<
     // Sample theta challenge for keeping lookup columns linearly independent
     let theta: ChallengeTheta<_> = transcript.squeeze_challenge_scalar();
 
+    let multisets = instance_values
+        .iter()
+        .zip(instance_cosets.iter())
+        .zip(advice_values.iter())
+        .zip(advice_cosets.iter())
+        .map(
+            |(((instance_values, instance_cosets), advice_values), advice_cosets)| -> Vec<_> {
+                pk.vk
+                    .cs
+                    .multisets
+                    .iter()
+                    .map(|multiset| {
+                        multiset.compress_expressions(
+                            domain,
+                            &value_evaluator,
+                            theta,
+                            advice_values,
+                            &fixed_values,
+                            instance_values,
+                            advice_cosets,
+                            &fixed_cosets,
+                            instance_cosets,
+                        )
+                    })
+                    .collect::<Vec<_>>()
+            },
+        );
+
     let lookups: Vec<Vec<lookup::prover::Permuted<C, _>>> = instance_values
         .iter()
         .zip(instance_cosets.iter())
@@ -480,6 +508,27 @@ pub fn create_proof<
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    // Commit to multiset equality arguments.
+    let multisets: Vec<Vec<multiset_equality::prover::Committed<C, _>>> = multisets
+        .map(|multisets| -> Result<Vec<_>, _> {
+            // Construct and commit to products for each multiset
+            multisets
+                .into_iter()
+                .map(|multiset| {
+                    multiset.commit_product(
+                        pk,
+                        params,
+                        beta,
+                        &mut coset_evaluator,
+                        &mut rng,
+                        transcript,
+                    )
+                })
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    // Commit to lookups.
     let lookups: Vec<Vec<lookup::prover::Committed<C, _>>> = lookups
         .into_iter()
         .map(|lookups| -> Result<Vec<_>, _> {
@@ -529,6 +578,17 @@ pub fn create_proof<
         })
         .unzip();
 
+    let (multisets, multiset_expressions): (Vec<Vec<_>>, Vec<Vec<_>>) = multisets
+        .into_iter()
+        .map(|multisets| {
+            // Evaluate the h(X) polynomial's constraint system expressions for the multiset argument constraints, if any.
+            multisets
+                .into_iter()
+                .map(|p| p.construct(beta, l0, l_blind, l_last))
+                .unzip()
+        })
+        .unzip();
+
     let (lookups, lookup_expressions): (Vec<Vec<_>>, Vec<Vec<_>>) = lookups
         .into_iter()
         .map(|lookups| {
@@ -544,9 +604,13 @@ pub fn create_proof<
         .iter()
         .zip(instance_cosets.iter())
         .zip(permutation_expressions.into_iter())
+        .zip(multiset_expressions)
         .zip(lookup_expressions.into_iter())
         .flat_map(
-            |(((advice_cosets, instance_cosets), permutation_expressions), lookup_expressions)| {
+            |(
+                (((advice_cosets, instance_cosets), permutation_expressions), multiset_expressions),
+                lookup_expressions,
+            )| {
                 let fixed_cosets = &fixed_cosets;
                 iter::empty()
                     // Custom constraints
@@ -579,6 +643,8 @@ pub fn create_proof<
                     }))
                     // Permutation constraints, if any.
                     .chain(permutation_expressions.into_iter())
+                    // Multiset constraints, if any.
+                    .chain(multiset_expressions.into_iter().flatten())
                     // Lookup constraints, if any.
                     .chain(lookup_expressions.into_iter().flatten())
             },
@@ -663,6 +729,17 @@ pub fn create_proof<
         .map(|permutation| -> Result<_, _> { permutation.evaluate(pk, x, transcript) })
         .collect::<Result<Vec<_>, _>>()?;
 
+    // Evaluate the multisets, if any, at omega^i x.
+    let multisets: Vec<Vec<multiset_equality::prover::Evaluated<C>>> = multisets
+        .into_iter()
+        .map(|multisets| -> Result<Vec<_>, _> {
+            multisets
+                .into_iter()
+                .map(|p| p.evaluate(pk, x, transcript))
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
     // Evaluate the lookups, if any, at omega^i x.
     let lookups: Vec<Vec<lookup::prover::Evaluated<C>>> = lookups
         .into_iter()
@@ -674,52 +751,54 @@ pub fn create_proof<
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let instances = instance
-        .iter()
-        .zip(advice.iter())
-        .zip(permutations.iter())
-        .zip(lookups.iter())
-        .flat_map(|(((instance, advice), permutation), lookups)| {
-            iter::empty()
-                .chain(
-                    pk.vk
-                        .cs
-                        .instance_queries
-                        .iter()
-                        .map(move |&(column, at)| ProverQuery {
-                            point: domain.rotate_omega(*x, at),
-                            poly: &instance.instance_polys[column.index()],
-                            blind: Blind::default(),
-                        }),
-                )
-                .chain(
-                    pk.vk
-                        .cs
-                        .advice_queries
-                        .iter()
-                        .map(move |&(column, at)| ProverQuery {
-                            point: domain.rotate_omega(*x, at),
-                            poly: &advice.advice_polys[column.index()],
-                            blind: advice.advice_blinds[column.index()],
-                        }),
-                )
-                .chain(permutation.open(pk, x))
-                .chain(lookups.iter().flat_map(move |p| p.open(pk, x)).into_iter())
-        })
-        .chain(
-            pk.vk
-                .cs
-                .fixed_queries
-                .iter()
-                .map(|&(column, at)| ProverQuery {
-                    point: domain.rotate_omega(*x, at),
-                    poly: &pk.fixed_polys[column.index()],
-                    blind: Blind::default(),
-                }),
-        )
-        .chain(pk.permutation.open(x))
-        // We query the h(X) polynomial at x
-        .chain(vanishing.open(x));
+    let instances =
+        instance
+            .iter()
+            .zip(advice.iter())
+            .zip(permutations.iter())
+            .zip(multisets.iter())
+            .zip(lookups.iter())
+            .flat_map(
+                |((((instance, advice), permutation), multisets), lookups)| {
+                    iter::empty()
+                        .chain(pk.vk.cs.instance_queries.iter().map(move |&(column, at)| {
+                            ProverQuery {
+                                point: domain.rotate_omega(*x, at),
+                                poly: &instance.instance_polys[column.index()],
+                                blind: Blind::default(),
+                            }
+                        }))
+                        .chain(pk.vk.cs.advice_queries.iter().map(move |&(column, at)| {
+                            ProverQuery {
+                                point: domain.rotate_omega(*x, at),
+                                poly: &advice.advice_polys[column.index()],
+                                blind: advice.advice_blinds[column.index()],
+                            }
+                        }))
+                        .chain(permutation.open(pk, x))
+                        .chain(
+                            multisets
+                                .iter()
+                                .flat_map(move |p| p.open(pk, x))
+                                .into_iter(),
+                        )
+                        .chain(lookups.iter().flat_map(move |p| p.open(pk, x)).into_iter())
+                },
+            )
+            .chain(
+                pk.vk
+                    .cs
+                    .fixed_queries
+                    .iter()
+                    .map(|&(column, at)| ProverQuery {
+                        point: domain.rotate_omega(*x, at),
+                        poly: &pk.fixed_polys[column.index()],
+                        blind: Blind::default(),
+                    }),
+            )
+            .chain(pk.permutation.open(x))
+            // We query the h(X) polynomial at x
+            .chain(vanishing.open(x));
 
     multiopen::create_proof(params, rng, transcript, instances).map_err(|_| Error::Opening)
 }
