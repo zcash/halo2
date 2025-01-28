@@ -120,6 +120,8 @@ impl<C: CurveAffine> Evaluated<C> {
                         expression.evaluate(
                             &|scalar| scalar,
                             &|_| panic!("virtual selectors are removed during optimization"),
+                            #[cfg(feature = "unstable-dynamic-lookups")]
+                            &|_| panic!("virtual table tags are removed during optimization"),
                             &|query| fixed_evals[query.index],
                             &|query| advice_evals[query.index],
                             &|query| instance_evals[query.index],

@@ -11,6 +11,8 @@ use std::{
 use ff::{Field, PrimeField};
 use group::prime::PrimeGroup;
 
+#[cfg(feature = "unstable-dynamic-lookups")]
+use crate::plonk::{DynamicTable, TableTag};
 use crate::{
     circuit::{layouter::RegionColumn, Value},
     plonk::{
@@ -90,11 +92,21 @@ pub(crate) struct Layout {
     pub(crate) equality: Vec<(Column<Any>, usize, Column<Any>, usize)>,
     /// Selector assignments used for optimization pass
     pub(crate) selectors: Vec<Vec<bool>>,
+    /// A map between DynamicTable.index, and rows included.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    pub(crate) dynamic_tables_assignments: Vec<Vec<bool>>,
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    pub(crate) dynamic_tables: Vec<DynamicTable>,
 }
 
 impl Layout {
     /// Creates a empty layout
-    pub fn new(k: u32, n: usize, num_selectors: usize) -> Self {
+    pub fn new(
+        k: u32,
+        n: usize,
+        num_selectors: usize,
+        #[cfg(feature = "unstable-dynamic-lookups")] dynamic_tables: Vec<DynamicTable>,
+    ) -> Self {
         Layout {
             k,
             regions: vec![],
@@ -108,6 +120,10 @@ impl Layout {
             equality: vec![],
             /// Selector assignments used for optimization pass
             selectors: vec![vec![false; n]; num_selectors],
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            dynamic_tables_assignments: vec![vec![false; n]; dynamic_tables.len()],
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            dynamic_tables,
         }
     }
 
@@ -180,6 +196,20 @@ impl<F: Field> Assignment<F> for Layout {
         }
 
         self.update((*selector).into(), row);
+        Ok(())
+    }
+
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fn add_to_lookup(&mut self, table: TableTag, row: usize) -> Result<(), Error> {
+        self.dynamic_tables_assignments[table.0][row] = true;
+
+        for col_index in 0..self.dynamic_tables[table.0].columns.len() {
+            self.update(
+                (self.dynamic_tables[table.0].columns[col_index]).into(),
+                row,
+            );
+        }
+
         Ok(())
     }
 
@@ -262,7 +292,13 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
         // Collect the layout details.
         let mut cs = ConstraintSystem::default();
         let config = ConcreteCircuit::configure(&mut cs);
-        let mut layout = Layout::new(k, 1 << k, cs.num_selectors);
+        let mut layout = Layout::new(
+            k,
+            1 << k,
+            cs.num_selectors,
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            cs.dynamic_tables.clone(),
+        );
         ConcreteCircuit::FloorPlanner::synthesize(
             &mut layout,
             circuit,
@@ -271,6 +307,8 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
         )
         .unwrap();
         let (cs, _) = cs.compress_selectors(layout.selectors);
+        #[cfg(feature = "unstable-dynamic-lookups")]
+        let (cs, _) = cs.compress_dynamic_table_tags(layout.dynamic_tables_assignments);
 
         assert!((1 << k) >= cs.minimum_rows());
 

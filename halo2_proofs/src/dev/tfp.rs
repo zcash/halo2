@@ -3,6 +3,8 @@ use std::{fmt, marker::PhantomData};
 use ff::Field;
 use tracing::{debug, debug_span, span::EnteredSpan};
 
+#[cfg(feature = "unstable-dynamic-lookups")]
+use crate::plonk::TableTag;
 use crate::{
     circuit::{layouter::RegionLayouter, AssignedCell, Cell, Layouter, Region, Table, Value},
     plonk::{
@@ -234,6 +236,12 @@ impl<'r, F: Field> RegionLayouter<F> for TracingRegion<'r, F> {
         self.0.enable_selector(annotation, selector, offset)
     }
 
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fn add_to_lookup(&mut self, table: TableTag, offset: usize) -> Result<(), Error> {
+        debug!(target: "add_to_lookup", table = ?table, offset = ?offset);
+        self.0.add_to_lookup(table, offset)
+    }
+
     fn assign_advice<'v>(
         &'v mut self,
         annotation: &'v (dyn Fn() -> String + 'v),
@@ -381,6 +389,13 @@ impl<'cs, F: Field, CS: Assignment<F>> Assignment<F> for TracingAssignment<'cs, 
             debug!(target: "enable_selector", name = annotation, row = row);
         }
         self.cs.enable_selector(|| annotation, selector, row)
+    }
+
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fn add_to_lookup(&mut self, table: TableTag, row: usize) -> Result<(), Error> {
+        let _guard = debug_span!("positioned").entered();
+        debug!(target: "add_to_lookup", table = ?table, row = row);
+        self.cs.add_to_lookup(table, row)
     }
 
     fn query_instance(&self, column: Column<Instance>, row: usize) -> Result<Value<F>, Error> {
