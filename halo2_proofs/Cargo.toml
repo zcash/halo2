@@ -44,33 +44,33 @@ name = "fft"
 harness = false
 
 [dependencies]
-backtrace = { version = "0.3", optional = true }
-ff = "0.13"
-group = "0.13"
-pasta_curves = "0.5"
-rand_core = { version = "0.6", default-features = false }
-tracing = "0.1"
-blake2b_simd = "1"
-maybe-rayon = {version = "0.1.0", default-features = false}
+backtrace = { workspace = true, optional = true }
+ff = { workspace = true }
+group = { workspace = true }
+pasta_curves = { workspace = true }
+rand_core = { workspace = true }
+tracing = { workspace = true }
+blake2b_simd = { workspace = true }
+maybe-rayon = { workspace = true }
 
 # Developer tooling dependencies
-plotters = { version = "0.3.0", default-features = false, optional = true }
-tabbycat = { version = "0.1", features = ["attributes"], optional = true }
+plotters = { workspace = true, optional = true }
+tabbycat = { workspace = true, features = ["attributes"], optional = true }
 
 # Legacy circuit compatibility
-halo2_legacy_pdqsort = { version = "0.1.0", optional = true }
+halo2_legacy_pdqsort = { workspace = true, optional = true }
 
 [dev-dependencies]
-assert_matches = "1.5"
-criterion = "0.3"
-gumdrop = "0.8"
-proptest = "1"
-rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
+assert_matches = { workspace = true }
+criterion = { workspace = true }
+gumdrop = { workspace = true }
+proptest = { workspace = true }
+rand_core = { workspace = true, features = ["getrandom"] }
 
 # Indirect dev-dependencies that we pin to preserve MSRV in CI checks.
-dashmap = ">=5, <5.5.0" # dashmap 5.5.0 has MSRV 1.64
-image = ">=0.24, <0.24.5" # image 0.24.5 has MSRV 1.61
-tempfile = ">=3, <3.7.0" # tempfile 3.7.0 has MSRV 1.63
+dashmap = { workspace = true } # dashmap 5.5.0 has MSRV 1.64
+image = { workspace = true } # image 0.24.5 has MSRV 1.61
+tempfile = { workspace = true } # tempfile 3.7.0 has MSRV 1.63
 
 [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
 getrandom = { version = "0.2", features = ["js"] }

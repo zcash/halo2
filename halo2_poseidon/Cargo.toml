@@ -15,10 +15,10 @@ readme = "README.md"
 categories = ["cryptography"]
 
 [dependencies]
-bitvec = { version = "1", default-features = false }
-ff = { version = "0.13", default-features = false }
-group = "0.13"
-pasta_curves = "0.5"
+bitvec = { workspace = true }
+ff = { workspace = true }
+group = { workspace = true }
+pasta_curves = { workspace = true }
 
 [features]
 test-dependencies = []
