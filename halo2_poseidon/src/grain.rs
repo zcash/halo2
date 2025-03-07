@@ -69,13 +69,13 @@ impl<F: PrimeField> Grain<F> {
         let mut grain = Grain {
             state,
             next_bit: STATE,
-            _field: PhantomData::default(),
+            _field: PhantomData,
         };
 
         // Discard the first 160 bits.
         for _ in 0..20 {
             grain.load_next_8_bits();
-            grain.next_bit = STATE;
+            grain.next_bit = 0;
         }
 
         grain
