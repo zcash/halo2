@@ -6,6 +6,9 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- The dependency on `rand` is now without default features, fixing use of this crate
+  in `no_std` environments.
 
 ## [0.3.1] - 2024-12-16
 - `halo2_gadgets::poseidon::primitives` is now a re-export of the new `halo2_poseidon`
