@@ -357,6 +357,99 @@ fn test_roundtrip() {
     }
 }
 
+#[test]
+fn test_identical_queries() {
+    use assert_matches::assert_matches;
+    use group::Curve;
+    use rand_core::OsRng;
+
+    use super::commitment::{Blind, Params};
+    use crate::arithmetic::eval_polynomial;
+    use crate::pasta::{EqAffine, Fp};
+    use crate::transcript::Challenge255;
+
+    const K: u32 = 4;
+
+    let params: Params<EqAffine> = Params::new(K);
+    let domain = EvaluationDomain::new(1, K);
+    let rng = OsRng;
+
+    let mut ax = domain.empty_coeff();
+    for (i, a) in ax.iter_mut().enumerate() {
+        *a = Fp::from(10 + i as u64);
+    }
+
+    let mut bx = domain.empty_coeff();
+    for (i, a) in bx.iter_mut().enumerate() {
+        *a = Fp::from(100 + i as u64);
+    }
+
+    let mut cx = domain.empty_coeff();
+    for (i, a) in cx.iter_mut().enumerate() {
+        *a = Fp::from(100 + i as u64);
+    }
+
+    let blind = Blind(Fp::random(rng));
+
+    let a = params.commit(&ax, blind).to_affine();
+    let b = params.commit(&bx, blind).to_affine();
+    let c = params.commit(&cx, blind).to_affine();
+
+    let x = Fp::random(rng);
+    let y = Fp::random(rng);
+    let avx = eval_polynomial(&ax, x);
+    let bvx = eval_polynomial(&bx, x);
+    let bvx_bad = Fp::random(rng);
+    let cvy = eval_polynomial(&cx, y);
+
+    let mut transcript = crate::transcript::Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
+    create_proof(
+        &params,
+        rng,
+        &mut transcript,
+        std::iter::empty()
+            .chain(Some(ProverQuery {
+                point: x,
+                poly: &ax,
+                blind,
+            }))
+            .chain(Some(ProverQuery {
+                point: x,
+                poly: &bx,
+                blind,
+            }))
+            .chain(Some(ProverQuery {
+                point: y,
+                poly: &cx,
+                blind,
+            })),
+    )
+    .unwrap();
+    let proof = transcript.finalize();
+
+    {
+        let mut proof = &proof[..];
+
+        let mut transcript =
+            crate::transcript::Blake2bRead::<_, _, Challenge255<_>>::init(&mut proof);
+        let msm = params.empty_msm();
+
+        assert_matches!(
+            verify_proof(
+                &params,
+                &mut transcript,
+                std::iter::empty()
+                    .chain(Some(VerifierQuery::new_commitment(&a, x, avx)))
+                    .chain(Some(VerifierQuery::new_commitment(&b, x, bvx_bad))) // This is wrong.
+                    .chain(Some(VerifierQuery::new_commitment(&b, x, bvx)))
+                    .chain(Some(VerifierQuery::new_commitment(&c, y, cvy))),
+                msm,
+            ),
+            Err(Error::OpeningError)
+        );
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Query;
