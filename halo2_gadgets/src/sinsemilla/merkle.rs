@@ -359,7 +359,6 @@ pub mod tests {
                                     (sibling, &node)
                                 };
 
-                                use crate::sinsemilla::primitives as sinsemilla;
                                 let merkle_crh =
                                     sinsemilla::HashDomain::from_Q(TestHashDomain.Q().into());
 
@@ -540,7 +539,6 @@ pub mod tests {
                                     (sibling, &node)
                                 };
 
-                                use crate::sinsemilla::primitives as sinsemilla;
                                 let merkle_crh =
                                     sinsemilla::HashDomain::from_Q(TestHashDomain.Q().into());
 
