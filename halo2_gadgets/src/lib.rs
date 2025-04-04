@@ -30,4 +30,5 @@ pub mod sinsemilla;
 pub mod utilities;
 
 #[cfg(test)]
+/// Module used for circuit tests.
 pub mod tests;

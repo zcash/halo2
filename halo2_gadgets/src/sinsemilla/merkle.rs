@@ -171,6 +171,7 @@ where
 }
 
 #[cfg(test)]
+/// Sinsemilla Merkle tree tests.
 pub mod tests {
     use super::{
         chip::{MerkleChip, MerkleConfig},
