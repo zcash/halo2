@@ -171,6 +171,7 @@ where
 }
 
 #[cfg(test)]
+/// Sinsemilla Merkle tree tests.
 pub mod tests {
     use super::{
         chip::{MerkleChip, MerkleConfig},
@@ -359,7 +360,6 @@ pub mod tests {
                                     (sibling, &node)
                                 };
 
-                                use crate::sinsemilla::primitives as sinsemilla;
                                 let merkle_crh =
                                     sinsemilla::HashDomain::from_Q(TestHashDomain.Q().into());
 
@@ -540,7 +540,6 @@ pub mod tests {
                                     (sibling, &node)
                                 };
 
-                                use crate::sinsemilla::primitives as sinsemilla;
                                 let merkle_crh =
                                     sinsemilla::HashDomain::from_Q(TestHashDomain.Q().into());
 

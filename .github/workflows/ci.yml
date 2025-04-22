@@ -7,6 +7,7 @@ jobs:
     name: Test on ${{ matrix.os }}${{ matrix.name_suffix }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         stage: [stable, beta, nightly]
         os: [ubuntu-latest, windows-latest, macOS-latest]
@@ -96,6 +97,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      - run: sudo apt-get -y install libfontconfig1-dev
       # Check bitrot with stable (as we don't need benchmarks or the test-dev-graph
       # feature flag to work with MSRV).
       - uses: ./.github/actions/prepare
