@@ -4,10 +4,7 @@ use std::{env, fs, path::Path};
 
 use rand::rngs::OsRng;
 
-use pasta_curves::{
-    vesta::Affine,
-    {pallas, vesta},
-};
+use pasta_curves::{pallas, vesta};
 
 use halo2_proofs::{
     plonk::{
@@ -30,10 +27,10 @@ impl AsRef<[u8]> for Proof {
 }
 
 impl Proof {
-    /// Creates a proof for the given circuit and instances.
+    /// Creates a proof for a single empty instance of the given circuit.
     pub fn create<C>(
-        vk: &VerifyingKey<Affine>,
-        params: &Params<Affine>,
+        vk: &VerifyingKey<vesta::Affine>,
+        params: &Params<vesta::Affine>,
         circuit: C,
     ) -> Result<Self, plonk::Error>
     where
@@ -48,11 +45,11 @@ impl Proof {
         Ok(Proof(proof))
     }
 
-    /// Verifies this proof with the instances.
+    /// Verifies this proof.
     pub fn verify(
         &self,
-        vk: &VerifyingKey<Affine>,
-        params: &Params<Affine>,
+        vk: &VerifyingKey<vesta::Affine>,
+        params: &Params<vesta::Affine>,
     ) -> Result<(), plonk::Error> {
         let strategy = SingleVerifier::new(params);
         let mut transcript = Blake2bRead::init(&self.0[..]);
@@ -78,7 +75,7 @@ pub(crate) fn test_against_stored_circuit<C: Circuit<pallas::Base>>(
         .with_extension("rdata");
 
     // Setup phase: generate parameters, vk for the circuit.
-    let params: Params<Affine> = Params::new(11);
+    let params: Params<vesta::Affine> = Params::new(11);
     let vk = plonk::keygen_vk(&params, &circuit).unwrap();
 
     let vk_text = format!("{:#?}\n", vk.pinned());

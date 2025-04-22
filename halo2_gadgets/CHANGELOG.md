@@ -6,6 +6,9 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- `halo2_gadgets::utilities::lookup_range_check::PallasLookupRangeCheckConfig` which is
+  a shorthand for `LookupRangeCheckConfig` specialized with `pallas::Base` and `sinsemilla::K`
 
 ## [0.3.1] - 2024-12-16
 - `halo2_gadgets::poseidon::primitives` is now a re-export of the new `halo2_poseidon`

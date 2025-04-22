@@ -145,7 +145,6 @@ where
         layouter: &mut impl Layouter<pallas::Base>,
     ) -> Result<<Self as Chip<pallas::Base>>::Loaded, Error> {
         // Load the lookup table.
-
         config.generator_table.load(layouter)
     }
 

@@ -19,11 +19,11 @@ use std::ops::Deref;
 
 /// `EccPointQ` can hold either a public or a private ECC Point
 #[derive(Debug, Clone)]
-pub enum EccPointQ<'a> {
+enum EccPointQ {
     PublicPoint(pallas::Affine),
     #[allow(dead_code)]
     // We will use private point for ZSA
-    PrivatePoint(&'a NonIdentityEccPoint),
+    PrivatePoint(NonIdentityEccPoint),
 }
 
 impl<Hash, Commit, Fixed, Lookup> SinsemillaChip<Hash, Commit, Fixed, Lookup>
@@ -387,6 +387,7 @@ where
 
         Ok((x_a, y_a, zs))
     }
+
     #[allow(unused_variables)]
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
