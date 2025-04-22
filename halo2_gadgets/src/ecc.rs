@@ -597,7 +597,7 @@ pub(crate) mod tests {
         FixedPoints,
     };
     use crate::{
-        tests::test_utils::test_against_stored_circuit,
+        test_circuits::test_utils::test_against_stored_circuit,
         utilities::lookup_range_check::{PallasLookupRangeCheck, PallasLookupRangeCheckConfig},
     };
 

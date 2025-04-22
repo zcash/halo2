@@ -14,7 +14,7 @@ use halo2_proofs::{
     transcript::{Blake2bRead, Blake2bWrite},
 };
 
-const TEST_DATA_DIR: &str = "src/tests/circuit_data";
+const TEST_DATA_DIR: &str = "src/test_circuits/circuit_data";
 const GEN_ENV_VAR: &str = "CIRCUIT_TEST_GENERATE_NEW_DATA";
 
 #[derive(Clone, Debug)]

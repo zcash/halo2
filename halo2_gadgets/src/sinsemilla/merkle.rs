@@ -171,6 +171,7 @@ where
 }
 
 #[cfg(test)]
+/// Sinsemilla Merkle tree tests.
 pub mod tests {
     use super::{
         chip::{MerkleChip, MerkleConfig},
@@ -184,7 +185,7 @@ pub mod tests {
             tests::{TestCommitDomain, TestHashDomain},
             HashDomains,
         },
-        tests::test_utils::test_against_stored_circuit,
+        test_circuits::test_utils::test_against_stored_circuit,
         utilities::{
             i2lebsp,
             lookup_range_check::{PallasLookupRangeCheck, PallasLookupRangeCheckConfig},

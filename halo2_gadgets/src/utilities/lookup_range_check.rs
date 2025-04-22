@@ -94,9 +94,10 @@ pub trait LookupRangeCheck<F: PrimeFieldBits, const K: usize> {
         Self: Sized;
 
     #[cfg(test)]
-    // Fill `table_idx` and `table_range_check_tag`.
-    // This is only used in testing for now, since the Sinsemilla chip provides a pre-loaded table
-    // in the Orchard context.
+    /// Fill `table_idx` and `table_range_check_tag`.
+    ///
+    /// This is only used in testing for now, since the Sinsemilla chip provides a pre-loaded table
+    /// in the Orchard context.
     fn load(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error>;
 
     /// Constrain `x` to be a NUM_BITS word.
@@ -470,7 +471,7 @@ mod tests {
 
     use crate::{
         sinsemilla::primitives::K,
-        tests::test_utils::test_against_stored_circuit,
+        test_circuits::test_utils::test_against_stored_circuit,
         utilities::lookup_range_check::{
             LookupRangeCheck, PallasLookupRangeCheck, PallasLookupRangeCheckConfig,
         },
