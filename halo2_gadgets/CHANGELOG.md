@@ -7,8 +7,15 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 ### Added
+- `halo2_gadgets::utilities::lookup_range_check::LookupRangeCheck`
+- `halo2_gadgets::utilities::lookup_range_check::PallasLookupRangeCheck` which is
+  a shorthand for `LookupRangeCheck` specialized with `pallas::Base` and `sinsemilla::K`
 - `halo2_gadgets::utilities::lookup_range_check::PallasLookupRangeCheckConfig` which is
   a shorthand for `LookupRangeCheckConfig` specialized with `pallas::Base` and `sinsemilla::K`
+
+### Changed
+- `halo2_gadgets::utilities::lookup_range_check::witness_short` now takes a generic `Lookup`
+  instead of directly taking a `LookupRangeCheckConfig<F, K>` reference
 
 ## [0.3.1] - 2024-12-16
 - `halo2_gadgets::poseidon::primitives` is now a re-export of the new `halo2_poseidon`

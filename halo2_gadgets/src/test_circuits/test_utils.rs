@@ -45,7 +45,7 @@ impl Proof {
         Ok(Proof(proof))
     }
 
-    /// Verifies this proof.
+    /// Verifies this proof  with a single empty instance.
     pub fn verify(
         &self,
         vk: &VerifyingKey<vesta::Affine>,

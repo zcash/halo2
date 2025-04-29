@@ -58,7 +58,7 @@ impl<F: PrimeFieldBits> RangeConstrained<F, AssignedCell<F, F>> {
     }
 }
 
-/// Configuration that provides methods for a 10-bit lookup range check.
+/// Configuration that provides methods for a lookup range check.
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub struct LookupRangeCheckConfig<F: PrimeFieldBits, const K: usize> {
     q_lookup: Selector,
@@ -70,7 +70,7 @@ pub struct LookupRangeCheckConfig<F: PrimeFieldBits, const K: usize> {
 }
 
 /// Trait that provides common methods for a lookup range check.
-pub trait LookupRangeCheck<F: PrimeFieldBits, const K: usize> {
+pub trait LookupRangeCheck<F: PrimeFieldBits, const K: usize>: Eq + Copy + Debug {
     /// Returns a reference to the `LookupRangeCheckConfig` instance.
     fn config(&self) -> &LookupRangeCheckConfig<F, K>;
 
@@ -102,7 +102,7 @@ pub trait LookupRangeCheck<F: PrimeFieldBits, const K: usize> {
 
     /// Constrain `x` to be a NUM_BITS word.
     ///
-    /// `element` must have been assigned to `self.running_sum` at offset 0.
+    /// `element` must have been assigned to `self.config().running_sum` at offset 0.
     fn short_range_check(
         &self,
         region: &mut Region<'_, F>,
@@ -314,7 +314,6 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCh
         let q_running = meta.complex_selector();
         let q_bitshift = meta.selector();
 
-        // if the order of the creation makes a difference
         let config = LookupRangeCheckConfig {
             q_lookup,
             q_running,
@@ -328,7 +327,6 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCh
         meta.lookup(|meta| {
             let q_lookup = meta.query_selector(config.q_lookup);
             let q_running = meta.query_selector(config.q_running);
-            // if the order of the creation makes a difference
             let z_cur = meta.query_advice(config.running_sum, Rotation::cur());
             let one = Expression::Constant(F::ONE);
 
@@ -353,6 +351,7 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCh
                 q_short * short_word
             };
 
+            // Combine the running sum and short lookups:
             vec![(
                 q_lookup * (running_sum_lookup + short_lookup),
                 config.table_idx,
@@ -446,10 +445,7 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCh
 /// `PallasLookupRangeCheck` a shorthand for `LookupRangeCheck` specialized with `pallas::Base` and
 /// `sinsemilla::K` and used to improve readability. In addition, it extends
 /// the `LookupRangeCheck` with additional standard traits.
-pub trait PallasLookupRangeCheck:
-    LookupRangeCheck<pallas::Base, { sinsemilla::K }> + Eq + PartialEq + Clone + Copy + Debug
-{
-}
+pub trait PallasLookupRangeCheck: LookupRangeCheck<pallas::Base, { sinsemilla::K }> {}
 
 /// `PallasLookupRangeCheckConfig` is a shorthand for `LookupRangeCheckConfig` specialized with
 /// `pallas::Base` and `sinsemilla::K` and used to improve readability```
