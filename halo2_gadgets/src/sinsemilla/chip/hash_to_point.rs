@@ -18,6 +18,7 @@ use pasta_curves::{arithmetic::CurveAffine, pallas};
 use std::ops::Deref;
 
 /// `EccPointQ` can hold either a public or a private ECC Point
+#[cfg(test)]
 #[derive(Debug, Clone)]
 enum EccPointQ {
     PublicPoint(pallas::Affine),
@@ -56,7 +57,16 @@ where
 
         let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
 
-        self.check_hash_result(EccPointQ::PublicPoint(Q), message, x_a, y_a, zs_sum)
+        #[cfg(test)]
+        self.check_hash_result(EccPointQ::PublicPoint(Q), message, &x_a, &y_a);
+
+        x_a.value()
+            .zip(y_a.value())
+            .error_if_known_and(|(x_a, y_a)| x_a.is_zero_vartime() || y_a.is_zero_vartime())?;
+        Ok((
+            NonIdentityEccPoint::from_coordinates_unchecked(x_a.0, y_a),
+            zs_sum,
+        ))
     }
 
     #[allow(non_snake_case)]
@@ -388,9 +398,8 @@ where
         Ok((x_a, y_a, zs))
     }
 
-    #[allow(unused_variables)]
+    #[cfg(test)]
     #[allow(non_snake_case)]
-    #[allow(clippy::type_complexity)]
     fn check_hash_result(
         &self,
         Q: EccPointQ,
@@ -399,17 +408,9 @@ where
             { sinsemilla::K },
             { sinsemilla::C },
         >>::Message,
-        x_a: X<pallas::Base>,
-        y_a: AssignedCell<Assigned<pallas::Base>, pallas::Base>,
-        zs_sum: Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
-    ) -> Result<
-        (
-            NonIdentityEccPoint,
-            Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
-        ),
-        Error,
-    > {
-        #[cfg(test)]
+        x_a: &X<pallas::Base>,
+        y_a: &AssignedCell<Assigned<pallas::Base>, pallas::Base>,
+    ) {
         // Check equivalence to result from primitives::sinsemilla::hash_to_point
         {
             use crate::sinsemilla::primitives::{K, S_PERSONALIZATION};
@@ -456,14 +457,6 @@ where
                     expected_point.to_affine() == actual_point
                 });
         }
-
-        x_a.value()
-            .zip(y_a.value())
-            .error_if_known_and(|(x_a, y_a)| x_a.is_zero_vartime() || y_a.is_zero_vartime())?;
-        Ok((
-            NonIdentityEccPoint::from_coordinates_unchecked(x_a.0, y_a),
-            zs_sum,
-        ))
     }
 }
 
