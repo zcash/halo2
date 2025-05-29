@@ -133,13 +133,17 @@ type IntermediateSets<F, Q> = (
     Vec<Vec<F>>,
 );
 
-fn construct_intermediate_sets<F: Field + Ord, I, Q: Query<F>>(queries: I) -> IntermediateSets<F, Q>
+/// Returns `None` if `queries` contains two queries with the same point and commitment,
+/// but different evaluations.
+fn construct_intermediate_sets<F: Field + Ord, I, Q: Query<F>>(
+    queries: I,
+) -> Option<IntermediateSets<F, Q>>
 where
     I: IntoIterator<Item = Q> + Clone,
 {
     // Construct sets of unique commitments and corresponding information about
     // their queries.
-    let mut commitment_map: Vec<CommitmentData<Q::Eval, Q::Commitment>> = vec![];
+    let mut commitment_map: Vec<CommitmentData<Option<Q::Eval>, Q::Commitment>> = vec![];
 
     // Also construct mapping from a unique point to a point_index. This defines
     // an ordering on the points.
@@ -193,7 +197,7 @@ where
     // Initialise empty evals vec for each unique commitment
     for commitment_data in commitment_map.iter_mut() {
         let len = commitment_data.point_indices.len();
-        commitment_data.evals = vec![Q::Eval::default(); len];
+        commitment_data.evals = vec![None; len];
     }
 
     // Populate set_index, evals and points for each commitment using point_idx_sets
@@ -228,10 +232,34 @@ where
         for commitment_data in commitment_map.iter_mut() {
             if query.get_commitment() == commitment_data.commitment {
                 // Insert the eval using the ordering of the point_index_set
-                commitment_data.evals[point_index_in_set] = query.get_eval();
+                let eval = commitment_data
+                    .evals
+                    .get_mut(point_index_in_set)
+                    .expect("valid index");
+                if eval.is_none() {
+                    *eval = Some(query.get_eval());
+                } else {
+                    // Caller tried to provide two different evaluations for the same
+                    // commitment. Permitting this would be unsound.
+                    return None;
+                }
             }
         }
     }
+
+    let commitment_map = commitment_map
+        .into_iter()
+        .map(|commitment_data| CommitmentData {
+            commitment: commitment_data.commitment,
+            set_index: commitment_data.set_index,
+            point_indices: commitment_data.point_indices,
+            evals: commitment_data
+                .evals
+                .into_iter()
+                .map(|eval| eval.expect("logic ensures all evals are set"))
+                .collect(),
+        })
+        .collect();
 
     // Get actual points in each point set
     let mut point_sets: Vec<Vec<F>> = vec![Vec::new(); point_idx_sets.len()];
@@ -242,7 +270,7 @@ where
         }
     }
 
-    (commitment_map, point_sets)
+    Some((commitment_map, point_sets))
 }
 
 #[test]
@@ -480,7 +508,11 @@ mod tests {
 #[cfg(test)]
 mod proptests {
     use group::ff::FromUniformBytes;
-    use proptest::{collection::vec, prelude::*, sample::select};
+    use proptest::{
+        collection::{hash_set, vec},
+        prelude::*,
+        sample::select,
+    };
 
     use super::construct_intermediate_sets;
     use pasta_curves::Fp;
@@ -534,10 +566,16 @@ mod proptests {
     prop_compose! {
         // Mapping from column index to point index.
         fn arb_queries_inner(num_points: usize, num_cols: usize, num_queries: usize)(
-            col_indices in vec(select((0..num_cols).collect::<Vec<_>>()), num_queries),
-            point_indices in vec(select((0..num_points).collect::<Vec<_>>()), num_queries)
+            // Use a HashSet to ensure we sample distinct (column, point) queries.
+            queries in hash_set(
+                (
+                    select((0..num_cols).collect::<Vec<_>>()),
+                    select((0..num_points).collect::<Vec<_>>()),
+                ),
+                num_queries,
+            )
         ) -> Vec<(usize, usize)> {
-            col_indices.into_iter().zip(point_indices.into_iter()).collect()
+            queries.into_iter().collect()
         }
     }
 
@@ -569,13 +607,15 @@ mod proptests {
         fn test_intermediate_sets(
             (queries_1, queries_2) in compare_queries(8, 8, 16)
         ) {
-            let (commitment_data, _point_sets) = construct_intermediate_sets(queries_1);
+            let (commitment_data, _point_sets) = construct_intermediate_sets(queries_1)
+                .ok_or_else(|| TestCaseError::Fail("mismatched evals".into()))?;
             let set_indices = commitment_data.iter().map(|data| data.set_index).collect::<Vec<_>>();
             let point_indices = commitment_data.iter().map(|data| data.point_indices.clone()).collect::<Vec<_>>();
 
             // It shouldn't matter what the point or eval values are; we should get
             // the same exact point set indices and point indices again.
-            let (new_commitment_data, _new_point_sets) = construct_intermediate_sets(queries_2);
+            let (new_commitment_data, _new_point_sets) = construct_intermediate_sets(queries_2)
+                .ok_or_else(|| TestCaseError::Fail("mismatched evals".into()))?;
             let new_set_indices = new_commitment_data.iter().map(|data| data.set_index).collect::<Vec<_>>();
             let new_point_indices = new_commitment_data.iter().map(|data| data.point_indices.clone()).collect::<Vec<_>>();
 

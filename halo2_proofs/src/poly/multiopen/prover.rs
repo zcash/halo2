@@ -36,7 +36,12 @@ where
     let x_1: ChallengeX1<_> = transcript.squeeze_challenge_scalar();
     let x_2: ChallengeX2<_> = transcript.squeeze_challenge_scalar();
 
-    let (poly_map, point_sets) = construct_intermediate_sets(queries);
+    let (poly_map, point_sets) = construct_intermediate_sets(queries).ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "queries iterator contains mismatching evaluations",
+        )
+    })?;
 
     // Collapse openings at same point sets together into single openings using
     // x_1 challenge.
