@@ -13,6 +13,7 @@ use crate::transcript::{EncodedChallenge, TranscriptWrite};
 use ff::Field;
 use group::Curve;
 use rand_core::RngCore;
+use std::hash::Hash;
 use std::io;
 use std::marker::PhantomData;
 
@@ -130,6 +131,14 @@ pub struct PolynomialPointer<'a, C: CurveAffine> {
 impl<'a, C: CurveAffine> PartialEq for PolynomialPointer<'a, C> {
     fn eq(&self, other: &Self) -> bool {
         std::ptr::eq(self.poly, other.poly)
+    }
+}
+
+impl<'a, C: CurveAffine> Eq for PolynomialPointer<'a, C> {}
+
+impl<'a, C: CurveAffine> Hash for PolynomialPointer<'a, C> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self.poly, state)
     }
 }
 
