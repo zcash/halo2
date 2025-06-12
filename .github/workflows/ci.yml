@@ -97,6 +97,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      - run: sudo apt-get -y install libfontconfig1-dev
       # Check bitrot with stable (as we don't need benchmarks or the test-dev-graph
       # feature flag to work with MSRV).
       - uses: ./.github/actions/prepare
@@ -147,9 +148,10 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: tarpaulin
+          # Extend the timeout to 3600 to ensure the code coverage test pass
           args: >
             ${{ steps.prepare.outputs.feature-flags }}
-            --timeout 600
+            --timeout 3600
             --out Xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3.1.4

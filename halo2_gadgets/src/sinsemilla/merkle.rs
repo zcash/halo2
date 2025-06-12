@@ -171,6 +171,7 @@ where
 }
 
 #[cfg(test)]
+/// Sinsemilla Merkle tree tests.
 pub mod tests {
     use super::{
         chip::{MerkleChip, MerkleConfig},
@@ -184,7 +185,12 @@ pub mod tests {
             tests::{TestCommitDomain, TestHashDomain},
             HashDomains,
         },
-        utilities::{i2lebsp, lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
+        test_circuits::test_utils::test_against_stored_circuit,
+        utilities::{
+            i2lebsp,
+            lookup_range_check::{PallasLookupRangeCheck, PallasLookupRangeCheckConfig},
+            UtilitiesInstructions,
+        },
     };
 
     use group::ff::{Field, PrimeField, PrimeFieldBits};
@@ -196,26 +202,44 @@ pub mod tests {
     };
 
     use rand::{rngs::OsRng, RngCore};
-    use std::{convert::TryInto, iter};
+    use std::{convert::TryInto, iter, marker::PhantomData};
 
     const MERKLE_DEPTH: usize = 32;
 
     #[derive(Default)]
-    struct MyCircuit {
+    struct MyCircuit<Lookup: PallasLookupRangeCheck> {
         leaf: Value<pallas::Base>,
         leaf_pos: Value<u32>,
         merkle_path: Value<[pallas::Base; MERKLE_DEPTH]>,
+        _lookup_marker: PhantomData<Lookup>,
     }
 
-    impl Circuit<pallas::Base> for MyCircuit {
-        type Config = (
-            MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases>,
-            MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases>,
-        );
+    impl<Lookup: PallasLookupRangeCheck> MyCircuit<Lookup> {
+        fn new(
+            leaf: Value<pallas::Base>,
+            leaf_pos: Value<u32>,
+            merkle_path: Value<[pallas::Base; MERKLE_DEPTH]>,
+        ) -> Self {
+            Self {
+                leaf,
+                leaf_pos,
+                merkle_path,
+                _lookup_marker: PhantomData,
+            }
+        }
+    }
+
+    type MyConfig<Lookup> = (
+        MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases, Lookup>,
+        MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases, Lookup>,
+    );
+
+    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for MyCircuit<Lookup> {
+        type Config = MyConfig<Lookup>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            Self::default()
+            MyCircuit::new(Value::default(), Value::default(), Value::default())
         }
 
         fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
@@ -248,7 +272,7 @@ pub mod tests {
                 meta.lookup_table_column(),
             );
 
-            let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup.0);
+            let range_check = Lookup::configure(meta, advices[9], lookup.0);
 
             let sinsemilla_config_1 = SinsemillaChip::configure(
                 meta,
@@ -279,7 +303,7 @@ pub mod tests {
             mut layouter: impl Layouter<pallas::Base>,
         ) -> Result<(), Error> {
             // Load generator table (shared across both configs)
-            SinsemillaChip::<TestHashDomain, TestCommitDomain, TestFixedBases>::load(
+            SinsemillaChip::<TestHashDomain, TestCommitDomain, TestFixedBases, Lookup>::load(
                 config.0.sinsemilla_config.clone(),
                 &mut layouter,
             )?;
@@ -354,8 +378,7 @@ pub mod tests {
         }
     }
 
-    #[test]
-    fn merkle_chip() {
+    fn generate_circuit<Lookup: PallasLookupRangeCheck>() -> MyCircuit<Lookup> {
         let mut rng = OsRng;
 
         // Choose a random leaf and position
@@ -368,15 +391,25 @@ pub mod tests {
             .collect();
 
         // The root is provided as a public input in the Orchard circuit.
+        MyCircuit::new(
+            Value::known(leaf),
+            Value::known(pos),
+            Value::known(path.try_into().unwrap()),
+        )
+    }
 
-        let circuit = MyCircuit {
-            leaf: Value::known(leaf),
-            leaf_pos: Value::known(pos),
-            merkle_path: Value::known(path.try_into().unwrap()),
-        };
+    #[test]
+    fn merkle_chip() {
+        let circuit: MyCircuit<PallasLookupRangeCheckConfig> = generate_circuit();
 
         let prover = MockProver::run(11, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
+    }
+
+    #[test]
+    fn test_merkle_chip_against_stored_circuit() {
+        let circuit: MyCircuit<PallasLookupRangeCheckConfig> = generate_circuit();
+        test_against_stored_circuit(circuit, "merkle_chip", 4160);
     }
 
     #[cfg(feature = "test-dev-graph")]
@@ -388,7 +421,12 @@ pub mod tests {
         root.fill(&WHITE).unwrap();
         let root = root.titled("MerkleCRH Path", ("sans-serif", 60)).unwrap();
 
-        let circuit = MyCircuit::default();
+        let circuit: MyCircuit<PallasLookupRangeCheckConfig> = MyCircuit {
+            leaf: Value::default(),
+            leaf_pos: Value::default(),
+            merkle_path: Value::default(),
+            _lookup_marker: PhantomData,
+        };
         halo2_proofs::dev::CircuitLayout::default()
             .show_labels(false)
             .render(11, &circuit, &root)
