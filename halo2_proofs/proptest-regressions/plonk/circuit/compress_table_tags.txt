@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 88c88a92a8c1799fc2b2dac1a5b9b434fc9ac5e1218e5104a85c345124d8a937 # shrinks to tables = [TableDescription { index: 0, activations: [false] }, TableDescription { index: 1, activations: [true] }]
