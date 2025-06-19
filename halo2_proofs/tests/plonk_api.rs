@@ -19,6 +19,12 @@ use std::marker::PhantomData;
 
 #[test]
 fn plonk_api() {
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .with_ansi(false)
+        .without_time()
+        .init();
+
     const K: u32 = 5;
 
     /// This represents an advice column at a certain row in the ConstraintSystem

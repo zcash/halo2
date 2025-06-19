@@ -18,3 +18,21 @@ pub mod transcript;
 
 pub mod dev;
 mod helpers;
+
+#[cfg(feature = "counter")]
+extern crate lazy_static;
+
+#[cfg(feature = "counter")]
+use lazy_static::lazy_static;
+
+#[cfg(feature = "counter")]
+use std::sync::Mutex;
+
+#[cfg(feature = "counter")]
+use std::collections::BTreeMap;
+
+#[cfg(feature = "counter")]
+lazy_static! {
+    static ref FFT_COUNTER: Mutex<BTreeMap<usize, usize>> = Mutex::new(BTreeMap::new());
+    static ref MSM_COUNTER: Mutex<BTreeMap<usize, usize>> = Mutex::new(BTreeMap::new());
+}
