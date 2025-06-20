@@ -618,18 +618,18 @@ mod tests {
     use std::convert::TryInto;
     use std::marker::PhantomData;
 
-    struct PermuteCircuit<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize>(
+    struct MyPermuteCircuit<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize>(
         PhantomData<S>,
     );
 
     impl<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize> Circuit<Fp>
-        for PermuteCircuit<S, WIDTH, RATE>
+        for MyPermuteCircuit<S, WIDTH, RATE>
     {
         type Config = Pow5Config<Fp, WIDTH, RATE>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            PermuteCircuit::<S, WIDTH, RATE>(PhantomData)
+            MyPermuteCircuit::<S, WIDTH, RATE>(PhantomData)
         }
 
         fn configure(meta: &mut ConstraintSystem<Fp>) -> Pow5Config<Fp, WIDTH, RATE> {
@@ -719,12 +719,12 @@ mod tests {
     #[test]
     fn poseidon_permute() {
         let k = 6;
-        let circuit = PermuteCircuit::<OrchardNullifier, 3, 2>(PhantomData);
+        let circuit = MyPermuteCircuit::<OrchardNullifier, 3, 2>(PhantomData);
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
     }
 
-    struct HashCircuit<
+    struct MyHashCircuit<
         S: Spec<Fp, WIDTH, RATE>,
         const WIDTH: usize,
         const RATE: usize,
@@ -738,7 +738,7 @@ mod tests {
     }
 
     impl<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize, const L: usize>
-        Circuit<Fp> for HashCircuit<S, WIDTH, RATE, L>
+        Circuit<Fp> for MyHashCircuit<S, WIDTH, RATE, L>
     {
         type Config = Pow5Config<Fp, WIDTH, RATE>;
         type FloorPlanner = SimpleFloorPlanner;
@@ -824,7 +824,7 @@ mod tests {
             poseidon::Hash::<_, OrchardNullifier, ConstantLength<2>, 3, 2>::init().hash(message);
 
         let k = 6;
-        let circuit = HashCircuit::<OrchardNullifier, 3, 2, 2> {
+        let circuit = MyHashCircuit::<OrchardNullifier, 3, 2, 2> {
             message: Value::known(message),
             output: Value::known(output),
             _spec: PhantomData,
@@ -842,7 +842,7 @@ mod tests {
             poseidon::Hash::<_, OrchardNullifier, ConstantLength<3>, 3, 2>::init().hash(message);
 
         let k = 7;
-        let circuit = HashCircuit::<OrchardNullifier, 3, 2, 3> {
+        let circuit = MyHashCircuit::<OrchardNullifier, 3, 2, 3> {
             message: Value::known(message),
             output: Value::known(output),
             _spec: PhantomData,
@@ -884,7 +884,7 @@ mod tests {
                 .hash(message);
 
             let k = 6;
-            let circuit = HashCircuit::<OrchardNullifier, 3, 2, 2> {
+            let circuit = MyHashCircuit::<OrchardNullifier, 3, 2, 2> {
                 message: Value::known(message),
                 output: Value::known(output),
                 _spec: PhantomData,
@@ -905,7 +905,7 @@ mod tests {
             .titled("Poseidon Chip Layout", ("sans-serif", 60))
             .unwrap();
 
-        let circuit = HashCircuit::<OrchardNullifier, 3, 2, 2> {
+        let circuit = MyHashCircuit::<OrchardNullifier, 3, 2, 2> {
             message: Value::unknown(),
             output: Value::unknown(),
             _spec: PhantomData,

@@ -586,11 +586,11 @@ pub(crate) mod tests {
         }
     }
 
-    struct SinsemillaCircuit<Lookup: PallasLookupRangeCheck> {
+    struct MySinsemillaCircuit<Lookup: PallasLookupRangeCheck> {
         _lookup_marker: PhantomData<Lookup>,
     }
 
-    impl<Lookup: PallasLookupRangeCheck> SinsemillaCircuit<Lookup> {
+    impl<Lookup: PallasLookupRangeCheck> MySinsemillaCircuit<Lookup> {
         fn new() -> Self {
             Self {
                 _lookup_marker: PhantomData,
@@ -808,12 +808,12 @@ pub(crate) mod tests {
         }
     }
 
-    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for SinsemillaCircuit<Lookup> {
+    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for MySinsemillaCircuit<Lookup> {
         type Config = EccSinsemillaConfig<Lookup>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            SinsemillaCircuit::new()
+            MySinsemillaCircuit::new()
         }
 
         #[allow(non_snake_case)]
@@ -833,14 +833,14 @@ pub(crate) mod tests {
     #[test]
     fn sinsemilla_chip() {
         let k = 11;
-        let circuit = SinsemillaCircuit::<PallasLookupRangeCheckConfig>::new();
+        let circuit = MySinsemillaCircuit::<PallasLookupRangeCheckConfig>::new();
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
     }
 
     #[test]
     fn test_sinsemilla_chip_against_stored_circuit() {
-        let circuit = SinsemillaCircuit::<PallasLookupRangeCheckConfig>::new();
+        let circuit = MySinsemillaCircuit::<PallasLookupRangeCheckConfig>::new();
         test_against_stored_circuit(circuit, "sinsemilla_chip", 4576);
     }
 
@@ -854,17 +854,17 @@ pub(crate) mod tests {
         root.fill(&WHITE).unwrap();
         let root = root.titled("SinsemillaHash", ("sans-serif", 60)).unwrap();
 
-        let circuit = SinsemillaCircuit::<PallasLookupRangeCheckConfig>::new();
+        let circuit = MySinsemillaCircuit::<PallasLookupRangeCheckConfig>::new();
         halo2_proofs::dev::CircuitLayout::default()
             .render(11, &circuit, &root)
             .unwrap();
     }
 
-    struct SinsemillaCircuitWithHashFromPrivatePoint<Lookup: PallasLookupRangeCheck> {
+    struct MySinsemillaCircuitWithHashFromPrivatePoint<Lookup: PallasLookupRangeCheck> {
         _lookup_marker: PhantomData<Lookup>,
     }
 
-    impl<Lookup: PallasLookupRangeCheck> SinsemillaCircuitWithHashFromPrivatePoint<Lookup> {
+    impl<Lookup: PallasLookupRangeCheck> MySinsemillaCircuitWithHashFromPrivatePoint<Lookup> {
         fn new() -> Self {
             Self {
                 _lookup_marker: PhantomData,
@@ -873,13 +873,13 @@ pub(crate) mod tests {
     }
 
     impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base>
-        for SinsemillaCircuitWithHashFromPrivatePoint<Lookup>
+        for MySinsemillaCircuitWithHashFromPrivatePoint<Lookup>
     {
         type Config = EccSinsemillaConfig<Lookup>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            SinsemillaCircuitWithHashFromPrivatePoint::new()
+            MySinsemillaCircuitWithHashFromPrivatePoint::new()
         }
 
         #[allow(non_snake_case)]
@@ -900,7 +900,7 @@ pub(crate) mod tests {
     fn sinsemilla_with_hash_from_private_point_chip_4_5b() {
         let k = 11;
         let circuit =
-            SinsemillaCircuitWithHashFromPrivatePoint::<PallasLookupRangeCheck4_5BConfig>::new();
+            MySinsemillaCircuitWithHashFromPrivatePoint::<PallasLookupRangeCheck4_5BConfig>::new();
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
     }
@@ -908,7 +908,7 @@ pub(crate) mod tests {
     #[test]
     fn test_against_stored_sinsemilla_with_hash_from_private_point_chip_4_5b() {
         let circuit =
-            SinsemillaCircuitWithHashFromPrivatePoint::<PallasLookupRangeCheck4_5BConfig>::new();
+            MySinsemillaCircuitWithHashFromPrivatePoint::<PallasLookupRangeCheck4_5BConfig>::new();
         test_against_stored_circuit(circuit, "sinsemilla_with_private_init_chip_4_5b", 4672);
     }
 
@@ -923,7 +923,7 @@ pub(crate) mod tests {
         let root = root.titled("SinsemillaHash", ("sans-serif", 60)).unwrap();
 
         let circuit =
-            SinsemillaCircuitWithHashFromPrivatePoint::<PallasLookupRangeCheck4_5BConfig>::new();
+            MySinsemillaCircuitWithHashFromPrivatePoint::<PallasLookupRangeCheck4_5BConfig>::new();
         halo2_proofs::dev::CircuitLayout::default()
             .render(11, &circuit, &root)
             .unwrap();

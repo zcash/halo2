@@ -244,7 +244,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 
     /// Multiply the point by sign, using the q_mul_fixed_short gate.
     /// Constraints `sign` in {-1, 1}
-    pub fn assign_scalar_sign(
+    pub(crate) fn assign_scalar_sign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,
         sign: &AssignedCell<pallas::Base, pallas::Base>,
@@ -471,7 +471,7 @@ pub mod tests {
     }
 
     #[derive(Default)]
-    struct MagnitudeSignCircuit<Lookup: PallasLookupRangeCheck> {
+    struct MyMagnitudeSignCircuit<Lookup: PallasLookupRangeCheck> {
         magnitude: Value<pallas::Base>,
         sign: Value<pallas::Base>,
         // For test checking
@@ -480,17 +480,17 @@ pub mod tests {
     }
 
     impl<Lookup: PallasLookupRangeCheck> UtilitiesInstructions<pallas::Base>
-        for MagnitudeSignCircuit<Lookup>
+        for MyMagnitudeSignCircuit<Lookup>
     {
         type Var = AssignedCell<pallas::Base, pallas::Base>;
     }
 
-    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for MagnitudeSignCircuit<Lookup> {
+    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for MyMagnitudeSignCircuit<Lookup> {
         type Config = EccConfig<TestFixedBases, Lookup>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            MagnitudeSignCircuit {
+            MyMagnitudeSignCircuit {
                 magnitude: Value::unknown(),
                 sign: Value::unknown(),
                 magnitude_error: Value::unknown(),
@@ -584,41 +584,41 @@ pub mod tests {
         }
     }
 
-    impl<Lookup: PallasLookupRangeCheck> MagnitudeSignCircuit<Lookup> {
+    impl<Lookup: PallasLookupRangeCheck> MyMagnitudeSignCircuit<Lookup> {
         fn test_invalid_magnitude_sign() {
             // Magnitude larger than 64 bits should fail
             {
                 let circuits = [
                     // 2^64
-                    MagnitudeSignCircuit::<Lookup> {
+                    MyMagnitudeSignCircuit::<Lookup> {
                         magnitude: Value::known(pallas::Base::from_u128(1 << 64)),
                         sign: Value::known(pallas::Base::one()),
                         magnitude_error: Value::known(pallas::Base::from(1 << 1)),
                         _lookup_marker: PhantomData,
                     },
                     // -2^64
-                    MagnitudeSignCircuit::<Lookup> {
+                    MyMagnitudeSignCircuit::<Lookup> {
                         magnitude: Value::known(pallas::Base::from_u128(1 << 64)),
                         sign: Value::known(-pallas::Base::one()),
                         magnitude_error: Value::known(pallas::Base::from(1 << 1)),
                         _lookup_marker: PhantomData,
                     },
                     // 2^66
-                    MagnitudeSignCircuit::<Lookup> {
+                    MyMagnitudeSignCircuit::<Lookup> {
                         magnitude: Value::known(pallas::Base::from_u128(1 << 66)),
                         sign: Value::known(pallas::Base::one()),
                         magnitude_error: Value::known(pallas::Base::from(1 << 3)),
                         _lookup_marker: PhantomData,
                     },
                     // -2^66
-                    MagnitudeSignCircuit::<Lookup> {
+                    MyMagnitudeSignCircuit::<Lookup> {
                         magnitude: Value::known(pallas::Base::from_u128(1 << 66)),
                         sign: Value::known(-pallas::Base::one()),
                         magnitude_error: Value::known(pallas::Base::from(1 << 3)),
                         _lookup_marker: PhantomData,
                     },
                     // 2^254
-                    MagnitudeSignCircuit::<Lookup> {
+                    MyMagnitudeSignCircuit::<Lookup> {
                         magnitude: Value::known(pallas::Base::from_u128(1 << 127).square()),
                         sign: Value::known(pallas::Base::one()),
                         magnitude_error: Value::known(
@@ -627,7 +627,7 @@ pub mod tests {
                         _lookup_marker: PhantomData,
                     },
                     // -2^254
-                    MagnitudeSignCircuit::<Lookup> {
+                    MyMagnitudeSignCircuit::<Lookup> {
                         magnitude: Value::known(pallas::Base::from_u128(1 << 127).square()),
                         sign: Value::known(-pallas::Base::one()),
                         magnitude_error: Value::known(
@@ -682,7 +682,7 @@ pub mod tests {
             // Sign that is not +/- 1 should fail
             {
                 let magnitude_u64 = rand::random::<u64>();
-                let circuit: MagnitudeSignCircuit<Lookup> = MagnitudeSignCircuit {
+                let circuit: MyMagnitudeSignCircuit<Lookup> = MyMagnitudeSignCircuit {
                     magnitude: Value::known(pallas::Base::from(magnitude_u64)),
                     sign: Value::known(pallas::Base::zero()),
                     magnitude_error: Value::unknown(),
@@ -744,12 +744,12 @@ pub mod tests {
 
     #[test]
     fn invalid_magnitude_sign() {
-        MagnitudeSignCircuit::<PallasLookupRangeCheckConfig>::test_invalid_magnitude_sign();
+        MyMagnitudeSignCircuit::<PallasLookupRangeCheckConfig>::test_invalid_magnitude_sign();
     }
 
     #[test]
     fn invalid_magnitude_sign_4_5b() {
-        MagnitudeSignCircuit::<PallasLookupRangeCheck4_5BConfig>::test_invalid_magnitude_sign();
+        MyMagnitudeSignCircuit::<PallasLookupRangeCheck4_5BConfig>::test_invalid_magnitude_sign();
     }
 
     pub(crate) fn test_mul_sign<Lookup: PallasLookupRangeCheck>(
@@ -819,24 +819,24 @@ pub mod tests {
     }
 
     #[derive(Default)]
-    struct MulSignCircuit<Lookup: PallasLookupRangeCheck> {
+    struct MyMulSignCircuit<Lookup: PallasLookupRangeCheck> {
         base: Value<pallas::Affine>,
         sign: Value<pallas::Base>,
         _lookup_marker: PhantomData<Lookup>,
     }
 
     impl<Lookup: PallasLookupRangeCheck> UtilitiesInstructions<pallas::Base>
-        for MulSignCircuit<Lookup>
+        for MyMulSignCircuit<Lookup>
     {
         type Var = AssignedCell<pallas::Base, pallas::Base>;
     }
 
-    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for MulSignCircuit<Lookup> {
+    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for MyMulSignCircuit<Lookup> {
         type Config = EccConfig<TestFixedBases, Lookup>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            MulSignCircuit {
+            MyMulSignCircuit {
                 base: Value::unknown(),
                 sign: Value::unknown(),
                 _lookup_marker: PhantomData,
@@ -900,12 +900,12 @@ pub mod tests {
         }
     }
 
-    impl<Lookup: PallasLookupRangeCheck> MulSignCircuit<Lookup> {
+    impl<Lookup: PallasLookupRangeCheck> MyMulSignCircuit<Lookup> {
         fn test_invalid_magnitude_sign() {
             // Sign that is not +/- 1 should fail
             // Generate a random non-identity point
             let point = pallas::Point::random(rand::rngs::OsRng);
-            let circuit: MulSignCircuit<Lookup> = MulSignCircuit {
+            let circuit: MyMulSignCircuit<Lookup> = MyMulSignCircuit {
                 base: Value::known(point.to_affine()),
                 sign: Value::known(pallas::Base::zero()),
                 _lookup_marker: PhantomData,
@@ -954,10 +954,10 @@ pub mod tests {
 
     #[test]
     fn invalid_sign_in_mul_sign() {
-        MulSignCircuit::<PallasLookupRangeCheckConfig>::test_invalid_magnitude_sign();
+        MyMulSignCircuit::<PallasLookupRangeCheckConfig>::test_invalid_magnitude_sign();
     }
     #[test]
     fn invalid_sign_in_mul_sign_4_5b() {
-        MulSignCircuit::<PallasLookupRangeCheck4_5BConfig>::test_invalid_magnitude_sign();
+        MyMulSignCircuit::<PallasLookupRangeCheck4_5BConfig>::test_invalid_magnitude_sign();
     }
 }

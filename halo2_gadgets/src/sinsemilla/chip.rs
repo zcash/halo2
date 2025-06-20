@@ -23,7 +23,7 @@ use halo2_proofs::{
 };
 use pasta_curves::pallas;
 
-mod generator_table;
+pub(crate) mod generator_table;
 use generator_table::GeneratorTableConfig;
 
 mod hash_to_point;
@@ -153,9 +153,7 @@ where
         layouter: &mut impl Layouter<pallas::Base>,
     ) -> Result<<Self as Chip<pallas::Base>>::Loaded, Error> {
         // Load the lookup table.
-        config
-            .generator_table
-            .load(config.lookup_config.table_range_check_tag(), layouter)
+        config.generator_table.load(config.lookup_config, layouter)
     }
 
     /// Creates the Sinsemilla chip
@@ -285,6 +283,7 @@ where
 
             Constraints::with_selector(q_s1, [("Secant line", secant_line), ("y check", y_check)])
         });
+
         config
     }
 }

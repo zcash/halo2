@@ -10,9 +10,9 @@ use std::{convert::TryInto, fmt::Debug, marker::PhantomData};
 
 use ff::PrimeFieldBits;
 
+use crate::sinsemilla::{chip::generator_table::GeneratorTableConfig, primitives as sinsemilla};
 use pasta_curves::pallas;
-
-use crate::sinsemilla::primitives as sinsemilla;
+use sinsemilla::SINSEMILLA_S;
 
 use super::*;
 
@@ -58,7 +58,7 @@ impl<F: PrimeFieldBits> RangeConstrained<F, AssignedCell<F, F>> {
     }
 }
 
-/// Configuration that provides methods for a 10-bit lookup range check.
+/// Configuration that provides methods for a lookup range check.
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub struct LookupRangeCheckConfig<F: PrimeFieldBits, const K: usize> {
     q_lookup: Selector,
@@ -93,15 +93,19 @@ pub trait LookupRangeCheck<F: PrimeFieldBits, const K: usize>: Eq + Copy + Debug
     where
         Self: Sized;
 
-    /// Returns the table column that contains the range check tag.
-    fn table_range_check_tag(&self) -> Option<TableColumn>;
+    /// Load the generator table into the circuit.
+    fn load(
+        &self,
+        generator_table_config: &GeneratorTableConfig,
+        layouter: &mut impl Layouter<pallas::Base>,
+    ) -> Result<(), Error>;
 
     #[cfg(test)]
     /// Fill `table_idx` and `table_range_check_tag`.
     ///
     /// This is only used in testing for now, since the Sinsemilla chip provides a pre-loaded table
     /// in the Orchard context.
-    fn load(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error>;
+    fn load_range_check_table(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error>;
 
     /// Constrain `x` to be a NUM_BITS word.
     ///
@@ -382,15 +386,52 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCh
         config
     }
 
-    fn table_range_check_tag(&self) -> Option<TableColumn> {
-        None
+    /// Load the generator table into the circuit.
+    ///
+    /// | table_idx |     table_x    |     table_y    |
+    /// ------------------------------------------------
+    /// |     0     |    X(S\[0\])   |    Y(S\[0\])   |
+    /// |     1     |    X(S\[1\])   |    Y(S\[1\])   |
+    /// |    ...    |      ...       |       ...      |
+    /// |   2^10-1  | X(S\[2^10-1\]) | Y(S\[2^10-1\]) |
+    fn load(
+        &self,
+        generator_table_config: &GeneratorTableConfig,
+        layouter: &mut impl Layouter<pallas::Base>,
+    ) -> Result<(), Error> {
+        layouter.assign_table(
+            || "generator_table",
+            |mut table| {
+                for (index, (x, y)) in SINSEMILLA_S.iter().enumerate() {
+                    table.assign_cell(
+                        || "table_idx",
+                        generator_table_config.table_idx,
+                        index,
+                        || Value::known(pallas::Base::from(index as u64)),
+                    )?;
+                    table.assign_cell(
+                        || "table_x",
+                        generator_table_config.table_x,
+                        index,
+                        || Value::known(*x),
+                    )?;
+                    table.assign_cell(
+                        || "table_y",
+                        generator_table_config.table_y,
+                        index,
+                        || Value::known(*y),
+                    )?;
+                }
+                Ok(())
+            },
+        )
     }
 
     #[cfg(test)]
     // Fill `table_idx` and `table_range_check_tag`.
     // This is only used in testing for now, since the Sinsemilla chip provides a pre-loaded table
     // in the Orchard context.
-    fn load(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error> {
+    fn load_range_check_table(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error> {
         layouter.assign_table(
             || "table_idx",
             |mut table| {
@@ -608,15 +649,121 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K>
         Self::configure_with_tag(meta, running_sum, table_idx, table_range_check_tag)
     }
 
-    fn table_range_check_tag(&self) -> Option<TableColumn> {
-        Some(self.table_range_check_tag)
+    /// Load the generator table into the circuit.
+    ///
+    /// | table_idx |     table_x    |     table_y    | table_range_check_tag |
+    /// -------------------------------------------------------------------
+    /// |     0     |    X(S\[0\])   |    Y(S\[0\])   |           0           |
+    /// |     1     |    X(S\[1\])   |    Y(S\[1\])   |           0           |
+    /// |    ...    |      ...       |       ...      |           0           |
+    /// |   2^10-1  | X(S\[2^10-1\]) | Y(S\[2^10-1\]) |           0           |
+    /// |     0     |    X(S\[0\])   |    Y(S\[0\])   |           4           |
+    /// |     1     |    X(S\[1\])   |    Y(S\[1\])   |           4           |
+    /// |    ...    |       ...      |       ...      |           4           |
+    /// |   2^4-1   | X(S\[2^4-1\])  | Y(S\[2^4-1\])  |           4           |
+    /// |     0     |    X(S\[0\])   |    Y(S\[0\])   |           5           |
+    /// |     1     |    X(S\[1\])   |    Y(S\[1\])   |           5           |
+    /// |    ...    |       ...      |       ...      |           5           |
+    /// |   2^5-1   | X(S\[2^5-1\])  | Y(S\[2^5-1\])  |           5           |
+    fn load(
+        &self,
+        generator_table_config: &GeneratorTableConfig,
+        layouter: &mut impl Layouter<pallas::Base>,
+    ) -> Result<(), Error> {
+        layouter.assign_table(
+            || "generator_table",
+            |mut table| {
+                for (index, (x, y)) in SINSEMILLA_S.iter().enumerate() {
+                    table.assign_cell(
+                        || "table_idx",
+                        generator_table_config.table_idx,
+                        index,
+                        || Value::known(pallas::Base::from(index as u64)),
+                    )?;
+                    table.assign_cell(
+                        || "table_x",
+                        generator_table_config.table_x,
+                        index,
+                        || Value::known(*x),
+                    )?;
+                    table.assign_cell(
+                        || "table_y",
+                        generator_table_config.table_y,
+                        index,
+                        || Value::known(*y),
+                    )?;
+
+                    table.assign_cell(
+                        || "table_range_check_tag",
+                        self.table_range_check_tag,
+                        index,
+                        || Value::known(pallas::Base::zero()),
+                    )?;
+                    if index < (1 << 4) {
+                        let new_index = index + (1 << sinsemilla::K);
+                        table.assign_cell(
+                            || "table_idx",
+                            generator_table_config.table_idx,
+                            new_index,
+                            || Value::known(pallas::Base::from(index as u64)),
+                        )?;
+                        table.assign_cell(
+                            || "table_x",
+                            generator_table_config.table_x,
+                            new_index,
+                            || Value::known(*x),
+                        )?;
+                        table.assign_cell(
+                            || "table_y",
+                            generator_table_config.table_y,
+                            new_index,
+                            || Value::known(*y),
+                        )?;
+                        table.assign_cell(
+                            || "table_range_check_tag",
+                            self.table_range_check_tag,
+                            new_index,
+                            || Value::known(pallas::Base::from(4_u64)),
+                        )?;
+                    }
+                    if index < (1 << 5) {
+                        let new_index = index + (1 << 10) + (1 << 4);
+                        table.assign_cell(
+                            || "table_idx",
+                            generator_table_config.table_idx,
+                            new_index,
+                            || Value::known(pallas::Base::from(index as u64)),
+                        )?;
+                        table.assign_cell(
+                            || "table_x",
+                            generator_table_config.table_x,
+                            new_index,
+                            || Value::known(*x),
+                        )?;
+                        table.assign_cell(
+                            || "table_y",
+                            generator_table_config.table_y,
+                            new_index,
+                            || Value::known(*y),
+                        )?;
+                        table.assign_cell(
+                            || "table_range_check_tag",
+                            self.table_range_check_tag,
+                            new_index,
+                            || Value::known(pallas::Base::from(5_u64)),
+                        )?;
+                    }
+                }
+                Ok(())
+            },
+        )
     }
 
     #[cfg(test)]
     // Fill `table_idx` and `table_range_check_tag`.
     // This is only used in testing for now, since the Sinsemilla chip provides a pre-loaded table
     // in the Orchard context.
-    fn load(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error> {
+    fn load_range_check_table(&self, layouter: &mut impl Layouter<F>) -> Result<(), Error> {
         layouter.assign_table(
             || "table_idx",
             |mut table| {
@@ -754,7 +901,7 @@ mod tests {
             mut layouter: impl Layouter<F>,
         ) -> Result<(), Error> {
             // Load table_idx
-            config.load(&mut layouter)?;
+            config.load_range_check_table(&mut layouter)?;
 
             // Lookup constraining element to be no longer than num_words * K bits.
             let elements_and_expected_final_zs = [
@@ -877,7 +1024,7 @@ mod tests {
             mut layouter: impl Layouter<F>,
         ) -> Result<(), Error> {
             // Load table_idx
-            config.load(&mut layouter)?;
+            config.load_range_check_table(&mut layouter)?;
 
             // Lookup constraining element to be no longer than num_bits.
             config.witness_short_check(

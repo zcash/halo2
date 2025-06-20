@@ -12,10 +12,16 @@ and this project adheres to Rust's notion of
   a shorthand for `LookupRangeCheck` specialized with `pallas::Base` and `sinsemilla::K`
 - `halo2_gadgets::utilities::lookup_range_check::PallasLookupRangeCheckConfig` which is
   a shorthand for `LookupRangeCheckConfig` specialized with `pallas::Base` and `sinsemilla::K`
+- `halo2_gadgets::ecc::Point::{mul_sign, new_from_constant}`
+- `halo2_gadgets::sinsemilla::CommitDomain::{blinding_factor, hash_with_private_init, q_init}`
+- `halo2_gadgets::utilities::cond_swap::CondSwapChip::{mux_on_points, mux_on_non_identity_points}`
 
 ### Changed
 - `halo2_gadgets::utilities::lookup_range_check::witness_short` now takes a generic `Lookup`
   instead of directly taking a `LookupRangeCheckConfig<F, K>` reference
+- `halo2_gadgets::sinsemilla::merkle::chip::MerkleConfig::cond_swap_config` is now public
+- `halo2_gadgets::sinsemilla::chip::SinsemillaChip::configure` has a new input
+  `init_from_private_point` to enable the evaluation of Sinsemilla hash from a private point.
 
 ## [0.3.1] - 2024-12-16
 - `halo2_gadgets::poseidon::primitives` is now a re-export of the new `halo2_poseidon`

@@ -317,13 +317,13 @@ mod tests {
     #[test]
     fn cond_swap() {
         #[derive(Default)]
-        struct CondSwapCircuit<F: Field> {
+        struct MyCondSwapCircuit<F: Field> {
             a: Value<F>,
             b: Value<F>,
             swap: Value<bool>,
         }
 
-        impl<F: PrimeField> Circuit<F> for CondSwapCircuit<F> {
+        impl<F: PrimeField> Circuit<F> for MyCondSwapCircuit<F> {
             type Config = CondSwapConfig;
             type FloorPlanner = SimpleFloorPlanner;
 
@@ -380,7 +380,7 @@ mod tests {
 
         // Test swap case
         {
-            let circuit: CondSwapCircuit<Base> = CondSwapCircuit {
+            let circuit: MyCondSwapCircuit<Base> = MyCondSwapCircuit {
                 a: Value::known(Base::random(rng)),
                 b: Value::known(Base::random(rng)),
                 swap: Value::known(true),
@@ -391,7 +391,7 @@ mod tests {
 
         // Test non-swap case
         {
-            let circuit: CondSwapCircuit<Base> = CondSwapCircuit {
+            let circuit: MyCondSwapCircuit<Base> = MyCondSwapCircuit {
                 a: Value::known(Base::random(rng)),
                 b: Value::known(Base::random(rng)),
                 swap: Value::known(false),
@@ -428,20 +428,20 @@ mod tests {
         }
 
         #[derive(Default)]
-        struct MuxCircuit<Lookup: PallasLookupRangeCheck> {
+        struct MyMuxCircuit<Lookup: PallasLookupRangeCheck> {
             left_point: Value<EpAffine>,
             right_point: Value<EpAffine>,
             choice: Value<pallas::Base>,
             _lookup_marker: PhantomData<Lookup>,
         }
 
-        impl<Lookup: PallasLookupRangeCheck> MuxCircuit<Lookup> {
+        impl<Lookup: PallasLookupRangeCheck> MyMuxCircuit<Lookup> {
             fn new(
                 left_point: Value<EpAffine>,
                 right_point: Value<EpAffine>,
                 choice: Value<pallas::Base>,
             ) -> Self {
-                MuxCircuit {
+                MyMuxCircuit {
                     left_point,
                     right_point,
                     choice,
@@ -450,12 +450,12 @@ mod tests {
             }
         }
 
-        impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for MuxCircuit<Lookup> {
+        impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for MyMuxCircuit<Lookup> {
             type Config = MuxConfig<Lookup>;
             type FloorPlanner = SimpleFloorPlanner;
 
             fn without_witnesses(&self) -> Self {
-                MuxCircuit::<Lookup>::new(Value::default(), Value::default(), Value::default())
+                MyMuxCircuit::<Lookup>::new(Value::default(), Value::default(), Value::default())
             }
 
             fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
@@ -597,7 +597,7 @@ mod tests {
             }
         }
 
-        impl<Lookup: PallasLookupRangeCheck> MuxCircuit<Lookup> {
+        impl<Lookup: PallasLookupRangeCheck> MyMuxCircuit<Lookup> {
             fn test_mux_circuits() {
                 // Test different circuits
                 let mut circuits = vec![];
@@ -610,7 +610,7 @@ mod tests {
                     };
                     let left_point = pallas::Point::random(OsRng).to_affine();
                     let right_point = pallas::Point::random(OsRng).to_affine();
-                    circuits.push(MuxCircuit::<Lookup> {
+                    circuits.push(MyMuxCircuit::<Lookup> {
                         left_point: Value::known(left_point),
                         right_point: Value::known(right_point),
                         choice: Value::known(choice_value),
@@ -638,7 +638,7 @@ mod tests {
             }
         }
 
-        MuxCircuit::<PallasLookupRangeCheckConfig>::test_mux_circuits();
-        MuxCircuit::<PallasLookupRangeCheck4_5BConfig>::test_mux_circuits();
+        MyMuxCircuit::<PallasLookupRangeCheckConfig>::test_mux_circuits();
+        MyMuxCircuit::<PallasLookupRangeCheck4_5BConfig>::test_mux_circuits();
     }
 }

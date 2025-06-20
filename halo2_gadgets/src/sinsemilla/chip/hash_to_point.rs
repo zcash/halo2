@@ -1,7 +1,7 @@
 use super::super::{CommitDomains, HashDomains, SinsemillaInstructions};
+use super::{NonIdentityEccPoint, SinsemillaChip};
 use crate::{
     ecc::FixedPoints,
-    sinsemilla::chip::{NonIdentityEccPoint, SinsemillaChip},
     sinsemilla::primitives::{self as sinsemilla, lebs2ip_k, INV_TWO_POW_K, SINSEMILLA_S},
     utilities::lookup_range_check::PallasLookupRangeCheck,
 };
