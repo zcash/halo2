@@ -190,23 +190,21 @@ where
     // Also construct mapping from commitment to point_idx_set
     let mut commitment_set_map = IndexMap::new();
 
-    for (commitment, commitment_data) in commitment_map.iter() {
+    for (commitment, commitment_data) in commitment_map.iter_mut() {
         let mut point_index_set = BTreeSet::new();
         // Note that point_index_set is ordered, unlike point_indices
         for &point_index in commitment_data.point_indices.iter() {
             point_index_set.insert(point_index);
         }
+        let len = point_index_set.len();
 
         // Push point_index_set to CommitmentData for the relevant commitment
         commitment_set_map.insert(*commitment, point_index_set.clone());
 
         let num_sets = point_idx_sets.len();
         point_idx_sets.entry(point_index_set).or_insert(num_sets);
-    }
 
-    // Initialise empty evals vec for each unique commitment
-    for commitment_data in commitment_map.values_mut() {
-        let len = commitment_data.point_indices.len();
+        // Initialise empty evals vec for each unique commitment
         commitment_data.evals = vec![None; len];
     }
 
