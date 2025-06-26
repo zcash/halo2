@@ -665,6 +665,25 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K>
     /// |     1     |    X(S\[1\])   |    Y(S\[1\])   |           5           |
     /// |    ...    |       ...      |       ...      |           5           |
     /// |   2^5-1   | X(S\[2^5-1\])  | Y(S\[2^5-1\])  |           5           |
+    ///
+    /// # Rationale
+    ///
+    /// While it is possible to avoid duplicated rows by using tags and storing them in an advice
+    /// column, as done in the spread table of the SHA-256 gadget, applying this technique to the
+    /// range check lookup table would significantly increase complexity.
+    ///
+    /// Indeed, in the range check lookup tables, tags are currently computed on the fly and are not
+    /// stored in advice columns. Adopting the no duplicated rows approach would require modifying
+    /// the lookup chip to include an advice column for tags and updating the public API accordingly.
+    /// This tag column would need to be populated each time a range check lookup is performed.
+    /// Additionally, the current lookup range check implementation involves combinations of
+    /// multiple lookups, further complicating this approach.
+    ///
+    /// The performance benefit would be minimal: our current table has 1072 rows (2^10 + 2^4 + 2^5),
+    /// and switching to the no duplicated-rows method would reduce it only slightly to 1024 rows
+    /// (2^10), while adding more logic and infrastructure to manage the tags.
+    ///
+    /// Therefore, we retain the simpler duplicated-rows format for clarity and maintainability.
     fn load(
         &self,
         generator_table_config: &GeneratorTableConfig,
