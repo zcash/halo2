@@ -7,6 +7,7 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+## [0.3.1] - 2025-07-07
 ### Security
 `halo2_proofs` uses a multiopen argument in its proofs, which takes the sequence
 of circuit queries and evaluations, and groups them into query sets for proof
