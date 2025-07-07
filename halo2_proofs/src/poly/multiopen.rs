@@ -107,9 +107,9 @@ impl<'r, 'params: 'r, C: CurveAffine> Eq for CommitmentReference<'r, 'params, C>
 
 impl<'r, 'params: 'r, C: CurveAffine> Hash for CommitmentReference<'r, 'params, C> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        match self {
-            &CommitmentReference::Commitment(a) => std::ptr::hash(a, state),
-            &CommitmentReference::MSM(a) => std::ptr::hash(a, state),
+        match *self {
+            CommitmentReference::Commitment(a) => std::ptr::hash(a, state),
+            CommitmentReference::MSM(a) => std::ptr::hash(a, state),
         }
     }
 }
