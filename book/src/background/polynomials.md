@@ -242,7 +242,7 @@ Now, we can write our polynomial as a linear combination of Lagrange basis funct
 
 $$A(X) = \sum_{i = 0}^{n-1} a_i\mathcal{L_i}(X), X \in \mathcal{H},$$
 
-which is equivalent to saying that $p(X)$ evaluates to $a_0$ at $\omega^0$,
+which is equivalent to saying that $A(X)$ evaluates to $a_0$ at $\omega^0$,
 to $a_1$ at $\omega^1$, to $a_2$ at $\omega^2, \cdots,$ and so on.
 
 When working over a multiplicative subgroup, the Lagrange basis function has a convenient

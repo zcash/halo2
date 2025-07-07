@@ -55,7 +55,7 @@ $$\mathbf{H} = [\text{Commit}(h_0(X)), \text{Commit}(h_1(X)), \dots, \text{Commi
 
 ## Evaluating the polynomials
 
-At this point, all properties of the circuit have been committed to. The verifier now
+At this point, we have committed to all properties of the circuit. The verifier now
 wants to see if the prover committed to the correct $h(X)$ polynomial. The verifier
 samples $x$, and the prover produces the purported evaluations of the various polynomials
 at $x$, for all the relative offsets used in the circuit, as well as $h(X)$.

@@ -13,6 +13,9 @@ pub mod floor_planner;
 pub use floor_planner::single_pass::SimpleFloorPlanner;
 
 pub mod layouter;
+mod table_layouter;
+
+pub use table_layouter::TableLayouter;
 
 /// A chip implements a set of instructions that can be used by gadgets.
 ///
@@ -365,11 +368,11 @@ impl<'r, F: Field> Region<'r, F> {
 /// A lookup table in the circuit.
 #[derive(Debug)]
 pub struct Table<'r, F: Field> {
-    table: &'r mut dyn layouter::TableLayouter<F>,
+    table: &'r mut dyn TableLayouter<F>,
 }
 
-impl<'r, F: Field> From<&'r mut dyn layouter::TableLayouter<F>> for Table<'r, F> {
-    fn from(table: &'r mut dyn layouter::TableLayouter<F>) -> Self {
+impl<'r, F: Field> From<&'r mut dyn TableLayouter<F>> for Table<'r, F> {
+    fn from(table: &'r mut dyn TableLayouter<F>) -> Self {
         Table { table }
     }
 }

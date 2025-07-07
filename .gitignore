@@ -1,6 +1,8 @@
 /target
+/halo2_gadgets/*-layout.png
+/halo2_gadgets/benches/sha256_assets
+**/.*.swp
 **/*.rs.bk
-Cargo.lock
 .vscode
-**/*.html
 .DS_Store
+/book/book

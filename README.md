@@ -1,6 +1,9 @@
-# halo2 [![Crates.io](https://img.shields.io/crates/v/halo2.svg)](https://crates.io/crates/halo2) #
+# halo2
 
-## [Documentation](https://docs.rs/halo2)
+## Usage
+
+This repository contains the [halo2_proofs](halo2_proofs/README.md) and
+[halo2_gadgets](halo2_gadgets/README.md) crates, which should be used directly.
 
 ## Minimum Supported Rust Version
 
