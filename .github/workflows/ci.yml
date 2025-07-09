@@ -103,6 +103,7 @@ jobs:
       - uses: ./.github/actions/prepare
         with:
           toolchain: stable
+      - run: sudo apt-get -y install libfontconfig1-dev
       # Build benchmarks and all-features to prevent bitrot
       - name: Build benchmarks
         uses: actions-rs/cargo@v1
