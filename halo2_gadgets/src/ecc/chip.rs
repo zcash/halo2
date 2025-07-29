@@ -559,7 +559,7 @@ where
         )
     }
 
-    /// Performs variable-base sign-scalar multiplication, returning `[sign] point`
+    /// Performs variable-base sign-scalar multiplication, returning `[sign] point`.
     /// `sign` must be in {-1, 1}.
     fn mul_sign(
         &self,
