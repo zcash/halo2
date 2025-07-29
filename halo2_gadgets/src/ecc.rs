@@ -120,8 +120,8 @@ pub trait EccInstructions<C: CurveAffine>:
         b: &B,
     ) -> Result<Self::Point, Error>;
 
-    /// Performs variable-base sign-scalar multiplication, returning `[sign] point`
-    /// `sign` must be in {-1, 1}.
+    /// Performs variable-base sign-scalar multiplication, returning `[sign] point`.
+    /// This constrains `sign` to be in {-1, 1}.
     fn mul_sign(
         &self,
         layouter: &mut impl Layouter<C::Base>,
@@ -463,7 +463,7 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
     }
 
     /// Returns `[sign] self`.
-    /// `sign` must be in {-1, 1}.
+    /// This constrains `sign` to be in {-1, 1}.
     pub fn mul_sign(
         &self,
         mut layouter: impl Layouter<C::Base>,

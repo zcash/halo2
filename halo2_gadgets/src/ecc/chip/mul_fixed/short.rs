@@ -243,7 +243,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
     }
 
     /// Multiply the point by sign, using the q_mul_fixed_short gate.
-    /// Constraints `sign` in {-1, 1}
+    /// This constrains `sign` to be in {-1, 1}.
     pub(crate) fn assign_scalar_sign(
         &self,
         mut layouter: impl Layouter<pallas::Base>,

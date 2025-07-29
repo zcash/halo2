@@ -1,4 +1,4 @@
-//! Gadget and chip for a conditional swap utility.
+//! Gadget and chip for conditional swap and mux utilities.
 
 use super::{bool_check, ternary, UtilitiesInstructions};
 
@@ -12,7 +12,7 @@ use halo2_proofs::{
 use pasta_curves::pallas;
 use std::marker::PhantomData;
 
-/// Instructions for a conditional swap gadget.
+/// Instructions for conditional swap and mux gadgets.
 pub trait CondSwapInstructions<F: Field>: UtilitiesInstructions<F> {
     #[allow(clippy::type_complexity)]
     /// Given an input pair (a,b) and a `swap` boolean flag, returns

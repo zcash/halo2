@@ -519,7 +519,7 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck4_5BConfig<F, K> {
     /// a value in `table_idx` constrains it to be within this range. The table
     /// can be loaded outside this helper.
     ///
-    /// # Side-effects
+    /// # Side effects
     ///
     /// Both the `running_sum` and `constants` columns will be equality-enabled.
     pub fn configure_with_tag(

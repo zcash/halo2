@@ -30,8 +30,8 @@ mod hash_to_point;
 
 /// Configuration for the Sinsemilla hash chip
 ///
-/// If `init_from_private_point` is true, the chip can compute a hash from a private point.
-/// However, compared to when `init_from_private_point` is set to false,
+/// If `allow_init_from_private_point` is true, the chip can compute a hash from a private point.
+/// However, compared to when `allow_init_from_private_point` is set to false,
 /// computing the hash from a public point will take one additional row.
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct SinsemillaConfig<Hash, Commit, F, Lookup = PallasLookupRangeCheckConfig>
@@ -66,7 +66,7 @@ where
     lookup_config: Lookup,
 
     /// If true, it is possible to compute a hash from a private point.
-    init_from_private_point: bool,
+    allow_init_from_private_point: bool,
 
     _marker: PhantomData<(Hash, Commit, F)>,
 }
@@ -158,8 +158,8 @@ where
 
     /// Creates the Sinsemilla chip
     ///
-    /// If `init_from_private_point` is true, the chip can compute a hash from a private point.
-    /// However, compared to when `init_from_private_point` is set to false,
+    /// If `allow_init_from_private_point` is true, the chip can compute a hash from a private point.
+    /// However, compared to when `allow_init_from_private_point` is set to false,
     /// computing the hash from a public point will take one additional row.
     ///
     /// # Side-effects
@@ -174,7 +174,7 @@ where
         fixed_y_q: Column<Fixed>,
         lookup: (TableColumn, TableColumn, TableColumn),
         range_check: Lookup,
-        init_from_private_point: bool,
+        allow_init_from_private_point: bool,
     ) -> <Self as Chip<pallas::Base>>::Config {
         // Enable equality on all advice columns
         for advice in advices.iter() {
@@ -200,7 +200,7 @@ where
                 table_y: lookup.2,
             },
             lookup_config: range_check,
-            init_from_private_point,
+            allow_init_from_private_point,
             _marker: PhantomData,
         };
 
@@ -224,7 +224,7 @@ where
         // https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial
         meta.create_gate("Initial y_Q", |meta| {
             let q_s4 = meta.query_selector(config.q_sinsemilla4);
-            let y_q = if init_from_private_point {
+            let y_q = if allow_init_from_private_point {
                 meta.query_advice(config.double_and_add.x_p, Rotation::prev())
             } else {
                 meta.query_fixed(config.fixed_y_q)
@@ -356,7 +356,7 @@ where
         Q: &Self::NonIdentityPoint,
         message: Self::Message,
     ) -> Result<(Self::NonIdentityPoint, Vec<Self::RunningSum>), Error> {
-        if !self.config().init_from_private_point {
+        if !self.config().allow_init_from_private_point {
             return Err(Error::IllegalHashFromPrivatePoint);
         }
 

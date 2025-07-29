@@ -85,7 +85,7 @@ where
         ),
         Error,
     > {
-        if !self.config().init_from_private_point {
+        if !self.config().allow_init_from_private_point {
             return Err(Error::IllegalHashFromPrivatePoint);
         }
 
@@ -97,8 +97,9 @@ where
         self.check_hash_result(EccPointQ::PrivatePoint(Q.clone()), message, &x_a, &y_a);
 
         x_a.value()
-            .zip(y_a.value())
-            .error_if_known_and(|(x_a, y_a)| x_a.is_zero_vartime() || y_a.is_zero_vartime())?;
+            .error_if_known_and(|x_a| x_a.is_zero_vartime())?;
+        y_a.value()
+            .error_if_known_and(|y_a| y_a.is_zero_vartime())?;
         Ok((
             NonIdentityEccPoint::from_coordinates_unchecked(x_a.0, y_a),
             zs_sum,
@@ -108,12 +109,12 @@ where
     #[allow(non_snake_case)]
     /// Assign the coordinates of the initial public point `Q`.
     ///
-    /// If init_from_private_point is not set,
+    /// If allow_init_from_private_point is not set,
     /// | offset | x_A | q_sinsemilla4 | fixed_y_q |
     /// --------------------------------------
     /// |   0    | x_Q |   1           |   y_Q     |
     ///
-    /// If init_from_private_point is set,
+    /// If allow_init_from_private_point is set,
     /// | offset | x_A | x_P | q_sinsemilla4 |
     /// --------------------------------------
     /// |   0    |     | y_Q |               |
@@ -132,12 +133,12 @@ where
 
         // Constrain the initial x_a, lambda_1, lambda_2, x_p using the q_sinsemilla4
         // selector.
-        let y_a: Y<pallas::Base> = if config.init_from_private_point {
+        let y_a: Y<pallas::Base> = if config.allow_init_from_private_point {
             // Enable `q_sinsemilla4` on the second row.
-            config.q_sinsemilla4.enable(region, 1)?;
+            config.q_sinsemilla4.enable(region, offset + 1)?;
             let y_a: AssignedCell<Assigned<pallas::Base>, pallas::Base> = region
                 .assign_advice_from_constant(
-                    || "fixed y_q",
+                    || "variable y_q",
                     config.double_and_add.x_p,
                     offset,
                     y_q.into(),
@@ -160,7 +161,7 @@ where
         // Constrain the initial x_q to equal the x-coordinate of the domain's `Q`.
         let x_a: X<pallas::Base> = {
             let x_a = region.assign_advice_from_constant(
-                || "fixed x_q",
+                || "variable x_q",
                 config.double_and_add.x_a,
                 offset,
                 x_q.into(),
@@ -186,7 +187,7 @@ where
     ) -> Result<(usize, X<pallas::Base>, Y<pallas::Base>), Error> {
         let config = self.config().clone();
 
-        if !config.init_from_private_point {
+        if !config.allow_init_from_private_point {
             return Err(Error::IllegalHashFromPrivatePoint);
         }
 

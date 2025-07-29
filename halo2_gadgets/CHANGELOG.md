@@ -21,7 +21,7 @@ and this project adheres to Rust's notion of
   instead of directly taking a `LookupRangeCheckConfig<F, K>` reference
 - `halo2_gadgets::sinsemilla::merkle::chip::MerkleConfig::cond_swap_config` is now public
 - `halo2_gadgets::sinsemilla::chip::SinsemillaChip::configure` has a new input
-  `init_from_private_point` to enable the evaluation of Sinsemilla hash from a private point.
+  `allow_init_from_private_point` to enable the evaluation of Sinsemilla hash from a private point.
 
 ## [0.3.1] - 2024-12-16
 - `halo2_gadgets::poseidon::primitives` is now a re-export of the new `halo2_poseidon`

@@ -606,7 +606,7 @@ pub(crate) mod tests {
 
     fn configure<Lookup: PallasLookupRangeCheck>(
         meta: &mut ConstraintSystem<pallas::Base>,
-        init_from_private_point: bool,
+        allow_init_from_private_point: bool,
     ) -> EccSinsemillaConfig<Lookup> {
         let advices = [
             meta.advice_column(),
@@ -660,7 +660,7 @@ pub(crate) mod tests {
             lagrange_coeffs[0],
             lookup,
             range_check,
-            init_from_private_point,
+            allow_init_from_private_point,
         );
         let config2 = SinsemillaChip::configure(
             meta,
@@ -669,7 +669,7 @@ pub(crate) mod tests {
             lagrange_coeffs[1],
             lookup,
             range_check,
-            init_from_private_point,
+            allow_init_from_private_point,
         );
         (ecc_config, config1, config2)
     }

@@ -235,7 +235,7 @@ pub mod tests {
     #[allow(clippy::type_complexity)]
     fn configure<Lookup: PallasLookupRangeCheck>(
         meta: &mut ConstraintSystem<pallas::Base>,
-        init_from_private_point: bool,
+        allow_init_from_private_point: bool,
     ) -> (
         MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases, Lookup>,
         MerkleConfig<TestHashDomain, TestCommitDomain, TestFixedBases, Lookup>,
@@ -278,7 +278,7 @@ pub mod tests {
             fixed_y_q_1,
             lookup,
             range_check,
-            init_from_private_point,
+            allow_init_from_private_point,
         );
         let config1 = MerkleChip::configure(meta, sinsemilla_config_1);
 
@@ -289,7 +289,7 @@ pub mod tests {
             fixed_y_q_2,
             lookup,
             range_check,
-            init_from_private_point,
+            allow_init_from_private_point,
         );
         let config2 = MerkleChip::configure(meta, sinsemilla_config_2);
 
