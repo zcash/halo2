@@ -36,6 +36,10 @@ name = "plonk"
 harness = false
 
 [[bench]]
+name = "poly"
+harness = false
+
+[[bench]]
 name = "dev_lookup"
 harness = false
 
