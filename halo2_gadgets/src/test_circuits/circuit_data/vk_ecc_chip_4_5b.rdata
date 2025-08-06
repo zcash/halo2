@@ -7,10 +7,10 @@ PinnedVerificationKey {
         omega: 0x181b50ad5f32119e31cbd395426d600b7a9b88bcaaa1c24eef28545aada17813,
     },
     cs: PinnedConstraintSystem {
-        num_fixed_columns: 19,
+        num_fixed_columns: 22,
         num_advice_columns: 10,
         num_instance_columns: 0,
-        num_selectors: 20,
+        num_selectors: 22,
         gates: [
             Product(
                 Product(
@@ -18,8 +18,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 13,
-                                    column_index: 13,
+                                    query_index: 16,
+                                    column_index: 16,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -30,8 +30,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 13,
-                                            column_index: 13,
+                                            query_index: 16,
+                                            column_index: 16,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -45,8 +45,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 13,
-                                        column_index: 13,
+                                        query_index: 16,
+                                        column_index: 16,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -60,8 +60,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 13,
-                                    column_index: 13,
+                                    query_index: 16,
+                                    column_index: 16,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -75,8 +75,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 13,
-                                column_index: 13,
+                                query_index: 16,
+                                column_index: 16,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -122,8 +122,8 @@ PinnedVerificationKey {
                             Product(
                                 Product(
                                     Fixed {
-                                        query_index: 13,
-                                        column_index: 13,
+                                        query_index: 16,
+                                        column_index: 16,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -134,8 +134,8 @@ PinnedVerificationKey {
                                         ),
                                         Negated(
                                             Fixed {
-                                                query_index: 13,
-                                                column_index: 13,
+                                                query_index: 16,
+                                                column_index: 16,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
@@ -149,8 +149,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 13,
-                                            column_index: 13,
+                                            query_index: 16,
+                                            column_index: 16,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -164,8 +164,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 13,
-                                        column_index: 13,
+                                        query_index: 16,
+                                        column_index: 16,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -179,8 +179,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 13,
-                                    column_index: 13,
+                                    query_index: 16,
+                                    column_index: 16,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -256,8 +256,8 @@ PinnedVerificationKey {
                             Product(
                                 Product(
                                     Fixed {
-                                        query_index: 13,
-                                        column_index: 13,
+                                        query_index: 16,
+                                        column_index: 16,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -268,8 +268,8 @@ PinnedVerificationKey {
                                         ),
                                         Negated(
                                             Fixed {
-                                                query_index: 13,
-                                                column_index: 13,
+                                                query_index: 16,
+                                                column_index: 16,
                                                 rotation: Rotation(
                                                     0,
                                                 ),
@@ -283,8 +283,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 13,
-                                            column_index: 13,
+                                            query_index: 16,
+                                            column_index: 16,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -298,8 +298,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 13,
-                                        column_index: 13,
+                                        query_index: 16,
+                                        column_index: 16,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -313,8 +313,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 13,
-                                    column_index: 13,
+                                    query_index: 16,
+                                    column_index: 16,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -389,8 +389,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 13,
-                                    column_index: 13,
+                                    query_index: 16,
+                                    column_index: 16,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -401,8 +401,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 13,
-                                            column_index: 13,
+                                            query_index: 16,
+                                            column_index: 16,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -416,8 +416,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 13,
-                                        column_index: 13,
+                                        query_index: 16,
+                                        column_index: 16,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -431,8 +431,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 13,
-                                    column_index: 13,
+                                    query_index: 16,
+                                    column_index: 16,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -446,8 +446,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 13,
-                                column_index: 13,
+                                query_index: 16,
+                                column_index: 16,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -514,8 +514,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 13,
-                                    column_index: 13,
+                                    query_index: 16,
+                                    column_index: 16,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -526,8 +526,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 13,
-                                            column_index: 13,
+                                            query_index: 16,
+                                            column_index: 16,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -541,8 +541,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 13,
-                                        column_index: 13,
+                                        query_index: 16,
+                                        column_index: 16,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -556,8 +556,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 13,
-                                    column_index: 13,
+                                    query_index: 16,
+                                    column_index: 16,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -571,8 +571,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 13,
-                                column_index: 13,
+                                query_index: 16,
+                                column_index: 16,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -694,8 +694,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 13,
-                                    column_index: 13,
+                                    query_index: 16,
+                                    column_index: 16,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -706,8 +706,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 13,
-                                            column_index: 13,
+                                            query_index: 16,
+                                            column_index: 16,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -721,8 +721,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 13,
-                                        column_index: 13,
+                                        query_index: 16,
+                                        column_index: 16,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -736,8 +736,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 13,
-                                    column_index: 13,
+                                    query_index: 16,
+                                    column_index: 16,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -751,8 +751,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 13,
-                                column_index: 13,
+                                query_index: 16,
+                                column_index: 16,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -844,8 +844,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -856,8 +856,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -871,8 +871,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -886,8 +886,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -970,8 +970,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -982,8 +982,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -997,8 +997,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -1012,8 +1012,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1109,8 +1109,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1121,8 +1121,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -1136,8 +1136,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -1151,8 +1151,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1253,8 +1253,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1265,8 +1265,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -1280,8 +1280,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -1295,8 +1295,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1397,8 +1397,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1409,8 +1409,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -1424,8 +1424,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -1439,8 +1439,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1539,8 +1539,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1551,8 +1551,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -1566,8 +1566,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -1581,8 +1581,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1681,8 +1681,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1693,8 +1693,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -1708,8 +1708,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -1723,8 +1723,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1781,8 +1781,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1793,8 +1793,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -1808,8 +1808,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -1823,8 +1823,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1881,8 +1881,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1893,8 +1893,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -1908,8 +1908,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -1923,8 +1923,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1981,8 +1981,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -1993,8 +1993,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -2008,8 +2008,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -2023,8 +2023,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -2081,8 +2081,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -2093,8 +2093,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -2108,8 +2108,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -2123,8 +2123,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -2210,8 +2210,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -2222,8 +2222,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -2237,8 +2237,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -2252,8 +2252,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -2340,8 +2340,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 13,
-                                    column_index: 13,
+                                    query_index: 16,
+                                    column_index: 16,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -2352,8 +2352,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 13,
-                                            column_index: 13,
+                                            query_index: 16,
+                                            column_index: 16,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -2367,8 +2367,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 13,
-                                        column_index: 13,
+                                        query_index: 16,
+                                        column_index: 16,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -2382,8 +2382,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 13,
-                                    column_index: 13,
+                                    query_index: 16,
+                                    column_index: 16,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -2397,8 +2397,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 13,
-                                column_index: 13,
+                                query_index: 16,
+                                column_index: 16,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -2493,8 +2493,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -2505,8 +2505,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -2520,8 +2520,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -2535,8 +2535,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -2568,8 +2568,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -2580,8 +2580,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -2595,8 +2595,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -2610,8 +2610,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -2643,8 +2643,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -2655,8 +2655,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -2670,8 +2670,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -2685,8 +2685,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -2751,8 +2751,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -2763,8 +2763,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -2778,8 +2778,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -2793,8 +2793,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -2951,8 +2951,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -2963,8 +2963,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -2978,8 +2978,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -2993,8 +2993,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -3088,8 +3088,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -3100,8 +3100,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -3115,8 +3115,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -3130,8 +3130,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -3320,8 +3320,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -3332,8 +3332,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -3347,8 +3347,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -3362,8 +3362,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -3428,8 +3428,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -3440,8 +3440,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -3455,8 +3455,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -3470,8 +3470,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -3628,8 +3628,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -3640,8 +3640,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -3655,8 +3655,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -3670,8 +3670,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -3765,8 +3765,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -3777,8 +3777,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -3792,8 +3792,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -3807,8 +3807,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -3934,8 +3934,8 @@ PinnedVerificationKey {
                     Product(
                         Product(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -3946,8 +3946,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 14,
-                                        column_index: 14,
+                                        query_index: 17,
+                                        column_index: 17,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -3961,8 +3961,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 14,
-                                    column_index: 14,
+                                    query_index: 17,
+                                    column_index: 17,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -3976,8 +3976,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 14,
-                                column_index: 14,
+                                query_index: 17,
+                                column_index: 17,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -4073,8 +4073,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -4085,8 +4085,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -4100,8 +4100,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -4115,8 +4115,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -4130,8 +4130,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -4164,8 +4164,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -4176,8 +4176,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -4191,8 +4191,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -4206,8 +4206,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -4221,8 +4221,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -4255,8 +4255,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -4267,8 +4267,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -4282,8 +4282,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -4297,8 +4297,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -4312,8 +4312,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -4379,8 +4379,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -4391,8 +4391,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -4406,8 +4406,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -4421,8 +4421,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -4436,8 +4436,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -4595,8 +4595,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -4607,8 +4607,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -4622,8 +4622,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -4637,8 +4637,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -4652,8 +4652,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -4748,8 +4748,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -4760,8 +4760,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -4775,8 +4775,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -4790,8 +4790,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -4805,8 +4805,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -4996,8 +4996,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -5008,8 +5008,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -5023,8 +5023,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -5038,8 +5038,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -5053,8 +5053,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -5120,8 +5120,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -5132,8 +5132,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -5147,8 +5147,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -5162,8 +5162,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -5177,8 +5177,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -5336,8 +5336,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -5348,8 +5348,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -5363,8 +5363,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -5378,8 +5378,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -5393,8 +5393,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -5489,8 +5489,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -5501,8 +5501,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -5516,8 +5516,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -5531,8 +5531,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -5546,8 +5546,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -5674,8 +5674,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -5686,8 +5686,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -5701,8 +5701,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -5716,8 +5716,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -5731,8 +5731,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -5802,8 +5802,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -5814,8 +5814,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -5829,8 +5829,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -5844,8 +5844,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -5859,8 +5859,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -5968,8 +5968,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -5980,8 +5980,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -5995,8 +5995,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -6010,8 +6010,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -6025,8 +6025,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -6078,8 +6078,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -6090,8 +6090,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -6105,8 +6105,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -6120,8 +6120,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -6135,8 +6135,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -6176,8 +6176,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -6188,8 +6188,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -6203,8 +6203,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -6218,8 +6218,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -6233,8 +6233,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -6272,8 +6272,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -6284,8 +6284,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -6299,8 +6299,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -6314,8 +6314,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -6329,8 +6329,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -6361,8 +6361,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -6373,8 +6373,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -6388,8 +6388,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -6403,8 +6403,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -6418,8 +6418,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -6482,8 +6482,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -6494,8 +6494,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -6509,8 +6509,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -6524,8 +6524,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -6539,8 +6539,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -6606,8 +6606,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -6618,8 +6618,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -6633,8 +6633,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -6648,8 +6648,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -6663,8 +6663,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -6759,8 +6759,8 @@ PinnedVerificationKey {
                         Product(
                             Product(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -6771,8 +6771,8 @@ PinnedVerificationKey {
                                     ),
                                     Negated(
                                         Fixed {
-                                            query_index: 15,
-                                            column_index: 15,
+                                            query_index: 18,
+                                            column_index: 18,
                                             rotation: Rotation(
                                                 0,
                                             ),
@@ -6786,8 +6786,8 @@ PinnedVerificationKey {
                                 ),
                                 Negated(
                                     Fixed {
-                                        query_index: 15,
-                                        column_index: 15,
+                                        query_index: 18,
+                                        column_index: 18,
                                         rotation: Rotation(
                                             0,
                                         ),
@@ -6801,8 +6801,8 @@ PinnedVerificationKey {
                             ),
                             Negated(
                                 Fixed {
-                                    query_index: 15,
-                                    column_index: 15,
+                                    query_index: 18,
+                                    column_index: 18,
                                     rotation: Rotation(
                                         0,
                                     ),
@@ -6816,8 +6816,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 15,
-                                column_index: 15,
+                                query_index: 18,
+                                column_index: 18,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -6906,8 +6906,8 @@ PinnedVerificationKey {
             ),
             Product(
                 Fixed {
-                    query_index: 16,
-                    column_index: 16,
+                    query_index: 19,
+                    column_index: 19,
                     rotation: Rotation(
                         0,
                     ),
@@ -7146,8 +7146,8 @@ PinnedVerificationKey {
             ),
             Product(
                 Fixed {
-                    query_index: 16,
-                    column_index: 16,
+                    query_index: 19,
+                    column_index: 19,
                     rotation: Rotation(
                         0,
                     ),
@@ -7169,7 +7169,7 @@ PinnedVerificationKey {
                                                             0x0000000000000000000000000000000000000000000000000000000000000001,
                                                         ),
                                                         Fixed {
-                                                            query_index: 3,
+                                                            query_index: 4,
                                                             column_index: 1,
                                                             rotation: Rotation(
                                                                 0,
@@ -7205,7 +7205,7 @@ PinnedVerificationKey {
                                                         ),
                                                     ),
                                                     Fixed {
-                                                        query_index: 4,
+                                                        query_index: 5,
                                                         column_index: 2,
                                                         rotation: Rotation(
                                                             0,
@@ -7264,7 +7264,7 @@ PinnedVerificationKey {
                                                     ),
                                                 ),
                                                 Fixed {
-                                                    query_index: 5,
+                                                    query_index: 6,
                                                     column_index: 3,
                                                     rotation: Rotation(
                                                         0,
@@ -7346,7 +7346,7 @@ PinnedVerificationKey {
                                                 ),
                                             ),
                                             Fixed {
-                                                query_index: 6,
+                                                query_index: 7,
                                                 column_index: 4,
                                                 rotation: Rotation(
                                                     0,
@@ -7451,7 +7451,7 @@ PinnedVerificationKey {
                                             ),
                                         ),
                                         Fixed {
-                                            query_index: 7,
+                                            query_index: 8,
                                             column_index: 5,
                                             rotation: Rotation(
                                                 0,
@@ -7579,7 +7579,7 @@ PinnedVerificationKey {
                                         ),
                                     ),
                                     Fixed {
-                                        query_index: 8,
+                                        query_index: 9,
                                         column_index: 6,
                                         rotation: Rotation(
                                             0,
@@ -7730,7 +7730,7 @@ PinnedVerificationKey {
                                     ),
                                 ),
                                 Fixed {
-                                    query_index: 9,
+                                    query_index: 10,
                                     column_index: 7,
                                     rotation: Rotation(
                                         0,
@@ -7904,7 +7904,7 @@ PinnedVerificationKey {
                                 ),
                             ),
                             Fixed {
-                                query_index: 10,
+                                query_index: 11,
                                 column_index: 8,
                                 rotation: Rotation(
                                     0,
@@ -7925,8 +7925,8 @@ PinnedVerificationKey {
             ),
             Product(
                 Fixed {
-                    query_index: 16,
-                    column_index: 16,
+                    query_index: 19,
+                    column_index: 19,
                     rotation: Rotation(
                         0,
                     ),
@@ -7961,8 +7961,8 @@ PinnedVerificationKey {
                     ),
                     Negated(
                         Fixed {
-                            query_index: 2,
-                            column_index: 10,
+                            query_index: 3,
+                            column_index: 11,
                             rotation: Rotation(
                                 0,
                             ),
@@ -7972,8 +7972,8 @@ PinnedVerificationKey {
             ),
             Product(
                 Fixed {
-                    query_index: 16,
-                    column_index: 16,
+                    query_index: 19,
+                    column_index: 19,
                     rotation: Rotation(
                         0,
                     ),
@@ -8033,8 +8033,8 @@ PinnedVerificationKey {
             ),
             Product(
                 Fixed {
-                    query_index: 17,
-                    column_index: 17,
+                    query_index: 20,
+                    column_index: 20,
                     rotation: Rotation(
                         0,
                     ),
@@ -8056,7 +8056,7 @@ PinnedVerificationKey {
                                                             0x0000000000000000000000000000000000000000000000000000000000000001,
                                                         ),
                                                         Fixed {
-                                                            query_index: 3,
+                                                            query_index: 4,
                                                             column_index: 1,
                                                             rotation: Rotation(
                                                                 0,
@@ -8078,7 +8078,7 @@ PinnedVerificationKey {
                                                         },
                                                     ),
                                                     Fixed {
-                                                        query_index: 4,
+                                                        query_index: 5,
                                                         column_index: 2,
                                                         rotation: Rotation(
                                                             0,
@@ -8109,7 +8109,7 @@ PinnedVerificationKey {
                                                     },
                                                 ),
                                                 Fixed {
-                                                    query_index: 5,
+                                                    query_index: 6,
                                                     column_index: 3,
                                                     rotation: Rotation(
                                                         0,
@@ -8149,7 +8149,7 @@ PinnedVerificationKey {
                                                 },
                                             ),
                                             Fixed {
-                                                query_index: 6,
+                                                query_index: 7,
                                                 column_index: 4,
                                                 rotation: Rotation(
                                                     0,
@@ -8198,7 +8198,7 @@ PinnedVerificationKey {
                                             },
                                         ),
                                         Fixed {
-                                            query_index: 7,
+                                            query_index: 8,
                                             column_index: 5,
                                             rotation: Rotation(
                                                 0,
@@ -8256,7 +8256,7 @@ PinnedVerificationKey {
                                         },
                                     ),
                                     Fixed {
-                                        query_index: 8,
+                                        query_index: 9,
                                         column_index: 6,
                                         rotation: Rotation(
                                             0,
@@ -8323,7 +8323,7 @@ PinnedVerificationKey {
                                     },
                                 ),
                                 Fixed {
-                                    query_index: 9,
+                                    query_index: 10,
                                     column_index: 7,
                                     rotation: Rotation(
                                         0,
@@ -8399,7 +8399,7 @@ PinnedVerificationKey {
                                 },
                             ),
                             Fixed {
-                                query_index: 10,
+                                query_index: 11,
                                 column_index: 8,
                                 rotation: Rotation(
                                     0,
@@ -8420,8 +8420,8 @@ PinnedVerificationKey {
             ),
             Product(
                 Fixed {
-                    query_index: 17,
-                    column_index: 17,
+                    query_index: 20,
+                    column_index: 20,
                     rotation: Rotation(
                         0,
                     ),
@@ -8456,8 +8456,8 @@ PinnedVerificationKey {
                     ),
                     Negated(
                         Fixed {
-                            query_index: 2,
-                            column_index: 10,
+                            query_index: 3,
+                            column_index: 11,
                             rotation: Rotation(
                                 0,
                             ),
@@ -8467,8 +8467,8 @@ PinnedVerificationKey {
             ),
             Product(
                 Fixed {
-                    query_index: 17,
-                    column_index: 17,
+                    query_index: 20,
+                    column_index: 20,
                     rotation: Rotation(
                         0,
                     ),
@@ -8528,8 +8528,8 @@ PinnedVerificationKey {
             ),
             Product(
                 Fixed {
-                    query_index: 17,
-                    column_index: 17,
+                    query_index: 20,
+                    column_index: 20,
                     rotation: Rotation(
                         0,
                     ),
@@ -8657,8 +8657,8 @@ PinnedVerificationKey {
             Product(
                 Product(
                     Fixed {
-                        query_index: 18,
-                        column_index: 18,
+                        query_index: 21,
+                        column_index: 21,
                         rotation: Rotation(
                             0,
                         ),
@@ -8669,8 +8669,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 18,
-                                column_index: 18,
+                                query_index: 21,
+                                column_index: 21,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -8705,8 +8705,8 @@ PinnedVerificationKey {
             Product(
                 Product(
                     Fixed {
-                        query_index: 18,
-                        column_index: 18,
+                        query_index: 21,
+                        column_index: 21,
                         rotation: Rotation(
                             0,
                         ),
@@ -8717,8 +8717,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 18,
-                                column_index: 18,
+                                query_index: 21,
+                                column_index: 21,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -8753,8 +8753,8 @@ PinnedVerificationKey {
             Product(
                 Product(
                     Fixed {
-                        query_index: 18,
-                        column_index: 18,
+                        query_index: 21,
+                        column_index: 21,
                         rotation: Rotation(
                             0,
                         ),
@@ -8765,8 +8765,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 18,
-                                column_index: 18,
+                                query_index: 21,
+                                column_index: 21,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -8814,8 +8814,8 @@ PinnedVerificationKey {
             Product(
                 Product(
                     Fixed {
-                        query_index: 18,
-                        column_index: 18,
+                        query_index: 21,
+                        column_index: 21,
                         rotation: Rotation(
                             0,
                         ),
@@ -8826,8 +8826,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 18,
-                                column_index: 18,
+                                query_index: 21,
+                                column_index: 21,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -8866,8 +8866,8 @@ PinnedVerificationKey {
             Product(
                 Product(
                     Fixed {
-                        query_index: 18,
-                        column_index: 18,
+                        query_index: 21,
+                        column_index: 21,
                         rotation: Rotation(
                             0,
                         ),
@@ -8878,8 +8878,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 18,
-                                column_index: 18,
+                                query_index: 21,
+                                column_index: 21,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -8907,8 +8907,8 @@ PinnedVerificationKey {
             Product(
                 Product(
                     Fixed {
-                        query_index: 18,
-                        column_index: 18,
+                        query_index: 21,
+                        column_index: 21,
                         rotation: Rotation(
                             0,
                         ),
@@ -8919,8 +8919,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 18,
-                                column_index: 18,
+                                query_index: 21,
+                                column_index: 21,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -8964,8 +8964,8 @@ PinnedVerificationKey {
             Product(
                 Product(
                     Fixed {
-                        query_index: 18,
-                        column_index: 18,
+                        query_index: 21,
+                        column_index: 21,
                         rotation: Rotation(
                             0,
                         ),
@@ -8976,8 +8976,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 18,
-                                column_index: 18,
+                                query_index: 21,
+                                column_index: 21,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -9049,8 +9049,8 @@ PinnedVerificationKey {
             Product(
                 Product(
                     Fixed {
-                        query_index: 18,
-                        column_index: 18,
+                        query_index: 21,
+                        column_index: 21,
                         rotation: Rotation(
                             0,
                         ),
@@ -9061,8 +9061,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 18,
-                                column_index: 18,
+                                query_index: 21,
+                                column_index: 21,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -9090,8 +9090,8 @@ PinnedVerificationKey {
             Product(
                 Product(
                     Fixed {
-                        query_index: 18,
-                        column_index: 18,
+                        query_index: 21,
+                        column_index: 21,
                         rotation: Rotation(
                             0,
                         ),
@@ -9102,8 +9102,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 18,
-                                column_index: 18,
+                                query_index: 21,
+                                column_index: 21,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -9170,8 +9170,8 @@ PinnedVerificationKey {
             Product(
                 Product(
                     Fixed {
-                        query_index: 18,
-                        column_index: 18,
+                        query_index: 21,
+                        column_index: 21,
                         rotation: Rotation(
                             0,
                         ),
@@ -9182,8 +9182,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 18,
-                                column_index: 18,
+                                query_index: 21,
+                                column_index: 21,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -9218,8 +9218,8 @@ PinnedVerificationKey {
             Product(
                 Product(
                     Fixed {
-                        query_index: 18,
-                        column_index: 18,
+                        query_index: 21,
+                        column_index: 21,
                         rotation: Rotation(
                             0,
                         ),
@@ -9230,8 +9230,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 18,
-                                column_index: 18,
+                                query_index: 21,
+                                column_index: 21,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -9273,8 +9273,8 @@ PinnedVerificationKey {
             Product(
                 Product(
                     Fixed {
-                        query_index: 18,
-                        column_index: 18,
+                        query_index: 21,
+                        column_index: 21,
                         rotation: Rotation(
                             0,
                         ),
@@ -9285,8 +9285,8 @@ PinnedVerificationKey {
                         ),
                         Negated(
                             Fixed {
-                                query_index: 18,
-                                column_index: 18,
+                                query_index: 21,
+                                column_index: 21,
                                 rotation: Rotation(
                                     0,
                                 ),
@@ -9598,6 +9598,15 @@ PinnedVerificationKey {
             ),
             (
                 Column {
+                    index: 11,
+                    column_type: Fixed,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+            (
+                Column {
                     index: 1,
                     column_type: Fixed,
                 },
@@ -9662,15 +9671,6 @@ PinnedVerificationKey {
             (
                 Column {
                     index: 8,
-                    column_type: Fixed,
-                },
-                Rotation(
-                    0,
-                ),
-            ),
-            (
-                Column {
-                    index: 11,
                     column_type: Fixed,
                 },
                 Rotation(
@@ -9740,6 +9740,33 @@ PinnedVerificationKey {
                     0,
                 ),
             ),
+            (
+                Column {
+                    index: 19,
+                    column_type: Fixed,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+            (
+                Column {
+                    index: 20,
+                    column_type: Fixed,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
+            (
+                Column {
+                    index: 21,
+                    column_type: Fixed,
+                },
+                Rotation(
+                    0,
+                ),
+            ),
         ],
         permutation: Argument {
             columns: [
@@ -9794,40 +9821,111 @@ PinnedVerificationKey {
                 input_expressions: [
                     Product(
                         Fixed {
-                            query_index: 11,
-                            column_index: 11,
+                            query_index: 12,
+                            column_index: 12,
                             rotation: Rotation(
                                 0,
                             ),
                         },
                         Sum(
                             Product(
-                                Fixed {
-                                    query_index: 12,
-                                    column_index: 12,
-                                    rotation: Rotation(
-                                        0,
-                                    ),
-                                },
                                 Sum(
-                                    Advice {
-                                        query_index: 0,
-                                        column_index: 9,
-                                        rotation: Rotation(
-                                            0,
-                                        ),
-                                    },
+                                    Constant(
+                                        0x0000000000000000000000000000000000000000000000000000000000000001,
+                                    ),
                                     Negated(
-                                        Scaled(
+                                        Sum(
+                                            Constant(
+                                                0x0000000000000000000000000000000000000000000000000000000000000001,
+                                            ),
+                                            Negated(
+                                                Product(
+                                                    Sum(
+                                                        Constant(
+                                                            0x0000000000000000000000000000000000000000000000000000000000000001,
+                                                        ),
+                                                        Negated(
+                                                            Fixed {
+                                                                query_index: 14,
+                                                                column_index: 14,
+                                                                rotation: Rotation(
+                                                                    0,
+                                                                ),
+                                                            },
+                                                        ),
+                                                    ),
+                                                    Sum(
+                                                        Constant(
+                                                            0x0000000000000000000000000000000000000000000000000000000000000001,
+                                                        ),
+                                                        Negated(
+                                                            Fixed {
+                                                                query_index: 15,
+                                                                column_index: 15,
+                                                                rotation: Rotation(
+                                                                    0,
+                                                                ),
+                                                            },
+                                                        ),
+                                                    ),
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                                Sum(
+                                    Product(
+                                        Fixed {
+                                            query_index: 13,
+                                            column_index: 13,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
+                                        Sum(
                                             Advice {
-                                                query_index: 1,
+                                                query_index: 0,
                                                 column_index: 9,
                                                 rotation: Rotation(
-                                                    1,
+                                                    0,
                                                 ),
                                             },
-                                            0x0000000000000000000000000000000000000000000000000000000000000400,
+                                            Negated(
+                                                Scaled(
+                                                    Advice {
+                                                        query_index: 1,
+                                                        column_index: 9,
+                                                        rotation: Rotation(
+                                                            1,
+                                                        ),
+                                                    },
+                                                    0x0000000000000000000000000000000000000000000000000000000000000400,
+                                                ),
+                                            ),
                                         ),
+                                    ),
+                                    Product(
+                                        Sum(
+                                            Constant(
+                                                0x0000000000000000000000000000000000000000000000000000000000000001,
+                                            ),
+                                            Negated(
+                                                Fixed {
+                                                    query_index: 13,
+                                                    column_index: 13,
+                                                    rotation: Rotation(
+                                                        0,
+                                                    ),
+                                                },
+                                            ),
+                                        ),
+                                        Advice {
+                                            query_index: 0,
+                                            column_index: 9,
+                                            rotation: Rotation(
+                                                0,
+                                            ),
+                                        },
                                     ),
                                 ),
                             ),
@@ -9837,13 +9935,36 @@ PinnedVerificationKey {
                                         0x0000000000000000000000000000000000000000000000000000000000000001,
                                     ),
                                     Negated(
-                                        Fixed {
-                                            query_index: 12,
-                                            column_index: 12,
-                                            rotation: Rotation(
-                                                0,
+                                        Product(
+                                            Sum(
+                                                Constant(
+                                                    0x0000000000000000000000000000000000000000000000000000000000000001,
+                                                ),
+                                                Negated(
+                                                    Fixed {
+                                                        query_index: 14,
+                                                        column_index: 14,
+                                                        rotation: Rotation(
+                                                            0,
+                                                        ),
+                                                    },
+                                                ),
                                             ),
-                                        },
+                                            Sum(
+                                                Constant(
+                                                    0x0000000000000000000000000000000000000000000000000000000000000001,
+                                                ),
+                                                Negated(
+                                                    Fixed {
+                                                        query_index: 15,
+                                                        column_index: 15,
+                                                        rotation: Rotation(
+                                                            0,
+                                                        ),
+                                                    },
+                                                ),
+                                            ),
+                                        ),
                                     ),
                                 ),
                                 Advice {
@@ -9856,11 +9977,108 @@ PinnedVerificationKey {
                             ),
                         ),
                     ),
+                    Product(
+                        Product(
+                            Fixed {
+                                query_index: 12,
+                                column_index: 12,
+                                rotation: Rotation(
+                                    0,
+                                ),
+                            },
+                            Sum(
+                                Constant(
+                                    0x0000000000000000000000000000000000000000000000000000000000000001,
+                                ),
+                                Negated(
+                                    Product(
+                                        Sum(
+                                            Constant(
+                                                0x0000000000000000000000000000000000000000000000000000000000000001,
+                                            ),
+                                            Negated(
+                                                Fixed {
+                                                    query_index: 14,
+                                                    column_index: 14,
+                                                    rotation: Rotation(
+                                                        0,
+                                                    ),
+                                                },
+                                            ),
+                                        ),
+                                        Sum(
+                                            Constant(
+                                                0x0000000000000000000000000000000000000000000000000000000000000001,
+                                            ),
+                                            Negated(
+                                                Fixed {
+                                                    query_index: 15,
+                                                    column_index: 15,
+                                                    rotation: Rotation(
+                                                        0,
+                                                    ),
+                                                },
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                        Sum(
+                            Product(
+                                Fixed {
+                                    query_index: 15,
+                                    column_index: 15,
+                                    rotation: Rotation(
+                                        0,
+                                    ),
+                                },
+                                Constant(
+                                    0x0000000000000000000000000000000000000000000000000000000000000005,
+                                ),
+                            ),
+                            Product(
+                                Product(
+                                    Sum(
+                                        Constant(
+                                            0x0000000000000000000000000000000000000000000000000000000000000001,
+                                        ),
+                                        Negated(
+                                            Fixed {
+                                                query_index: 15,
+                                                column_index: 15,
+                                                rotation: Rotation(
+                                                    0,
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                    Fixed {
+                                        query_index: 14,
+                                        column_index: 14,
+                                        rotation: Rotation(
+                                            0,
+                                        ),
+                                    },
+                                ),
+                                Constant(
+                                    0x0000000000000000000000000000000000000000000000000000000000000004,
+                                ),
+                            ),
+                        ),
+                    ),
                 ],
                 table_expressions: [
                     Fixed {
                         query_index: 1,
                         column_index: 0,
+                        rotation: Rotation(
+                            0,
+                        ),
+                    },
+                    Fixed {
+                        query_index: 2,
+                        column_index: 10,
                         rotation: Rotation(
                             0,
                         ),
@@ -9877,7 +10095,7 @@ PinnedVerificationKey {
         minimum_degree: None,
     },
     fixed_commitments: [
-        (0x05f5862cad2888855bc3c1843a9eff57b11b592d9eb0e13354256661387f5231, 0x32236b14df85bf5f532a930232cb23a5c56ef7d67aaeed8bcb8fc10ea132cbd6),
+        (0x3887a29815d3a28d43c453904169e07def787baca6c9452505d2de78dd44b86f, 0x2f95e59472ab087725d62deea9c3b406ae490eff7c0318269d6f2b025934cc70),
         (0x0b70f6f89e88131bb5ab28571ca837a4160b51998c6ced04328991a5c3bdcae9, 0x2cee3ef6523c2d36e01981c4794271d53fb47e9c5480b982a2ff3a869144d648),
         (0x0299c2272092ebe4e08c73d7261afea742a7dc29ddf73ffb941a1c9c19dcf4a1, 0x1f002552d6af287e66e3e9706ecc2a5523f256bf2c6eeb995b4233f80c8c4eeb),
         (0x28fb28941b09f9878eab1ce7923578b332ca794e3036789016fc6f832e820a37, 0x0e1fa37a3b4298c8df50b830e32ed5ff0ea40a0f8fbb1f9bb4620b8cfdcacf12),
@@ -9887,9 +10105,12 @@ PinnedVerificationKey {
         (0x02fb26d5aa81b4fd2ba3324ae48a27a3e89a90005e4daebfb8004697379f235d, 0x0b484b92ea252f7a58c5bd41cbcdcd9efb932482c902abb4ae3ccb2c90912173),
         (0x22e2076fb8f40364e7c733c89be2039af2d0976a5a240ef6f05d9b67f5861b8a, 0x1b9f2382c80f971341343fbfd1cfa3a3fa84d70310e7a8fda21a21e20fe9b0a2),
         (0x2bbc94ef7b22aebef24f9a4b0cc1831882548b605171366017d45c3e6fd92075, 0x082b801a6e176239943bfb759fb02138f47a5c8cc4aa7fa0af559fde4e3abd97),
+        (0x0decb727cf32e573604ae3928a761b450d9460f2a7283c8cf88a2b38b796e575, 0x044c0a88bc6aa468e75fc709f9eb21b6e309dd8a6ca62f7a3da86299141ea3a9),
         (0x2cec31b1d071d872bd6b1e0660840e27bc6247398c917d5dcb09354d3175fd68, 0x0812dfd78e8ec30827f658cfb64f4f253458d0fcac102af2639295659aaa75a6),
         (0x2e0cad5df5c23f42086784fd79c09b1dff1718dd1700e5157a1592dec21306a8, 0x01cd2a585d4dacd1c4ebb7eccc804a7284792641900d383e9f6f496482c01144),
         (0x2e0cad5df5c23f42086784fd79c09b1dff1718dd1700e5157a1592dec21306a8, 0x01cd2a585d4dacd1c4ebb7eccc804a7284792641900d383e9f6f496482c01144),
+        (0x2bbc94ef7b22aebef24f9a4b0cc1831882548b605171366017d45c3e6fd92075, 0x082b801a6e176239943bfb759fb02138f47a5c8cc4aa7fa0af559fde4e3abd97),
+        (0x2bbc94ef7b22aebef24f9a4b0cc1831882548b605171366017d45c3e6fd92075, 0x082b801a6e176239943bfb759fb02138f47a5c8cc4aa7fa0af559fde4e3abd97),
         (0x0a7b6a62e3771fea1024172f8fa5ae0a8b6b63d96dc2cd5794a0d61be93c5230, 0x2664583fab5a71ea152a5dc10512917a6b927ca607008db40abdd06dbbb0aedf),
         (0x149ab89afd559c4dab808f183828cac2c3c20ce9311ecf7280e03bc9881fd783, 0x2ffd5de1303205066fd7a1540ed79a47baad27532dfc1de2fb708cfde51be867),
         (0x11c136f6ea303c5630240788e7a4db6c3aa321aaeaebecbd473af5ace4d05248, 0x0afe33d04a38bae95c2ec4c4372b2d766369c4c5b10f82dcbd4375a41f838d79),

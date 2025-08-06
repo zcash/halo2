@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 use halo2_proofs::{
     arithmetic::CurveAffine,
-    circuit::{Chip, Layouter, Value},
+    circuit::{AssignedCell, Chip, Layouter, Value},
     plonk::Error,
 };
 
@@ -60,6 +60,15 @@ pub trait EccInstructions<C: CurveAffine>:
         value: Value<C>,
     ) -> Result<Self::Point, Error>;
 
+    /// Witnesses the given constant point as a private input to the circuit.
+    /// This allows the point to be the identity, mapped to (0, 0) in
+    /// affine coordinates.
+    fn witness_point_from_constant(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        value: C,
+    ) -> Result<Self::Point, Error>;
+
     /// Witnesses the given point as a private input to the circuit.
     /// This returns an error if the point is the identity.
     fn witness_point_non_id(
@@ -109,6 +118,15 @@ pub trait EccInstructions<C: CurveAffine>:
         layouter: &mut impl Layouter<C::Base>,
         a: &A,
         b: &B,
+    ) -> Result<Self::Point, Error>;
+
+    /// Performs variable-base sign-scalar multiplication, returning `[sign] point`.
+    /// This constrains `sign` to be in {-1, 1}.
+    fn mul_sign(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        sign: &AssignedCell<C::Base, C::Base>,
+        point: &Self::Point,
     ) -> Result<Self::Point, Error>;
 
     /// Performs variable-base scalar multiplication, returning `[scalar] base`.
@@ -390,6 +408,17 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
         point.map(|inner| Point { chip, inner })
     }
 
+    /// Witnesses the given constant point as a private input to the circuit.
+    /// This allows the point to be the identity, mapped to (0, 0) in affine coordinates.
+    pub fn new_from_constant(
+        chip: EccChip,
+        mut layouter: impl Layouter<C::Base>,
+        value: C,
+    ) -> Result<Self, Error> {
+        let point = chip.witness_point_from_constant(&mut layouter, value);
+        point.map(|inner| Point { chip, inner })
+    }
+
     /// Constrains this point to be equal in value to another point.
     pub fn constrain_equal<Other: Into<Point<C, EccChip>> + Clone>(
         &self,
@@ -430,6 +459,21 @@ impl<C: CurveAffine, EccChip: EccInstructions<C> + Clone + Debug + Eq> Point<C, 
             .map(|inner| Point {
                 chip: self.chip.clone(),
                 inner,
+            })
+    }
+
+    /// Returns `[sign] self`.
+    /// This constrains `sign` to be in {-1, 1}.
+    pub fn mul_sign(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        sign: &AssignedCell<C::Base, C::Base>,
+    ) -> Result<Point<C, EccChip>, Error> {
+        self.chip
+            .mul_sign(&mut layouter, sign, &self.inner)
+            .map(|point| Point {
+                chip: self.chip.clone(),
+                inner: point,
             })
     }
 }
@@ -598,7 +642,9 @@ pub(crate) mod tests {
     };
     use crate::{
         test_circuits::test_utils::test_against_stored_circuit,
-        utilities::lookup_range_check::{PallasLookupRangeCheck, PallasLookupRangeCheckConfig},
+        utilities::lookup_range_check::{
+            PallasLookupRangeCheck, PallasLookupRangeCheck4_5BConfig, PallasLookupRangeCheckConfig,
+        },
     };
 
     #[derive(Debug, Eq, PartialEq, Clone)]
@@ -727,12 +773,12 @@ pub(crate) mod tests {
         type Base = BaseField;
     }
 
-    struct MyCircuit<Lookup: PallasLookupRangeCheck> {
+    struct MyEccCircuit<Lookup: PallasLookupRangeCheck> {
         test_errors: bool,
         _lookup_marker: PhantomData<Lookup>,
     }
 
-    impl<Lookup: PallasLookupRangeCheck> MyCircuit<Lookup> {
+    impl<Lookup: PallasLookupRangeCheck> MyEccCircuit<Lookup> {
         fn new(test_errors: bool) -> Self {
             Self {
                 test_errors,
@@ -742,12 +788,12 @@ pub(crate) mod tests {
     }
 
     #[allow(non_snake_case)]
-    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for MyCircuit<Lookup> {
+    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for MyEccCircuit<Lookup> {
         type Config = EccConfig<TestFixedBases, Lookup>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            MyCircuit::new(false)
+            MyEccCircuit::new(false)
         }
 
         fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
@@ -796,7 +842,7 @@ pub(crate) mod tests {
 
             // Load 10-bit lookup table. In the Action circuit, this will be
             // provided by the Sinsemilla chip.
-            config.lookup_config.load(&mut layouter)?;
+            config.lookup_config.load_range_check_table(&mut layouter)?;
 
             // Generate a random non-identity point P
             let p_val = pallas::Point::random(rand::rngs::OsRng).to_affine(); // P
@@ -884,6 +930,14 @@ pub(crate) mod tests {
                 )?;
             }
 
+            // Test variable-base sign-scalar multiplication
+            {
+                super::chip::mul_fixed::short::tests::test_mul_sign(
+                    chip.clone(),
+                    layouter.namespace(|| "variable-base sign-scalar mul"),
+                )?;
+            }
+
             // Test full-width fixed-base scalar multiplication
             {
                 super::chip::mul_fixed::full_width::tests::test_mul_fixed(
@@ -915,14 +969,14 @@ pub(crate) mod tests {
     #[test]
     fn ecc_chip() {
         let k = 13;
-        let circuit = MyCircuit::<PallasLookupRangeCheckConfig>::new(true);
+        let circuit = MyEccCircuit::<PallasLookupRangeCheckConfig>::new(true);
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
     }
 
     #[test]
     fn test_ecc_chip_against_stored_circuit() {
-        let circuit = MyCircuit::<PallasLookupRangeCheckConfig>::new(false);
+        let circuit = MyEccCircuit::<PallasLookupRangeCheckConfig>::new(false);
         test_against_stored_circuit(circuit, "ecc_chip", 3872);
     }
 
@@ -935,7 +989,37 @@ pub(crate) mod tests {
         root.fill(&WHITE).unwrap();
         let root = root.titled("Ecc Chip Layout", ("sans-serif", 60)).unwrap();
 
-        let circuit = MyCircuit::<PallasLookupRangeCheckConfig>::new(false);
+        let circuit = MyEccCircuit::<PallasLookupRangeCheckConfig>::new(false);
+        halo2_proofs::dev::CircuitLayout::default()
+            .render(13, &circuit, &root)
+            .unwrap();
+    }
+
+    #[test]
+    fn ecc_chip_4_5b() {
+        let k = 13;
+        let circuit = MyEccCircuit::<PallasLookupRangeCheck4_5BConfig>::new(true);
+        let prover = MockProver::run(k, &circuit, vec![]).unwrap();
+
+        assert_eq!(prover.verify(), Ok(()))
+    }
+
+    #[test]
+    fn test_against_stored_ecc_chip_4_5b() {
+        let circuit = MyEccCircuit::<PallasLookupRangeCheck4_5BConfig>::new(false);
+        test_against_stored_circuit(circuit, "ecc_chip_4_5b", 3968);
+    }
+
+    #[cfg(feature = "test-dev-graph")]
+    #[test]
+    fn print_ecc_chip_4_5b() {
+        use plotters::prelude::*;
+
+        let root = BitMapBackend::new("ecc-chip-4_5b-layout.png", (1024, 7680)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+        let root = root.titled("Ecc Chip Layout", ("sans-serif", 60)).unwrap();
+
+        let circuit = MyEccCircuit::<PallasLookupRangeCheck4_5BConfig>::new(false);
         halo2_proofs::dev::CircuitLayout::default()
             .render(13, &circuit, &root)
             .unwrap();

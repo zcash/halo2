@@ -79,13 +79,27 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     /// This returns both the resulting point, as well as the message
     /// decomposition in the form of intermediate values in a cumulative
     /// sum.
-    ///
+    /// The initial point `Q` is a public point.
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
     fn hash_to_point(
         &self,
         layouter: impl Layouter<C::Base>,
         Q: C,
+        message: Self::Message,
+    ) -> Result<(Self::NonIdentityPoint, Vec<Self::RunningSum>), Error>;
+
+    /// Hashes a message to an ECC curve point.
+    /// This returns both the resulting point, as well as the message
+    /// decomposition in the form of intermediate values in a cumulative
+    /// sum.
+    /// The initial point `Q` is a private point.
+    #[allow(non_snake_case)]
+    #[allow(clippy::type_complexity)]
+    fn hash_to_point_with_private_init(
+        &self,
+        layouter: impl Layouter<C::Base>,
+        Q: &Self::NonIdentityPoint,
         message: Self::Message,
     ) -> Result<(Self::NonIdentityPoint, Vec<Self::RunningSum>), Error>;
 
@@ -330,6 +344,21 @@ where
             .map(|(point, zs)| (ecc::NonIdentityPoint::from_inner(self.ecc_chip.clone(), point), zs))
     }
 
+    #[allow(non_snake_case)]
+    #[allow(clippy::type_complexity)]
+    /// Evaluate the Sinsemilla hash of `message` from the private initial point `Q`.
+    pub fn hash_to_point_with_private_init(
+        &self,
+        layouter: impl Layouter<C::Base>,
+        Q: &<SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
+        message: Message<C, SinsemillaChip, K, MAX_WORDS>,
+    ) -> Result<(ecc::NonIdentityPoint<C, EccChip>, Vec<SinsemillaChip::RunningSum>), Error> {
+        assert_eq!(self.sinsemilla_chip, message.chip);
+        self.sinsemilla_chip
+            .hash_to_point_with_private_init(layouter, Q, message.inner)
+            .map(|(point, zs)| (ecc::NonIdentityPoint::from_inner(self.ecc_chip.clone(), point), zs))
+    }
+
     /// $\mathsf{SinsemillaHash}$ from [§ 5.4.1.9][concretesinsemillahash].
     ///
     /// [concretesinsemillahash]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
@@ -413,6 +442,45 @@ where
         }
     }
 
+    #[allow(non_snake_case)]
+    #[allow(clippy::type_complexity)]
+    /// Evaluates the Sinsemilla hash of `message` from the private initial point `Q`.
+    pub fn hash_with_private_init(
+        &self,
+        layouter: impl Layouter<C::Base>,
+        Q: &<SinsemillaChip as SinsemillaInstructions<C, K, MAX_WORDS>>::NonIdentityPoint,
+        message: Message<C, SinsemillaChip, K, MAX_WORDS>,
+    ) -> Result<
+        (
+            ecc::NonIdentityPoint<C, EccChip>,
+            Vec<SinsemillaChip::RunningSum>,
+        ),
+        Error,
+    > {
+        assert_eq!(self.M.sinsemilla_chip, message.chip);
+        self.M.hash_to_point_with_private_init(layouter, Q, message)
+    }
+
+    #[allow(clippy::type_complexity)]
+    /// Returns the public initial point `Q` stored into `CommitDomain`.
+    pub fn q_init(&self) -> C {
+        self.M.Q
+    }
+
+    #[allow(clippy::type_complexity)]
+    /// Evaluates the blinding factor equal to $\[r\] R$ where `r` is stored in the `CommitDomain`.
+    pub fn blinding_factor(
+        &self,
+        mut layouter: impl Layouter<C::Base>,
+        r: ecc::ScalarFixed<C, EccChip>,
+    ) -> Result<
+        ecc::Point<C, EccChip>,
+        Error,
+    > {
+        let (blind, _) = self.R.mul(layouter.namespace(|| "[r] R"), r)?;
+        Ok(blind)
+    }
+
     #[allow(clippy::type_complexity)]
     /// $\mathsf{SinsemillaCommit}$ from [§ 5.4.8.4][concretesinsemillacommit].
     ///
@@ -474,7 +542,9 @@ pub(crate) mod tests {
         },
         sinsemilla::primitives::{self as sinsemilla, K},
         test_circuits::test_utils::test_against_stored_circuit,
-        utilities::lookup_range_check::{PallasLookupRangeCheck, PallasLookupRangeCheckConfig},
+        utilities::lookup_range_check::{
+            PallasLookupRangeCheck, PallasLookupRangeCheck4_5BConfig, PallasLookupRangeCheckConfig,
+        },
     };
 
     use group::{ff::Field, Curve};
@@ -516,247 +586,261 @@ pub(crate) mod tests {
         }
     }
 
-    struct MyCircuit<Lookup: PallasLookupRangeCheck> {
+    struct MySinsemillaCircuit<Lookup: PallasLookupRangeCheck> {
         _lookup_marker: PhantomData<Lookup>,
     }
 
-    impl<Lookup: PallasLookupRangeCheck> MyCircuit<Lookup> {
+    impl<Lookup: PallasLookupRangeCheck> MySinsemillaCircuit<Lookup> {
         fn new() -> Self {
-            MyCircuit {
+            Self {
                 _lookup_marker: PhantomData,
             }
         }
     }
 
-    type MyConfig<Lookup> = (
+    type EccSinsemillaConfig<Lookup> = (
         EccConfig<TestFixedBases, Lookup>,
         SinsemillaConfig<TestHashDomain, TestCommitDomain, TestFixedBases, Lookup>,
         SinsemillaConfig<TestHashDomain, TestCommitDomain, TestFixedBases, Lookup>,
     );
 
-    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for MyCircuit<Lookup> {
-        #[allow(clippy::type_complexity)]
-        type Config = MyConfig<Lookup>;
+    fn configure<Lookup: PallasLookupRangeCheck>(
+        meta: &mut ConstraintSystem<pallas::Base>,
+        allow_init_from_private_point: bool,
+    ) -> EccSinsemillaConfig<Lookup> {
+        let advices = [
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+            meta.advice_column(),
+        ];
+
+        // Shared fixed column for loading constants
+        let constants = meta.fixed_column();
+        meta.enable_constant(constants);
+
+        let table_idx = meta.lookup_table_column();
+        let lagrange_coeffs = [
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+            meta.fixed_column(),
+        ];
+
+        // Fixed columns for the Sinsemilla generator lookup table
+        let lookup = (
+            table_idx,
+            meta.lookup_table_column(),
+            meta.lookup_table_column(),
+        );
+
+        let range_check = Lookup::configure(meta, advices[9], table_idx);
+
+        let ecc_config = EccChip::<TestFixedBases, Lookup>::configure(
+            meta,
+            advices,
+            lagrange_coeffs,
+            range_check,
+        );
+
+        let config1 = SinsemillaChip::configure(
+            meta,
+            advices[..5].try_into().unwrap(),
+            advices[2],
+            lagrange_coeffs[0],
+            lookup,
+            range_check,
+            allow_init_from_private_point,
+        );
+        let config2 = SinsemillaChip::configure(
+            meta,
+            advices[5..].try_into().unwrap(),
+            advices[7],
+            lagrange_coeffs[1],
+            lookup,
+            range_check,
+            allow_init_from_private_point,
+        );
+        (ecc_config, config1, config2)
+    }
+
+    fn synthesize<Lookup: PallasLookupRangeCheck>(
+        config: EccSinsemillaConfig<Lookup>,
+        mut layouter: impl Layouter<pallas::Base>,
+    ) -> Result<(), Error> {
+        let rng = OsRng;
+
+        let ecc_chip = EccChip::construct(config.0);
+
+        // The two `SinsemillaChip`s share the same lookup table.
+        SinsemillaChip::<TestHashDomain, TestCommitDomain, TestFixedBases, Lookup>::load(
+            config.1.clone(),
+            &mut layouter,
+        )?;
+
+        // This MerkleCRH example is purely for illustrative purposes.
+        // It is not an implementation of the Orchard protocol spec.
+        {
+            let chip1 = SinsemillaChip::construct(config.1);
+
+            let merkle_crh = HashDomain::new(chip1.clone(), ecc_chip.clone(), &TestHashDomain);
+
+            // Layer 31, l = MERKLE_DEPTH - 1 - layer = 0
+            let l_bitstring = vec![Value::known(false); K];
+            let l = MessagePiece::from_bitstring(
+                chip1.clone(),
+                layouter.namespace(|| "l"),
+                &l_bitstring,
+            )?;
+
+            // Left leaf
+            let left_bitstring: Vec<Value<bool>> = (0..250)
+                .map(|_| Value::known(rand::random::<bool>()))
+                .collect();
+            let left = MessagePiece::from_bitstring(
+                chip1.clone(),
+                layouter.namespace(|| "left"),
+                &left_bitstring,
+            )?;
+
+            // Right leaf
+            let right_bitstring: Vec<Value<bool>> = (0..250)
+                .map(|_| Value::known(rand::random::<bool>()))
+                .collect();
+            let right = MessagePiece::from_bitstring(
+                chip1.clone(),
+                layouter.namespace(|| "right"),
+                &right_bitstring,
+            )?;
+
+            let l_bitstring: Value<Vec<bool>> = l_bitstring.into_iter().collect();
+            let left_bitstring: Value<Vec<bool>> = left_bitstring.into_iter().collect();
+            let right_bitstring: Value<Vec<bool>> = right_bitstring.into_iter().collect();
+
+            // Witness expected parent
+            let expected_parent = {
+                let expected_parent = l_bitstring.zip(left_bitstring.zip(right_bitstring)).map(
+                    |(l, (left, right))| {
+                        let merkle_crh = sinsemilla::HashDomain::from_Q((*Q).into());
+                        let point = merkle_crh
+                            .hash_to_point(
+                                l.into_iter()
+                                    .chain(left.into_iter())
+                                    .chain(right.into_iter()),
+                            )
+                            .unwrap();
+                        point.to_affine()
+                    },
+                );
+
+                NonIdentityPoint::new(
+                    ecc_chip.clone(),
+                    layouter.namespace(|| "Witness expected parent"),
+                    expected_parent,
+                )?
+            };
+
+            // Parent
+            let (parent, _) = {
+                let message = Message::from_pieces(chip1, vec![l, left, right]);
+                merkle_crh.hash_to_point(layouter.namespace(|| "parent"), message)?
+            };
+
+            parent.constrain_equal(
+                layouter.namespace(|| "parent == expected parent"),
+                &expected_parent,
+            )?;
+        }
+
+        {
+            let chip2 = SinsemillaChip::construct(config.2);
+
+            let test_commit = CommitDomain::new(chip2.clone(), ecc_chip.clone(), &TestCommitDomain);
+            let r_val = pallas::Scalar::random(rng);
+            let message: Vec<Value<bool>> = (0..500)
+                .map(|_| Value::known(rand::random::<bool>()))
+                .collect();
+
+            let (result, _) = {
+                let r = ScalarFixed::new(
+                    ecc_chip.clone(),
+                    layouter.namespace(|| "r"),
+                    Value::known(r_val),
+                )?;
+                let message = Message::from_bitstring(
+                    chip2,
+                    layouter.namespace(|| "witness message"),
+                    message.clone(),
+                )?;
+                test_commit.commit(layouter.namespace(|| "commit"), message, r)?
+            };
+
+            // Witness expected result.
+            let expected_result = {
+                let message: Value<Vec<bool>> = message.into_iter().collect();
+                let expected_result = message.map(|message| {
+                    let domain = sinsemilla::CommitDomain::new(PERSONALIZATION);
+                    let point = domain.commit(message.into_iter(), &r_val).unwrap();
+                    point.to_affine()
+                });
+
+                NonIdentityPoint::new(
+                    ecc_chip,
+                    layouter.namespace(|| "Witness expected result"),
+                    expected_result,
+                )?
+            };
+
+            result.constrain_equal(
+                layouter.namespace(|| "result == expected result"),
+                &expected_result,
+            )
+        }
+    }
+
+    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base> for MySinsemillaCircuit<Lookup> {
+        type Config = EccSinsemillaConfig<Lookup>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            MyCircuit::new()
+            MySinsemillaCircuit::new()
         }
 
         #[allow(non_snake_case)]
         fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
-            let advices = [
-                meta.advice_column(),
-                meta.advice_column(),
-                meta.advice_column(),
-                meta.advice_column(),
-                meta.advice_column(),
-                meta.advice_column(),
-                meta.advice_column(),
-                meta.advice_column(),
-                meta.advice_column(),
-                meta.advice_column(),
-            ];
-
-            // Shared fixed column for loading constants
-            let constants = meta.fixed_column();
-            meta.enable_constant(constants);
-
-            let table_idx = meta.lookup_table_column();
-            let lagrange_coeffs = [
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-                meta.fixed_column(),
-            ];
-
-            // Fixed columns for the Sinsemilla generator lookup table
-            let lookup = (
-                table_idx,
-                meta.lookup_table_column(),
-                meta.lookup_table_column(),
-            );
-
-            let range_check = Lookup::configure(meta, advices[9], table_idx);
-
-            let ecc_config = EccChip::<TestFixedBases, Lookup>::configure(
-                meta,
-                advices,
-                lagrange_coeffs,
-                range_check,
-            );
-
-            let config1 = SinsemillaChip::configure(
-                meta,
-                advices[..5].try_into().unwrap(),
-                advices[2],
-                lagrange_coeffs[0],
-                lookup,
-                range_check,
-            );
-            let config2 = SinsemillaChip::configure(
-                meta,
-                advices[5..].try_into().unwrap(),
-                advices[7],
-                lagrange_coeffs[1],
-                lookup,
-                range_check,
-            );
-            (ecc_config, config1, config2)
+            configure::<Lookup>(meta, false)
         }
 
         fn synthesize(
             &self,
             config: Self::Config,
-            mut layouter: impl Layouter<pallas::Base>,
+            layouter: impl Layouter<pallas::Base>,
         ) -> Result<(), Error> {
-            let rng = OsRng;
-
-            let ecc_chip = EccChip::construct(config.0);
-
-            // The two `SinsemillaChip`s share the same lookup table.
-            SinsemillaChip::<TestHashDomain, TestCommitDomain, TestFixedBases, Lookup>::load(
-                config.1.clone(),
-                &mut layouter,
-            )?;
-
-            // This MerkleCRH example is purely for illustrative purposes.
-            // It is not an implementation of the Orchard protocol spec.
-            {
-                let chip1 = SinsemillaChip::construct(config.1);
-
-                let merkle_crh = HashDomain::new(chip1.clone(), ecc_chip.clone(), &TestHashDomain);
-
-                // Layer 31, l = MERKLE_DEPTH - 1 - layer = 0
-                let l_bitstring = vec![Value::known(false); K];
-                let l = MessagePiece::from_bitstring(
-                    chip1.clone(),
-                    layouter.namespace(|| "l"),
-                    &l_bitstring,
-                )?;
-
-                // Left leaf
-                let left_bitstring: Vec<Value<bool>> = (0..250)
-                    .map(|_| Value::known(rand::random::<bool>()))
-                    .collect();
-                let left = MessagePiece::from_bitstring(
-                    chip1.clone(),
-                    layouter.namespace(|| "left"),
-                    &left_bitstring,
-                )?;
-
-                // Right leaf
-                let right_bitstring: Vec<Value<bool>> = (0..250)
-                    .map(|_| Value::known(rand::random::<bool>()))
-                    .collect();
-                let right = MessagePiece::from_bitstring(
-                    chip1.clone(),
-                    layouter.namespace(|| "right"),
-                    &right_bitstring,
-                )?;
-
-                let l_bitstring: Value<Vec<bool>> = l_bitstring.into_iter().collect();
-                let left_bitstring: Value<Vec<bool>> = left_bitstring.into_iter().collect();
-                let right_bitstring: Value<Vec<bool>> = right_bitstring.into_iter().collect();
-
-                // Witness expected parent
-                let expected_parent = {
-                    let expected_parent = l_bitstring.zip(left_bitstring.zip(right_bitstring)).map(
-                        |(l, (left, right))| {
-                            let merkle_crh = sinsemilla::HashDomain::from_Q((*Q).into());
-                            let point = merkle_crh
-                                .hash_to_point(
-                                    l.into_iter()
-                                        .chain(left.into_iter())
-                                        .chain(right.into_iter()),
-                                )
-                                .unwrap();
-                            point.to_affine()
-                        },
-                    );
-
-                    NonIdentityPoint::new(
-                        ecc_chip.clone(),
-                        layouter.namespace(|| "Witness expected parent"),
-                        expected_parent,
-                    )?
-                };
-
-                // Parent
-                let (parent, _) = {
-                    let message = Message::from_pieces(chip1, vec![l, left, right]);
-                    merkle_crh.hash_to_point(layouter.namespace(|| "parent"), message)?
-                };
-
-                parent.constrain_equal(
-                    layouter.namespace(|| "parent == expected parent"),
-                    &expected_parent,
-                )?;
-            }
-
-            {
-                let chip2 = SinsemillaChip::construct(config.2);
-
-                let test_commit =
-                    CommitDomain::new(chip2.clone(), ecc_chip.clone(), &TestCommitDomain);
-                let r_val = pallas::Scalar::random(rng);
-                let message: Vec<Value<bool>> = (0..500)
-                    .map(|_| Value::known(rand::random::<bool>()))
-                    .collect();
-
-                let (result, _) = {
-                    let r = ScalarFixed::new(
-                        ecc_chip.clone(),
-                        layouter.namespace(|| "r"),
-                        Value::known(r_val),
-                    )?;
-                    let message = Message::from_bitstring(
-                        chip2,
-                        layouter.namespace(|| "witness message"),
-                        message.clone(),
-                    )?;
-                    test_commit.commit(layouter.namespace(|| "commit"), message, r)?
-                };
-
-                // Witness expected result.
-                let expected_result = {
-                    let message: Value<Vec<bool>> = message.into_iter().collect();
-                    let expected_result = message.map(|message| {
-                        let domain = sinsemilla::CommitDomain::new(PERSONALIZATION);
-                        let point = domain.commit(message.into_iter(), &r_val).unwrap();
-                        point.to_affine()
-                    });
-
-                    NonIdentityPoint::new(
-                        ecc_chip,
-                        layouter.namespace(|| "Witness expected result"),
-                        expected_result,
-                    )?
-                };
-
-                result.constrain_equal(
-                    layouter.namespace(|| "result == expected result"),
-                    &expected_result,
-                )
-            }
+            synthesize(config, layouter)
         }
     }
 
     #[test]
     fn sinsemilla_chip() {
         let k = 11;
-        let circuit = MyCircuit::<PallasLookupRangeCheckConfig>::new();
+        let circuit = MySinsemillaCircuit::<PallasLookupRangeCheckConfig>::new();
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
     }
 
     #[test]
     fn test_sinsemilla_chip_against_stored_circuit() {
-        let circuit = MyCircuit::<PallasLookupRangeCheckConfig>::new();
+        let circuit = MySinsemillaCircuit::<PallasLookupRangeCheckConfig>::new();
         test_against_stored_circuit(circuit, "sinsemilla_chip", 4576);
     }
 
@@ -770,7 +854,76 @@ pub(crate) mod tests {
         root.fill(&WHITE).unwrap();
         let root = root.titled("SinsemillaHash", ("sans-serif", 60)).unwrap();
 
-        let circuit = MyCircuit::<PallasLookupRangeCheckConfig>::new();
+        let circuit = MySinsemillaCircuit::<PallasLookupRangeCheckConfig>::new();
+        halo2_proofs::dev::CircuitLayout::default()
+            .render(11, &circuit, &root)
+            .unwrap();
+    }
+
+    struct MySinsemillaCircuitWithHashFromPrivatePoint<Lookup: PallasLookupRangeCheck> {
+        _lookup_marker: PhantomData<Lookup>,
+    }
+
+    impl<Lookup: PallasLookupRangeCheck> MySinsemillaCircuitWithHashFromPrivatePoint<Lookup> {
+        fn new() -> Self {
+            Self {
+                _lookup_marker: PhantomData,
+            }
+        }
+    }
+
+    impl<Lookup: PallasLookupRangeCheck> Circuit<pallas::Base>
+        for MySinsemillaCircuitWithHashFromPrivatePoint<Lookup>
+    {
+        type Config = EccSinsemillaConfig<Lookup>;
+        type FloorPlanner = SimpleFloorPlanner;
+
+        fn without_witnesses(&self) -> Self {
+            MySinsemillaCircuitWithHashFromPrivatePoint::new()
+        }
+
+        #[allow(non_snake_case)]
+        fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
+            configure::<Lookup>(meta, true)
+        }
+
+        fn synthesize(
+            &self,
+            config: Self::Config,
+            layouter: impl Layouter<pallas::Base>,
+        ) -> Result<(), Error> {
+            synthesize(config, layouter)
+        }
+    }
+
+    #[test]
+    fn sinsemilla_with_hash_from_private_point_chip_4_5b() {
+        let k = 11;
+        let circuit =
+            MySinsemillaCircuitWithHashFromPrivatePoint::<PallasLookupRangeCheck4_5BConfig>::new();
+        let prover = MockProver::run(k, &circuit, vec![]).unwrap();
+        assert_eq!(prover.verify(), Ok(()))
+    }
+
+    #[test]
+    fn test_against_stored_sinsemilla_with_hash_from_private_point_chip_4_5b() {
+        let circuit =
+            MySinsemillaCircuitWithHashFromPrivatePoint::<PallasLookupRangeCheck4_5BConfig>::new();
+        test_against_stored_circuit(circuit, "sinsemilla_with_private_init_chip_4_5b", 4672);
+    }
+
+    #[cfg(feature = "test-dev-graph")]
+    #[test]
+    fn print_sinsemilla_with_hash_from_private_point_chip_4_5b() {
+        use plotters::prelude::*;
+
+        let root = BitMapBackend::new("sinsemilla-with-private-init-4_5b-layout.png", (1024, 7680))
+            .into_drawing_area();
+        root.fill(&WHITE).unwrap();
+        let root = root.titled("SinsemillaHash", ("sans-serif", 60)).unwrap();
+
+        let circuit =
+            MySinsemillaCircuitWithHashFromPrivatePoint::<PallasLookupRangeCheck4_5BConfig>::new();
         halo2_proofs::dev::CircuitLayout::default()
             .render(11, &circuit, &root)
             .unwrap();

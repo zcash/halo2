@@ -23,12 +23,16 @@ use halo2_proofs::{
 };
 use pasta_curves::pallas;
 
-mod generator_table;
+pub(crate) mod generator_table;
 use generator_table::GeneratorTableConfig;
 
 mod hash_to_point;
 
 /// Configuration for the Sinsemilla hash chip
+///
+/// If `allow_init_from_private_point` is true, the chip can compute a hash from a private point.
+/// However, compared to when `allow_init_from_private_point` is set to false,
+/// computing the hash from a public point will take one additional row.
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct SinsemillaConfig<Hash, Commit, F, Lookup = PallasLookupRangeCheckConfig>
 where
@@ -60,6 +64,10 @@ where
     pub(super) generator_table: GeneratorTableConfig,
     /// An advice column configured to perform lookup range checks.
     lookup_config: Lookup,
+
+    /// If true, it is possible to compute a hash from a private point.
+    allow_init_from_private_point: bool,
+
     _marker: PhantomData<(Hash, Commit, F)>,
 }
 
@@ -145,9 +153,15 @@ where
         layouter: &mut impl Layouter<pallas::Base>,
     ) -> Result<<Self as Chip<pallas::Base>>::Loaded, Error> {
         // Load the lookup table.
-        config.generator_table.load(layouter)
+        config.generator_table.load(config.lookup_config, layouter)
     }
 
+    /// Creates the Sinsemilla chip
+    ///
+    /// If `allow_init_from_private_point` is true, the chip can compute a hash from a private point.
+    /// However, compared to when `allow_init_from_private_point` is set to false,
+    /// computing the hash from a public point will take one additional row.
+    ///
     /// # Side-effects
     ///
     /// All columns in `advices` and will be equality-enabled.
@@ -160,6 +174,7 @@ where
         fixed_y_q: Column<Fixed>,
         lookup: (TableColumn, TableColumn, TableColumn),
         range_check: Lookup,
+        allow_init_from_private_point: bool,
     ) -> <Self as Chip<pallas::Base>>::Config {
         // Enable equality on all advice columns
         for advice in advices.iter() {
@@ -185,6 +200,7 @@ where
                 table_y: lookup.2,
             },
             lookup_config: range_check,
+            allow_init_from_private_point,
             _marker: PhantomData,
         };
 
@@ -208,7 +224,11 @@ where
         // https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial
         meta.create_gate("Initial y_Q", |meta| {
             let q_s4 = meta.query_selector(config.q_sinsemilla4);
-            let y_q = meta.query_fixed(config.fixed_y_q);
+            let y_q = if allow_init_from_private_point {
+                meta.query_advice(config.double_and_add.x_p, Rotation::prev())
+            } else {
+                meta.query_fixed(config.fixed_y_q)
+            };
 
             // Y_A = (lambda_1 + lambda_2) * (x_a - x_r)
             let Y_A_cur = Y_A(meta, Rotation::cur());
@@ -325,6 +345,24 @@ where
         layouter.assign_region(
             || "hash_to_point",
             |mut region| self.hash_message(&mut region, Q, &message),
+        )
+    }
+
+    #[allow(non_snake_case)]
+    #[allow(clippy::type_complexity)]
+    fn hash_to_point_with_private_init(
+        &self,
+        mut layouter: impl Layouter<pallas::Base>,
+        Q: &Self::NonIdentityPoint,
+        message: Self::Message,
+    ) -> Result<(Self::NonIdentityPoint, Vec<Self::RunningSum>), Error> {
+        if !self.config().allow_init_from_private_point {
+            return Err(Error::IllegalHashFromPrivatePoint);
+        }
+
+        layouter.assign_region(
+            || "hash_to_point",
+            |mut region| self.hash_message_with_private_init(&mut region, Q, &message),
         )
     }
 

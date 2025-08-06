@@ -1,6 +1,7 @@
+use ff::PrimeFieldBits;
 use group::ff::PrimeField;
 use halo2_proofs::{
-    circuit::{Layouter, Value},
+    circuit::Layouter,
     plonk::{ConstraintSystem, Error, Expression, TableColumn},
     poly::Rotation,
 };
@@ -8,7 +9,7 @@ use halo2_proofs::{
 use super::{CommitDomains, FixedPoints, HashDomains};
 use crate::{
     sinsemilla::primitives::{self as sinsemilla, SINSEMILLA_S},
-    utilities::lookup_range_check::PallasLookupRangeCheck,
+    utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRangeCheck},
 };
 use pasta_curves::pallas;
 
@@ -81,22 +82,15 @@ impl GeneratorTableConfig {
         });
     }
 
-    pub fn load(&self, layouter: &mut impl Layouter<pallas::Base>) -> Result<(), Error> {
-        layouter.assign_table(
-            || "generator_table",
-            |mut table| {
-                for (index, (x, y)) in SINSEMILLA_S.iter().enumerate() {
-                    table.assign_cell(
-                        || "table_idx",
-                        self.table_idx,
-                        index,
-                        || Value::known(pallas::Base::from(index as u64)),
-                    )?;
-                    table.assign_cell(|| "table_x", self.table_x, index, || Value::known(*x))?;
-                    table.assign_cell(|| "table_y", self.table_y, index, || Value::known(*y))?;
-                }
-                Ok(())
-            },
-        )
+    /// Load the generator table into the circuit.
+    pub fn load<F, const K: usize>(
+        &self,
+        lookup_config: impl LookupRangeCheck<F, K>,
+        layouter: &mut impl Layouter<pallas::Base>,
+    ) -> Result<(), Error>
+    where
+        F: PrimeFieldBits,
+    {
+        lookup_config.load(self, layouter)
     }
 }

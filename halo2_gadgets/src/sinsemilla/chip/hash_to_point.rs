@@ -21,8 +21,6 @@ use std::ops::Deref;
 #[cfg(test)]
 enum EccPointQ {
     PublicPoint(pallas::Affine),
-    #[allow(dead_code)]
-    // We will use private point for ZSA
     PrivatePoint(NonIdentityEccPoint),
 }
 
@@ -68,21 +66,66 @@ where
         ))
     }
 
+    /// [Specification](https://p.z.cash/halo2-0.1:sinsemilla-constraints?partial).
     #[allow(non_snake_case)]
-    /// Assign the coordinates of the initial public point `Q`
-    /// - `x_Q` in a advice column, and
-    /// - `y_Q` in a fixed column.
+    #[allow(clippy::type_complexity)]
+    pub(super) fn hash_message_with_private_init(
+        &self,
+        region: &mut Region<'_, pallas::Base>,
+        Q: &NonIdentityEccPoint,
+        message: &<Self as SinsemillaInstructions<
+            pallas::Affine,
+            { sinsemilla::K },
+            { sinsemilla::C },
+        >>::Message,
+    ) -> Result<
+        (
+            NonIdentityEccPoint,
+            Vec<Vec<AssignedCell<pallas::Base, pallas::Base>>>,
+        ),
+        Error,
+    > {
+        if !self.config().allow_init_from_private_point {
+            return Err(Error::IllegalHashFromPrivatePoint);
+        }
+
+        let (offset, x_a, y_a) = self.private_q_initialization(region, Q)?;
+
+        let (x_a, y_a, zs_sum) = self.hash_all_pieces(region, offset, message, x_a, y_a)?;
+
+        #[cfg(test)]
+        self.check_hash_result(EccPointQ::PrivatePoint(Q.clone()), message, &x_a, &y_a);
+
+        x_a.value()
+            .error_if_known_and(|x_a| x_a.is_zero_vartime())?;
+        y_a.value()
+            .error_if_known_and(|y_a| y_a.is_zero_vartime())?;
+        Ok((
+            NonIdentityEccPoint::from_coordinates_unchecked(x_a.0, y_a),
+            zs_sum,
+        ))
+    }
+
+    #[allow(non_snake_case)]
+    /// Assign the coordinates of the initial public point `Q`.
     ///
+    /// If allow_init_from_private_point is not set,
     /// | offset | x_A | q_sinsemilla4 | fixed_y_q |
     /// --------------------------------------
     /// |   0    | x_Q |   1           |   y_Q     |
+    ///
+    /// If allow_init_from_private_point is set,
+    /// | offset | x_A | x_P | q_sinsemilla4 |
+    /// --------------------------------------
+    /// |   0    |     | y_Q |               |
+    /// |   1    | x_Q |     |         1     |
     fn public_q_initialization(
         &self,
         region: &mut Region<'_, pallas::Base>,
         Q: pallas::Affine,
     ) -> Result<(usize, X<pallas::Base>, Y<pallas::Base>), Error> {
         let config = self.config().clone();
-        let offset = 0;
+        let mut offset = 0;
 
         // Get the `x`- and `y`-coordinates of the starting `Q` base.
         let x_q = *Q.coordinates().unwrap().x();
@@ -90,7 +133,19 @@ where
 
         // Constrain the initial x_a, lambda_1, lambda_2, x_p using the q_sinsemilla4
         // selector.
-        let y_a: Y<pallas::Base> = {
+        let y_a: Y<pallas::Base> = if config.allow_init_from_private_point {
+            // Enable `q_sinsemilla4` on the second row.
+            config.q_sinsemilla4.enable(region, offset + 1)?;
+            let y_a: AssignedCell<Assigned<pallas::Base>, pallas::Base> = region
+                .assign_advice_from_constant(
+                    || "variable y_q",
+                    config.double_and_add.x_p,
+                    offset,
+                    y_q.into(),
+                )?;
+            offset += 1;
+            y_a.value_field().into()
+        } else {
             // Enable `q_sinsemilla4` on the first row.
             config.q_sinsemilla4.enable(region, offset)?;
             region.assign_fixed(
@@ -106,7 +161,7 @@ where
         // Constrain the initial x_q to equal the x-coordinate of the domain's `Q`.
         let x_a: X<pallas::Base> = {
             let x_a = region.assign_advice_from_constant(
-                || "fixed x_q",
+                || "variable x_q",
                 config.double_and_add.x_a,
                 offset,
                 x_q.into(),
@@ -116,6 +171,46 @@ where
         };
 
         Ok((offset, x_a, y_a))
+    }
+
+    #[allow(non_snake_case)]
+    /// Assign the coordinates of the initial private point `Q`
+    ///
+    /// | offset | x_A | x_P | q_sinsemilla4 |
+    /// --------------------------------------
+    /// |   0    |     | y_Q |               |
+    /// |   1    | x_Q |     |         1     |
+    fn private_q_initialization(
+        &self,
+        region: &mut Region<'_, pallas::Base>,
+        Q: &NonIdentityEccPoint,
+    ) -> Result<(usize, X<pallas::Base>, Y<pallas::Base>), Error> {
+        let config = self.config().clone();
+
+        if !config.allow_init_from_private_point {
+            return Err(Error::IllegalHashFromPrivatePoint);
+        }
+
+        // Assign `x_Q` and `y_Q` in the region and constrain the initial x_a, lambda_1, lambda_2,
+        // x_p, y_Q using the q_sinsemilla4 selector.
+        let y_a: Y<pallas::Base> = {
+            // Enable `q_sinsemilla4` on the second row.
+            config.q_sinsemilla4.enable(region, 1)?;
+            let q_y: AssignedCell<Assigned<pallas::Base>, pallas::Base> = Q.y().into();
+            let y_a: AssignedCell<Assigned<pallas::Base>, pallas::Base> =
+                q_y.copy_advice(|| "fixed y_q", region, config.double_and_add.x_p, 0)?;
+
+            y_a.value_field().into()
+        };
+
+        let x_a: X<pallas::Base> = {
+            let q_x: AssignedCell<Assigned<pallas::Base>, pallas::Base> = Q.x().into();
+            let x_a = q_x.copy_advice(|| "fixed x_q", region, config.double_and_add.x_a, 1)?;
+
+            x_a.into()
+        };
+
+        Ok((1, x_a, y_a))
     }
 
     #[allow(clippy::type_complexity)]

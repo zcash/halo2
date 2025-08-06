@@ -40,6 +40,8 @@ pub enum Error {
     ColumnNotInPermutation(Column<Any>),
     /// An error relating to a lookup table.
     TableError(TableError),
+    /// Try to hash from a private point when allow_init_from_private_point is not set.
+    IllegalHashFromPrivatePoint,
 }
 
 impl From<io::Error> for Error {
@@ -82,7 +84,11 @@ impl fmt::Display for Error {
                 "Column {:?} must be included in the permutation. Help: try applying `meta.enable_equalty` on the column",
                 column
             ),
-            Error::TableError(error) => write!(f, "{}", error)
+            Error::TableError(error) => write!(f, "{}", error),
+            Error::IllegalHashFromPrivatePoint =>  write!(
+                f,
+                "Hashing from private point is disabled"
+            )
         }
     }
 }
