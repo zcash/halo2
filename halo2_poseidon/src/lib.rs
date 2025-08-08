@@ -382,6 +382,31 @@ pub trait Domain<F: Field, const RATE: usize> {
     fn padding(input_len: usize) -> Self::Padding;
 }
 
+/// A Poseidon hash function used with variable input length.
+///
+/// Domain specified in [ePrint 2019/458 section 4.2](https://eprint.iacr.org/2019/458.pdf).
+#[derive(Clone, Copy, Debug)]
+pub struct VariableLength;
+
+impl<F: PrimeField, const RATE: usize> Domain<F, RATE> for VariableLength {
+    type Padding = iter::Chain<iter::Once<F>, iter::Take<iter::Repeat<F>>>;
+
+    fn name() -> String {
+        "VariableLength".into()
+    }
+
+    fn initial_capacity_element() -> F {
+        // Capacity value is $2^64 + (o-1)$ where o is the output length.
+        // We hard-code an output length of 1.
+        F::from_u128(1u128 << 64)
+    }
+
+    fn padding(input_len: usize) -> Self::Padding {
+        let k = (input_len + RATE - 1) / RATE;
+        iter::once(F::ONE).chain(iter::repeat(F::ZERO).take(k * RATE - input_len - 1))
+    }
+}
+
 /// A Poseidon hash function used with constant input length.
 ///
 /// Domain specified in [ePrint 2019/458 section 4.2](https://eprint.iacr.org/2019/458.pdf).
@@ -447,6 +472,22 @@ impl<F: Field, S: Spec<F, T, RATE>, D: Domain<F, RATE>, const T: usize, const RA
             sponge: Sponge::new(D::initial_capacity_element()),
             _domain: PhantomData::default(),
         }
+    }
+}
+
+impl<F: PrimeField, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
+    Hash<F, S, VariableLength, T, RATE>
+{
+    /// Hashes the given input.
+    pub fn hash(mut self, message: &[F]) -> F {
+        for value in message
+            .into_iter()
+            .map(|value| *value)
+            .chain(<VariableLength as Domain<F, RATE>>::padding(message.len()))
+        {
+            self.sponge.absorb(value);
+        }
+        self.sponge.finish_absorbing().squeeze()
     }
 }
 
