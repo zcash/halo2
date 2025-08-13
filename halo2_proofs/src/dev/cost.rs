@@ -414,6 +414,97 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
             _marker: PhantomData::default(),
         }
     }
+
+    /// Returns the marginal prover work per instance of this circuit.
+    pub fn marginal_prover_work(&self) -> MarginalProverWork {
+        // Instance columns
+        // - 1 `lagrange_to_coeff` for each instance column
+        // - 1 `coeff_to_extended` for each instance column
+        // - 1 `commit_lagrange` for each instance column
+        let instance = ProverWorkContribution::new(
+            self.num_instance_columns,
+            self.num_instance_columns,
+            self.num_instance_columns,
+        );
+        // Instance columns
+        // - 1 `lagrange_to_coeff` for each advice column
+        // - 1 `coeff_to_extended` for each advice column
+        // - 1 `commit_lagrange` for each advice column
+        let advice = ProverWorkContribution::new(
+            self.num_advice_columns,
+            self.num_advice_columns,
+            self.num_advice_columns,
+        );
+        // Lookup arguments
+        // - for the permuted input expression:
+        //   - 1 `lagrange_to_coeff`
+        //   - 1 `coeff_to_extended`
+        //   - 1 `commit_lagrange`
+        // - for the permuted table expression:
+        //   - 1 `lagrange_to_coeff`
+        //   - 1 `coeff_to_extended`
+        //   - 1 `commit_lagrange`
+        // - for the lookup product:
+        //   - 1 `lagrange_to_coeff`
+        //   - 1 `coeff_to_extended`
+        //   - 1 `commit_lagrange`
+        let lookups =
+            ProverWorkContribution::new(self.lookups * 3, self.lookups * 3, self.lookups * 3);
+        // For each chunk:
+        // - 1 `lagrange_to_coeff`
+        // - 1 `coeff_to_extended`
+        // - 1 `commit_lagrange`
+        let equality = ProverWorkContribution::new(
+            self.permutation_chunks(),
+            self.permutation_chunks(),
+            self.permutation_chunks(),
+        );
+
+        MarginalProverWork {
+            instance,
+            advice,
+            lookups,
+            equality,
+        }
+    }
+
+    /// Returns the prover work for the given number of instances of this circuit.
+    pub fn prover_work(&self, instances: usize) -> ProverWork {
+        let mut extended_k = self.k;
+        let n = 1u64 << self.k;
+        while (1 << extended_k) < (n * (self.max_deg as u64 - 1)) {
+            extended_k += 1;
+        }
+
+        let marginal = self.marginal_prover_work();
+
+        // Vanishing argument
+        // - 1 `extended_to_coeff` on `h_poly`
+        // - 1 commitment to random_poly
+        // - (max_deg - 1) commitments (1 for each `h(X)` piece)
+        let vanishing = ProverWorkContribution::new(0, 1, 1 + (self.max_deg - 1));
+
+        // Multiopen argument
+        // - 1 commitment to q_prime
+        let multiopen = ProverWorkContribution::new(0, 0, 1);
+
+        // IPA polynomial commitment
+        // - 1 commitment to s_poly
+        // - the number of scalar multiplications resulting from all rounds of IPA
+        //   is equivalent to about 2 * (2 * 2^k) (excluding some constants)
+        let polycomm = ProverWorkContribution::new(0, 0, 4);
+
+        ProverWork {
+            extended_k,
+            instance: marginal.instance * instances,
+            advice: marginal.advice * instances,
+            lookups: marginal.lookups * instances,
+            equality: marginal.equality * instances,
+            vanishing,
+            multiopen,
+            polycomm,
+        }
+    }
 }
 
 /// (commitments, evaluations)
@@ -508,6 +599,72 @@ impl<G: PrimeGroup> From<ProofSize<G>> for usize {
             + proof.multiopen.len(point, scalar)
             + proof.polycomm.len(point, scalar)
     }
+}
+
+#[derive(Debug)]
+struct ProverWorkContribution {
+    // Number of FFTs in the 2^k domain
+    ffts: usize,
+    // Number of FFTs in the 2^extended_k domain
+    extended_ffts: usize,
+    // Number of multi-scalar multiplications of length 2^k
+    msms: usize,
+}
+
+impl ProverWorkContribution {
+    fn new(ffts: usize, extended_ffts: usize, msms: usize) -> Self {
+        ProverWorkContribution {
+            ffts,
+            extended_ffts,
+            msms,
+        }
+    }
+}
+
+impl Add for ProverWorkContribution {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            ffts: self.ffts + rhs.ffts,
+            extended_ffts: self.extended_ffts + rhs.extended_ffts,
+            msms: self.msms + rhs.msms,
+        }
+    }
+}
+
+impl Mul<usize> for ProverWorkContribution {
+    type Output = Self;
+
+    fn mul(self, instances: usize) -> Self::Output {
+        Self {
+            ffts: self.ffts * instances,
+            extended_ffts: self.extended_ffts * instances,
+            msms: self.msms * instances,
+        }
+    }
+}
+
+/// The marginal prover work to generate a Halo 2 proof, broken down into its contributing factors.
+#[derive(Debug)]
+pub struct MarginalProverWork {
+    instance: ProverWorkContribution,
+    advice: ProverWorkContribution,
+    lookups: ProverWorkContribution,
+    equality: ProverWorkContribution,
+}
+
+/// The prover work to generate a Halo 2 proof, broken down into its contributing factors.
+#[derive(Debug)]
+pub struct ProverWork {
+    extended_k: u32,
+    instance: ProverWorkContribution,
+    advice: ProverWorkContribution,
+    lookups: ProverWorkContribution,
+    equality: ProverWorkContribution,
+    vanishing: ProverWorkContribution,
+    multiopen: ProverWorkContribution,
+    polycomm: ProverWorkContribution,
 }
 
 #[cfg(test)]
