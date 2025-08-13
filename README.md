@@ -2,8 +2,8 @@
 
 ## Usage
 
-This repository contains the [halo2_proofs](halo2_proofs/README.md) and
-[halo2_gadgets](halo2_gadgets/README.md) crates, which should be used directly.
+This repository contains the [halo2_proofs](https://github.com/zcash/halo2/blob/main/halo2_proofs/README.md) and
+[halo2_gadgets](https://github.com/zcash/halo2/blob/main/halo2_gadgets/README.md) crates, which should be used directly.
 
 ## Minimum Supported Rust Version
 
