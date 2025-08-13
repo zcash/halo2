@@ -253,6 +253,7 @@ impl TryFrom<Column<Any>> for Column<Instance> {
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "dev-graph", derive(serde::Serialize))]
 pub struct Selector(pub(crate) usize, bool);
 
 impl Selector {
