@@ -5,3 +5,7 @@ members = [
     "halo2_poseidon",
     "halo2_proofs",
 ]
+
+[profile.bench]
+lto = "thin"
+codegen-units = 1
