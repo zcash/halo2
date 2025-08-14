@@ -368,7 +368,18 @@ So $\mathbf{k}_{253..130}$ are all $0$ exactly when $\mathbf{z}_{130} = \mathbf{
 
 Finally, we can merge the $130$-bit decompositions for the $\mathbf{k}_{254} = 0$ and $\mathbf{k}_{254} = 1$ cases by checking that $(\alpha + \mathbf{k}_{254} \cdot 2^{130}) \bmod p \in [0, 2^{130})$.
 
-### Overflow check constraints
+### Layout
+
+$$
+\begin{array}{|c|c|c|c|}
+  a_0   &      a_1    & a_2 & q_\texttt{mul\_overflow} \\\hline
+  z_0   &    k_{254}  &     &             0            \\\hline
+z_{130} &    \alpha   &  s  &             1            \\\hline
+  \eta  &    s_{hi}   &     &             0            \\\hline
+\end{array}
+$$
+
+### Constraints
 
 Let $s = \alpha + \mathbf{k}_{254} \cdot 2^{130}$. The constraints for the overflow check are:
 
@@ -393,11 +404,11 @@ $$
 2 & q_\texttt{mul\_overflow} \cdot \left(s - (\alpha + \mathbf{k}_{254} \cdot 2^{130})\right) = 0 \\\hline
 2 & q_\texttt{mul\_overflow} \cdot \left(\mathbf{z}_0 - \alpha - t_q\right) = 0 \\\hline
 3 & q_\texttt{mul\_overflow} \cdot \left(\mathbf{k}_{254} \cdot (\mathbf{z}_{130} - 2^{124})\right) = 0 \\\hline
-3 & q_\texttt{mul\_overflow} \cdot \left(\mathbf{k}_{254} \cdot (s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}\right) = 0 \\\hline
+3 & q_\texttt{mul\_overflow} \cdot \left(\mathbf{k}_{254} \cdot s_{hi}\right) = 0 \\\hline
 5 & q_\texttt{mul\_overflow} \cdot \left((1 - \mathbf{k}_{254}) \cdot (1 - \mathbf{z}_{130} \cdot \eta) \cdot (s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}\right) = 0 \\\hline
 \end{array}
 $$
-where $(s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}$ can be computed by another running sum. Note that the factor of $1/2^{130}$ has no effect on the constraint, since the RHS is zero.
+where $s_{hi} = (s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}$ can be computed by another running sum. Note that the factor of $1/2^{130}$ has no effect on the constraint, since the RHS is zero.
 
 #### Running sum range check
 We make use of a $10$-bit [lookup range check](../decomposition.md#lookup-decomposition) in the circuit to subtract the low $130$ bits of $\mathbf{s}$. The range check subtracts the first $13 \cdot 10$ bits of $\mathbf{s},$ and right-shifts the result to give $(s - \sum\limits_{i=0}^{129} 2^i \cdot \mathbf{s}_i)/2^{130}.$
