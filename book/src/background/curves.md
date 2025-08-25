@@ -271,7 +271,22 @@ over $E_q/\mathbb{F}_q,$ forming a 2-cycle with the first:
 
 ![](https://i.imgur.com/bNMyMRu.png)
 
-### TODO: Pallas-Vesta curves
+### Pallas-Vesta curves
+
+The Pallas and Vesta curves form a 2-cycle of elliptic curves designed specifically for Halo 2. They are defined over finite fields with highly 2-adic structure, meaning they have large multiplicative subgroups of order $2^S$ where $S = 32$.
+
+**Pallas curve ($E_p/\mathbb{F}_p$):**
+- Base field: $\mathbb{F}_p$ where $p = 2^{254} + t_p$ and $t_p = 45560315531419706090280762371685220353$
+- Scalar field: $\mathbb{F}_q$ where $q = 2^{254} + t_q$ and $t_q = 45560315531506369815346746415080538113$
+- Curve equation: $y^2 = x^3 + 5$
+
+**Vesta curve ($E_q/\mathbb{F}_q$):**
+- Base field: $\mathbb{F}_q$ (same as Pallas scalar field)
+- Scalar field: $\mathbb{F}_p$ (same as Pallas base field)
+- Curve equation: $y^2 = x^3 + 5$
+
+This 2-cycle structure enables efficient recursive proof composition, where proofs generated on one curve can be efficiently verified on the other curve. The highly 2-adic structure ($p-1 = T \cdot 2^{32}$ with $T$ odd) provides efficient FFT operations and enables a wide variety of circuit sizes.
+
 Reference: https://github.com/zcash/pasta
 
 ## Hashing to curves
@@ -290,7 +305,28 @@ framework used in the Internet Draft makes use of several functions:
 
 [cfrg-hash-to-curve]: https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/?include_text=1
 
-### TODO: Simplified SWU
+### Simplified SWU
+
+The Simplified SWU (Shallue-van de Woestijne-Ulas) method is an efficient hash-to-curve algorithm that maps field elements to curve points. It is particularly well-suited for curves of the form $y^2 = x^3 + b$ where $b \neq 0$.
+
+For a field element $u \in \mathbb{F}_p$, the Simplified SWU algorithm works as follows:
+
+1. **Precomputation**: Compute $Z = -b/A$ where $A$ is a non-square in $\mathbb{F}_p$
+2. **Mapping**: For input $u$, compute:
+   - $t_1 = -Z \cdot (1 + u^2)$
+   - $t_2 = -Z \cdot (1 - u^2)$
+   - $x_1 = t_1^3 + b$
+   - $x_2 = t_2^3 + b$
+   - $x_3 = Z \cdot (t_1^2 \cdot t_2^2)$
+
+3. **Selection**: Choose the first $x_i$ that is a square in $\mathbb{F}_p$
+4. **Square root**: Compute $y = \sqrt{x_i^3 + b}$
+5. **Sign adjustment**: If $u \cdot y$ is negative, negate $y$
+
+The result is the curve point $(x_i, y)$.
+
+This method is constant-time, deterministic, and provides a uniform distribution over the curve points. It is used in Halo 2 for various cryptographic operations including parameter generation and commitment schemes.
+
 Reference: https://eprint.iacr.org/2019/403.pdf
 
 ## References
