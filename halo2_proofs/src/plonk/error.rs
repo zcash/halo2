@@ -5,6 +5,48 @@ use std::io;
 use super::TableColumn;
 use super::{Any, Column};
 
+/// This is an error that could occur during table synthesis.
+#[derive(Debug)]
+pub enum TableError {
+    /// A `TableColumn` has not been assigned.
+    ColumnNotAssigned(TableColumn),
+    /// A Table has columns of uneven lengths.
+    UnevenColumnLengths((TableColumn, usize), (TableColumn, usize)),
+    /// Attempt to assign a used `TableColumn`
+    UsedColumn(TableColumn),
+    /// Attempt to overwrite a default value
+    OverwriteDefault(TableColumn, String, String),
+}
+
+impl fmt::Display for TableError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TableError::ColumnNotAssigned(col) => {
+                write!(
+                    f,
+                    "{:?} not fully assigned. Help: assign a value at offset 0.",
+                    col
+                )
+            }
+            TableError::UnevenColumnLengths((col, col_len), (col2, col2_len)) => write!(
+                f,
+                "{:?} has length {} while {:?} has length {}",
+                col, col_len, col2, col2_len
+            ),
+            TableError::UsedColumn(col) => {
+                write!(f, "{:?} has already been used", col)
+            }
+            TableError::OverwriteDefault(col, default, val) => {
+                write!(
+                    f,
+                    "Attempted to overwrite default value {} with {} in {:?}",
+                    default, val, col
+                )
+            }
+        }
+    }
+}
+
 /// This is an error that could occur during proving or circuit synthesis.
 // TODO: these errors need to be cleaned up
 #[non_exhaustive]
@@ -81,7 +123,7 @@ impl fmt::Display for Error {
             }
             Error::ColumnNotInPermutation(column) => write!(
                 f,
-                "Column {:?} must be included in the permutation. Help: try applying `meta.enable_equalty` on the column",
+                "Column {:?} must be included in the permutation. Help: try applying `meta.enable_equality` on the column",
                 column
             ),
             Error::TableError(error) => write!(f, "{}", error),
@@ -98,48 +140,6 @@ impl error::Error for Error {
         match self {
             Error::Transcript(e) => Some(e),
             _ => None,
-        }
-    }
-}
-
-/// This is an error that could occur during table synthesis.
-#[derive(Debug)]
-pub enum TableError {
-    /// A `TableColumn` has not been assigned.
-    ColumnNotAssigned(TableColumn),
-    /// A Table has columns of uneven lengths.
-    UnevenColumnLengths((TableColumn, usize), (TableColumn, usize)),
-    /// Attempt to assign a used `TableColumn`
-    UsedColumn(TableColumn),
-    /// Attempt to overwrite a default value
-    OverwriteDefault(TableColumn, String, String),
-}
-
-impl fmt::Display for TableError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            TableError::ColumnNotAssigned(col) => {
-                write!(
-                    f,
-                    "{:?} not fully assigned. Help: assign a value at offset 0.",
-                    col
-                )
-            }
-            TableError::UnevenColumnLengths((col, col_len), (table, table_len)) => write!(
-                f,
-                "{:?} has length {} while {:?} has length {}",
-                col, col_len, table, table_len
-            ),
-            TableError::UsedColumn(col) => {
-                write!(f, "{:?} has already been used", col)
-            }
-            TableError::OverwriteDefault(col, default, val) => {
-                write!(
-                    f,
-                    "Attempted to overwrite default value {} with {} in {:?}",
-                    default, val, col
-                )
-            }
         }
     }
 }
