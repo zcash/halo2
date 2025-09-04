@@ -63,7 +63,9 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for SingleVerifie
     }
 }
 
-/// Returns a boolean indicating whether or not the proof is valid
+/// Verifies a proof using the provided strategy.
+///
+/// On success returns the strategy-defined output (`V::Output`), or an `Error` on failure.
 pub fn verify_proof<
     'params,
     C: CurveAffine,
