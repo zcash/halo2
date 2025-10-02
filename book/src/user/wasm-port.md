@@ -94,7 +94,7 @@ rustflags = ["-C", "target-feature=+atomics,+bulk-memory,+mutable-globals", "-C"
 ...
 ```
 
-Shoutout to [@mattgibb](https://github.com/mattgibb) who documented this esoteric change for increasing maximum memory in a random GitHub issue [here](https://github.com/rustwasm/wasm-bindgen/issues/2498#issuecomment-801498175).[^1]
+Shoutout to [@mattgibb](https://github.com/mattgibb) who documented this esoteric change for increasing maximum memory in a random GitHub issue [here](https://github.com/wasm-bindgen/wasm-bindgen/issues/2498#issuecomment-801498175).[^1]
 
 [^1]: Off-topic but it was quite surprising for me to learn that WASM has a hard maximum limitation of 4GB memory. This is because WASM currently has a 32-bit architecture, which was quite surprising to me for such a new, forward-facing assembly language. There are, however, some open proposals to [move WASM to a larger address space](https://github.com/WebAssembly/memory64).
 
@@ -116,7 +116,7 @@ If you'd prefer to use your own Worker/React setup, the code to [fetch and seria
 
 ## Safari
 
-Note that `wasm-bindgen-rayon` library is not supported by Safari because it spawns Web Workers from inside another Web Worker. According to the relevant [Webkit issue](https://bugs.webkit.org/show_bug.cgi?id=25212), support for this feature had made it into Safari Technology Preview by November 2022, and indeed the [Release Notes for Safari Technology Preview Release 155](https://developer.apple.com/safari/technology-preview/release-notes/#r155) claim support, so it is worth checking whether this has made it into Safari if that is important to you.
+Note that `wasm-bindgen-rayon` library is not supported by Safari because it spawns Web Workers from inside another Web Worker. According to the relevant [Webkit issue](https://bugs.webkit.org/show_bug.cgi?id=25212), support for this feature had made it into Safari Technology Preview by November 2022, and indeed the [Release Notes for Safari Technology Preview Release 155](https://developer.apple.com/documentation/safari-technology-preview-release-notes#r155) claim support, so it is worth checking whether this has made it into Safari if that is important to you.
 
 ## Debugging
 
@@ -124,4 +124,4 @@ Often, you'll run into issues with your Rust code and see that the WASM executio
 
 ## Credits
 
-This guide was written by [Nalin](https://twitter.com/nibnalin). Thanks additionally to [Uma](https://twitter.com/pumatheuma) and [Blaine](https://twitter.com/BlaineBublitz) for significant work on figuring out these steps. Feel free to reach out to me if you have trouble with any of these steps.
+This guide was written by [Nalin](https://x.com/nibnalin). Thanks additionally to [Uma](https://x.com/pumatheuma) and [Blaine](https://x.com/BlaineBublitz) for significant work on figuring out these steps. Feel free to reach out to me if you have trouble with any of these steps.
