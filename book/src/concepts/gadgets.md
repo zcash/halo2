@@ -11,14 +11,14 @@ SHA-256 might be dependent on internals of the hash function design such as the 
 between message schedule and compression function. The corresponding gadget interface can
 provide a more convenient and familiar `update`/`finalize` API, and can also handle parts
 of the hash function that do not need chip support, such as padding. This is similar to how
-[accelerated](https://software.intel.com/content/www/us/en/develop/articles/intel-sha-extensions.html)
+[accelerated](https://www.intel.com/content/www/us/en/developer/overview.html)
 [instructions](https://developer.arm.com/documentation/ddi0514/g/introduction/about-the-cortex-a57-processor-cryptography-engine)
 for cryptographic primitives on CPUs are typically accessed via software libraries, rather
 than directly.
 
 Gadgets can also provide modular and reusable abstractions for circuit programming
 at a higher level, similar to their use in libraries such as
-[libsnark](https://github.com/christianlundkvist/libsnark-tutorial) and
+[libsnark](https://github.com/coder5876/libsnark-tutorial) and
 [bellman](https://electriccoin.co/blog/bellman-zksnarks-in-rust/). As well as abstracting
 *functions*, they can also abstract *types*, such as elliptic curve points or integers of
 specific sizes.
