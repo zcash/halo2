@@ -5,7 +5,7 @@ Requires Rust 1.60+.
 ## Documentation
 
 - [The Halo 2 Book](https://zcash.github.io/halo2/)
-- [Crate documentation](https://docs.rs/halo2_gadgets)
+- [Crate documentation](https://docs.rs/halo2_gadgets/latest/halo2_gadgets/)
 
 ## License
 
