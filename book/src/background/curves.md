@@ -288,8 +288,7 @@ framework used in the Internet Draft makes use of several functions:
   field $\mathbb{F}_p$
 * ``map_to_curve``: takes an $\mathbb{F}_p$ element and maps it to $E_p$.
 
-[cfrg-hash-to-curve]: https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/?include_text=1
-
+[cfrg-hash-to-curve]: https://datatracker.ietf.org/doc/rfc9380/
 ### TODO: Simplified SWU
 Reference: https://eprint.iacr.org/2019/403.pdf
 
