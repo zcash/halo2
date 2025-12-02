@@ -13,8 +13,8 @@ pub mod floor_planner;
 pub use floor_planner::single_pass::SimpleFloorPlanner;
 
 pub mod layouter;
-mod table_layouter;
 
+mod table_layouter;
 pub use table_layouter::TableLayouter;
 
 /// A chip implements a set of instructions that can be used by gadgets.

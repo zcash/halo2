@@ -7,21 +7,61 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 ### Added
-- `halo2_gadgets::utilities::lookup_range_check::LookupRangeCheck`
-- `halo2_gadgets::utilities::lookup_range_check::PallasLookupRangeCheck` which is
-  a shorthand for `LookupRangeCheck` specialized with `pallas::Base` and `sinsemilla::K`
-- `halo2_gadgets::utilities::lookup_range_check::PallasLookupRangeCheckConfig` which is
-  a shorthand for `LookupRangeCheckConfig` specialized with `pallas::Base` and `sinsemilla::K`
-- `halo2_gadgets::ecc::Point::{mul_sign, new_from_constant}`
-- `halo2_gadgets::sinsemilla::CommitDomain::{blinding_factor, hash_with_private_init, q_init}`
-- `halo2_gadgets::utilities::cond_swap::CondSwapChip::{mux_on_points, mux_on_non_identity_points}`
+- `halo2_gadgets::ecc`:
+  - `Point::new_from_constant`
+  - `Point::mul_sign`
+- `halo2_gadgets::sinsemilla`:
+  - `CommitDomain::blinding_factor`
+  - `CommitDomain::hash_with_private_init`
+  - `CommitDomain::q_init`
+  - `HashDomain::hash_to_point_with_private_init`
+  - `merkle::chip::MerkleConfig::cond_swap_config`
+- `halo2_gadgets::utilities::cond_swap`:
+  - `CondSwapChip::mux_on_points`
+  - `CondSwapChip::mux_on_non_identity_points`
+- `halo2_gadgets::utilities::lookup_range_check`:
+  - `LookupRangeCheck` trait
+  - `LookupRangeCheck4_5BConfig<F, K>`, for efficient 4-, 5-, and K-bit lookup
+    range checks.
+  - `impl LookupRangeCheck for LookupRangeCheckConfig`
+  - `PallasLookupRangeCheck: LookupRangeCheck<pallas::Base, { sinsemilla::K }>`
+    trait.
+  - `PallasLookupRangeCheckConfig` type alias, for
+    `LookupRangeCheckConfig<pallas::Base, { sinsemilla::K }>`.
+  - `PallasLookupRangeCheck4_5BConfig` type alias, for
+    `LookupRangeCheck4_5BConfig<pallas::Base, { sinsemilla::K }>`.
 
 ### Changed
-- `halo2_gadgets::utilities::lookup_range_check::witness_short` now takes a generic `Lookup`
-  instead of directly taking a `LookupRangeCheckConfig<F, K>` reference
-- `halo2_gadgets::sinsemilla::merkle::chip::MerkleConfig::cond_swap_config` is now public
-- `halo2_gadgets::sinsemilla::chip::SinsemillaChip::configure` has a new input
-  `allow_init_from_private_point` to enable the evaluation of Sinsemilla hash from a private point.
+- `halo2_gadgets::ecc`:
+  - Changes to the `EccInstructions` trait:
+    - Added `EccInstructions::witness_point_from_constant`.
+    - Added `EccInstructions::mul_sign`.
+  - `chip::EccConfig` now has a `Lookup: PallasLookupRangeCheck` generic
+    parameter, which defaults to the previous type of the `lookup_config` field
+    (`PallasLookupRangeCheckConfig`).
+  - `chip::EccChip` now has a `Lookup: PallasLookupRangeCheck` generic
+    parameter, which defaults to `PallasLookupRangeCheckConfig`.
+- `halo2_gadgets::sinsemilla`:
+  - Changes to the `SinsemillaInstructions` trait:
+    - Added `SinsemillaInstructions::hash_to_point_with_private_init`.
+  - `chip`:
+    - `SinsemillaConfig` and `SinsemillaChip` now have a
+      `Lookup: PallasLookupRangeCheck` generic parameter, which defaults to
+      `PallasLookupRangeCheckConfig`.
+    - `SinsemillaConfig::lookup_config` now returns `Lookup`.
+    - `SinsemillaChip::configure` now takes `Lookup`, and has a new input
+      `allow_init_from_private_point` to enable the evaluation of Sinsemilla
+      hash from a private point.
+  - `merkle::chip`:
+    - `MerkleConfig` and `MerkleChip` now have a `Lookup: PallasLookupRangeCheck`
+      generic parameter, which defaults to `PallasLookupRangeCheckConfig`.
+- `halo2_gadgets::utilities`:
+  - `RangeConstrained::witness_short` now takes a generic
+    `Lookup: lookup_range_check::LookupRangeCheck<F, K>` instead of the concrete
+    type `lookup_range_check::LookupRangeCheckConfig<F, K>`.
+- `halo2_gadgets::utilities::cond_swap`:
+  - Changes to the `CondSwapInstructions` trait:
+    - Added `CondSwapInstructions::mux`.
 
 ## [0.3.1] - 2024-12-16
 - `halo2_gadgets::poseidon::primitives` is now a re-export of the new `halo2_poseidon`
