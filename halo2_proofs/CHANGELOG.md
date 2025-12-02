@@ -19,6 +19,10 @@ and this project adheres to Rust's notion of
 - `halo2_proofs::poly::commitment`:
   - `Params::k`
 
+### Deprecated
+- `halo2_proofs::circuit::layouter::TableLayouter` (moved to
+  `halo2_proofs::circuit::TableLayouter`).
+
 ## [0.3.1] - 2025-07-07
 ### Security
 `halo2_proofs` uses a multiopen argument in its proofs, which takes the sequence
