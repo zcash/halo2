@@ -15,7 +15,7 @@ and this project adheres to Rust's notion of
   - `CommitDomain::hash_with_private_init`
   - `CommitDomain::q_init`
   - `HashDomain::hash_to_point_with_private_init`
-  - `merkle::chip::MerkleConfig::cond_swap_config` field
+  - `merkle::chip::MerkleConfig::cond_swap_config`
 - `halo2_gadgets::utilities::cond_swap`:
   - `CondSwapChip::mux_on_points`
   - `CondSwapChip::mux_on_non_identity_points`

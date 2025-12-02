@@ -41,8 +41,21 @@ where
     advices: [Column<Advice>; 5],
     q_decompose: Selector,
     /// Configuration for the `CondSwapChip` used by the `MerkleChip`.
-    pub cond_swap_config: CondSwapConfig,
+    pub(super) cond_swap_config: CondSwapConfig,
     pub(super) sinsemilla_config: SinsemillaConfig<Hash, Commit, Fixed, Lookup>,
+}
+
+impl<Hash, Commit, Fixed, Lookup> MerkleConfig<Hash, Commit, Fixed, Lookup>
+where
+    Hash: HashDomains<pallas::Affine>,
+    Fixed: FixedPoints<pallas::Affine>,
+    Commit: CommitDomains<pallas::Affine, Fixed, Hash>,
+    Lookup: PallasLookupRangeCheck,
+{
+    /// Returns the conditional swap config used in this config.
+    pub fn cond_swap_config(&self) -> &CondSwapConfig {
+        &self.cond_swap_config
+    }
 }
 
 /// Chip implementing `MerkleInstructions`.
