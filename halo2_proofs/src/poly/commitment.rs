@@ -160,6 +160,11 @@ impl<C: CurveAffine> Params<C> {
         self.g.clone()
     }
 
+    /// Get the circuit size parameter k
+    pub fn k(&self) -> u32 {
+        self.k
+    }
+
     /// Writes params to a buffer.
     pub fn write<W: io::Write>(&self, writer: &mut W) -> io::Result<()> {
         writer.write_all(&self.k.to_le_bytes())?;
