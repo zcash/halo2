@@ -7,6 +7,18 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+### Added
+- `halo2_proofs::circuit`:
+  - `TableLayouter`
+  - `impl<F: Field> From<AssignedCell<F, F>> for AssignedCell<Assigned<F>, F>`
+- `halo2_proofs::plonk`:
+  - `Error::TableError`
+  - `Error::IllegalHashFromPrivatePoint`
+  - `TableError`
+  - `impl {Ord, PartialOrd} for TableColumn`
+- `halo2_proofs::poly::commitment`:
+  - `Params::k`
+
 ## [0.3.1] - 2025-07-07
 ### Security
 `halo2_proofs` uses a multiopen argument in its proofs, which takes the sequence
