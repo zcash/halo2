@@ -28,7 +28,7 @@ While the specific inputs and their serialisations will depend on your circuit a
 
 This function takes as input the `final_word` that the user aimed for, and the words they attempted to use (in the form of `words_js`). It also takes as input the parameters for the circuit, which are serialized in `params_ser`. We will expand on this in the [Params](#params) section below.
 
-Note that the function parameters are passed in `wasm_bindgen`-compatible formats: `String` and `JsValue`. The `JsValue` type is a type from the [`Serde`](https://serde.rs) library. You can find much more details about this type and how to use it in the documentation [here](https://rustwasm.github.io/wasm-bindgen/reference/arbitrary-data-with-serde.html#serializing-and-deserializing-arbitrary-data-into-and-from-jsvalue-with-serde).
+Note that the function parameters are passed in `wasm_bindgen`-compatible formats: `String` and `JsValue`. The `JsValue` type is a type from the [`Serde`](https://serde.rs) library. You can find much more details about this type and how to use it in the documentation [here](https://wasm-bindgen.github.io/wasm-bindgen/reference/arbitrary-data-with-serde.html#serializing-and-deserializing-arbitrary-data-into-and-from-jsvalue-with-serde).
 
 The output is a `Vec<u8>` converted to a `JSValue` using Serde. This is later passed in as input to the the verifier function.
 
@@ -116,7 +116,7 @@ If you'd prefer to use your own Worker/React setup, the code to [fetch and seria
 
 ## Safari
 
-Note that `wasm-bindgen-rayon` library is not supported by Safari because it spawns Web Workers from inside another Web Worker. According to the relevant [Webkit issue](https://bugs.webkit.org/show_bug.cgi?id=25212), support for this feature had made it into Safari Technology Preview by November 2022, and indeed the [Release Notes for Safari Technology Preview Release 155](https://developer.apple.com/safari/technology-preview/release-notes/#r155) claim support, so it is worth checking whether this has made it into Safari if that is important to you.
+Note that `wasm-bindgen-rayon` library is not supported by Safari because it spawns Web Workers from inside another Web Worker. According to the relevant [Webkit issue](https://bugs.webkit.org/show_bug.cgi?id=25212), support for this feature had made it into Safari Technology Preview by November 2022, and indeed the [Release Notes for Safari Technology Preview Release 155](https://developer.apple.com/documentation/safari-technology-preview-release-notes/stp-release-155#Web-API) claim support, so it is worth checking whether this has made it into Safari if that is important to you.
 
 ## Debugging
 
