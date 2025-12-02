@@ -501,7 +501,7 @@ pub type PallasLookupRangeCheckConfig = LookupRangeCheckConfig<pallas::Base, { s
 
 impl PallasLookupRangeCheck for PallasLookupRangeCheckConfig {}
 
-/// Configuration that provides methods for an efficient 4, 5, and 10-bit lookup range check.
+/// Configuration that provides methods for an efficient 4, 5, and K-bit lookup range check.
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 pub struct LookupRangeCheck4_5BConfig<F: PrimeFieldBits, const K: usize> {
     base: LookupRangeCheckConfig<F, K>,
