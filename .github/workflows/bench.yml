@@ -13,7 +13,7 @@ jobs:
     name: Performance regression check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/prepare
       - name: Run benchmark
         run: cargo bench -- --output-format bencher | tee output.txt
