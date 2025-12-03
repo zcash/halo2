@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/prepare
       - name: Run benchmark
         run: cargo bench -- --output-format bencher | tee output.txt

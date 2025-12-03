@@ -26,6 +26,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - id: prepare
         uses: ./.github/actions/prepare
       - name: Run tests
@@ -53,6 +55,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - id: prepare
         uses: ./.github/actions/prepare
         with:
@@ -81,6 +85,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - id: prepare
         uses: ./.github/actions/prepare
         with:
@@ -99,6 +105,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/prepare
       # Check bitrot with stable (as we don't need benchmarks or the test-dev-graph
       # feature flag to work with MSRV).
@@ -118,6 +126,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/prepare
       - name: cargo build
         run: cargo build
@@ -136,6 +146,8 @@ jobs:
       options: --security-opt seccomp=unconfined
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - id: prepare
         uses: ./.github/actions/prepare
         with:
@@ -156,6 +168,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/prepare
       - run: sudo apt-get -y install libfontconfig1-dev
       - run: cargo fetch
@@ -170,5 +184,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/prepare
       - run: cargo fmt --all -- --check
