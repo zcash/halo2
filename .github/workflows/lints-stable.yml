@@ -15,7 +15,6 @@ jobs:
         uses: ./.github/actions/prepare
         with:
           nightly-features: true
-      - run: rustup component add clippy
       - name: Run clippy
         uses: actions-rs/clippy-check@v1
         with:

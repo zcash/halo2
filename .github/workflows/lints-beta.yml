@@ -16,9 +16,13 @@ jobs:
       - id: prepare
         uses: ./.github/actions/prepare
         with:
-          toolchain: beta
           nightly-features: true
-      - run: rustup component add clippy
+      - uses: dtolnay/rust-toolchain@beta
+        id: toolchain
+      - run: rustup override set "${TOOLCHAIN}"
+        shell: sh
+        env:
+          TOOLCHAIN: ${{steps.toolchain.outputs.name}}
       - name: Run Clippy (beta)
         uses: actions-rs/clippy-check@v1
         continue-on-error: true

@@ -1,10 +1,6 @@
 name: 'Prepare Halo 2'
-description: 'Sets up the Rust toolchain and prepares feature flags'
+description: 'Prepares feature flags'
 inputs:
-  toolchain:
-    description: 'Rust toolchain to use (defaults to MSRV)'
-    required: false
-    default: 1.60.0
   beta-features:
     description: 'Include beta features'
     required: false
@@ -24,10 +20,6 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: ${{ inputs.toolchain }}
-        override: true
     - id: beta
       shell: bash
       run: echo "feature=beta" >> $GITHUB_OUTPUT

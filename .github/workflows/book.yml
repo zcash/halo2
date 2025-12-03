@@ -10,29 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: '1.76.0'
-          override: true
+      - uses: dtolnay/rust-toolchain@nightly
+        id: toolchain
+      - run: rustup override set "${TOOLCHAIN}"
+        shell: sh
+        env:
+          TOOLCHAIN: ${{steps.toolchain.outputs.name}}
 
-      # - name: Setup mdBook
-      #   uses: peaceiris/actions-mdbook@v1
-      #   with:
-      #     mdbook-version: 'latest'
-
-      # mdBook for mdbook-pdf compatibility by fixing broken links in print.html
-      # Waiting for https://github.com/rust-lang/mdBook/pull/1738 to get merged
-      - name: Install patched mdbook
-        uses: actions-rs/cargo@v1
+      - name: Setup mdBook
+        uses: peaceiris/actions-mdbook@adeb05db28a0c0004681db83893d56c0388ea9ea # v1.2.0
         with:
-          command: install
-          args: mdbook --git https://github.com/HollowMan6/mdBook.git --rev 5830c9555a4dc051675d17f1fcb04dd0920543e8
+          mdbook-version: 'latest'
 
       - name: Install mdbook-katex and mdbook-pdf
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: mdbook-katex mdbook-pdf
+        run: cargo install mdbook-katex mdbook-pdf
 
       - name: Install mdbook-pdf-outline
         run: pip3 install mdbook-pdf-outline
@@ -40,16 +31,12 @@ jobs:
       - name: Build halo2 book
         run: mdbook build book/
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly-2023-10-05 
-          override: true
-
       - name: Build latest rustdocs
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --no-deps --workspace --all-features
+        run: >
+          cargo doc
+          --no-deps
+          --workspace
+          --all-features
         env:
           RUSTDOCFLAGS: -Z unstable-options --enable-index-page --cfg docsrs --html-in-header ${{ github.workspace }}/halo2_proofs/katex-header.html
 
@@ -59,13 +46,13 @@ jobs:
           mv ./target/doc ./book/book/html/rustdoc/latest
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./book/book/html
 
       - name: Upload PDF File to Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
         with:
           name: The_halo2_Book
           path: book/book/pdf-outline/*.pdf

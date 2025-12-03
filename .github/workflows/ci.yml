@@ -1,6 +1,11 @@
 name: CI checks
 
-on: [push, pull_request]
+on:
+  pull_request:
+  push:
+    branches: main
+
+permissions: {}
 
 jobs:
   test:
@@ -24,15 +29,15 @@ jobs:
       - id: prepare
         uses: ./.github/actions/prepare
       - name: Run tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: >
-            --verbose
-            --release
-            --workspace
-            ${{ steps.prepare.outputs.feature-flags }}
-            ${{ matrix.extra_flags }}
+        run: >
+          cargo test
+          --verbose
+          --release
+          --workspace
+          ${{ steps.prepare.outputs.feature-flags }}
+          ${{ matrix.extra_flags }}
+      - name: Verify working directory is clean
+        run: git diff --exit-code
 
   test-32-bit:
     name: Test on i686-unknown-linux-gnu${{ matrix.name_suffix }}
@@ -84,32 +89,29 @@ jobs:
       - name: Add target
         run: rustup target add ${{ matrix.target }}
       - name: cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: >
-            ${{ steps.prepare.outputs.feature-flags }}
-            --target ${{ matrix.target }}
+        run: >
+          cargo build
+          ${{ steps.prepare.outputs.feature-flags }}
+          --target ${{ matrix.target }}
 
   bitrot:
     name: Bitrot check
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v5
-      - run: sudo apt-get -y install libfontconfig1-dev
+      - uses: ./.github/actions/prepare
       # Check bitrot with stable (as we don't need benchmarks or the test-dev-graph
       # feature flag to work with MSRV).
-      - uses: ./.github/actions/prepare
-        with:
-          toolchain: stable
+      - uses: dtolnay/rust-toolchain@stable
+        id: toolchain
+      - run: rustup override set "${TOOLCHAIN}"
+        shell: sh
+        env:
+          TOOLCHAIN: ${{steps.toolchain.outputs.name}}
       - run: sudo apt-get -y install libfontconfig1-dev
       # Build benchmarks and all-features to prevent bitrot
       - name: Build benchmarks
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --benches --examples --all-features
+        run: cargo build --benches --examples --all-features
 
   book:
     name: Book tests
@@ -118,9 +120,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/prepare
       - name: cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
+        run: cargo build
       - name: Setup mdBook
         uses: peaceiris/actions-mdbook@v1
         with:
@@ -131,51 +131,38 @@ jobs:
   codecov:
     name: Code coverage
     runs-on: ubuntu-latest
-
+    container:
+      image: xd009642/tarpaulin:develop-nightly
+      options: --security-opt seccomp=unconfined
     steps:
       - uses: actions/checkout@v5
-      # Use stable for this to ensure that cargo-tarpaulin can be built.
       - id: prepare
         uses: ./.github/actions/prepare
         with:
-          toolchain: stable
           nightly-features: true
-      - name: Install cargo-tarpaulin
-        uses: actions-rs/cargo@v1
-        with:
-          command: install
-          args: cargo-tarpaulin
+      # Extend the timeout to 3600 to ensure the code coverage test pass
       - name: Generate coverage report
-        uses: actions-rs/cargo@v1
-        with:
-          command: tarpaulin
-          # Extend the timeout to 3600 to ensure the code coverage test pass
-          args: >
-            ${{ steps.prepare.outputs.feature-flags }}
-            --timeout 3600
-            --out Xml
+        run: >
+          cargo tarpaulin
+          --engine llvm
+          ${{ steps.prepare.outputs.feature-flags }}
+          --timeout 3600
+          --out xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3.1.4
 
   doc-links:
     name: Intra-doc links
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/prepare
-      - name: cargo fetch
-        uses: actions-rs/cargo@v1
-        with:
-          command: fetch
-
+      - run: sudo apt-get -y install libfontconfig1-dev
+      - run: cargo fetch
       # Ensure intra-documentation links all resolve correctly
       # Requires #![deny(intra_doc_link_resolution_failure)] in crates.
       - name: Check intra-doc links
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --all --document-private-items
+        run: cargo doc --all --all-features --document-private-items
 
   fmt:
     name: Rustfmt
@@ -184,8 +171,4 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/prepare
-      - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - run: cargo fmt --all -- --check
