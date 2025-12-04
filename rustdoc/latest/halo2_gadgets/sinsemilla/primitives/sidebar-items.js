@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["C","INV_TWO_POW_K","K","Q_PERSONALIZATION","SINSEMILLA_S","S_PERSONALIZATION"],"struct":["CommitDomain","HashDomain"]};

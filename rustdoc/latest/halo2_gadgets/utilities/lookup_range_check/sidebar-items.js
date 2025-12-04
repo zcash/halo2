@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["LookupRangeCheckConfig","RunningSum"]};
+window.SIDEBAR_ITEMS = {"struct":["LookupRangeCheck4_5BConfig","LookupRangeCheckConfig","RunningSum"],"trait":["LookupRangeCheck","PallasLookupRangeCheck"],"type":["PallasLookupRangeCheck4_5BConfig","PallasLookupRangeCheckConfig"]};

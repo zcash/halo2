@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/poly/multiopen/verifier.rs`."><title>verifier.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-fa3bb1812debf86c.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (2bbb61989 2023-10-04)" data-channel="nightly" data-search-js="search-8be46b629f5f14a8.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-c5bd66d33317d69f.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/poly/multiopen/verifier.rs`."><title>verifier.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0-nightly (83e49b75e 2025-12-03)" data-channel="nightly" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../../../static.files/storage-e2aeef58.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,300 +13,153 @@
         });
     });
 </script>
-</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../halo2_proofs/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
-<a href="#2" id="2">2</a>
-<a href="#3" id="3">3</a>
-<a href="#4" id="4">4</a>
-<a href="#5" id="5">5</a>
-<a href="#6" id="6">6</a>
-<a href="#7" id="7">7</a>
-<a href="#8" id="8">8</a>
-<a href="#9" id="9">9</a>
-<a href="#10" id="10">10</a>
-<a href="#11" id="11">11</a>
-<a href="#12" id="12">12</a>
-<a href="#13" id="13">13</a>
-<a href="#14" id="14">14</a>
-<a href="#15" id="15">15</a>
-<a href="#16" id="16">16</a>
-<a href="#17" id="17">17</a>
-<a href="#18" id="18">18</a>
-<a href="#19" id="19">19</a>
-<a href="#20" id="20">20</a>
-<a href="#21" id="21">21</a>
-<a href="#22" id="22">22</a>
-<a href="#23" id="23">23</a>
-<a href="#24" id="24">24</a>
-<a href="#25" id="25">25</a>
-<a href="#26" id="26">26</a>
-<a href="#27" id="27">27</a>
-<a href="#28" id="28">28</a>
-<a href="#29" id="29">29</a>
-<a href="#30" id="30">30</a>
-<a href="#31" id="31">31</a>
-<a href="#32" id="32">32</a>
-<a href="#33" id="33">33</a>
-<a href="#34" id="34">34</a>
-<a href="#35" id="35">35</a>
-<a href="#36" id="36">36</a>
-<a href="#37" id="37">37</a>
-<a href="#38" id="38">38</a>
-<a href="#39" id="39">39</a>
-<a href="#40" id="40">40</a>
-<a href="#41" id="41">41</a>
-<a href="#42" id="42">42</a>
-<a href="#43" id="43">43</a>
-<a href="#44" id="44">44</a>
-<a href="#45" id="45">45</a>
-<a href="#46" id="46">46</a>
-<a href="#47" id="47">47</a>
-<a href="#48" id="48">48</a>
-<a href="#49" id="49">49</a>
-<a href="#50" id="50">50</a>
-<a href="#51" id="51">51</a>
-<a href="#52" id="52">52</a>
-<a href="#53" id="53">53</a>
-<a href="#54" id="54">54</a>
-<a href="#55" id="55">55</a>
-<a href="#56" id="56">56</a>
-<a href="#57" id="57">57</a>
-<a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
-<a href="#62" id="62">62</a>
-<a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a>
-<a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
-<a href="#73" id="73">73</a>
-<a href="#74" id="74">74</a>
-<a href="#75" id="75">75</a>
-<a href="#76" id="76">76</a>
-<a href="#77" id="77">77</a>
-<a href="#78" id="78">78</a>
-<a href="#79" id="79">79</a>
-<a href="#80" id="80">80</a>
-<a href="#81" id="81">81</a>
-<a href="#82" id="82">82</a>
-<a href="#83" id="83">83</a>
-<a href="#84" id="84">84</a>
-<a href="#85" id="85">85</a>
-<a href="#86" id="86">86</a>
-<a href="#87" id="87">87</a>
-<a href="#88" id="88">88</a>
-<a href="#89" id="89">89</a>
-<a href="#90" id="90">90</a>
-<a href="#91" id="91">91</a>
-<a href="#92" id="92">92</a>
-<a href="#93" id="93">93</a>
-<a href="#94" id="94">94</a>
-<a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>ff::Field;
-
-<span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{
-    commitment::{Guard, Params, MSM},
-    Error,
-};
-<span class="kw">use super</span>::{
-    construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4,
-    CommitmentReference, Query, VerifierQuery,
-};
-<span class="kw">use </span><span class="kw">crate</span>::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine};
-<span class="kw">use </span><span class="kw">crate</span>::transcript::{EncodedChallenge, TranscriptRead};
-
-<span class="doccomment">/// Verify a multi-opening proof
-</span><span class="kw">pub fn </span>verify_proof&lt;
-    <span class="lifetime">&#39;r</span>,
-    <span class="lifetime">&#39;params</span>: <span class="lifetime">&#39;r</span>,
-    I,
-    C: CurveAffine,
-    E: EncodedChallenge&lt;C&gt;,
-    T: TranscriptRead&lt;C, E&gt;,
-&gt;(
-    params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;params </span>Params&lt;C&gt;,
-    transcript: <span class="kw-2">&amp;mut </span>T,
-    queries: I,
-    <span class="kw-2">mut </span>msm: MSM&lt;<span class="lifetime">&#39;params</span>, C&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Guard&lt;<span class="lifetime">&#39;params</span>, C, E&gt;, Error&gt;
-<span class="kw">where
-    </span>I: IntoIterator&lt;Item = VerifierQuery&lt;<span class="lifetime">&#39;r</span>, <span class="lifetime">&#39;params</span>, C&gt;&gt; + Clone,
-{
-    <span class="comment">// Sample x_1 for compressing openings at the same point sets together
-    </span><span class="kw">let </span>x_1: ChallengeX1&lt;<span class="kw">_</span>&gt; = transcript.squeeze_challenge_scalar();
-
-    <span class="comment">// Sample a challenge x_2 for keeping the multi-point quotient
-    // polynomial terms linearly independent.
-    </span><span class="kw">let </span>x_2: ChallengeX2&lt;<span class="kw">_</span>&gt; = transcript.squeeze_challenge_scalar();
-
-    <span class="kw">let </span>(commitment_map, point_sets) = construct_intermediate_sets(queries);
-
-    <span class="comment">// Compress the commitments and expected evaluations at x together.
-    // using the challenge x_1
-    </span><span class="kw">let </span><span class="kw-2">mut </span>q_commitments: Vec&lt;<span class="kw">_</span>&gt; = <span class="macro">vec!</span>[
-        (params.empty_msm(), C::Scalar::ONE); <span class="comment">// (accumulator, next x_1 power).
-        </span>point_sets.len()];
-
-    <span class="comment">// A vec of vecs of evals. The outer vec corresponds to the point set,
-    // while the inner vec corresponds to the points in a particular set.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>q_eval_sets = Vec::with_capacity(point_sets.len());
-    <span class="kw">for </span>point_set <span class="kw">in </span>point_sets.iter() {
-        q_eval_sets.push(<span class="macro">vec!</span>[C::Scalar::ZERO; point_set.len()]);
-    }
-
-    {
-        <span class="kw">let </span><span class="kw-2">mut </span>accumulate = |set_idx: usize, new_commitment, evals: Vec&lt;C::Scalar&gt;| {
-            <span class="kw">let </span>(q_commitment, x_1_power) = <span class="kw-2">&amp;mut </span>q_commitments[set_idx];
-            <span class="kw">match </span>new_commitment {
-                CommitmentReference::Commitment(c) =&gt; {
-                    q_commitment.append_term(<span class="kw-2">*</span>x_1_power, <span class="kw-2">*</span>c);
-                }
-                CommitmentReference::MSM(msm) =&gt; {
-                    <span class="kw">let </span><span class="kw-2">mut </span>msm = msm.clone();
-                    msm.scale(<span class="kw-2">*</span>x_1_power);
-                    q_commitment.add_msm(<span class="kw-2">&amp;</span>msm);
-                }
-            }
-            <span class="kw">for </span>(eval, set_eval) <span class="kw">in </span>evals.iter().zip(q_eval_sets[set_idx].iter_mut()) {
-                <span class="kw-2">*</span>set_eval += (<span class="kw-2">*</span>eval) * (<span class="kw-2">*</span>x_1_power);
-            }
-            <span class="kw-2">*</span>x_1_power <span class="kw-2">*</span>= <span class="kw-2">*</span>x_1;
-        };
-
-        <span class="comment">// Each commitment corresponds to evaluations at a set of points.
-        // For each set, we collapse each commitment&#39;s evals pointwise.
-        // Run in order of increasing x_1 powers.
-        </span><span class="kw">for </span>commitment_data <span class="kw">in </span>commitment_map.into_iter().rev() {
-            accumulate(
-                commitment_data.set_index,  <span class="comment">// set_idx,
-                </span>commitment_data.commitment, <span class="comment">// commitment,
-                </span>commitment_data.evals,      <span class="comment">// evals
-            </span>);
-        }
-    }
-
-    <span class="comment">// Obtain the commitment to the multi-point quotient polynomial f(X).
-    </span><span class="kw">let </span>q_prime_commitment = transcript.read_point().map_err(|<span class="kw">_</span>| Error::SamplingError)<span class="question-mark">?</span>;
-
-    <span class="comment">// Sample a challenge x_3 for checking that f(X) was committed to
-    // correctly.
-    </span><span class="kw">let </span>x_3: ChallengeX3&lt;<span class="kw">_</span>&gt; = transcript.squeeze_challenge_scalar();
-
-    <span class="comment">// u is a vector containing the evaluations of the Q polynomial
-    // commitments at x_3
-    </span><span class="kw">let </span><span class="kw-2">mut </span>u = Vec::with_capacity(q_eval_sets.len());
-    <span class="kw">for _ in </span><span class="number">0</span>..q_eval_sets.len() {
-        u.push(transcript.read_scalar().map_err(|<span class="kw">_</span>| Error::SamplingError)<span class="question-mark">?</span>);
-    }
-
-    <span class="comment">// We can compute the expected msm_eval at x_3 using the u provided
-    // by the prover and from x_2
-    </span><span class="kw">let </span>msm_eval = point_sets
-        .iter()
-        .zip(q_eval_sets.iter())
-        .zip(u.iter())
-        .fold(
-            C::Scalar::ZERO,
-            |msm_eval, ((points, evals), proof_eval)| {
-                <span class="kw">let </span>r_poly = lagrange_interpolate(points, evals);
-                <span class="kw">let </span>r_eval = eval_polynomial(<span class="kw-2">&amp;</span>r_poly, <span class="kw-2">*</span>x_3);
-                <span class="kw">let </span>eval = points.iter().fold(<span class="kw-2">*</span>proof_eval - <span class="kw-2">&amp;</span>r_eval, |eval, point| {
-                    eval * <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>x_3 - point).invert().unwrap()
-                });
-                msm_eval * <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>x_2) + <span class="kw-2">&amp;</span>eval
-            },
-        );
-
-    <span class="comment">// Sample a challenge x_4 that we will use to collapse the openings of
-    // the various remaining polynomials at x_3 together.
-    </span><span class="kw">let </span>x_4: ChallengeX4&lt;<span class="kw">_</span>&gt; = transcript.squeeze_challenge_scalar();
-
-    <span class="comment">// Compute the final commitment that has to be opened
-    </span>msm.append_term(C::Scalar::ONE, q_prime_commitment);
-    <span class="kw">let </span>(msm, v) = q_commitments.into_iter().zip(u.iter()).fold(
-        (msm, msm_eval),
-        |(<span class="kw-2">mut </span>msm, msm_eval), ((q_commitment, <span class="kw">_</span>), q_eval)| {
-            msm.scale(<span class="kw-2">*</span>x_4);
-            msm.add_msm(<span class="kw-2">&amp;</span>q_commitment);
-            (msm, msm_eval * <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>x_4) + q_eval)
-        },
-    );
-
-    <span class="comment">// Verify the opening proof
-    </span><span class="kw">super</span>::commitment::verify_proof(params, msm, transcript, <span class="kw-2">*</span>x_3, v)
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, C: CurveAffine&gt; Query&lt;C::Scalar&gt; <span class="kw">for </span>VerifierQuery&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, C&gt; {
-    <span class="kw">type </span>Commitment = CommitmentReference&lt;<span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, C&gt;;
-    <span class="kw">type </span>Eval = C::Scalar;
-
-    <span class="kw">fn </span>get_point(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; C::Scalar {
-        <span class="self">self</span>.point
-    }
-    <span class="kw">fn </span>get_eval(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; C::Scalar {
-        <span class="self">self</span>.eval
-    }
-    <span class="kw">fn </span>get_commitment(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Commitment {
-        <span class="self">self</span>.commitment
-    }
-}
+</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">halo2_proofs/poly/multiopen/</div>verifier.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>ff::Field;
+<a href=#2 id=2 data-nosnippet>2</a>
+<a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{
+<a href=#4 id=4 data-nosnippet>4</a>    commitment::{Guard, Params, MSM},
+<a href=#5 id=5 data-nosnippet>5</a>    Error,
+<a href=#6 id=6 data-nosnippet>6</a>};
+<a href=#7 id=7 data-nosnippet>7</a><span class="kw">use super</span>::{
+<a href=#8 id=8 data-nosnippet>8</a>    construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4,
+<a href=#9 id=9 data-nosnippet>9</a>    CommitmentReference, Query, VerifierQuery,
+<a href=#10 id=10 data-nosnippet>10</a>};
+<a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span><span class="kw">crate</span>::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine};
+<a href=#12 id=12 data-nosnippet>12</a><span class="kw">use </span><span class="kw">crate</span>::transcript::{EncodedChallenge, TranscriptRead};
+<a href=#13 id=13 data-nosnippet>13</a>
+<a href=#14 id=14 data-nosnippet>14</a><span class="doccomment">/// Verify a multi-opening proof
+<a href=#15 id=15 data-nosnippet>15</a></span><span class="kw">pub fn </span>verify_proof&lt;
+<a href=#16 id=16 data-nosnippet>16</a>    <span class="lifetime">'r</span>,
+<a href=#17 id=17 data-nosnippet>17</a>    <span class="lifetime">'params</span>: <span class="lifetime">'r</span>,
+<a href=#18 id=18 data-nosnippet>18</a>    I,
+<a href=#19 id=19 data-nosnippet>19</a>    C: CurveAffine,
+<a href=#20 id=20 data-nosnippet>20</a>    E: EncodedChallenge&lt;C&gt;,
+<a href=#21 id=21 data-nosnippet>21</a>    T: TranscriptRead&lt;C, E&gt;,
+<a href=#22 id=22 data-nosnippet>22</a>&gt;(
+<a href=#23 id=23 data-nosnippet>23</a>    params: <span class="kw-2">&amp;</span><span class="lifetime">'params </span>Params&lt;C&gt;,
+<a href=#24 id=24 data-nosnippet>24</a>    transcript: <span class="kw-2">&amp;mut </span>T,
+<a href=#25 id=25 data-nosnippet>25</a>    queries: I,
+<a href=#26 id=26 data-nosnippet>26</a>    <span class="kw-2">mut </span>msm: MSM&lt;<span class="lifetime">'params</span>, C&gt;,
+<a href=#27 id=27 data-nosnippet>27</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Guard&lt;<span class="lifetime">'params</span>, C, E&gt;, Error&gt;
+<a href=#28 id=28 data-nosnippet>28</a><span class="kw">where
+<a href=#29 id=29 data-nosnippet>29</a>    </span>I: IntoIterator&lt;Item = VerifierQuery&lt;<span class="lifetime">'r</span>, <span class="lifetime">'params</span>, C&gt;&gt; + Clone,
+<a href=#30 id=30 data-nosnippet>30</a>{
+<a href=#31 id=31 data-nosnippet>31</a>    <span class="comment">// Sample x_1 for compressing openings at the same point sets together
+<a href=#32 id=32 data-nosnippet>32</a>    </span><span class="kw">let </span>x_1: ChallengeX1&lt;<span class="kw">_</span>&gt; = transcript.squeeze_challenge_scalar();
+<a href=#33 id=33 data-nosnippet>33</a>
+<a href=#34 id=34 data-nosnippet>34</a>    <span class="comment">// Sample a challenge x_2 for keeping the multi-point quotient
+<a href=#35 id=35 data-nosnippet>35</a>    // polynomial terms linearly independent.
+<a href=#36 id=36 data-nosnippet>36</a>    </span><span class="kw">let </span>x_2: ChallengeX2&lt;<span class="kw">_</span>&gt; = transcript.squeeze_challenge_scalar();
+<a href=#37 id=37 data-nosnippet>37</a>
+<a href=#38 id=38 data-nosnippet>38</a>    <span class="kw">let </span>(commitment_map, point_sets) =
+<a href=#39 id=39 data-nosnippet>39</a>        construct_intermediate_sets(queries).ok_or(Error::OpeningError)<span class="question-mark">?</span>;
+<a href=#40 id=40 data-nosnippet>40</a>
+<a href=#41 id=41 data-nosnippet>41</a>    <span class="comment">// Compress the commitments and expected evaluations at x together.
+<a href=#42 id=42 data-nosnippet>42</a>    // using the challenge x_1
+<a href=#43 id=43 data-nosnippet>43</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>q_commitments: Vec&lt;<span class="kw">_</span>&gt; = <span class="macro">vec!</span>[
+<a href=#44 id=44 data-nosnippet>44</a>        (params.empty_msm(), C::Scalar::ONE); <span class="comment">// (accumulator, next x_1 power).
+<a href=#45 id=45 data-nosnippet>45</a>        </span>point_sets.len()];
+<a href=#46 id=46 data-nosnippet>46</a>
+<a href=#47 id=47 data-nosnippet>47</a>    <span class="comment">// A vec of vecs of evals. The outer vec corresponds to the point set,
+<a href=#48 id=48 data-nosnippet>48</a>    // while the inner vec corresponds to the points in a particular set.
+<a href=#49 id=49 data-nosnippet>49</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>q_eval_sets = Vec::with_capacity(point_sets.len());
+<a href=#50 id=50 data-nosnippet>50</a>    <span class="kw">for </span>point_set <span class="kw">in </span>point_sets.iter() {
+<a href=#51 id=51 data-nosnippet>51</a>        q_eval_sets.push(<span class="macro">vec!</span>[C::Scalar::ZERO; point_set.len()]);
+<a href=#52 id=52 data-nosnippet>52</a>    }
+<a href=#53 id=53 data-nosnippet>53</a>
+<a href=#54 id=54 data-nosnippet>54</a>    {
+<a href=#55 id=55 data-nosnippet>55</a>        <span class="kw">let </span><span class="kw-2">mut </span>accumulate = |set_idx: usize, new_commitment, evals: Vec&lt;C::Scalar&gt;| {
+<a href=#56 id=56 data-nosnippet>56</a>            <span class="kw">let </span>(q_commitment, x_1_power) = <span class="kw-2">&amp;mut </span>q_commitments[set_idx];
+<a href=#57 id=57 data-nosnippet>57</a>            <span class="kw">match </span>new_commitment {
+<a href=#58 id=58 data-nosnippet>58</a>                CommitmentReference::Commitment(c) =&gt; {
+<a href=#59 id=59 data-nosnippet>59</a>                    q_commitment.append_term(<span class="kw-2">*</span>x_1_power, <span class="kw-2">*</span>c);
+<a href=#60 id=60 data-nosnippet>60</a>                }
+<a href=#61 id=61 data-nosnippet>61</a>                CommitmentReference::MSM(msm) =&gt; {
+<a href=#62 id=62 data-nosnippet>62</a>                    <span class="kw">let </span><span class="kw-2">mut </span>msm = msm.clone();
+<a href=#63 id=63 data-nosnippet>63</a>                    msm.scale(<span class="kw-2">*</span>x_1_power);
+<a href=#64 id=64 data-nosnippet>64</a>                    q_commitment.add_msm(<span class="kw-2">&amp;</span>msm);
+<a href=#65 id=65 data-nosnippet>65</a>                }
+<a href=#66 id=66 data-nosnippet>66</a>            }
+<a href=#67 id=67 data-nosnippet>67</a>            <span class="kw">for </span>(eval, set_eval) <span class="kw">in </span>evals.iter().zip(q_eval_sets[set_idx].iter_mut()) {
+<a href=#68 id=68 data-nosnippet>68</a>                <span class="kw-2">*</span>set_eval += (<span class="kw-2">*</span>eval) * (<span class="kw-2">*</span>x_1_power);
+<a href=#69 id=69 data-nosnippet>69</a>            }
+<a href=#70 id=70 data-nosnippet>70</a>            <span class="kw-2">*</span>x_1_power <span class="kw-2">*</span>= <span class="kw-2">*</span>x_1;
+<a href=#71 id=71 data-nosnippet>71</a>        };
+<a href=#72 id=72 data-nosnippet>72</a>
+<a href=#73 id=73 data-nosnippet>73</a>        <span class="comment">// Each commitment corresponds to evaluations at a set of points.
+<a href=#74 id=74 data-nosnippet>74</a>        // For each set, we collapse each commitment's evals pointwise.
+<a href=#75 id=75 data-nosnippet>75</a>        // Run in order of increasing x_1 powers.
+<a href=#76 id=76 data-nosnippet>76</a>        </span><span class="kw">for </span>commitment_data <span class="kw">in </span>commitment_map.into_iter().rev() {
+<a href=#77 id=77 data-nosnippet>77</a>            accumulate(
+<a href=#78 id=78 data-nosnippet>78</a>                commitment_data.set_index,  <span class="comment">// set_idx,
+<a href=#79 id=79 data-nosnippet>79</a>                </span>commitment_data.commitment, <span class="comment">// commitment,
+<a href=#80 id=80 data-nosnippet>80</a>                </span>commitment_data.evals,      <span class="comment">// evals
+<a href=#81 id=81 data-nosnippet>81</a>            </span>);
+<a href=#82 id=82 data-nosnippet>82</a>        }
+<a href=#83 id=83 data-nosnippet>83</a>    }
+<a href=#84 id=84 data-nosnippet>84</a>
+<a href=#85 id=85 data-nosnippet>85</a>    <span class="comment">// Obtain the commitment to the multi-point quotient polynomial f(X).
+<a href=#86 id=86 data-nosnippet>86</a>    </span><span class="kw">let </span>q_prime_commitment = transcript.read_point().map_err(|<span class="kw">_</span>| Error::SamplingError)<span class="question-mark">?</span>;
+<a href=#87 id=87 data-nosnippet>87</a>
+<a href=#88 id=88 data-nosnippet>88</a>    <span class="comment">// Sample a challenge x_3 for checking that f(X) was committed to
+<a href=#89 id=89 data-nosnippet>89</a>    // correctly.
+<a href=#90 id=90 data-nosnippet>90</a>    </span><span class="kw">let </span>x_3: ChallengeX3&lt;<span class="kw">_</span>&gt; = transcript.squeeze_challenge_scalar();
+<a href=#91 id=91 data-nosnippet>91</a>
+<a href=#92 id=92 data-nosnippet>92</a>    <span class="comment">// u is a vector containing the evaluations of the Q polynomial
+<a href=#93 id=93 data-nosnippet>93</a>    // commitments at x_3
+<a href=#94 id=94 data-nosnippet>94</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>u = Vec::with_capacity(q_eval_sets.len());
+<a href=#95 id=95 data-nosnippet>95</a>    <span class="kw">for _ in </span><span class="number">0</span>..q_eval_sets.len() {
+<a href=#96 id=96 data-nosnippet>96</a>        u.push(transcript.read_scalar().map_err(|<span class="kw">_</span>| Error::SamplingError)<span class="question-mark">?</span>);
+<a href=#97 id=97 data-nosnippet>97</a>    }
+<a href=#98 id=98 data-nosnippet>98</a>
+<a href=#99 id=99 data-nosnippet>99</a>    <span class="comment">// We can compute the expected msm_eval at x_3 using the u provided
+<a href=#100 id=100 data-nosnippet>100</a>    // by the prover and from x_2
+<a href=#101 id=101 data-nosnippet>101</a>    </span><span class="kw">let </span>msm_eval = point_sets
+<a href=#102 id=102 data-nosnippet>102</a>        .iter()
+<a href=#103 id=103 data-nosnippet>103</a>        .zip(q_eval_sets.iter())
+<a href=#104 id=104 data-nosnippet>104</a>        .zip(u.iter())
+<a href=#105 id=105 data-nosnippet>105</a>        .fold(
+<a href=#106 id=106 data-nosnippet>106</a>            C::Scalar::ZERO,
+<a href=#107 id=107 data-nosnippet>107</a>            |msm_eval, ((points, evals), proof_eval)| {
+<a href=#108 id=108 data-nosnippet>108</a>                <span class="kw">let </span>r_poly = lagrange_interpolate(points, evals);
+<a href=#109 id=109 data-nosnippet>109</a>                <span class="kw">let </span>r_eval = eval_polynomial(<span class="kw-2">&amp;</span>r_poly, <span class="kw-2">*</span>x_3);
+<a href=#110 id=110 data-nosnippet>110</a>                <span class="kw">let </span>eval = points.iter().fold(<span class="kw-2">*</span>proof_eval - <span class="kw-2">&amp;</span>r_eval, |eval, point| {
+<a href=#111 id=111 data-nosnippet>111</a>                    eval * <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>x_3 - point).invert().unwrap()
+<a href=#112 id=112 data-nosnippet>112</a>                });
+<a href=#113 id=113 data-nosnippet>113</a>                msm_eval * <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>x_2) + <span class="kw-2">&amp;</span>eval
+<a href=#114 id=114 data-nosnippet>114</a>            },
+<a href=#115 id=115 data-nosnippet>115</a>        );
+<a href=#116 id=116 data-nosnippet>116</a>
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="comment">// Sample a challenge x_4 that we will use to collapse the openings of
+<a href=#118 id=118 data-nosnippet>118</a>    // the various remaining polynomials at x_3 together.
+<a href=#119 id=119 data-nosnippet>119</a>    </span><span class="kw">let </span>x_4: ChallengeX4&lt;<span class="kw">_</span>&gt; = transcript.squeeze_challenge_scalar();
+<a href=#120 id=120 data-nosnippet>120</a>
+<a href=#121 id=121 data-nosnippet>121</a>    <span class="comment">// Compute the final commitment that has to be opened
+<a href=#122 id=122 data-nosnippet>122</a>    </span>msm.append_term(C::Scalar::ONE, q_prime_commitment);
+<a href=#123 id=123 data-nosnippet>123</a>    <span class="kw">let </span>(msm, v) = q_commitments.into_iter().zip(u.iter()).fold(
+<a href=#124 id=124 data-nosnippet>124</a>        (msm, msm_eval),
+<a href=#125 id=125 data-nosnippet>125</a>        |(<span class="kw-2">mut </span>msm, msm_eval), ((q_commitment, <span class="kw">_</span>), q_eval)| {
+<a href=#126 id=126 data-nosnippet>126</a>            msm.scale(<span class="kw-2">*</span>x_4);
+<a href=#127 id=127 data-nosnippet>127</a>            msm.add_msm(<span class="kw-2">&amp;</span>q_commitment);
+<a href=#128 id=128 data-nosnippet>128</a>            (msm, msm_eval * <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>x_4) + q_eval)
+<a href=#129 id=129 data-nosnippet>129</a>        },
+<a href=#130 id=130 data-nosnippet>130</a>    );
+<a href=#131 id=131 data-nosnippet>131</a>
+<a href=#132 id=132 data-nosnippet>132</a>    <span class="comment">// Verify the opening proof
+<a href=#133 id=133 data-nosnippet>133</a>    </span><span class="kw">super</span>::commitment::verify_proof(params, msm, transcript, <span class="kw-2">*</span>x_3, v)
+<a href=#134 id=134 data-nosnippet>134</a>}
+<a href=#135 id=135 data-nosnippet>135</a>
+<a href=#136 id=136 data-nosnippet>136</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, C: CurveAffine&gt; Query&lt;C::Scalar&gt; <span class="kw">for </span>VerifierQuery&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, C&gt; {
+<a href=#137 id=137 data-nosnippet>137</a>    <span class="kw">type </span>Commitment = CommitmentReference&lt;<span class="lifetime">'a</span>, <span class="lifetime">'b</span>, C&gt;;
+<a href=#138 id=138 data-nosnippet>138</a>    <span class="kw">type </span>Eval = C::Scalar;
+<a href=#139 id=139 data-nosnippet>139</a>
+<a href=#140 id=140 data-nosnippet>140</a>    <span class="kw">fn </span>get_point(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; C::Scalar {
+<a href=#141 id=141 data-nosnippet>141</a>        <span class="self">self</span>.point
+<a href=#142 id=142 data-nosnippet>142</a>    }
+<a href=#143 id=143 data-nosnippet>143</a>    <span class="kw">fn </span>get_eval(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; C::Scalar {
+<a href=#144 id=144 data-nosnippet>144</a>        <span class="self">self</span>.eval
+<a href=#145 id=145 data-nosnippet>145</a>    }
+<a href=#146 id=146 data-nosnippet>146</a>    <span class="kw">fn </span>get_commitment(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>::Commitment {
+<a href=#147 id=147 data-nosnippet>147</a>        <span class="self">self</span>.commitment
+<a href=#148 id=148 data-nosnippet>148</a>    }
+<a href=#149 id=149 data-nosnippet>149</a>}
 </code></pre></div></section></main></body></html>

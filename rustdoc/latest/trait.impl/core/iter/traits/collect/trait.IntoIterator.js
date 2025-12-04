@@ -1,0 +1,9 @@
+(function() {
+    var implementors = Object.fromEntries([["halo2_proofs",[["impl&lt;F: <a class=\"trait\" href=\"halo2_proofs/arithmetic/trait.Field.html\" title=\"trait halo2_proofs::arithmetic::Field\">Field</a>, C: <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/convert/trait.Into.html\" title=\"trait core::convert::Into\">Into</a>&lt;<a class=\"struct\" href=\"halo2_proofs/plonk/struct.Constraint.html\" title=\"struct halo2_proofs::plonk::Constraint\">Constraint</a>&lt;F&gt;&gt;, Iter: <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/iter/traits/collect/trait.IntoIterator.html\" title=\"trait core::iter::traits::collect::IntoIterator\">IntoIterator</a>&lt;Item = C&gt;&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/iter/traits/collect/trait.IntoIterator.html\" title=\"trait core::iter::traits::collect::IntoIterator\">IntoIterator</a> for <a class=\"struct\" href=\"halo2_proofs/plonk/struct.Constraints.html\" title=\"struct halo2_proofs::plonk::Constraints\">Constraints</a>&lt;F, C, Iter&gt;"]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":57,"fragment_lengths":[1010]}
