@@ -177,7 +177,7 @@ $$
 
 For each $hi$ and $lo$ half, we have three sets of gates. Note that $i$ is going from $255..=3$; $i$ is NOT indexing the rows.
 
-### $q_1 = 1$ <a name="incomplete-first-row-gate">
+### $q_1 = 1$ <a name="incomplete-first-row-gate"></a>
 This gate is only used on the first row (before the for loop). We check that $\lambda_1, \lambda_2$ are initialized to values consistent with the initial $y_A.$
 $$
 \begin{array}{|c|l|}
@@ -194,7 +194,7 @@ y_{A,n}^\text{witnessed} &\text{ is witnessed.}
 \end{aligned}
 $$
 
-### $q_2 = 1$ <a name="incomplete-main-loop-gate">
+### $q_2 = 1$ <a name="incomplete-main-loop-gate"></a>
 This gate is used on all rows corresponding to the for loop except the last.
 
 $$
@@ -218,7 +218,7 @@ y_{A,i-1} &= \frac{(\lambda_{1,i-1} + \lambda_{2,i-1}) \cdot (x_{A,i-1} - (\lamb
 \end{aligned}
 $$
 
-### $q_3 = 1$ <a name="incomplete-last-row-gate">
+### $q_3 = 1$ <a name="incomplete-last-row-gate"></a>
 This gate is used on the final iteration of the for loop, handling the special case where we check that the output $y_A$ has been witnessed correctly.
 $$
 \begin{array}{|c|l|}
@@ -261,7 +261,7 @@ x_A & y_A & x_q & y_q & \lambda_2 & \alpha_2 & \beta_2 & \gamma_2 & \delta_2 & y
 \end{array}
 $$
 
-### Constraints <a name="complete-gate">
+### Constraints <a name="complete-gate"></a>
 
 In addition to the complete addition constraints, we define the following gate:
 
@@ -287,7 +287,7 @@ x_T & y_T & x_r & y_r &         &        &       &        &        & z_0 & 0 \\\
 \end{array}
 $$
 
-### Constraints <a name="lsb-gate">
+### Constraints <a name="lsb-gate"></a>
 
 $$
 \begin{array}{|c|l|}

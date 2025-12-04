@@ -129,12 +129,19 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/prepare
+      # Build with stable so the .rmeta files match what mdBook expects.
+      - uses: dtolnay/rust-toolchain@stable
+        id: toolchain
+      - run: rustup override set "${TOOLCHAIN}"
+        shell: sh
+        env:
+          TOOLCHAIN: ${{steps.toolchain.outputs.name}}
       - name: cargo build
         run: cargo build
       - name: Setup mdBook
-        uses: peaceiris/actions-mdbook@v1
+        uses: peaceiris/actions-mdbook@adeb05db28a0c0004681db83893d56c0388ea9ea # v1.2.0
         with:
-          mdbook-version: '0.4.5'
+          mdbook-version: '0.5.1'
       - name: Test halo2 book
         run: mdbook test -L target/debug/deps book/
 

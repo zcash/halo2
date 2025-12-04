@@ -22,10 +22,10 @@ jobs:
       - name: Setup mdBook
         uses: peaceiris/actions-mdbook@adeb05db28a0c0004681db83893d56c0388ea9ea # v1.2.0
         with:
-          mdbook-version: '0.4.52'
+          mdbook-version: '0.5.1'
 
       - name: Install mdbook-katex and mdbook-pdf
-        run: cargo install mdbook-katex mdbook-pdf
+        run: cargo install mdbook-katex@0.10.0-alpha mdbook-pdf
 
       - name: Install mdbook-pdf-outline
         run: pip3 install mdbook-pdf-outline
