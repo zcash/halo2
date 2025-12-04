@@ -1,7 +1,6 @@
 //! This module provides common utilities, traits and structures for group,
 //! field and polynomial arithmetic.
 
-use super::multicore;
 pub use ff::Field;
 use group::{
     ff::{BatchInvert, PrimeField},
@@ -9,6 +8,8 @@ use group::{
 };
 use maybe_rayon::prelude::*;
 pub use pasta_curves::arithmetic::*;
+
+use crate::multicore::{self, TheBestReduce};
 
 /// This represents an element of a group with basic operations that can be
 /// performed. This allows an FFT implementation (for example) to operate
@@ -162,7 +163,8 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
                 (0..c * i).for_each(|_| acc = acc.double());
                 acc
             })
-            .reduce(|| C::Curve::identity(), |a, b| a + b)
+            .the_best_reduce(C::Curve::identity, |a, b| a + b)
+            .expect("multi_buckets always contains at least 1 bucket")
     } else {
         multi_buckets
             .iter_mut()
