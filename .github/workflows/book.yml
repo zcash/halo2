@@ -33,6 +33,7 @@ jobs:
       - name: Build halo2 book
         run: mdbook build book/
 
+      - run: sudo apt-get -y install libfontconfig1-dev
       - name: Build latest rustdocs
         run: >
           cargo doc
