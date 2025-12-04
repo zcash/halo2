@@ -7,6 +7,7 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+## [0.3.2] - 2025-12-04
 ### Added
 - `halo2_proofs::circuit`:
   - `TableLayouter`
@@ -18,6 +19,9 @@ and this project adheres to Rust's notion of
   - `impl {Ord, PartialOrd} for TableColumn`
 - `halo2_proofs::poly::commitment`:
   - `Params::k`
+
+### Changed
+- `halo2_proofs::arithmetic::best_multiexp` performance has been improved.
 
 ### Deprecated
 - `halo2_proofs::circuit::layouter::TableLayouter` (moved to
