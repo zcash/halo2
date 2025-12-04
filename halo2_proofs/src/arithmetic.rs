@@ -433,7 +433,27 @@ pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
 use rand_core::OsRng;
 
 #[cfg(test)]
-use crate::pasta::Fp;
+use crate::pasta::{Eq, EqAffine, Fp};
+
+#[test]
+fn test_multiexp() {
+    let rng = OsRng;
+    let k = 8;
+
+    let coeffs = (0..(1 << k)).map(|_| Fp::random(rng)).collect::<Vec<_>>();
+    let bases = (0..(1 << k))
+        .map(|_| EqAffine::from(Eq::random(rng)))
+        .collect::<Vec<_>>();
+
+    let expected = best_multiexp(&coeffs, &bases);
+    let actual = coeffs
+        .iter()
+        .zip(bases)
+        .map(|(coeff, base)| base * coeff)
+        .fold(Eq::identity(), |acc, val| acc + val);
+
+    assert_eq!(expected, actual);
+}
 
 #[test]
 fn test_lagrange_interpolate() {
