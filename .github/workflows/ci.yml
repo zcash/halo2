@@ -139,7 +139,7 @@ jobs:
       - name: cargo build
         run: cargo build
       - name: Setup mdBook
-        uses: peaceiris/actions-mdbook@adeb05db28a0c0004681db83893d56c0388ea9ea # v1.2.0
+        uses: peaceiris/actions-mdbook@ee69d230fe19748b7abf22df32acaa93833fad08 # v2.0.0
         with:
           mdbook-version: '0.5.1'
       - name: Test halo2 book
