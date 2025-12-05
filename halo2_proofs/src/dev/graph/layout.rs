@@ -3,12 +3,13 @@ use plotters::{
     coord::Shift,
     prelude::{DrawingArea, DrawingAreaErrorKind, DrawingBackend},
 };
+
 use std::collections::HashSet;
 use std::ops::Range;
 
 use crate::{
     circuit::layouter::RegionColumn,
-    dev::cost::Layout,
+    dev::cost::{Cell, Layout, LayoutRegion},
     plonk::{Any, Circuit, Column, ConstraintSystem, FloorPlanner},
 };
 
@@ -242,26 +243,26 @@ impl CircuitLayout {
 
         // Darken the cells of the region that have been assigned to.
         for region in layout.regions {
-            for (column, row) in region.cells {
+            for Cell { column, row } in region.cells {
                 draw_cell(&root, column_index(&cs, column), row)?;
             }
         }
 
         // Darken any loose cells that have been assigned to.
-        for (column, row) in layout.loose_cells {
+        for Cell { column, row } in layout.loose_cells {
             draw_cell(&root, column_index(&cs, column), row)?;
         }
 
         // Mark equality-constrained cells.
         if self.mark_equality_cells {
             let mut cells = HashSet::new();
-            for (l_col, l_row, r_col, r_row) in &layout.equality {
-                let l_col = column_index(&cs, (*l_col).into());
-                let r_col = column_index(&cs, (*r_col).into());
+            for (l, r) in &layout.equality {
+                let l_col = column_index(&cs, l.column);
+                let r_col = column_index(&cs, r.column);
 
                 // Deduplicate cells.
-                cells.insert((l_col, *l_row));
-                cells.insert((r_col, *r_row));
+                cells.insert((l_col, l.row));
+                cells.insert((r_col, r.row));
             }
 
             for (col, row) in cells {
@@ -274,11 +275,11 @@ impl CircuitLayout {
 
         // Draw lines between equality-constrained cells.
         if self.show_equality_constraints {
-            for (l_col, l_row, r_col, r_row) in &layout.equality {
-                let l_col = column_index(&cs, (*l_col).into());
-                let r_col = column_index(&cs, (*r_col).into());
+            for (l, r) in &layout.equality {
+                let l_col = column_index(&cs, l.column);
+                let r_col = column_index(&cs, r.column);
                 root.draw(&PathElement::new(
-                    [(l_col, *l_row), (r_col, *r_row)],
+                    [(l_col, l.row), (r_col, r.row)],
                     ShapeStyle::from(&RED),
                 ))?;
             }
@@ -317,4 +318,36 @@ impl CircuitLayout {
         }
         Ok(())
     }
+}
+
+/// Renders the given circuit layout to a JSON string.
+pub fn render_to_json<F: Field, ConcreteCircuit: Circuit<F>>(
+    circuit: &ConcreteCircuit,
+) -> Result<String, serde_json::Error> {
+    // Collect the layout details.
+    let mut cs = ConstraintSystem::default();
+    let config = ConcreteCircuit::configure(&mut cs);
+    let mut layout = Layout::default();
+    ConcreteCircuit::FloorPlanner::synthesize(&mut layout, circuit, config, cs.constants).unwrap();
+
+    // Render.
+    #[derive(serde::Serialize)]
+    struct Circuit {
+        num_instance_columns: usize,
+        num_advice_columns: usize,
+        num_fixed_columns: usize,
+        total_rows: usize,
+        regions: Vec<LayoutRegion>,
+        loose_cells: Vec<Cell>,
+        selectors: Vec<Vec<bool>>,
+    }
+    serde_json::to_string(&Circuit {
+        num_instance_columns: cs.num_instance_columns,
+        num_advice_columns: cs.num_advice_columns,
+        num_fixed_columns: cs.num_fixed_columns,
+        total_rows: layout.total_rows,
+        regions: layout.regions,
+        loose_cells: layout.loose_cells,
+        selectors: layout.selectors,
+    })
 }
