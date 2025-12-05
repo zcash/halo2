@@ -25,7 +25,7 @@ jobs:
             extra_flags: --features nightly
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6.0.1
         with:
           persist-credentials: false
       - id: prepare
@@ -54,7 +54,7 @@ jobs:
             name_suffix: " with nightly features"
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6.0.1
         with:
           persist-credentials: false
       - id: prepare
@@ -84,7 +84,7 @@ jobs:
           - wasm32-wasi
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6.0.1
         with:
           persist-credentials: false
       - id: prepare
@@ -104,7 +104,7 @@ jobs:
     name: Bitrot check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6.0.1
         with:
           persist-credentials: false
       - uses: ./.github/actions/prepare
@@ -125,7 +125,7 @@ jobs:
     name: Book tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6.0.1
         with:
           persist-credentials: false
       - uses: ./.github/actions/prepare
@@ -152,7 +152,7 @@ jobs:
       image: xd009642/tarpaulin:develop-nightly
       options: --security-opt seccomp=unconfined
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6.0.1
         with:
           persist-credentials: false
       - id: prepare
@@ -174,7 +174,7 @@ jobs:
     name: Intra-doc links
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6.0.1
         with:
           persist-credentials: false
       - uses: ./.github/actions/prepare
@@ -190,7 +190,7 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6.0.1
         with:
           persist-credentials: false
       - uses: ./.github/actions/prepare
