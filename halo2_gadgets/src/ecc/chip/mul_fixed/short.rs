@@ -54,12 +54,8 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
             // `(x_a, y_a)` is the result of `[m]B`, where `m` is the magnitude.
             // We conditionally negate this result using `y_p = y_a * s`, where `s` is the sign.
 
-            // Check that the final `y_p = y_a` or `y_p = -y_a`
-            //
-            // This constraint is redundant / unnecessary, because `sign` is constrained
-            // to -1 or 1 by `sign_check`, and `negation_check` therefore permits a strict
-            // subset of the cases that this constraint permits.
-            let y_check = (y_p.clone() - y_a.clone()) * (y_p.clone() + y_a.clone());
+            // Enforce conditional negation via sign_check (sign ∈ {-1, 1})
+            // and negation_check (sign * y_p = y_a).
 
             // Check that the correct sign is witnessed s.t. sign * y_p = y_a
             let negation_check = sign * y_p - y_a;
@@ -69,7 +65,6 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                 [
                     ("last_window_check", last_window_check),
                     ("sign_check", sign_check),
-                    ("y_check", y_check),
                     ("negation_check", negation_check),
                 ],
             )
@@ -716,7 +711,7 @@ pub mod tests {
                         VerifyFailure::ConstraintNotSatisfied {
                             constraint: (
                                 (17, "Short fixed-base mul gate").into(),
-                                3,
+                                2,
                                 "negation_check"
                             )
                                 .into(),
@@ -927,7 +922,7 @@ pub mod tests {
                     VerifyFailure::ConstraintNotSatisfied {
                         constraint: (
                             (17, "Short fixed-base mul gate").into(),
-                            3,
+                            2,
                             "negation_check"
                         )
                             .into(),
