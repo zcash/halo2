@@ -5,6 +5,8 @@ use std::ops::Range;
 use ff::{Field, FromUniformBytes};
 use group::Curve;
 
+#[cfg(feature = "unstable-dynamic-lookups")]
+use super::TableTag;
 use super::{
     circuit::{
         Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
@@ -50,6 +52,9 @@ struct Assembly<F: Field> {
     fixed: Vec<Polynomial<Assigned<F>, LagrangeCoeff>>,
     permutation: permutation::keygen::Assembly,
     selectors: Vec<Vec<bool>>,
+    /// A map between DynamicTable.index, and rows included.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    dynamic_tables: Vec<Vec<bool>>,
     // A range of available rows for assignment and copies.
     usable_rows: Range<usize>,
     _marker: std::marker::PhantomData<F>,
@@ -78,6 +83,17 @@ impl<F: Field> Assignment<F> for Assembly<F> {
         }
 
         self.selectors[selector.0][row] = true;
+
+        Ok(())
+    }
+
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fn add_to_lookup(&mut self, table: TableTag, row: usize) -> Result<(), Error> {
+        if !self.usable_rows.contains(&row) {
+            return Err(Error::not_enough_rows_available(self.k));
+        }
+
+        self.dynamic_tables[table.0][row] = true;
 
         Ok(())
     }
@@ -206,6 +222,8 @@ where
         fixed: vec![domain.empty_lagrange_assigned(); cs.num_fixed_columns],
         permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.permutation),
         selectors: vec![vec![false; params.n as usize]; cs.num_selectors],
+        #[cfg(feature = "unstable-dynamic-lookups")]
+        dynamic_tables: vec![vec![false; params.n as usize]; cs.dynamic_tables.len()],
         usable_rows: 0..params.n as usize - (cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
     };
@@ -222,6 +240,15 @@ where
     let (cs, selector_polys) = cs.compress_selectors(assembly.selectors);
     fixed.extend(
         selector_polys
+            .into_iter()
+            .map(|poly| domain.lagrange_from_vec(poly)),
+    );
+
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    let (cs, dynamic_table_polys) = cs.compress_dynamic_table_tags(assembly.dynamic_tables);
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fixed.extend(
+        dynamic_table_polys
             .into_iter()
             .map(|poly| domain.lagrange_from_vec(poly)),
     );
@@ -267,6 +294,8 @@ where
         fixed: vec![vk.domain.empty_lagrange_assigned(); cs.num_fixed_columns],
         permutation: permutation::keygen::Assembly::new(params.n as usize, &cs.permutation),
         selectors: vec![vec![false; params.n as usize]; cs.num_selectors],
+        #[cfg(feature = "unstable-dynamic-lookups")]
+        dynamic_tables: vec![vec![false; params.n as usize]; cs.dynamic_tables.len()],
         usable_rows: 0..params.n as usize - (cs.blinding_factors() + 1),
         _marker: std::marker::PhantomData,
     };
@@ -283,6 +312,15 @@ where
     let (cs, selector_polys) = cs.compress_selectors(assembly.selectors);
     fixed.extend(
         selector_polys
+            .into_iter()
+            .map(|poly| vk.domain.lagrange_from_vec(poly)),
+    );
+
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    let (cs, dynamic_table_polys) = cs.compress_dynamic_table_tags(assembly.dynamic_tables);
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fixed.extend(
+        dynamic_table_polys
             .into_iter()
             .map(|poly| vk.domain.lagrange_from_vec(poly)),
     );
