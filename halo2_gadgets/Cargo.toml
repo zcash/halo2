@@ -27,7 +27,7 @@ bitvec = "1"
 ff = "0.13"
 group = "0.13"
 halo2_poseidon = { version = "0.1", path = "../halo2_poseidon", default-features = false }
-halo2_proofs = { version = "0.3", path = "../halo2_proofs", default-features = false }
+halo2_proofs = { version = "0.3.2", path = "../halo2_proofs", default-features = false }
 lazy_static = "1"
 pasta_curves = "0.5"
 proptest = { version = "1.0.0", optional = true }
