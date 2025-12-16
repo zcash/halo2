@@ -3,13 +3,16 @@
 use std::{
     cmp,
     collections::{HashMap, HashSet},
-    iter,
+    iter::{self, Sum},
     marker::PhantomData,
     ops::{Add, Mul},
+    time::{Duration, Instant},
 };
 
 use ff::{Field, PrimeField};
-use group::prime::PrimeGroup;
+use group::{prime::PrimeGroup, Group};
+use pasta_curves::arithmetic::{CurveAffine, CurveExt};
+use rand_core::OsRng;
 
 use crate::{
     circuit::{layouter::RegionColumn, Value},
@@ -20,6 +23,8 @@ use crate::{
     poly::Rotation,
 };
 
+mod time;
+
 /// Measures a circuit to determine its costs, and explain what contributes to them.
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -28,8 +33,12 @@ pub struct CircuitCost<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> {
     k: u32,
     /// Maximum degree of the circuit.
     max_deg: usize,
+    /// Number of instance columns.
+    instance_columns: usize,
     /// Number of advice columns.
     advice_columns: usize,
+    /// Costs of the gate expressions.
+    gate_expressions: Vec<time::ExpressionCost>,
     /// Number of direct queries for each column type.
     instance_queries: usize,
     advice_queries: usize,
@@ -38,8 +47,8 @@ pub struct CircuitCost<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> {
     lookups: usize,
     /// Number of columns in the global permutation.
     permutation_cols: usize,
-    /// Number of distinct sets of points in the multiopening argument.
-    point_sets: usize,
+    /// Size of each distinct sets of points in the multiopening argument.
+    point_sets: Vec<usize>,
     /// Maximum rows used over all columns
     max_rows: usize,
     /// Maximum rows used over all advice columns
@@ -274,6 +283,27 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
 
         assert!((1 << k) >= cs.minimum_rows());
 
+        // Measure the gate expressions.
+        let gate_expressions = cs
+            .gates
+            .iter()
+            .flat_map(move |gate| {
+                gate.polynomials().iter().map(move |poly| {
+                    poly.evaluate(
+                        &|_| (0, 0, 0).into(),
+                        &|_| panic!("virtual selectors are removed during optimization"),
+                        &|_, _, _| (0, 0, 0).into(),
+                        &|_, _, _| (0, 0, 0).into(),
+                        &|_, _, _| (0, 0, 0).into(),
+                        &|a| a,
+                        &|a, b| a + b + (1, 0, 0).into(),
+                        &|a, b| a + b + (0, 1, 0).into(),
+                        &|a, _| a + (0, 0, 1).into(),
+                    )
+                })
+            })
+            .collect();
+
         // Figure out how many point sets we have due to queried cells.
         let mut column_queries: HashMap<Column<Any>, HashSet<i32>> = HashMap::new();
         for (c, r) in iter::empty()
@@ -318,13 +348,15 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
         CircuitCost {
             k,
             max_deg,
+            instance_columns: cs.num_instance_columns,
             advice_columns: cs.num_advice_columns,
+            gate_expressions,
             instance_queries: cs.instance_queries.len(),
             advice_queries: cs.advice_queries.len(),
             fixed_queries: cs.fixed_queries.len(),
             lookups: cs.lookups.len(),
             permutation_cols,
-            point_sets: point_sets.len(),
+            point_sets: point_sets.into_iter().map(|set| set.len()).collect(),
             _marker: PhantomData::default(),
             max_rows: layout.total_rows,
             max_advice_rows: layout.total_advice_rows,
@@ -402,7 +434,7 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
             // Multiopening argument:
             // - f_commitment
             // - 1 eval per set of points in multiopen argument
-            multiopen: ProofContribution::new(1, self.point_sets),
+            multiopen: ProofContribution::new(1, self.point_sets.len()),
 
             // Polycommit:
             // - s_poly commitment
@@ -417,7 +449,7 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
 }
 
 /// (commitments, evaluations)
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 struct ProofContribution {
     commitments: usize,
     evaluations: usize,
@@ -459,7 +491,7 @@ impl Mul<usize> for ProofContribution {
 }
 
 /// The marginal size of a Halo 2 proof, broken down into its contributing factors.
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct MarginalProofSize<G: PrimeGroup> {
     instance: ProofContribution,
     advice: ProofContribution,
@@ -481,7 +513,7 @@ impl<G: PrimeGroup> From<MarginalProofSize<G>> for usize {
 }
 
 /// The size of a Halo 2 proof, broken down into its contributing factors.
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct ProofSize<G: PrimeGroup> {
     instance: ProofContribution,
     advice: ProofContribution,
