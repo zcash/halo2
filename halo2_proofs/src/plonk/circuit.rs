@@ -6,7 +6,7 @@ use std::{
     ops::{Neg, Sub},
 };
 
-use super::{lookup, permutation, Assigned, Error};
+use super::{lookup, multiset_equality, permutation, Assigned, Error};
 use crate::{
     circuit::{Layouter, Region, Value},
     poly::Rotation,
@@ -954,6 +954,11 @@ pub struct ConstraintSystem<F: Field> {
     // Permutation argument for performing equality constraints
     pub(crate) permutation: permutation::Argument,
 
+    // Vector of multiset equality arguments, where each corresponds to a
+    // sequence of unpermuted expressions and a sequence of permuted
+    // expressions involved in the multiset equality.
+    pub(crate) multisets: Vec<multiset_equality::Argument<F>>,
+
     // Vector of lookup arguments, where each corresponds to a sequence of
     // input expressions and a sequence of table expressions involved in the lookup.
     pub(crate) lookups: Vec<lookup::Argument<F>>,
@@ -1007,6 +1012,7 @@ impl<F: Field> Default for ConstraintSystem<F> {
             num_advice_queries: Vec::new(),
             instance_queries: Vec::new(),
             permutation: permutation::Argument::new(),
+            multisets: Vec::new(),
             lookups: Vec::new(),
             constants: vec![],
             minimum_degree: None,
@@ -1052,6 +1058,32 @@ impl<F: Field> ConstraintSystem<F> {
         let column = column.into();
         self.query_any_index(column, Rotation::cur());
         self.permutation.add_column(column);
+    }
+
+    /// Add a multiset equality argument for some unpermuted expressions and
+    /// permuted expressions.
+    ///
+    /// `multiset_map` returns a map between unpermuted expressions and the
+    /// permuted expfressions they need to match.
+    pub fn multiset_equality(
+        &mut self,
+        multiset_map: impl FnOnce(&mut VirtualCells<'_, F>) -> Vec<(Expression<F>, Expression<F>)>,
+    ) -> usize {
+        let mut cells = VirtualCells::new(self);
+        let multiset_map = multiset_map(&mut cells);
+        for (original, permuted) in multiset_map.iter() {
+            if original.contains_simple_selector() || permuted.contains_simple_selector() {
+                panic!(
+                    "expression containing simple selector supplied to multiset equality argument"
+                );
+            }
+        }
+        let index = self.multisets.len();
+
+        self.multisets
+            .push(multiset_equality::Argument::new(multiset_map));
+
+        index
     }
 
     /// Add a lookup argument for some input expressions and table columns.
@@ -1410,6 +1442,16 @@ impl<F: Field> ConstraintSystem<F> {
         degree = std::cmp::max(
             degree,
             self.lookups
+                .iter()
+                .map(|l| l.required_degree())
+                .max()
+                .unwrap_or(1),
+        );
+
+        // Account for the multiset equality argument.
+        degree = std::cmp::max(
+            degree,
+            self.multisets
                 .iter()
                 .map(|l| l.required_degree())
                 .max()

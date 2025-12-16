@@ -20,6 +20,7 @@ mod circuit;
 mod error;
 mod keygen;
 mod lookup;
+mod multiset_equality;
 pub(crate) mod permutation;
 mod vanishing;
 

@@ -149,6 +149,17 @@ pub fn verify_proof<
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    let multisets_committed = (0..num_proofs)
+        .map(|_| -> Result<Vec<_>, _> {
+            // Hash each multiset product commitment
+            vk.cs
+                .multisets
+                .iter()
+                .map(|argument| argument.clone().read_product_commitment(transcript))
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
     let lookups_committed = lookups_permuted
         .into_iter()
         .map(|lookups| {
@@ -189,6 +200,16 @@ pub fn verify_proof<
         .map(|permutation| permutation.evaluate(transcript))
         .collect::<Result<Vec<_>, _>>()?;
 
+    let multisets_evaluated = multisets_committed
+        .into_iter()
+        .map(|multisets| -> Result<Vec<_>, _> {
+            multisets
+                .into_iter()
+                .map(|multiset| multiset.evaluate(transcript))
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
     let lookups_evaluated = lookups_committed
         .into_iter()
         .map(|lookups| -> Result<Vec<_>, _> {
@@ -221,61 +242,85 @@ pub fn verify_proof<
             .iter()
             .zip(instance_evals.iter())
             .zip(permutations_evaluated.iter())
+            .zip(multisets_evaluated.iter())
             .zip(lookups_evaluated.iter())
-            .flat_map(|(((advice_evals, instance_evals), permutation), lookups)| {
-                let fixed_evals = &fixed_evals;
-                std::iter::empty()
-                    // Evaluate the circuit using the custom gates provided
-                    .chain(vk.cs.gates.iter().flat_map(move |gate| {
-                        gate.polynomials().iter().map(move |poly| {
-                            poly.evaluate(
-                                &|scalar| scalar,
-                                &|_| panic!("virtual selectors are removed during optimization"),
-                                &|query| fixed_evals[query.index],
-                                &|query| advice_evals[query.index],
-                                &|query| instance_evals[query.index],
-                                &|a| -a,
-                                &|a, b| a + &b,
-                                &|a, b| a * &b,
-                                &|a, scalar| a * &scalar,
-                            )
-                        })
-                    }))
-                    .chain(permutation.expressions(
-                        vk,
-                        &vk.cs.permutation,
-                        &permutations_common,
-                        advice_evals,
-                        fixed_evals,
-                        instance_evals,
-                        l_0,
-                        l_last,
-                        l_blind,
-                        beta,
-                        gamma,
-                        x,
-                    ))
-                    .chain(
-                        lookups
-                            .iter()
-                            .zip(vk.cs.lookups.iter())
-                            .flat_map(move |(p, argument)| {
-                                p.expressions(
-                                    l_0,
-                                    l_last,
-                                    l_blind,
-                                    argument,
-                                    theta,
-                                    beta,
-                                    gamma,
-                                    advice_evals,
-                                    fixed_evals,
-                                    instance_evals,
+            .flat_map(
+                |((((advice_evals, instance_evals), permutation), multisets), lookups)| {
+                    let fixed_evals = &fixed_evals;
+                    std::iter::empty()
+                        // Evaluate the circuit using the custom gates provided
+                        .chain(vk.cs.gates.iter().flat_map(move |gate| {
+                            gate.polynomials().iter().map(move |poly| {
+                                poly.evaluate(
+                                    &|scalar| scalar,
+                                    &|_| {
+                                        panic!("virtual selectors are removed during optimization")
+                                    },
+                                    &|query| fixed_evals[query.index],
+                                    &|query| advice_evals[query.index],
+                                    &|query| instance_evals[query.index],
+                                    &|a| -a,
+                                    &|a, b| a + &b,
+                                    &|a, b| a * &b,
+                                    &|a, scalar| a * &scalar,
                                 )
                             })
-                            .into_iter(),
-                    )
-            });
+                        }))
+                        .chain(permutation.expressions(
+                            vk,
+                            &vk.cs.permutation,
+                            &permutations_common,
+                            advice_evals,
+                            fixed_evals,
+                            instance_evals,
+                            l_0,
+                            l_last,
+                            l_blind,
+                            beta,
+                            gamma,
+                            x,
+                        ))
+                        .chain(
+                            multisets
+                                .iter()
+                                .zip(vk.cs.multisets.iter())
+                                .flat_map(move |(p, argument)| {
+                                    p.expressions(
+                                        l_0,
+                                        l_last,
+                                        l_blind,
+                                        argument,
+                                        theta,
+                                        beta,
+                                        advice_evals,
+                                        fixed_evals,
+                                        instance_evals,
+                                    )
+                                })
+                                .into_iter(),
+                        )
+                        .chain(
+                            lookups
+                                .iter()
+                                .zip(vk.cs.lookups.iter())
+                                .flat_map(move |(p, argument)| {
+                                    p.expressions(
+                                        l_0,
+                                        l_last,
+                                        l_blind,
+                                        argument,
+                                        theta,
+                                        beta,
+                                        gamma,
+                                        advice_evals,
+                                        fixed_evals,
+                                        instance_evals,
+                                    )
+                                })
+                                .into_iter(),
+                        )
+                },
+            );
 
         vanishing.verify(params, expressions, y, xn)
     };
@@ -286,12 +331,19 @@ pub fn verify_proof<
         .zip(advice_commitments.iter())
         .zip(advice_evals.iter())
         .zip(permutations_evaluated.iter())
+        .zip(multisets_evaluated.iter())
         .zip(lookups_evaluated.iter())
         .flat_map(
             |(
                 (
-                    (((instance_commitments, instance_evals), advice_commitments), advice_evals),
-                    permutation,
+                    (
+                        (
+                            ((instance_commitments, instance_evals), advice_commitments),
+                            advice_evals,
+                        ),
+                        permutation,
+                    ),
+                    multisets,
                 ),
                 lookups,
             )| {
@@ -315,6 +367,12 @@ pub fn verify_proof<
                         },
                     ))
                     .chain(permutation.queries(vk, x))
+                    .chain(
+                        multisets
+                            .iter()
+                            .flat_map(move |p| p.queries(vk, x))
+                            .into_iter(),
+                    )
                     .chain(
                         lookups
                             .iter()
