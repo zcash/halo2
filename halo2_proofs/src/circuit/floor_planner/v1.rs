@@ -103,7 +103,11 @@ impl FloorPlanner for V1 {
             fixed_allocations.iter().flat_map(|(c, a)| {
                 let c = *c;
                 a.free_intervals(0, Some(first_unassigned_row))
-                    .flat_map(move |e| e.range().unwrap().map(move |i| (c, i)))
+                .flat_map(move |e| {
+                    e.range()
+                        .into_iter()
+                        .flat_map(move |r| r.map(move |l| (c, l)))
+                })                
             })
         };
 
