@@ -273,7 +273,7 @@ over $E_q/\mathbb{F}_q,$ forming a 2-cycle with the first:
 
 ### Pallas-Vesta curves
 
-The Pallas and Vesta curves form a 2-cycle of elliptic curves designed specifically for Halo 2. They are defined over finite fields with highly 2-adic structure, meaning they have large multiplicative subgroups of order $2^S$ where $S = 32$.
+The Pallas and Vesta curves form a 2-cycle of elliptic curves designed to allow efficient recursion in discrete-log-based proof systems such as Halo 2. They are defined over finite fields with highly 2-adic structure, meaning they have large multiplicative subgroups of order $2^S$, where in this case $S = 32$.
 
 **Pallas curve ($E_p/\mathbb{F}_p$):**
 - Base field: $\mathbb{F}_p$ where $p = 2^{254} + t_p$ and $t_p = 45560315531419706090280762371685220353$
@@ -309,7 +309,7 @@ framework used in the Internet Draft makes use of several functions:
 
 The Simplified SWU (Shallue-van de Woestijne-Ulas) method is an efficient hash-to-curve algorithm that maps field elements to curve points. It is particularly well-suited for curves of the form $y^2 = x^3 + b$ where $b \neq 0$.
 
-For a field element $u \in \mathbb{F}_p$, the Simplified SWU algorithm works as follows:
+For a field element $u \in \mathbb{F}_p$, the core of the Simplified SWU algorithm works as follows:
 
 1. **Precomputation**: Compute $Z = -b/A$ where $A$ is a non-square in $\mathbb{F}_p$
 2. **Mapping**: For input $u$, compute:
@@ -324,6 +324,8 @@ For a field element $u \in \mathbb{F}_p$, the Simplified SWU algorithm works as 
 5. **Sign adjustment**: If $u \cdot y$ is negative, negate $y$
 
 The result is the curve point $(x_i, y)$.
+
+In practice for curves with $j$-invariant $0$ such as Pallas and Vesta, this algorithm cannot be used as-is. Instead we map $u$ to an isogenous curve with a non-zero $j$-invariant ("iso-Pallas" or "iso-Vesta"), and then apply the isogeny to give a point on the target curve. Also, the full hash-to-curve operation involves pre-hashing the input with domain separation, and adding the results of two such mappings to the target curve (or equivalently, adding them on the isogenous curve and then applying the isogeny). For full details see the [Sage reference implementation](https://github.com/zcash/pasta/blob/master/hashtocurve.sage).
 
 This method is constant-time, deterministic, and provides a uniform distribution over the curve points. It is used in Halo 2 for various cryptographic operations including parameter generation and commitment schemes.
 
