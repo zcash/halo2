@@ -47,6 +47,22 @@ Two meta-flags are provided to enable all features at a particular stabilisation
 
 ## In-progress features
 
-| Feature flag | Stage | Notes |
-| --- | --- | --- |
-| `unstable-sha256-gadget` | `nightly` | The SHA-256 gadget and chip.
+None currently.
+
+## Removed features
+
+<table>
+<tr><th>Feature flag</th><th>Removed in</th><th>Notes</th></tr>
+<tr>
+  <td><code>unstable-sha256-gadget</code></td>
+  <td>0.5.0</td>
+  <td>
+    The SHA-256 Table16 gadget was removed due to multiple soundness issues
+    (missing carry range checks in the compression function, missing copy
+    constraints on final-round outputs, and missing boolean constraints on
+    schedule decomposition bits). These allowed a malicious prover to forge
+    arbitrary SHA-256 digests. The code will be republished separately as an
+    instructive example of an unsound circuit implementation.
+  </td>
+</tr>
+</table>
