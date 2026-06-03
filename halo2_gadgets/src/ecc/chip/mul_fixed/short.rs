@@ -321,7 +321,7 @@ pub mod tests {
         ecc::{
             chip::{EccChip, EccConfig, FixedPoint, MagnitudeSign},
             tests::{Short, TestFixedBases},
-            FixedPointShort, NonIdentityPoint, Point, ScalarFixedShort,
+            CircuitVersion, FixedPointShort, NonIdentityPoint, Point, ScalarFixedShort,
         },
         utilities::{
             lookup_range_check::{
@@ -553,7 +553,7 @@ pub mod tests {
                 let sign =
                     self.load_private(layouter.namespace(|| "load sign"), column, self.sign)?;
                 ScalarFixedShort::new(
-                    EccChip::construct(config),
+                    EccChip::construct(config, CircuitVersion::AnchoredBase),
                     layouter.namespace(|| "signed short scalar"),
                     (magnitude, sign),
                 )?
@@ -886,7 +886,10 @@ pub mod tests {
             config: Self::Config,
             mut layouter: impl Layouter<pallas::Base>,
         ) -> Result<(), Error> {
-            let chip = EccChip::<TestFixedBases, Lookup>::construct(config.clone());
+            let chip = EccChip::<TestFixedBases, Lookup>::construct(
+                config.clone(),
+                CircuitVersion::AnchoredBase,
+            );
 
             let column = config.advices[0];
 

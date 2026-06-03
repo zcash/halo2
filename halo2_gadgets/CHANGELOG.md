@@ -1,14 +1,22 @@
 # Changelog
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.1] - 2026-06-03
+
+### Fixed
+
+- Cherry-picked [d8e48efddbe4746d76eb2c8a843a6ddc2b9a727a](https://github.com/zcash/halo2/commit/d8e48efddbe4746d76eb2c8a843a6ddc2b9a727a)
+- Cherry-picked [e2664299240e44edbfdb191d32187ebad50acd78](https://github.com/zcash/halo2/commit/e2664299240e44edbfdb191d32187ebad50acd78)
 
 ## [0.4.0] - 2025-12-04
+
 ### Added
+
 - `halo2_gadgets::ecc`:
   - `Point::new_from_constant`
   - `Point::mul_sign`
@@ -34,6 +42,7 @@ and this project adheres to Rust's notion of
     `LookupRangeCheck4_5BConfig<pallas::Base, { sinsemilla::K }>`.
 
 ### Changed
+
 - `halo2_gadgets::ecc`:
   - Changes to the `EccInstructions` trait:
     - Added `EccInstructions::witness_point_from_constant`.
@@ -66,25 +75,32 @@ and this project adheres to Rust's notion of
     - Added `CondSwapInstructions::mux`.
 
 ## [0.3.1] - 2024-12-16
+
 - `halo2_gadgets::poseidon::primitives` is now a re-export of the new `halo2_poseidon`
   crate.
 - `halo2_gadgets::sinsemilla::primitives` is now a re-export of the new `sinsemilla`
   crate.
 
 ## [0.3.0] - 2023-03-21
+
 ### Added
+
 - `halo2_gadgets::poseidon::primitives::{Mds, generate_constants}`
 
 ### Changed
+
 - Migrated to `ff 0.13`, `group 0.13`, `pasta_curves 0.5` and `halo2_proofs 0.3`.
 - APIs with `F: pasta_curves::arithmetic::FieldExt` bounds have been changed to
   use `ff` traits directly.
 
 ## [0.2.0] - 2022-06-23
+
 ### Added
+
 - `halo2_gadgets::utilities::RangeConstrained<F, Value<F>>::bitrange_of`
 
 ### Changed
+
 All APIs that represented witnessed values as `Option<V>` now represent them as
 `halo2_proofs::circuit::Value<V>`. The core API changes are listed below.
 
@@ -123,10 +139,13 @@ All APIs that represented witnessed values as `Option<V>` now represent them as
   `Value<u32>` instead of `Option<u32>`.
 
 ### Removed
+
 - `halo2_gadgets::utilities::RangeConstrained<F, Option<F>>::bitrange_of`
 
 ## [0.1.0] - 2022-05-10
+
 ### Added
+
 - `halo2_gadgets::utilities`:
   - `FieldValue` trait.
   - `RangeConstrained` newtype wrapper.
@@ -156,6 +175,7 @@ All APIs that represented witnessed values as `Option<V>` now represent them as
   - `MessagePiece::from_subpieces`
 
 ### Changed
+
 - `halo2_gadgets::ecc`:
   - `EccInstructions::ScalarVar` is now treated as a full-width scalar, instead
     of being restricted to a base field element.
@@ -179,16 +199,22 @@ All APIs that represented witnessed values as `Option<V>` now represent them as
     `MerkleChip`s.
 
 ### Removed
+
 - `halo2_gadgets::primitives` (use `halo2_gadgets::poseidon::primitives` or
   `halo2_gadgets::sinsemilla::primitives` instead).
 
 ## [0.1.0-beta.3] - 2022-04-06
+
 ### Changed
+
 - Migrated to `halo2_proofs 0.1.0-beta.4`.
 
 ## [0.1.0-beta.2] - 2022-03-22
+
 ### Changed
+
 - Migrated to `halo2_proofs 0.1.0-beta.3`.
 
 ## [0.1.0-beta.1] - 2022-02-14
+
 Initial release!

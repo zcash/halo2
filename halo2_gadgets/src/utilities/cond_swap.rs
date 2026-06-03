@@ -406,7 +406,7 @@ mod tests {
         use crate::ecc::{
             chip::{EccChip, EccConfig},
             tests::TestFixedBases,
-            NonIdentityPoint, Point,
+            CircuitVersion, NonIdentityPoint, Point,
         };
 
         use group::{cofactor::CofactorCurveAffine, Curve, Group};
@@ -523,7 +523,10 @@ mod tests {
                 let cond_swap_chip = CondSwapChip::construct(config.cond_swap_config);
 
                 // Construct an ECC chip
-                let ecc_chip = EccChip::<TestFixedBases, Lookup>::construct(config.ecc_config);
+                let ecc_chip = EccChip::<TestFixedBases, Lookup>::construct(
+                    config.ecc_config,
+                    CircuitVersion::AnchoredBase,
+                );
 
                 // Assign choice
                 let choice = layouter.assign_region(

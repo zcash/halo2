@@ -1,4 +1,4 @@
-use super::super::NonIdentityEccPoint;
+use super::super::{CircuitVersion, NonIdentityEccPoint};
 use super::{X, Y, Z};
 use crate::utilities::bool_check;
 
@@ -232,6 +232,7 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
         base: &NonIdentityEccPoint,
         bits: &[Value<bool>],
         acc: (X<pallas::Base>, Y<pallas::Base>, Z<pallas::Base>),
+        circuit_version: CircuitVersion,
     ) -> Result<(X<pallas::Base>, Y<pallas::Base>, Vec<Z<pallas::Base>>), Error> {
         // Check that we have the correct number of bits for this double-and-add.
         assert_eq!(bits.len(), NUM_BITS);
@@ -305,9 +306,35 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
             z = region.assign_advice(|| "z", self.z, row + offset, || z_val)?;
             zs.push(Z(z.clone()));
 
-            // Assign `x_p`, `y_p`
-            region.assign_advice(|| "x_p", self.double_and_add.x_p, row + offset, || x_p)?;
-            region.assign_advice(|| "y_p", self.y_p, row + offset, || y_p)?;
+            // Assign `x_p`, `y_p`.
+            //
+            // The `q_mul_2` gate only constrains `(x_p, y_p)` to be *constant* across the
+            // incomplete-addition rows; it does not by itself tie them to the real `base`.
+            // The fixed circuit therefore `copy_advice`s `base` into the first loop row, so
+            // the `q_mul_2` constancy propagates the equality to every loop row, forcing the
+            // per-iteration base to equal `base`. `InsecureUnanchoredBase` reproduces the prior
+            // behaviour (no anchor) and exists only to rebuild the historical verifying key.
+            match circuit_version {
+                CircuitVersion::AnchoredBase if row == 0 => {
+                    base.x.copy_advice(
+                        || "anchor x_p to base",
+                        region,
+                        self.double_and_add.x_p,
+                        row + offset,
+                    )?;
+                    base.y
+                        .copy_advice(|| "anchor y_p to base", region, self.y_p, row + offset)?;
+                }
+                _ => {
+                    region.assign_advice(
+                        || "x_p",
+                        self.double_and_add.x_p,
+                        row + offset,
+                        || x_p,
+                    )?;
+                    region.assign_advice(|| "y_p", self.y_p, row + offset, || y_p)?;
+                }
+            }
 
             // If the bit is set, use `y`; if the bit is not set, use `-y`
             let y_p = y_p

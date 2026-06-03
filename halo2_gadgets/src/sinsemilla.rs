@@ -538,7 +538,7 @@ pub(crate) mod tests {
         ecc::{
             chip::{find_zs_and_us, EccChip, EccConfig, H, NUM_WINDOWS},
             tests::{FullWidth, TestFixedBases},
-            NonIdentityPoint, ScalarFixed,
+            CircuitVersion, NonIdentityPoint, ScalarFixed,
         },
         sinsemilla::primitives::{self as sinsemilla, K},
         test_circuits::test_utils::test_against_stored_circuit,
@@ -680,7 +680,7 @@ pub(crate) mod tests {
     ) -> Result<(), Error> {
         let rng = OsRng;
 
-        let ecc_chip = EccChip::construct(config.0);
+        let ecc_chip = EccChip::construct(config.0, CircuitVersion::AnchoredBase);
 
         // The two `SinsemillaChip`s share the same lookup table.
         SinsemillaChip::<TestHashDomain, TestCommitDomain, TestFixedBases, Lookup>::load(
