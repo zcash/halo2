@@ -464,18 +464,17 @@ pub(crate) mod tests {
         chip::{SinsemillaChip, SinsemillaConfig},
         CommitDomain, CommitDomains, HashDomain, HashDomains, Message, MessagePiece,
     };
+    use crate::utilities::lookup_range_check::LookupRangeCheckConfig;
 
     use crate::{
+        ecc::CircuitVersion,
         ecc::ScalarFixed,
-        sinsemilla::primitives::{self as sinsemilla, K},
-        {
-            ecc::{
-                chip::{find_zs_and_us, EccChip, EccConfig, H, NUM_WINDOWS},
-                tests::{FullWidth, TestFixedBases},
-                NonIdentityPoint,
-            },
-            utilities::lookup_range_check::LookupRangeCheckConfig,
+        ecc::{
+            chip::{find_zs_and_us, EccChip, EccConfig, H, NUM_WINDOWS},
+            tests::{FullWidth, TestFixedBases},
+            NonIdentityPoint,
         },
+        sinsemilla::primitives::{self as sinsemilla, K},
     };
 
     use group::{ff::Field, Curve};
@@ -600,7 +599,7 @@ pub(crate) mod tests {
         ) -> Result<(), Error> {
             let rng = OsRng;
 
-            let ecc_chip = EccChip::construct(config.0);
+            let ecc_chip = EccChip::construct(config.0, CircuitVersion::AnchoredBase);
 
             // The two `SinsemillaChip`s share the same lookup table.
             SinsemillaChip::<TestHashDomain, TestCommitDomain, TestFixedBases>::load(

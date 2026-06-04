@@ -7,6 +7,13 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-06-04
+
+### Fixed
+
+- Cherry-picked [d8e48efddbe4746d76eb2c8a843a6ddc2b9a727a](https://github.com/zcash/halo2/commit/d8e48efddbe4746d76eb2c8a843a6ddc2b9a727a)
+- Cherry-picked [e2664299240e44edbfdb191d32187ebad50acd78](https://github.com/zcash/halo2/commit/e2664299240e44edbfdb191d32187ebad50acd78)
+
 ## [0.3.0] - 2023-03-21
 ### Added
 - `halo2_gadgets::poseidon::primitives::{Mds, generate_constants}`

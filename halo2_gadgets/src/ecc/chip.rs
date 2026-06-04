@@ -29,6 +29,27 @@ pub use constants::*;
 // Exposed for Sinsemilla.
 pub(crate) use mul::incomplete::DoubleAndAdd;
 
+/// Selects which version of the variable-base scalar-multiplication subcircuit the chip
+/// synthesizes.
+///
+/// The two versions differ only in witness assignment (a single `copy_advice` that anchors
+/// the incomplete-addition base to the real base), so they share an identical
+/// `ConstraintSystem`/`configure`; only the permutation argument — and hence the verifying
+/// key — differs. A single binary can therefore build, and verify against, both the
+/// historical and the fixed verifying keys.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CircuitVersion {
+    /// The original circuit, in which the incomplete-addition base is **not** anchored to the
+    /// real base.
+    ///
+    /// This circuit is insecure. Use it only to rebuild the original verifying key in order to
+    /// verify proofs produced by that circuit — never to prove, and never to verify
+    /// newly-produced proofs.
+    InsecureUnanchoredBase,
+    /// The fixed circuit, which anchors the incomplete-addition base to the real base.
+    AnchoredBase,
+}
+
 /// A curve point represented in affine (x, y) coordinates, or the
 /// identity represented as (0, 0).
 /// Each coordinate is assigned to a cell.
@@ -229,6 +250,7 @@ pub trait FixedPoint<C: CurveAffine>: std::fmt::Debug + Eq + Clone {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct EccChip<FixedPoints: super::FixedPoints<pallas::Affine>> {
     config: EccConfig<FixedPoints>,
+    circuit_version: CircuitVersion,
 }
 
 impl<FixedPoints: super::FixedPoints<pallas::Affine>> Chip<pallas::Base> for EccChip<FixedPoints> {
@@ -251,9 +273,20 @@ impl<Fixed: super::FixedPoints<pallas::Affine>> UtilitiesInstructions<pallas::Ba
 }
 
 impl<FixedPoints: super::FixedPoints<pallas::Affine>> EccChip<FixedPoints> {
-    /// Reconstructs this chip from the given config.
-    pub fn construct(config: <Self as Chip<pallas::Base>>::Config) -> Self {
-        Self { config }
+    /// Reconstructs this chip from the given config, selecting the circuit version.
+    ///
+    /// The version must be chosen explicitly (there is no default): use
+    /// [`CircuitVersion::AnchoredBase`] for all proving and current verification, and
+    /// [`CircuitVersion::InsecureUnanchoredBase`] only to rebuild the original verifying key for
+    /// verifying proofs produced by the original circuit.
+    pub fn construct(
+        config: <Self as Chip<pallas::Base>>::Config,
+        circuit_version: CircuitVersion,
+    ) -> Self {
+        Self {
+            config,
+            circuit_version,
+        }
     }
 
     /// # Side effects
@@ -544,6 +577,7 @@ where
                 layouter.namespace(|| "variable-base scalar mul"),
                 scalar.clone(),
                 base,
+                self.circuit_version,
             ),
             ScalarVar::FullWidth => {
                 todo!()

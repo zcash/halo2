@@ -12,6 +12,9 @@ use crate::utilities::UtilitiesInstructions;
 
 pub mod chip;
 
+#[doc(inline)]
+pub use chip::CircuitVersion;
+
 /// The set of circuit instructions required to use the ECC gadgets.
 pub trait EccInstructions<C: CurveAffine>:
     Chip<C::Base> + UtilitiesInstructions<C::Base> + Clone + Debug + Eq
@@ -593,8 +596,9 @@ pub(crate) mod tests {
             find_zs_and_us, BaseFieldElem, EccChip, EccConfig, FixedPoint, FullScalar, ShortScalar,
             H, NUM_WINDOWS, NUM_WINDOWS_SHORT,
         },
-        FixedPoints,
+        CircuitVersion, FixedPoints,
     };
+    use crate::test_circuits::test_utils::test_against_stored_circuit;
     use crate::utilities::lookup_range_check::LookupRangeCheckConfig;
 
     #[derive(Debug, Eq, PartialEq, Clone)]
@@ -723,17 +727,31 @@ pub(crate) mod tests {
         type Base = BaseField;
     }
 
-    struct MyCircuit {
+    struct MyEccCircuit {
         test_errors: bool,
+        circuit_version: CircuitVersion,
+    }
+
+    impl MyEccCircuit {
+        fn new(test_errors: bool) -> Self {
+            Self::with_version(test_errors, CircuitVersion::AnchoredBase)
+        }
+
+        fn with_version(test_errors: bool, circuit_version: CircuitVersion) -> Self {
+            Self {
+                test_errors,
+                circuit_version,
+            }
+        }
     }
 
     #[allow(non_snake_case)]
-    impl Circuit<pallas::Base> for MyCircuit {
+    impl Circuit<pallas::Base> for MyEccCircuit {
         type Config = EccConfig<TestFixedBases>;
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            MyCircuit { test_errors: false }
+            MyEccCircuit::with_version(false, self.circuit_version)
         }
 
         fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
@@ -773,7 +791,7 @@ pub(crate) mod tests {
             config: Self::Config,
             mut layouter: impl Layouter<pallas::Base>,
         ) -> Result<(), Error> {
-            let chip = EccChip::construct(config.clone());
+            let chip = EccChip::construct(config.clone(), self.circuit_version);
 
             // Load 10-bit lookup table. In the Action circuit, this will be
             // provided by the Sinsemilla chip.
@@ -896,9 +914,24 @@ pub(crate) mod tests {
     #[test]
     fn ecc_chip() {
         let k = 13;
-        let circuit = MyCircuit { test_errors: true };
+        let circuit = MyEccCircuit::new(true);
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
+    }
+
+    #[test]
+    fn test_ecc_chip_fixed_against_stored_circuit() {
+        let circuit = MyEccCircuit::with_version(false, CircuitVersion::AnchoredBase);
+        test_against_stored_circuit(circuit, "ecc_chip_fixed", 3872);
+    }
+
+    // Old proofs must still verify under the old (unanchored) verifying key, so that a node
+    // can sync the chain from before the fix. These fixtures are the original (pre-fix)
+    // `vk`/`proof`, reproduced here by the `InsecureUnanchoredBase` circuit.
+    #[test]
+    fn test_ecc_chip_insecure_against_stored_circuit() {
+        let circuit = MyEccCircuit::with_version(false, CircuitVersion::InsecureUnanchoredBase);
+        test_against_stored_circuit(circuit, "ecc_chip_insecure", 3872);
     }
 
     #[cfg(feature = "test-dev-graph")]
@@ -910,7 +943,7 @@ pub(crate) mod tests {
         root.fill(&WHITE).unwrap();
         let root = root.titled("Ecc Chip Layout", ("sans-serif", 60)).unwrap();
 
-        let circuit = MyCircuit { test_errors: false };
+        let circuit = MyEccCircuit::new(false);
         halo2_proofs::dev::CircuitLayout::default()
             .render(13, &circuit, &root)
             .unwrap();

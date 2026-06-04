@@ -8,6 +8,7 @@ use halo2_proofs::{
     plonk::{ConstraintSystem, Constraints, Error, Expression, Selector},
     poly::Rotation,
 };
+
 use pasta_curves::pallas;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -404,6 +405,7 @@ pub mod tests {
     fn invalid_magnitude_sign() {
         use crate::{
             ecc::chip::{EccConfig, FixedPoint},
+            ecc::CircuitVersion,
             utilities::UtilitiesInstructions,
         };
         use halo2_proofs::{
@@ -482,7 +484,7 @@ pub mod tests {
                     let sign =
                         self.load_private(layouter.namespace(|| "load sign"), column, self.sign)?;
                     ScalarFixedShort::new(
-                        EccChip::construct(config),
+                        EccChip::construct(config, CircuitVersion::AnchoredBase),
                         layouter.namespace(|| "signed short scalar"),
                         (magnitude, sign),
                     )?

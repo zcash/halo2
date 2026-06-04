@@ -1,13 +1,14 @@
-use super::{add, EccPoint, NonIdentityEccPoint, ScalarVar, T_Q};
+use super::{add, CircuitVersion, EccPoint, NonIdentityEccPoint, ScalarVar, T_Q};
 use crate::{
     sinsemilla::primitives as sinsemilla,
-    utilities::{bool_check, lookup_range_check::LookupRangeCheckConfig, ternary},
+    utilities::{bool_check, ternary},
 };
 use std::{
     convert::TryInto,
     ops::{Deref, Range},
 };
 
+use crate::utilities::lookup_range_check::LookupRangeCheckConfig;
 use ff::{Field, PrimeField};
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter, Region, Value},
@@ -166,6 +167,7 @@ impl Config {
         mut layouter: impl Layouter<pallas::Base>,
         alpha: AssignedCell<pallas::Base, pallas::Base>,
         base: &NonIdentityEccPoint,
+        circuit_version: CircuitVersion,
     ) -> Result<(EccPoint, ScalarVar), Error> {
         let (result, zs): (EccPoint, Vec<Z<pallas::Base>>) = layouter.assign_region(
             || "variable-base scalar mul",
@@ -211,6 +213,7 @@ impl Config {
                     base,
                     bits_incomplete_hi,
                     (X(acc.x), Y(acc.y), z_init.clone()),
+                    circuit_version,
                 )?;
 
                 // Double-and-add (incomplete addition) for the `lo` half of the scalar decomposition
@@ -221,6 +224,7 @@ impl Config {
                     base,
                     bits_incomplete_lo,
                     (x_a, y_a, z.clone()),
+                    circuit_version,
                 )?;
 
                 // Move from incomplete addition to complete addition.
@@ -578,5 +582,281 @@ pub mod tests {
         }
 
         Ok(())
+    }
+
+    /// Test for the variable-base scalar-mul base-anchoring fix.
+    ///
+    /// This drives the real `Circuit::configure` + `FloorPlanner::synthesize` (so
+    /// that the production `mul::Config` / `incomplete::Config::double_and_add` runs)
+    /// through a copy-recording `Assignment`, and asserts that the fixed circuit
+    /// emits extra copy (equality) constraints relative to the insecure one. The
+    /// extra constraints are exactly the base anchors — `base.{x,y}` copied into the
+    /// incomplete-addition `x_p`/`y_p` columns. If the anchor is removed, the two
+    /// circuits emit identical copies and this fails. Copies are structural, so the
+    /// witness is left unknown (no malicious-witness construction needed).
+    mod base_anchoring {
+        use crate::{
+            ecc::{
+                chip::{EccChip, EccConfig},
+                tests::TestFixedBases,
+                CircuitVersion, NonIdentityPoint, ScalarVar,
+            },
+            utilities::{lookup_range_check::LookupRangeCheckConfig, UtilitiesInstructions},
+        };
+        use group::{Curve, Group};
+        use halo2_proofs::{
+            circuit::{Layouter, SimpleFloorPlanner, Value},
+            plonk::{
+                Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
+                FloorPlanner, Instance, Selector,
+            },
+        };
+        use pasta_curves::pallas;
+        use std::collections::BTreeSet;
+
+        /// An `Assignment` that records the copy constraints and selector enables, so a test
+        /// can inspect both which equality constraints and at which rows they were emitted.
+        #[derive(Default)]
+        struct CopyRecorder {
+            copies: Vec<(Column<Any>, usize, Column<Any>, usize)>,
+            selectors: Vec<(Selector, usize)>,
+        }
+
+        impl Assignment<pallas::Base> for CopyRecorder {
+            fn enter_region<NR, N>(&mut self, _: N)
+            where
+                NR: Into<String>,
+                N: FnOnce() -> NR,
+            {
+            }
+            fn exit_region(&mut self) {}
+            fn enable_selector<A, AR>(
+                &mut self,
+                _: A,
+                selector: &Selector,
+                row: usize,
+            ) -> Result<(), Error>
+            where
+                A: FnOnce() -> AR,
+                AR: Into<String>,
+            {
+                self.selectors.push((*selector, row));
+                Ok(())
+            }
+            fn query_instance(
+                &self,
+                _: Column<Instance>,
+                _: usize,
+            ) -> Result<Value<pallas::Base>, Error> {
+                Ok(Value::unknown())
+            }
+            fn assign_advice<V, VR, A, AR>(
+                &mut self,
+                _: A,
+                _: Column<Advice>,
+                _: usize,
+                _: V,
+            ) -> Result<(), Error>
+            where
+                V: FnOnce() -> Value<VR>,
+                VR: Into<Assigned<pallas::Base>>,
+                A: FnOnce() -> AR,
+                AR: Into<String>,
+            {
+                Ok(())
+            }
+            fn assign_fixed<V, VR, A, AR>(
+                &mut self,
+                _: A,
+                _: Column<Fixed>,
+                _: usize,
+                _: V,
+            ) -> Result<(), Error>
+            where
+                V: FnOnce() -> Value<VR>,
+                VR: Into<Assigned<pallas::Base>>,
+                A: FnOnce() -> AR,
+                AR: Into<String>,
+            {
+                Ok(())
+            }
+            fn copy(
+                &mut self,
+                left_column: Column<Any>,
+                left_row: usize,
+                right_column: Column<Any>,
+                right_row: usize,
+            ) -> Result<(), Error> {
+                self.copies
+                    .push((left_column, left_row, right_column, right_row));
+                Ok(())
+            }
+            fn fill_from_row(
+                &mut self,
+                _: Column<Fixed>,
+                _: usize,
+                _: Value<Assigned<pallas::Base>>,
+            ) -> Result<(), Error> {
+                Ok(())
+            }
+            fn push_namespace<NR, N>(&mut self, _: N)
+            where
+                NR: Into<String>,
+                N: FnOnce() -> NR,
+            {
+            }
+            fn pop_namespace(&mut self, _: Option<String>) {}
+        }
+
+        /// Minimal circuit that performs a single variable-base scalar multiplication.
+        struct MulCircuit {
+            circuit_version: CircuitVersion,
+        }
+
+        #[derive(Clone)]
+        struct MulConfig {
+            ecc: EccConfig<TestFixedBases>,
+            constants: Column<Fixed>,
+        }
+
+        impl Circuit<pallas::Base> for MulCircuit {
+            type Config = MulConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                MulCircuit {
+                    circuit_version: self.circuit_version,
+                }
+            }
+
+            fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> MulConfig {
+                let advices = [
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                ];
+                let lookup_table = meta.lookup_table_column();
+                let lagrange_coeffs = [
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                    meta.fixed_column(),
+                ];
+                let constants = meta.fixed_column();
+                meta.enable_constant(constants);
+                let range_check = LookupRangeCheckConfig::configure(meta, advices[9], lookup_table);
+                let ecc = EccChip::<TestFixedBases>::configure(
+                    meta,
+                    advices,
+                    lagrange_coeffs,
+                    range_check,
+                );
+                MulConfig { ecc, constants }
+            }
+
+            fn synthesize(
+                &self,
+                config: MulConfig,
+                mut layouter: impl Layouter<pallas::Base>,
+            ) -> Result<(), Error> {
+                let chip = EccChip::construct(config.ecc.clone(), self.circuit_version);
+                let base = NonIdentityPoint::new(
+                    chip.clone(),
+                    layouter.namespace(|| "base"),
+                    Value::known(pallas::Point::generator().to_affine()),
+                )?;
+                let scalar = chip.load_private(
+                    layouter.namespace(|| "scalar"),
+                    config.ecc.advices[0],
+                    Value::known(pallas::Base::from(7)),
+                )?;
+                let scalar =
+                    ScalarVar::from_base(chip, layouter.namespace(|| "scalar var"), &scalar)?;
+                base.mul(layouter.namespace(|| "[scalar] base"), scalar)?;
+                Ok(())
+            }
+        }
+
+        type Copy = (Column<Any>, usize, Column<Any>, usize);
+
+        /// Synthesizes `MulCircuit` for the given version through a [`CopyRecorder`].
+        fn record(circuit_version: CircuitVersion) -> CopyRecorder {
+            let circuit = MulCircuit { circuit_version };
+            let mut cs = ConstraintSystem::<pallas::Base>::default();
+            let config = MulCircuit::configure(&mut cs);
+            let constants = vec![config.constants];
+            let mut recorder = CopyRecorder::default();
+            <MulCircuit as Circuit<pallas::Base>>::FloorPlanner::synthesize(
+                &mut recorder,
+                &circuit,
+                config,
+                constants,
+            )
+            .expect("synthesis should succeed");
+            recorder
+        }
+
+        #[test]
+        fn fixed_circuit_anchors_incomplete_base() {
+            let insecure: BTreeSet<Copy> = record(CircuitVersion::InsecureUnanchoredBase)
+                .copies
+                .into_iter()
+                .collect();
+            let fixed_recorder = record(CircuitVersion::AnchoredBase);
+            let fixed: BTreeSet<Copy> = fixed_recorder.copies.iter().cloned().collect();
+
+            // The fix only adds copy constraints; it changes no layout. So every copy the
+            // insecure circuit emits must still be present in the fixed circuit.
+            assert!(
+                insecure.is_subset(&fixed),
+                "the fixed circuit must retain every copy constraint of the insecure circuit"
+            );
+
+            // `configure` is deterministic, so this config's columns/selectors match the run.
+            let config = MulCircuit::configure(&mut ConstraintSystem::default());
+            let mul = &config.ecc.mul;
+            let x_p = Column::<Any>::from(mul.hi_config.double_and_add.x_p);
+            let y_p = Column::<Any>::from(mul.hi_config.y_p);
+
+            // The anchor must sit on the first incomplete-addition row — the row where the
+            // `(x_p, y_p)`-constancy gate `q_mul_2` first fires — so that constancy propagates
+            // the base to every subsequent incomplete row. (Anchoring one row earlier, on the
+            // `q_mul_1` doubling row, would not be reached by the constancy chain.)
+            let first_incomplete_row = fixed_recorder
+                .selectors
+                .iter()
+                .filter(|(s, _)| *s == mul.hi_config.q_mul_2)
+                .map(|&(_, row)| row)
+                .min()
+                .expect("q_mul_2 must be enabled");
+
+            // The `hi` and `lo` halves share the `x_p`/`y_p` columns (see `Config::configure`) and
+            // anchor at the same offset, so the four `copy_advice` calls collapse to exactly two
+            // new equality constraints. Each is recorded as `(dst_col, dst_row, src_col, src_row)`:
+            // the `copy_advice` writes the anchored cell at `(x_p|y_p, first_incomplete_row)` and
+            // equates it to the source base coordinate, which this circuit witnesses in the same
+            // column at row 0.
+            let extra: BTreeSet<Copy> = fixed.difference(&insecure).cloned().collect();
+            assert_eq!(
+                extra,
+                [
+                    (x_p, first_incomplete_row, x_p, 0),
+                    (y_p, first_incomplete_row, y_p, 0),
+                ]
+                .into_iter()
+                .collect()
+            );
+        }
     }
 }
