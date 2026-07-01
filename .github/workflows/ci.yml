@@ -117,7 +117,7 @@ jobs:
       - uses: ./.github/actions/prepare
       # Check bitrot with stable (as we don't need benchmarks or the test-dev-graph
       # feature flag to work with MSRV).
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master HEAD 2026-05-31
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master HEAD 2026-05-31
         id: toolchain
         with:
           toolchain: stable
@@ -139,7 +139,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/prepare
       # Build with stable so the .rmeta files match what mdBook expects.
-      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master HEAD 2026-05-31
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master HEAD 2026-05-31
         id: toolchain
         with:
           toolchain: stable
