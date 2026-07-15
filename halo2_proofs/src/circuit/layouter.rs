@@ -10,6 +10,8 @@ use ff::Field;
 pub use super::table_layouter::TableLayouter;
 
 use super::{Cell, RegionIndex, Value};
+#[cfg(feature = "unstable-dynamic-lookups")]
+use crate::plonk::TableTag;
 use crate::plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector};
 
 /// Helper trait for implementing a custom [`Layouter`].
@@ -17,7 +19,7 @@ use crate::plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Select
 /// This trait is used for implementing region assignments:
 ///
 /// ```ignore
-/// impl<'a, F: FieldExt, C: Chip<F>, CS: Assignment<F> + 'a> Layouter<C> for MyLayouter<'a, C, CS> {
+/// impl<'a, F: Field, C: Chip<F>, CS: Assignment<F> + 'a> Layouter<C> for MyLayouter<'a, C, CS> {
 ///     fn assign_region(
 ///         &mut self,
 ///         assignment: impl FnOnce(Region<'_, F, C>) -> Result<(), Error>,
@@ -50,6 +52,10 @@ pub trait RegionLayouter<F: Field>: fmt::Debug {
         selector: &Selector,
         offset: usize,
     ) -> Result<(), Error>;
+
+    /// Enables a dynamic table lookup at the given offset.
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fn add_to_lookup(&mut self, table: TableTag, offset: usize) -> Result<(), Error>;
 
     /// Assign an advice column value (witness)
     fn assign_advice<'v>(
@@ -129,6 +135,9 @@ pub enum RegionColumn {
     Column(Column<Any>),
     /// Virtual column representing a (boolean) selector
     Selector(Selector),
+    /// Virtual column used for storing dynamic table tags
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    TableTag(TableTag),
 }
 
 impl From<Column<Any>> for RegionColumn {
@@ -143,13 +152,26 @@ impl From<Selector> for RegionColumn {
     }
 }
 
+#[cfg(feature = "unstable-dynamic-lookups")]
+impl From<TableTag> for RegionColumn {
+    fn from(table_tag: TableTag) -> RegionColumn {
+        RegionColumn::TableTag(table_tag)
+    }
+}
+
 impl Ord for RegionColumn {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
         match (self, other) {
             (Self::Column(ref a), Self::Column(ref b)) => a.cmp(b),
             (Self::Selector(ref a), Self::Selector(ref b)) => a.0.cmp(&b.0),
-            (Self::Column(_), Self::Selector(_)) => cmp::Ordering::Less,
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            (Self::TableTag(ref a), Self::TableTag(ref b)) => a.0.cmp(&b.0),
+            (Self::Column(_), _) => cmp::Ordering::Less,
             (Self::Selector(_), Self::Column(_)) => cmp::Ordering::Greater,
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            (Self::TableTag(_), _) => cmp::Ordering::Greater,
+            #[cfg(feature = "unstable-dynamic-lookups")]
+            (_, Self::TableTag(_)) => cmp::Ordering::Less,
         }
     }
 }
@@ -195,6 +217,14 @@ impl<F: Field> RegionLayouter<F> for RegionShape {
     ) -> Result<(), Error> {
         // Track the selector's fixed column as part of the region's shape.
         self.columns.insert((*selector).into());
+        self.row_count = cmp::max(self.row_count, offset + 1);
+        Ok(())
+    }
+
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fn add_to_lookup(&mut self, table: TableTag, offset: usize) -> Result<(), Error> {
+        // Track the tag's fixed column as part of the region's shape.
+        self.columns.insert(table.into());
         self.row_count = cmp::max(self.row_count, offset + 1);
         Ok(())
     }

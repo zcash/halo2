@@ -4,6 +4,8 @@ use rand_core::RngCore;
 use std::iter;
 use std::ops::RangeTo;
 
+#[cfg(feature = "unstable-dynamic-lookups")]
+use super::TableTag;
 use super::{
     circuit::{
         Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
@@ -167,6 +169,13 @@ pub fn create_proof<
                     A: FnOnce() -> AR,
                     AR: Into<String>,
                 {
+                    // We only care about advice columns here
+
+                    Ok(())
+                }
+
+                #[cfg(feature = "unstable-dynamic-lookups")]
+                fn add_to_lookup(&mut self, _: TableTag, _: usize) -> Result<(), Error> {
                     // We only care about advice columns here
 
                     Ok(())
@@ -555,6 +564,8 @@ pub fn create_proof<
                             expr.evaluate(
                                 &poly::Ast::ConstantTerm,
                                 &|_| panic!("virtual selectors are removed during optimization"),
+                                #[cfg(feature = "unstable-dynamic-lookups")]
+                                &|_| panic!("virtual table tags are removed during optimization"),
                                 &|query| {
                                     fixed_cosets[query.column_index]
                                         .with_rotation(query.rotation)

@@ -112,6 +112,8 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
                     expression.evaluate(
                         &|scalar| poly::Ast::ConstantTerm(scalar),
                         &|_| panic!("virtual selectors are removed during optimization"),
+                        #[cfg(feature = "unstable-dynamic-lookups")]
+                        &|_| panic!("virtual table tags are removed during optimization"),
                         &|query| {
                             fixed_values[query.column_index]
                                 .with_rotation(query.rotation)
@@ -141,6 +143,8 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
                     expression.evaluate(
                         &|scalar| poly::Ast::ConstantTerm(scalar),
                         &|_| panic!("virtual selectors are removed during optimization"),
+                        #[cfg(feature = "unstable-dynamic-lookups")]
+                        &|_| panic!("virtual table tags are removed during optimization"),
                         &|query| {
                             fixed_cosets[query.column_index]
                                 .with_rotation(query.rotation)

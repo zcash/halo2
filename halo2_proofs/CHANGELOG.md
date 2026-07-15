@@ -6,6 +6,12 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+
+### Changed
+- `halo2_proofs::dev`
+    - `MockProver<F>` now has an additional bound `<F + From<u64>>`.
+    - `graph::CircuitLayout::render<F>` now has an additional bound `<F + From<u64>>`.
 
 ## [0.3.2] - 2025-12-04
 ### Added

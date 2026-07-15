@@ -101,7 +101,9 @@ beta = [
 ]
 nightly = [
     "beta",
+    "unstable-dynamic-lookups",
 ]
+unstable-dynamic-lookups = []
 # Add flags for in-development features above this line.
 
 [lib]
@@ -110,3 +112,7 @@ bench = false
 [[example]]
 name = "circuit-layout"
 required-features = ["test-dev-graph"]
+
+[[example]]
+name = "dynamic-lookup"
+required-features = ["unstable-dynamic-lookups"]

@@ -1,6 +1,8 @@
 use ff::Field;
 use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 
+#[cfg(feature = "unstable-dynamic-lookups")]
+use crate::plonk::TableTag;
 use crate::{
     circuit::Value,
     plonk::{
@@ -96,6 +98,11 @@ impl<F: Field> Assignment<F> for Graph {
         AR: Into<String>,
     {
         // Do nothing; we don't care about cells in this context.
+        Ok(())
+    }
+
+    #[cfg(feature = "unstable-dynamic-lookups")]
+    fn add_to_lookup(&mut self, _: TableTag, _: usize) -> Result<(), Error> {
         Ok(())
     }
 

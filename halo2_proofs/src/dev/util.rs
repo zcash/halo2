@@ -143,6 +143,8 @@ pub(super) fn cell_values<'a, F: Field>(
     let cell_values = poly.evaluate(
         &|_| BTreeMap::default(),
         &|_| panic!("virtual selectors are removed during optimization"),
+        #[cfg(feature = "unstable-dynamic-lookups")]
+        &|_| panic!("virtual table tags are removed during optimization"),
         &cell_value(virtual_cells, load_fixed),
         &cell_value(virtual_cells, load_advice),
         &cell_value(virtual_cells, load_instance),
