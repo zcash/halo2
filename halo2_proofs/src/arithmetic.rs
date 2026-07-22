@@ -71,10 +71,15 @@ impl<C: CurveAffine> Buckets<C> {
         }
     }
 
-    fn sum(&mut self, coeffs: &[C::Scalar], bases: &[C], i: usize) -> C::Curve {
+    fn sum(
+        &mut self,
+        coeffs: &[<C::Scalar as PrimeField>::Repr],
+        bases: &[C],
+        i: usize,
+    ) -> C::Curve {
         // get segmentation and add coeff to buckets content
         for (coeff, base) in coeffs.iter().zip(bases.iter()) {
-            let seg = self.get_at::<C::Scalar>(i, &coeff.to_repr());
+            let seg = self.get_at(i, coeff);
             if seg != 0 {
                 self.coeffs[seg - 1].add_assign(base);
             }
@@ -92,7 +97,7 @@ impl<C: CurveAffine> Buckets<C> {
         acc
     }
 
-    fn get_at<F: PrimeField>(&self, segment: usize, bytes: &F::Repr) -> usize {
+    fn get_at(&self, segment: usize, bytes: &<C::Scalar as PrimeField>::Repr) -> usize {
         let skip_bits = segment * self.c;
         let skip_bytes = skip_bits / 8;
 
@@ -143,6 +148,9 @@ pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::C
 pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
     assert_eq!(coeffs.len(), bases.len());
 
+    // Convert to canonical representations once instead of once per window.
+    let coeffs = coeffs.iter().map(PrimeField::to_repr).collect::<Vec<_>>();
+
     let c = if bases.len() < 4 {
         1
     } else if bases.len() < 32 {
@@ -159,7 +167,7 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
             .enumerate()
             .rev()
             .map(|(i, buckets)| {
-                let mut acc = buckets.sum(coeffs, bases, i);
+                let mut acc = buckets.sum(&coeffs, bases, i);
                 (0..c * i).for_each(|_| acc = acc.double());
                 acc
             })
@@ -170,7 +178,7 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
             .iter_mut()
             .enumerate()
             .rev()
-            .map(|(i, buckets)| buckets.sum(coeffs, bases, i))
+            .map(|(i, buckets)| buckets.sum(&coeffs, bases, i))
             .fold(C::Curve::identity(), |mut sum, bucket| {
                 // restore original evaluation point
                 (0..c).for_each(|_| sum = sum.double());
