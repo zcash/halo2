@@ -7,6 +7,11 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+### Changed
+- `halo2_proofs::plonk::verify_proof` now computes instance commitments
+  directly from their supplied Lagrange coefficients, without zero-padding to
+  the evaluation domain.
+
 ## [0.3.5] - 2026-08-02
 ### Added
 - `halo2_proofs::plonk::VerifyingKey::dump_vesta_lean_fixture_match_only`
