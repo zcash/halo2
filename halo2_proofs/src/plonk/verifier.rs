@@ -6,7 +6,7 @@ use super::{
     vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
     VerifyingKey,
 };
-use crate::arithmetic::CurveAffine;
+use crate::arithmetic::{best_multiexp, CurveAffine};
 use crate::poly::{
     commitment::{Blind, Guard, Params, MSM},
     multiopen::{self, VerifierQuery},
@@ -17,6 +17,18 @@ use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, Transcr
 mod batch;
 #[cfg(feature = "batch")]
 pub use batch::BatchVerifier;
+
+fn commit_instance<C: CurveAffine>(params: &Params<C>, instance: &[C::Scalar]) -> C::Curve {
+    let mut scalars = Vec::with_capacity(instance.len() + 1);
+    scalars.extend(instance);
+    scalars.push(Blind::default().0);
+
+    let mut bases = Vec::with_capacity(instance.len() + 1);
+    bases.extend(&params.g_lagrange[..instance.len()]);
+    bases.push(params.w);
+
+    best_multiexp::<C>(&scalars, &bases)
+}
 
 /// Trait representing a strategy for verifying Halo 2 proofs.
 pub trait VerificationStrategy<'params, C: CurveAffine> {
@@ -93,11 +105,8 @@ pub fn verify_proof<
                     if instance.len() > params.n as usize - (vk.cs.blinding_factors() + 1) {
                         return Err(Error::InstanceTooLarge);
                     }
-                    let mut poly = instance.to_vec();
-                    poly.resize(params.n as usize, C::Scalar::ZERO);
-                    let poly = vk.domain.lagrange_from_vec(poly);
 
-                    Ok(params.commit_lagrange(&poly, Blind::default()).to_affine())
+                    Ok(commit_instance(params, instance).to_affine())
                 })
                 .collect::<Result<Vec<_>, _>>()
         })
@@ -335,4 +344,37 @@ pub fn verify_proof<
     strategy.process(|msm| {
         multiopen::verify_proof(params, transcript, queries, msm).map_err(|_| Error::Opening)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::commit_instance;
+    use crate::{
+        pasta::{EqAffine, Fp},
+        poly::{
+            commitment::{Blind, Params},
+            EvaluationDomain,
+        },
+    };
+
+    #[test]
+    fn instance_commitment_matches_zero_padded_commitment() {
+        const K: u32 = 5;
+
+        let params = Params::<EqAffine>::new(K);
+        let domain = EvaluationDomain::new(1, K);
+
+        for len in [0, 1, 9, 1 << K] {
+            let instance = (0..len).map(|i| Fp::from(i as u64)).collect::<Vec<_>>();
+            let mut padded = domain.empty_lagrange();
+            for (coefficient, value) in padded.iter_mut().zip(instance.iter()) {
+                *coefficient = *value;
+            }
+
+            assert_eq!(
+                commit_instance(&params, &instance),
+                params.commit_lagrange(&padded, Blind::default()),
+            );
+        }
+    }
 }
