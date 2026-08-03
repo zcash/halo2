@@ -6,6 +6,10 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- `halo2_proofs::circuit`:
+  - Duplicate assignments to the same lookup-table cell now return a table
+    overwrite error before mutating the fixed-column assignment backend.
 
 ## [0.3.5] - 2026-08-02
 ### Added

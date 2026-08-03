@@ -79,6 +79,13 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
         }
 
         let entry = self.default_and_assigned.entry(column).or_default();
+        if entry.1.get(offset).copied().unwrap_or(false) {
+            return Err(Error::TableError(TableError::OverwriteDefault(
+                column,
+                format!("offset {}", offset),
+                format!("{:?}", to()),
+            )));
+        }
 
         let mut value = Value::unknown();
         self.cs.assign_fixed(
@@ -92,19 +99,9 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
             },
         )?;
 
-        match (entry.0.is_none(), offset) {
-            // Use the value at offset 0 as the default value for this table column.
-            (true, 0) => entry.0 = Some(value),
-            // Since there is already an existing default value for this table column,
-            // the caller should not be attempting to assign another value at offset 0.
-            (false, 0) => {
-                return Err(Error::TableError(TableError::OverwriteDefault(
-                    column,
-                    format!("{:?}", entry.0.unwrap()),
-                    format!("{:?}", value),
-                )))
-            }
-            _ => (),
+        // Use the value at offset 0 as the default value for this table column.
+        if entry.0.is_none() && offset == 0 {
+            entry.0 = Some(value);
         }
         if entry.1.len() <= offset {
             entry.1.resize(offset + 1, false);
@@ -280,7 +277,77 @@ mod tests {
         let prover = MockProver::run(K, &FaultyCircuit, vec![]);
         assert_eq!(
             format!("{}", prover.unwrap_err()),
-            "Attempted to overwrite default value Value { inner: Some(Trivial(0x0000000000000000000000000000000000000000000000000000000000000000)) } with Value { inner: Some(Trivial(0x0000000000000000000000000000000000000000000000000000000000000000)) } in TableColumn { inner: Column { index: 0, column_type: Fixed } }"
+            "Attempted to overwrite table value offset 0 with Value { inner: Some(Trivial(0x0000000000000000000000000000000000000000000000000000000000000000)) } in TableColumn { inner: Column { index: 0, column_type: Fixed } }"
+        );
+    }
+
+    #[test]
+    fn table_overwrite_non_default_cell() {
+        const K: u32 = 4;
+
+        #[derive(Clone)]
+        struct FaultyCircuitConfig {
+            table: TableColumn,
+        }
+
+        struct FaultyCircuit;
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                Self
+            }
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let table = meta.lookup_table_column();
+
+                meta.lookup(|cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+                    vec![(a, table)]
+                });
+
+                Self::Config { table }
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
+            ) -> Result<(), Error> {
+                layouter.assign_table(
+                    || "duplicate assignment",
+                    |mut table| {
+                        table.assign_cell(
+                            || "default",
+                            config.table,
+                            0,
+                            || Value::known(Fp::zero()),
+                        )?;
+                        table.assign_cell(
+                            || "first assignment",
+                            config.table,
+                            1,
+                            || Value::known(Fp::one()),
+                        )?;
+                        table.assign_cell(
+                            || "duplicate",
+                            config.table,
+                            1,
+                            || Value::known(Fp::from(2)),
+                        )
+                    },
+                )
+            }
+        }
+
+        let prover = MockProver::run(K, &FaultyCircuit, vec![]);
+        assert_eq!(
+            format!("{}", prover.unwrap_err()),
+            "Attempted to overwrite table value offset 1 with Value { inner: Some(Trivial(0x0000000000000000000000000000000000000000000000000000000000000002)) } in TableColumn { inner: Column { index: 0, column_type: Fixed } }"
         );
     }
 

@@ -111,7 +111,7 @@ pub enum TableError {
     UnevenColumnLengths((TableColumn, usize), (TableColumn, usize)),
     /// Attempt to assign a used `TableColumn`
     UsedColumn(TableColumn),
-    /// Attempt to overwrite a default value
+    /// Attempt to overwrite a table value
     OverwriteDefault(TableColumn, String, String),
 }
 
@@ -136,7 +136,7 @@ impl fmt::Display for TableError {
             TableError::OverwriteDefault(col, default, val) => {
                 write!(
                     f,
-                    "Attempted to overwrite default value {} with {} in {:?}",
+                    "Attempted to overwrite table value {} with {} in {:?}",
                     default, val, col
                 )
             }
