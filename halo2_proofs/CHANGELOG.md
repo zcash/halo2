@@ -7,6 +7,12 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+### Changed
+- The IPA prover now batches the scalar multiplications used to collapse its
+  generator vector, using GLV for Pasta curves because the Fiat-Shamir
+  challenges are public.
+- The minimum supported Rust version is now 1.63.
+
 ## [0.3.5] - 2026-08-02
 ### Added
 - `halo2_proofs::plonk::VerifyingKey::dump_vesta_lean_fixture_match_only`

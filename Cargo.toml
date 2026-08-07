@@ -5,3 +5,6 @@ members = [
     "halo2_poseidon",
     "halo2_proofs",
 ]
+
+[patch.crates-io]
+pasta_curves = { git = "https://github.com/valargroup/pasta_curves", rev = "21898a77810260ae8f2ed4f27058315729e683bc" }

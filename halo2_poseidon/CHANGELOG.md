@@ -7,6 +7,9 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+### Changed
+- The minimum supported Rust version is now 1.63.
+
 ## [0.1.0] - 2024-12-16
 Initial release, extracted from `halo2_gadgets 0.3.0`. Includes minor changes
 for `no-std` support.

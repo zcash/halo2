@@ -4,11 +4,11 @@ use rand_core::RngCore;
 use super::super::{Coeff, Polynomial};
 use super::{Blind, Params};
 use crate::arithmetic::{
-    best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine,
+    best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine, CurveExt,
 };
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
-use group::Curve;
+use group::{Curve, Group};
 use std::io;
 
 /// Create a polynomial commitment opening proof for the polynomial defined
@@ -156,11 +156,73 @@ fn parallel_generator_collapse<C: CurveAffine>(g: &mut [C], challenge: C::Scalar
     let (g_lo, g_hi) = g.split_at_mut(len);
 
     parallelize(g_lo, |g_lo, start| {
-        let g_hi = &g_hi[start..];
-        let mut tmp = Vec::with_capacity(g_lo.len());
-        for (g_lo, g_hi) in g_lo.iter().zip(g_hi.iter()) {
-            tmp.push(g_lo.to_curve() + &(*g_hi * challenge));
+        let g_hi = &g_hi[start..start + g_lo.len()];
+        let mut scaled = vec![C::Curve::identity(); g_hi.len()];
+        // The Fiat-Shamir challenge is public, so variable-time scalar
+        // multiplication is appropriate here.
+        <C::Curve as CurveExt>::batch_mul_same_scalar_vartime(g_hi, &challenge, &mut scaled);
+        for (scaled, g_lo) in scaled.iter_mut().zip(g_lo.iter()) {
+            *scaled += *g_lo;
         }
-        C::Curve::batch_normalize(&tmp, g_lo);
+        C::Curve::batch_normalize(&scaled, g_lo);
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parallel_generator_collapse;
+    use crate::arithmetic::CurveAffine;
+    use ff::Field;
+    use group::{Curve, Group};
+    use pasta_curves::{pallas, vesta};
+
+    fn generator_collapse_matches_native<C>()
+    where
+        C: CurveAffine + core::fmt::Debug,
+    {
+        let points: Vec<C> = (0..16)
+            .map(|i| {
+                if i == 3 || i == 12 {
+                    C::identity()
+                } else {
+                    C::from(C::Curve::generator() * C::Scalar::from(i as u64 + 1))
+                }
+            })
+            .collect();
+        let full_width = (C::Scalar::from(0x9E37_79B9_7F4A_7C15u64).square()
+            + C::Scalar::from(0x0123_4567_89AB_CDEFu64))
+        .square();
+        let challenges = [
+            C::Scalar::ZERO,
+            C::Scalar::ONE,
+            -C::Scalar::ONE,
+            C::Scalar::from(2),
+            full_width,
+        ];
+
+        for challenge in challenges {
+            let half = points.len() / 2;
+            let expected_projective: Vec<C::Curve> = points[..half]
+                .iter()
+                .zip(points[half..].iter())
+                .map(|(g_lo, g_hi)| g_lo.to_curve() + (*g_hi * challenge))
+                .collect();
+            let mut expected = vec![C::identity(); half];
+            C::Curve::batch_normalize(&expected_projective, &mut expected);
+
+            let mut actual = points.clone();
+            parallel_generator_collapse(&mut actual, challenge);
+            assert_eq!(&actual[..half], expected);
+        }
+    }
+
+    #[test]
+    fn generator_collapse_matches_native_pallas() {
+        generator_collapse_matches_native::<pallas::Affine>();
+    }
+
+    #[test]
+    fn generator_collapse_matches_native_vesta() {
+        generator_collapse_matches_native::<vesta::Affine>();
+    }
 }

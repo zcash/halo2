@@ -7,6 +7,9 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+### Changed
+- The minimum supported Rust version is now 1.63.
+
 ## [0.5.0] - 2026-06-02
 
 ### Added

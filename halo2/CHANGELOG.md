@@ -7,6 +7,9 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+### Changed
+- The minimum supported Rust version is now 1.63.
+
 ## [0.1.0-beta.2] - 2022-02-14
 ### Removed
 - Everything (moved to `halo2_proofs` crate).
