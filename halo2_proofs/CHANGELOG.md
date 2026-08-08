@@ -8,9 +8,9 @@ and this project adheres to Rust's notion of
 ## [Unreleased]
 
 ### Changed
-- The internal polynomial evaluator now avoids field multiplication for scales
-  by $1$ and $-1$, and evaluates subtraction without materializing a negated
-  polynomial.
+- The internal polynomial evaluator now uses field identity, negation, or
+  doubling for multiplications by $1$, $-1$, or $2$, and evaluates subtraction
+  without materializing a negated polynomial.
 
 ## [0.3.5] - 2026-08-02
 ### Added
