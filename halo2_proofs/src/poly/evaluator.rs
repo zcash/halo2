@@ -146,6 +146,8 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
             chunk_size: usize,
             chunk_index: usize,
             polys: &'a [Polynomial<F, B>],
+            minus_one: F,
+            two: F,
         }
 
         fn recurse<E, F: WithSmallOrderMulGroup<3>, B: BasisOps>(
@@ -163,7 +165,7 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                 Ast::Add(a, b) => {
                     let mut lhs = recurse(a, ctx);
                     if let Ast::Scale(rhs, scalar) = b.as_ref() {
-                        if *scalar == -F::ONE {
+                        if *scalar == ctx.minus_one {
                             let rhs = recurse(rhs, ctx);
                             for (lhs, rhs) in lhs.iter_mut().zip(rhs.iter()) {
                                 *lhs -= *rhs;
@@ -179,6 +181,19 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                     lhs
                 }
                 Ast::Mul(AstMul(a, b)) => {
+                    // Preserve the multiplication shape while avoiding a
+                    // constant vector for scalars with cheap field operations.
+                    if let Ast::ConstantTerm(scalar) = a.as_ref() {
+                        if let Some(rhs) = recurse_small_scale(b, *scalar, ctx) {
+                            return rhs;
+                        }
+                    }
+                    if let Ast::ConstantTerm(scalar) = b.as_ref() {
+                        if let Some(lhs) = recurse_small_scale(a, *scalar, ctx) {
+                            return lhs;
+                        }
+                    }
+
                     let mut lhs = recurse(a, ctx);
                     let rhs = recurse(b, ctx);
                     for (lhs, rhs) in lhs.iter_mut().zip(rhs.iter()) {
@@ -186,19 +201,16 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                     }
                     lhs
                 }
-                Ast::Scale(a, scalar) => {
-                    let mut lhs = recurse(a, ctx);
-                    if *scalar == -F::ONE {
-                        for lhs in lhs.iter_mut() {
-                            *lhs = -*lhs;
-                        }
-                    } else if *scalar != F::ONE {
+                Ast::Scale(a, scalar) => match recurse_small_scale(a, *scalar, ctx) {
+                    Some(lhs) => lhs,
+                    None => {
+                        let mut lhs = recurse(a, ctx);
                         for lhs in lhs.iter_mut() {
                             *lhs *= scalar;
                         }
+                        lhs
                     }
-                    lhs
-                }
+                },
                 Ast::DistributePowers(terms, base) => terms.iter().fold(
                     B::constant_term(ctx.poly_len, ctx.chunk_size, ctx.chunk_index, F::ZERO),
                     |mut acc, term| {
@@ -223,8 +235,34 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
             }
         }
 
+        fn recurse_small_scale<E, F: WithSmallOrderMulGroup<3>, B: BasisOps>(
+            ast: &Ast<E, F, B>,
+            scalar: F,
+            ctx: &AstContext<'_, F, B>,
+        ) -> Option<Vec<F>> {
+            if scalar == ctx.minus_one {
+                let mut values = recurse(ast, ctx);
+                for value in values.iter_mut() {
+                    *value = -*value;
+                }
+                Some(values)
+            } else if scalar == F::ONE {
+                Some(recurse(ast, ctx))
+            } else if scalar == ctx.two {
+                let mut values = recurse(ast, ctx);
+                for value in values.iter_mut() {
+                    *value = value.double();
+                }
+                Some(values)
+            } else {
+                None
+            }
+        }
+
         // Apply `ast` to each chunk in parallel, writing the result into an output
         // polynomial.
+        let minus_one = -F::ONE;
+        let two = F::ONE.double();
         let mut result = B::empty_poly(domain);
         multicore::scope(|scope| {
             for (chunk_index, out) in result.chunks_mut(chunk_size).enumerate() {
@@ -235,6 +273,8 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                         chunk_size,
                         chunk_index,
                         polys: &self.polys,
+                        minus_one,
+                        two,
                     };
                     out.copy_from_slice(&recurse(ast, &ctx));
                 });
@@ -678,16 +718,66 @@ mod tests {
     }
 
     #[test]
-    fn scale_by_identity_values() {
+    fn scale_by_small_values() {
         let domain = EvaluationDomain::new(1, 4);
         let mut evaluator = new_evaluator::<_, _, ExtendedLagrangeCoeff>(|| {});
         evaluator.register_poly(ExtendedLagrangeCoeff::empty_poly(&domain));
 
         let value = pallas::Base::from(42);
-        for (scalar, expected) in [(pallas::Base::ONE, value), (-pallas::Base::ONE, -value)] {
+        for (scalar, expected) in [
+            (pallas::Base::ONE, value),
+            (-pallas::Base::ONE, -value),
+            (pallas::Base::ONE.double(), value.double()),
+        ] {
             let result = evaluator.evaluate(&(Ast::ConstantTerm(value) * scalar), &domain);
             assert!(result.iter().all(|result| *result == expected));
         }
+    }
+
+    #[test]
+    fn multiply_by_constant_terms() {
+        fn check<B: BasisOps>()
+        where
+            Ast<fn(), pallas::Base, B>: std::ops::Mul<Output = Ast<fn(), pallas::Base, B>>,
+        {
+            fn context() {}
+
+            let domain = EvaluationDomain::new(1, 4);
+            let mut poly = B::empty_poly(&domain);
+            for (index, value) in poly.iter_mut().enumerate() {
+                *value = pallas::Base::from(index as u64 + 7);
+            }
+            let expected = poly.clone();
+
+            let mut evaluator = new_evaluator::<fn(), _, B>(context);
+            let leaf = evaluator.register_poly(poly);
+            let two = pallas::Base::ONE.double();
+
+            for scalar in [
+                -pallas::Base::ONE,
+                pallas::Base::ONE,
+                two,
+                pallas::Base::from(7),
+            ] {
+                let constant = Ast::ConstantTerm(scalar);
+                let expression = Ast::from(leaf);
+                let constant_lhs = constant.clone() * expression.clone();
+                let constant_rhs = expression * constant;
+
+                for ast in [constant_lhs, constant_rhs] {
+                    assert!(matches!(&ast, Ast::Mul(_)));
+
+                    let result = evaluator.evaluate(&ast, &domain);
+                    assert!(result
+                        .iter()
+                        .zip(expected.iter())
+                        .all(|(result, value)| *result == *value * scalar));
+                }
+            }
+        }
+
+        check::<LagrangeCoeff>();
+        check::<ExtendedLagrangeCoeff>();
     }
 
     #[test]
