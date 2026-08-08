@@ -3,6 +3,7 @@
 
 use crate::{
     arithmetic::{best_fft, parallelize},
+    multicore,
     plonk::Assigned,
 };
 
@@ -245,8 +246,7 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
         assert_eq!(a.values.len(), 1 << self.k);
 
         self.distribute_powers_zeta(&mut a.values, true);
-        a.values.resize(self.extended_len(), F::ZERO);
-        best_fft(&mut a.values, self.extended_omega, self.extended_k);
+        Self::fft_zero_padded(&mut a.values, self.extended_omega, self.k, self.extended_k);
 
         Polynomial {
             values: a.values,
@@ -382,6 +382,84 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
         });
     }
 
+    fn fft_zero_padded(coefficients: &mut Vec<F>, omega: F, log_n: u32, extended_log_n: u32) {
+        assert!(log_n <= extended_log_n);
+
+        let n = 1 << log_n;
+        let extended_n = 1 << extended_log_n;
+        let extension = extended_n / n;
+
+        assert_eq!(coefficients.len(), n);
+        if extension == 1 {
+            best_fft(coefficients, omega, log_n);
+            return;
+        }
+
+        // A constant polynomial needs no butterfly arithmetic.
+        if n == 1 {
+            coefficients.resize(extended_n, coefficients[0]);
+            return;
+        }
+
+        let mut twiddles = Vec::with_capacity(extended_n / 2);
+        let mut twiddle = F::ONE;
+        for index in 0..extended_n / 2 {
+            twiddles.push(twiddle);
+            if index + 1 < extended_n / 2 {
+                twiddle *= &omega;
+            }
+        }
+
+        // For an n-length input, bitreverse_extended(i) is
+        // extension * bitreverse_n(i). The omitted radix-2 stages would copy
+        // each live coefficient across an `extension`-sized chunk. Materialize
+        // the first retained stage directly instead of writing and rereading
+        // those replicated chunks.
+        let mut values = Vec::with_capacity(extended_n);
+        let mut right_values = vec![F::ZERO; extension];
+        // `arithmetic::recursive_butterfly_arithmetic` uses twiddle stride
+        // N / L at a node of length L. The first retained node has
+        // L = 2 * extension, so its stride is N / (2 * extension) = n / 2.
+        let first_twiddle_chunk = n / 2;
+        for pair in 0..n / 2 {
+            let left = coefficients[bitreverse(2 * pair, log_n)];
+            let right = coefficients[bitreverse(2 * pair + 1, log_n)];
+
+            let mut left_value = left;
+            left_value += &right;
+            values.push(left_value);
+            right_values[0] = left;
+            right_values[0] -= &right;
+
+            for (index, right_value) in right_values.iter_mut().enumerate().skip(1) {
+                let mut t = right;
+                t *= &twiddles[index * first_twiddle_chunk];
+
+                let mut left_value = left;
+                left_value += &t;
+                values.push(left_value);
+
+                *right_value = left;
+                *right_value -= &t;
+            }
+            values.extend_from_slice(&right_values);
+        }
+        debug_assert_eq!(values.len(), extended_n);
+
+        let mut parallel_depth = 0;
+        let mut parallel_tasks = 1;
+        let threads = multicore::current_num_threads();
+        while parallel_tasks < threads {
+            parallel_depth += 1;
+            parallel_tasks <<= 1;
+        }
+
+        // Each 2 * extension chunk contains the first retained stage. Continue
+        // with the other log_n - 1 butterfly stages.
+        recursive_butterfly_after_prefix(&mut values, 2 * extension, 1, &twiddles, parallel_depth);
+        *coefficients = values;
+    }
+
     /// Get the size of the extended domain
     pub fn extended_len(&self) -> usize {
         1 << self.extended_k
@@ -488,6 +566,84 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
     }
 }
 
+fn bitreverse(value: usize, bits: u32) -> usize {
+    if bits == 0 {
+        0
+    } else {
+        value.reverse_bits() >> (usize::BITS - bits)
+    }
+}
+
+fn recursive_butterfly_after_prefix<F: Field>(
+    values: &mut [F],
+    completed_chunk_len: usize,
+    twiddle_chunk: usize,
+    twiddles: &[F],
+    parallel_depth: u32,
+) {
+    let len = values.len();
+    if len == completed_chunk_len {
+        return;
+    }
+
+    let (left, right) = values.split_at_mut(len / 2);
+    if len / 2 > completed_chunk_len {
+        if parallel_depth > 0 {
+            multicore::join(
+                || {
+                    recursive_butterfly_after_prefix(
+                        left,
+                        completed_chunk_len,
+                        twiddle_chunk * 2,
+                        twiddles,
+                        parallel_depth - 1,
+                    )
+                },
+                || {
+                    recursive_butterfly_after_prefix(
+                        right,
+                        completed_chunk_len,
+                        twiddle_chunk * 2,
+                        twiddles,
+                        parallel_depth - 1,
+                    )
+                },
+            );
+        } else {
+            recursive_butterfly_after_prefix(
+                left,
+                completed_chunk_len,
+                twiddle_chunk * 2,
+                twiddles,
+                0,
+            );
+            recursive_butterfly_after_prefix(
+                right,
+                completed_chunk_len,
+                twiddle_chunk * 2,
+                twiddles,
+                0,
+            );
+        }
+    }
+
+    // Handle the unity twiddle without a field multiplication.
+    let (first_left, left) = left.split_at_mut(1);
+    let (first_right, right) = right.split_at_mut(1);
+    let t = first_right[0];
+    first_right[0] = first_left[0];
+    first_left[0] += &t;
+    first_right[0] -= &t;
+
+    for (index, (left, right)) in left.iter_mut().zip(right.iter_mut()).enumerate() {
+        let mut t = *right;
+        t *= &twiddles[(index + 1) * twiddle_chunk];
+        *right = *left;
+        *left += &t;
+        *right -= &t;
+    }
+}
+
 /// Represents the minimal parameters that determine an `EvaluationDomain`.
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -495,6 +651,34 @@ pub struct PinnedEvaluationDomain<'a, F: Field> {
     k: &'a u32,
     extended_k: &'a u32,
     omega: &'a F,
+}
+
+#[test]
+fn test_zero_padded_fft_matches_best_fft() {
+    use crate::{arithmetic::best_fft, pasta::pallas::Scalar};
+
+    for k in 0..=8 {
+        for extension_log in 0..=4 {
+            let degree = if extension_log == 0 {
+                2
+            } else {
+                (1 << extension_log) + 1
+            };
+            let domain = EvaluationDomain::<Scalar>::new(degree, k);
+            assert_eq!(domain.extended_k, k + extension_log);
+
+            let coefficients = (1..=(1u64 << k)).map(Scalar::from).collect::<Vec<_>>();
+            let mut expected = coefficients.clone();
+            domain.distribute_powers_zeta(&mut expected, true);
+            expected.resize(domain.extended_len(), Scalar::ZERO);
+            best_fft(&mut expected, domain.extended_omega, domain.extended_k);
+
+            let coefficients = domain.coeff_from_vec(coefficients);
+            let actual = domain.coeff_to_extended(coefficients);
+
+            assert_eq!(&actual[..], &expected);
+        }
+    }
 }
 
 #[test]
