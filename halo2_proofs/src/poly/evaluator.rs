@@ -162,6 +162,16 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                 ),
                 Ast::Add(a, b) => {
                     let mut lhs = recurse(a, ctx);
+                    if let Ast::Scale(rhs, scalar) = b.as_ref() {
+                        if *scalar == -F::ONE {
+                            let rhs = recurse(rhs, ctx);
+                            for (lhs, rhs) in lhs.iter_mut().zip(rhs.iter()) {
+                                *lhs -= *rhs;
+                            }
+                            return lhs;
+                        }
+                    }
+
                     let rhs = recurse(b, ctx);
                     for (lhs, rhs) in lhs.iter_mut().zip(rhs.iter()) {
                         *lhs += *rhs;
@@ -678,5 +688,18 @@ mod tests {
             let result = evaluator.evaluate(&(Ast::ConstantTerm(value) * scalar), &domain);
             assert!(result.iter().all(|result| *result == expected));
         }
+    }
+
+    #[test]
+    fn subtract_polynomials() {
+        let domain = EvaluationDomain::new(1, 4);
+        let mut evaluator = new_evaluator::<_, _, ExtendedLagrangeCoeff>(|| {});
+        evaluator.register_poly(ExtendedLagrangeCoeff::empty_poly(&domain));
+
+        let lhs = pallas::Base::from(42);
+        let rhs = pallas::Base::from(17);
+        let result =
+            evaluator.evaluate(&(Ast::ConstantTerm(lhs) - Ast::ConstantTerm(rhs)), &domain);
+        assert!(result.iter().all(|result| *result == lhs - rhs));
     }
 }
