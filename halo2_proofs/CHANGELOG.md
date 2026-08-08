@@ -7,6 +7,10 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+### Changed
+- `halo2_proofs::plonk::create_proof` now commits directly to the supplied
+  instance values instead of zero-padding them to the evaluation domain first.
+
 ## [0.3.5] - 2026-08-02
 ### Added
 - `halo2_proofs::plonk::VerifyingKey::dump_vesta_lean_fixture_match_only`

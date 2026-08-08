@@ -13,7 +13,7 @@ use super::{
     ChallengeY, Error, ProvingKey,
 };
 use crate::{
-    arithmetic::{eval_polynomial, CurveAffine},
+    arithmetic::{best_multiexp, eval_polynomial, CurveAffine},
     circuit::Value,
     plonk::Assigned,
     poly::{
@@ -27,6 +27,18 @@ use crate::{
     poly::batch_invert_assigned,
     transcript::{EncodedChallenge, TranscriptWrite},
 };
+
+fn commit_instance<C: CurveAffine>(params: &Params<C>, instance: &[C::Scalar]) -> C::Curve {
+    let mut scalars = Vec::with_capacity(instance.len() + 1);
+    scalars.extend(instance);
+    scalars.push(Blind::default().0);
+
+    let mut bases = Vec::with_capacity(instance.len() + 1);
+    bases.extend(&params.g_lagrange[..instance.len()]);
+    bases.push(params.w);
+
+    best_multiexp::<C>(&scalars, &bases)
+}
 
 /// This creates a proof for the provided `circuit` when given the public
 /// parameters `params` and the proving key [`ProvingKey`] that was
@@ -90,9 +102,9 @@ pub fn create_proof<
                     Ok(poly)
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            let instance_commitments_projective: Vec<_> = instance_values
+            let instance_commitments_projective: Vec<_> = instance
                 .iter()
-                .map(|poly| params.commit_lagrange(poly, Blind::default()))
+                .map(|values| commit_instance(params, values))
                 .collect();
             let mut instance_commitments =
                 vec![C::identity(); instance_commitments_projective.len()];
@@ -722,6 +734,27 @@ pub fn create_proof<
         .chain(vanishing.open(x));
 
     multiopen::create_proof(params, rng, transcript, instances).map_err(|_| Error::Opening)
+}
+
+#[test]
+fn test_commit_instance() {
+    use pasta_curves::{EqAffine, Fp};
+
+    let params: Params<EqAffine> = Params::new(3);
+    let domain = crate::poly::EvaluationDomain::new(1, 3);
+    let instance = [Fp::from(3), Fp::ZERO, Fp::from(5)];
+
+    for instance in [&[][..], &instance[..]] {
+        let mut poly = domain.empty_lagrange();
+        for (coefficient, value) in poly.iter_mut().zip(instance.iter()) {
+            *coefficient = *value;
+        }
+
+        assert_eq!(
+            commit_instance(&params, instance),
+            params.commit_lagrange(&poly, Blind::default())
+        );
+    }
 }
 
 #[test]
