@@ -3,12 +3,12 @@ use group::Curve;
 use std::iter;
 
 use super::{
-    vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
-    VerifyingKey,
+    commit_instance, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
+    ChallengeY, Error, VerifyingKey,
 };
-use crate::arithmetic::{best_multiexp, CurveAffine};
+use crate::arithmetic::CurveAffine;
 use crate::poly::{
-    commitment::{Blind, Guard, Params, MSM},
+    commitment::{Guard, Params, MSM},
     multiopen::{self, VerifierQuery},
 };
 use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
@@ -20,18 +20,6 @@ pub use batch::BatchVerifier;
 
 // Batch normalization costs more than individual normalization below this.
 const MIN_BATCH_NORMALIZE: usize = 4;
-
-fn commit_instance<C: CurveAffine>(params: &Params<C>, instance: &[C::Scalar]) -> C::Curve {
-    let mut scalars = Vec::with_capacity(instance.len() + 1);
-    scalars.extend(instance);
-    scalars.push(Blind::default().0);
-
-    let mut bases = Vec::with_capacity(instance.len() + 1);
-    bases.extend(&params.g_lagrange[..instance.len()]);
-    bases.push(params.w);
-
-    best_multiexp::<C>(&scalars, &bases)
-}
 
 /// Trait representing a strategy for verifying Halo 2 proofs.
 pub trait VerificationStrategy<'params, C: CurveAffine> {

@@ -8,8 +8,9 @@
 use blake2b_simd::Params as Blake2bParams;
 use group::ff::{Field, FromUniformBytes, PrimeField};
 
-use crate::arithmetic::CurveAffine;
+use crate::arithmetic::{best_multiexp, CurveAffine};
 use crate::poly::{
+    commitment::{Blind, Params},
     Coeff, EvaluationDomain, ExtendedLagrangeCoeff, LagrangeCoeff, PinnedEvaluationDomain,
     Polynomial,
 };
@@ -38,6 +39,18 @@ pub use prover::*;
 pub use verifier::*;
 
 use std::io;
+
+fn commit_instance<C: CurveAffine>(params: &Params<C>, instance: &[C::Scalar]) -> C::Curve {
+    let mut scalars = Vec::with_capacity(instance.len() + 1);
+    scalars.extend(instance);
+    scalars.push(Blind::default().0);
+
+    let mut bases = Vec::with_capacity(instance.len() + 1);
+    bases.extend(&params.g_lagrange[..instance.len()]);
+    bases.push(params.w);
+
+    best_multiexp::<C>(&scalars, &bases)
+}
 
 /// This is a verifying key which allows for the verification of proofs for a
 /// particular circuit.
