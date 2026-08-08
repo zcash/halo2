@@ -178,8 +178,14 @@ impl<E, F: Field, B: Basis> Evaluator<E, F, B> {
                 }
                 Ast::Scale(a, scalar) => {
                     let mut lhs = recurse(a, ctx);
-                    for lhs in lhs.iter_mut() {
-                        *lhs *= scalar;
+                    if *scalar == -F::ONE {
+                        for lhs in lhs.iter_mut() {
+                            *lhs = -*lhs;
+                        }
+                    } else if *scalar != F::ONE {
+                        for lhs in lhs.iter_mut() {
+                            *lhs *= scalar;
+                        }
                     }
                     lhs
                 }
@@ -659,5 +665,18 @@ mod tests {
         test_case(k, new_evaluator::<_, _, Coeff>(|| {}));
         test_case(k, new_evaluator::<_, _, LagrangeCoeff>(|| {}));
         test_case(k, new_evaluator::<_, _, ExtendedLagrangeCoeff>(|| {}));
+    }
+
+    #[test]
+    fn scale_by_identity_values() {
+        let domain = EvaluationDomain::new(1, 4);
+        let mut evaluator = new_evaluator::<_, _, ExtendedLagrangeCoeff>(|| {});
+        evaluator.register_poly(ExtendedLagrangeCoeff::empty_poly(&domain));
+
+        let value = pallas::Base::from(42);
+        for (scalar, expected) in [(pallas::Base::ONE, value), (-pallas::Base::ONE, -value)] {
+            let result = evaluator.evaluate(&(Ast::ConstantTerm(value) * scalar), &domain);
+            assert!(result.iter().all(|result| *result == expected));
+        }
     }
 }
