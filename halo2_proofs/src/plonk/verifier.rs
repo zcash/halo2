@@ -145,7 +145,7 @@ pub fn verify_proof<
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-        debug_assert!(normalized_commitments.next().is_none());
+        assert!(normalized_commitments.next().is_none());
         instance_commitments
     };
 
