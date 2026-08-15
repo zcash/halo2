@@ -11,8 +11,6 @@ pub use pasta_curves::arithmetic::*;
 
 use crate::multicore::{self, TheBestReduce};
 
-const SCALAR_BITS: usize = 256;
-
 /// This represents an element of a group with basic operations that can be
 /// performed. This allows an FFT implementation (for example) to operate
 /// generically over either a field or elliptic curve group.
@@ -107,6 +105,24 @@ fn booth_digit(bytes: &[u8], window_bits: usize, window: usize) -> BoothDigit {
     }
 }
 
+fn booth_window_count<R: AsRef<[u8]>>(reprs: &[R], window_bits: usize) -> usize {
+    debug_assert!(window_bits > 0);
+
+    let repr_bytes = reprs
+        .iter()
+        .map(|repr| repr.as_ref().len())
+        .max()
+        .unwrap_or(0);
+    let repr_bits = repr_bytes
+        .checked_mul(u8::BITS as usize)
+        .expect("scalar representation is too large");
+
+    // Integer division reserves an additional carry window exactly when the
+    // representation ends on a window boundary. Otherwise, the last partial
+    // window cannot produce a carry.
+    repr_bits / window_bits + 1
+}
+
 #[derive(Clone)]
 struct BoothBuckets<C: CurveAffine> {
     c: usize,
@@ -193,10 +209,8 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
         (f64::from(bases.len() as u32)).ln().ceil() as usize
     };
 
-    // The extra window captures a Booth carry above the scalar representation
-    // when `c` divides `SCALAR_BITS`.
     let mut multi_buckets: Vec<BoothBuckets<C>> =
-        vec![BoothBuckets::new(c); (SCALAR_BITS / c) + 1];
+        vec![BoothBuckets::new(c); booth_window_count(&coeffs, c)];
     let num_threads = multicore::current_num_threads();
     if coeffs.len() > num_threads {
         multi_buckets
@@ -493,6 +507,39 @@ fn assert_multiexp_matches_naive<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[
     assert_eq!(best_multiexp(coeffs, bases), expected);
 }
 
+#[cfg(test)]
+fn evaluate_le_bytes(bytes: &[u8]) -> Fp {
+    bytes.iter().rev().fold(Fp::ZERO, |mut acc, byte| {
+        for bit in (0..u8::BITS).rev() {
+            acc = acc.double();
+            if (byte >> bit) & 1 != 0 {
+                acc += Fp::ONE;
+            }
+        }
+        acc
+    })
+}
+
+#[cfg(test)]
+fn evaluate_booth_digits(bytes: &[u8], window_bits: usize) -> Fp {
+    (0..booth_window_count(&[bytes], window_bits))
+        .rev()
+        .fold(Fp::ZERO, |mut acc, window| {
+            for _ in 0..window_bits {
+                acc = acc.double();
+            }
+
+            let digit = booth_digit(bytes, window_bits, window);
+            let magnitude = Fp::from(digit.magnitude as u64);
+            if digit.negative {
+                acc -= magnitude;
+            } else {
+                acc += magnitude;
+            }
+            acc
+        })
+}
+
 #[test]
 fn test_multiexp() {
     let rng = OsRng;
@@ -518,7 +565,8 @@ fn test_booth_digit_boundaries() {
         );
     };
 
-    let mut bytes = [0; SCALAR_BITS / 8];
+    let repr_bytes = <Fp as PrimeField>::Repr::default().as_ref().len();
+    let mut bytes = vec![0; repr_bytes];
     assert_digit(&bytes, 3, 0, 0, false);
 
     bytes[0] = 3;
@@ -532,9 +580,77 @@ fn test_booth_digit_boundaries() {
     assert_digit(&bytes, 3, 0, 1, true);
     assert_digit(&bytes, 3, 1, 1, false);
 
-    let bytes = [u8::MAX; SCALAR_BITS / 8];
+    let bytes = vec![u8::MAX; repr_bytes];
     assert_digit(&bytes, 8, 31, 0, false);
     assert_digit(&bytes, 8, 32, 1, false);
+}
+
+#[test]
+fn test_booth_digit_wide_representation() {
+    const WIDE_REPR_BYTES: usize = 40;
+    const FIRST_WIDE_BYTE: usize = 32;
+    const WINDOW_BITS: usize = 8;
+    const HALF_RADIX: usize = 1 << (WINDOW_BITS - 1);
+
+    // A high-half value in the first byte above 256 bits produces a negative
+    // digit whose carry must be consumed by the following window.
+    let mut bytes = [0; WIDE_REPR_BYTES];
+    let short_bytes = [0; FIRST_WIDE_BYTE];
+    assert_eq!(
+        booth_window_count(&[short_bytes.as_slice(), bytes.as_slice()], WINDOW_BITS),
+        WIDE_REPR_BYTES + 1
+    );
+
+    bytes[FIRST_WIDE_BYTE] = HALF_RADIX as u8;
+    assert_eq!(
+        booth_digit(&bytes, WINDOW_BITS, FIRST_WIDE_BYTE),
+        BoothDigit {
+            magnitude: HALF_RADIX,
+            negative: true,
+        }
+    );
+    assert_eq!(
+        booth_digit(&bytes, WINDOW_BITS, FIRST_WIDE_BYTE + 1),
+        BoothDigit {
+            magnitude: 1,
+            negative: false,
+        }
+    );
+
+    // The final data window likewise has a following carry-only window.
+    bytes = [0; WIDE_REPR_BYTES];
+    bytes[WIDE_REPR_BYTES - 1] = HALF_RADIX as u8;
+    assert_eq!(
+        booth_digit(&bytes, WINDOW_BITS, WIDE_REPR_BYTES - 1),
+        BoothDigit {
+            magnitude: HALF_RADIX,
+            negative: true,
+        }
+    );
+    assert_eq!(
+        booth_digit(&bytes, WINDOW_BITS, WIDE_REPR_BYTES),
+        BoothDigit {
+            magnitude: 1,
+            negative: false,
+        }
+    );
+
+    let first_high_bit = {
+        let mut bytes = [0; WIDE_REPR_BYTES];
+        bytes[FIRST_WIDE_BYTE + 1] = 1;
+        bytes
+    };
+    let all_ones = [u8::MAX; WIDE_REPR_BYTES];
+    // Folding into `Fp` avoids a big-integer test dependency while exercising
+    // the complete 320-bit recoding schedule.
+    for bytes in [&bytes, &first_high_bit, &all_ones] {
+        for window_bits in [1, 3, 5, 8, 9] {
+            assert_eq!(
+                evaluate_booth_digits(bytes, window_bits),
+                evaluate_le_bytes(bytes)
+            );
+        }
+    }
 }
 
 #[test]
