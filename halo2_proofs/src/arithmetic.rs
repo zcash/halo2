@@ -11,6 +11,8 @@ pub use pasta_curves::arithmetic::*;
 
 use crate::multicore::{self, TheBestReduce};
 
+const SCALAR_BITS: usize = 256;
+
 /// This represents an element of a group with basic operations that can be
 /// performed. This allows an FFT implementation (for example) to operate
 /// generically over either a field or elliptic curve group.
@@ -34,12 +36,12 @@ enum Bucket<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> Bucket<C> {
-    fn add_assign(&mut self, other: &C) {
+    fn add_assign(&mut self, other: C) {
         *self = match *self {
-            Bucket::None => Bucket::Affine(*other),
-            Bucket::Affine(a) => Bucket::Projective(a + *other),
+            Bucket::None => Bucket::Affine(other),
+            Bucket::Affine(a) => Bucket::Projective(a + other),
             Bucket::Projective(mut a) => {
-                a += *other;
+                a += other;
                 Bucket::Projective(a)
             }
         }
@@ -57,17 +59,65 @@ impl<C: CurveAffine> Bucket<C> {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct BoothDigit {
+    magnitude: usize,
+    negative: bool,
+}
+
+fn booth_digit(bytes: &[u8], window_bits: usize, window: usize) -> BoothDigit {
+    debug_assert!(window_bits > 0);
+    debug_assert!(window_bits < u64::BITS as usize);
+
+    let window_start = window * window_bits;
+    let byte_start = window_start / 8;
+    let mut encoded = [0; 8];
+    if byte_start < bytes.len() {
+        for (slot, byte) in encoded.iter_mut().zip(&bytes[byte_start..]) {
+            *slot = *byte;
+        }
+    }
+
+    let bit_offset = window_start - byte_start * 8;
+    let radix = 1usize << window_bits;
+    let value = ((u64::from_le_bytes(encoded) >> bit_offset) as usize) & (radix - 1);
+    let overlap = if window_start == 0 {
+        0
+    } else {
+        let bit = window_start - 1;
+        bytes
+            .get(bit / 8)
+            .map_or(0, |byte| usize::from((byte >> (bit % 8)) & 1))
+    };
+
+    // The bit below each window is its carry-in, while the window's high bit
+    // is its carry-out. These terms cancel between adjacent windows, leaving
+    // a signed digit whose magnitude is at most half the radix.
+    if value < radix / 2 {
+        BoothDigit {
+            magnitude: value + overlap,
+            negative: false,
+        }
+    } else {
+        let magnitude = radix - value - overlap;
+        BoothDigit {
+            magnitude,
+            negative: magnitude != 0,
+        }
+    }
+}
+
 #[derive(Clone)]
-struct Buckets<C: CurveAffine> {
+struct BoothBuckets<C: CurveAffine> {
     c: usize,
     coeffs: Vec<Bucket<C>>,
 }
 
-impl<C: CurveAffine> Buckets<C> {
+impl<C: CurveAffine> BoothBuckets<C> {
     fn new(c: usize) -> Self {
         Self {
             c,
-            coeffs: vec![Bucket::None; (1 << c) - 1],
+            coeffs: vec![Bucket::None; 1 << (c - 1)],
         }
     }
 
@@ -77,11 +127,13 @@ impl<C: CurveAffine> Buckets<C> {
         bases: &[C],
         i: usize,
     ) -> C::Curve {
-        // get segmentation and add coeff to buckets content
+        // Recode each scalar window into a signed digit and add its base to
+        // the bucket for the digit's magnitude.
         for (coeff, base) in coeffs.iter().zip(bases.iter()) {
-            let seg = self.get_at(i, coeff);
-            if seg != 0 {
-                self.coeffs[seg - 1].add_assign(base);
+            let digit = booth_digit(coeff.as_ref(), self.c, i);
+            if digit.magnitude != 0 {
+                let base = if digit.negative { -*base } else { *base };
+                self.coeffs[digit.magnitude - 1].add_assign(base);
             }
         }
         // Summation by parts
@@ -95,24 +147,6 @@ impl<C: CurveAffine> Buckets<C> {
             acc += sum;
         });
         acc
-    }
-
-    fn get_at(&self, segment: usize, bytes: &<C::Scalar as PrimeField>::Repr) -> usize {
-        let skip_bits = segment * self.c;
-        let skip_bytes = skip_bits / 8;
-
-        if skip_bytes >= 32 {
-            0
-        } else {
-            let mut v = [0; 8];
-            for (v, o) in v.iter_mut().zip(bytes.as_ref()[skip_bytes..].iter()) {
-                *v = *o;
-            }
-
-            let mut tmp = u64::from_le_bytes(v);
-            tmp >>= skip_bits - (skip_bytes * 8);
-            (tmp % (1 << self.c)) as usize
-        }
     }
 }
 
@@ -159,7 +193,10 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
         (f64::from(bases.len() as u32)).ln().ceil() as usize
     };
 
-    let mut multi_buckets: Vec<Buckets<C>> = vec![Buckets::new(c); (256 / c) + 1];
+    // The extra window captures a Booth carry above the scalar representation
+    // when `c` divides `SCALAR_BITS`.
+    let mut multi_buckets: Vec<BoothBuckets<C>> =
+        vec![BoothBuckets::new(c); (SCALAR_BITS / c) + 1];
     let num_threads = multicore::current_num_threads();
     if coeffs.len() > num_threads {
         multi_buckets
@@ -443,26 +480,105 @@ pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
 use rand_core::OsRng;
 
 #[cfg(test)]
-use crate::pasta::{Eq, EqAffine, Fp};
+use crate::pasta::{Ep, EpAffine, Eq, EqAffine, Fp, Fq};
+
+#[cfg(test)]
+fn assert_multiexp_matches_naive<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) {
+    let expected = coeffs
+        .iter()
+        .zip(bases)
+        .map(|(coeff, base)| *base * coeff)
+        .fold(C::Curve::identity(), |acc, val| acc + val);
+
+    assert_eq!(best_multiexp(coeffs, bases), expected);
+}
 
 #[test]
 fn test_multiexp() {
     let rng = OsRng;
-    let k = 8;
+    for len in [0, 1, 2, 3, 4, 31, 32, 33, 255, 256, 257] {
+        let coeffs = (0..len).map(|_| Fp::random(rng)).collect::<Vec<_>>();
+        let bases = (0..len)
+            .map(|_| EqAffine::from(Eq::random(rng)))
+            .collect::<Vec<_>>();
 
-    let coeffs = (0..(1 << k)).map(|_| Fp::random(rng)).collect::<Vec<_>>();
-    let bases = (0..(1 << k))
+        assert_multiexp_matches_naive(&coeffs, &bases);
+    }
+}
+
+#[test]
+fn test_booth_digit_boundaries() {
+    let assert_digit = |bytes: &[u8], window_bits, window, magnitude, negative| {
+        assert_eq!(
+            booth_digit(bytes, window_bits, window),
+            BoothDigit {
+                magnitude,
+                negative,
+            }
+        );
+    };
+
+    let mut bytes = [0; SCALAR_BITS / 8];
+    assert_digit(&bytes, 3, 0, 0, false);
+
+    bytes[0] = 3;
+    assert_digit(&bytes, 3, 0, 3, false);
+
+    bytes[0] = 4;
+    assert_digit(&bytes, 3, 0, 4, true);
+    assert_digit(&bytes, 3, 1, 1, false);
+
+    bytes[0] = 7;
+    assert_digit(&bytes, 3, 0, 1, true);
+    assert_digit(&bytes, 3, 1, 1, false);
+
+    let bytes = [u8::MAX; SCALAR_BITS / 8];
+    assert_digit(&bytes, 8, 31, 0, false);
+    assert_digit(&bytes, 8, 32, 1, false);
+}
+
+#[test]
+fn test_multiexp_booth_boundaries() {
+    let rng = OsRng;
+    let mut fp_high_bit = Fp::ONE;
+    for _ in 0..254 {
+        fp_high_bit = fp_high_bit.double();
+    }
+    let fp_scalars = [
+        Fp::ZERO,
+        Fp::ONE,
+        -Fp::ONE,
+        Fp::from(3),
+        Fp::from(4),
+        Fp::from(7),
+        Fp::from(8),
+        fp_high_bit,
+    ];
+    let fp_coeffs = fp_scalars.into_iter().cycle().take(32).collect::<Vec<_>>();
+    let fp_bases = (0..fp_coeffs.len())
         .map(|_| EqAffine::from(Eq::random(rng)))
         .collect::<Vec<_>>();
+    assert_multiexp_matches_naive(&fp_coeffs, &fp_bases);
 
-    let expected = best_multiexp(&coeffs, &bases);
-    let actual = coeffs
-        .iter()
-        .zip(bases)
-        .map(|(coeff, base)| base * coeff)
-        .fold(Eq::identity(), |acc, val| acc + val);
-
-    assert_eq!(expected, actual);
+    let mut fq_high_bit = Fq::ONE;
+    for _ in 0..254 {
+        fq_high_bit = fq_high_bit.double();
+    }
+    let fq_scalars = [
+        Fq::ZERO,
+        Fq::ONE,
+        -Fq::ONE,
+        Fq::from(3),
+        Fq::from(4),
+        Fq::from(7),
+        Fq::from(8),
+        fq_high_bit,
+    ];
+    let fq_coeffs = fq_scalars.into_iter().cycle().take(32).collect::<Vec<_>>();
+    let fq_bases = (0..fq_coeffs.len())
+        .map(|_| EpAffine::from(Ep::random(rng)))
+        .collect::<Vec<_>>();
+    assert_multiexp_matches_naive(&fq_coeffs, &fq_bases);
 }
 
 #[test]
