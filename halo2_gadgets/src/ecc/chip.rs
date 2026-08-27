@@ -20,6 +20,8 @@ use std::convert::TryInto;
 pub(super) mod add;
 pub(super) mod add_incomplete;
 pub mod constants;
+#[cfg(test)]
+pub(crate) mod layout_dump;
 pub(super) mod mul;
 pub(super) mod mul_fixed;
 pub(super) mod witness_point;

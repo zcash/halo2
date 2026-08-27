@@ -42,6 +42,7 @@ plotters = { version = "0.3.0", default-features = false, optional = true }
 [dev-dependencies]
 criterion = "0.3"
 halo2_poseidon = { version = "0.1", path = "../halo2_poseidon", default-features = false, features = ["test-dependencies"] }
+halo2_proofs = { version = "0.3", path = "../halo2_proofs", default-features = false, features = ["unstable-circuit-fixtures"] }
 proptest = "1.0.0"
 sinsemilla = { version = "0.1", features = ["test-dependencies"] }
 

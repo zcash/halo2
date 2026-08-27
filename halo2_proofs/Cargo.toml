@@ -106,6 +106,8 @@ nightly = [
 # Capture-only tooling that exposes the assembled verifier MSM fingerprint and
 # exports it as a Lean fixture. Off by default; does not affect proof acceptance.
 unstable-verifier-fingerprint = []
+# Capture-only tooling for recording keygen layouts and rendering reproducible circuit fixtures.
+unstable-circuit-fixtures = []
 # Add flags for in-development features above this line.
 
 [lib]
